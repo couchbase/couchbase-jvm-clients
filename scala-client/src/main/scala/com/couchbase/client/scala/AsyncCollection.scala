@@ -19,6 +19,7 @@ import java.util.Optional
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error._
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.msg.kv._
@@ -42,7 +43,12 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 import scala.util.{Failure, Success, Try}
 
-case class HandlerParams(core: Core, bucketName: String, collectionIdentifier: CollectionIdentifier)
+case class HandlerParams(
+    core: Core,
+    bucketName: String,
+    collectionIdentifier: CollectionIdentifier,
+    env: ClusterEnvironment
+)
 
 /** Provides asynchronous access to all collection APIs, based around Scala `Future`s.  This is the main entry-point
   * for key-value (KV) operations.
@@ -70,7 +76,7 @@ class AsyncCollection(
   private[scala] val retryStrategy = environment.retryStrategy
   private[scala] val collectionIdentifier =
     new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(name))
-  private[scala] val hp                    = HandlerParams(core, bucketName, collectionIdentifier)
+  private[scala] val hp                    = HandlerParams(core, bucketName, collectionIdentifier, environment)
   private[scala] val existsHandler         = new ExistsHandler(hp)
   private[scala] val insertHandler         = new InsertHandler(hp)
   private[scala] val replaceHandler        = new ReplaceHandler(hp)
@@ -178,7 +184,8 @@ class AsyncCollection(
       expiry: Duration = 0.seconds,
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = JsonTranscoder.Instance,
+      parentSpan: Option[RequestSpan] = None
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
     val req = upsertHandler.request(
       id,
@@ -188,7 +195,8 @@ class AsyncCollection(
       timeout,
       retryStrategy,
       transcoder,
-      serializer
+      serializer,
+      parentSpan
     )
     wrapWithDurability(req, id, upsertHandler, durability, false, timeout)
   }
@@ -505,6 +513,8 @@ object AsyncCollection {
         val out = FutureConverters
           .toScala(request.response())
           .map(response => handler.response(request, id, response))
+
+        out.onComplete(_ => request.context.logicallyComplete())
 
         out
 

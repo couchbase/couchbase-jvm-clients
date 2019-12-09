@@ -17,6 +17,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.msg.kv.{GetRequest, KeyValueRequest}
 import com.couchbase.client.core.msg.{Request, Response}
 import com.couchbase.client.core.retry.RetryStrategy
@@ -119,7 +120,8 @@ class ReactiveCollection(async: AsyncCollection) {
       expiry: Duration = 0.seconds,
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = JsonTranscoder.Instance,
+      parentSpan: Option[RequestSpan] = None
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
     val req = async.upsertHandler.request(
       id,
@@ -129,7 +131,8 @@ class ReactiveCollection(async: AsyncCollection) {
       timeout,
       retryStrategy,
       transcoder,
-      serializer
+      serializer,
+      parentSpan
     )
     wrap(req, id, async.upsertHandler)
   }

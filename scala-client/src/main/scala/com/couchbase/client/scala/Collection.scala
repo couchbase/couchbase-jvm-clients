@@ -17,6 +17,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec._
@@ -94,6 +95,8 @@ object Collection {
   *                        some control over ensuring the success of the mutation's replication.  See
   *                        [[com.couchbase.client.scala.durability.Durability]]
   *                        for a detailed discussion.
+  * @define ParentSpan     an optional parent 'span' for the request, allowing tracing requests through the full
+  *                        distributed system
   **/
 class Collection(
     /** Provides access to an async version of this API. */
@@ -126,6 +129,7 @@ class Collection(
     *                       is set to None, meaning a normal full document fetch will be performed.
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    *
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
@@ -151,6 +155,7 @@ class Collection(
     * @param expiry        $Expiry
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentAlreadyExistsException`, indicating the document already exists.
     *         $ErrorHandling
@@ -185,6 +190,7 @@ class Collection(
     * @param expiry        $Expiry
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
@@ -222,6 +228,8 @@ class Collection(
     * @param expiry        $Expiry
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    * @param parentSpan    $ParentSpan
+    *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  $ErrorHandling
     */
   def upsert[T](
@@ -231,7 +239,8 @@ class Collection(
       expiry: Duration = 0.seconds,
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = JsonTranscoder.Instance,
+      parentSpan: Option[RequestSpan] = None
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] =
     block(
       async.upsert(
@@ -241,7 +250,8 @@ class Collection(
         expiry,
         timeout,
         retryStrategy,
-        transcoder
+        transcoder,
+        parentSpan
       )
     )
 
@@ -252,6 +262,7 @@ class Collection(
     * @param durability    $Durability
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
@@ -323,6 +334,7 @@ class Collection(
     * @param lockTime        how long to lock the document for
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    *
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
@@ -345,6 +357,7 @@ class Collection(
     *                       unlock the document
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    *
     * @return on success, a `Success(Unit)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
@@ -363,6 +376,7 @@ class Collection(
     * @param expiry         $Expiry
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    *
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
@@ -396,6 +410,7 @@ class Collection(
     * @param withExpiry    $WithExpiry
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    *
     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
@@ -422,6 +437,7 @@ class Collection(
     * @param id            $Id
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    *
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
@@ -449,6 +465,7 @@ class Collection(
     * @param id            $Id
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    *
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
@@ -469,6 +486,7 @@ class Collection(
     * @param id             $Id
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    *
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
@@ -485,6 +503,7 @@ class Collection(
     * @param id             $Id
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling

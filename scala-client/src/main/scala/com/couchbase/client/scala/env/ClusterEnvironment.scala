@@ -19,6 +19,7 @@ package com.couchbase.client.scala.env
 import java.util.concurrent.{Executors, ThreadFactory}
 
 import com.couchbase.client.core
+import com.couchbase.client.core.cnc.RequestTracer
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.util.DurationConversions._
@@ -57,7 +58,8 @@ object ClusterEnvironment {
       private[scala] val securityConfig: Option[SecurityConfig] = None,
       private[scala] val timeoutConfig: Option[TimeoutConfig] = None,
       private[scala] val loggerConfig: Option[LoggerConfig] = None,
-      private[scala] val retryStrategy: Option[RetryStrategy] = None
+      private[scala] val retryStrategy: Option[RetryStrategy] = None,
+      private[scala] val requestTracer: Option[RequestTracer] = None
   ) {
 
     def build: Try[ClusterEnvironment] = Try(new ClusterEnvironment(this))
@@ -117,8 +119,20 @@ object ClusterEnvironment {
       copy(loggerConfig = Some(config))
     }
 
+    /** Sets the default [[com.couchbase.client.core.retry.RetryStrategy]] to use for all operations.
+      *
+      * @return this, for chaining
+      */
     def retryStrategy(value: RetryStrategy): ClusterEnvironment.Builder = {
       copy(retryStrategy = Some(value))
+    }
+
+    /** Sets the default `RequestTracer` to use for all operations.
+      *
+      * @return this, for chaining
+      */
+    def requestTracer(requestTracer: RequestTracer): ClusterEnvironment.Builder = {
+      copy(requestTracer = Some(requestTracer))
     }
   }
 }
@@ -136,11 +150,10 @@ private[scala] class CoreEnvironment(
 
 /** All configuration options related to a cluster environment, along with some long-lived resources including a
   * thread-pool.
-  *
-  * @param owned whether the cluster owns the environment, which will decide if it shuts it down automatically when
-  *              the cluster is shutdown
   */
 class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder) {
+  // Whether the cluster owns the environment, which will decide if it shuts it down automatically when the cluster is
+  // shutdown
   private[scala] val owned: Boolean = builder.owned
 
   private[scala] def timeoutConfig = coreEnv.timeoutConfig()
@@ -178,6 +191,7 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
   builder.timeoutConfig.foreach(v => coreBuilder.timeoutConfig(v.toCore))
   builder.loggerConfig.foreach(v => coreBuilder.loggerConfig(v.toCore))
   builder.retryStrategy.foreach(rs => coreBuilder.retryStrategy(rs))
+  builder.requestTracer.foreach(v => coreBuilder.requestTracer(v))
 
   private[scala] val coreEnv = new CoreEnvironment(coreBuilder)
 

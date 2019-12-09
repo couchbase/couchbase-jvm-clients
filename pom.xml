@@ -107,6 +107,7 @@
         <module>core-io</module>
         <module>scala-implicits</module>
         <module>scala-client</module>
+        <module>scala-examples</module>
         <module>test-utils</module>
         <module>benchmarks</module>
         <module>tracing-opentracing</module>

@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error.EncodingFailureException
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{KeyValueRequest, UpsertRequest, UpsertResponse}
@@ -47,7 +48,8 @@ private[scala] class UpsertHandler(hp: HandlerParams)
       timeout: java.time.Duration,
       retryStrategy: RetryStrategy,
       transcoder: Transcoder,
-      serializer: JsonSerializer[T]
+      serializer: JsonSerializer[T],
+      parentSpan: Option[RequestSpan]
   ): Try[UpsertRequest] = {
     val validations: Try[UpsertRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
@@ -58,6 +60,11 @@ private[scala] class UpsertHandler(hp: HandlerParams)
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
     } yield null
 
+    val span =
+      hp.env.coreEnv.requestTracer.internalSpan(UpsertRequest.OPERATION_NAME, parentSpan.orNull)
+    val start = System.nanoTime()
+    span.startPayloadEncoding()
+
     if (validations.isFailure) {
       validations
     } else {
@@ -66,22 +73,27 @@ private[scala] class UpsertHandler(hp: HandlerParams)
         case x: TranscoderWithoutSerializer => x.encode(content)
       }
 
+      span.stopPayloadEncoding()
+      val end = System.nanoTime()
+
       encoded match {
         case Success(en) =>
-          Success(
-            new UpsertRequest(
-              id,
-              en.encoded,
-              expiration.getSeconds,
-              en.flags,
-              timeout,
-              hp.core.context(),
-              hp.collectionIdentifier,
-              retryStrategy,
-              durability.toDurabilityLevel,
-              null /* todo: add rto */
-            )
+          val out = new UpsertRequest(
+            id,
+            en.encoded,
+            expiration.getSeconds,
+            en.flags,
+            timeout,
+            hp.core.context(),
+            hp.collectionIdentifier,
+            retryStrategy,
+            durability.toDurabilityLevel,
+            span
           )
+          out
+            .context()
+            .encodeLatency(end - start)
+          Success(out)
 
         case Failure(err) =>
           Failure(new EncodingFailureException(err))
