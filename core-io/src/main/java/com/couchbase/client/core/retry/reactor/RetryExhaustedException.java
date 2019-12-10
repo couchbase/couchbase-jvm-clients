@@ -26,19 +26,6 @@ public class RetryExhaustedException extends RuntimeException {
 
 	private static final long serialVersionUID = 6961442923363481283L;
 
-	public RetryExhaustedException() {
-		super();
-	}
-
-	public RetryExhaustedException(String message, Throwable cause, boolean enableSuppression,
-			boolean writableStackTrace) {
-		super(message, cause, enableSuppression, writableStackTrace);
-	}
-
-	public RetryExhaustedException(String message, Throwable cause) {
-		super(message, cause);
-	}
-
 	public RetryExhaustedException(String message) {
 		super(message);
 	}
@@ -46,4 +33,5 @@ public class RetryExhaustedException extends RuntimeException {
 	public RetryExhaustedException(Throwable cause) {
 		super(cause);
 	}
+
 }

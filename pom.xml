@@ -16,6 +16,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <junit.version>5.5.2</junit.version>
+        <assertj.version>3.9.0</assertj.version>
         <jackson.version>2.10.1</jackson.version>
         <reactor.version>3.3.1.RELEASE</reactor.version>
 

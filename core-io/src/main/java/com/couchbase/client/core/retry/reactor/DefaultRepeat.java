@@ -19,8 +19,6 @@ package com.couchbase.client.core.retry.reactor;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Scheduler;
-import reactor.util.Logger;
-import reactor.util.Loggers;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -29,7 +27,6 @@ import java.util.function.Predicate;
 
 public class DefaultRepeat<T> extends AbstractRetry<T, Long> implements Repeat<T> {
 
-	static final Logger log = Loggers.getLogger(DefaultRepeat.class);
 	static final Consumer<? super RepeatContext<?>> NOOP_ON_REPEAT = r -> {};
 
 	final Predicate<? super RepeatContext<T>> repeatPredicate;

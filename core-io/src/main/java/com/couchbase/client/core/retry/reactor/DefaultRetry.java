@@ -20,9 +20,6 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
-import reactor.util.Logger;
-import reactor.util.Loggers;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
@@ -30,7 +27,6 @@ import java.util.function.Predicate;
 
 public class DefaultRetry<T> extends AbstractRetry<T, Throwable> implements Retry<T> {
 
-	static final Logger log = Loggers.getLogger(DefaultRetry.class);
 	static final Consumer<? super RetryContext<?>> NOOP_ON_RETRY = r -> {};
 
 	final Predicate<? super RetryContext<T>> retryPredicate;

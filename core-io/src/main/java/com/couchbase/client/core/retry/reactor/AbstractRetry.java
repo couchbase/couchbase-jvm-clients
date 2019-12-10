@@ -22,8 +22,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
-import reactor.util.Logger;
-import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -31,8 +29,6 @@ import java.time.Instant;
 import java.util.function.Function;
 
 public abstract class AbstractRetry<T, S> implements Function<Flux<S>, Publisher<Long>> {
-
-	static final Logger log = Loggers.getLogger(AbstractRetry.class);
 
 	static final BackoffDelay RETRY_EXHAUSTED = new BackoffDelay(Duration.ofSeconds(-1)) {
 		@Override

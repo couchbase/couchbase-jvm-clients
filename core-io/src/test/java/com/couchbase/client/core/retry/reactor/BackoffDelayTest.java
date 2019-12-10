@@ -16,18 +16,35 @@
 
 package com.couchbase.client.core.retry.reactor;
 
-/**
- * Context provided to retry predicate {@link Retry#onlyIf(java.util.function.Predicate)} and
- * the retry callback {@link Retry#doOnRetry(java.util.function.Consumer)}.
- *
- * @param <T> Application context type
- */
-public interface RetryContext<T> extends IterationContext<T> {
+import org.junit.jupiter.api.Test;
 
-	/**
-	 * Returns the exception from the last iteration.
-	 * @return exception that resulted in retry
-	 */
-	public Throwable exception();
+import java.time.Duration;
 
+import static org.junit.jupiter.api.Assertions.*;
+
+class BackoffDelayTest {
+
+  @Test
+  void toStringZero() {
+    assertEquals("{ZERO}", BackoffDelay.ZERO.toString());
+  }
+
+  @Test
+  void toStringExhausted() {
+    assertEquals("{EXHAUSTED}", AbstractRetry.RETRY_EXHAUSTED.toString());
+  }
+
+  @Test
+  void toStringSimple() {
+    assertEquals("{3000ms}", new BackoffDelay(Duration.ofSeconds(3)).toString());
+  }
+
+  @Test
+  void toStringMinMaxDelay() {
+    assertEquals("{123ms/4000ms}", new BackoffDelay(
+      Duration.ofSeconds(3),
+      Duration.ofSeconds(4),
+      Duration.ofMillis(123)
+    ).toString());
+  }
 }
