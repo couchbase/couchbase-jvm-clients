@@ -37,6 +37,7 @@ import java.util.function.Consumer;
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.java.view.DesignDocumentNamespace.DEVELOPMENT;
 import static com.couchbase.client.java.view.DesignDocumentNamespace.PRODUCTION;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -66,8 +67,8 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
         views.getAllDesignDocuments(namespace).forEach(ddoc ->
             views.dropDesignDocument(ddoc.name(), namespace)));
     forEachNamespace(namespace ->
-            views.getAllDesignDocuments(namespace).forEach(ddoc ->
-                    waitUntilDesignDocDropped(ddoc.name(), namespace)));
+        views.getAllDesignDocuments(namespace).forEach(ddoc ->
+            waitUntilDesignDocDropped(ddoc.name(), namespace)));
   }
 
   private void waitUntilDesignDocPresent(String name, DesignDocumentNamespace ns) {
@@ -75,8 +76,7 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
       try {
         views.getDesignDocument(name, ns);
         return true;
-      }
-      catch (DesignDocumentNotFoundException err) {
+      } catch (DesignDocumentNotFoundException err) {
         return false;
       }
     });
@@ -87,8 +87,7 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
       try {
         views.getDesignDocument(name, ns);
         return false;
-      }
-      catch (DesignDocumentNotFoundException err) {
+      } catch (DesignDocumentNotFoundException err) {
         return true;
       }
     });
@@ -188,8 +187,11 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
   private void assertRoundTrip(DesignDocument doc, DesignDocumentNamespace namespace) {
     views.upsertDesignDocument(doc, namespace);
     waitUntilDesignDocPresent(doc.name(), namespace);
-    DesignDocument roundTrip = views.getDesignDocument(doc.name(), namespace);
-    assertEquals(doc, roundTrip);
+
+    waitUntilCondition(() -> {
+      DesignDocument roundTrip = views.getDesignDocument(doc.name(), namespace);
+      return doc.equals(roundTrip);
+    });
   }
 
   private static DesignDocument oneExampleDocument() {
