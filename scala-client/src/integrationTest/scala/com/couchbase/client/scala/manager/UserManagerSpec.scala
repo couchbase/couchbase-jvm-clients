@@ -43,7 +43,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
 
     // Wait until nsserver is ready to serve
     Util.waitUntilCondition(() => {
-      users.getAllGroups() match {
+      users.getAllUsers() match {
         case Success(_) => true
         case Failure(err) =>
           println(err)
@@ -196,6 +196,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
     )
   }
 
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.USER_GROUPS)) // test is verifying some groups info
   @Test
   def create(): Unit = {
     val origPassword: String = "password"
@@ -285,6 +286,6 @@ class UserManagerSpec extends ScalaIntegrationTest {
     val e: UserNotFoundException =
       assertThrows(classOf[UserNotFoundException], () => users.dropUser(name).get)
     assertEquals(name, e.username)
-    assertEquals(AuthDomain.Local, e.domain)
+    assertEquals(AuthDomain.Local.alias, e.domain)
   }
 }

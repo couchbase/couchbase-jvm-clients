@@ -244,6 +244,6 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
     String name = "doesnotexist";
     UserNotFoundException e = assertThrows(UserNotFoundException.class, () -> users.dropUser(name));
     assertEquals(name, e.username());
-    assertEquals(LOCAL, e.domain());
+    assertEquals(LOCAL.alias(), e.domain());
   }
 }

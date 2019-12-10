@@ -75,9 +75,9 @@ case class UserAndMetadata(
     @upickle.implicits.key("id") username: String,
     @upickle.implicits.key("name") displayName: String,
     @upickle.implicits.key("roles") private[scala] val _effectiveRoles: Seq[RoleAndOrigins],
-    @upickle.implicits.key("password_change_date") _passwordChanged: Option[String],
-    @upickle.implicits.key("groups") groups: Seq[String],
-    @upickle.implicits.key("external_groups") externalGroups: Seq[String]
+    @upickle.implicits.key("password_change_date") _passwordChanged: Option[String] = None,
+    @upickle.implicits.key("groups") groups: Seq[String] = Seq(),
+    @upickle.implicits.key("external_groups") externalGroups: Seq[String] = Seq()
 ) {
 
   /** Returns the roles assigned specifically to the user. Excludes roles that are

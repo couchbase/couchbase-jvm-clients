@@ -136,12 +136,12 @@ object RoleAndOrigins {
         json
       },
       (json: ujson.Obj) => {
-        val origins                    = json("origins")
+        val origins                    = Try(json("origins")).toOption
         val bucketName: Option[String] = Try(json("bucket_name").str).toOption
 
         RoleAndOrigins(
           Role(json("role").str, bucketName),
-          CouchbasePickler.read[Seq[Origin]](origins)
+          origins.map(v => CouchbasePickler.read[Seq[Origin]](v)).getOrElse(Seq())
         )
       }
     )
