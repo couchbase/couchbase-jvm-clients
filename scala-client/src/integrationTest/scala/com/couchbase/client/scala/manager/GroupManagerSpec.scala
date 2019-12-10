@@ -16,7 +16,7 @@ import org.junit.jupiter.api._
 import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), missesCapabilities = Array(Capabilities.USER_GROUPS))
 class GroupManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster   = _
   private var users: UserManager = _
