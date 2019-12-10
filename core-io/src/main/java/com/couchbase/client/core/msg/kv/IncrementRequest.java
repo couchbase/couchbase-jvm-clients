@@ -43,13 +43,13 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> imp
 
   private final long delta;
   private final Optional<Long> initial;
-  private final int expiry;
+  private final long expiry;
   private final Optional<DurabilityLevel> syncReplicationType;
   private final long cas;
 
   public IncrementRequest(Duration timeout, CoreContext ctx, CollectionIdentifier collectionIdentifier,
                           RetryStrategy retryStrategy, String key, long cas,
-                          long delta, Optional<Long> initial, final int expiration,
+                          long delta, Optional<Long> initial, final long expiration,
                           final Optional<DurabilityLevel> syncReplicationType, InternalSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     if (initial.isPresent() && initial.get() < 0) {
@@ -74,7 +74,7 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> imp
       extras.writeLong(delta);
       if (initial.isPresent()) {
         extras.writeLong(initial.get());
-        extras.writeInt(expiry);
+        extras.writeInt((int) expiry);
       } else {
         extras.writeLong(0); // no initial present, will lead to doc not found
         extras.writeInt(COUNTER_NOT_EXISTS_EXPIRY);

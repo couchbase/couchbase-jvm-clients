@@ -40,14 +40,14 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> imp
 
   private final long delta;
   private final Optional<Long> initial;
-  private final int expiry;
+  private final long expiry;
   private final Optional<DurabilityLevel> syncReplicationType;
   private final long cas;
 
 
   public DecrementRequest(Duration timeout, CoreContext ctx, CollectionIdentifier collectionIdentifier,
                           RetryStrategy retryStrategy, String key, long cas,
-                          long delta, Optional<Long> initial, int expiry,
+                          long delta, Optional<Long> initial, long expiry,
                           final Optional<DurabilityLevel> syncReplicationType, InternalSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     if (initial.isPresent() && initial.get() < 0) {
@@ -72,7 +72,7 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> imp
       extras.writeLong(delta);
       if (initial.isPresent()) {
         extras.writeLong(initial.get());
-        extras.writeInt(expiry);
+        extras.writeInt((int) expiry);
       } else {
         extras.writeLong(0); // no initial present, will lead to doc not found
         extras.writeInt(IncrementRequest.COUNTER_NOT_EXISTS_EXPIRY);

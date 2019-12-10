@@ -18,26 +18,51 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 
+import java.time.Duration;
 import java.util.Optional;
 
+/**
+ * Modifies properties of the increment operation.
+ */
 public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> {
 
-  private long delta;
-  private Optional<Long> initial;
-  private int expiry;
-  private long cas;
+  /**
+   * Stores the delta for the operation.
+   */
+  private long delta = 1;
 
+  /**
+   * If present, holds the initial value.
+   */
+  private Optional<Long> initial = Optional.empty();
+
+  /**
+   * If set, holds the expiration for this operation.
+   */
+  private Duration expiry = Duration.ZERO;
+
+  /**
+   * If set, holds the CAS value for this operation.
+   */
+  private long cas = 0;
+
+  /**
+   * Creates a new {@link IncrementOptions}.
+   *
+   * @return the created options.
+   */
   public static IncrementOptions incrementOptions() {
     return new IncrementOptions();
   }
 
-  private IncrementOptions() {
-    delta = 1;
-    initial = Optional.empty();
-    expiry = 0;
-    cas = 0;
-  }
+  private IncrementOptions() { }
 
+  /**
+   * The amount of which the document value should be incremented.
+   *
+   * @param delta the amount to increment.
+   * @return this options class for chaining purposes.
+   */
   public IncrementOptions delta(long delta) {
     if (delta < 0) {
       throw new IllegalArgumentException("The delta cannot be less than 0");
@@ -46,17 +71,34 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
     return this;
   }
 
+  /**
+   * The initial value that should be used if the document has not been created yet.
+   *
+   * @param initial the initial value to use.
+   * @return this options class for chaining purposes.
+   */
   public IncrementOptions initial(long initial) {
     this.initial = Optional.of(initial);
     return this;
   }
 
-  public IncrementOptions expiry(int expiry) {
+  /**
+   * Set a custom expiration time for the document (by default no expiry is set).
+   *
+   * @param expiry the custom expiry value of the document.
+   * @return this options class for chaining purposes.
+   */
+  public IncrementOptions expiry(final Duration expiry) {
     this.expiry = expiry;
     return this;
   }
 
-
+  /**
+   * Set the CAS from a previous read operation to perform optimistic concurrency.
+   *
+   * @param cas the CAS to use for this operation.
+   * @return this options class for chaining purposes.
+   */
   public IncrementOptions cas(long cas) {
     this.cas = cas;
     return this;
@@ -69,7 +111,7 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
 
   public class Built extends BuiltCommonDurabilityOptions {
 
-    public int expiry() {
+    public Duration expiry() {
       return expiry;
     }
 

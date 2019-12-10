@@ -29,11 +29,17 @@ import com.couchbase.client.java.kv.PrependOptions;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 
+/**
+ * Allows to perform certain operations on non-JSON documents.
+ */
 public class BinaryCollection {
 
+  /**
+   * Holds the underlying async binary collection.
+   */
   private final AsyncBinaryCollection async;
 
-  BinaryCollection(AsyncBinaryCollection asyncBinaryCollection) {
+  BinaryCollection(final AsyncBinaryCollection asyncBinaryCollection) {
     this.async = asyncBinaryCollection;
   }
 

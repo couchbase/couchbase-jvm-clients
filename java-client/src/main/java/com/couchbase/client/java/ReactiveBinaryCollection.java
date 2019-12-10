@@ -18,7 +18,11 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.error.CasMismatchException;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.msg.kv.AppendRequest;
 import com.couchbase.client.core.msg.kv.DecrementRequest;
 import com.couchbase.client.core.msg.kv.IncrementRequest;
@@ -35,19 +39,24 @@ import com.couchbase.client.java.kv.PrependOptions;
 import reactor.core.publisher.Mono;
 
 import static com.couchbase.client.core.util.Validators.notNull;
-import static com.couchbase.client.java.kv.AppendOptions.appendOptions;
-import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
-import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
-import static com.couchbase.client.java.kv.PrependOptions.prependOptions;
+import static com.couchbase.client.java.AsyncBinaryCollection.DEFAULT_APPEND_OPTIONS;
+import static com.couchbase.client.java.AsyncBinaryCollection.DEFAULT_DECREMENT_OPTIONS;
+import static com.couchbase.client.java.AsyncBinaryCollection.DEFAULT_INCREMENT_OPTIONS;
+import static com.couchbase.client.java.AsyncBinaryCollection.DEFAULT_PREPEND_OPTIONS;
 
+/**
+ * Allows to perform certain operations on non-JSON documents.
+ */
 public class ReactiveBinaryCollection {
 
-  static final PrependOptions DEFAULT_PREPEND_OPTIONS = prependOptions();
-  static final AppendOptions DEFAULT_APPEND_OPTIONS = appendOptions();
-  static final IncrementOptions DEFAULT_INCREMENT_OPTIONS = incrementOptions();
-  static final DecrementOptions DEFAULT_DECREMENT_OPTIONS = decrementOptions();
-
+  /**
+   * Holds the underlying async binary collection.
+   */
   private final AsyncBinaryCollection async;
+
+  /**
+   * Provides access to the core.
+   */
   private final Core core;
 
   ReactiveBinaryCollection(final Core core, final AsyncBinaryCollection async) {
@@ -55,10 +64,33 @@ public class ReactiveBinaryCollection {
     this.async = async;
   }
 
+  /**
+   * Appends binary content to the document.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param content the binary content to append to the document.
+   * @return a {@link MutationResult} once completed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
   public Mono<MutationResult> append(final String id, final byte[] content) {
     return append(id, content, DEFAULT_APPEND_OPTIONS);
   }
 
+  /**
+   * Appends binary content to the document with custom options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param content the binary content to append to the document.
+   * @param options custom options to customize the append behavior.
+   * @return a {@link MutationResult} once completed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
   public Mono<MutationResult> append(final String id, final byte[] content, final AppendOptions options) {
     return Mono.defer(() -> {
       notNull(options, "AppendOptions", () -> ReducedKeyValueErrorContext.create(id, async.collectionIdentifier()));
@@ -72,10 +104,33 @@ public class ReactiveBinaryCollection {
     });
   }
 
+  /**
+   * Prepends binary content to the document.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param content the binary content to append to the document.
+   * @return a {@link MutationResult} once completed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
   public Mono<MutationResult> prepend(final String id, final byte[] content) {
     return prepend(id, content, DEFAULT_PREPEND_OPTIONS);
   }
 
+  /**
+   * Prepends binary content to the document with custom options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param content the binary content to append to the document.
+   * @param options custom options to customize the prepend behavior.
+   * @return a {@link MutationResult} once completed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
   public Mono<MutationResult> prepend(final String id, final byte[] content, final PrependOptions options) {
     return Mono.defer(() -> {
       notNull(options, "PrependOptions", () -> ReducedKeyValueErrorContext.create(id, async.collectionIdentifier()));
@@ -89,10 +144,31 @@ public class ReactiveBinaryCollection {
     });
   }
 
+  /**
+   * Increments the counter document by one.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @return a {@link CounterResult} once completed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
   public Mono<CounterResult> increment(final String id) {
     return increment(id, DEFAULT_INCREMENT_OPTIONS);
   }
 
+  /**
+   * Increments the counter document by one or the number defined in the options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param options custom options to customize the increment behavior.
+   * @return a {@link CounterResult} once completed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
   public Mono<CounterResult> increment(final String id, final IncrementOptions options) {
     return Mono.defer(() -> {
       notNull(options, "IncrementOptions", () -> ReducedKeyValueErrorContext.create(id, async.collectionIdentifier()));
@@ -106,10 +182,31 @@ public class ReactiveBinaryCollection {
     });
   }
 
+  /**
+   * Decrements the counter document by one.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @return a {@link CounterResult} once completed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
   public Mono<CounterResult> decrement(final String id) {
     return decrement(id, DEFAULT_DECREMENT_OPTIONS);
   }
 
+  /**
+   * Decrements the counter document by one or the number defined in the options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param options custom options to customize the decrement behavior.
+   * @return a {@link CounterResult} once completed.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws CasMismatchException if the document has been concurrently modified on the server.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
   public Mono<CounterResult> decrement(final String id, final DecrementOptions options) {
     return Mono.defer(() -> {
       notNull(options, "DecrementOptions", () -> ReducedKeyValueErrorContext.create(id, async.collectionIdentifier()));

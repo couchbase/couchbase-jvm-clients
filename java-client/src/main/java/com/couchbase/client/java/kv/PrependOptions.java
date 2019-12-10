@@ -18,18 +18,34 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 
+/**
+ * Modifies properties of the prepend operation.
+ */
 public class PrependOptions extends CommonDurabilityOptions<PrependOptions> {
 
+  /**
+   * The default CAS used (0 means no cas in this context).
+   */
+  private long cas = 0;
+
+  /**
+   * Creates a new {@link PrependOptions}.
+   *
+   * @return the created options.
+   */
   public static PrependOptions prependOptions() {
     return new PrependOptions();
   }
 
-  private PrependOptions() {
-  }
+  private PrependOptions() { }
 
-  private long cas;
-
-  public PrependOptions cas(long cas) {
+  /**
+   * Set the CAS from a previous read operation to perform optimistic concurrency.
+   *
+   * @param cas the CAS to use for this operation.
+   * @return this options class for chaining purposes.
+   */
+  public PrependOptions cas(final long cas) {
     this.cas = cas;
     return this;
   }
