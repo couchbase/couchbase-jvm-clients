@@ -55,10 +55,12 @@ class SystemPropertyPropertyLoaderTest {
     Properties properties = new Properties();
     properties.setProperty("com.couchbase.env.io.maxHttpConnections", "23");
     properties.setProperty("com.couchbase.env.io.configPollInterval", "2m");
+    properties.setProperty("com.couchbase.env.io.networkResolution", "external");
 
     parse(properties, env -> {
       assertEquals(23, env.ioConfig().maxHttpConnections());
       assertEquals(Duration.ofMinutes(2), env.ioConfig().configPollInterval());
+      assertEquals(NetworkResolution.EXTERNAL, env.ioConfig().networkResolution());
     });
   }
 

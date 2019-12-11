@@ -20,11 +20,11 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeRefere
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.util.Golang;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.nio.file.Path;
@@ -37,7 +37,6 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -67,9 +66,9 @@ class BuilderPropertySetter {
       }
 
       final List<Method> candidates = Arrays.stream(builder.getClass().getMethods())
-        .filter(m -> m.getName().equals(setterName))
-        .filter(m -> m.getParameterCount() == 1)
-        .collect(Collectors.toList());
+          .filter(m -> m.getName().equals(setterName))
+          .filter(m -> m.getParameterCount() == 1)
+          .collect(Collectors.toList());
 
       if (candidates.isEmpty()) {
         throw new IllegalArgumentException("No one-arg setter for property \"" + propertyName + "\" in " + builder.getClass());
@@ -88,8 +87,8 @@ class BuilderPropertySetter {
           failedCandidates.add(t);
           if (--remainingCandidates == 0) {
             final IllegalArgumentException e = new IllegalArgumentException(
-              "Found multiple one-arg setters for property \"" + propertyName + "\" in "
-                + builder.getClass() + " but none accepted the value \"" + propertyValue + "\".");
+                "Found multiple one-arg setters for property \"" + propertyName + "\" in "
+                    + builder.getClass() + " but none accepted the value \"" + propertyValue + "\".");
             failedCandidates.forEach(e::addSuppressed);
             throw e;
           }
@@ -139,7 +138,7 @@ class BuilderPropertySetter {
 
         } catch (Exception e) {
           throw new IllegalArgumentException(
-            "Expected " + converter.expectation(targetType, this) + " but got \"" + value + "\".", e);
+              "Expected " + converter.expectation(targetType, this) + " but got \"" + value + "\".", e);
         }
       }
 
@@ -152,6 +151,23 @@ class BuilderPropertySetter {
       Optional<Class> enumClass = asEnumClass(targetType);
       if (enumClass.isPresent()) {
         return convertEnum(enumClass.get(), value);
+      }
+
+      // Maybe it has a `valueOf` factory method.
+      if (targetType instanceof Class) {
+        try {
+          final Method factoryMethod = ((Class<?>) targetType).getMethod("valueOf", String.class);
+          final int modifiers = factoryMethod.getModifiers();
+          if (Modifier.isStatic(modifiers)
+              && Modifier.isPublic(modifiers)
+              && Arrays.equals(factoryMethod.getParameterTypes(), new Class[]{String.class})) {
+            return factoryMethod.invoke(null, value);
+          }
+        } catch (NoSuchMethodException e) {
+          // oh well.
+        } catch (IllegalAccessException | InvocationTargetException e) {
+          throw new RuntimeException(e);
+        }
       }
 
       // Maybe Jackson can convert it for us.
@@ -199,7 +215,7 @@ class BuilderPropertySetter {
       return Enum.valueOf(enumClass, value);
     } catch (IllegalArgumentException e) {
       throw new IllegalArgumentException("Expected one of " +
-        Arrays.toString(enumClass.getEnumConstants()) + " but got \"" + value + "\"");
+          Arrays.toString(enumClass.getEnumConstants()) + " but got \"" + value + "\"");
     }
   }
 
@@ -234,27 +250,27 @@ class BuilderPropertySetter {
 
   {
     typeRegistry
-      .register(String.class, "a string", Function.identity())
-      .register(Integer.class, "an int", Integer::parseInt)
-      .register(Integer.TYPE, "an int", Integer::parseInt)
-      .register(Long.class, "a long", Long::parseLong)
-      .register(Long.TYPE, "a long", Long::parseLong)
-      .register(Double.class, "a double", Double::parseDouble)
-      .register(Double.TYPE, "a double", Double::parseDouble)
-      .register(Float.class, "a float", Float::parseFloat)
-      .register(Float.TYPE, "a float", Float::parseFloat)
-      .register(Boolean.class, "a boolean (\"true\", \"false\", \"1\", or \"0\")", BuilderPropertySetter::parseBooleanStrict)
-      .register(Boolean.TYPE, "a boolean (\"true\", \"false\", \"1\", or \"0\")", BuilderPropertySetter::parseBooleanStrict)
+        .register(String.class, "a string", Function.identity())
+        .register(Integer.class, "an int", Integer::parseInt)
+        .register(Integer.TYPE, "an int", Integer::parseInt)
+        .register(Long.class, "a long", Long::parseLong)
+        .register(Long.TYPE, "a long", Long::parseLong)
+        .register(Double.class, "a double", Double::parseDouble)
+        .register(Double.TYPE, "a double", Double::parseDouble)
+        .register(Float.class, "a float", Float::parseFloat)
+        .register(Float.TYPE, "a float", Float::parseFloat)
+        .register(Boolean.class, "a boolean (\"true\", \"false\", \"1\", or \"0\")", BuilderPropertySetter::parseBooleanStrict)
+        .register(Boolean.TYPE, "a boolean (\"true\", \"false\", \"1\", or \"0\")", BuilderPropertySetter::parseBooleanStrict)
 
-      .register(Duration.class, "a duration qualified by a time unit (like \"2.5s\" or \"300ms\")",
-        d -> requireNonNegative(Golang.parseDuration(d)))
+        .register(Duration.class, "a duration qualified by a time unit (like \"2.5s\" or \"300ms\")",
+            d -> requireNonNegative(Golang.parseDuration(d)))
 
-      .register(Path.class, "an open file from a path", s -> Paths.get(s))
+        .register(Path.class, "an open file from a path", s -> Paths.get(s))
 
-      .register(Iterable.class, new CollectionConverter(ArrayList.class))
-      .register(Collection.class, new CollectionConverter(ArrayList.class))
-      .register(List.class, new CollectionConverter(ArrayList.class))
-      .register(Set.class, new CollectionConverter(LinkedHashSet.class))
+        .register(Iterable.class, new CollectionConverter(ArrayList.class))
+        .register(Collection.class, new CollectionConverter(ArrayList.class))
+        .register(List.class, new CollectionConverter(ArrayList.class))
+        .register(Set.class, new CollectionConverter(LinkedHashSet.class))
     ;
   }
 
@@ -324,14 +340,14 @@ class BuilderPropertySetter {
 
   private static Optional<Class> asEnumClass(Type t) {
     return t instanceof Class && ((Class) t).isEnum()
-      ? Optional.of((Class) t)
-      : Optional.empty();
+        ? Optional.of((Class) t)
+        : Optional.empty();
   }
 
   private static Optional<Class> getArrayComponentType(Type t) {
     return t instanceof Class && ((Class) t).isArray()
-      ? Optional.of(((Class) t).getComponentType())
-      : Optional.empty();
+        ? Optional.of(((Class) t).getComponentType())
+        : Optional.empty();
   }
 
   private static List<String> splitList(String commaDelimitedList) {
