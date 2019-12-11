@@ -229,7 +229,8 @@ object JsonArray {
     try {
       Success(JacksonTransformers.stringToJsonArray(json))
     } catch {
-      case NonFatal(err) => Failure(new InvalidArgumentException("Failed to decode json", err, null))
+      case NonFatal(err) =>
+        Failure(new InvalidArgumentException("Failed to decode json", err, null))
     }
   }
 

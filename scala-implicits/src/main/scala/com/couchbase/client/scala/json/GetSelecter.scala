@@ -126,7 +126,11 @@ private[scala] object GetSelecter {
   private def couldNotFindKey(name: String) =
     new InvalidArgumentException(s"Could not find key $name", null, null)
   private def expectedObjectButFoundArray(name: String) =
-    new InvalidArgumentException(s"Expected object or field for '$name' but found an array", null, null)
+    new InvalidArgumentException(
+      s"Expected object or field for '$name' but found an array",
+      null,
+      null
+    )
   private def expectedArrayButFoundObject(name: String) =
     new InvalidArgumentException(s"Expected array for '$name' but found an object", null, null)
 
@@ -163,11 +167,17 @@ private[scala] object GetSelecter {
                       case Success(v) => Success(v)
                       case Failure(err) =>
                         Failure(
-                          new InvalidArgumentException(s"Could not get idx $idx in array '$name'", null, null)
+                          new InvalidArgumentException(
+                            s"Could not get idx $idx in array '$name'",
+                            null,
+                            null
+                          )
                         )
                     }
                   case Failure(err) =>
-                    Failure(new InvalidArgumentException(s"Could not find array '$name'", null, null))
+                    Failure(
+                      new InvalidArgumentException(s"Could not find array '$name'", null, null)
+                    )
                 }
               case Right(arr) =>
                 Failure(expectedObjectButFoundArray(name))
@@ -189,11 +199,19 @@ private[scala] object GetSelecter {
                   case Success(v: Any) =>
                     Failure(
                       new InvalidArgumentException(
-                        s"Needed object or array at $name, but found '${v}'", null, null
+                        s"Needed object or array at $name, but found '${v}'",
+                        null,
+                        null
                       )
                     )
                   case _ =>
-                    Failure(new InvalidArgumentException(s"Could not find anything matching $name", null, null))
+                    Failure(
+                      new InvalidArgumentException(
+                        s"Could not find anything matching $name",
+                        null,
+                        null
+                      )
+                    )
                 }
 
               case Right(arr) =>
@@ -215,17 +233,25 @@ private[scala] object GetSelecter {
                       case Success(v: Any) =>
                         Failure(
                           new InvalidArgumentException(
-                            s"Needed object or array at $name[$idx], but found '${v}'", null, null
+                            s"Needed object or array at $name[$idx], but found '${v}'",
+                            null,
+                            null
                           )
                         )
                       case _ =>
                         Failure(
                           new InvalidArgumentException(
-                            s"Found array $name but nothing at index $idx", null, null                          )
+                            s"Found array $name but nothing at index $idx",
+                            null,
+                            null
+                          )
                         )
                     }
 
-                  case _ => Failure(new InvalidArgumentException(s"Could not find array '$name'", null, null))
+                  case _ =>
+                    Failure(
+                      new InvalidArgumentException(s"Could not find array '$name'", null, null)
+                    )
                 }
               case Right(arr) =>
                 eval(Right(arr), xs)

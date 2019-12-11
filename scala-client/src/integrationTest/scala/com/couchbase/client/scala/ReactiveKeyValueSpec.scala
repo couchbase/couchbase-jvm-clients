@@ -16,10 +16,7 @@
 
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.{
-  DocumentNotFoundException,
-  TimeoutException
-}
+import com.couchbase.client.core.error.{DocumentNotFoundException, TimeoutException}
 
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{ClusterType, IgnoreWhen}

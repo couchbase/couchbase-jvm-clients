@@ -25,14 +25,20 @@ private[scala] object ValueConvertor {
       case v: Float  => v.toInt
       case v: Short  => v.toInt
       case v: String => v.toInt
-      case _         => throw new InvalidArgumentException(s"$name '$out' cannot be converted to Int", null, null)
+      case _ =>
+        throw new InvalidArgumentException(s"$name '$out' cannot be converted to Int", null, null)
     }
   }
 
   def bool(out: Any, name: String): Boolean = {
     out match {
       case v: Boolean => v
-      case _          => throw new InvalidArgumentException(s"$name '$out' cannot be converted to Boolean", null, null)
+      case _ =>
+        throw new InvalidArgumentException(
+          s"$name '$out' cannot be converted to Boolean",
+          null,
+          null
+        )
     }
   }
 
@@ -44,7 +50,8 @@ private[scala] object ValueConvertor {
       case v: Float  => v.toLong
       case v: Double => v.toLong
       case v: String => v.toLong
-      case _         => throw new InvalidArgumentException(s"$name '$out' cannot be converted to Long", null, null)
+      case _ =>
+        throw new InvalidArgumentException(s"$name '$out' cannot be converted to Long", null, null)
     }
   }
 
@@ -56,7 +63,12 @@ private[scala] object ValueConvertor {
       case v: Short  => v.toDouble
       case v: Int    => v.toDouble
       case v: String => v.toDouble
-      case _         => throw new InvalidArgumentException(s"$name '$out' cannot be converted to Double", null, null)
+      case _ =>
+        throw new InvalidArgumentException(
+          s"$name '$out' cannot be converted to Double",
+          null,
+          null
+        )
     }
   }
 
@@ -68,7 +80,12 @@ private[scala] object ValueConvertor {
       case v: Short  => v.toFloat
       case v: Int    => v.toFloat
       case v: String => v.toFloat
-      case _         => throw new InvalidArgumentException(s"$name '$out' cannot be converted to Double", null, null)
+      case _ =>
+        throw new InvalidArgumentException(
+          s"$name '$out' cannot be converted to Double",
+          null,
+          null
+        )
     }
   }
 
@@ -77,7 +94,12 @@ private[scala] object ValueConvertor {
       case v: JsonObject     => v
       case v: JsonObjectSafe => v.o
       case null              => null
-      case _                 => throw new InvalidArgumentException(s"$name '$out' cannot be converted to JsonObject", null, null)
+      case _ =>
+        throw new InvalidArgumentException(
+          s"$name '$out' cannot be converted to JsonObject",
+          null,
+          null
+        )
     }
   }
 
@@ -86,7 +108,12 @@ private[scala] object ValueConvertor {
       case v: JsonArray     => v
       case v: JsonArraySafe => v.a
       case null             => null
-      case _                => throw new InvalidArgumentException(s"$name '$out' cannot be converted to JsonArray", null, null)
+      case _ =>
+        throw new InvalidArgumentException(
+          s"$name '$out' cannot be converted to JsonArray",
+          null,
+          null
+        )
     }
   }
 }

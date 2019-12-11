@@ -1,7 +1,11 @@
 package com.couchbase.client.scala.kv
 
 import com.couchbase.client.core.error.{InvalidArgumentException, ReducedKeyValueErrorContext}
-import com.couchbase.client.core.msg.kv.{SubDocumentField, SubDocumentOpResponseStatus, SubdocCommandType}
+import com.couchbase.client.core.msg.kv.{
+  SubDocumentField,
+  SubDocumentOpResponseStatus,
+  SubdocCommandType
+}
 import com.couchbase.client.scala.codec.{JsonDeserializer, Transcoder}
 
 import scala.compat.java8.OptionConverters._
@@ -43,7 +47,13 @@ case class LookupInResult(
       index: Int
   )(implicit deserializer: JsonDeserializer[T], tag: WeakTypeTag[T]): Try[T] = {
     if (index < 0 || index >= content.size) {
-      Failure(new InvalidArgumentException(s"$index is out of bounds", null, ReducedKeyValueErrorContext.create(id)))
+      Failure(
+        new InvalidArgumentException(
+          s"$index is out of bounds",
+          null,
+          ReducedKeyValueErrorContext.create(id)
+        )
+      )
     } else {
       val field = content(index)
       field.error().asScala match {
@@ -56,7 +66,11 @@ case class LookupInResult(
                 Success(exists.asInstanceOf[T])
               } else {
                 Failure(
-                  new InvalidArgumentException("Exists results can only be returned as Boolean", null, ReducedKeyValueErrorContext.create(id))
+                  new InvalidArgumentException(
+                    "Exists results can only be returned as Boolean",
+                    null,
+                    ReducedKeyValueErrorContext.create(id)
+                  )
                 )
               }
             case _ => deserializer.deserialize(field.value)
