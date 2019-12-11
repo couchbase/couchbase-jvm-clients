@@ -133,7 +133,14 @@ public class Reactor {
             // if the downstream consumer closes. Do not call onErrorDropped in this case, since we expect this
             // case to be happening. Default reactor only suppresses this for cancellations, but our exception
             // hierachy doesn't allow for it, hence the workaround.
-            if (e instanceof RequestCanceledException) {
+            // Note: sometimes it's a raw RequestCancelException, sometimes it's wrapped in a CompletionException.
+            // See ReactorTest::noErrorDroppedWhenCancelledVia* tests for examples.
+            if (e instanceof CompletionException && e.getCause() instanceof RequestCanceledException) {
+              RequestContext requestContext = ((RequestCanceledException) (e.getCause())).context().requestContext();
+              if (requestContext.request().cancellationReason() != CancellationReason.STOPPED_LISTENING) {
+                Operators.onErrorDropped(e, ctx);
+              }
+            } else if (e instanceof RequestCanceledException) {
               RequestContext requestContext = ((RequestCanceledException) e).context().requestContext();
               if (requestContext.request().cancellationReason() != CancellationReason.STOPPED_LISTENING) {
                 Operators.onErrorDropped(e, ctx);

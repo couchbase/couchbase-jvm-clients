@@ -18,6 +18,7 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
@@ -25,6 +26,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.Disposable;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Hooks;
@@ -35,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -164,6 +167,55 @@ class ReactorTest {
     assertEquals(actors, consumed.size());
 
     service.shutdownNow();
+
   }
 
+  @Test
+  void noErrorDroppedWhenCancelledViaCompletionException() {
+    AtomicInteger droppedErrors = new AtomicInteger(0);
+    Hooks.onErrorDropped(v -> {
+      droppedErrors.incrementAndGet();
+    });
+
+    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class),
+            mock(RetryStrategy.class), mock(CollectionIdentifier.class));
+
+    // Because this is a multi-step CompleteableFuture, the RequestCanceledException will be wrapped in a
+    // CompletionException in the internals.  It will be unwrapped by the time it is raised to the app.
+    Mono<NoopResponse> mono = Reactor.wrap(request, request.response().thenApply(v -> v), true);
+
+    Disposable subscriber = mono.subscribe();
+
+    StepVerifier verifier = StepVerifier.create(mono).expectError(RequestCanceledException.class);
+
+    subscriber.dispose();
+
+    verifier.verify();
+    assertEquals(0, droppedErrors.get());
+  }
+
+
+  @Test
+  void noErrorDroppedWhenCancelledViaRequestCanceledException() {
+    AtomicInteger droppedErrors = new AtomicInteger(0);
+    Hooks.onErrorDropped(v -> {
+      droppedErrors.incrementAndGet();
+    });
+
+    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class),
+            mock(RetryStrategy.class), mock(CollectionIdentifier.class));
+
+    // Because this is a single-stage CompleteableFuture, the RequestCanceledException will raised directly in the
+    // internals.
+    Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
+
+    Disposable subscriber = mono.subscribe();
+
+    StepVerifier verifier = StepVerifier.create(mono).expectError(RequestCanceledException.class);
+
+    subscriber.dispose();
+
+    verifier.verify();
+    assertEquals(0, droppedErrors.get());
+  }
 }
