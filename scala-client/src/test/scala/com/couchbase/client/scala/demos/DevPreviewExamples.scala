@@ -169,7 +169,7 @@
 //    }
 //
 //    // Basic Durability using Synchronous Replication
-//    coll.insert("test_id", joan, durability = Durability.MajorityAndPersistOnMaster)
+//    coll.insert("test_id", joan, durability = Durability.MajorityAndPersistToActive)
 //  }
 //
 //}

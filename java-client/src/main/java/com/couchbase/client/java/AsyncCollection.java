@@ -1162,7 +1162,7 @@ public class AsyncCollection {
     }
 
     boolean syncDurability = opts.durabilityLevel().isPresent() && (
-      opts.durabilityLevel().get() == DurabilityLevel.MAJORITY_AND_PERSIST_ON_MASTER
+      opts.durabilityLevel().get() == DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE
       || opts.durabilityLevel().get() == DurabilityLevel.PERSIST_TO_MAJORITY);
     boolean pollDurability = opts.persistTo() != PersistTo.NONE;
 

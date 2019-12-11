@@ -41,7 +41,7 @@ public class EntityInsertWithDurability {
       id,
       new Person("Jon Henry", 34, null, null),
       insertOptions()
-        .durability(DurabilityLevel.MAJORITY_AND_PERSIST_ON_MASTER)
+        .durability(DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE)
         .timeout(Duration.ofSeconds(30))
     );
 

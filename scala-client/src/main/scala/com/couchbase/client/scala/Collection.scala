@@ -431,7 +431,7 @@ class Collection(
     * situations where, say, a [[Collection.get]] operation has failed, and the
     * application wants to return any - even possibly stale - data as soon as possible.
     *
-    * Under the hood this sends a request to all configured replicas for the document, including the master, and
+    * Under the hood this sends a request to all configured replicas for the document, including the active, and
     * whichever returns first is returned.
     *
     * @param id            $Id

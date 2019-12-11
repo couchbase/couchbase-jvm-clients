@@ -30,7 +30,6 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.sql.Ref;
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -57,14 +56,14 @@ class MemcacheProtocolTest {
   void flexibleSyncReplicationUserTimeout() {
     ByteBuf result = MemcacheProtocol.flexibleSyncReplication(
       ALLOC,
-      DurabilityLevel.MAJORITY_AND_PERSIST_ON_MASTER,
+      DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE,
       Duration.ofSeconds(3),
       context
     );
 
     assertEquals(4, result.readableBytes()); // 4 bytes total for these flexible extras
     assertEquals(0x13, result.getByte(0)); // sync replication id 1 and length 3
-    assertEquals(0x02, result.getByte(1)); // majority and persist on master has id 2
+    assertEquals(0x02, result.getByte(1)); // majority and persist on active has id 2
     assertEquals(2700, result.getShort(2)); // 2700 -> 90% of the 3000ms user timeout
 
     verify(eventBus, never()).publish(any(DurabilityTimeoutCoercedEvent.class));

@@ -96,10 +96,10 @@ class DurabilitySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def MajorityAndPersistOnMaster() {
+  def MajorityAndPersistToActive() {
     val docId   = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
-    coll.insert(docId, content, durability = Durability.MajorityAndPersistOnMaster) match {
+    coll.insert(docId, content, durability = Durability.MajorityAndPersistToActive) match {
       case Success(_)   =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }

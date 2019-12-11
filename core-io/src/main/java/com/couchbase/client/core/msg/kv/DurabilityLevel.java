@@ -35,9 +35,9 @@ public enum DurabilityLevel {
    * The mutation must be replicated to a majority of the Data Service nodes.
    *
    * <p>Additionally, it must be persisted (that is, written and synchronised to disk) on the
-   * node hosting the active vBucket for the data.</p>
+   * node hosting the active partition (vBucket) for the data.</p>
    */
-  MAJORITY_AND_PERSIST_ON_MASTER((byte) 0x02),
+  MAJORITY_AND_PERSIST_TO_ACTIVE((byte) 0x02),
   /**
    * The mutation must be persisted to a majority of the Data Service nodes.
    *

@@ -332,7 +332,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     // with durability.
     val docId = TestUtils.docId(0)
     coll.remove(docId)
-    coll.upsert(docId, JsonObject.create, durability = Durability.MajorityAndPersistOnMaster).get
+    coll.upsert(docId, JsonObject.create, durability = Durability.MajorityAndPersistToActive).get
 
     val result = coll
       .lookupIn(

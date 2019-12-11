@@ -35,8 +35,8 @@ sealed trait Durability {
     this match {
       case Durability.Majority          => Optional.of(CoreLevel.MAJORITY)
       case Durability.PersistToMajority => Optional.of(CoreLevel.PERSIST_TO_MAJORITY)
-      case Durability.MajorityAndPersistOnMaster =>
-        Optional.of(CoreLevel.MAJORITY_AND_PERSIST_ON_MASTER)
+      case Durability.MajorityAndPersistToActive =>
+        Optional.of(CoreLevel.MAJORITY_AND_PERSIST_TO_ACTIVE)
       case _ => Optional.empty()
     }
   }
@@ -69,12 +69,12 @@ object Durability {
   case object Majority extends Durability
 
   /** The server will ensure that the change is available in memory on the majority of
-    * configured replicas, plus persisted to disk on the master node, before returning success
+    * configured replicas, plus persisted to disk on the active node, before returning success
     * to the SDK.
     *
     * Only available in Couchbase Server 6.5 and above.
     */
-  case object MajorityAndPersistOnMaster extends Durability
+  case object MajorityAndPersistToActive extends Durability
 
   /** The server will ensure that the change is both available in memory and persisted to disk
     * on the majority of configured replicas, before returning success to the SDK.
