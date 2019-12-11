@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.io.DurabilityTimeoutCoercedEvent;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.*;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -610,8 +611,8 @@ public enum MemcacheProtocol {
    * For any response that can be returned by a SubDocument command - path, document, or execution-based - map it to
    * an appropriate SubDocumentException.
    */
-  public static SubDocumentException mapSubDocumentError(KeyValueRequest<?> request, SubDocumentOpResponseStatus status,
-                                                         String path, int index) {
+  public static CouchbaseException mapSubDocumentError(KeyValueRequest<?> request, SubDocumentOpResponseStatus status,
+                                                       String path, int index) {
     SubDocumentErrorContext ctx = new SubDocumentErrorContext(
       KeyValueErrorContext.completedRequest(request, ResponseStatus.SUBDOC_FAILURE),
       index,
@@ -621,39 +622,39 @@ public enum MemcacheProtocol {
 
     switch(status) {
       case PATH_NOT_FOUND:
-        return new PathNotFoundException(ctx, index);
+        return new PathNotFoundException(ctx);
       case PATH_MISMATCH:
-        return new PathMismatchException(ctx, index);
+        return new PathMismatchException(ctx);
       case PATH_TOO_BIG:
-        return new PathTooDeepException(ctx, index);
+        return new PathTooDeepException(ctx);
       case DOC_TOO_DEEP:
-        return new DocumentTooDeepException(ctx, index);
+        return new DocumentTooDeepException(ctx);
       case VALUE_CANTINSERT:
-        return new CannotInsertValueException(ctx, index);
+        return new ValueInvalidException(ctx);
       case DOC_NOT_JSON:
-        return new DocumentNotJsonException(ctx, index);
+        return new DocumentNotJsonException(ctx);
       case NUM_RANGE:
-        return new NumberTooBigException(ctx, index);
+        return new NumberTooBigException(ctx);
       case DELTA_RANGE:
-        return new DeltaInvalidException(ctx, index);
+        return new DeltaInvalidException(ctx);
       case PATH_EXISTS:
-        return new PathExistsException(ctx, index);
+        return new PathExistsException(ctx);
       case VALUE_TOO_DEEP:
-        return new ValueTooDeepException(ctx, index);
+        return new ValueTooDeepException(ctx);
       case XATTR_INVALID_FLAG_COMBO:
-        return new XattrInvalidFlagComboException(ctx, index);
+        return new XattrInvalidFlagComboException(ctx);
       case XATTR_UNKNOWN_MACRO:
-        return new XattrUnknownMacroException(ctx, index);
+        return new XattrUnknownMacroException(ctx);
       case XATTR_INVALID_KEY_COMBO:
-        return new XattrInvalidKeyComboException(ctx, index);
+        return new XattrInvalidKeyComboException(ctx);
       case XATTR_UNKNOWN_VATTR:
-        return new XattrUnknownVirtualAttributeException(ctx, index);
+        return new XattrUnknownVirtualAttributeException(ctx);
       case XATTR_INVALID_ORDER:
-        return new XattrInvalidOrderException(ctx, index);
+        return new XattrInvalidOrderException(ctx);
       case XATTR_CANNOT_MODIFY_VATTR:
-        return new XattrCannotModifyVirtualAttributeException(ctx, index);
+        return new XattrCannotModifyVirtualAttributeException(ctx);
       default:
-        return new SubDocumentException("Unknown subdoc response code", ctx, index);
+        return new CouchbaseException("Unknown SubDocument response code", ctx);
     }
   }
 

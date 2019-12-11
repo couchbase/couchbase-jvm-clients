@@ -16,18 +16,20 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.error.ErrorContext;
+import com.couchbase.client.core.error.CouchbaseException;
 
 /**
  * Subdocument exception thrown when the targeted enclosing document itself is not JSON.
- *
- * @author Simon Baslé
- * @since 2.0
  */
-public class DocumentNotJsonException extends SubDocumentException {
+public class DocumentNotJsonException extends CouchbaseException {
 
-    public DocumentNotJsonException(ErrorContext ctx, int index) {
-        super("Document content is not JSON", ctx, index);
+    public DocumentNotJsonException(final SubDocumentErrorContext ctx) {
+        super("Document content is not JSON", ctx);
+    }
+
+    @Override
+    public SubDocumentErrorContext context() {
+        return (SubDocumentErrorContext) super.context();
     }
 
 }

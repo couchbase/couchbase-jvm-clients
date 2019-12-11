@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.subdoc.SubDocumentException;
+import com.couchbase.client.core.error.CouchbaseException;
 
 import java.util.Optional;
 
@@ -26,12 +26,12 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @Stability.Internal
 public class SubDocumentField {
   private final SubDocumentOpResponseStatus status;
-  private final Optional<SubDocumentException> error;
+  private final Optional<CouchbaseException> error;
   private final byte[] value;
   private final String path;
   private final SubdocCommandType type;
 
-  public SubDocumentField(SubDocumentOpResponseStatus status, Optional<SubDocumentException> error, byte[] value,
+  public SubDocumentField(SubDocumentOpResponseStatus status, Optional<CouchbaseException> error, byte[] value,
                           String path, SubdocCommandType type) {
     this.status = status;
     this.error = error;
@@ -44,7 +44,7 @@ public class SubDocumentField {
     return status;
   }
 
-  public Optional<SubDocumentException> error() {
+  public Optional<CouchbaseException> error() {
     return error;
   }
 

@@ -16,9 +16,9 @@
 
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.error.subdoc.SubDocumentException
 import com.couchbase.client.core.error.{
   CasMismatchException,
+  CouchbaseException,
   DocumentExistsException,
   KeyValueErrorContext,
   ReducedKeyValueErrorContext
@@ -132,8 +132,10 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
         response.error().asScala match {
           case Some(err) => throw err
           case _ => {
-            val ctx = KeyValueErrorContext.completedRequest(request, response.status())
-            throw new SubDocumentException("Unknown SubDocument failure occurred", ctx, 0)
+            throw new CouchbaseException(
+              "Unknown SubDocument failure occurred",
+              KeyValueErrorContext.completedRequest(request, response.status())
+            )
           }
         }
 

@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.msg.kv;
 
-import com.couchbase.client.core.error.subdoc.SubDocumentException;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
@@ -28,10 +28,10 @@ public class SubdocMutateResponse extends BaseResponse {
   private final SubDocumentField[] values;
   private final long cas;
   private final Optional<MutationToken> mutationToken;
-  private final Optional<SubDocumentException> error;
+  private final Optional<CouchbaseException> error;
 
   public SubdocMutateResponse(ResponseStatus status,
-                              Optional<SubDocumentException> error,
+                              Optional<CouchbaseException> error,
                               SubDocumentField[] values,
                               long cas,
                               Optional<MutationToken> mutationToken) {
@@ -57,7 +57,7 @@ public class SubdocMutateResponse extends BaseResponse {
   /**
    * Error will be set, and should be checked and handled, when status==SUBDOC_FAILURE
    */
-  public Optional<SubDocumentException> error() {
+  public Optional<CouchbaseException> error() {
     return error;
   }
 

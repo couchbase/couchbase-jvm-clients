@@ -17,25 +17,22 @@
 package com.couchbase.client.core.error.subdoc;
 
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.ErrorContext;
 
 /**
- * An abstract common class for all {@link CouchbaseException} that relates
- * to the sub-document feature.
+ * Subdocument exception thrown when the provided value cannot be inserted at the given path.
  *
- * @author Simon Baslé
- * @since 2.0
+ * It is actually thrown when the delta in an counter operation is valid, but applying that delta would
+ * result in an out-of-range number (over {@link Long#MAX_VALUE} or under {@link Long#MIN_VALUE}).
  */
-public class SubDocumentException extends CouchbaseException {
+public class ValueInvalidException extends CouchbaseException {
 
-    private final int index;
-
-    public SubDocumentException(String message, ErrorContext ctx, int index) {
-        super(message, ctx);
-        this.index = index;
+    public ValueInvalidException(final SubDocumentErrorContext ctx) {
+        super("Cannot insert the subdoc value", ctx);
     }
 
-    public int index() {
-        return index;
+    @Override
+    public SubDocumentErrorContext context() {
+        return (SubDocumentErrorContext) super.context();
     }
+
 }

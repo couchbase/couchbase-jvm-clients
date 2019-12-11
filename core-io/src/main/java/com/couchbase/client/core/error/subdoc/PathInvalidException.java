@@ -16,19 +16,20 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.error.ErrorContext;
+import com.couchbase.client.core.error.CouchbaseException;
 
 /**
  * Subdocument exception thrown when path has a syntax error, or path syntax is incorrect for the operation
  * (for example, if operation requires an array index).
- *
- * @author Simon Baslé
- * @since 2.0
  */
-public class PathInvalidException extends SubDocumentException {
+public class PathInvalidException extends CouchbaseException {
 
-    public PathInvalidException(String message, ErrorContext ctx, int index) {
-        super(message, ctx, index);
+    public PathInvalidException(final String message, final SubDocumentErrorContext ctx) {
+        super(message, ctx);
     }
 
+    @Override
+    public SubDocumentErrorContext context() {
+        return (SubDocumentErrorContext) super.context();
+    }
 }

@@ -40,6 +40,13 @@ public class SubDocumentErrorContext extends ErrorContext {
     this.status = status;
   }
 
+  /**
+   * Returns the index of the spec which triggered the error.
+   */
+  public int index() {
+    return index;
+  }
+
   @Override
   public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);

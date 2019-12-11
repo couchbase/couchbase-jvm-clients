@@ -19,15 +19,12 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.ErrorContext;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.KeyValueErrorContext;
-import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
-import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.SubDocumentErrorContext;
-import com.couchbase.client.core.error.subdoc.SubDocumentException;
-import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -160,7 +157,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     Optional<ByteBuf> maybeBody = body(response);
     short rawOverallStatus = status(response);
     ResponseStatus overallStatus = decodeStatus(response);
-    Optional<SubDocumentException> error = Optional.empty();
+    Optional<CouchbaseException> error = Optional.empty();
 
     SubDocumentField[] values;
 
@@ -192,7 +189,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
           SubDocumentOpResponseStatus status = decodeSubDocumentStatus(statusRaw);
 
           if (status != SubDocumentOpResponseStatus.SUCCESS) {
-            SubDocumentException err = mapSubDocumentError(this, status, command.path, command.originalIndex);
+            CouchbaseException err = mapSubDocumentError(this, status, command.path, command.originalIndex);
 
             SubDocumentField op = new SubDocumentField(status, Optional.of(err), Bytes.EMPTY_BYTE_ARRAY, command.path, command.type);
             values[command.originalIndex] = op;

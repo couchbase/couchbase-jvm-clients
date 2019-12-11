@@ -25,7 +25,7 @@ public class KeyValueErrorContext extends ErrorContext {
 
   private final KeyValueRequest<?> request;
 
-  private KeyValueErrorContext(final KeyValueRequest<?> request, final ResponseStatus status) {
+  protected KeyValueErrorContext(final KeyValueRequest<?> request, final ResponseStatus status) {
     super(status);
     this.request = request;
   }

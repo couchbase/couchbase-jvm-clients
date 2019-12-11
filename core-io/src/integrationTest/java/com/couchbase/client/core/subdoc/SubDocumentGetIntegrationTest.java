@@ -18,6 +18,7 @@ package com.couchbase.client.core.subdoc;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.subdoc.*;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -98,7 +99,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
     assertFalse(response.status().success());
     assertEquals(ResponseStatus.SUBDOC_FAILURE, response.status());
     assertTrue(response.error().isPresent());
-    SubDocumentException err = response.error().get();
+    CouchbaseException err = response.error().get();
     assertTrue(expected.isInstance(err));
   }
 

@@ -24,7 +24,6 @@ import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.TimeoutException;
-import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.java.datastructures.CouchbaseArrayList;
 import com.couchbase.client.java.datastructures.CouchbaseArraySet;
 import com.couchbase.client.java.datastructures.CouchbaseMap;
@@ -552,7 +551,6 @@ public class Collection {
    * @throws DocumentNotFoundException the given document id is not found in the collection and replace mode is selected.
    * @throws DocumentExistsException the given document id is already present in the collection and insert is was selected.
    * @throws TimeoutException if the operation times out before getting a result.
-   * @throws SubDocumentException if the server reports issues when applying the individual subdocument specs.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutateInResult mutateIn(final String id, final List<MutateInSpec> specs) {
@@ -569,7 +567,6 @@ public class Collection {
    * @throws DocumentNotFoundException the given document id is not found in the collection and replace mode is selected.
    * @throws DocumentExistsException the given document id is already present in the collection and insert is was selected.
    * @throws TimeoutException if the operation times out before getting a result.
-   * @throws SubDocumentException if the server reports issues when applying the individual subdocument specs.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutateInResult mutateIn(final String id, final List<MutateInSpec> specs, final MutateInOptions options) {

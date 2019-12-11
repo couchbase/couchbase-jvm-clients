@@ -1,11 +1,7 @@
 package com.couchbase.client.scala.subdoc
 
-import com.couchbase.client.core.error.{DocumentExistsException, InvalidArgumentException}
-import com.couchbase.client.core.error.subdoc.{
-  PathExistsException,
-  PathNotFoundException,
-  SubDocumentException
-}
+import com.couchbase.client.core.error.{CouchbaseException, DocumentExistsException, InvalidArgumentException}
+import com.couchbase.client.core.error.subdoc.{PathExistsException, PathNotFoundException}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.scala.kv.MutateInSpec._
@@ -211,7 +207,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
 
     coll.mutateIn(docId, ops) match {
       case Success(result) => assert(false, "should not succeed")
-      case Failure(err: SubDocumentException) =>
+      case Failure(err: CouchbaseException) =>
         assert(err.getClass.isAssignableFrom(expected))
       case Failure(err) => assert(false, s"unexpected error $err")
     }
@@ -226,7 +222,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
 
     coll.mutateIn(docId, ops) match {
       case Success(result) => assert(false, "should not succeed")
-      case Failure(err: SubDocumentException) =>
+      case Failure(err: CouchbaseException) =>
         assert(err.getClass.isAssignableFrom(expected))
       case Failure(err) => assert(false, s"unexpected error $err")
     }

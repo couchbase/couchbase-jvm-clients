@@ -16,21 +16,23 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.error.ErrorContext;
+import com.couchbase.client.core.error.CouchbaseException;
 
 /**
  * Subdocument exception thrown when existing number value in document is too big.
  *
  * The value is interpreted as 64 bit on the server side so the acceptable range
  * is that of Java's long ({@link Long#MIN_VALUE} to {@link Long#MAX_VALUE}).
- *
- * @author Simon Baslé
- * @since 2.0
  */
-public class NumberTooBigException extends SubDocumentException {
+public class NumberTooBigException extends CouchbaseException {
 
-    public NumberTooBigException(ErrorContext ctx, int index) {
-        super("Stored numeric value is too big", ctx, index);
+    public NumberTooBigException(final SubDocumentErrorContext ctx) {
+        super("Stored numeric value is too big", ctx);
+    }
+
+    @Override
+    public SubDocumentErrorContext context() {
+        return (SubDocumentErrorContext) super.context();
     }
 
 }

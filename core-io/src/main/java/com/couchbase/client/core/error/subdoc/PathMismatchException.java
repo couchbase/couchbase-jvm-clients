@@ -16,19 +16,20 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.error.ErrorContext;
+import com.couchbase.client.core.error.CouchbaseException;
 
 /**
  * Subdocument exception thrown when the path structure conflicts with the document structure
  * (for example, if a path mentions foo.bar[0].baz, but foo.bar is actually a JSON object).
- *
- * @author Simon Baslé
- * @since 2.2
  */
-public class PathMismatchException extends SubDocumentException {
+public class PathMismatchException extends CouchbaseException {
 
-    public PathMismatchException(ErrorContext ctx, int index) {
-        super("Path mismatch identified", ctx, index);
+    public PathMismatchException(final SubDocumentErrorContext ctx) {
+        super("Path mismatch identified", ctx);
     }
 
+    @Override
+    public SubDocumentErrorContext context() {
+        return (SubDocumentErrorContext) super.context();
+    }
 }

@@ -103,8 +103,7 @@ public class LookupInResult {
       if (value == null) {
         throw new PathInvalidException(
           "No result exists at index",
-          new SubDocumentErrorContext(ctx, index, null, null),
-          index
+          new SubDocumentErrorContext(ctx, index, null, null)
         );
       }
       if (value.error().isPresent()) {
@@ -114,8 +113,7 @@ public class LookupInResult {
     } else {
       throw new PathInvalidException(
         "Index is out of bounds",
-        new SubDocumentErrorContext(ctx, index, null, null),
-        index
+        new SubDocumentErrorContext(ctx, index, null, null)
       );
     }
   }

@@ -19,11 +19,11 @@ import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.{
+  CouchbaseException,
   DocumentNotFoundException,
   KeyValueErrorContext,
   ReducedKeyValueErrorContext
 }
-import com.couchbase.client.core.error.subdoc.SubDocumentException
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
@@ -33,7 +33,6 @@ import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.util.{FunctionalUtil, Validate}
 
-import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
@@ -170,8 +169,10 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
         response.error().asScala match {
           case Some(err) => throw err
           case _ => {
-            val ctx = ReducedKeyValueErrorContext.create(id)
-            throw new SubDocumentException("Unknown SubDocument failure occurred", ctx, 0)
+            throw new CouchbaseException(
+              "Unknown SubDocument failure occurred",
+              ReducedKeyValueErrorContext.create(id)
+            )
           }
         }
 
@@ -210,8 +211,12 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
         response.error().asScala match {
           case Some(err) => Failure(err)
           case _ => {
-            val ctx = ReducedKeyValueErrorContext.create(id)
-            Failure(new SubDocumentException("Unknown SubDocument failure occurred", ctx, 0))
+            Failure(
+              new CouchbaseException(
+                "Unknown SubDocument failure occurred",
+                ReducedKeyValueErrorContext.create(id)
+              )
+            )
           }
         }
 

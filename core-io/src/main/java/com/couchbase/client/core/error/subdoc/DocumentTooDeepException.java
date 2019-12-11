@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.error.ErrorContext;
+import com.couchbase.client.core.error.CouchbaseException;
 
 /**
  * Subdocument exception thrown when document is too deep to parse.
@@ -24,14 +24,16 @@ import com.couchbase.client.core.error.ErrorContext;
  * The current limitation is there to ensure a single parse does not consume too much memory (overloading the server).
  * This error is similar to other TooDeep errors, which all relate to various validation stages to ensure the server
  * does not consume too much memory when parsing a single document.
- *
- * @author Simon Baslé
- * @since 2.0
  */
-public class DocumentTooDeepException extends SubDocumentException {
+public class DocumentTooDeepException extends CouchbaseException {
 
-    public DocumentTooDeepException(ErrorContext ctx, int index) {
-        super("JSON is too deep in the document to modify", ctx, index);
+    public DocumentTooDeepException(final SubDocumentErrorContext ctx) {
+        super("JSON is too deep in the document to modify", ctx);
+    }
+
+    @Override
+    public SubDocumentErrorContext context() {
+        return (SubDocumentErrorContext) super.context();
     }
 
 }

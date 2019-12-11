@@ -16,19 +16,19 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-
-import com.couchbase.client.core.error.ErrorContext;
+import com.couchbase.client.core.error.CouchbaseException;
 
 /**
  * Subdocument exception thrown when a macro has been requested which is not recognised by the server.
- *
- * @author Graham Pople
- * @since 2.0
  */
-public class XattrUnknownMacroException extends SubDocumentException {
+public class XattrUnknownMacroException extends CouchbaseException {
 
-    public XattrUnknownMacroException(ErrorContext ctx, int index) {
-        super("The requested macro was not known for path", ctx, index);
+    public XattrUnknownMacroException(final SubDocumentErrorContext ctx) {
+        super("The requested macro was not known for path", ctx);
     }
 
+    @Override
+    public SubDocumentErrorContext context() {
+        return (SubDocumentErrorContext) super.context();
+    }
 }

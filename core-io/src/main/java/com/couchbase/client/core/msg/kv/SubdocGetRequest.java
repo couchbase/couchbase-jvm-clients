@@ -19,11 +19,7 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
-import com.couchbase.client.core.error.KeyValueErrorContext;
-import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
-import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
-import com.couchbase.client.core.error.subdoc.SubDocumentErrorContext;
-import com.couchbase.client.core.error.subdoc.SubDocumentException;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -116,17 +112,17 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   public SubdocGetResponse decode(final ByteBuf response, ChannelContext ctx) {
     Optional<ByteBuf> maybeBody = body(response);
     SubDocumentField[] values;
-    List<SubDocumentException> errors = null;
+    List<CouchbaseException> errors = null;
     if (maybeBody.isPresent()) {
       ByteBuf body = maybeBody.get();
       values = new SubDocumentField[commands.size()];
       for (Command command : commands) {
         short statusRaw = body.readShort();
         SubDocumentOpResponseStatus status = decodeSubDocumentStatus(statusRaw);
-        Optional<SubDocumentException> error = Optional.empty();
+        Optional<CouchbaseException> error = Optional.empty();
         if (status != SubDocumentOpResponseStatus.SUCCESS) {
           if (errors == null) errors = new ArrayList<>();
-          SubDocumentException err = mapSubDocumentError(this, status, command.path, command.originalIndex());
+          CouchbaseException err = mapSubDocumentError(this, status, command.path, command.originalIndex());
           errors.add(err);
           error = Optional.of(err);
         }
@@ -143,7 +139,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     short rawStatus = status(response);
     ResponseStatus status = decodeStatus(response);
 
-    Optional<SubDocumentException> error = Optional.empty();
+    Optional<CouchbaseException> error = Optional.empty();
 
     // Note that we send all subdoc requests as multi currently so always get this back on error
     if (rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()

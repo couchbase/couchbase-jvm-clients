@@ -16,10 +16,10 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.subdoc.PathExistsException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
-import com.couchbase.client.core.error.subdoc.SubDocumentException;
 import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -155,7 +155,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         try {
             coll.mutateIn(docId, Arrays.asList(ops));
             fail();
-        } catch (SubDocumentException ex) {
+        } catch (CouchbaseException ex) {
            assertTrue(ex.getClass().isAssignableFrom(expected));
         }
     }
@@ -170,7 +170,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         try {
             coll.mutateIn(docId, ops);
             fail();
-        } catch (SubDocumentException ex) {
+        } catch (CouchbaseException ex) {
             assertTrue(ex.getClass().isAssignableFrom(expected));
         }
     }

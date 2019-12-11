@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.error.ErrorContext;
+import com.couchbase.client.core.error.CouchbaseException;
 
 /**
  * Subdocument exception thrown when the delta in an arithmetic operation (eg counter) is invalid. In this
@@ -24,15 +24,16 @@ import com.couchbase.client.core.error.ErrorContext;
  *
  * Note that the server also returns the corresponding error code when the delta value itself is too big,
  * or not a number, but since the SDK enforces deltas to be of type long, these cases shouldn't come up.
- *
- * @author Simon Baslé
- * @since 2.0
- * @see ValueTooDeepException if the delta is valid but applying it to the current value would cause an overflow.
  */
-public class DeltaInvalidException extends SubDocumentException {
+public class DeltaInvalidException extends CouchbaseException {
 
-    public DeltaInvalidException(ErrorContext ctx, int index) {
-        super("Delta must not be zero, or is otherwise invalid", ctx, index);
+    public DeltaInvalidException(final SubDocumentErrorContext ctx) {
+        super("Delta must not be zero, or is otherwise invalid", ctx);
+    }
+
+    @Override
+    public SubDocumentErrorContext context() {
+        return (SubDocumentErrorContext) super.context();
     }
 
 }

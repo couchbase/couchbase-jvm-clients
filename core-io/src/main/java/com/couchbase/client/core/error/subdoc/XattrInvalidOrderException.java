@@ -16,19 +16,19 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-
-import com.couchbase.client.core.error.ErrorContext;
+import com.couchbase.client.core.error.CouchbaseException;
 
 /**
  * Subdocument exception thrown when the ordering of extended attributes is invalid.
- *
- * @author Graham Pople
- * @since 2.0
  */
-public class XattrInvalidOrderException extends SubDocumentException {
+public class XattrInvalidOrderException extends CouchbaseException {
 
-    public XattrInvalidOrderException(ErrorContext ctx, int index) {
-        super("The extended attribute ordering is invalid", ctx, index);
+    public XattrInvalidOrderException(final SubDocumentErrorContext ctx) {
+        super("The extended attribute ordering is invalid", ctx);
     }
 
+    @Override
+    public SubDocumentErrorContext context() {
+        return (SubDocumentErrorContext) super.context();
+    }
 }
