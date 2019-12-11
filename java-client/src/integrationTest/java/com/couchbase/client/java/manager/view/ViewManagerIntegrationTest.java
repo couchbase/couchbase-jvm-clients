@@ -29,6 +29,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.rnorth.ducttape.unreliables.Unreliables;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -38,6 +39,7 @@ import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.java.view.DesignDocumentNamespace.DEVELOPMENT;
 import static com.couchbase.client.java.view.DesignDocumentNamespace.PRODUCTION;
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -96,18 +98,20 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
   @Test
   void upsertReplacesPreviousVersion() {
     forEachNamespace(namespace -> {
-          exampleDocuments().forEach(doc -> {
-            assertRoundTrip(doc, namespace);
+          exampleDocuments().forEach(doc ->
+              Unreliables.retryUntilSuccess(30, SECONDS, () -> {
+                assertRoundTrip(doc, namespace);
 
-            DesignDocument newVersion = new DesignDocument(doc.name(), doc.views())
-                .putView("anotherView", "function (doc, meta) { emit(doc.foo, doc.bar); }");
+                DesignDocument newVersion = new DesignDocument(doc.name(), doc.views())
+                    .putView("anotherView", "function (doc, meta) { emit(doc.foo, doc.bar); }");
 
-            views.upsertDesignDocument(newVersion, namespace);
+                views.upsertDesignDocument(newVersion, namespace);
 
-            Util.waitUntilCondition(() -> {
-              return views.getDesignDocument(doc.name(), namespace).views().containsKey("anotherView");
-            });
-          });
+                Util.waitUntilCondition(() ->
+                    views.getDesignDocument(doc.name(), namespace).views().containsKey("anotherView"));
+
+                return null;
+              }));
         }
     );
   }
