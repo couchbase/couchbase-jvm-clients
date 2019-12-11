@@ -21,10 +21,9 @@ import com.couchbase.client.core.cnc.events.io.SelectBucketCompletedEvent;
 import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;
 import com.couchbase.client.core.cnc.events.io.SelectBucketFailedEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
-import com.couchbase.client.core.error.AuthenticationException;
+import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.KeyValueIoErrorContext;
-import com.couchbase.client.core.error.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
@@ -169,7 +168,7 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
           new SelectBucketFailedEvent(ioContext, status)
         );
         interceptedConnectPromise.tryFailure(
-          new AuthenticationException(
+          new AuthenticationFailureException(
             "No Access to bucket " + redactMeta(bucketName),
             new KeyValueIoErrorContext(MemcacheProtocol.decodeStatus(status), endpointContext),
             null

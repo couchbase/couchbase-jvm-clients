@@ -17,7 +17,7 @@
 package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.QueryIndexNotFoundException;
+import com.couchbase.client.core.error.IndexNotFoundException;
 
 public class WatchQueryIndexesOptions {
 
@@ -33,7 +33,7 @@ public class WatchQueryIndexesOptions {
   /**
    * Include the bucket's primary index in the watch result.
    * If the bucket has no primary index, the watch operation
-   * will fail with {@link QueryIndexNotFoundException}.
+   * will fail with {@link IndexNotFoundException}.
    */
   public WatchQueryIndexesOptions watchPrimary(boolean watch) {
     this.watchPrimary = watch;

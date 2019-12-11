@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.manager.search;
 
-import com.couchbase.client.core.error.SearchIndexNotFoundException;
+import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -67,7 +67,7 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
     Thread.sleep(2000);
 
     assertTrue(indexes.getIndexedDocumentsCount(name) >= 0);
-    assertThrows(SearchIndexNotFoundException.class, () -> indexes.getIndexedDocumentsCount("some-weird-index"));
+    assertThrows(IndexNotFoundException.class, () -> indexes.getIndexedDocumentsCount("some-weird-index"));
   }
 
   @Test
@@ -109,8 +109,8 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
 
     indexes.dropIndex(name);
 
-    assertThrows(SearchIndexNotFoundException.class, () -> indexes.getIndex(name));
-    assertThrows(SearchIndexNotFoundException.class, () -> indexes.dropIndex(name));
+    assertThrows(IndexNotFoundException.class, () -> indexes.getIndex(name));
+    assertThrows(IndexNotFoundException.class, () -> indexes.dropIndex(name));
   }
 
   /**
@@ -151,12 +151,12 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
     indexes.allowQuerying(name);
     indexes.disallowQuerying(name);
 
-    assertThrows(SearchIndexNotFoundException.class, () -> indexes.pauseIngest("some-weird-index"));
-    assertThrows(SearchIndexNotFoundException.class, () -> indexes.resumeIngest("some-weird-index"));
-    assertThrows(SearchIndexNotFoundException.class, () -> indexes.freezePlan("some-weird-index"));
-    assertThrows(SearchIndexNotFoundException.class, () -> indexes.unfreezePlan("some-weird-index"));
-    assertThrows(SearchIndexNotFoundException.class, () -> indexes.allowQuerying("some-weird-index"));
-    assertThrows(SearchIndexNotFoundException.class, () -> indexes.disallowQuerying("some-weird-index"));
+    assertThrows(IndexNotFoundException.class, () -> indexes.pauseIngest("some-weird-index"));
+    assertThrows(IndexNotFoundException.class, () -> indexes.resumeIngest("some-weird-index"));
+    assertThrows(IndexNotFoundException.class, () -> indexes.freezePlan("some-weird-index"));
+    assertThrows(IndexNotFoundException.class, () -> indexes.unfreezePlan("some-weird-index"));
+    assertThrows(IndexNotFoundException.class, () -> indexes.allowQuerying("some-weird-index"));
+    assertThrows(IndexNotFoundException.class, () -> indexes.disallowQuerying("some-weird-index"));
   }
 
 }

@@ -17,10 +17,9 @@ package com.couchbase.client.scala.manager
 
 import java.util.concurrent.TimeUnit.SECONDS
 
-import com.couchbase.client.core.diag.PingServiceHealth.PingState
 import com.couchbase.client.core.error.{
-  QueryIndexExistsException,
-  QueryIndexNotFoundException,
+  IndexExistsException,
+  IndexNotFoundException,
   TimeoutException
 }
 import com.couchbase.client.core.service.ServiceType
@@ -76,8 +75,8 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     cluster.queryIndexes.createPrimaryIndex(config.bucketname()).get
 
     cluster.queryIndexes.createPrimaryIndex(config.bucketname()) match {
-      case Success(value)                          => assert(false)
-      case Failure(err: QueryIndexExistsException) =>
+      case Success(value)                     => assert(false)
+      case Failure(err: IndexExistsException) =>
       case Failure(err) =>
         assert(false)
     }
@@ -96,8 +95,8 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     cluster.queryIndexes.createIndex(config.bucketname(), indexName, fields)
 
     cluster.queryIndexes.createIndex(config.bucketname(), indexName, fields) match {
-      case Success(value)                          => assert(false)
-      case Failure(err: QueryIndexExistsException) =>
+      case Success(value)                     => assert(false)
+      case Failure(err: IndexExistsException) =>
       case Failure(err) =>
         assert(false)
     }
@@ -140,8 +139,8 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
   @Test
   def dropPrimaryIndex() = {
     cluster.queryIndexes.dropPrimaryIndex(config.bucketname()) match {
-      case Success(value)                            => assert(false)
-      case Failure(err: QueryIndexNotFoundException) =>
+      case Success(value)                       => assert(false)
+      case Failure(err: IndexNotFoundException) =>
       case Failure(err) =>
         assert(false)
     }
@@ -158,8 +157,8 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
   @Test
   def dropIndex() = {
     cluster.queryIndexes.dropIndex(config.bucketname(), "foo") match {
-      case Success(value)                            => assert(false)
-      case Failure(err: QueryIndexNotFoundException) =>
+      case Success(value)                       => assert(false)
+      case Failure(err: IndexNotFoundException) =>
       case Failure(err) =>
         println(err)
         assert(false)
@@ -258,18 +257,18 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
   @Test
   def watchingAbsentIndexThrowsException(): Unit = {
     indexes.watchIndexes(bucketName, Seq("doesNotExist"), 3.seconds) match {
-      case Success(value)                            => assert(false)
-      case Failure(err: QueryIndexNotFoundException) =>
-      case Failure(err)                              => assert(false)
+      case Success(value)                       => assert(false)
+      case Failure(err: IndexNotFoundException) =>
+      case Failure(err)                         => assert(false)
     }
   }
 
   @Test
   def watchingAbsentPrimaryIndexThrowsException(): Unit = {
     indexes.watchIndexes(bucketName, Seq(), 3.seconds, watchPrimary = true) match {
-      case Success(value)                            => assert(false)
-      case Failure(err: QueryIndexNotFoundException) =>
-      case Failure(err)                              => assert(false)
+      case Success(value)                       => assert(false)
+      case Failure(err: IndexNotFoundException) =>
+      case Failure(err)                         => assert(false)
     }
   }
 

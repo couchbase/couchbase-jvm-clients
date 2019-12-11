@@ -17,11 +17,11 @@
 package com.couchbase.client.core.io.netty.search;
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
-import com.couchbase.client.core.error.AuthenticationException;
+import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.InternalServerException;
+import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.error.InternalServerFailureException;
 import com.couchbase.client.core.error.SearchErrorContext;
-import com.couchbase.client.core.error.SearchIndexNotFoundException;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
@@ -88,11 +88,11 @@ public class SearchChunkResponseParser
       statusCode
     );
     if (statusCode == 400 && errorDecoded.contains("index not found")) {
-      return new SearchIndexNotFoundException(errorContext);
+      return new IndexNotFoundException(errorContext);
     } else if (statusCode == 500) {
-      return new InternalServerException(errorContext);
+      return new InternalServerFailureException(errorContext);
     } else if (statusCode == 401 || statusCode == 403) {
-      return new AuthenticationException("Could not authenticate search query", errorContext, null);
+      return new AuthenticationFailureException("Could not authenticate search query", errorContext, null);
     }
     return new CouchbaseException("Unknown search error: " + errorDecoded, errorContext);
   }

@@ -18,15 +18,12 @@ package com.couchbase.client.scala.manager
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 
-import com.couchbase.client.core.error.{DocumentNotFoundException, SearchIndexNotFoundException}
+import com.couchbase.client.core.error.IndexNotFoundException
 import com.couchbase.client.scala.json.JsonObject
-import com.couchbase.client.scala.manager.bucket._
 import com.couchbase.client.scala.manager.search._
 import com.couchbase.client.scala.util.{CouchbasePickler, ScalaIntegrationTest}
-import com.couchbase.client.scala.{Cluster, Collection}
-import com.couchbase.client.test.Util.waitUntilThrows
+import com.couchbase.client.scala.Cluster
 import com.couchbase.client.test._
-import org.junit.jupiter.api.Assertions.{assertEquals, assertFalse, assertThrows, assertTrue}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
@@ -66,8 +63,8 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
     val result = indexes.getIndex("not_exist")
 
     result match {
-      case Failure(err: SearchIndexNotFoundException) =>
-      case _                                          => assert(false)
+      case Failure(err: IndexNotFoundException) =>
+      case _                                    => assert(false)
     }
   }
 
@@ -167,8 +164,8 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
     indexes.dropIndex(name).get
 
     indexes.getIndex(name) match {
-      case Failure(err: SearchIndexNotFoundException) =>
-      case _                                          => assert(false)
+      case Failure(err: IndexNotFoundException) =>
+      case _                                    => assert(false)
     }
   }
 

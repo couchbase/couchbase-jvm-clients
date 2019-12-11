@@ -16,10 +16,10 @@
 
 package com.couchbase.client.java.manager.query;
 
+import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexesNotReadyException;
 import com.couchbase.client.core.error.QueryException;
-import com.couchbase.client.core.error.QueryIndexExistsException;
-import com.couchbase.client.core.error.QueryIndexNotFoundException;
+import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
@@ -85,7 +85,7 @@ public class AsyncQueryIndexManager {
 
     return exec(WRITE, statement, builtOpts.with(), builtOpts)
         .exceptionally(t -> {
-          if (builtOpts.ignoreIfExists() && hasCause(t, QueryIndexExistsException.class)) {
+          if (builtOpts.ignoreIfExists() && hasCause(t, IndexExistsException.class)) {
             return null;
           }
           throwIfUnchecked(t);
@@ -110,7 +110,7 @@ public class AsyncQueryIndexManager {
 
     return exec(WRITE, statement, builtOpts.with(), builtOpts)
         .exceptionally(t -> {
-          if (builtOpts.ignoreIfExists() && hasCause(t, QueryIndexExistsException.class)) {
+          if (builtOpts.ignoreIfExists() && hasCause(t, IndexExistsException.class)) {
             return null;
           }
           throwIfUnchecked(t);
@@ -156,7 +156,7 @@ public class AsyncQueryIndexManager {
 
     return exec(WRITE, statement, builtOpts)
         .exceptionally(t -> {
-          if (builtOpts.ignoreIfNotExists() && hasCause(t, QueryIndexNotFoundException.class)) {
+          if (builtOpts.ignoreIfNotExists() && hasCause(t, IndexNotFoundException.class)) {
             return null;
           }
           throwIfUnchecked(t);
@@ -178,7 +178,7 @@ public class AsyncQueryIndexManager {
 
     return exec(WRITE, statement, builtOpts)
         .exceptionally(t -> {
-          if (builtOpts.ignoreIfNotExists() && hasCause(t, QueryIndexNotFoundException.class)) {
+          if (builtOpts.ignoreIfNotExists() && hasCause(t, IndexNotFoundException.class)) {
             return null;
           }
           throwIfUnchecked(t);
@@ -254,7 +254,7 @@ public class AsyncQueryIndexManager {
   private CompletableFuture<Void> failIfIndexesOffline(String bucketName,
                                                        Set<String> indexNames,
                                                        boolean includePrimary)
-      throws IndexesNotReadyException, QueryIndexNotFoundException {
+      throws IndexesNotReadyException, IndexNotFoundException {
 
     requireNonNull(bucketName);
     requireNonNull(indexNames);
@@ -269,7 +269,7 @@ public class AsyncQueryIndexManager {
               .anyMatch(QueryIndex::primary);
 
           if (includePrimary && !primaryIndexPresent) {
-            throw new QueryIndexNotFoundException("#primary");
+            throw new IndexNotFoundException("#primary");
           }
 
           final Set<String> matchingIndexNames = matchingIndexes.stream()
@@ -278,7 +278,7 @@ public class AsyncQueryIndexManager {
 
           final Set<String> missingIndexNames = difference(indexNames, matchingIndexNames);
           if (!missingIndexNames.isEmpty()) {
-            throw new QueryIndexNotFoundException(missingIndexNames.toString());
+            throw new IndexNotFoundException(missingIndexNames.toString());
           }
 
           final Map<String, String> offlineIndexNameToState = matchingIndexes.stream()

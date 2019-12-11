@@ -17,10 +17,10 @@
 package com.couchbase.client.core.io.netty.analytics;
 
 import com.couchbase.client.core.error.AnalyticsErrorContext;
-import com.couchbase.client.core.error.AnalyticsIndexExistsException;
-import com.couchbase.client.core.error.AnalyticsIndexNotFoundException;
-import com.couchbase.client.core.error.AnalyticsLinkNotFoundException;
-import com.couchbase.client.core.error.AuthenticationException;
+import com.couchbase.client.core.error.IndexExistsException;
+import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.error.LinkNotFoundException;
+import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CompilationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DatasetExistsException;
@@ -28,7 +28,7 @@ import com.couchbase.client.core.error.DatasetNotFoundException;
 import com.couchbase.client.core.error.DataverseExistsException;
 import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
-import com.couchbase.client.core.error.InternalServerException;
+import com.couchbase.client.core.error.InternalServerFailureException;
 import com.couchbase.client.core.error.JobQueueFullException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.TemporaryFailureException;
@@ -110,9 +110,9 @@ public class AnalyticsChunkResponseParser
     if (errors.size() >= 1) {
       int code = errors.get(0).code();
       if (code >= 25000 && code < 26000) {
-        return new InternalServerException(errorContext);
+        return new InternalServerFailureException(errorContext);
       } else if (code >= 20000 && code < 21000) {
-        return new AuthenticationException("Could not authenticate analytics query", errorContext, null);
+        return new AuthenticationFailureException("Could not authenticate analytics query", errorContext, null);
       } else if (code == 23000 || code == 23003) {
         return new TemporaryFailureException(errorContext);
       } else if (code == 23007) {
@@ -120,7 +120,7 @@ public class AnalyticsChunkResponseParser
       } else if (code == 24000) {
         return new ParsingFailureException(errorContext);
       } else if (code == 24006) {
-        return new AnalyticsLinkNotFoundException(errorContext);
+        return new LinkNotFoundException(errorContext);
       } else if (code == 24040) {
         return new DatasetExistsException(errorContext);
       } else if (code == 24044 || code == 24045 || code == 24025) {
@@ -130,9 +130,9 @@ public class AnalyticsChunkResponseParser
       } else if (code == 24039) {
         return new DataverseExistsException(errorContext);
       } else if (code == 24047) {
-        return new AnalyticsIndexNotFoundException(errorContext);
+        return new IndexNotFoundException(errorContext);
       } else if (code == 24048) {
-        return new AnalyticsIndexExistsException(errorContext);
+        return new IndexExistsException(errorContext);
       } else if (code > 24000 && code < 25000) {
         return new CompilationFailureException(errorContext);
       }

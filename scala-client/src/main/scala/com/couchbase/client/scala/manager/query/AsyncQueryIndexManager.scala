@@ -20,9 +20,9 @@ import java.util.concurrent.TimeoutException
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.error.{
   ErrorCodeAndMessage,
-  QueryException,
-  QueryIndexExistsException,
-  QueryIndexNotFoundException
+  IndexExistsException,
+  IndexNotFoundException,
+  QueryException
 }
 import com.couchbase.client.core.logging.RedactableArgument.redactMeta
 import com.couchbase.client.core.retry.RetryStrategy
@@ -264,7 +264,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
     * @param bucketName        the bucket to remove the index from.
     * @param indexNames        the indexes to poll.
     * @param watchPrimary      include the bucket's primary index.  If the bucket has no primary index, the operation
-    *                          will fail with [[QueryIndexNotFoundException]]
+    *                          will fail with [[IndexNotFoundException]]
     * @param timeout           when the operation will timeout.
     * @param retryStrategy     $RetryStrategy
     */
@@ -292,14 +292,14 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
                 val primaryIndexPresent: Boolean = matchingIndexes.exists(_.isPrimary)
 
                 if (watchPrimary && !primaryIndexPresent) {
-                  throw new QueryIndexNotFoundException(PrimaryIndexName)
+                  throw new IndexNotFoundException(PrimaryIndexName)
                 } else {
                   val matchingIndexNames: Set[String] = matchingIndexes.map(_.name).toSet
 
                   val missingIndexNames: Set[String] = indexNames.toSet.diff(matchingIndexNames)
 
                   if (missingIndexNames.nonEmpty) {
-                    throw new QueryIndexNotFoundException(missingIndexNames.mkString(","))
+                    throw new IndexNotFoundException(missingIndexNames.mkString(","))
                   } else {
                     val offlineIndexes = matchingIndexes.filter(_.state != "online")
 
@@ -423,10 +423,10 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
   ): Future[Unit] = {
     val out = in transform {
       case s @ Success(_) => s
-      case Failure(err: QueryIndexNotFoundException) =>
+      case Failure(err: IndexNotFoundException) =>
         if (ignoreIfNotExists) Success(Unit)
         else Failure(err)
-      case Failure(err: QueryIndexExistsException) =>
+      case Failure(err: IndexExistsException) =>
         if (ignoreIfExists) Success(Unit)
         else Failure(err)
       case Failure(err) => Failure(err)

@@ -17,9 +17,9 @@
 package com.couchbase.client.java.manager.analytics;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
-import com.couchbase.client.core.error.AnalyticsIndexExistsException;
-import com.couchbase.client.core.error.AnalyticsIndexNotFoundException;
-import com.couchbase.client.core.error.AnalyticsLinkNotFoundException;
+import com.couchbase.client.core.error.IndexExistsException;
+import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.error.LinkNotFoundException;
 import com.couchbase.client.core.error.DatasetExistsException;
 import com.couchbase.client.core.error.DatasetNotFoundException;
 import com.couchbase.client.core.error.DataverseExistsException;
@@ -290,8 +290,8 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
         createDatasetAnalyticsOptions()
             .dataverseName(dataverse));
 
-    assertThrows(AnalyticsIndexNotFoundException.class, () -> analytics.dropIndex(index, dataset));
-    assertThrows(AnalyticsIndexNotFoundException.class, () -> analytics.dropIndex(index, dataset,
+    assertThrows(IndexNotFoundException.class, () -> analytics.dropIndex(index, dataset));
+    assertThrows(IndexNotFoundException.class, () -> analytics.dropIndex(index, dataset,
         dropIndexAnalyticsOptions()
             .dataverseName(dataverse)));
   }
@@ -330,7 +330,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
     analytics.createIndex(index, dataset, fields);
 
-    assertThrows(AnalyticsIndexExistsException.class, () -> analytics.createIndex(index, dataset, fields));
+    assertThrows(IndexExistsException.class, () -> analytics.createIndex(index, dataset, fields));
 
     // do the ignoreIfExists check here to, since the setup is a pain
     analytics.createIndex(index, dataset, fields,
@@ -342,7 +342,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
         createIndexAnalyticsOptions()
             .dataverseName(dataverse));
 
-    assertThrows(AnalyticsIndexExistsException.class, () -> analytics.createIndex(index, dataset, fields,
+    assertThrows(IndexExistsException.class, () -> analytics.createIndex(index, dataset, fields,
         createIndexAnalyticsOptions()
             .dataverseName(dataverse)));
 
@@ -354,11 +354,11 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void connectLinkFailsIfAbsent() {
-    assertThrows(AnalyticsLinkNotFoundException.class, () -> analytics.connectLink(
+    assertThrows(LinkNotFoundException.class, () -> analytics.connectLink(
         connectLinkAnalyticsOptions()
             .dataverseName(dataverse)));
 
-    assertThrows(AnalyticsLinkNotFoundException.class, () -> analytics.connectLink(
+    assertThrows(LinkNotFoundException.class, () -> analytics.connectLink(
         connectLinkAnalyticsOptions()
             .linkName("bogusLink")));
   }

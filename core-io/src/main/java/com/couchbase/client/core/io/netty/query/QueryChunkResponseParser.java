@@ -16,18 +16,18 @@
 
 package com.couchbase.client.core.io.netty.query;
 
-import com.couchbase.client.core.error.AuthenticationException;
+import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
-import com.couchbase.client.core.error.InternalServerException;
+import com.couchbase.client.core.error.IndexExistsException;
+import com.couchbase.client.core.error.InternalServerFailureException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.PlanningFailureException;
 import com.couchbase.client.core.error.PreparedStatementException;
 import com.couchbase.client.core.error.QueryErrorContext;
-import com.couchbase.client.core.error.QueryIndexException;
-import com.couchbase.client.core.error.QueryIndexExistsException;
-import com.couchbase.client.core.error.QueryIndexNotFoundException;
+import com.couchbase.client.core.error.IndexFailureException;
+import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
@@ -124,21 +124,21 @@ public class QueryChunkResponseParser
       } else if (PREPARED_ERROR_CODES.contains(code)) {
         return new PreparedStatementException(errorContext);
       } else if (code == 4300 && message.matches("^.*index .+ already exists.*")) {
-        return new QueryIndexExistsException(errorContext);
+        return new IndexExistsException(errorContext);
       } else if (code >= 4000 && code < 5000) {
         return new PlanningFailureException(errorContext);
       } else if (code == 12004 || code == 12016 || (code == 5000 && message.matches("^.*index .+ not found.*"))) {
-        return new QueryIndexNotFoundException(errorContext);
+        return new IndexNotFoundException(errorContext);
       } else if (code == 5000 && message.matches("^.*Index .+ already exists.*")) {
-        return new QueryIndexExistsException(errorContext);
+        return new IndexExistsException(errorContext);
       } else if (code >= 5000 && code < 6000) {
-        return new InternalServerException(errorContext);
+        return new InternalServerFailureException(errorContext);
       } else if (code == 12009) {
         return new CasMismatchException(errorContext);
       } else if (code >= 10000 && code < 11000) {
-        return new AuthenticationException("Could not authenticate query", errorContext, null);
+        return new AuthenticationFailureException("Could not authenticate query", errorContext, null);
       } else if ((code >= 12000 && code < 13000) || (code >= 14000 && code < 15000)) {
-        return new QueryIndexException(errorContext);
+        return new IndexFailureException(errorContext);
       }
     }
     return new CouchbaseException("Unknown query error", errorContext);

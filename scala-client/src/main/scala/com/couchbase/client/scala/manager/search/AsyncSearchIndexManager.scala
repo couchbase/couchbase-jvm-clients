@@ -20,8 +20,7 @@ import java.nio.charset.StandardCharsets
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled
 import com.couchbase.client.core.deps.io.netty.handler.codec.http._
-import com.couchbase.client.core.error.{CouchbaseException, SearchIndexNotFoundException}
-import com.couchbase.client.core.logging.RedactableArgument.redactSystem
+import com.couchbase.client.core.error.IndexNotFoundException
 import com.couchbase.client.core.msg.search.{GenericSearchRequest, GenericSearchResponse}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode
@@ -50,7 +49,7 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
     case s @ Success(_) => s
     case Failure(err) =>
       if (err.getMessage.contains("index not found")) {
-        Failure(SearchIndexNotFoundException.forIndex(indexName))
+        Failure(new IndexNotFoundException(indexName))
       } else Failure(err)
   }
 
@@ -68,7 +67,7 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
       case s @ Success(_) => s
       case Failure(err) =>
         if (err.getMessage.contains("index not found")) {
-          Failure(SearchIndexNotFoundException.forIndex(indexName))
+          Failure(new IndexNotFoundException(indexName))
         } else Failure(err)
     }
   }

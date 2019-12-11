@@ -22,9 +22,9 @@ package com.couchbase.client.core.error;
  *
  * @since 2.0.0
  */
-public class AuthenticationException extends CouchbaseException {
+public class AuthenticationFailureException extends CouchbaseException {
 
-  public AuthenticationException(String message, ErrorContext ctx, Throwable cause) {
+  public AuthenticationFailureException(String message, ErrorContext ctx, Throwable cause) {
     super(message, cause, ctx);
   }
 }

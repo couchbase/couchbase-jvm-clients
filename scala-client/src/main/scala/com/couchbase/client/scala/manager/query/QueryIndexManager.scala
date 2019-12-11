@@ -16,6 +16,7 @@
 package com.couchbase.client.scala.manager.query
 
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.error.IndexNotFoundException
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.util.DurationConversions._
@@ -164,7 +165,7 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
     * @param bucketName        the bucket to watch on
     * @param indexNames        the indexes to poll.
     * @param watchPrimary      include the bucket's primary index.  If the bucket has no primary index, the operation
-    *                          will fail with [[com.couchbase.client.core.error.QueryIndexNotFoundException]]
+    *                          will fail with [[IndexNotFoundException]]
     * @param timeout           when the operation will timeout.
     * @param retryStrategy     $RetryStrategy
     */

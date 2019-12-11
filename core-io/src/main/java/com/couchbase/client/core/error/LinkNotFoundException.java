@@ -16,8 +16,8 @@
 
 package com.couchbase.client.core.error;
 
-public class AnalyticsLinkNotFoundException extends CouchbaseException {
-  public AnalyticsLinkNotFoundException(final ErrorContext ctx) {
-    super("The analytics link is not found", ctx);
+public class LinkNotFoundException extends CouchbaseException {
+  public LinkNotFoundException(final ErrorContext ctx) {
+    super("The link is not found", ctx);
   }
 }

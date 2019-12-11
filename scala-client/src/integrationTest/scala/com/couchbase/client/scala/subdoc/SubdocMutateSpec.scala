@@ -1,6 +1,10 @@
 package com.couchbase.client.scala.subdoc
 
-import com.couchbase.client.core.error.{CouchbaseException, DocumentExistsException, InvalidArgumentException}
+import com.couchbase.client.core.error.{
+  CouchbaseException,
+  DocumentExistsException,
+  InvalidArgumentException
+}
 import com.couchbase.client.core.error.subdoc.{PathExistsException, PathNotFoundException}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.LookupInSpec._

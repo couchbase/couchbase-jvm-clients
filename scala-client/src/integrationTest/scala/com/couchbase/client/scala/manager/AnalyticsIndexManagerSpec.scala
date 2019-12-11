@@ -153,8 +153,8 @@ class AnalyticsIndexManagerSpec extends ScalaIntegrationTest {
     analytics.createIndex(IndexName, DatasetName, fields).get
 
     analytics.createIndex(IndexName, DatasetName, fields) match {
-      case Failure(err: AnalyticsIndexExistsException) =>
-      case _                                           => assert(false)
+      case Failure(err: IndexExistsException) =>
+      case _                                  => assert(false)
     }
 
     analytics.createIndex(IndexName, DatasetName, fields, ignoreIfExists = true).get

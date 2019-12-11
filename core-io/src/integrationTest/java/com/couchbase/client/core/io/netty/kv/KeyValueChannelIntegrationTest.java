@@ -21,7 +21,7 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
-import com.couchbase.client.core.error.AuthenticationException;
+import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
@@ -203,7 +203,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
     CountDownLatch latch = new CountDownLatch(1);
     bootstrap.connect().addListener((ChannelFutureListener) future -> {
       Throwable ex = future.cause();
-      assertTrue(ex instanceof AuthenticationException);
+      assertTrue(ex instanceof AuthenticationFailureException);
       assertEquals(msg, ex.getMessage());
       latch.countDown();
     });

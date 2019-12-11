@@ -16,8 +16,8 @@
 
 package com.couchbase.client.java.manager.query;
 
-import com.couchbase.client.core.error.QueryIndexExistsException;
-import com.couchbase.client.core.error.QueryIndexNotFoundException;
+import com.couchbase.client.core.error.IndexExistsException;
+import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -90,7 +90,7 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
   @Test
   void createDuplicatePrimaryIndex() {
     indexes.createPrimaryIndex(bucketName);
-    assertThrows(QueryIndexExistsException.class, () -> indexes.createPrimaryIndex(bucketName));
+    assertThrows(IndexExistsException.class, () -> indexes.createPrimaryIndex(bucketName));
 
     // but this should succeed
     indexes.createPrimaryIndex(bucketName, createPrimaryQueryIndexOptions()
@@ -103,7 +103,7 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
     final Set<String> fields = setOf("fieldA", "fieldB");
 
     indexes.createIndex(bucketName, indexName, fields);
-    assertThrows(QueryIndexExistsException.class,
+    assertThrows(IndexExistsException.class,
         () -> indexes.createIndex(bucketName, indexName, fields));
 
     // but this should succeed
@@ -148,7 +148,7 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void dropPrimaryIndex() {
-    assertThrows(QueryIndexNotFoundException.class, () ->
+    assertThrows(IndexNotFoundException.class, () ->
         indexes.dropPrimaryIndex(bucketName));
 
     indexes.dropPrimaryIndex(bucketName, dropPrimaryQueryIndexOptions().ignoreIfNotExists(true));
@@ -162,7 +162,7 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void dropIndex() {
-    assertThrows(QueryIndexNotFoundException.class, () -> indexes.dropIndex(bucketName, "foo"));
+    assertThrows(IndexNotFoundException.class, () -> indexes.dropIndex(bucketName, "foo"));
 
     indexes.dropIndex(bucketName, "foo", dropQueryIndexOptions()
         .ignoreIfNotExists(true));
@@ -222,13 +222,13 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void watchingAbsentIndexThrowsException() {
-    assertThrows(QueryIndexNotFoundException.class, () ->
+    assertThrows(IndexNotFoundException.class, () ->
         indexes.watchIndexes(bucketName, listOf("doesNotExist"), Duration.ofSeconds(3)));
   }
 
   @Test
   void watchingAbsentPrimaryIndexThrowsException() {
-    assertThrows(QueryIndexNotFoundException.class, () ->
+    assertThrows(IndexNotFoundException.class, () ->
         indexes.watchIndexes(bucketName, listOf(), Duration.ofSeconds(3), watchQueryIndexesOptions()
             .watchPrimary(true)));
   }
@@ -308,7 +308,7 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void reactiveErrorPropagationSmokeTest() {
-    assertThrows(QueryIndexNotFoundException.class, () ->
+    assertThrows(IndexNotFoundException.class, () ->
         indexes.reactive().dropIndex(bucketName, "doesNotExist")
             .block());
 
@@ -329,7 +329,7 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
     createPrimary.block(); // subscribe; this should trigger index creation
 
     // subscribe again and expect the Mono to try creating the index again.
-    assertThrows(QueryIndexExistsException.class, createPrimary::block);
+    assertThrows(IndexExistsException.class, createPrimary::block);
   }
 
   private static void assertNoIndexesPresent() {

@@ -30,7 +30,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.core.error.SearchIndexNotFoundException;
+import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.search.GenericSearchRequest;
 import com.couchbase.client.java.json.JsonObject;
@@ -119,7 +119,7 @@ public class AsyncSearchIndexManager {
       if (found.isPresent()) {
         return found.get();
       }
-      throw SearchIndexNotFoundException.forIndex(name);
+      throw new IndexNotFoundException(name);
     });
   }
 
@@ -164,7 +164,7 @@ public class AsyncSearchIndexManager {
       .response()
       .exceptionally(throwable -> {
         if (throwable.getMessage().contains("index not found")) {
-          throw SearchIndexNotFoundException.forIndex(name);
+          throw new IndexNotFoundException(name);
         }
         throw new CouchbaseException("Failed to get indexed documents count search index", throwable);
       })
@@ -221,7 +221,7 @@ public class AsyncSearchIndexManager {
       .response()
       .exceptionally(throwable -> {
         if (throwable.getMessage().contains("index not found")) {
-          throw SearchIndexNotFoundException.forIndex(name);
+          throw new IndexNotFoundException(name);
         }
         throw new CouchbaseException("Failed to drop search index", throwable);
       })
@@ -250,7 +250,7 @@ public class AsyncSearchIndexManager {
         if (throwable.getMessage().contains("Page not found")) {
           throw new FeatureNotAvailableException("Document analysis is not available on this server version!");
         } else if (throwable.getMessage().contains("no indexName:")) {
-          throw SearchIndexNotFoundException.forIndex(name);
+          throw new IndexNotFoundException(name);
         }
         throw new CouchbaseException("Failed to analyze search document", throwable);
       })
@@ -292,7 +292,7 @@ public class AsyncSearchIndexManager {
     return request.response()
       .exceptionally(throwable -> {
         if (throwable.getMessage().contains("index not found")) {
-          throw SearchIndexNotFoundException.forIndex(name);
+          throw new IndexNotFoundException(name);
         }
         throw new CouchbaseException("Failed to pause search index ingest", throwable);
       })
@@ -316,7 +316,7 @@ public class AsyncSearchIndexManager {
     return request.response()
       .exceptionally(throwable -> {
         if (throwable.getMessage().contains("index not found")) {
-          throw SearchIndexNotFoundException.forIndex(name);
+          throw new IndexNotFoundException(name);
         }
         throw new CouchbaseException("Failed to resume search index ingest", throwable);
       })
@@ -340,7 +340,7 @@ public class AsyncSearchIndexManager {
     return request.response()
       .exceptionally(throwable -> {
         if (throwable.getMessage().contains("index not found")) {
-          throw SearchIndexNotFoundException.forIndex(name);
+          throw new IndexNotFoundException(name);
         }
         throw new CouchbaseException("Failed to allow querying on the search index", throwable);
       })
@@ -364,7 +364,7 @@ public class AsyncSearchIndexManager {
     return request.response()
       .exceptionally(throwable -> {
         if (throwable.getMessage().contains("index not found")) {
-          throw SearchIndexNotFoundException.forIndex(name);
+          throw new IndexNotFoundException(name);
         }
         throw new CouchbaseException("Failed to disallow querying on the search index", throwable);
       })
@@ -388,7 +388,7 @@ public class AsyncSearchIndexManager {
     return request.response()
       .exceptionally(throwable -> {
         if (throwable.getMessage().contains("index not found")) {
-          throw SearchIndexNotFoundException.forIndex(name);
+          throw new IndexNotFoundException(name);
         }
         throw new CouchbaseException("Failed to freeze plan on the search index", throwable);
       })
@@ -412,7 +412,7 @@ public class AsyncSearchIndexManager {
     return request.response()
       .exceptionally(throwable -> {
         if (throwable.getMessage().contains("index not found")) {
-          throw SearchIndexNotFoundException.forIndex(name);
+          throw new IndexNotFoundException(name);
         }
         throw new CouchbaseException("Failed to unfreeze plan on the search index", throwable);
       })
