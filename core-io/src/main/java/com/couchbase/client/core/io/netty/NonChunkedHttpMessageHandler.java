@@ -196,15 +196,19 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
           if (currentRequest.internalSpan() != null) {
             currentRequest.internalSpan().stopDispatch();
           }
-          FullHttpResponse httpResponse = (FullHttpResponse) msg;
-          ResponseStatus responseStatus = HttpProtocol.decodeStatus(httpResponse.status());
-          if (responseStatus == ResponseStatus.SUCCESS) {
-            Response response = currentRequest.decode(httpResponse);
-            currentRequest.succeed(response);
-          } else {
-            String body = httpResponse.content().toString(StandardCharsets.UTF_8);
-            currentRequest.fail(failRequestWith(httpResponse.status(), body));
-          }
+            FullHttpResponse httpResponse = (FullHttpResponse) msg;
+            ResponseStatus responseStatus = HttpProtocol.decodeStatus(httpResponse.status());
+            if (!currentRequest.completed()) {
+              if (responseStatus == ResponseStatus.SUCCESS) {
+                Response response = currentRequest.decode(httpResponse);
+                currentRequest.succeed(response);
+              } else {
+                String body = httpResponse.content().toString(StandardCharsets.UTF_8);
+                currentRequest.fail(failRequestWith(httpResponse.status(), body));
+              }
+            } else {
+              ioContext.environment().orphanReporter().report(currentRequest);
+            }
         } catch (Throwable ex) {
           currentRequest.fail(ex);
         } finally {

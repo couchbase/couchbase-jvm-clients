@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.cnc.DefaultEventBus;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
+import com.couchbase.client.core.cnc.OrphanReporter;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.tracing.ThresholdRequestTracer;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -97,12 +98,14 @@ public class CoreEnvironment {
   private final SecurityConfig securityConfig;
   private final TimeoutConfig timeoutConfig;
   private final DiagnosticsConfig diagnosticsConfig;
+  private final OrphanReporterConfig orphanReporterConfig;
   private final Supplier<RequestTracer> requestTracer;
 
   private final LoggerConfig loggerConfig;
 
   private final RetryStrategy retryStrategy;
   private final Supplier<Scheduler> scheduler;
+  private final OrphanReporter orphanReporter;
 
 
   public static CoreEnvironment create() {
@@ -137,6 +140,7 @@ public class CoreEnvironment {
     this.retryStrategy = Optional.ofNullable(builder.retryStrategy).orElse(DEFAULT_RETRY_STRATEGY);
     this.loggerConfig = builder.loggerConfig.build();
     this.diagnosticsConfig = builder.diagnosticsConfig.build();
+    this.orphanReporterConfig = builder.orphanReporterConfig.build();
 
     if (eventBus instanceof OwnedSupplier) {
       eventBus.get().start().block();
@@ -150,6 +154,9 @@ public class CoreEnvironment {
     if (requestTracer instanceof OwnedSupplier) {
       requestTracer.get().start().block();
     }
+
+    orphanReporter = new OrphanReporter(eventBus.get(), orphanReporterConfig);
+    orphanReporter.start().block();
   }
 
   /**
@@ -291,6 +298,10 @@ public class CoreEnvironment {
     return retryStrategy;
   }
 
+  public OrphanReporter orphanReporter() {
+    return orphanReporter;
+  }
+
   /**
    * Shuts down this Environment with the default disconnect timeout.
    *
@@ -350,6 +361,7 @@ public class CoreEnvironment {
         }
         return Mono.empty();
       }))
+      .then(Mono.defer(() -> orphanReporter.stop(timeout)))
       .timeout(timeout);
   }
 
@@ -398,6 +410,7 @@ public class CoreEnvironment {
     input.put("timeoutConfig", timeoutConfig.exportAsMap());
     input.put("loggerConfig", loggerConfig.exportAsMap());
     input.put("diagnosticsConfig", diagnosticsConfig.exportAsMap());
+    input.put("orphanReporterConfig", orphanReporterConfig.exportAsMap());
 
     input.put("retryStrategy", retryStrategy.getClass().getSimpleName());
     input.put("requestTracer", requestTracer.getClass().getSimpleName());
@@ -419,6 +432,7 @@ public class CoreEnvironment {
     private TimeoutConfig.Builder timeoutConfig = TimeoutConfig.builder();
     private LoggerConfig.Builder loggerConfig = LoggerConfig.builder();
     private DiagnosticsConfig.Builder diagnosticsConfig = DiagnosticsConfig.builder();
+    private OrphanReporterConfig.Builder orphanReporterConfig = OrphanReporterConfig.builder();
     private Supplier<EventBus> eventBus = null;
     private Supplier<Scheduler> scheduler = null;
     private Supplier<RequestTracer> requestTracer = null;
@@ -444,6 +458,11 @@ public class CoreEnvironment {
 
     public SELF ioConfig(final IoConfig.Builder ioConfig) {
       this.ioConfig = requireNonNull(ioConfig);
+      return self();
+    }
+
+    public SELF orphanReporterConfig(final OrphanReporterConfig.Builder orphanReporterConfig) {
+      this.orphanReporterConfig = orphanReporterConfig;
       return self();
     }
 

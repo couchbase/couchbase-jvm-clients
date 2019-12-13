@@ -244,14 +244,22 @@ public abstract class ChunkedMessageHandler
     currentResponse = currentRequest.decode(
       convertedResponseStatus, header, chunkResponseParser.rows(), chunkResponseParser.trailer()
     );
-    currentRequest.succeed(currentResponse);
+    if (!currentRequest.completed()) {
+      currentRequest.succeed(currentResponse);
+    } else {
+      ioContext.environment().orphanReporter().report(currentRequest);
+    }
   }
 
   private void completeResponseWithFailure() {
-    final Throwable cause = chunkResponseParser.decodingFailure().orElseGet(
-      () -> chunkResponseParser.error().orElseGet(
-        () -> new CouchbaseException("Request failed, but no more information available")));
-    currentRequest.fail(cause);
+    if (!currentRequest.completed()) {
+      final Throwable cause = chunkResponseParser.decodingFailure().orElseGet(
+        () -> chunkResponseParser.error().orElseGet(
+          () -> new CouchbaseException("Request failed, but no more information available")));
+      currentRequest.fail(cause);
+    } else {
+      ioContext.environment().orphanReporter().report(currentRequest);
+    }
   }
 
   private void cleanupState() {

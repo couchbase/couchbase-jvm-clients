@@ -281,15 +281,31 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     } else {
       RetryReason retryReason = statusCodeIndicatesRetry(status, request);
       if (retryReason == null) {
-        try {
-          Response decoded = request.decode(response, channelContext);
-          request.succeed(decoded);
-        } catch (Throwable t) {
-          request.fail(new DecodingFailureException(t));
+        if (!request.completed()) {
+          decodeAndComplete(request, response);
+        } else {
+         ioContext.environment().orphanReporter().report(request);
         }
       } else {
         RetryOrchestrator.maybeRetry(ioContext, request, retryReason);
       }
+    }
+  }
+
+  /**
+   * Tries to decode the response and succeed the request.
+   * <p>
+   * If decoding fails, will fail the underlying request as well.
+   *
+   * @param request the request to decode and complete.
+   * @param response the raw response to decode.
+   */
+  private void decodeAndComplete(final KeyValueRequest<Response> request, final ByteBuf response) {
+    try {
+      Response decoded = request.decode(response, channelContext);
+      request.succeed(decoded);
+    } catch (Throwable t) {
+      request.fail(new DecodingFailureException(t));
     }
   }
 
