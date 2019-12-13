@@ -104,6 +104,8 @@ public abstract class CommonOptions<SELF extends CommonOptions<SELF>> {
    * Note that this only has impact when using a tracing implementation that can actually deal with the notion
    * of a parent. You likely want to use this if you want to wire up your application with OpenTracing or
    * OpenTelemetry - use the support separate modules for that.
+   * <p>
+   * IMPORTANT: this is a volatile, likely to change API!
    *
    * @param parentSpan the parent span for this request.
    * @return this options builder for chaining purposes.

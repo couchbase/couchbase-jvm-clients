@@ -272,6 +272,7 @@ public class CoreEnvironment {
     return scheduler.get();
   }
 
+  @Stability.Volatile
   public RequestTracer requestTracer() {
     return requestTracer.get();
   }
@@ -513,6 +514,15 @@ public class CoreEnvironment {
       return self();
     }
 
+    /**
+     * Allows to configure a custom tracer implementation.
+     * <p>
+     * IMPORTANT: this is a volatile, likely to change API!
+     *
+     * @param requestTracer the custom request tracer to use.
+     * @return this builder for chaining purposes.
+     */
+    @Stability.Volatile
     public SELF requestTracer(final RequestTracer requestTracer) {
       this.requestTracer = new ExternalSupplier<>(requestTracer);
       return self();
