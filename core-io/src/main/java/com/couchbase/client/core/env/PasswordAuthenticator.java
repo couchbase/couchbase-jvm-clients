@@ -41,19 +41,38 @@ public class PasswordAuthenticator implements Authenticator {
   private final Supplier<String> username;
   private final Supplier<String> password;
   private final Set<SaslMechanism> allowedSaslMechanisms;
+  private final String cachedHttpAuthHeader;
 
   public static PasswordAuthenticator.Builder builder() {
     return new Builder();
   }
 
   public static PasswordAuthenticator create(final String username, final String password) {
-    return builder().username(() -> username).password(() -> password).build();
+    return builder().username(username).password(password).build();
   }
 
   private PasswordAuthenticator(final Builder builder) {
     this.username = builder.username;
     this.password = builder.password;
     this.allowedSaslMechanisms = builder.allowedSaslMechanisms;
+
+    if (username instanceof OwnedSupplier && password instanceof OwnedSupplier) {
+      cachedHttpAuthHeader = encodeAuthHttpHeader();
+    } else {
+      cachedHttpAuthHeader = null;
+    }
+  }
+
+  /**
+   * Helper method to encode the authentication http header value from the username and password.
+   */
+  private String encodeAuthHttpHeader() {
+    final String password = this.password.get();
+    final String username = this.username.get();
+
+    final String pw = password == null ? "" : password;
+    final String encoded = Base64.getEncoder().encodeToString((username + ":" + pw).getBytes(UTF_8));
+    return "Basic " + encoded;
   }
 
   @Override
@@ -69,12 +88,10 @@ public class PasswordAuthenticator implements Authenticator {
 
   @Override
   public void authHttpRequest(final ServiceType serviceType, final HttpRequest request) {
-    final String password = this.password.get();
-    final String username = this.username.get();
-
-    final String pw = password == null ? "" : password;
-    final String encoded = Base64.getEncoder().encodeToString((username + ":" + pw).getBytes(UTF_8));
-    request.headers().add(HttpHeaderNames.AUTHORIZATION, "Basic " + encoded);
+    request.headers().add(
+      HttpHeaderNames.AUTHORIZATION,
+      cachedHttpAuthHeader != null ? cachedHttpAuthHeader : encodeAuthHttpHeader()
+    );
   }
 
   public static class Builder {
@@ -83,13 +100,23 @@ public class PasswordAuthenticator implements Authenticator {
     private Supplier<String> password;
     private Set<SaslMechanism> allowedSaslMechanisms = DEFAULT_SASL_MECHANISMS;
 
-    public Builder username(Supplier<String> username) {
+    public Builder username(final String username) {
+      notNullOrEmpty(username, "Username");
+      return username(new OwnedSupplier<>(username));
+    }
+
+    public Builder username(final Supplier<String> username) {
       notNull(username, "Username");
       this.username = username;
       return this;
     }
 
-    public Builder password(Supplier<String> password) {
+    public Builder password(final String password) {
+      notNullOrEmpty(password, "Password");
+      return password(new OwnedSupplier<>(password));
+    }
+
+    public Builder password(final Supplier<String> password) {
       notNull(password, "Password");
       this.password = password;
       return this;

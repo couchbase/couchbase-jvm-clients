@@ -24,7 +24,7 @@ class EnvironmentSpec {
 
   @Test
   def badConnstrReturnsErr() {
-    Cluster.connect("not:a:valid:conn:str", "", "") match {
+    Cluster.connect("not:a:valid:conn:str", "user", "pass") match {
       case Success(env) => assert(false)
       case _            =>
     }
