@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.diag.DiagnosticsResult;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
@@ -30,6 +31,7 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
+import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.analytics.ReactiveAnalyticsIndexManager;
 import com.couchbase.client.java.manager.bucket.ReactiveBucketManager;
@@ -46,6 +48,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -55,6 +58,7 @@ import static com.couchbase.client.java.AsyncCluster.seedNodesFromConnectionStri
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
 import static com.couchbase.client.java.diagnostics.DiagnosticsOptions.diagnosticsOptions;
+import static com.couchbase.client.java.diagnostics.WaitUntilReadyOptions.waitUntilReadyOptions;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static com.couchbase.client.java.search.SearchOptions.searchOptions;
 
@@ -64,6 +68,7 @@ public class ReactiveCluster {
   static final SearchOptions DEFAULT_SEARCH_OPTIONS = searchOptions();
   static final AnalyticsOptions DEFAULT_ANALYTICS_OPTIONS = analyticsOptions();
   static final DiagnosticsOptions DEFAULT_DIAGNOSTICS_OPTIONS = diagnosticsOptions();
+  static final WaitUntilReadyOptions DEFAULT_WAIT_UNTIL_READY_OPTIONS = waitUntilReadyOptions();
 
   /**
    * Holds the underlying async cluster reference.
@@ -310,6 +315,41 @@ public class ReactiveCluster {
    */
   public Mono<Void> disconnect(final Duration timeout) {
     return asyncCluster.disconnectInternal(timeout);
+  }
+
+  /**
+   * Runs a diagnostic report on the current state of the cluster from the SDKs point of view.
+   * <p>
+   * Please note that it does not perform any I/O to do this, it will only use the current known state of the cluster
+   * to assemble the report (so, if for example no N1QL query has been run the socket pool might be empty and as
+   * result not show up in the report).
+   *
+   * @return the {@link DiagnosticsResult} once complete.
+   */
+  public Mono<DiagnosticsResult> diagnostics() {
+    return diagnostics(DEFAULT_DIAGNOSTICS_OPTIONS);
+  }
+
+  /**
+   * Runs a diagnostic report with custom options on the current state of the cluster from the SDKs point of view.
+   * <p>
+   * Please note that it does not perform any I/O to do this, it will only use the current known state of the cluster
+   * to assemble the report (so, if for example no N1QL query has been run the socket pool might be empty and as
+   * result not show up in the report).
+   *
+   * @param options options that allow to customize the report.
+   * @return the {@link DiagnosticsResult} once complete.
+   */
+  public Mono<DiagnosticsResult> diagnostics(final DiagnosticsOptions options) {
+    return Mono.defer(() -> Mono.fromFuture(asyncCluster.diagnostics(options)));
+  }
+
+  public Mono<Void> waitUntilReady(final Duration timeout) {
+    return waitUntilReady(timeout, DEFAULT_WAIT_UNTIL_READY_OPTIONS);
+  }
+
+  public Mono<Void> waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
+    return Mono.defer(() -> Mono.fromFuture(asyncCluster.waitUntilReady(timeout, options)));
   }
 
 }

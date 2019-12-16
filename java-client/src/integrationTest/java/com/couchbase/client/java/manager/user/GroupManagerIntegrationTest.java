@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -63,6 +64,7 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
   static void setup() {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
     users = cluster.users();
+    cluster.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll

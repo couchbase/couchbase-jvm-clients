@@ -41,6 +41,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -71,6 +72,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
     cluster.bucket(config().bucketname());
     users = cluster.users();
+    cluster.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll

@@ -28,6 +28,7 @@ import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
+import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.analytics.AnalyticsIndexManager;
 import com.couchbase.client.java.manager.bucket.BucketManager;
@@ -54,6 +55,7 @@ import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTION
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_DIAGNOSTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_WAIT_UNTIL_READY_OPTIONS;
 
 /**
  * The {@link Cluster} is the main entry point when connecting to a Couchbase cluster.
@@ -323,26 +325,39 @@ public class Cluster {
   }
 
   /**
-   * Returns a {@link DiagnosticsResult}, reflecting the SDK's current view of all its existing connections to the
-   * cluster.
+   * Runs a diagnostic report on the current state of the cluster from the SDKs point of view.
+   * <p>
+   * Please note that it does not perform any I/O to do this, it will only use the current known state of the cluster
+   * to assemble the report (so, if for example no N1QL query has been run the socket pool might be empty and as
+   * result not show up in the report).
    *
-   * @param options options on the generation of the report
-   * @return a {@link DiagnosticsResult}
+   * @return the {@link DiagnosticsResult} once complete.
    */
-  @Stability.Volatile
-  public DiagnosticsResult diagnostics(DiagnosticsOptions options) {
-    return block(asyncCluster.diagnostics(options));
-  }
-
-  /**
-   * Returns a {@link DiagnosticsResult}, reflecting the SDK's current view of all its existing connections to the
-   * cluster.
-   *
-   * @return a {@link DiagnosticsResult}
-   */
-  @Stability.Volatile
   public DiagnosticsResult diagnostics() {
     return block(asyncCluster.diagnostics(DEFAULT_DIAGNOSTICS_OPTIONS));
   }
+
+  /**
+   * Runs a diagnostic report with custom options on the current state of the cluster from the SDKs point of view.
+   * <p>
+   * Please note that it does not perform any I/O to do this, it will only use the current known state of the cluster
+   * to assemble the report (so, if for example no N1QL query has been run the socket pool might be empty and as
+   * result not show up in the report).
+   *
+   * @param options options that allow to customize the report.
+   * @return the {@link DiagnosticsResult} once complete.
+   */
+  public DiagnosticsResult diagnostics(final DiagnosticsOptions options) {
+    return block(asyncCluster.diagnostics(options));
+  }
+
+  public void waitUntilReady(final Duration timeout) {
+    block(asyncCluster.waitUntilReady(timeout));
+  }
+
+  public void waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
+    block(asyncCluster.waitUntilReady(timeout, options));
+  }
+
 }
 

@@ -30,6 +30,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @IgnoreWhen( missesCapabilities = { Capabilities.SEARCH })
@@ -41,6 +43,7 @@ class SearchErrorIntegrationTest extends JavaIntegrationTest {
   static void beforeAll() {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
     cluster.bucket(config().bucketname());
+    cluster.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll

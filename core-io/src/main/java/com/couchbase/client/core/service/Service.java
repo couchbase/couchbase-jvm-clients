@@ -16,12 +16,11 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.diag.EndpointHealth;
+import com.couchbase.client.core.diag.EndpointDiagnostics;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.util.Stateful;
 
-import java.util.List;
 import java.util.stream.Stream;
 
 /**
@@ -76,5 +75,5 @@ public interface Service extends Stateful<ServiceState> {
   /**
    * Returns diagnostics information for this service.
    */
-  Stream<EndpointHealth> diagnostics();
+  Stream<EndpointDiagnostics> diagnostics();
 }

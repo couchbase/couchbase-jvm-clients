@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.msg.diagnostics;
+package com.couchbase.client.core.msg.query;
 
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
-public class PingResponse extends BaseResponse {
+public class QueryPingResponse extends BaseResponse {
 
   private final byte[] content;
 
-  PingResponse(ResponseStatus status, byte[] content) {
+  QueryPingResponse(ResponseStatus status, byte[] content) {
     super(status);
     this.content = content;
   }
@@ -32,10 +32,4 @@ public class PingResponse extends BaseResponse {
     return content;
   }
 
-  @Override
-  public String toString() {
-    return "PingResponse{" +
-      "status=" + status() +
-      '}';
-  }
 }

@@ -33,6 +33,7 @@ import static junit.framework.TestCase.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -57,6 +58,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
         cluster = Cluster.connect(seedNodes(), clusterOptions());
         collection = cluster.bucket(config().bucketname()).defaultCollection();
         options = ArrayListOptions.arrayListOptions();
+        cluster.waitUntilReady(Duration.ofSeconds(5));
     }
 
     @AfterAll

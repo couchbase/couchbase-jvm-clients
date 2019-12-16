@@ -18,8 +18,12 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.config.ClusterConfig;
+import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.diag.DiagnosticsResult;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.diag.EndpointDiagnostics;
+import com.couchbase.client.core.diag.HealthPinger;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.OwnedSupplier;
@@ -32,12 +36,14 @@ import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConnectionStringUtil;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
+import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.manager.analytics.AsyncAnalyticsIndexManager;
@@ -52,6 +58,8 @@ import com.couchbase.client.java.search.SearchAccessor;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
@@ -59,6 +67,7 @@ import java.time.Duration;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -70,6 +79,8 @@ import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTION
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_DIAGNOSTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_WAIT_UNTIL_READY_OPTIONS;
+import static com.couchbase.client.java.diagnostics.DiagnosticsOptions.diagnosticsOptions;
 
 /**
  * The {@link AsyncCluster} is the main entry point when connecting to a Couchbase cluster.
@@ -465,31 +476,86 @@ public class AsyncCluster {
     return queryAccessor;
   }
 
-
   /**
-   * Returns a {@link DiagnosticsResult}, reflecting the SDK's current view of all its existing connections to the
-   * cluster.
+   * Runs a diagnostic report on the current state of the cluster from the SDKs point of view.
+   * <p>
+   * Please note that it does not perform any I/O to do this, it will only use the current known state of the cluster
+   * to assemble the report (so, if for example no N1QL query has been run the socket pool might be empty and as
+   * result not show up in the report).
    *
-   * @param options options on the generation of the report
-   * @return a {@link DiagnosticsResult}
+   * @return the {@link DiagnosticsResult} once complete.
    */
-  @Stability.Volatile
-  public CompletableFuture<DiagnosticsResult> diagnostics(DiagnosticsOptions options) {
-    DiagnosticsResult out = new DiagnosticsResult(core.diagnostics().collect(Collectors.toList()),
-            core.context().environment().userAgent().formattedShort(),
-            options.build().reportId().orElse(UUID.randomUUID().toString()));
-
-    return CompletableFuture.completedFuture(out);
-  }
-
-  /**
-   * Returns a {@link DiagnosticsResult}, reflecting the SDK's current view of all its existing connections to the
-   * cluster.
-   *
-   * @return a {@link DiagnosticsResult}
-   */
-  @Stability.Volatile
   public CompletableFuture<DiagnosticsResult> diagnostics() {
-      return diagnostics(DEFAULT_DIAGNOSTICS_OPTIONS);
+    return diagnostics(DEFAULT_DIAGNOSTICS_OPTIONS);
   }
+
+  /**
+   * Runs a diagnostic report with custom options on the current state of the cluster from the SDKs point of view.
+   * <p>
+   * Please note that it does not perform any I/O to do this, it will only use the current known state of the cluster
+   * to assemble the report (so, if for example no N1QL query has been run the socket pool might be empty and as
+   * result not show up in the report).
+   *
+   * @param options options that allow to customize the report.
+   * @return the {@link DiagnosticsResult} once complete.
+   */
+  public CompletableFuture<DiagnosticsResult> diagnostics(final DiagnosticsOptions options) {
+    notNull(options, "DiagnosticsOptions");
+    final DiagnosticsOptions.Built opts = options.build();
+
+    final RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
+    final Mono<Void> maybePing = opts.ping() ? HealthPinger.ping(core, opts.timeout(), retryStrategy, opts.serviceTypes()) : Mono.empty();
+    return maybePing.then(Mono.defer(() -> Mono.just(new DiagnosticsResult(
+        core.diagnostics().collect(Collectors.groupingBy(EndpointDiagnostics::type)),
+        core.context().environment().userAgent().formattedShort(),
+        options.build().reportId().orElse(UUID.randomUUID().toString())
+      )))).toFuture();
+  }
+
+  public CompletableFuture<Void> waitUntilReady(final Duration timeout) {
+    return waitUntilReady(timeout, DEFAULT_WAIT_UNTIL_READY_OPTIONS);
+  }
+
+  public CompletableFuture<Void> waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
+    notNull(options, "WaitUntilReadyOptions");
+    final WaitUntilReadyOptions.Built opts = options.build();
+
+    if (!hasChanceOfCompletingWaiting(core.clusterConfig(), core.configurationProvider())) {
+      CompletableFuture<Void> f = new CompletableFuture<>();
+      f.completeExceptionally(new IllegalStateException("Against pre 6.5 clusters at least a bucket needs to be opened!"));
+      return f;
+    }
+
+    return Flux
+      .interval(Duration.ofMillis(10))
+      .filter(i -> !(core.configurationProvider().bucketConfigLoadInProgress() || core.configurationProvider().globalConfigLoadInProgress()))
+      .take(1)
+      .flatMap(aLong -> {
+        final Set<ServiceType> servicesToCheck = opts.serviceTypes() != null && !opts.serviceTypes().isEmpty()
+          ? opts.serviceTypes()
+          : HealthPinger
+          .extractPingTargets(core.clusterConfig())
+          .stream()
+          .map(HealthPinger.PingTarget::serviceType)
+          .collect(Collectors.toSet());
+
+        return Flux
+          .interval(Duration.ofMillis(10))
+          .flatMap(i -> Mono.fromFuture(diagnostics(diagnosticsOptions().ping(true).serviceTypes(servicesToCheck).timeout(timeout))))
+          .takeUntil(d -> d.state() == opts.desiredState());
+      })
+      .timeout(timeout)
+      .then()
+      .toFuture();
+  }
+
+  /**
+   * Helper method to figure out if waiting until ready has ever a chance of completing.
+   */
+  private boolean hasChanceOfCompletingWaiting(final ClusterConfig clusterConfig, final ConfigurationProvider provider) {
+    return clusterConfig.hasClusterOrBucketConfig()
+      || provider.bucketConfigLoadInProgress()
+      || provider.bucketConfigLoadInProgress();
+  }
+
 }

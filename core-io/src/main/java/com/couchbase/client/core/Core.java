@@ -33,7 +33,7 @@ import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
 import com.couchbase.client.core.config.GlobalConfig;
-import com.couchbase.client.core.diag.EndpointHealth;
+import com.couchbase.client.core.diag.EndpointDiagnostics;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
@@ -60,14 +60,12 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
@@ -268,7 +266,7 @@ public class Core {
   }
 
   @Stability.Internal
-  public Stream<EndpointHealth> diagnostics() {
+  public Stream<EndpointDiagnostics> diagnostics() {
     return nodes.stream().flatMap(Node::diagnostics);
   }
 

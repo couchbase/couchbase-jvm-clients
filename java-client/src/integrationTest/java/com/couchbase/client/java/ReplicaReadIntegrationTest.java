@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -69,6 +70,7 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
+    cluster.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll

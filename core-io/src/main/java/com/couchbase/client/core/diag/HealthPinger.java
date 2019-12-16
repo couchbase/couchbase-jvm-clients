@@ -18,243 +18,221 @@ package com.couchbase.client.core.diag;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
-import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.config.BucketConfig;
+import com.couchbase.client.core.config.ClusterConfig;
+import com.couchbase.client.core.config.NodeInfo;
+import com.couchbase.client.core.config.PortInfo;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.msg.diagnostics.PingKVRequest;
-import com.couchbase.client.core.msg.diagnostics.PingRequest;
+import com.couchbase.client.core.msg.analytics.AnalyticsPingRequest;
+import com.couchbase.client.core.msg.kv.KvPingRequest;
+import com.couchbase.client.core.msg.query.QueryPingRequest;
+import com.couchbase.client.core.msg.search.SearchPingRequest;
+import com.couchbase.client.core.msg.view.ViewPingRequest;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.util.HostAndPort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
- * The {@link HealthPinger} allows to "ping" individual services with
- * real operations for their health.
+ * The {@link HealthPinger} allows to "ping" individual services with real operations for their health.
  * <p>
- * This can be used by up the stack code to assert the given state of
- * a connected cluster and/or bucket.
- *
- * @author Michael Nitschinger
- * @since 1.5.4
+ * This can be used by up the stack code to assert the given state of a connected cluster and/or bucket.
  */
+@Stability.Internal
 public class HealthPinger {
 
   /**
    * Performs a service ping against all or (if given) the services provided.
-   * <p>
-   * First, all the services are contacted with:
-   * <p>
-   * - KV - NOOP
-   * - N1QL - GET /admin/ping (expect 200 OK)
-   * - CBFT - GET /api/ping (expect 200 OK)
-   * - Views - GET / (expect 200 OK)
-   * - Analytics - GET /admin/ping (expect 200 OK)
-   * <p>
-   * Afterwards, the responses are assembled into a {@link PingResult} and returned.
    *
-   * @param env      the environment to use.
-   * @param bucket   the bucket name
    * @param core     the core instance against to check.
-   * @param id       the id of the ping to use, can be null.
    * @param timeout  the timeout for each individual and total ping report.
-   * @param types    if present, limits the queried services for the given types.
-   * @return
+   * @param retryStrategy the retry strategy to use for each ping.
+   * @param serviceTypes    if present, limits the queried services for the given types.
+   * @return a mono that completes once all pings have been completed as well.
    */
-  public static Mono<PingResult> ping(
-          final CoreEnvironment env,
-          final String bucket,
-          final Core core,
-          final String id,
-          final Duration timeout,
-          final RetryStrategy retryStrategy,
-          final List<ServiceType> types) {
+  @Stability.Internal
+  public static Mono<Void> ping(final Core core, final Optional<Duration> timeout, final RetryStrategy retryStrategy,
+                                final Set<ServiceType> serviceTypes) {
+    return Mono.defer(() -> {
+      if (!core.clusterConfig().hasClusterOrBucketConfig()) {
+        // We do not have a config at all, we cannot perform a ping operation.
+        return Mono.empty();
+      }
 
-    List<Mono<PingServiceHealth>> services = new ArrayList<>();
-
-    core.clusterConfig()
-            .bucketConfigs()
-            .values()
-            .stream()
-            .filter(v -> v.name().equals(bucket))
-            .forEach(bucketConfig -> {
-              bucketConfig
-                      .nodes()
-                      .forEach(node -> {
-                        node.services()
-                                .keySet()
-                                .stream()
-                                .filter(serviceType -> types == null || types.contains(serviceType))
-                                .forEach(serviceType -> {
-                                  switch (serviceType) {
-                                    case KV:
-                                      services.add(pingKV(bucket, core, timeout, retryStrategy));
-                                      break;
-                                    case VIEWS:
-                                      services.add(pingViews(bucket, core, timeout, retryStrategy));
-                                      break;
-                                    case SEARCH:
-                                      services.add(pingSearch(bucket, core, timeout, retryStrategy));
-                                      break;
-                                    case QUERY:
-                                      services.add(pingQuery(bucket, core, timeout, retryStrategy));
-                                      break;
-                                    case ANALYTICS:
-                                      services.add(pingAnalytics(bucket, core, timeout, retryStrategy));
-                                      break;
-                                  }
-                                });
-                      });
-            });
-
-    return Flux.merge(services)
-            .collectList()
-            .map(results -> {
-              // rev is a hard-coded 0 right now, to be fixed under JCBC-1468
-              return new PingResult(results, env.userAgent().formattedShort(), id, 0);
-            });
+      Set<PingTarget> targets = extractPingTargets(core.clusterConfig());
+      if (serviceTypes != null && !serviceTypes.isEmpty()) {
+        targets = targets.stream().filter(t -> serviceTypes.contains(t.serviceType)).collect(Collectors.toSet());
+      }
+      return pingTargets(core, targets, timeout, retryStrategy);
+    });
   }
 
-  public static Mono<PingServiceHealth> pingQuery(
-          final String bucket,
-          final Core core,
-          final Duration timeout,
-          final RetryStrategy retryStrategy) {
-    return pingGeneric(bucket, core, timeout, retryStrategy, "/admin/ping", ServiceType.QUERY);
+  @Stability.Internal
+  public static Set<PingTarget> extractPingTargets(final ClusterConfig clusterConfig) {
+    final Set<PingTarget> targets = new HashSet<>();
+
+    if (clusterConfig.globalConfig() != null) {
+      for (PortInfo portInfo : clusterConfig.globalConfig().portInfos()) {
+        for (ServiceType serviceType : portInfo.ports().keySet()) {
+          if (serviceType == ServiceType.KV || serviceType == ServiceType.VIEWS) {
+            // do not check bucket-level resources from a global level (null bucket name will not work)
+            continue;
+          }
+          targets.add(new PingTarget(serviceType, portInfo.identifier(), null));
+        }
+      }
+    }
+
+    for (Map.Entry<String, BucketConfig> bucketConfig : clusterConfig.bucketConfigs().entrySet()) {
+      for (NodeInfo nodeInfo : bucketConfig.getValue().nodes()) {
+        for (ServiceType serviceType: nodeInfo.services().keySet()) {
+          if (serviceType != ServiceType.VIEWS && serviceType != ServiceType.KV) {
+            targets.add(new PingTarget(serviceType, nodeInfo.identifier(), null));
+          } else {
+            targets.add(new PingTarget(serviceType, nodeInfo.identifier(), bucketConfig.getKey()));
+          }
+        }
+      }
+    }
+
+    return targets;
   }
 
-  public static Mono<PingServiceHealth> pingSearch(
-          final String bucket,
-          final Core core,
-          final Duration timeout,
-          final RetryStrategy retryStrategy) {
-    return pingGeneric(bucket, core, timeout, retryStrategy, "/api/ping", ServiceType.SEARCH);
+  private static Mono<Void> pingTargets(final Core core, final Set<PingTarget> targets,
+                                        final Optional<Duration> timeout, final RetryStrategy retryStrategy) {
+    return Flux
+      .fromIterable(targets)
+      .flatMap(target -> pingTarget(core, target, timeout, retryStrategy).onErrorResume(throwable -> {
+        // TODO: print individual ping failure
+        return Mono.empty();
+      }))
+      .then();
   }
 
-  public static Mono<PingServiceHealth> pingViews(
-          final String bucket,
-          final Core core,
-          final Duration timeout,
-          final RetryStrategy retryStrategy) {
-    return pingGeneric(bucket, core, timeout, retryStrategy, "/", ServiceType.VIEWS);
+  private static Mono<Void> pingTarget(final Core core, final PingTarget target, final Optional<Duration> timeout,
+                                       final RetryStrategy retryStrategy) {
+    final RetryStrategy retry = retryStrategy == null ? core.context().environment().retryStrategy() : retryStrategy;
+    switch (target.serviceType) {
+      case QUERY: return pingQuery(core, target, timeout, retry);
+      case KV: return pingKv(core, target, timeout, retry);
+      case VIEWS: return pingViews(core, target, timeout, retry);
+      case SEARCH: return pingSearch(core, target, timeout, retry);
+      case MANAGER: return Mono.empty(); // right now we are not pinging the cluster manager
+      case ANALYTICS: return pingAnalytics(core, target, timeout, retry);
+      default: return Mono.error(new IllegalStateException("Unknown service to ping, this is a bug!"));
+    }
   }
 
-  /**
-   * Pings the service and completes if successful - and fails if it didn't work
-   * for some reason (reason is in the exception).
-   */
-  public static Mono<PingServiceHealth> pingAnalytics(
-          final String bucket,
-          final Core core,
-          final Duration timeout,
-          final RetryStrategy retryStrategy) {
-    return pingGeneric(bucket, core, timeout, retryStrategy, "/admin/ping", ServiceType.ANALYTICS);
+  private static Mono<Void> pingKv(final Core core, final PingTarget target, final Optional<Duration> userTimeout,
+                                   final RetryStrategy retryStrategy) {
+    return Mono.defer(() -> {
+      Duration timeout = userTimeout.orElse(core.context().environment().timeoutConfig().kvTimeout());
+      CollectionIdentifier collectionIdentifier = CollectionIdentifier.fromDefault(target.bucketName);
+      KvPingRequest request = new KvPingRequest(timeout, core.context(), retryStrategy, collectionIdentifier, target.nodeIdentifier);
+      core.send(request);
+      return Reactor.wrap(request, request.response(), true);
+    }).then();
   }
 
-  public static Mono<PingServiceHealth> pingGeneric(
-          final String bucket,
-          final Core core,
-          final Duration timeout,
-          final RetryStrategy retryStrategy,
-          final String path,
-          final ServiceType type) {
-
-    final long creationTime = System.nanoTime();
-
-    PingRequest req = new PingRequest(timeout,
-            core.context(),
-            retryStrategy,
-            bucket,
-            path,
-            type);
-
-    final String id = "0x" + Integer.toHexString(req.hashCode());
-    core.send(req);
-    return Reactor.wrap(req, req.response(), true)
-
-            .map(response -> {
-              return new PingServiceHealth(
-                      type,
-                      PingServiceHealth.PingState.OK,
-                      id,
-                      TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - creationTime),
-                      req.context().lastDispatchedFrom().toString(),
-                      req.context().lastDispatchedTo().toString(),
-                      bucket);
-            })
-
-            .onErrorResume(err -> {
-              PingServiceHealth.PingState state = PingServiceHealth.PingState.ERROR;
-
-              if (err instanceof TimeoutException) {
-                state = PingServiceHealth.PingState.TIMEOUT;
-              }
-
-              return Mono.just(new PingServiceHealth(
-                      type,
-                      state,
-                      id,
-                      TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - creationTime),
-                      req.context().lastDispatchedFrom().toString(),
-                      req.context().lastDispatchedTo().toString(),
-                      bucket));
-            });
+  private static Mono<Void> pingQuery(final Core core, final PingTarget target, final Optional<Duration> userTimeout,
+                                      final RetryStrategy retryStrategy) {
+    return Mono.defer(() -> {
+      Duration timeout = userTimeout.orElse(core.context().environment().timeoutConfig().queryTimeout());
+      QueryPingRequest request = new QueryPingRequest(timeout, core.context(), retryStrategy, target.nodeIdentifier);
+      core.send(request);
+      return Reactor.wrap(request, request.response(), true);
+    }).then();
   }
 
-  public static Mono<PingServiceHealth> pingKV(
-          final String bucket,
-          final Core core,
-          final Duration timeout,
-          final RetryStrategy retryStrategy) {
+  private static Mono<Void> pingAnalytics(final Core core, final PingTarget target, final Optional<Duration> userTimeout,
+                                          final RetryStrategy retryStrategy) {
+    return Mono.defer(() -> {
+      Duration timeout = userTimeout.orElse(core.context().environment().timeoutConfig().analyticsTimeout());
+      AnalyticsPingRequest request = new AnalyticsPingRequest(timeout, core.context(), retryStrategy, target.nodeIdentifier);
+      core.send(request);
+      return Reactor.wrap(request, request.response(), true);
+    }).then();
+  }
 
-    final long creationTime = System.nanoTime();
+  private static Mono<Void> pingViews(final Core core, final PingTarget target, final Optional<Duration> userTimeout,
+                                          final RetryStrategy retryStrategy) {
+    return Mono.defer(() -> {
+      Duration timeout = userTimeout.orElse(core.context().environment().timeoutConfig().viewTimeout());
+      ViewPingRequest request = new ViewPingRequest(timeout, core.context(), retryStrategy, target.bucketName, target.nodeIdentifier);
+      core.send(request);
+      return Reactor.wrap(request, request.response(), true);
+    }).then();
+  }
 
-    PingKVRequest req = new PingKVRequest(timeout,
-            core.context(),
-            retryStrategy,
-            CollectionIdentifier.fromDefault(bucket));
+  private static Mono<Void> pingSearch(final Core core, final PingTarget target, final Optional<Duration> userTimeout,
+                                       final RetryStrategy retryStrategy) {
+    return Mono.defer(() -> {
+      Duration timeout = userTimeout.orElse(core.context().environment().timeoutConfig().searchTimeout());
+      SearchPingRequest request = new SearchPingRequest(timeout, core.context(), retryStrategy, target.nodeIdentifier);
+      core.send(request);
+      return Reactor.wrap(request, request.response(), true);
+    }).then();
+  }
 
-    String id = "0x" + Integer.toHexString(req.hashCode());
-    core.send(req);
-    return Reactor.wrap(req, req.response(), true)
+  @Stability.Internal
+  public static class PingTarget {
 
-            .map(response -> {
-              return new PingServiceHealth(
-                      ServiceType.KV,
-                      PingServiceHealth.PingState.OK,
-                      id,
-                      TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - creationTime),
-                      req.context().lastDispatchedFrom().toString(),
-                      req.context().lastDispatchedTo().toString(),
-                      bucket
-              );
-            })
+    private final ServiceType serviceType;
+    private final NodeIdentifier nodeIdentifier;
+    private final String bucketName;
 
-            .onErrorResume(err -> {
-              PingServiceHealth.PingState state = PingServiceHealth.PingState.ERROR;
+    PingTarget(final ServiceType serviceType, final NodeIdentifier nodeIdentifier, final String bucketName) {
+      this.serviceType = serviceType;
+      this.nodeIdentifier = nodeIdentifier;
+      this.bucketName = bucketName;
+    }
 
-              if (err instanceof TimeoutException) {
-                state = PingServiceHealth.PingState.TIMEOUT;
-              }
+    public ServiceType serviceType() {
+      return serviceType;
+    }
 
-              HostAndPort lastDispatchedTo = req.context().lastDispatchedTo();
-              HostAndPort lastDispatchedFrom = req.context().lastDispatchedFrom();
-              return Mono.just(new PingServiceHealth(
-                ServiceType.KV,
-                state,
-                id,
-                TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - creationTime),
-                lastDispatchedFrom == null ? null : lastDispatchedFrom.toString(),
-                lastDispatchedTo == null ? null : lastDispatchedTo.toString(),
-                bucket
-              ));
-            });
+    public NodeIdentifier nodeIdentifier() {
+      return nodeIdentifier;
+    }
+
+    public String bucketName() {
+      return bucketName;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      PingTarget that = (PingTarget) o;
+      return serviceType == that.serviceType &&
+        Objects.equals(nodeIdentifier, that.nodeIdentifier) &&
+        Objects.equals(bucketName, that.bucketName);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(serviceType, nodeIdentifier, bucketName);
+    }
+
+    @Override
+    public String toString() {
+      return "PingTarget{" +
+        "serviceType=" + serviceType +
+        ", nodeIdentifier=" + nodeIdentifier +
+        ", bucketName='" + bucketName + '\'' +
+        '}';
+    }
   }
 
 }

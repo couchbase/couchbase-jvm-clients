@@ -30,6 +30,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
@@ -53,6 +54,8 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
     cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
+
+    cluster.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterEach

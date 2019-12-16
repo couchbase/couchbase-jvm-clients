@@ -20,23 +20,15 @@ import java.util.UUID
 import java.util.stream.Collectors
 
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diag.DiagnosticsResult
+import com.couchbase.client.core.diag.{DiagnosticsResult, EndpointDiagnostics}
 import com.couchbase.client.core.env.{Authenticator, PasswordAuthenticator}
-import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.AsyncCluster.seedNodesFromConnectionString
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.manager.analytics.AnalyticsIndexManager
 import com.couchbase.client.scala.manager.bucket.BucketManager
 import com.couchbase.client.scala.manager.query.QueryIndexManager
-import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager, UserManager}
-import com.couchbase.client.scala.manager.bucket.{
-  AsyncBucketManager,
-  BucketManager,
-  ReactiveBucketManager
-}
-import com.couchbase.client.scala.manager.collection.CollectionManager
-import com.couchbase.client.scala.manager.query.{AsyncQueryIndexManager, QueryIndexManager}
 import com.couchbase.client.scala.manager.search.SearchIndexManager
 import com.couchbase.client.scala.manager.user.UserManager
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
@@ -45,8 +37,7 @@ import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
 import com.couchbase.client.scala.util.AsyncUtils
 
-import scala.concurrent.{Await, ExecutionContext}
-import scala.concurrent.duration.Duration
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 /** Represents a connection to a Couchbase cluster.
@@ -184,7 +175,13 @@ class Cluster private[scala] (
   def diagnostics(reportId: String = UUID.randomUUID.toString): Try[DiagnosticsResult] = {
     Try(
       new DiagnosticsResult(
-        async.core.diagnostics().collect(Collectors.toList()),
+        async.core
+          .diagnostics()
+          .collect(
+            Collectors.groupingBy[EndpointDiagnostics, ServiceType](
+              (v1: EndpointDiagnostics) => v1.`type`()
+            )
+          ),
         async.core.context().environment().userAgent().formattedShort(),
         reportId
       )

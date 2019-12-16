@@ -26,7 +26,7 @@ import com.couchbase.client.core.cnc.events.service.ServiceAddIgnoredEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceAddedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemoveIgnoredEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemovedEvent;
-import com.couchbase.client.core.diag.EndpointHealth;
+import com.couchbase.client.core.diag.EndpointDiagnostics;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.Request;
@@ -55,8 +55,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -432,7 +430,7 @@ public class Node implements Stateful<NodeState> {
     }
   }
 
-  public Stream<EndpointHealth> diagnostics() {
+  public Stream<EndpointDiagnostics> diagnostics() {
     return services.values()
             .stream()
             .flatMap(services -> services.values().stream())

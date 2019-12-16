@@ -50,7 +50,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
-    waitUntilCondition(() -> cluster.core().clusterConfig().hasClusterOrBucketConfig());
+    cluster.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll

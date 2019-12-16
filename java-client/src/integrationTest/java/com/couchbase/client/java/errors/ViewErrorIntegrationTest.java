@@ -27,6 +27,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ViewErrorIntegrationTest extends JavaIntegrationTest {
@@ -40,7 +42,7 @@ class ViewErrorIntegrationTest extends JavaIntegrationTest {
   static void beforeAll() {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
     bucket = cluster.bucket(config().bucketname());
-
+    cluster.waitUntilReady(Duration.ofSeconds(5));
     DesignDocument designDocument = new DesignDocument(designDocName);
     bucket.viewIndexes().upsertDesignDocument(designDocument, DesignDocumentNamespace.PRODUCTION);
   }

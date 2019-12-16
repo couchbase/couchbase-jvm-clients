@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.msg.diagnostics;
+package com.couchbase.client.core.msg.query;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -24,51 +24,45 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
-import com.couchbase.client.core.msg.ScopedRequest;
+import com.couchbase.client.core.msg.TargetedRequest;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
 
 import static com.couchbase.client.core.io.netty.HttpProtocol.decodeStatus;
-import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
-public class PingRequest
-  extends BaseRequest<PingResponse>
-  implements NonChunkedHttpRequest<PingResponse>, ScopedRequest {
+public class QueryPingRequest extends BaseRequest<QueryPingResponse>
+  implements NonChunkedHttpRequest<QueryPingResponse>, TargetedRequest {
 
-  private final String bucket;
-  private final String path;
-  private final ServiceType type;
+  private final NodeIdentifier target;
 
-  public PingRequest(final Duration timeout,
-                     final CoreContext ctx,
-                     final RetryStrategy retryStrategy,
-                     final String bucket,
-                     final String path,
-                     final ServiceType type) {
+  public QueryPingRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy, NodeIdentifier target) {
     super(timeout, ctx, retryStrategy);
-    this.bucket = bucket;
-    this.path = path;
-    this.type = type;
+    this.target = target;
   }
 
   @Override
-  public PingResponse decode(final FullHttpResponse response) {
+  public QueryPingResponse decode(final FullHttpResponse response) {
     byte[] dst = new byte[response.content().readableBytes()];
     response.content().readBytes(dst);
-    return new PingResponse(decodeStatus(response.status()), dst);
+    return new QueryPingResponse(decodeStatus(response.status()), dst);
   }
 
   @Override
   public FullHttpRequest encode() {
-    return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
+    return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/admin/ping");
   }
 
   @Override
   public ServiceType serviceType() {
-    return type;
+    return ServiceType.QUERY;
+  }
+
+  @Override
+  public NodeIdentifier target() {
+    return target;
   }
 
   @Override
@@ -76,17 +70,5 @@ public class PingRequest
     return true;
   }
 
-  @Override
-  public String bucket() {
-    return bucket;
-  }
-
-  @Override
-  public String toString() {
-    return "PingRequest{" +
-      "bucket='" + redactMeta(bucket) + '\'' +
-      ", path='" + path + '\'' +
-      ", type=" + type +
-      '}';
-  }
 }
+

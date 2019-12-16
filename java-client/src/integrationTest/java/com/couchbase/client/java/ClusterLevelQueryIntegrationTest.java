@@ -26,6 +26,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -47,6 +49,8 @@ class ClusterLevelQueryIntegrationTest extends JavaIntegrationTest {
   @Test
   @IgnoreWhen(missesCapabilities = {Capabilities.GLOBAL_CONFIG, Capabilities.QUERY})
   void performsClusterLevelQueryWithoutOpenBucket() {
+    cluster.waitUntilReady(Duration.ofSeconds(5));
+
     QueryResult result = cluster.query("select 1=1", queryOptions().clientContextId("my-context-id"));
     assertEquals(1, result.rowsAsObject().size());
     assertEquals("my-context-id", result.metaData().clientContextId());

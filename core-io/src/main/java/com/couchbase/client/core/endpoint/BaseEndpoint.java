@@ -58,7 +58,7 @@ import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueEventLoopGro
 import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueSocketChannel;
 import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChannel;
-import com.couchbase.client.core.diag.EndpointHealth;
+import com.couchbase.client.core.diag.EndpointDiagnostics;
 import com.couchbase.client.core.util.SingleStateful;
 import com.couchbase.client.core.util.HostAndPort;
 import reactor.core.publisher.Flux;
@@ -584,8 +584,11 @@ public abstract class BaseEndpoint implements Endpoint {
     }
   }
 
+  /**
+   * Collects and assembles the endpoint diagnostics for this specific endpoint.
+   */
   @Override
-  public EndpointHealth diagnostics() {
+  public EndpointDiagnostics diagnostics() {
     String remote = null;
     String local = null;
     if(channel != null) {
@@ -600,15 +603,14 @@ public abstract class BaseEndpoint implements Endpoint {
         local = redactMeta(la.getHostString()) + ":" + la.getPort();
       }
     }
-    long lastActivity = TimeUnit.NANOSECONDS.toMicros(lastResponseTimestamp > 0 ? System.nanoTime() - lastResponseTimestamp : 0);
-    String id = "0x" + Integer.toHexString(hashCode());
 
-    return new EndpointHealth(endpointContext().serviceType(),
-            state(),
-            remote,
-            local,
-            endpointContext().bucket(),
-            lastActivity,
-            id);
+    final Optional<Long> lastActivity = lastResponseTimestamp == 0
+      ? Optional.empty()
+      : Optional.of(TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - lastResponseTimestamp));
+    final String id = "0x" + Integer.toHexString(hashCode());
+
+    return new EndpointDiagnostics(endpointContext().serviceType(), state(), remote, local, endpointContext().bucket(),
+      lastActivity, id);
   }
+
 }

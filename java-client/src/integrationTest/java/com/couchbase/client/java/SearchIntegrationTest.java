@@ -32,6 +32,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.UUID;
 
 import static com.couchbase.client.java.search.SearchOptions.searchOptions;
@@ -51,6 +52,8 @@ class SearchIntegrationTest extends JavaIntegrationTest {
         cluster = Cluster.connect(seedNodes(), clusterOptions());
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
+
+        cluster.waitUntilReady(Duration.ofSeconds(5));
         cluster.searchIndexes().upsertIndex(new SearchIndex("idx-" + config().bucketname(), config().bucketname()));
     }
 

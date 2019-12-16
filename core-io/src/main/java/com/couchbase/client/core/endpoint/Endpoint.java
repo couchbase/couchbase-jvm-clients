@@ -16,10 +16,9 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.diag.EndpointHealth;
+import com.couchbase.client.core.diag.EndpointDiagnostics;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
-import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.Stateful;
 
 /**
@@ -78,5 +77,5 @@ public interface Endpoint extends Stateful<EndpointState> {
   /**
    * Returns diagnostics information for this endpoint.
    */
-  EndpointHealth diagnostics();
+  EndpointDiagnostics diagnostics();
 }

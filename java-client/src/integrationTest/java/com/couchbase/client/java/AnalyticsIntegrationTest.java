@@ -28,6 +28,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.List;
 
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
@@ -45,6 +46,8 @@ class AnalyticsIntegrationTest extends JavaIntegrationTest {
     static void setup() {
         cluster = Cluster.connect(seedNodes(), clusterOptions());
         cluster.bucket(config().bucketname());
+
+        cluster.waitUntilReady(Duration.ofSeconds(5));
     }
 
     @AfterAll

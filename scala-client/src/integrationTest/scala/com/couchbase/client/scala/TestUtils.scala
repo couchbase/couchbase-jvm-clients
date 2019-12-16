@@ -2,7 +2,6 @@ package com.couchbase.client.scala
 
 import java.util.UUID
 
-import com.couchbase.client.core.diag.PingServiceHealth.PingState
 import com.couchbase.client.core.service.ServiceType
 
 import scala.util.{Failure, Success}
@@ -18,7 +17,7 @@ object TestUtils {
     var done  = false
     var guard = 100
 
-    while (!done && guard != 0) {
+    /*while (!done && guard != 0) {
       guard -= 1
       bucket.ping(Seq(serviceType)) match {
         case Success(result) =>
@@ -32,7 +31,7 @@ object TestUtils {
       if (!done) {
         Thread.sleep(100)
       }
-    }
+    }*/
 
   }
 }

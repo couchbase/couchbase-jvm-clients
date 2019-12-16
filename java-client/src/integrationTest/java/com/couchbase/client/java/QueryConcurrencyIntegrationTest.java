@@ -28,6 +28,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -55,12 +56,12 @@ class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void setup() {
-    environment = environment()
-      .ioConfig(IoConfig.enableMutationTokens(true))
-      .build();
+    environment = environment().ioConfig(IoConfig.enableMutationTokens(true)).build();
     cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     Bucket bucket = cluster.bucket(config().bucketname());
     Collection collection = bucket.defaultCollection();
+
+    cluster.waitUntilReady(Duration.ofSeconds(5));
 
     bucketName = "`" + config().bucketname() + "`";
     createPrimaryIndex(cluster, config().bucketname());

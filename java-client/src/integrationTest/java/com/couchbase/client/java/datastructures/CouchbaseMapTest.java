@@ -28,6 +28,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -52,6 +53,7 @@ class CouchbaseMapTest extends JavaIntegrationTest {
         cluster = Cluster.connect(seedNodes(), clusterOptions());
         collection = cluster.bucket(config().bucketname()).defaultCollection();
         options = MapOptions.mapOptions();
+        cluster.waitUntilReady(Duration.ofSeconds(5));
     }
 
     @AfterAll

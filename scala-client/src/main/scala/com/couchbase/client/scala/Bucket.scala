@@ -19,7 +19,6 @@ package com.couchbase.client.scala
 import java.util.UUID
 
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diag.PingResult
 import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.manager.collection.CollectionManager
@@ -108,27 +107,4 @@ class Bucket private[scala] (val async: AsyncBucket) {
     AsyncUtils.block(async.viewQuery(designDoc, viewName, options))
   }
 
-  /** Performs a diagnostic active "ping" call against one or more services.
-    *
-    * Note that since each service has different timeouts, you need to provide a timeout that suits
-    * your needs (how long each individual service ping should take max before it times out).
-    *
-    * @param services        which services to ping.  Default (an empty Seq) means to fetch all of them.
-    * @param reportId        this will be returned in the [[PingResult]].  If not specified it defaults to a UUID.
-    * @param timeout         when the operation will timeout.  This will default to `timeoutConfig().kvTimeout()`
-    *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
-    * @param retryStrategy   provides some control over how the SDK handles failures.  Will default to
-    *                        FailFastRetryStrategy.
-    *
-    * @return a ping report once created.
-    */
-  @Stability.Volatile
-  def ping(
-      services: Seq[ServiceType] = Seq(),
-      reportId: String = UUID.randomUUID.toString,
-      timeout: Duration = kvTimeout,
-      retryStrategy: RetryStrategy = FailFastRetryStrategy.INSTANCE
-  ): Try[PingResult] = {
-    AsyncUtils.block(async.ping(services, reportId, timeout, retryStrategy))
-  }
 }

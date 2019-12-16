@@ -63,9 +63,10 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void setup() {
-        cluster = Cluster.connect(seedNodes(), clusterOptions());
-        Bucket bucket = cluster.bucket(config().bucketname());
-        coll = bucket.defaultCollection();
+      cluster = Cluster.connect(seedNodes(), clusterOptions());
+      Bucket bucket = cluster.bucket(config().bucketname());
+      coll = bucket.defaultCollection();
+      cluster.waitUntilReady(Duration.ofSeconds(5));
     }
 
     @AfterAll

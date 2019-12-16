@@ -35,6 +35,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -76,6 +77,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
     bucket = cluster.bucket(config().bucketname());
     analytics = cluster.analyticsIndexes();
+    cluster.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll

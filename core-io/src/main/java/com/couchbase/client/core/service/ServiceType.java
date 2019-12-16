@@ -51,7 +51,7 @@ public enum ServiceType {
   /**
    * The Cluster Manager service ("ns server")
    */
-  MANAGER(ServiceScope.CLUSTER, "manager");
+  MANAGER(ServiceScope.CLUSTER, "mgmt");
 
   private final ServiceScope scope;
   private final String ident;

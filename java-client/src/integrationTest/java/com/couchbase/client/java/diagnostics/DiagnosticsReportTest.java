@@ -20,20 +20,19 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
-import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Simple verification of the {@link DiagnosticsResult}.
- *
- * @since 1.5.0
  */
 public class DiagnosticsReportTest extends JavaIntegrationTest {
 
@@ -43,6 +42,7 @@ public class DiagnosticsReportTest extends JavaIntegrationTest {
     static void setup() {
         cluster = Cluster.connect(seedNodes(), clusterOptions());
         cluster.bucket(config().bucketname());
+        cluster.waitUntilReady(Duration.ofSeconds(5));
     }
 
     @AfterAll
@@ -51,37 +51,13 @@ public class DiagnosticsReportTest extends JavaIntegrationTest {
     }
 
     @Test
-    void basicKVCheck() {
+    void containsKeyValueEndpointsWithoutOp() {
         DiagnosticsResult response = cluster.diagnostics();
 
-        String json = response.exportToJson(true);
+        String json = response.exportToJson();
         assertFalse(json.isEmpty());
 
-        // One for config().bucketname(), one for BUCKET_GLOBAL_SCOPE
-        assertTrue(response.endpoints(ServiceType.KV).size() >= 2);
+        assertFalse(response.endpoints().get(ServiceType.KV).isEmpty());
     }
 
-    @IgnoreWhen( missesCapabilities = { Capabilities.QUERY }, clusterTypes = ClusterType.MOCKED)
-    @Test
-    void noInfoOnQueryUntilRunStatement() {
-        assertTrue(cluster.diagnostics().endpoints(ServiceType.QUERY).isEmpty());
-
-        cluster.query("select 'hello' as greeting");
-
-        assertEquals(1, cluster.diagnostics().endpoints(ServiceType.QUERY).size());
-    }
-
-    @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
-    @Test
-    void shouldExposeHealthInfoAfterConnect() {
-        cluster.query("select 'hello' as greeting");
-
-        DiagnosticsResult response = cluster.diagnostics();
-
-        String json = response.exportToJson(true);
-        assertFalse(json.isEmpty());
-
-        // One for config().bucketname(), one for BUCKET_GLOBAL_SCOPE
-        assertTrue(response.endpoints(ServiceType.KV).size() >= 2);
-    }
 }

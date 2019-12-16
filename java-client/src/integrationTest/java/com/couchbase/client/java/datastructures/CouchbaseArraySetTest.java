@@ -28,6 +28,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.HashSet;
@@ -53,6 +54,7 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
         cluster = Cluster.connect(seedNodes(), clusterOptions());
         collection = cluster.bucket(config().bucketname()).defaultCollection();
         options = ArraySetOptions.arraySetOptions();
+        cluster.waitUntilReady(Duration.ofSeconds(5));
     }
 
     @AfterAll

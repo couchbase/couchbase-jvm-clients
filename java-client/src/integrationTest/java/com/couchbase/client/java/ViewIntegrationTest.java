@@ -30,6 +30,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +57,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
     bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
-    waitUntilCondition(() -> cluster.core().clusterConfig().hasClusterOrBucketConfig());
+    cluster.waitUntilReady(Duration.ofSeconds(5));
 
     createDesignDocument();
 

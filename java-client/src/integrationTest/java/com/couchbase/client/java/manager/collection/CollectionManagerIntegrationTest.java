@@ -32,6 +32,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.UUID;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -53,6 +54,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     environment = environment().ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)).build();
     cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     collections = cluster.bucket(config().bucketname()).collections();
+    cluster.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll

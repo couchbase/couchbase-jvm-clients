@@ -20,11 +20,11 @@ import java.util.stream.Collectors
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diag.DiagnosticsResult
+import com.couchbase.client.core.diag.{DiagnosticsResult, EndpointDiagnostics}
 import com.couchbase.client.core.env.Authenticator
-import com.couchbase.client.core.error.{AnalyticsException, ErrorCodeAndMessage}
+import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.msg.search.SearchRequest
-import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionStringUtil
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
@@ -33,8 +33,8 @@ import com.couchbase.client.scala.manager.analytics.{
   ReactiveAnalyticsIndexManager
 }
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, ReactiveBucketManager}
-import com.couchbase.client.scala.manager.search.AsyncSearchIndexManager
 import com.couchbase.client.scala.manager.query.AsyncQueryIndexManager
+import com.couchbase.client.scala.manager.search.AsyncSearchIndexManager
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager}
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler, SearchHandler}
@@ -245,7 +245,10 @@ class AsyncCluster(
   def diagnostics(reportId: String = UUID.randomUUID.toString): Future[DiagnosticsResult] = {
     Future(
       new DiagnosticsResult(
-        core.diagnostics().collect(Collectors.toList()),
+        core.diagnostics.collect(
+          Collectors
+            .groupingBy[EndpointDiagnostics, ServiceType]((v1: EndpointDiagnostics) => v1.`type`())
+        ),
         core.context().environment().userAgent().formattedShort(),
         reportId
       )

@@ -33,6 +33,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 
@@ -58,6 +59,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     cluster.bucket(config().bucketname());
     buckets = cluster.buckets();
+    cluster.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll
