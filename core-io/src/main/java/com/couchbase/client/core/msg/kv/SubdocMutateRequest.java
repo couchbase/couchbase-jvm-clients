@@ -24,7 +24,10 @@ import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.ErrorContext;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.KeyValueErrorContext;
+import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
+import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.SubDocumentErrorContext;
+import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.ChannelContext;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -205,8 +208,20 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     } else {
       values = new SubDocumentField[0];
     }
-    // Do not handle SUBDOC_INVALID_COMBO here, it indicates a client-side bug
 
+    // Handle any document-level failures here
+    if (rawOverallStatus == Status.SUBDOC_DOC_NOT_JSON.status()) {
+      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_NOT_JSON);
+      error = Optional.of(new DocumentNotJsonException(e));
+    } else if (rawOverallStatus == Status.SUBDOC_DOC_TOO_DEEP.status()) {
+      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_TOO_DEEP);
+      error = Optional.of(new DocumentTooDeepException(e));
+    } else if (rawOverallStatus == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status()) {
+      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.XATTR_INVALID_KEY_COMBO);
+      error = Optional.of(new XattrInvalidKeyComboException(e));
+    }
+
+    // Do not handle SUBDOC_INVALID_COMBO here, it indicates a client-side bug
     return new SubdocMutateResponse(
       overallStatus,
       error,

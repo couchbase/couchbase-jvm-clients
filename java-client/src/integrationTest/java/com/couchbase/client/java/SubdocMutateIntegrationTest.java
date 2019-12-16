@@ -715,14 +715,17 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     @Test
     public void multipleXattrKeysShouldFail() {
         String docId = docId();
-
-        assertThrows(XattrInvalidKeyComboException.class, () -> {
-            coll.mutateIn(docId,
-                    Arrays.asList(
-                            MutateInSpec.increment("count", 1).xattr().createPath(),
-                            MutateInSpec.arrayAppend("logs", Arrays.asList("someValue")),
-                            MutateInSpec.upsert("logs[-1].c", MutateInMacro.CAS).xattr()),
-                    MutateInOptions.mutateInOptions().storeSemantics(StoreSemantics.UPSERT));
-        });
+        assertThrows(
+          XattrInvalidKeyComboException.class,
+          () -> coll.mutateIn(
+            docId,
+            Arrays.asList(
+              MutateInSpec.increment("count", 1).xattr().createPath(),
+              MutateInSpec.arrayAppend("logs", Collections.singletonList("someValue")),
+              MutateInSpec.upsert("logs[-1].c", MutateInMacro.CAS).xattr()
+            ),
+            MutateInOptions.mutateInOptions().storeSemantics(StoreSemantics.UPSERT))
+        );
     }
+
 }
