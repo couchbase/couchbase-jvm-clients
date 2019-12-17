@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.subdoc.PathExistsException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
@@ -81,7 +82,13 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
     private String prepare(JsonObject content) {
         String docId = docId();
-        coll.insert(docId, content);
+        try {
+          coll.insert(docId, content);
+        } catch (RequestCanceledException ex) {
+          // suspect this happens because another test is running and the server closed because of some
+          // invalid arg tests... redo the insert one more time
+          coll.insert(docId, content);
+        }
         return docId;
     }
 

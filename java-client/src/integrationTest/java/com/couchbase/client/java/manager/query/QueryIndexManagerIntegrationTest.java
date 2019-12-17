@@ -32,6 +32,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
@@ -101,7 +102,7 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void createDuplicateSecondaryIndex() {
-    final String indexName = "myIndex";
+    final String indexName = "foo" + UUID.randomUUID().toString();
     final Set<String> fields = setOf("fieldA", "fieldB");
 
     indexes.createIndex(bucketName, indexName, fields);
@@ -115,9 +116,11 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void createPrimaryIndex() {
-    indexes.createPrimaryIndex(bucketName, createPrimaryQueryIndexOptions()
-        .deferred(true)
-        .numReplicas(0));
+    try {
+      indexes.createPrimaryIndex(bucketName, createPrimaryQueryIndexOptions().numReplicas(0));
+    } catch (IndexExistsException ex) {
+      // this is fine, might happen if some other tests race
+    }
 
     QueryIndex index = getIndex("#primary");
     assertTrue(index.primary());

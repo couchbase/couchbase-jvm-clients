@@ -123,13 +123,13 @@ public class QueryChunkResponseParser
         return new ParsingFailureException(errorContext);
       } else if (PREPARED_ERROR_CODES.contains(code)) {
         return new PreparedStatementException(errorContext);
-      } else if (code == 4300 && message.matches("^.*index .+ already exists.*")) {
+      } else if (code == 4300 && message.matches("^.*index .*already exist.*")) {
         return new IndexExistsException(errorContext);
       } else if (code >= 4000 && code < 5000) {
         return new PlanningFailureException(errorContext);
       } else if (code == 12004 || code == 12016 || (code == 5000 && message.matches("^.*index .+ not found.*"))) {
         return new IndexNotFoundException(errorContext);
-      } else if (code == 5000 && message.matches("^.*Index .+ already exists.*")) {
+      } else if (code == 5000 && message.matches("^.*Index .*already exist.*")) {
         return new IndexExistsException(errorContext);
       } else if (code >= 5000 && code < 6000) {
         return new InternalServerFailureException(errorContext);
