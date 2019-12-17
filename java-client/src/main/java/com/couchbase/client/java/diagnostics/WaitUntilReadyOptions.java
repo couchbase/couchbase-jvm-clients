@@ -76,6 +76,10 @@ public class WaitUntilReadyOptions {
    */
   public WaitUntilReadyOptions desiredState(final ClusterState desiredState) {
     notNull(desiredState, "Desired State");
+    if (desiredState == ClusterState.OFFLINE) {
+      throw new IllegalArgumentException("Offline cannot be passed in as a state to wait for");
+    }
+
     this.desiredState = desiredState;
     return this;
   }

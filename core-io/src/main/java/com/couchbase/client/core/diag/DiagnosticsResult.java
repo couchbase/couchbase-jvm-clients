@@ -114,6 +114,15 @@ public class DiagnosticsResult {
     }
 
     /**
+     * The version of this report (useful when exporting to JSON).
+     *
+     * @return the version format of this report.
+     */
+    public int version() {
+        return VERSION;
+    }
+
+    /**
      * The identifier of this SDK (useful when exporting to JSON).
      *
      * @return the identifier of this SDK.
