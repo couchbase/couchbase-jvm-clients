@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.diag.ClusterState;
 import com.couchbase.client.core.diag.DiagnosticsResult;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
@@ -351,10 +352,31 @@ public class Cluster {
     return block(asyncCluster.diagnostics(options));
   }
 
+  /**
+   * Waits until the desired {@link ClusterState} is reached.
+   * <p>
+   * This method will wait until either the cluster state is "online", or the timeout is reached. Since the SDK is
+   * bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
+   * and usable before moving on.
+   *
+   * @param timeout the maximum time to wait until readiness.
+   * @return a function that completes either once ready or timeout.
+   */
   public void waitUntilReady(final Duration timeout) {
     block(asyncCluster.waitUntilReady(timeout));
   }
 
+  /**
+   * Waits until the desired {@link ClusterState} is reached.
+   * <p>
+   * This method will wait until either the cluster state is "online" by default, or the timeout is reached. Since the
+   * SDK is bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
+   * and usable before moving on. You can tune the properties through {@link WaitUntilReadyOptions}.
+   *
+   * @param timeout the maximum time to wait until readiness.
+   * @param options the options to customize the readiness waiting.
+   * @return a function that completes either once ready or timeout.
+   */
   public void waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
     block(asyncCluster.waitUntilReady(timeout, options));
   }

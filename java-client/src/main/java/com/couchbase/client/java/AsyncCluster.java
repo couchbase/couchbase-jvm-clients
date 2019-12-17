@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
+import com.couchbase.client.core.diag.ClusterState;
 import com.couchbase.client.core.diag.DiagnosticsResult;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diag.EndpointDiagnostics;
@@ -512,23 +513,50 @@ public class AsyncCluster {
       )))).toFuture();
   }
 
+  /**
+   * Waits until the desired {@link ClusterState} is reached.
+   * <p>
+   * This method will wait until either the cluster state is "online", or the timeout is reached. Since the SDK is
+   * bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
+   * and usable before moving on.
+   *
+   * @param timeout the maximum time to wait until readiness.
+   * @return a completable future that completes either once ready or timeout.
+   */
   public CompletableFuture<Void> waitUntilReady(final Duration timeout) {
     return waitUntilReady(timeout, DEFAULT_WAIT_UNTIL_READY_OPTIONS);
   }
 
+  /**
+   * Waits until the desired {@link ClusterState} is reached.
+   * <p>
+   * This method will wait until either the cluster state is "online" by default, or the timeout is reached. Since the
+   * SDK is bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
+   * and usable before moving on. You can tune the properties through {@link WaitUntilReadyOptions}.
+   *
+   * @param timeout the maximum time to wait until readiness.
+   * @param options the options to customize the readiness waiting.
+   * @return a completable future that completes either once ready or timeout.
+   */
   public CompletableFuture<Void> waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
     notNull(options, "WaitUntilReadyOptions");
     final WaitUntilReadyOptions.Built opts = options.build();
 
-    if (!hasChanceOfCompletingWaiting(core.clusterConfig(), core.configurationProvider())) {
+    boolean hasChance = core.clusterConfig().hasClusterOrBucketConfig()
+      || core.configurationProvider().bucketConfigLoadInProgress()
+      || core.configurationProvider().bucketConfigLoadInProgress();
+    if (!hasChance) {
       CompletableFuture<Void> f = new CompletableFuture<>();
-      f.completeExceptionally(new IllegalStateException("Against pre 6.5 clusters at least a bucket needs to be opened!"));
+      f.completeExceptionally(
+        new IllegalStateException("Against pre 6.5 clusters at least a bucket needs to be opened!")
+      );
       return f;
     }
 
     return Flux
       .interval(Duration.ofMillis(10))
-      .filter(i -> !(core.configurationProvider().bucketConfigLoadInProgress() || core.configurationProvider().globalConfigLoadInProgress()))
+      .filter(i -> !(core.configurationProvider().bucketConfigLoadInProgress()
+        || core.configurationProvider().globalConfigLoadInProgress()))
       .take(1)
       .flatMap(aLong -> {
         final Set<ServiceType> servicesToCheck = opts.serviceTypes() != null && !opts.serviceTypes().isEmpty()
@@ -541,21 +569,14 @@ public class AsyncCluster {
 
         return Flux
           .interval(Duration.ofMillis(10))
-          .flatMap(i -> Mono.fromFuture(diagnostics(diagnosticsOptions().ping(true).serviceTypes(servicesToCheck).timeout(timeout))))
+          .flatMap(i -> Mono.fromFuture(diagnostics(
+            diagnosticsOptions().ping(true).serviceTypes(servicesToCheck).timeout(timeout)
+          )))
           .takeUntil(d -> d.state() == opts.desiredState());
       })
       .timeout(timeout)
       .then()
       .toFuture();
-  }
-
-  /**
-   * Helper method to figure out if waiting until ready has ever a chance of completing.
-   */
-  private boolean hasChanceOfCompletingWaiting(final ClusterConfig clusterConfig, final ConfigurationProvider provider) {
-    return clusterConfig.hasClusterOrBucketConfig()
-      || provider.bucketConfigLoadInProgress()
-      || provider.bucketConfigLoadInProgress();
   }
 
 }
