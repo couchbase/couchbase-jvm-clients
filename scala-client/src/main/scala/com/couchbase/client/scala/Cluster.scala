@@ -20,7 +20,7 @@ import java.util.UUID
 import java.util.stream.Collectors
 
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diag.{DiagnosticsResult, EndpointDiagnostics}
+import com.couchbase.client.core.diagnostics.{DiagnosticsResult, EndpointDiagnostics}
 import com.couchbase.client.core.env.{Authenticator, PasswordAuthenticator}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.AsyncCluster.seedNodesFromConnectionString

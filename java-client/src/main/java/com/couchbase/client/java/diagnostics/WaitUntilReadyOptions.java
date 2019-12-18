@@ -17,12 +17,9 @@
 package com.couchbase.client.java.diagnostics;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.diag.ClusterState;
+import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.CommonOptions;
 
-import java.util.Optional;
 import java.util.Set;
 
 import static com.couchbase.client.core.util.Validators.notNull;

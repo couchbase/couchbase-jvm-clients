@@ -19,7 +19,7 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.cnc.events.service.ServiceConnectInitiatedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiatedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceStateChangedEvent;
-import com.couchbase.client.core.diag.EndpointDiagnostics;
+import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.msg.Request;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.diag;
+package com.couchbase.client.core.diagnostics;
 
 /**
  * Describes the cluster state from the clients perspective in a simplified and aggregated state.

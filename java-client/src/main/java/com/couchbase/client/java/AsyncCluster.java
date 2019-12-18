@@ -18,13 +18,11 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.cnc.InternalSpan;
-import com.couchbase.client.core.config.ClusterConfig;
-import com.couchbase.client.core.config.ConfigurationProvider;
-import com.couchbase.client.core.diag.ClusterState;
-import com.couchbase.client.core.diag.DiagnosticsResult;
+import com.couchbase.client.core.diagnostics.ClusterState;
+import com.couchbase.client.core.diagnostics.DiagnosticsResult;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.diag.EndpointDiagnostics;
-import com.couchbase.client.core.diag.HealthPinger;
+import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
+import com.couchbase.client.core.diagnostics.HealthPinger;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.OwnedSupplier;
@@ -59,7 +57,6 @@ import com.couchbase.client.java.search.SearchAccessor;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
-import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -68,7 +65,6 @@ import java.time.Duration;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 

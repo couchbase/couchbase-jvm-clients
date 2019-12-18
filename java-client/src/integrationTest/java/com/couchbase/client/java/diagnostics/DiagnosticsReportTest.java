@@ -15,12 +15,10 @@
  */
 package com.couchbase.client.java.diagnostics;
 
-import com.couchbase.client.core.diag.DiagnosticsResult;
+import com.couchbase.client.core.diagnostics.DiagnosticsResult;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
-import com.couchbase.client.test.Capabilities;
-import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

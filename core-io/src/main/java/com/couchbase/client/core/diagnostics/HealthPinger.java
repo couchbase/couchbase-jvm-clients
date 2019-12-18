@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.diag;
+package com.couchbase.client.core.diagnostics;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
@@ -41,7 +41,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**

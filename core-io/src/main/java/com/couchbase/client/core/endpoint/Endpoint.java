@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.diag.EndpointDiagnostics;
+import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.util.Stateful;

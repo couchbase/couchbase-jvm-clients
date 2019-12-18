@@ -20,7 +20,7 @@ import java.util.stream.Collectors
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diag.{DiagnosticsResult, EndpointDiagnostics}
+import com.couchbase.client.core.diagnostics.{DiagnosticsResult, EndpointDiagnostics}
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.msg.search.SearchRequest

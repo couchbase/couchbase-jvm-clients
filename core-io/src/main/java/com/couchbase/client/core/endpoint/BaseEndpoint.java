@@ -58,7 +58,7 @@ import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueEventLoopGro
 import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueSocketChannel;
 import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChannel;
-import com.couchbase.client.core.diag.EndpointDiagnostics;
+import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.util.SingleStateful;
 import com.couchbase.client.core.util.HostAndPort;
 import reactor.core.publisher.Flux;
