@@ -26,22 +26,12 @@ import java.util.Set;
 /**
  * Allows to customize the diagnostics report.
  */
-public class DiagnosticsOptions extends CommonOptions<DiagnosticsOptions> {
+public class DiagnosticsOptions {
 
   /**
    * Holds a custom report id.
    */
   private Optional<String> reportId = Optional.empty();
-
-  /**
-   * If a ping should be performed before performing the diagnostics.
-   */
-  private boolean ping = false;
-
-  /**
-   * The service types to limit this diagnostics request to.
-   */
-  private Set<ServiceType> serviceTypes;
 
   /**
    * Creates a new set of {@link DiagnosticsOptions}.
@@ -67,50 +57,17 @@ public class DiagnosticsOptions extends CommonOptions<DiagnosticsOptions> {
     return this;
   }
 
-  /**
-   * If set to true, the SDK will perform application-level pings against all possible services first.
-   * <p>
-   * Pinging the services will have the effect that previously idle services will also be tested, but by nature this
-   * operation will perform actual I/O against each service.
-   *
-   * @param ping if ping should be enabled.
-   * @return the {@link DiagnosticsOptions} to allow method chaining.
-   */
-  public DiagnosticsOptions ping(final boolean ping) {
-    this.ping = ping;
-    return this;
-  }
-
-  /**
-   * Allows to customize the set of services to diagnose.
-   * <p>
-   * If no set is provided, all possible services are assumed to be diagnosable.
-   *
-   * @param serviceTypes the service types that should be diagnosed.
-   * @return the {@link DiagnosticsOptions} to allow method chaining.
-   */
-  public DiagnosticsOptions serviceTypes(final Set<ServiceType> serviceTypes) {
-    this.serviceTypes = serviceTypes;
-    return this;
-  }
-
   @Stability.Internal
   public Built build() {
     return new Built();
   }
 
   @Stability.Internal
-  public class Built extends BuiltCommonOptions {
+  public class Built {
     public Optional<String> reportId() {
       return reportId;
     }
-    public boolean ping() {
-      return ping;
-    }
 
-    public Set<ServiceType> serviceTypes() {
-      return serviceTypes;
-    }
   }
 
 }

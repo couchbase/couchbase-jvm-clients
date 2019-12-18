@@ -77,7 +77,6 @@ import static com.couchbase.client.java.ReactiveCluster.DEFAULT_DIAGNOSTICS_OPTI
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_WAIT_UNTIL_READY_OPTIONS;
-import static com.couchbase.client.java.diagnostics.DiagnosticsOptions.diagnosticsOptions;
 
 /**
  * The {@link AsyncCluster} is the main entry point when connecting to a Couchbase cluster.
@@ -500,13 +499,11 @@ public class AsyncCluster {
     notNull(options, "DiagnosticsOptions");
     final DiagnosticsOptions.Built opts = options.build();
 
-    final RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
-    final Mono<Void> maybePing = opts.ping() ? HealthPinger.ping(core, opts.timeout(), retryStrategy, opts.serviceTypes()) : Mono.empty();
-    return maybePing.then(Mono.defer(() -> Mono.just(new DiagnosticsResult(
-        core.diagnostics().collect(Collectors.groupingBy(EndpointDiagnostics::type)),
-        core.context().environment().userAgent().formattedShort(),
-        options.build().reportId().orElse(UUID.randomUUID().toString())
-      )))).toFuture();
+    return Mono.defer(() -> Mono.just(new DiagnosticsResult(
+      core.diagnostics().collect(Collectors.groupingBy(EndpointDiagnostics::type)),
+      core.context().environment().userAgent().formattedShort(),
+      opts.reportId().orElse(UUID.randomUUID().toString())
+    ))).toFuture();
   }
 
   /**
@@ -563,11 +560,10 @@ public class AsyncCluster {
           .map(HealthPinger.PingTarget::serviceType)
           .collect(Collectors.toSet());
 
+        // TODO: once ping is back, use it
         return Flux
           .interval(Duration.ofMillis(10))
-          .flatMap(i -> Mono.fromFuture(diagnostics(
-            diagnosticsOptions().ping(true).serviceTypes(servicesToCheck).timeout(timeout)
-          )))
+          .flatMap(i -> Mono.fromFuture(diagnostics()))
           .takeUntil(d -> d.state() == opts.desiredState());
       })
       .timeout(timeout)
