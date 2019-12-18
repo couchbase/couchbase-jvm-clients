@@ -24,7 +24,7 @@ public abstract class AbstractPooledEndpointServiceConfig implements ServiceConf
 
   public static final int DEFAULT_MAX_ENDPOINTS = 12;
   public static final int DEFAULT_MIN_ENDPOINTS = 0;
-  public static final Duration DEFAULT_IDLE_TIME = Duration.ofMinutes(5);
+  public static final Duration DEFAULT_IDLE_TIME = Duration.ofSeconds(30);
 
   private final int minEndpoints;
   private final int maxEndpoints;

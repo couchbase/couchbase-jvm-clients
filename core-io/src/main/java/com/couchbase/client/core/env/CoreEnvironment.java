@@ -24,6 +24,7 @@ import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
 import com.couchbase.client.core.cnc.OrphanReporter;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.events.config.HighIdleHttpConnectionTimeoutConfiguredEvent;
 import com.couchbase.client.core.cnc.tracing.ThresholdRequestTracer;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -157,6 +158,10 @@ public class CoreEnvironment {
 
     orphanReporter = new OrphanReporter(eventBus.get(), orphanReporterConfig);
     orphanReporter.start().block();
+
+    if (ioConfig.idleHttpConnectionTimeout().getSeconds() > Duration.ofMinutes(1).getSeconds()) {
+      eventBus.get().publish(new HighIdleHttpConnectionTimeoutConfiguredEvent());
+    }
   }
 
   /**
