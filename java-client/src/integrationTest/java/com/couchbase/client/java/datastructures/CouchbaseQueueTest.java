@@ -16,6 +16,7 @@
 package com.couchbase.client.java.datastructures;
 
 import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.collections.support.TestObject;
@@ -53,9 +54,10 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
     @BeforeAll
     static void setup() {
         cluster = Cluster.connect(seedNodes(), clusterOptions());
-        collection = cluster.bucket(config().bucketname()).defaultCollection();
+        Bucket bucket = cluster.bucket(config().bucketname());
+        collection = bucket.defaultCollection();
         options = QueueOptions.queueOptions();
-        cluster.waitUntilReady(Duration.ofSeconds(5));
+        bucket.waitUntilReady(Duration.ofSeconds(5));
     }
 
     @AfterAll

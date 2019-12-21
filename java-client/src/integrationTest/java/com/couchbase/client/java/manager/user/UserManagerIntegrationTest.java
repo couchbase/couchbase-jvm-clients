@@ -18,6 +18,7 @@ package com.couchbase.client.java.manager.user;
 
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.UserNotFoundException;
+import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
@@ -70,9 +71,9 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
   @BeforeAll
   static void setup() {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
-    cluster.bucket(config().bucketname());
+    Bucket bucket = cluster.bucket(config().bucketname());
     users = cluster.users();
-    cluster.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll

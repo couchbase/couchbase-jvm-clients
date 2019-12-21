@@ -73,8 +73,7 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
 
     // required for pre-GCCCP servers (< 6.5)
     Bucket bucket = cluster.bucket(bucketName);
-
-    cluster.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll

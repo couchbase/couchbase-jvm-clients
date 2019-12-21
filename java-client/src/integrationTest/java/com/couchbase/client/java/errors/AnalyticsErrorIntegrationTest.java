@@ -17,6 +17,7 @@
 package com.couchbase.client.java.errors;
 
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
@@ -37,8 +38,8 @@ class AnalyticsErrorIntegrationTest extends JavaIntegrationTest {
   @BeforeAll
   static void beforeAll() {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
-    cluster.bucket(config().bucketname());
-    cluster.waitUntilReady(Duration.ofSeconds(5));
+    Bucket bucket = cluster.bucket(config().bucketname());
+    bucket.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll

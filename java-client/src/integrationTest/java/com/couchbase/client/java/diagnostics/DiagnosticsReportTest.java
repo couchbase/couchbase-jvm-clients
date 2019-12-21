@@ -17,6 +17,7 @@ package com.couchbase.client.java.diagnostics;
 
 import com.couchbase.client.core.diagnostics.DiagnosticsResult;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterAll;
@@ -39,8 +40,8 @@ public class DiagnosticsReportTest extends JavaIntegrationTest {
     @BeforeAll
     static void setup() {
         cluster = Cluster.connect(seedNodes(), clusterOptions());
-        cluster.bucket(config().bucketname());
-        cluster.waitUntilReady(Duration.ofSeconds(5));
+        Bucket bucket = cluster.bucket(config().bucketname());
+        bucket.waitUntilReady(Duration.ofSeconds(5));
     }
 
     @AfterAll

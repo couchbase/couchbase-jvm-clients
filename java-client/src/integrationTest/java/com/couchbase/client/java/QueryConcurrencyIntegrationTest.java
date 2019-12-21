@@ -61,7 +61,7 @@ class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
     Bucket bucket = cluster.bucket(config().bucketname());
     Collection collection = bucket.defaultCollection();
 
-    cluster.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(Duration.ofSeconds(5));
 
     bucketName = "`" + config().bucketname() + "`";
     createPrimaryIndex(cluster, config().bucketname());

@@ -22,6 +22,7 @@ import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.ScopeAlreadyExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -53,8 +54,9 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   static void setup() {
     environment = environment().ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)).build();
     cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
-    collections = cluster.bucket(config().bucketname()).collections();
-    cluster.waitUntilReady(Duration.ofSeconds(5));
+    Bucket bucket = cluster.bucket(config().bucketname());
+    collections = bucket.collections();
+    bucket.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll

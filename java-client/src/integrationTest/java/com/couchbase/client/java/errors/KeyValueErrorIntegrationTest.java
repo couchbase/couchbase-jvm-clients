@@ -67,7 +67,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
-    cluster.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll

@@ -57,7 +57,7 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
     Bucket bucket = cluster.bucket(config().bucketname());
     views = bucket.viewIndexes();
-    cluster.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll

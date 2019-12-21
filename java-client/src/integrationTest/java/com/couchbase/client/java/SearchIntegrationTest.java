@@ -53,7 +53,7 @@ class SearchIntegrationTest extends JavaIntegrationTest {
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
 
-        cluster.waitUntilReady(Duration.ofSeconds(5));
+        bucket.waitUntilReady(Duration.ofSeconds(5));
         cluster.searchIndexes().upsertIndex(new SearchIndex("idx-" + config().bucketname(), config().bucketname()));
     }
 

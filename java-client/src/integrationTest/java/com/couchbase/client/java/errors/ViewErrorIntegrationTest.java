@@ -42,7 +42,7 @@ class ViewErrorIntegrationTest extends JavaIntegrationTest {
   static void beforeAll() {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
     bucket = cluster.bucket(config().bucketname());
-    cluster.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(Duration.ofSeconds(5));
     DesignDocument designDocument = new DesignDocument(designDocName);
     bucket.viewIndexes().upsertDesignDocument(designDocument, DesignDocumentNamespace.PRODUCTION);
   }

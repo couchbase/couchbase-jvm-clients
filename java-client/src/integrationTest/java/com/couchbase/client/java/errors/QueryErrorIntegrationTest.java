@@ -41,8 +41,8 @@ class QueryErrorIntegrationTest extends JavaIntegrationTest {
   @BeforeAll
   static void beforeAll() {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
-    cluster.bucket(config().bucketname());
-    cluster.waitUntilReady(Duration.ofSeconds(5));
+    Bucket bucket = cluster.bucket(config().bucketname());
+    bucket.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll
