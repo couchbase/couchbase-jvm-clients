@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.DiagnosticsResult;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
@@ -29,6 +30,7 @@ import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
+import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.analytics.AnalyticsIndexManager;
@@ -349,6 +351,33 @@ public class Cluster {
    */
   public DiagnosticsResult diagnostics(final DiagnosticsOptions options) {
     return block(asyncCluster.diagnostics(options));
+  }
+
+  /**
+   * Performs application-level ping requests against services in the couchbase cluster.
+   * <p>
+   * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
+   * not wish to perform I/O, consider using the {@link #diagnostics()} instead. You can also combine the functionality
+   * of both APIs as needed, which is {@link #waitUntilReady(Duration)} is doing in its implementation as well.
+   *
+   * @return the {@link PingResult} once complete.
+   */
+  public PingResult ping() {
+    return block(asyncCluster.ping());
+  }
+
+  /**
+   * Performs application-level ping requests with custom options against services in the couchbase cluster.
+   * <p>
+   * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
+   * not wish to perform I/O, consider using the {@link #diagnostics(DiagnosticsOptions)} instead. You can also combine
+   * the functionality of both APIs as needed, which is {@link #waitUntilReady(Duration)} is doing in its
+   * implementation as well.
+   *
+   * @return the {@link PingResult} once complete.
+   */
+  public PingResult ping(final PingOptions options) {
+    return block(asyncCluster.ping(options));
   }
 
   /**

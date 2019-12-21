@@ -21,7 +21,7 @@ import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -239,15 +239,16 @@ class CompressionTest {
     ReferenceCountUtil.release(encoded);
   }
 
-  private ChannelContext ctx(boolean enabled) {
-    return new ChannelContext(
+  private KeyValueChannelContext ctx(boolean enabled) {
+    return new KeyValueChannelContext(
       CompressionConfig.builder().enable(enabled).build(),
       false,
       false,
       Optional.of(cid.bucket()),
       false,
       false,
-      new CollectionMap()
+      new CollectionMap(),
+      null
     );
   }
 

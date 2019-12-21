@@ -19,7 +19,7 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -48,7 +48,7 @@ public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdR
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     ByteBuf key = null;
     try {
       key = Unpooled.copiedBuffer(collectionIdentifier().scope() + "." + collectionIdentifier().collection(), UTF_8);
@@ -60,7 +60,7 @@ public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdR
   }
 
   @Override
-  public GetCollectionIdResponse decode(ByteBuf response, ChannelContext ctx) {
+  public GetCollectionIdResponse decode(ByteBuf response, KeyValueChannelContext ctx) {
     ResponseStatus status = MemcacheProtocol.decodeStatus(response);
     Optional<Long> cid = Optional.empty();
     if (status.success()) {

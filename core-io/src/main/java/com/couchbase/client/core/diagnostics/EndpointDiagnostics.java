@@ -62,7 +62,7 @@ public class EndpointDiagnostics {
     /**
      * The ID of this endpoint.
      */
-    private final String id;
+    private final Optional<String> id;
 
     /**
      * If present, the namespace of this endpoint.
@@ -72,7 +72,7 @@ public class EndpointDiagnostics {
     @Stability.Internal
     public EndpointDiagnostics(final ServiceType type, final EndpointState state, final String local,
                                final String remote, final Optional<String> namespace,
-                               final Optional<Long> lastActivityUs, final String id) {
+                               final Optional<Long> lastActivityUs, final Optional<String> id) {
         this.type = type;
         this.state = state;
         this.id = id;
@@ -92,7 +92,7 @@ public class EndpointDiagnostics {
     /**
      * The ID for this endpoint.
      */
-    public String id() {
+    public Optional<String> id() {
         return id;
     }
 
@@ -141,7 +141,7 @@ public class EndpointDiagnostics {
         }
         map.put("state", state().toString().toLowerCase());
         lastActivityUs.ifPresent(a -> map.put("last_activity_us", a));
-        map.put("id", id());
+        id.ifPresent(id -> map.put("id", id));
         namespace.ifPresent(n -> map.put("namespace", n));
         return map;
     }

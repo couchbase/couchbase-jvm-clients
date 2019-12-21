@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg.analytics;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
+import com.couchbase.client.core.io.netty.HttpChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -44,7 +45,7 @@ public class GenericAnalyticsRequest extends BaseRequest<GenericAnalyticsRespons
   }
 
   @Override
-  public GenericAnalyticsResponse decode(final FullHttpResponse response) {
+  public GenericAnalyticsResponse decode(final FullHttpResponse response, HttpChannelContext context) {
     byte[] dst = new byte[response.content().readableBytes()];
     response.content().readBytes(dst);
     return new GenericAnalyticsResponse(decodeStatus(response.status()), dst);

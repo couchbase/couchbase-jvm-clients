@@ -22,14 +22,19 @@ import com.couchbase.client.core.msg.ResponseStatus;
 public class AnalyticsPingResponse extends BaseResponse {
 
   private final byte[] content;
+  private final String channelId;
 
-  AnalyticsPingResponse(ResponseStatus status, byte[] content) {
+  AnalyticsPingResponse(ResponseStatus status, byte[] content, String channelId) {
     super(status);
     this.content = content;
+    this.channelId = channelId;
   }
 
   public byte[] content() {
     return content;
   }
 
+  public String channelId() {
+    return channelId;
+  }
 }

@@ -20,7 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
@@ -65,13 +65,13 @@ public class CarrierGlobalConfigRequest
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final ChannelContext ctx) {
+  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final KeyValueChannelContext ctx) {
     return MemcacheProtocol.request(alloc, Opcode.GET_CONFIG, noDatatype(),
       noPartition(), opaque, noCas(), noExtras(), noKey(), noBody());
   }
 
   @Override
-  public CarrierGlobalConfigResponse decode(final ByteBuf response, final ChannelContext ctx) {
+  public CarrierGlobalConfigResponse decode(final ByteBuf response, final KeyValueChannelContext ctx) {
     byte[] content = body(response)
       .map(ByteBufUtil::getBytes)
       .map(bytes -> tryDecompression(bytes, datatype(response)))

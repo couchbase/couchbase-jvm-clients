@@ -22,7 +22,7 @@ import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -56,7 +56,7 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> implement
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     ByteBuf key = null;
     ByteBuf flexibleExtras = null;
 
@@ -85,7 +85,7 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> implement
   }
 
   @Override
-  public RemoveResponse decode(final ByteBuf response, ChannelContext ctx) {
+  public RemoveResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
     ResponseStatus status = decodeStatus(response);
     Optional<MutationToken> mutationToken = extractToken(
       ctx.mutationTokensEnabled(),

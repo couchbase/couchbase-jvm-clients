@@ -22,12 +22,11 @@ import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -61,7 +60,7 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> imp
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     ByteBuf key = null;
     ByteBuf extras = null;
     ByteBuf flexibleExtras = null;
@@ -101,7 +100,7 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> imp
   }
 
   @Override
-  public DecrementResponse decode(ByteBuf response, ChannelContext ctx) {
+  public DecrementResponse decode(ByteBuf response, KeyValueChannelContext ctx) {
     return new DecrementResponse(
       decodeStatus(response),
       body(response).map(ByteBuf::readLong).orElse(0L),

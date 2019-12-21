@@ -18,14 +18,20 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.diagnostics.ClusterState;
+import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.ViewNotFoundException;
+import com.couchbase.client.java.diagnostics.PingOptions;
+import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.collection.CollectionManager;
 import com.couchbase.client.java.manager.view.ViewIndexManager;
 import com.couchbase.client.java.view.ViewOptions;
 import com.couchbase.client.java.view.ViewResult;
+
+import java.time.Duration;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.ReactiveBucket.DEFAULT_VIEW_OPTIONS;
@@ -177,6 +183,51 @@ public class Bucket {
    */
   public ViewResult viewQuery(final String designDoc, final String viewName, final ViewOptions options) {
     return block(asyncBucket.viewQuery(designDoc, viewName, options));
+  }
+
+  /**
+   * Performs application-level ping requests against services in the couchbase cluster.
+   *
+   * @return the {@link PingResult} once complete.
+   */
+  public PingResult ping() {
+    return block(asyncBucket.ping());
+  }
+
+  /**
+   * Performs application-level ping requests with custom options against services in the couchbase cluster.
+   *
+   * @return the {@link PingResult} once complete.
+   */
+  public PingResult ping(final PingOptions options) {
+    return block(asyncBucket.ping(options));
+  }
+
+  /**
+   * Waits until the desired {@link ClusterState} is reached.
+   * <p>
+   * This method will wait until either the cluster state is "online", or the timeout is reached. Since the SDK is
+   * bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
+   * and usable before moving on.
+   *
+   * @param timeout the maximum time to wait until readiness.
+   */
+  public void waitUntilReady(final Duration timeout) {
+    block(asyncBucket.waitUntilReady(timeout));
+  }
+
+  /**
+   * Waits until the desired {@link ClusterState} is reached.
+   * <p>
+   * This method will wait until either the cluster state is "online" by default, or the timeout is reached. Since the
+   * SDK is bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
+   * and usable before moving on. You can tune the properties through {@link WaitUntilReadyOptions}.
+   *
+   * @param timeout the maximum time to wait until readiness.
+   * @param options the options to customize the readiness waiting.
+   */
+  public void waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
+    block(asyncBucket.waitUntilReady(timeout, options));
   }
 
 }

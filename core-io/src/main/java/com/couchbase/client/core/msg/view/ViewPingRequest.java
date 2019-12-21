@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpReques
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.core.io.netty.HttpChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.ScopedRequest;
@@ -47,10 +48,10 @@ public class ViewPingRequest extends BaseRequest<ViewPingResponse>
   }
 
   @Override
-  public ViewPingResponse decode(final FullHttpResponse response) {
+  public ViewPingResponse decode(final FullHttpResponse response, final HttpChannelContext context) {
     byte[] dst = new byte[response.content().readableBytes()];
     response.content().readBytes(dst);
-    return new ViewPingResponse(decodeStatus(response.status()), dst);
+    return new ViewPingResponse(decodeStatus(response.status()), dst, context.channelId().asShortText());
   }
 
   @Override

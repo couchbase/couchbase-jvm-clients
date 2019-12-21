@@ -19,27 +19,45 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.diagnostics.ClusterState;
+import com.couchbase.client.core.diagnostics.DiagnosticsResult;
+import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
+import com.couchbase.client.core.diagnostics.HealthPinger;
+import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.error.ReducedViewErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
+import com.couchbase.client.java.diagnostics.PingOptions;
+import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.collection.AsyncCollectionManager;
 import com.couchbase.client.java.manager.view.AsyncViewIndexManager;
 import com.couchbase.client.java.view.ViewAccessor;
 import com.couchbase.client.java.view.ViewOptions;
 import com.couchbase.client.java.view.ViewResult;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.ReactiveBucket.DEFAULT_VIEW_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_PING_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_WAIT_UNTIL_READY_OPTIONS;
+import static com.couchbase.client.java.diagnostics.DiagnosticsOptions.diagnosticsOptions;
+import static reactor.core.publisher.Mono.fromFuture;
 
 /**
  * Provides access to a Couchbase bucket in an async fashion.
@@ -186,6 +204,101 @@ public class AsyncBucket {
       viewName, query, keysJson, development, span);
     request.context().clientContext(opts.clientContext());
     return request;
+  }
+
+
+  /**
+   * Performs application-level ping requests against services in the couchbase cluster.
+   *
+   * @return the {@link PingResult} once complete.
+   */
+  public CompletableFuture<PingResult> ping() {
+    return ping(DEFAULT_PING_OPTIONS);
+  }
+
+  /**
+   * Performs application-level ping requests with custom options against services in the couchbase cluster.
+   *
+   * @return the {@link PingResult} once complete.
+   */
+  public CompletableFuture<PingResult> ping(final PingOptions options) {
+    notNull(options, "PingOptions");
+    final PingOptions.Built opts = options.build();
+    return HealthPinger.ping(
+      core,
+      opts.timeout(),
+      opts.retryStrategy().orElse(environment.retryStrategy()),
+      opts.serviceTypes(),
+      opts.reportId(),
+      false
+    ).toFuture();
+  }
+
+  /**
+   * Waits until the desired {@link ClusterState} is reached.
+   * <p>
+   * This method will wait until either the cluster state is "online", or the timeout is reached. Since the SDK is
+   * bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
+   * and usable before moving on.
+   *
+   * @param timeout the maximum time to wait until readiness.
+   * @return a completable future that completes either once ready or timeout.
+   */
+  public CompletableFuture<Void> waitUntilReady(final Duration timeout) {
+    return waitUntilReady(timeout, DEFAULT_WAIT_UNTIL_READY_OPTIONS);
+  }
+
+  /**
+   * Waits until the desired {@link ClusterState} is reached.
+   * <p>
+   * This method will wait until either the cluster state is "online" by default, or the timeout is reached. Since the
+   * SDK is bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
+   * and usable before moving on. You can tune the properties through {@link WaitUntilReadyOptions}.
+   *
+   * @param timeout the maximum time to wait until readiness.
+   * @param options the options to customize the readiness waiting.
+   * @return a completable future that completes either once ready or timeout.
+   */
+  public CompletableFuture<Void> waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
+    notNull(options, "WaitUntilReadyOptions");
+    final WaitUntilReadyOptions.Built opts = options.build();
+
+    return Flux
+      .interval(Duration.ofMillis(10))
+      .filter(i -> !(core.configurationProvider().bucketConfigLoadInProgress()
+        || core.configurationProvider().globalConfigLoadInProgress()))
+      .take(1)
+      .flatMap(aLong -> {
+        final Set<ServiceType> servicesToCheck = opts.serviceTypes() != null && !opts.serviceTypes().isEmpty()
+          ? opts.serviceTypes()
+          : HealthPinger
+          .extractPingTargets(core.clusterConfig(), false)
+          .stream()
+          .map(HealthPinger.PingTarget::serviceType)
+          .collect(Collectors.toSet());
+
+        final Flux<PingResult> ping = Mono
+          .fromFuture(ping(PingOptions.pingOptions().serviceTypes(servicesToCheck)))
+          .flux();
+
+        final Flux<DiagnosticsResult> diagnostics = Flux
+          .interval(Duration.ofMillis(10))
+          .flatMap(i -> fromFuture(diagnostics()))
+          .takeUntil(d -> d.state() == opts.desiredState());
+
+        return Flux.concat(ping, diagnostics);
+      })
+      .timeout(timeout)
+      .then()
+      .toFuture();
+  }
+
+  private CompletableFuture<DiagnosticsResult> diagnostics() {
+    return Mono.defer(() -> Mono.just(new DiagnosticsResult(
+      core.diagnostics().collect(Collectors.groupingBy(EndpointDiagnostics::type)),
+      core.context().environment().userAgent().formattedShort(),
+      UUID.randomUUID().toString()
+    ))).toFuture();
   }
 
 }

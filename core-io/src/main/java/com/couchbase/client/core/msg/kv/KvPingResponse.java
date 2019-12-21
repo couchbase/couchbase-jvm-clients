@@ -20,8 +20,15 @@ import com.couchbase.client.core.msg.ResponseStatus;
 
 public class KvPingResponse extends NoopResponse {
 
-  KvPingResponse(ResponseStatus status) {
+  private String channelId;
+
+  KvPingResponse(final ResponseStatus status, final String channelId) {
     super(status);
+    this.channelId = channelId;
+  }
+
+  public String channelId() {
+    return channelId;
   }
 
 }

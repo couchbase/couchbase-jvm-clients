@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg.view;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
+import com.couchbase.client.core.io.netty.HttpChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.ScopedRequest;
@@ -47,7 +48,7 @@ public class GenericViewRequest extends BaseRequest<GenericViewResponse>
   }
 
   @Override
-  public GenericViewResponse decode(final FullHttpResponse response) {
+  public GenericViewResponse decode(final FullHttpResponse response, HttpChannelContext context) {
     byte[] dst = new byte[response.content().readableBytes()];
     response.content().readBytes(dst);
     return new GenericViewResponse(decodeStatus(response.status()), dst);

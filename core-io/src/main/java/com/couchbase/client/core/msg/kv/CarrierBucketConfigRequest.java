@@ -18,7 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
@@ -43,13 +43,13 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_CONFIG, noDatatype(),
       noPartition(), opaque, noCas(), noExtras(), noKey(), noBody());
   }
 
   @Override
-  public CarrierBucketConfigResponse decode(final ByteBuf response, ChannelContext ctx) {
+  public CarrierBucketConfigResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
     byte[] content = body(response)
       .map(ByteBufUtil::getBytes)
       .map(bytes -> tryDecompression(bytes, datatype(response)))

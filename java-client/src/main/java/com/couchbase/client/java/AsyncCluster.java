@@ -23,6 +23,7 @@ import com.couchbase.client.core.diagnostics.DiagnosticsResult;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.diagnostics.HealthPinger;
+import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.OwnedSupplier;
@@ -42,6 +43,7 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
+import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
@@ -74,9 +76,11 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_DIAGNOSTICS_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_PING_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_WAIT_UNTIL_READY_OPTIONS;
+import static reactor.core.publisher.Mono.fromFuture;
 
 /**
  * The {@link AsyncCluster} is the main entry point when connecting to a Couchbase cluster.
@@ -507,6 +511,42 @@ public class AsyncCluster {
   }
 
   /**
+   * Performs application-level ping requests against services in the couchbase cluster.
+   * <p>
+   * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
+   * not wish to perform I/O, consider using the {@link #diagnostics()} instead. You can also combine the functionality
+   * of both APIs as needed, which is {@link #waitUntilReady(Duration)} is doing in its implementation as well.
+   *
+   * @return the {@link PingResult} once complete.
+   */
+  public CompletableFuture<PingResult> ping() {
+    return ping(DEFAULT_PING_OPTIONS);
+  }
+
+  /**
+   * Performs application-level ping requests with custom options against services in the couchbase cluster.
+   * <p>
+   * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
+   * not wish to perform I/O, consider using the {@link #diagnostics(DiagnosticsOptions)} instead. You can also combine
+   * the functionality of both APIs as needed, which is {@link #waitUntilReady(Duration)} is doing in its
+   * implementation as well.
+   *
+   * @return the {@link PingResult} once complete.
+   */
+  public CompletableFuture<PingResult> ping(final PingOptions options) {
+    notNull(options, "PingOptions");
+    final PingOptions.Built opts = options.build();
+    return HealthPinger.ping(
+      core,
+      opts.timeout(),
+      opts.retryStrategy().orElse(environment.get().retryStrategy()),
+      opts.serviceTypes(),
+      opts.reportId(),
+      true
+    ).toFuture();
+  }
+
+  /**
    * Waits until the desired {@link ClusterState} is reached.
    * <p>
    * This method will wait until either the cluster state is "online", or the timeout is reached. Since the SDK is
@@ -536,7 +576,7 @@ public class AsyncCluster {
     final WaitUntilReadyOptions.Built opts = options.build();
 
     boolean hasChance = core.clusterConfig().hasClusterOrBucketConfig()
-      || core.configurationProvider().bucketConfigLoadInProgress()
+      || core.configurationProvider().globalConfigLoadInProgress()
       || core.configurationProvider().bucketConfigLoadInProgress();
     if (!hasChance) {
       CompletableFuture<Void> f = new CompletableFuture<>();
@@ -555,16 +595,21 @@ public class AsyncCluster {
         final Set<ServiceType> servicesToCheck = opts.serviceTypes() != null && !opts.serviceTypes().isEmpty()
           ? opts.serviceTypes()
           : HealthPinger
-          .extractPingTargets(core.clusterConfig())
+          .extractPingTargets(core.clusterConfig(), true)
           .stream()
           .map(HealthPinger.PingTarget::serviceType)
           .collect(Collectors.toSet());
 
-        // TODO: once ping is back, use it
-        return Flux
+        final Flux<PingResult> ping = Mono
+          .fromFuture(ping(PingOptions.pingOptions().serviceTypes(servicesToCheck)))
+          .flux();
+
+        final Flux<DiagnosticsResult> diagnostics = Flux
           .interval(Duration.ofMillis(10))
-          .flatMap(i -> Mono.fromFuture(diagnostics()))
+          .flatMap(i -> fromFuture(diagnostics()))
           .takeUntil(d -> d.state() == opts.desiredState());
+
+        return Flux.concat(ping, diagnostics);
       })
       .timeout(timeout)
       .then()

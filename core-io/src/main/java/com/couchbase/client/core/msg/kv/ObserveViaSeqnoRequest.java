@@ -20,7 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -58,7 +58,7 @@ public class ObserveViaSeqnoRequest extends BaseKeyValueRequest<ObserveViaSeqnoR
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final ChannelContext ctx) {
+  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final KeyValueChannelContext ctx) {
     ByteBuf body = null;
     try {
       body = alloc.buffer(Long.BYTES).writeLong(vbucketUUID);
@@ -70,7 +70,7 @@ public class ObserveViaSeqnoRequest extends BaseKeyValueRequest<ObserveViaSeqnoR
   }
 
   @Override
-  public ObserveViaSeqnoResponse decode(final ByteBuf response, final ChannelContext ctx) {
+  public ObserveViaSeqnoResponse decode(final ByteBuf response, final KeyValueChannelContext ctx) {
     ResponseStatus status = decodeStatus(response);
     if (status.success()) {
       ByteBuf content = body(response).get();

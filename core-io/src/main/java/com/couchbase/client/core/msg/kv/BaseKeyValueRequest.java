@@ -22,7 +22,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.error.CollectionDoesNotExistException;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -30,7 +30,6 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -114,7 +113,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
    * @param ctx the channel context.
    * @return the encoded ID, maybe with the collection prefix in place.
    */
-  protected ByteBuf encodedKeyWithCollection(final ByteBufAllocator alloc, final ChannelContext ctx) {
+  protected ByteBuf encodedKeyWithCollection(final ByteBufAllocator alloc, final KeyValueChannelContext ctx) {
     if (ctx.collectionsEnabled()) {
       byte[] collection = ctx.collectionMap().get(collectionIdentifier);
       if (collection == null) {

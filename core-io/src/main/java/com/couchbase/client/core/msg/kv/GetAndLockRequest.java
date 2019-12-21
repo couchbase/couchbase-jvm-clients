@@ -20,14 +20,13 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
@@ -54,7 +53,7 @@ public class GetAndLockRequest extends BaseKeyValueRequest<GetAndLockResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     ByteBuf key = null;
     ByteBuf extras = null;
 
@@ -71,7 +70,7 @@ public class GetAndLockRequest extends BaseKeyValueRequest<GetAndLockResponse> {
   }
 
   @Override
-  public GetAndLockResponse decode(final ByteBuf response, ChannelContext ctx) {
+  public GetAndLockResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
     ResponseStatus status = decodeStatus(response);
     long cas = cas(response);
 

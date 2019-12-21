@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.DiagnosticsResult;
+import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
@@ -32,6 +33,7 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
+import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.analytics.ReactiveAnalyticsIndexManager;
@@ -58,6 +60,7 @@ import static com.couchbase.client.java.AsyncCluster.seedNodesFromConnectionStri
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
 import static com.couchbase.client.java.diagnostics.DiagnosticsOptions.diagnosticsOptions;
+import static com.couchbase.client.java.diagnostics.PingOptions.pingOptions;
 import static com.couchbase.client.java.diagnostics.WaitUntilReadyOptions.waitUntilReadyOptions;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static com.couchbase.client.java.search.SearchOptions.searchOptions;
@@ -69,6 +72,7 @@ public class ReactiveCluster {
   static final AnalyticsOptions DEFAULT_ANALYTICS_OPTIONS = analyticsOptions();
   static final DiagnosticsOptions DEFAULT_DIAGNOSTICS_OPTIONS = diagnosticsOptions();
   static final WaitUntilReadyOptions DEFAULT_WAIT_UNTIL_READY_OPTIONS = waitUntilReadyOptions();
+  static final PingOptions DEFAULT_PING_OPTIONS = pingOptions();
 
   /**
    * Holds the underlying async cluster reference.
@@ -342,6 +346,33 @@ public class ReactiveCluster {
    */
   public Mono<DiagnosticsResult> diagnostics(final DiagnosticsOptions options) {
     return Mono.defer(() -> Mono.fromFuture(asyncCluster.diagnostics(options)));
+  }
+
+  /**
+   * Performs application-level ping requests against services in the couchbase cluster.
+   * <p>
+   * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
+   * not wish to perform I/O, consider using the {@link #diagnostics()} instead. You can also combine the functionality
+   * of both APIs as needed, which is {@link #waitUntilReady(Duration)} is doing in its implementation as well.
+   *
+   * @return the {@link PingResult} once complete.
+   */
+  public Mono<PingResult> ping() {
+    return ping(DEFAULT_PING_OPTIONS);
+  }
+
+  /**
+   * Performs application-level ping requests with custom options against services in the couchbase cluster.
+   * <p>
+   * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
+   * not wish to perform I/O, consider using the {@link #diagnostics(DiagnosticsOptions)} instead. You can also combine
+   * the functionality of both APIs as needed, which is {@link #waitUntilReady(Duration)} is doing in its
+   * implementation as well.
+   *
+   * @return the {@link PingResult} once complete.
+   */
+  public Mono<PingResult> ping(final PingOptions options) {
+    return Mono.defer(() -> Mono.fromFuture(asyncCluster.ping(options)));
   }
 
   /**

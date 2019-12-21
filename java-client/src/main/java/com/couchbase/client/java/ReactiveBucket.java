@@ -18,8 +18,13 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.diagnostics.ClusterState;
+import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.error.ReducedViewErrorContext;
 import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
+import com.couchbase.client.java.diagnostics.PingOptions;
+import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.collection.ReactiveCollectionManager;
 import com.couchbase.client.java.view.ReactiveViewResult;
@@ -27,7 +32,11 @@ import com.couchbase.client.java.view.ViewAccessor;
 import com.couchbase.client.java.view.ViewOptions;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
+
 import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_PING_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_WAIT_UNTIL_READY_OPTIONS;
 import static com.couchbase.client.java.view.ViewOptions.viewOptions;
 
 /**
@@ -141,6 +150,53 @@ public class ReactiveBucket {
       JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
       return ViewAccessor.viewQueryReactive(asyncBucket.core(), asyncBucket.viewRequest(designDoc, viewName, opts), serializer);
     });
+  }
+
+  /**
+   * Performs application-level ping requests against services in the couchbase cluster.
+   *
+   * @return the {@link PingResult} once complete.
+   */
+  public Mono<PingResult> ping() {
+    return ping(DEFAULT_PING_OPTIONS);
+  }
+
+  /**
+   * Performs application-level ping requests with custom options against services in the couchbase cluster.
+   *
+   * @return the {@link PingResult} once complete.
+   */
+  public Mono<PingResult> ping(final PingOptions options) {
+    return Mono.defer(() -> Mono.fromFuture(asyncBucket.ping(options)));
+  }
+
+  /**
+   * Waits until the desired {@link ClusterState} is reached.
+   * <p>
+   * This method will wait until either the cluster state is "online", or the timeout is reached. Since the SDK is
+   * bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
+   * and usable before moving on.
+   *
+   * @param timeout the maximum time to wait until readiness.
+   * @return a mono that completes either once ready or timeout.
+   */
+  public Mono<Void> waitUntilReady(final Duration timeout) {
+    return waitUntilReady(timeout, DEFAULT_WAIT_UNTIL_READY_OPTIONS);
+  }
+
+  /**
+   * Waits until the desired {@link ClusterState} is reached.
+   * <p>
+   * This method will wait until either the cluster state is "online" by default, or the timeout is reached. Since the
+   * SDK is bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
+   * and usable before moving on. You can tune the properties through {@link WaitUntilReadyOptions}.
+   *
+   * @param timeout the maximum time to wait until readiness.
+   * @param options the options to customize the readiness waiting.
+   * @return a mono that completes either once ready or timeout.
+   */
+  public Mono<Void> waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
+    return Mono.defer(() -> Mono.fromFuture(asyncBucket.waitUntilReady(timeout, options)));
   }
 
 }

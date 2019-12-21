@@ -18,7 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -46,13 +46,13 @@ public class NoopRequest extends BaseKeyValueRequest<NoopResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.NOOP, noDatatype(), noPartition(),
       opaque, noCas(), noExtras(), noKey(), noBody());
   }
 
   @Override
-  public NoopResponse decode(final ByteBuf response, ChannelContext ctx) {
+  public NoopResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
     return new NoopResponse(MemcacheProtocol.decodeStatus(response));
   }
 

@@ -14,14 +14,10 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.msg;
+package com.couchbase.client.core.diagnostics;
 
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
-import com.couchbase.client.core.io.netty.HttpChannelContext;
-
-public interface NonChunkedHttpRequest<R extends Response> extends Encodable<FullHttpRequest>, Request<R> {
-
-  R decode(FullHttpResponse response, HttpChannelContext context);
-
+public enum PingState {
+  OK,
+  TIMEOUT,
+  ERROR
 }

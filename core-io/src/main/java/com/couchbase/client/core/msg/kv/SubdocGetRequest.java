@@ -26,7 +26,7 @@ import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.SubDocumentErrorContext;
 import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -63,7 +63,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     ByteBuf key = null;
     ByteBuf extras = null;
     ByteBuf body = null;
@@ -114,7 +114,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   }
 
   @Override
-  public SubdocGetResponse decode(final ByteBuf response, ChannelContext ctx) {
+  public SubdocGetResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
     Optional<ByteBuf> maybeBody = body(response);
     SubDocumentField[] values;
     List<CouchbaseException> errors = null;

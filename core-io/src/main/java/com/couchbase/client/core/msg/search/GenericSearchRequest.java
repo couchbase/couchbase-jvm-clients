@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg.search;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
+import com.couchbase.client.core.io.netty.HttpChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -44,7 +45,7 @@ public class GenericSearchRequest extends BaseRequest<GenericSearchResponse>
   }
 
   @Override
-  public GenericSearchResponse decode(final FullHttpResponse response) {
+  public GenericSearchResponse decode(final FullHttpResponse response, final HttpChannelContext  context) {
     byte[] dst = new byte[response.content().readableBytes()];
     response.content().readBytes(dst);
     return new GenericSearchResponse(decodeStatus(response.status()), dst);

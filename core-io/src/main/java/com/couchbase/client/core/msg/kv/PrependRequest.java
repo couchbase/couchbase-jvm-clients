@@ -23,7 +23,7 @@ import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -53,7 +53,7 @@ public class PrependRequest extends BaseKeyValueRequest<PrependResponse> impleme
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     ByteBuf key = null;
     ByteBuf content = null;
     ByteBuf flexibleExtras = null;
@@ -98,7 +98,7 @@ public class PrependRequest extends BaseKeyValueRequest<PrependResponse> impleme
   }
 
   @Override
-  public PrependResponse decode(ByteBuf response, ChannelContext ctx) {
+  public PrependResponse decode(ByteBuf response, KeyValueChannelContext ctx) {
     return new PrependResponse(
       decodeStatus(response),
       cas(response),

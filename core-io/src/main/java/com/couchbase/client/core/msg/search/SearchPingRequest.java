@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpReques
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.core.io.netty.HttpChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.TargetedRequest;
@@ -44,10 +45,10 @@ public class SearchPingRequest extends BaseRequest<SearchPingResponse>
   }
 
   @Override
-  public SearchPingResponse decode(final FullHttpResponse response) {
+  public SearchPingResponse decode(final FullHttpResponse response, final HttpChannelContext context) {
     byte[] dst = new byte[response.content().readableBytes()];
     response.content().readBytes(dst);
-    return new SearchPingResponse(decodeStatus(response.status()), dst);
+    return new SearchPingResponse(decodeStatus(response.status()), dst, context.channelId().asShortText());
   }
 
   @Override

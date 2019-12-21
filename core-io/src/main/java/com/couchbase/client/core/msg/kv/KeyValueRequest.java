@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ScopedRequest;
@@ -52,7 +52,7 @@ public interface KeyValueRequest<R extends Response> extends Request<R>, ScopedR
    * @param ctx more encode context.
    * @return the encoded request as a {@link ByteBuf}.
    */
-  ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx);
+  ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx);
 
   /**
    * Decode the encoded response into its message representation.
@@ -60,7 +60,7 @@ public interface KeyValueRequest<R extends Response> extends Request<R>, ScopedR
    * @param response the response to decode.
    * @return the decoded response as the generic type R.
    */
-  R decode(ByteBuf response, ChannelContext ctx);
+  R decode(ByteBuf response, KeyValueChannelContext ctx);
 
   /**
    * The key of the kv request.

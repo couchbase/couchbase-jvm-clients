@@ -20,7 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -48,7 +48,7 @@ public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     ByteBuf key = null;
     ByteBuf extras = null;
 
@@ -66,7 +66,7 @@ public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
   }
 
   @Override
-  public TouchResponse decode(ByteBuf response, ChannelContext ctx) {
+  public TouchResponse decode(ByteBuf response, KeyValueChannelContext ctx) {
     return new TouchResponse(
       decodeStatus(response),
       cas(response),

@@ -29,7 +29,7 @@ import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.SubDocumentErrorContext;
 import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -99,7 +99,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     ByteBuf key = null;
     ByteBuf extras = null;
     ByteBuf content = null;
@@ -156,7 +156,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   }
 
   @Override
-  public SubdocMutateResponse decode(final ByteBuf response, ChannelContext ctx) {
+  public SubdocMutateResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
     Optional<ByteBuf> maybeBody = body(response);
     short rawOverallStatus = status(response);
     ResponseStatus overallStatus = decodeStatus(response);

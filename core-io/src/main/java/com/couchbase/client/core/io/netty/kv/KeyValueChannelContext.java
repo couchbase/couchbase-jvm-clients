@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
+import com.couchbase.client.core.deps.io.netty.channel.ChannelId;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.CollectionMap;
 
@@ -26,7 +27,7 @@ import java.util.Optional;
  *
  * @since 2.0.0
  */
-public class ChannelContext {
+public class KeyValueChannelContext {
 
   private final Optional<String> bucket;
   private final CompressionConfig compression;
@@ -35,11 +36,12 @@ public class ChannelContext {
   private final boolean syncReplication;
   private final boolean altRequest;
   private final CollectionMap collectionMap;
+  private final ChannelId channelId;
 
-  public ChannelContext(final CompressionConfig compression, final boolean collections,
-                        final boolean mutationTokens, final Optional<String> bucket,
-                        final boolean syncReplication, final boolean altRequest,
-                        final CollectionMap collectionMap) {
+  public KeyValueChannelContext(final CompressionConfig compression, final boolean collections,
+                                final boolean mutationTokens, final Optional<String> bucket,
+                                final boolean syncReplication, final boolean altRequest,
+                                final CollectionMap collectionMap, final ChannelId channelId) {
     this.compression = compression;
     this.collections = collections;
     this.mutationTokensEnabled = mutationTokens;
@@ -47,6 +49,7 @@ public class ChannelContext {
     this.syncReplication = syncReplication;
     this.altRequest = altRequest;
     this.collectionMap = collectionMap;
+    this.channelId = channelId;
   }
 
   public boolean collectionsEnabled() {
@@ -75,6 +78,10 @@ public class ChannelContext {
 
   public CollectionMap collectionMap() {
     return collectionMap;
+  }
+
+  public ChannelId channelId() {
+    return channelId;
   }
 
   /**

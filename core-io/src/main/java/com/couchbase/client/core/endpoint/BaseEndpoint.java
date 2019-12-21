@@ -607,8 +607,9 @@ public abstract class BaseEndpoint implements Endpoint {
     final Optional<Long> lastActivity = lastResponseTimestamp == 0
       ? Optional.empty()
       : Optional.of(TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - lastResponseTimestamp));
-    final String id = "0x" + Integer.toHexString(hashCode());
 
+
+    final Optional<String> id = Optional.ofNullable(channel).map(c -> "0x" + c.id().asShortText());
     return new EndpointDiagnostics(endpointContext().serviceType(), state(), remote, local, endpointContext().bucket(),
       lastActivity, id);
   }

@@ -110,7 +110,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   /**
    * Once connected/active, holds the channel context.
    */
-  private ChannelContext channelContext;
+  private KeyValueChannelContext channelContext;
 
   /**
    * If present, holds the error map negotiated on this connection.
@@ -165,14 +165,15 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
         "must negotiate Alternate Requests. This is a bug! - please report.");
     }
 
-    channelContext = new ChannelContext(
+    channelContext = new KeyValueChannelContext(
       compression ? compressionConfig : null,
       collections,
       mutationTokens,
       bucketName,
       syncReplication,
       altRequest,
-      ioContext.core().configurationProvider().collectionMap()
+      ioContext.core().configurationProvider().collectionMap(),
+      ctx.channel().id()
     );
 
     ctx.fireChannelActive();

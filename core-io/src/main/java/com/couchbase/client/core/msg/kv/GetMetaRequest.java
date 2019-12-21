@@ -20,27 +20,19 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.netty.kv.ChannelContext;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.tryDecompression;
 
 /**
  * Represents a kv get meta operation.
@@ -60,7 +52,7 @@ public class GetMetaRequest extends BaseKeyValueRequest<GetMetaResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, ChannelContext ctx) {
+  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     ByteBuf key = null;
     ByteBuf extras = null;
 
@@ -78,7 +70,7 @@ public class GetMetaRequest extends BaseKeyValueRequest<GetMetaResponse> {
   }
 
   @Override
-  public GetMetaResponse decode(final ByteBuf response, ChannelContext ctx) {
+  public GetMetaResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
     return new GetMetaResponse(decodeStatus(response), cas(response));
   }
 

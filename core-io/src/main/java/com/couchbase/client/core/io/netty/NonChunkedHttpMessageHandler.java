@@ -98,6 +98,11 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
    */
   private long dispatchTimingStart;
 
+  /**
+   * Once active holds additional channel context for decoding.
+   */
+  private HttpChannelContext channelContext;
+
   protected NonChunkedHttpMessageHandler(final BaseEndpoint endpoint, final ServiceType serviceType) {
     this.endpoint = endpoint;
     this.endpointContext = endpoint.endpointContext();
@@ -176,6 +181,8 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
       endpointContext.bucket()
     );
 
+    channelContext = new HttpChannelContext(ctx.channel().id());
+
     remoteHost = remoteHttpHost(ctx.channel().remoteAddress());
     ctx.pipeline().get(HttpObjectAggregator.class).channelActive(ctx);
     ctx.fireChannelActive();
@@ -200,7 +207,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
             ResponseStatus responseStatus = HttpProtocol.decodeStatus(httpResponse.status());
             if (!currentRequest.completed()) {
               if (responseStatus == ResponseStatus.SUCCESS) {
-                Response response = currentRequest.decode(httpResponse);
+                Response response = currentRequest.decode(httpResponse, channelContext);
                 currentRequest.succeed(response);
               } else {
                 String body = httpResponse.content().toString(StandardCharsets.UTF_8);

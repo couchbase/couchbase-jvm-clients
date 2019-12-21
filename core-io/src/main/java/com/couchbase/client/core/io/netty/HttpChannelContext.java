@@ -14,27 +14,19 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.msg.query;
+package com.couchbase.client.core.io.netty;
 
-import com.couchbase.client.core.msg.BaseResponse;
-import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelId;
 
-public class QueryPingResponse extends BaseResponse {
+public class HttpChannelContext {
 
-  private final byte[] content;
-  private final String channelId;
+  private final ChannelId channelId;
 
-  QueryPingResponse(ResponseStatus status, byte[] content, String channelId) {
-    super(status);
-    this.content = content;
+  public HttpChannelContext(final ChannelId channelId) {
     this.channelId = channelId;
   }
 
-  public byte[] content() {
-    return content;
-  }
-
-  public String channelId() {
+  public ChannelId channelId() {
     return channelId;
   }
 }
