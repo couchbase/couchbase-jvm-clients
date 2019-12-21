@@ -18,7 +18,7 @@ package com.couchbase.client.scala.manager
 import java.util.UUID
 
 import com.couchbase.client.core.error.{
-  BucketAlreadyExistsException,
+  BucketExistsException,
   BucketNotFoundException,
   DocumentNotFoundException
 }
@@ -167,7 +167,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   @Test
   def createShouldFailWhenPresent(): Unit = {
     assertThrows(
-      classOf[BucketAlreadyExistsException],
+      classOf[BucketExistsException],
       () => {
         buckets.create(CreateBucketSettings(bucketName, 100)).get
         waitUntilHealthy(bucketName)

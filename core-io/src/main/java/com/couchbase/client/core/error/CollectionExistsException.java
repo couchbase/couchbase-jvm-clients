@@ -22,16 +22,16 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
-public class CollectionAlreadyExistsException extends CouchbaseException {
+public class CollectionExistsException extends CouchbaseException {
   private final String collectionName;
 
-  public CollectionAlreadyExistsException(String collectionName) {
+  public CollectionExistsException(String collectionName) {
     super("Collection [" + redactMeta(collectionName) + "] already exists.");
     this.collectionName = requireNonNull(collectionName);
   }
 
-  public static CollectionAlreadyExistsException forCollection(String collectionName) {
-    return new CollectionAlreadyExistsException(collectionName);
+  public static CollectionExistsException forCollection(String collectionName) {
+    return new CollectionExistsException(collectionName);
   }
 
   public String collectionName() {

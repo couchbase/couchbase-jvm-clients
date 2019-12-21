@@ -22,17 +22,17 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
-public class BucketAlreadyExistsException extends CouchbaseException {
+public class BucketExistsException extends CouchbaseException {
 
   private final String bucketName;
 
-  BucketAlreadyExistsException(final String bucketName) {
+  BucketExistsException(final String bucketName) {
     super("Bucket [" + redactMeta(bucketName) + "] already exists.");
     this.bucketName = requireNonNull(bucketName);
   }
 
-  public static BucketAlreadyExistsException forBucket(final String bucketName) {
-    return new BucketAlreadyExistsException(bucketName);
+  public static BucketExistsException forBucket(final String bucketName) {
+    return new BucketExistsException(bucketName);
   }
 
   public String bucketName() {

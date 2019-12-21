@@ -21,7 +21,7 @@ import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.{DELETE, GET, POST}
 import com.couchbase.client.core.error.{
-  BucketAlreadyExistsException,
+  BucketExistsException,
   BucketNotFoundException,
   CouchbaseException
 }
@@ -75,7 +75,7 @@ class ReactiveBucketManager(core: Core) {
         if ((response.status == ResponseStatus.INVALID_ARGS) && response.content != null) {
           val content = new String(response.content, StandardCharsets.UTF_8)
           if (content.contains("Bucket with given name already exists")) {
-            SMono.raiseError(BucketAlreadyExistsException.forBucket(settings.name))
+            SMono.raiseError(BucketExistsException.forBucket(settings.name))
           } else {
             SMono.raiseError(new CouchbaseException(content))
           }

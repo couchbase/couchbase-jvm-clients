@@ -23,7 +23,7 @@ import com.couchbase.client.core.config.CollectionsManifestCollection;
 import com.couchbase.client.core.config.CollectionsManifestScope;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.error.CollectionAlreadyExistsException;
+import com.couchbase.client.core.error.CollectionExistsException;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.ScopeAlreadyExistsException;
@@ -76,7 +76,7 @@ public class AsyncCollectionManager extends ManagerSupport {
    *
    * @param collectionSpec the collection spec that contains the properties of the collection.
    * @return a {@link CompletableFuture} once the collection creation completed.
-   * @throws CollectionAlreadyExistsException (async) if the collection already exists
+   * @throws CollectionExistsException (async) if the collection already exists
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    */
   public CompletableFuture<Void> createCollection(final CollectionSpec collectionSpec) {
@@ -202,7 +202,7 @@ public class AsyncCollectionManager extends ManagerSupport {
         throw ScopeAlreadyExistsException.forScope(scopeName);
       }
       if (error.contains("Collection with this name already exists")) {
-        throw CollectionAlreadyExistsException.forCollection(collectionName);
+        throw CollectionExistsException.forCollection(collectionName);
       }
     }
 

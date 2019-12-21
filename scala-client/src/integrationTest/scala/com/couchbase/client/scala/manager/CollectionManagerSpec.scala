@@ -18,7 +18,7 @@ package com.couchbase.client.scala.manager
 import java.util.UUID
 
 import com.couchbase.client.core.error.{
-  CollectionAlreadyExistsException,
+  CollectionExistsException,
   ScopeAlreadyExistsException,
   ScopeNotFoundException
 }
@@ -104,7 +104,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
 
     collections.createCollection(collSpec) match {
       case Success(_)                                     => assert(false)
-      case Failure(err: CollectionAlreadyExistsException) =>
+      case Failure(err: CollectionExistsException) =>
       case Failure(_)                                     => assert(false)
     }
   }

@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets
 import com.couchbase.client.core.config.CollectionsManifest
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod
 import com.couchbase.client.core.error.{
-  CollectionAlreadyExistsException,
+  CollectionExistsException,
   CollectionNotFoundException,
   CouchbaseException,
   ScopeAlreadyExistsException,
@@ -239,7 +239,7 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
         if (error.contains("Scope with this name already exists")) {
           Failure(new ScopeAlreadyExistsException(scopeName))
         } else if (error.contains("Collection with this name already exists")) {
-          Failure(new CollectionAlreadyExistsException(collectionName))
+          Failure(new CollectionExistsException(collectionName))
         } else {
           Failure(new IllegalArgumentException("Unknown error in CollectionManager: " + error))
         }

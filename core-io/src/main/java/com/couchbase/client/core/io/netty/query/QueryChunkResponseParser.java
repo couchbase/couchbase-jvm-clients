@@ -24,7 +24,7 @@ import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.InternalServerFailureException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.PlanningFailureException;
-import com.couchbase.client.core.error.PreparedStatementException;
+import com.couchbase.client.core.error.PreparedStatementFailureException;
 import com.couchbase.client.core.error.QueryErrorContext;
 import com.couchbase.client.core.error.IndexFailureException;
 import com.couchbase.client.core.error.IndexNotFoundException;
@@ -122,7 +122,7 @@ public class QueryChunkResponseParser
       if (code == 3000) {
         return new ParsingFailureException(errorContext);
       } else if (PREPARED_ERROR_CODES.contains(code)) {
-        return new PreparedStatementException(errorContext);
+        return new PreparedStatementFailureException(errorContext);
       } else if (code == 4300 && message.matches("^.*index .*already exist.*")) {
         return new IndexExistsException(errorContext);
       } else if (code >= 4000 && code < 5000) {

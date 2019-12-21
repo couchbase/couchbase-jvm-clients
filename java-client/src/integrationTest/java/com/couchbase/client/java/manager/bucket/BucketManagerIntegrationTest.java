@@ -17,7 +17,7 @@
 package com.couchbase.client.java.manager.bucket;
 
 import com.couchbase.client.core.env.IoConfig;
-import com.couchbase.client.core.error.BucketAlreadyExistsException;
+import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
@@ -146,7 +146,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   @Test
   void createShouldFailWhenPresent() {
     assertThrows(
-      BucketAlreadyExistsException.class,
+      BucketExistsException.class,
       () -> {
         buckets.createBucket(BucketSettings.create(config().bucketname()));
         waitUntilHealthy(config().bucketname());

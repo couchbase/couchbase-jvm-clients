@@ -19,7 +19,7 @@ package com.couchbase.client.java.manager.bucket;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.core.error.BucketAlreadyExistsException;
+import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.json.Mapper;
@@ -73,7 +73,7 @@ public class AsyncBucketManager extends ManagerSupport {
       if (response.status() == ResponseStatus.INVALID_ARGS && response.content() != null) {
         String content = new String(response.content(), StandardCharsets.UTF_8);
         if (content.contains("Bucket with given name already exists")) {
-          throw BucketAlreadyExistsException.forBucket(settings.name());
+          throw BucketExistsException.forBucket(settings.name());
         }
         else {
           throw new CouchbaseException(content);

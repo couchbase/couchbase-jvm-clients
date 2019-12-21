@@ -20,10 +20,10 @@ package com.couchbase.client.core.error;
  *
  * @since 3.0
  */
-public class PreparedStatementException extends CouchbaseException {
+public class PreparedStatementFailureException extends CouchbaseException {
 
-  public PreparedStatementException(final ErrorContext ctx) {
-    super("Prepared statement error", ctx);
+  public PreparedStatementFailureException(final ErrorContext ctx) {
+    super("Prepared statement failure", ctx);
   }
 
 }
