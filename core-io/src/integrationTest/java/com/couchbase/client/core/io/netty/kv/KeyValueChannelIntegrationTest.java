@@ -28,6 +28,8 @@ import com.couchbase.client.core.msg.kv.NoopResponse;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.core.util.HostAndPort;
+import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
 import com.couchbase.client.core.deps.io.netty.bootstrap.Bootstrap;
@@ -49,6 +51,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Tests the direct lower level communication of a full KV channel against
@@ -132,6 +135,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
   void failWithInvalidPasswordCredential() throws Exception {
     TestNodeConfig node = config().nodes().get(0);
     Bootstrap bootstrap = new Bootstrap()
@@ -153,6 +157,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
   void failWithInvalidUsernameCredential() throws Exception {
     TestNodeConfig node = config().nodes().get(0);
     Bootstrap bootstrap = new Bootstrap()
@@ -198,14 +203,17 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
   /**
    * Helper method to assert authentication failure in different scenarios.
    */
-  private void assertAuthenticationFailure(final Bootstrap bootstrap, final String msg)
-    throws Exception {
+  private void assertAuthenticationFailure(final Bootstrap bootstrap, final String msg) throws Exception {
     CountDownLatch latch = new CountDownLatch(1);
     bootstrap.connect().addListener((ChannelFutureListener) future -> {
-      Throwable ex = future.cause();
-      assertTrue(ex instanceof AuthenticationFailureException);
-      assertEquals(msg, ex.getMessage());
-      latch.countDown();
+      try {
+        assertFalse(future.isSuccess());
+        Throwable ex = future.cause();
+        assertTrue(ex instanceof AuthenticationFailureException);
+        assertEquals(msg, ex.getMessage());
+      } finally {
+        latch.countDown();
+      }
     });
     latch.await();
   }

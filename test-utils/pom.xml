@@ -30,9 +30,9 @@
             <version>1.12.1</version>
         </dependency>
         <dependency>
-            <groupId>com.couchbase.mock</groupId>
+            <groupId>com.github.Couchbase</groupId>
             <artifactId>CouchbaseMock</artifactId>
-            <version>1.5.23</version>
+            <version>73e493d259</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -45,6 +45,13 @@
             <version>4.0.1</version>
         </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
 
     <build>
         <plugins>

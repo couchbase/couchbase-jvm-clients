@@ -20,9 +20,11 @@ import com.couchbase.mock.Bucket;
 import com.couchbase.mock.BucketConfiguration;
 import com.couchbase.mock.CouchbaseMock;
 import com.couchbase.mock.memcached.MemcachedServer;
+import com.couchbase.mock.security.sasl.ShaSaslServerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -78,6 +80,10 @@ public class MockTestCluster extends TestCluster {
     for (Bucket bucket : mock.getBuckets().values()) {
       for (MemcachedServer server : bucket.getServers()) {
         server.setCccpEnabled(true);
+
+        List<String> mechs = new ArrayList<>(Arrays.asList(ShaSaslServerFactory.SUPPORTED_MECHS));
+        mechs.add("PLAIN");
+        server.setSaslMechanisms(mechs);
       }
     }
 

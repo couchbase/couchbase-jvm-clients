@@ -16,13 +16,16 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.ValueTooLargeException;
 import com.couchbase.client.core.retry.RetryReason;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.codec.RawBinaryTranscoder;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;

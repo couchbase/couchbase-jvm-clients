@@ -34,9 +34,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class PasswordAuthenticator implements Authenticator {
 
   private static final Set<SaslMechanism> DEFAULT_SASL_MECHANISMS =
-    EnumSet.of(SaslMechanism.SCRAM_SHA512, SaslMechanism.SCRAM_SHA256, SaslMechanism.SCRAM_SHA1,
-      SaslMechanism.PLAIN // TODO: this will be disabled later, but more changes to mock needed
-  );
+    EnumSet.of(SaslMechanism.SCRAM_SHA512, SaslMechanism.SCRAM_SHA256, SaslMechanism.SCRAM_SHA1);
 
   private final Supplier<String> username;
   private final Supplier<String> password;
