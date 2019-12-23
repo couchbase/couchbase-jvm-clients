@@ -108,7 +108,19 @@ public enum RetryReason {
   /**
    * Search engine indicates that there are too many requests going on (similar to tmpfail).
    */
-  SEARCH_TOO_MANY_REQUESTS(true, false);
+  SEARCH_TOO_MANY_REQUESTS(true, false),
+  /**
+   * A prepared statement failure that can be retried.
+   */
+  QUERY_PREPARED_STATEMENT_FAILURE(true, false),
+  /**
+   * A query index that is temporarily not found.
+   */
+  QUERY_INDEX_NOT_FOUND(true, false),
+  /**
+   * The analytics service reports temporary failure.
+   */
+  ANALYTICS_TEMPORARY_FAILURE(true, false);
 
   private final boolean allowsNonIdempotentRetry;
   private final boolean alwaysRetry;
