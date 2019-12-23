@@ -104,7 +104,11 @@ public enum RetryReason {
   /**
    * There is no active partition on that node, cannot serve view. This happens during a rebalance.
    */
-  VIEWS_NO_ACTIVE_PARTITION(true, true);
+  VIEWS_NO_ACTIVE_PARTITION(true, true),
+  /**
+   * Search engine indicates that there are too many requests going on (similar to tmpfail).
+   */
+  SEARCH_TOO_MANY_REQUESTS(true, false);
 
   private final boolean allowsNonIdempotentRetry;
   private final boolean alwaysRetry;

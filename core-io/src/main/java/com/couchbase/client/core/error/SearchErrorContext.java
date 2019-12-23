@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+@Stability.Volatile
 public class SearchErrorContext extends ErrorContext {
 
   private final RequestContext requestContext;
@@ -39,6 +41,10 @@ public class SearchErrorContext extends ErrorContext {
     return requestContext;
   }
 
+  @Stability.Volatile
+  public int httpStatus() {
+    return httpStatus;
+  }
 
   @Override
   public void injectExportableParams(final Map<String, Object> input) {
