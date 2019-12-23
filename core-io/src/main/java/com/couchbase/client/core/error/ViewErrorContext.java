@@ -16,12 +16,14 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.view.ViewError;
 
 import java.util.Map;
 
+@Stability.Volatile
 public class ViewErrorContext extends ErrorContext {
 
   private final RequestContext requestContext;
@@ -37,6 +39,16 @@ public class ViewErrorContext extends ErrorContext {
 
   public RequestContext requestContext() {
     return requestContext;
+  }
+
+  @Stability.Volatile
+  public int httpStatus() {
+    return httpStatus;
+  }
+
+  @Stability.Volatile
+  public ViewError error() {
+    return viewError;
   }
 
   @Override

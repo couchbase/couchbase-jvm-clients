@@ -98,11 +98,11 @@ public class AnalyticsChunkResponseParser
   }
 
   @Override
-  public Optional<Throwable> error() {
+  public Optional<CouchbaseException> error() {
     return Optional.ofNullable(errors).map(this::errorsToThrowable);
   }
 
-  private Throwable errorsToThrowable(final byte[] bytes) {
+  private CouchbaseException errorsToThrowable(final byte[] bytes) {
     final List<ErrorCodeAndMessage> errors = bytes.length == 0
       ? Collections.emptyList()
       : ErrorCodeAndMessage.fromJsonArray(bytes);

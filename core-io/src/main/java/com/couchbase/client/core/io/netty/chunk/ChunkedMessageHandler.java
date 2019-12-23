@@ -42,6 +42,8 @@ import com.couchbase.client.core.msg.chunk.ChunkedResponse;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 
+import java.util.Optional;
+
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
 import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
 
@@ -186,7 +188,7 @@ public abstract class ChunkedMessageHandler
         if (msg instanceof LastHttpContent) {
           chunkResponseParser.endOfInput();
           if (!isSuccess()) {
-            completeResponseWithFailure();
+            maybeCompleteResponseWithFailure();
           }
           cleanupState();
           if (endpoint != null) {
@@ -251,15 +253,31 @@ public abstract class ChunkedMessageHandler
     }
   }
 
-  private void completeResponseWithFailure() {
+  private void maybeCompleteResponseWithFailure() {
     if (!currentRequest.completed()) {
-      final Throwable cause = chunkResponseParser.decodingFailure().orElseGet(
+      final CouchbaseException cause = chunkResponseParser.decodingFailure().orElseGet(
         () -> chunkResponseParser.error().orElseGet(
           () -> new CouchbaseException("Request failed, but no more information available")));
-      currentRequest.fail(cause);
+
+      Optional<RetryReason> qualifies = qualifiesForRetry(cause);
+      if (qualifies.isPresent()) {
+        RetryOrchestrator.maybeRetry(ioContext, currentRequest, qualifies.get());
+      } else {
+        currentRequest.fail(cause);
+      }
     } else {
       ioContext.environment().orphanReporter().report(currentRequest);
     }
+  }
+
+  /**
+   * Can be implemented by children to not fail a request but rather send it into retry.
+   *
+   * @param exception the throwable to check.
+   * @return a reason if it should be retried - if empty will fail the request.
+   */
+  protected Optional<RetryReason> qualifiesForRetry(CouchbaseException exception) {
+    return Optional.empty();
   }
 
   private void cleanupState() {

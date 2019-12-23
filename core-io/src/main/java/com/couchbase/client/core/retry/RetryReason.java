@@ -96,7 +96,15 @@ public enum RetryReason {
   /**
    * If a concurrent global config load is in progress.
    */
-  GLOBAL_CONFIG_LOAD_IN_PROGRESS(true, false);
+  GLOBAL_CONFIG_LOAD_IN_PROGRESS(true, false),
+  /**
+   * If the view engine indicates a temporary issue.
+   */
+  VIEWS_TEMPORARY_FAILURE(true, false),
+  /**
+   * There is no active partition on that node, cannot serve view. This happens during a rebalance.
+   */
+  VIEWS_NO_ACTIVE_PARTITION(true, true);
 
   private final boolean allowsNonIdempotentRetry;
   private final boolean alwaysRetry;

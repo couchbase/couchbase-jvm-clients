@@ -77,7 +77,7 @@ public class ViewChunkResponseParser
   }
 
   @Override
-  public Optional<Throwable> error() {
+  public Optional<CouchbaseException> error() {
     return error.map(e -> {
       int httpStatus = responseHeader().status().code();
       ResponseStatus responseStatus = HttpProtocol.decodeStatus(responseHeader().status());
@@ -91,7 +91,7 @@ public class ViewChunkResponseParser
 
   @Override
   public void signalComplete() {
-    Optional<Throwable> maybeError = error();
+    Optional<CouchbaseException> maybeError = error();
     if (maybeError.isPresent()) {
       failRows(maybeError.get());
     } else {

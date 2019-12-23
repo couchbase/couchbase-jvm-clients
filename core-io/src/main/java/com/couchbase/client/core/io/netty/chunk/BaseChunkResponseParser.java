@@ -20,6 +20,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelConfig;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.json.stream.CopyingStreamWindow;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
@@ -56,7 +57,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
   /**
    * Remember if the stream parser threw an exception so we can skip the rest of the stream.
    */
-  private Throwable decodingFailure;
+  private CouchbaseException decodingFailure;
 
   /**
    * Whether the subclass has marked the header as complete.
@@ -212,7 +213,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
   }
 
   @Override
-  public Optional<Throwable> decodingFailure() {
+  public Optional<CouchbaseException> decodingFailure() {
     return Optional.ofNullable(decodingFailure);
   }
 

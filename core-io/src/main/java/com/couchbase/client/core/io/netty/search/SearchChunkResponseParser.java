@@ -75,11 +75,11 @@ public class SearchChunkResponseParser
   }
 
   @Override
-  public Optional<Throwable> error() {
+  public Optional<CouchbaseException> error() {
     return Optional.ofNullable(error).map(this::errorsToThrowable);
   }
 
-  private Throwable errorsToThrowable(final byte[] bytes) {
+  private CouchbaseException errorsToThrowable(final byte[] bytes) {
     int statusCode = responseHeader().status().code();
     String errorDecoded = bytes == null || bytes.length == 0 ? "" : new String(bytes, CharsetUtil.UTF_8);
     SearchErrorContext errorContext = new SearchErrorContext(

@@ -19,6 +19,7 @@ package com.couchbase.client.core.io.netty.chunk;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelConfig;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.chunk.ChunkHeader;
 import com.couchbase.client.core.msg.chunk.ChunkRow;
@@ -46,12 +47,12 @@ public interface ChunkResponseParser<H extends ChunkHeader, ROW extends ChunkRow
    * If the parser sees an error, it should fill this optional so that if the IO
    * layer needs to fail the topmost future it will be passed in.
    */
-  Optional<Throwable> error();
+  Optional<CouchbaseException> error();
 
   /**
    * If the parser fails due to malformed input the cause is returned here.
    */
-  Optional<Throwable> decodingFailure();
+  Optional<CouchbaseException> decodingFailure();
 
   /**
    * Begins a new parsing session.
