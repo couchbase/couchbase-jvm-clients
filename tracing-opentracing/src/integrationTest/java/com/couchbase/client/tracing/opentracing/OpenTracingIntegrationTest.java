@@ -30,6 +30,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
@@ -63,6 +64,8 @@ class OpenTracingIntegrationTest extends ClusterAwareIntegrationTest {
     );
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
+
+    bucket.waitUntilReady(Duration.ofSeconds(5));
   }
 
   @AfterAll

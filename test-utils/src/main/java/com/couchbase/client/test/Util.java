@@ -38,11 +38,11 @@ public class Util {
    * @param supplier return true once it should stop waiting.
    */
   public static void waitUntilCondition(final BooleanSupplier supplier) {
-    with()
-      .pollInterval(Duration.ofMillis(1))
-      .await()
-      .atMost(Duration.ofMinutes(1))
-      .until(supplier::getAsBoolean);
+    waitUntilCondition(supplier, Duration.ofMinutes(1));
+  }
+
+  public static void waitUntilCondition(final BooleanSupplier supplier, Duration atMost) {
+    with().pollInterval(Duration.ofMillis(1)).await().atMost(atMost).until(supplier::getAsBoolean);
   }
 
   public static void waitUntilThrows(final Class<? extends Exception> clazz, final Supplier<Object> supplier) {

@@ -103,9 +103,9 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     collections.createCollection(collSpec).get
 
     collections.createCollection(collSpec) match {
-      case Success(_)                                     => assert(false)
+      case Success(_)                              => assert(false)
       case Failure(err: CollectionExistsException) =>
-      case Failure(_)                                     => assert(false)
+      case Failure(_)                              => assert(false)
     }
   }
 

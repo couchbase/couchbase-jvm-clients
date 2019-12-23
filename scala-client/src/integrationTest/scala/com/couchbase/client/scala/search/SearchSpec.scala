@@ -16,6 +16,8 @@
 
 package com.couchbase.client.scala.search
 
+import java.time.Duration
+
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.MutationState
 import com.couchbase.client.scala.manager.search.SearchIndex
@@ -63,20 +65,25 @@ class SearchSpec extends ScalaIntegrationTest {
   def simple() {
     // The wait is to try and get around an issue on CI where the search service repeatedly returns
     // "pindex not available" errors
-    Util.waitUntilCondition(() => {
-      cluster.searchQuery(
-        indexName,
-        SearchQuery.matchPhrase("John Smith"),
-        SearchOptions().scanConsistency(SearchScanConsistency.ConsistentWith(ms))
-      ) match {
-        case Success(result) =>
-          result.metaData.errors.foreach(err => println(s"Err: ${err}"))
-          println(s"Rows: ${result.rows}")
-          1 == result.rows.size && result.rows.head.id == "test"
-        case Failure(ex) =>
-          println(ex.getMessage)
-          false
-      }
-    })
+    Util.waitUntilCondition(
+      () => {
+        cluster.searchQuery(
+          indexName,
+          SearchQuery.matchPhrase("John Smith"),
+          SearchOptions().scanConsistency(SearchScanConsistency.ConsistentWith(ms))
+        ) match {
+          case Success(result) =>
+            result.metaData.errors.foreach(err => println(s"Err: ${err}"))
+            println(s"Rows: ${result.rows}")
+            1 == result.rows.size && result.rows.head.id == "test"
+          case Failure(ex) =>
+            println(ex.getMessage)
+            Thread.sleep(500) // let's also sleep a bit longer in between to give the server
+            // a chance to recover ...
+            false
+        }
+      },
+      Duration.ofMinutes(5)
+    )
   }
 }
