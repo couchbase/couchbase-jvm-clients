@@ -16,10 +16,10 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.codec.Transcoder;
 
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -32,32 +32,34 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
  */
 public class GetReplicaResult extends GetResult {
 
+  /**
+   * True if this result came from a replica.
+   */
   private final boolean isReplica;
 
   /**
    * Creates a new {@link GetReplicaResult}.
    *
    * @param cas the cas from the doc.
-   * @param expiration the expiration if fetched from the doc.
+   * @param expiry the expiration if fetched from the doc.
    * @param isReplica whether the active or replica returned this result
    */
-  private GetReplicaResult(final byte[] content,
-                   final int flags,
-                   final long cas,
-                   final Optional<Duration> expiration,
-                   Transcoder transcoder,
-                   boolean isReplica) {
-    super(content, flags, cas, expiration, transcoder);
+  private GetReplicaResult(final byte[] content, final int flags, final long cas, final Optional<Duration> expiry,
+                   final Transcoder transcoder, boolean isReplica) {
+    super(content, flags, cas, expiry, transcoder);
     this.isReplica = isReplica;
   }
 
+  @Stability.Internal
   public static GetReplicaResult from(GetResult response, boolean isReplica) {
-    return new GetReplicaResult(response.content,
-            response.flags,
-            response.cas(),
-            response.expiry(),
-            response.transcoder,
-      isReplica);
+    return new GetReplicaResult(
+      response.content,
+      response.flags,
+      response.cas(),
+      response.expiry(),
+      response.transcoder,
+      isReplica
+    );
   }
 
   /**
@@ -70,12 +72,12 @@ public class GetReplicaResult extends GetResult {
   @Override
   public String toString() {
     return "GetReplicaResult{" +
-            "content=" + redactUser(Arrays.toString(content)) +
-            ", flags=" + flags +
-            ", cas=" + cas() +
-            ", expiration=" + expiry() +
-            ", isReplica=" + isReplica +
-            '}';
+      "content=" + redactUser(convertContentToString()) +
+      ", flags=0x" + Integer.toHexString(flags) +
+      ", cas=0x" + Long.toHexString(cas()) +
+      ", expiry=" + expiry() +
+      ", isReplica=" + isReplica +
+      '}';
   }
 
   @Override

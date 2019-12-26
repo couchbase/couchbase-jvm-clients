@@ -68,7 +68,7 @@ public class ExistsResult {
   @Override
   public String toString() {
     return "ExistsResult{" +
-      "cas=" + cas +
+      ", cas=0x" + Long.toHexString(cas) +
       ", exists=" + exists +
       '}';
   }
@@ -78,8 +78,7 @@ public class ExistsResult {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     ExistsResult that = (ExistsResult) o;
-    return cas == that.cas &&
-      exists == that.exists;
+    return cas == that.cas && exists == that.exists;
   }
 
   @Override

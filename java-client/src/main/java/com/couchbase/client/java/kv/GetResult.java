@@ -16,11 +16,16 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Objects;
@@ -130,11 +135,28 @@ public class GetResult {
   @Override
   public String toString() {
     return "GetResult{" +
-      "content=" + redactUser(Arrays.toString(content)) +
-      ", flags=" + flags +
-      ", cas=" + cas +
+      "content=" + redactUser(convertContentToString()) +
+      ", flags=0x" + Integer.toHexString(flags) +
+      ", cas=0x" + Long.toHexString(cas) +
       ", expiry=" + expiry +
       '}';
+  }
+
+  /**
+   * Converts the content to a string representation if possible (for toString).
+   */
+  protected String convertContentToString() {
+    boolean printable = CodecFlags.hasCommonFormat(flags, CodecFlags.JSON_COMMON_FLAGS)
+      || CodecFlags.hasCommonFormat(flags, CodecFlags.STRING_COMMON_FLAGS);
+
+    if (printable) {
+      return new String(content, StandardCharsets.UTF_8);
+    } else {
+      ByteBuf buf = Unpooled.wrappedBuffer(content);
+      String result = ByteBufUtil.prettyHexDump(buf);
+      buf.release();
+      return "\n" + result + "\n";
+    }
   }
 
   @Override

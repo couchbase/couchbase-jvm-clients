@@ -18,6 +18,7 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.msg.kv.MutationToken;
 
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -68,7 +69,7 @@ public class MutationResult {
   @Override
   public String toString() {
     return "MutationResult{" +
-      "cas=" + cas +
+      "cas=0x" + Long.toHexString(cas) +
       ", mutationToken=" + mutationToken +
       '}';
   }
@@ -81,13 +82,13 @@ public class MutationResult {
     MutationResult that = (MutationResult) o;
 
     if (cas != that.cas) return false;
-    return mutationToken != null ? mutationToken.equals(that.mutationToken) : that.mutationToken == null;
+    return Objects.equals(mutationToken, that.mutationToken);
   }
 
   @Override
   public int hashCode() {
     int result = (int) (cas ^ (cas >>> 32));
-    result = 31 * result + (mutationToken != null ? mutationToken.hashCode() : 0);
+    result = 31 * result + (mutationToken.isPresent() ? mutationToken.hashCode() : 0);
     return result;
   }
 

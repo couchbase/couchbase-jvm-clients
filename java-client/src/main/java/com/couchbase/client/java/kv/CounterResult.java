@@ -56,7 +56,7 @@ public class CounterResult extends MutationResult {
   @Override
   public String toString() {
     return "CounterResult{" +
-      "cas=" + cas() +
+      "cas=0x" + Long.toHexString(cas()) +
       ", mutationToken=" + mutationToken() +
       ", content=" + content +
       '}';

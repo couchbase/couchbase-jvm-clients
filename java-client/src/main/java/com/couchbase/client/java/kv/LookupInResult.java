@@ -155,8 +155,7 @@ public class LookupInResult {
   public String toString() {
     return "LookupInResult{" +
       "encoded=" + Arrays.asList(encoded) +
-      ", cas=" + cas +
-      ", serializer=" + serializer +
+      ", cas=0x" + Long.toHexString(cas) +
       '}';
   }
 
@@ -165,9 +164,7 @@ public class LookupInResult {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     LookupInResult that = (LookupInResult) o;
-    return cas == that.cas &&
-      Arrays.equals(encoded, that.encoded) &&
-      Objects.equals(serializer, that.serializer);
+    return cas == that.cas && Arrays.equals(encoded, that.encoded) && Objects.equals(serializer, that.serializer);
   }
 
   @Override
