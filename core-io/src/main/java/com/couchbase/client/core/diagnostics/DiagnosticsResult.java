@@ -84,7 +84,7 @@ public class DiagnosticsResult {
      * @param endpoints the endpoints to aggregate.
      * @return the aggregated cluster state.
      */
-    private static ClusterState aggregateClusterState(final Collection<List<EndpointDiagnostics>> endpoints) {
+    static ClusterState aggregateClusterState(final Collection<List<EndpointDiagnostics>> endpoints) {
         int numConnected = 0;
         int numFound = 0;
         for (List<EndpointDiagnostics> endpoint : endpoints) {

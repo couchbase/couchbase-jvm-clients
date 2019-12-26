@@ -82,7 +82,7 @@ public class HealthPinger {
   }
 
   @Stability.Internal
-  public static Set<PingTarget> extractPingTargets(final ClusterConfig clusterConfig, final boolean clusterLevel) {
+  static Set<PingTarget> extractPingTargets(final ClusterConfig clusterConfig, final boolean clusterLevel) {
     final Set<PingTarget> targets = new HashSet<>();
 
     if (clusterLevel) {

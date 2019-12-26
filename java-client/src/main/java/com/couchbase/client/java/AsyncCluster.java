@@ -24,6 +24,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.diagnostics.HealthPinger;
 import com.couchbase.client.core.diagnostics.PingResult;
+import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.OwnedSupplier;
@@ -574,46 +575,7 @@ public class AsyncCluster {
   public CompletableFuture<Void> waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
     notNull(options, "WaitUntilReadyOptions");
     final WaitUntilReadyOptions.Built opts = options.build();
-
-    boolean hasChance = core.clusterConfig().hasClusterOrBucketConfig()
-      || core.configurationProvider().globalConfigLoadInProgress()
-      || core.configurationProvider().bucketConfigLoadInProgress();
-    if (!hasChance) {
-      CompletableFuture<Void> f = new CompletableFuture<>();
-      f.completeExceptionally(
-        new IllegalStateException("Against pre 6.5 clusters at least a bucket needs to be opened!")
-      );
-      return f;
-    }
-
-    return Flux
-      .interval(Duration.ofMillis(10))
-      .filter(i -> !(core.configurationProvider().bucketConfigLoadInProgress()
-        || core.configurationProvider().globalConfigLoadInProgress()))
-      .take(1)
-      .flatMap(aLong -> {
-        final Set<ServiceType> servicesToCheck = opts.serviceTypes() != null && !opts.serviceTypes().isEmpty()
-          ? opts.serviceTypes()
-          : HealthPinger
-          .extractPingTargets(core.clusterConfig(), true)
-          .stream()
-          .map(HealthPinger.PingTarget::serviceType)
-          .collect(Collectors.toSet());
-
-        final Flux<PingResult> ping = Mono
-          .fromFuture(ping(PingOptions.pingOptions().serviceTypes(servicesToCheck)))
-          .flux();
-
-        final Flux<DiagnosticsResult> diagnostics = Flux
-          .interval(Duration.ofMillis(10))
-          .flatMap(i -> fromFuture(diagnostics()))
-          .takeUntil(d -> d.state() == opts.desiredState());
-
-        return Flux.concat(ping, diagnostics);
-      })
-      .timeout(timeout)
-      .then()
-      .toFuture();
+    return WaitUntilReadyHelper.waitUntilReady(core, opts.serviceTypes(), timeout, opts.desiredState(), true);
   }
 
 }

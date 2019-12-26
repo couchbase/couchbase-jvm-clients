@@ -24,6 +24,7 @@ import com.couchbase.client.core.diagnostics.DiagnosticsResult;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.diagnostics.HealthPinger;
 import com.couchbase.client.core.diagnostics.PingResult;
+import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.error.ReducedViewErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -262,43 +263,7 @@ public class AsyncBucket {
   public CompletableFuture<Void> waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
     notNull(options, "WaitUntilReadyOptions");
     final WaitUntilReadyOptions.Built opts = options.build();
-
-    return Flux
-      .interval(Duration.ofMillis(10))
-      .filter(i -> !(core.configurationProvider().bucketConfigLoadInProgress()
-        || core.configurationProvider().globalConfigLoadInProgress()))
-      .take(1)
-      .flatMap(aLong -> {
-        final Set<ServiceType> servicesToCheck = opts.serviceTypes() != null && !opts.serviceTypes().isEmpty()
-          ? opts.serviceTypes()
-          : HealthPinger
-          .extractPingTargets(core.clusterConfig(), false)
-          .stream()
-          .map(HealthPinger.PingTarget::serviceType)
-          .collect(Collectors.toSet());
-
-        final Flux<PingResult> ping = Mono
-          .fromFuture(ping(PingOptions.pingOptions().serviceTypes(servicesToCheck)))
-          .flux();
-
-        final Flux<DiagnosticsResult> diagnostics = Flux
-          .interval(Duration.ofMillis(10))
-          .flatMap(i -> fromFuture(diagnostics()))
-          .takeUntil(d -> d.state() == opts.desiredState());
-
-        return Flux.concat(ping, diagnostics);
-      })
-      .timeout(timeout)
-      .then()
-      .toFuture();
-  }
-
-  private CompletableFuture<DiagnosticsResult> diagnostics() {
-    return Mono.defer(() -> Mono.just(new DiagnosticsResult(
-      core.diagnostics().collect(Collectors.groupingBy(EndpointDiagnostics::type)),
-      core.context().environment().userAgent().formattedShort(),
-      UUID.randomUUID().toString()
-    ))).toFuture();
+    return WaitUntilReadyHelper.waitUntilReady(core, opts.serviceTypes(), timeout, opts.desiredState(), false);
   }
 
 }
