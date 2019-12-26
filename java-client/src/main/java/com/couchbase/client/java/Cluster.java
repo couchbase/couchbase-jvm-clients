@@ -61,6 +61,43 @@ import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
 
 /**
  * The {@link Cluster} is the main entry point when connecting to a Couchbase cluster.
+ * <p>
+ * Most likely you want to start out by using the {@link #connect(String, String, String)} entry point. For more
+ * advanced options you want to use the {@link #connect(String, ClusterOptions)} method. The entry point that allows
+ * overriding the seed nodes ({@link #connect(Set, ClusterOptions)} is only needed if you run a couchbase cluster
+ * at non-standard ports.
+ * <p>
+ * See the individual connect methods for more information, but here is a snippet to get you off the ground quickly. It
+ * assumes you have Couchbase running locally and the "travel-sample" sample bucket loaded:
+ * <pre>
+ * //Connect and open a bucket
+ * Cluster cluster=Cluster.connect("127.0.0.1","Administrator","password");
+ * Bucket bucket=cluster.bucket("travel-sample");
+ * Collection collection=bucket.defaultCollection();
+ *
+ * // Perform a N1QL query
+ * QueryResult queryResult=cluster.query("select * from `travel-sample` limit 5");
+ * System.out.println(queryResult.rowsAsObject());
+ *
+ * // Perform a KV request and load a document
+ * GetResult getResult=collection.get("airline_10");
+ * System.out.println(getResult);
+ * </pre>
+ * <p>
+ * When the application shuts down (or the SDK is not needed anymore), you are required to call {@link #disconnect()}.
+ * If you omit this step, the application will terminate (all spawned threads are daemon threads) but any operations
+ * or work in-flight will not be able to complete and lead to undesired side-effects. Note that disconnect will also
+ * shutdown all associated {@link Bucket buckets}.
+ * <p>
+ * Cluster-level operations like {@link #query(String)} will not work unless at leas one bucket is opened against a
+ * pre 6.5 cluster. If you are using 6.5 or later, you can run cluster-level queries without opening a bucket. All
+ * of these operations are lazy, so the SDK will bootstrap in the background and service queries as quickly as possible.
+ * This also means that the first operations might be a bit slower until all sockets are opened in the background and
+ * the configuration is loaded. If you want to wait explicitly, you can utilize the {@link #waitUntilReady(Duration)}
+ * method before performing your first query.
+ * <p>
+ * The SDK will only work against Couchbase Server 5.0 and later, because RBAC (role-based access control) is a first
+ * class concept since 3.0 and therefore required.
  */
 public class Cluster {
 
@@ -75,21 +112,62 @@ public class Cluster {
   private final ReactiveCluster reactiveCluster;
 
   /**
-   * Holds the index manager.
+   * The search index manager manages search indexes.
    */
   private final SearchIndexManager searchIndexManager;
 
-
+  /**
+   * The user manager manages users and groups.
+   */
   private final UserManager userManager;
 
+  /**
+   * The bucket manager manages buckets and allows to flush them.
+   */
   private final BucketManager bucketManager;
 
+  /**
+   * Allows to manage query indexes.
+   */
   private final QueryIndexManager queryIndexManager;
 
+  /**
+   * Allows to manage analytics indexes.
+   */
   private final AnalyticsIndexManager analyticsIndexManager;
 
   /**
    * Connect to a Couchbase cluster with a username and a password as credentials.
+   * <p>
+   * This is the simplest (and recommended) method to connect to the cluster if you do not need to provide any
+   * custom options.
+   * <p>
+   * The first argument (the connection string in its simplest form) is used to supply the hostnames of the cluster. In
+   * development it is OK to only pass in one hostname (or IP address), but in production we recommend passing in at
+   * least 3 nodes of the cluster (comma separated). The reason is that if one or more of the nodes are not reachable
+   * the client will still be able to bootstrap (and your application will become more resilient as a result).
+   * <p>
+   * Here is how you specify one node to use for bootstrapping:
+   * <pre>
+   * Cluster cluster = Cluster.connect("127.0.0.1", "user", "password"); // ok during development
+   * </pre>
+   * This is what we recommend in production:
+   * <pre>
+   * Cluster cluster = Cluster.connect("host1,host2,host3", "user", "password"); // recommended in production
+   * </pre>
+   * It is important to understand that the SDK will only use the bootstrap ("seed nodes") host list to establish an
+   * initial contact with the cluster. Once the configuration is loaded this list is discarded and the client will
+   * connect to all nodes based on this configuration.
+   * <p>
+   * This method will return immediately and the SDK will try to establish all the necessary resources and connections
+   * in the background. This means that depending on how fast it can be bootstrapped, the first couple cluster-level
+   * operations like {@link #query(String)} will take a bit longer. If you want to wait explicitly until those resources
+   * are available, you can use the {@link #waitUntilReady(Duration)} method before running any of them:
+   * <pre>
+   * Cluster cluster = Cluster.connect("host1,host2,host3", "user", "password");
+   * cluster.waitUntilReady(Duration.ofSeconds(5));
+   * QueryResult result = cluster.query("select * from bucket limit 1");
+   * </pre>
    *
    * @param connectionString connection string used to locate the Couchbase cluster.
    * @param username the name of the user with appropriate permissions on the cluster.
@@ -101,7 +179,56 @@ public class Cluster {
   }
 
   /**
-   * Connect to a Couchbase cluster with custom {@link Authenticator}.
+   * Connect to a Couchbase cluster with custom options.
+   * <p>
+   * You likely want to use this over the simpler {@link #connect(String, String, String)} if:
+   * <ul>
+   *   <li>A custom {@link ClusterEnvironment}</li>
+   *   <li>Or a custom {@link Authenticator}</li>
+   * </ul>
+   * needs to be provided.
+   * <p>
+   * A custom environment can be passed in like this:
+   * <pre>
+   * // on bootstrap:
+   * ClusterEnvironment environment = ClusterEnvironment.builder().build();
+   * Cluster cluster = Cluster.connect(
+   *   "127.0.0.1",
+   *   clusterOptions("user", "password").environment(environment)
+   * );
+   *
+   * // on shutdown:
+   * cluster.disconnect();
+   * environment.shutdown();
+   * </pre>
+   * It is <strong>VERY</strong> important to shut down the environment when being passed in separately (as shown in
+   * the code sample above) and <strong>AFTER</strong> the cluster is disconnected. This will ensure an orderly shutdown
+   * and makes sure that no resources are left lingering.
+   * <p>
+   * If you want to pass in a custom {@link Authenticator}, it is likely because you are setting up certificate-based
+   * authentication instead of using a username and a password directly. Remember to also enable TLS.
+   * <pre>
+   * ClusterEnvironment environment = ClusterEnvironment
+   *   .builder()
+   *   .securityConfig(SecurityConfig.enableTls(true))
+   *   .build();
+   *
+   * Authenticator authenticator = CertificateAuthenticator.fromKey(...);
+   *
+   * Cluster cluster = Cluster.connect(
+   *   "127.0.0.1",
+   *   clusterOptions(authenticator).environment(environment)
+   * );
+   * </pre>
+   * This method will return immediately and the SDK will try to establish all the necessary resources and connections
+   * in the background. This means that depending on how fast it can be bootstrapped, the first couple cluster-level
+   * operations like {@link #query(String)} will take a bit longer. If you want to wait explicitly until those resources
+   * are available, you can use the {@link #waitUntilReady(Duration)} method before running any of them:
+   * <pre>
+   * Cluster cluster = Cluster.connect("host1,host2,host3", "user", "password");
+   * cluster.waitUntilReady(Duration.ofSeconds(5));
+   * QueryResult result = cluster.query("select * from bucket limit 1");
+   * </pre>
    *
    * @param connectionString connection string used to locate the Couchbase cluster.
    * @param options custom options when creating the cluster.
@@ -123,10 +250,17 @@ public class Cluster {
   /**
    * Connect to a Couchbase cluster with a list of seed nodes and custom options.
    * <p>
-   * Please note that you likely only want to use this method if you need to pass in custom ports for specific
-   * seed nodes during bootstrap. Otherwise we recommend relying ont he simpler {@link #connect(String, ClusterOptions)}
-   * method instead.
-   *
+   * Note that you likely only want to use this method if you need to pass in custom ports for specific seed nodes
+   * during bootstrap. Otherwise we recommend relying on the simpler {@link #connect(String, String, String)} method
+   * instead.
+   * <p>
+   * The following example shows how to bootstrap against a node with custom KV and management ports:
+   * <pre>
+   * Set<SeedNode> seedNodes = new HashSet<>(Collections.singletonList(
+   *   SeedNode.create("127.0.0.1", Optional.of(12000), Optional.of(9000))
+   * ));
+   * Cluster cluster Cluster.connect(seedNodes, clusterOptions("user", "password"));
+   * </pre>
    * @param seedNodes the seed nodes used to connect to the cluster.
    * @param options custom options when creating the cluster.
    * @return the instantiated {@link Cluster}.
@@ -142,9 +276,12 @@ public class Cluster {
   /**
    * Creates a new cluster from a {@link ClusterEnvironment}.
    *
-   * @param environment the environment to use for this cluster.
+   * @param environment the environment to use.
+   * @param authenticator the authenticator to use.
+   * @param seedNodes the seed nodes to bootstrap from.
    */
-  private Cluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator, Set<SeedNode> seedNodes) {
+  private Cluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator,
+                  final Set<SeedNode> seedNodes) {
     this.asyncCluster = new AsyncCluster(environment, authenticator, seedNodes);
     this.reactiveCluster = new ReactiveCluster(asyncCluster);
     this.searchIndexManager = new SearchIndexManager(asyncCluster.searchIndexes());
@@ -155,7 +292,11 @@ public class Cluster {
   }
 
   /**
-   * Provides access to the underlying {@link AsyncCluster}.
+   * Provides access to the related {@link AsyncCluster}.
+   * <p>
+   * Note that the {@link AsyncCluster} is considered advanced API and should only be used to get the last drop
+   * of performance or if you are building higher-level abstractions on top. If in doubt, we recommend using the
+   * {@link #reactive()} API instead.
    */
   public AsyncCluster async() {
     return asyncCluster;
@@ -171,7 +312,7 @@ public class Cluster {
   /**
    * Provides access to the underlying {@link Core}.
    *
-   * <p>This is advanced API, use with care!</p>
+   * <p>This is advanced and volatile API - it might change any time without notice. <strong>Use with care!</strong></p>
    */
   @Stability.Volatile
   public Core core() {
@@ -179,56 +320,51 @@ public class Cluster {
   }
 
   /**
-   * Provides access to the user management services.
+   * The user manager allows to manage users and groups.
    */
-  @Stability.Volatile
   public UserManager users() {
     return userManager;
   }
 
   /**
-   * Provides access to the bucket management services.
+   * The bucket manager allows to perform administrative tasks on buckets and their resources.
    */
-  @Stability.Volatile
   public BucketManager buckets() {
     return bucketManager;
   }
 
   /**
-   * Provides access to the Analytics index management services.
+   * The analytics index manager allows to modify and create indexes for the analytics service.
    */
-  @Stability.Volatile
   public AnalyticsIndexManager analyticsIndexes() {
     return analyticsIndexManager;
   }
 
   /**
-   * Provides access to the N1QL index management services.
+   * The analytics index manager allows to modify and create indexes for the query service.
    */
-  @Stability.Volatile
   public QueryIndexManager queryIndexes() {
     return queryIndexManager;
   }
 
   /**
-   * Provides access to the Full Text Search index management services.
+   * The analytics index manager allows to modify and create indexes for the search service.
    */
-  @Stability.Volatile
   public SearchIndexManager searchIndexes() {
     return searchIndexManager;
   }
 
   /**
-   * Provides access to the configured {@link ClusterEnvironment} for this cluster.
+   * Provides access to the used {@link ClusterEnvironment}.
    */
   public ClusterEnvironment environment() {
     return asyncCluster.environment();
   }
 
   /**
-   * Performs a N1QL query with default {@link QueryOptions}.
+   * Performs a query against the query (N1QL) services.
    *
-   * @param statement the N1QL query statement as a raw string.
+   * @param statement the N1QL query statement.
    * @return the {@link QueryResult} once the response arrives successfully.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
@@ -238,7 +374,7 @@ public class Cluster {
   }
 
   /**
-   * Performs a N1QL query with custom {@link QueryOptions}.
+   * Performs a query against the query (N1QL) services with custom options.
    *
    * @param statement the N1QL query statement as a raw string.
    * @param options the custom options for this query.
@@ -312,6 +448,12 @@ public class Cluster {
 
   /**
    * Performs a non-reversible disconnect of this {@link Cluster}.
+   * <p>
+   * If this method is used, the default disconnect timeout on the environment is used. Please use the companion
+   * overload ({@link #disconnect(Duration)} if you want to provide a custom duration.
+   * <p>
+   * If a custom {@link ClusterEnvironment} has been passed in during connect, it is <strong>VERY</strong> important to
+   * shut it down after calling this method. This will prevent any in-flight tasks to be stopped prematurely.
    */
   public void disconnect() {
     block(asyncCluster.disconnect());
@@ -319,8 +461,11 @@ public class Cluster {
 
   /**
    * Performs a non-reversible disconnect of this {@link Cluster}.
+   * <p>
+   * If a custom {@link ClusterEnvironment} has been passed in during connect, it is <strong>VERY</strong> important to
+   * shut it down after calling this method. This will prevent any in-flight tasks to be stopped prematurely.
    *
-   * @param timeout overriding the default disconnect timeout if needed.
+   * @param timeout allows to override the default disconnect duration.
    */
   public void disconnect(final Duration timeout) {
     block(asyncCluster.disconnect(timeout));
@@ -388,7 +533,6 @@ public class Cluster {
    * and usable before moving on.
    *
    * @param timeout the maximum time to wait until readiness.
-   * @return a function that completes either once ready or timeout.
    */
   public void waitUntilReady(final Duration timeout) {
     block(asyncCluster.waitUntilReady(timeout));
@@ -403,7 +547,6 @@ public class Cluster {
    *
    * @param timeout the maximum time to wait until readiness.
    * @param options the options to customize the readiness waiting.
-   * @return a function that completes either once ready or timeout.
    */
   public void waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
     block(asyncCluster.waitUntilReady(timeout, options));
