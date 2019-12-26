@@ -77,7 +77,7 @@ public class OrphanReporterConfig {
   @Stability.Volatile
   Map<String, Object> exportAsMap() {
     Map<String, Object> export = new LinkedHashMap<>();
-    export.put("emitInterval", emitInterval);
+    export.put("emitIntervalMs", emitInterval.toMillis());
     export.put("sampleSize", sampleSize);
     export.put("queueLength", queueLength);
     return export;

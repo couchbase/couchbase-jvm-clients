@@ -83,7 +83,7 @@ public class DiagnosticsConfig {
   Map<String, Object> exportAsMap() {
     Map<String, Object> export = new LinkedHashMap<>();
     export.put("enabled", enabled);
-    export.put("emitInterval", emitInterval.toString());
+    export.put("emitIntervalMs", emitInterval.toMillis());
     return export;
   }
 

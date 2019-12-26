@@ -230,8 +230,8 @@ public class IoConfig {
     export.put("networkResolution", networkResolution.name());
     export.put("dnsSrvEnabled", dnsSrvEnabled);
     export.put("tcpKeepAlivesEnabled", tcpKeepAlivesEnabled);
-    export.put("tcpKeepAliveTime", tcpKeepAliveTime);
-    export.put("configPollIntervalMillis", configPollInterval.toMillis());
+    export.put("tcpKeepAliveTimeMs", tcpKeepAliveTime.toMillis());
+    export.put("configPollIntervalMs", configPollInterval.toMillis());
     export.put("kvCircuitBreakerConfig", kvCircuitBreakerConfig.enabled() ? kvCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("queryCircuitBreakerConfig", queryCircuitBreakerConfig.enabled() ? queryCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("viewCircuitBreakerConfig", viewCircuitBreakerConfig.enabled() ? viewCircuitBreakerConfig.exportAsMap() : "disabled");
@@ -240,7 +240,7 @@ public class IoConfig {
     export.put("managerCircuitBreakerConfig", managerCircuitBreakerConfig.enabled() ? managerCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("numKvConnections", numKvConnections);
     export.put("maxHttpConnections", maxHttpConnections);
-    export.put("idleHttpConnectionTimeout", idleHttpConnectionTimeout);
+    export.put("idleHttpConnectionTimeoutMs", idleHttpConnectionTimeout.toMillis());
     return export;
   }
 
