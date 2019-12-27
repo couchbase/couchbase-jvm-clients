@@ -19,7 +19,7 @@ package com.couchbase.client.java.manager.collection;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CollectionExistsException;
 import com.couchbase.client.core.error.CollectionNotFoundException;
-import com.couchbase.client.core.error.ScopeAlreadyExistsException;
+import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -64,7 +64,7 @@ public class ReactiveCollectionManager {
    * Creates a scope if it does not already exist.
    *
    * @param scopeName the name of the scope to create.
-   * @throws ScopeAlreadyExistsException (async) if the scope already exists.
+   * @throws ScopeExistsException (async) if the scope already exists.
    */
   public Mono<Void> createScope(final String scopeName) {
     return toMono(() -> async.createScope(scopeName));

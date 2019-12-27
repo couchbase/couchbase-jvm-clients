@@ -19,7 +19,7 @@ package com.couchbase.client.java.manager.collection;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CollectionExistsException;
 import com.couchbase.client.core.error.CollectionNotFoundException;
-import com.couchbase.client.core.error.ScopeAlreadyExistsException;
+import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 
 import java.util.List;
@@ -64,7 +64,7 @@ public class CollectionManager {
    * Creates a scope if it does not already exist.
    *
    * @param scopeName the name of the scope to create.
-   * @throws ScopeAlreadyExistsException if the scope already exists.
+   * @throws ScopeExistsException if the scope already exists.
    */
   public void createScope(final String scopeName) {
     block(asyncCollectionManager.createScope(scopeName));

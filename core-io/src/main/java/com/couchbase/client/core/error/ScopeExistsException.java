@@ -22,16 +22,16 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
-public class ScopeAlreadyExistsException extends CouchbaseException {
+public class ScopeExistsException extends CouchbaseException {
   private final String scopeName;
 
-  public ScopeAlreadyExistsException(String scopeName) {
+  public ScopeExistsException(String scopeName) {
     super("Scope [" + redactMeta(scopeName) + "] already exists.");
     this.scopeName = requireNonNull(scopeName);
   }
 
-  public static ScopeAlreadyExistsException forScope(String scopeName) {
-    return new ScopeAlreadyExistsException(scopeName);
+  public static ScopeExistsException forScope(String scopeName) {
+    return new ScopeExistsException(scopeName);
   }
 
   public String scopeName() {

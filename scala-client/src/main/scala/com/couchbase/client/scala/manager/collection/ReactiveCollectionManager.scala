@@ -24,7 +24,7 @@ import com.couchbase.client.core.error.{
   CollectionExistsException,
   CollectionNotFoundException,
   CouchbaseException,
-  ScopeAlreadyExistsException,
+  ScopeExistsException,
   ScopeNotFoundException
 }
 import com.couchbase.client.core.msg.ResponseStatus
@@ -237,7 +237,7 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
         }
       } else if (response.status == ResponseStatus.INVALID_ARGS) {
         if (error.contains("Scope with this name already exists")) {
-          Failure(new ScopeAlreadyExistsException(scopeName))
+          Failure(new ScopeExistsException(scopeName))
         } else if (error.contains("Collection with this name already exists")) {
           Failure(new CollectionExistsException(collectionName))
         } else {

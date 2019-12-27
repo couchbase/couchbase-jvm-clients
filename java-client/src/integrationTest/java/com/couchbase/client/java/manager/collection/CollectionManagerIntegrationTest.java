@@ -19,7 +19,7 @@ package com.couchbase.client.java.manager.collection;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.CollectionExistsException;
 import com.couchbase.client.core.error.CollectionNotFoundException;
-import com.couchbase.client.core.error.ScopeAlreadyExistsException;
+import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
@@ -95,7 +95,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 
     collections.createScope(scope);
     waitUntilCondition(() -> scopeExists(scope));
-    assertThrows(ScopeAlreadyExistsException.class, () -> collections.createScope(scope));
+    assertThrows(ScopeExistsException.class, () -> collections.createScope(scope));
   }
 
   @Test

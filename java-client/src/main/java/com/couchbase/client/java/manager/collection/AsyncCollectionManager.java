@@ -26,7 +26,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.error.CollectionExistsException;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.ScopeAlreadyExistsException;
+import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.json.MapperException;
@@ -96,7 +96,7 @@ public class AsyncCollectionManager extends ManagerSupport {
    *
    * @param scopeName the name of the scope to create.
    * @return a {@link CompletableFuture} once the scope creation completed.
-   * @throws ScopeAlreadyExistsException (async) if the scope already exists.
+   * @throws ScopeExistsException (async) if the scope already exists.
    */
   public CompletableFuture<Void> createScope(final String scopeName) {
     final UrlQueryStringBuilder body = UrlQueryStringBuilder
@@ -199,7 +199,7 @@ public class AsyncCollectionManager extends ManagerSupport {
 
     if (response.status() == ResponseStatus.INVALID_ARGS) {
       if (error.contains("Scope with this name already exists")) {
-        throw ScopeAlreadyExistsException.forScope(scopeName);
+        throw ScopeExistsException.forScope(scopeName);
       }
       if (error.contains("Collection with this name already exists")) {
         throw CollectionExistsException.forCollection(collectionName);

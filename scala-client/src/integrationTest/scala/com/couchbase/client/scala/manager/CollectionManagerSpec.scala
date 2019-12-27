@@ -19,7 +19,7 @@ import java.util.UUID
 
 import com.couchbase.client.core.error.{
   CollectionExistsException,
-  ScopeAlreadyExistsException,
+  ScopeExistsException,
   ScopeNotFoundException
 }
 import com.couchbase.client.scala.Cluster
@@ -87,9 +87,9 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     collections.createScope(scope).get
 
     collections.createScope(scope) match {
-      case Success(_)                                => assert(false)
-      case Failure(err: ScopeAlreadyExistsException) =>
-      case Failure(_)                                => assert(false)
+      case Success(_)                         => assert(false)
+      case Failure(err: ScopeExistsException) =>
+      case Failure(_)                         => assert(false)
     }
   }
 

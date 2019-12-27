@@ -20,7 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.error.CollectionDoesNotExistException;
+import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
@@ -117,9 +117,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
     if (ctx.collectionsEnabled()) {
       byte[] collection = ctx.collectionMap().get(collectionIdentifier);
       if (collection == null) {
-        throw new CollectionDoesNotExistException("Collection \""
-          + collectionIdentifier.collection() + "\" in scope \""
-          + collectionIdentifier.scope() + "\" does not exist.");
+        throw CollectionNotFoundException.forCollection(collectionIdentifier.collection().orElse(""));
       }
 
       return alloc
