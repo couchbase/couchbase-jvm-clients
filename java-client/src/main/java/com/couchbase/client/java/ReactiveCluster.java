@@ -65,6 +65,29 @@ import static com.couchbase.client.java.diagnostics.WaitUntilReadyOptions.waitUn
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static com.couchbase.client.java.search.SearchOptions.searchOptions;
 
+/**
+ * The {@link Cluster} is the main entry point when connecting to a Couchbase cluster using the reactive APIs.
+ * <p>
+ * Most likely you want to start out by using the {@link #connect(String, String, String)} entry point. For more
+ * advanced options you want to use the {@link #connect(String, ClusterOptions)} method. The entry point that allows
+ * overriding the seed nodes ({@link #connect(Set, ClusterOptions)} is only needed if you run a couchbase cluster
+ * at non-standard ports.
+ * <p>
+ * When the application shuts down (or the SDK is not needed anymore), you are required to call {@link #disconnect()}.
+ * If you omit this step, the application will terminate (all spawned threads are daemon threads) but any operations
+ * or work in-flight will not be able to complete and lead to undesired side-effects. Note that disconnect will also
+ * shutdown all associated {@link Bucket buckets}.
+ * <p>
+ * Cluster-level operations like {@link #query(String)} will not work unless at leas one bucket is opened against a
+ * pre 6.5 cluster. If you are using 6.5 or later, you can run cluster-level queries without opening a bucket. All
+ * of these operations are lazy, so the SDK will bootstrap in the background and service queries as quickly as possible.
+ * This also means that the first operations might be a bit slower until all sockets are opened in the background and
+ * the configuration is loaded. If you want to wait explicitly, you can utilize the {@link #waitUntilReady(Duration)}
+ * method before performing your first query.
+ * <p>
+ * The SDK will only work against Couchbase Server 5.0 and later, because RBAC (role-based access control) is a first
+ * class concept since 3.0 and therefore required.
+ */
 public class ReactiveCluster {
 
   static final QueryOptions DEFAULT_QUERY_OPTIONS = queryOptions();
@@ -164,7 +187,6 @@ public class ReactiveCluster {
   /**
    * Provides access to the user management services.
    */
-  @Stability.Volatile
   public ReactiveUserManager users() {
     return new ReactiveUserManager(asyncCluster.users());
   }
@@ -172,7 +194,6 @@ public class ReactiveCluster {
   /**
    * Provides access to the bucket management services.
    */
-  @Stability.Volatile
   public ReactiveBucketManager buckets() {
     return new ReactiveBucketManager(async().buckets());
   }
@@ -180,7 +201,6 @@ public class ReactiveCluster {
   /**
    * Provides access to the Analytics index management services.
    */
-  @Stability.Volatile
   public ReactiveAnalyticsIndexManager analyticsIndexes() {
     return new ReactiveAnalyticsIndexManager(async());
   }
@@ -188,7 +208,6 @@ public class ReactiveCluster {
   /**
    * Provides access to the N1QL index management services.
    */
-  @Stability.Volatile
   public ReactiveQueryIndexManager queryIndexes() {
     return new ReactiveQueryIndexManager(new AsyncQueryIndexManager(async()));
   }
@@ -307,6 +326,12 @@ public class ReactiveCluster {
 
   /**
    * Performs a non-reversible disconnect of this {@link ReactiveCluster}.
+   * <p>
+   * If this method is used, the default disconnect timeout on the environment is used. Please use the companion
+   * overload ({@link #disconnect(Duration)} if you want to provide a custom duration.
+   * <p>
+   * If a custom {@link ClusterEnvironment} has been passed in during connect, it is <strong>VERY</strong> important to
+   * shut it down after calling this method. This will prevent any in-flight tasks to be stopped prematurely.
    */
   public Mono<Void> disconnect() {
     return disconnect(environment().timeoutConfig().disconnectTimeout());
@@ -314,6 +339,9 @@ public class ReactiveCluster {
 
   /**
    * Performs a non-reversible disconnect of this {@link ReactiveCluster}.
+   * <p>
+   * If a custom {@link ClusterEnvironment} has been passed in during connect, it is <strong>VERY</strong> important to
+   * shut it down after calling this method. This will prevent any in-flight tasks to be stopped prematurely.
    *
    * @param timeout overriding the default disconnect timeout if needed.
    */

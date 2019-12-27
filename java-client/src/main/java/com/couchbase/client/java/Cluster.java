@@ -71,16 +71,16 @@ import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
  * assumes you have Couchbase running locally and the "travel-sample" sample bucket loaded:
  * <pre>
  * //Connect and open a bucket
- * Cluster cluster=Cluster.connect("127.0.0.1","Administrator","password");
- * Bucket bucket=cluster.bucket("travel-sample");
- * Collection collection=bucket.defaultCollection();
+ * Cluster cluster = Cluster.connect("127.0.0.1","Administrator","password");
+ * Bucket bucket = cluster.bucket("travel-sample");
+ * Collection collection = bucket.defaultCollection();
  *
  * // Perform a N1QL query
- * QueryResult queryResult=cluster.query("select * from `travel-sample` limit 5");
+ * QueryResult queryResult = cluster.query("select * from `travel-sample` limit 5");
  * System.out.println(queryResult.rowsAsObject());
  *
  * // Perform a KV request and load a document
- * GetResult getResult=collection.get("airline_10");
+ * GetResult getResult = collection.get("airline_10");
  * System.out.println(getResult);
  * </pre>
  * <p>
