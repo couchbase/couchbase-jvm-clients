@@ -16,8 +16,11 @@
 
 package com.couchbase.client.core.node;
 
+import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
+import com.couchbase.client.core.config.MemcachedBucketConfig;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ScopedRequest;
@@ -30,6 +33,23 @@ public class ViewLocator extends RoundRobinLocator {
 
   public ViewLocator() {
     super(ServiceType.VIEWS);
+  }
+
+  @Override
+  protected boolean checkServiceNotAvailable(Request<? extends Response> request, final ClusterConfig config) {
+    if (request instanceof ScopedRequest) {
+      String bucket = ((ScopedRequest) request).bucket();
+      BucketConfig bucketConfig = config.bucketConfig(bucket);
+      if (bucketConfig instanceof MemcachedBucketConfig) {
+        request.fail(new FeatureNotAvailableException("Memcached buckets do not support view queries"));
+        return false;
+      }
+      if (bucketConfig instanceof CouchbaseBucketConfig && ((CouchbaseBucketConfig) bucketConfig).ephemeral()) {
+        request.fail(new FeatureNotAvailableException("Ephemeral buckets do not support view queries"));
+        return false;
+      }
+    }
+    return true;
   }
 
   /**

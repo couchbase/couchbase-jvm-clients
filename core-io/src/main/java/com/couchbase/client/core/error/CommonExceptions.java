@@ -20,8 +20,7 @@ public class CommonExceptions {
     private CommonExceptions() {}
 
     public static RuntimeException getFromReplicaNotCouchbaseBucket() {
-        return new UnsupportedOperationException("Only Couchbase buckets are supported "
-                + "for replica get requests!");
+        return new FeatureNotAvailableException("Only Couchbase buckets are supported for replica get requests");
     }
 
     public static RuntimeException getFromReplicaInvalidReplica(int replicaIndex, int configuredReplicas) {

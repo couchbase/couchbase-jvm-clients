@@ -23,20 +23,16 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.ReplicaNotConfiguredException;
-import com.couchbase.client.core.error.ServiceNotAvailableException;
-import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.ObserveViaSeqnoRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.retry.reactor.Repeat;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.SignalType;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * Implements traditional observe-based durability requirements.
@@ -122,22 +118,22 @@ public class Observe {
   private static int validateReplicas(final BucketConfig bucketConfig, final ObservePersistTo persistTo,
                                       final ObserveReplicateTo replicateTo) {
     if (!(bucketConfig instanceof CouchbaseBucketConfig)) {
-      throw new ServiceNotAvailableException("Only couchbase buckets are supported.");
+      throw new FeatureNotAvailableException("Only couchbase buckets support PersistTo and/or ReplicateTo");
     }
     CouchbaseBucketConfig cbc = (CouchbaseBucketConfig) bucketConfig;
     int numReplicas = cbc.numberOfReplicas();
 
     if (cbc.ephemeral() && persistTo.value() != 0) {
-      throw new ServiceNotAvailableException("Ephemeral Buckets do not support " +
-        "ObservePersistTo.");
+      throw new FeatureNotAvailableException("Ephemeral Buckets do not support " +
+        "PersistTo");
     }
     if (replicateTo.touchesReplica() && replicateTo.value() > numReplicas) {
       throw new ReplicaNotConfiguredException("Not enough replicas configured on " +
-        "the bucket.");
+        "the bucket");
     }
     if (persistTo.touchesReplica() && persistTo.value() - 1 > numReplicas) {
       throw new ReplicaNotConfiguredException("Not enough replicas configured on " +
-        "the bucket.");
+        "the bucket");
     }
 
     return numReplicas;

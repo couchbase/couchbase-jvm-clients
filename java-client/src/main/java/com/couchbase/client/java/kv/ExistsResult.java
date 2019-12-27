@@ -68,7 +68,7 @@ public class ExistsResult {
   @Override
   public String toString() {
     return "ExistsResult{" +
-      ", cas=0x" + Long.toHexString(cas) +
+      "cas=0x" + Long.toHexString(cas) +
       ", exists=" + exists +
       '}';
   }

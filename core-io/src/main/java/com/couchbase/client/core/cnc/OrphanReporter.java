@@ -258,6 +258,9 @@ public class OrphanReporter {
           if (serverDuration > 0) {
             fieldMap.put("d", serverDuration);
           }
+
+          long timeout = request.timeout().toMillis();
+          fieldMap.put("t", timeout);
         }
 
         top.add(fieldMap);

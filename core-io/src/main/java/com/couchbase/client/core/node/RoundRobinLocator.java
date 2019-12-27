@@ -65,6 +65,10 @@ public class RoundRobinLocator implements Locator {
   @Override
   public void dispatch(final Request<? extends Response> request, final List<Node> nodes,
                        final ClusterConfig config, final CoreContext ctx) {
+    if (!checkServiceNotAvailable(request, config)) {
+      return;
+    }
+
     boolean isTargeted = request instanceof TargetedRequest;
 
     if (!isTargeted && !config.hasClusterOrBucketConfig()) {
@@ -95,6 +99,16 @@ public class RoundRobinLocator implements Locator {
     } else {
       dispatchUntargeted(request, filteredNodes, ctx);
     }
+  }
+
+  /**
+   * Can be overridden to check if a request should be cancelled immediately that the service is not
+   * supported.
+   * <p>
+   * If this method returns false, something MUST be done with the request or it will time out!
+   */
+  protected boolean checkServiceNotAvailable(final Request<? extends Response> request, final ClusterConfig config) {
+    return true;
   }
 
   private void dispatchTargeted(final Request<? extends Response> request, final List<Node> nodes,
