@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.error.CollectionNotFoundException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
@@ -125,9 +126,11 @@ public abstract class BaseKeyValueRequest<R extends Response>
         .writeBytes(collection)
         .writeBytes(key);
     } else {
-      return alloc
-        .buffer(key.length)
-        .writeBytes(key);
+      if (collectionIdentifier.isDefault()) {
+        return alloc.buffer(key.length).writeBytes(key);
+      } else {
+        throw new FeatureNotAvailableException("Collections are not supported (or enabled) on the cluster");
+      }
     }
   }
 

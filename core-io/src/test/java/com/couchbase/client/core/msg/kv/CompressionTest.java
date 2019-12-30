@@ -57,7 +57,7 @@ class CompressionTest {
   private final long expiry = 0;
   private final int flags = 0;
   private final Optional<DurabilityLevel> durability = Optional.empty();
-  private final CollectionIdentifier cid = new CollectionIdentifier("b", Optional.of("s"), Optional.of("c"));
+  private final CollectionIdentifier cid = CollectionIdentifier.fromDefault("b");
 
   private final byte[] shortContent = "short".getBytes(UTF_8);
   private final byte[] longContent = readResource(

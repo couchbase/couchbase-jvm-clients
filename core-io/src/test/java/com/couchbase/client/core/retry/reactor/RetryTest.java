@@ -351,7 +351,10 @@ class RetryTest {
 
   @Test
   void retryToString() {
-    System.out.println(Retry.any().noBackoff().retryMax(2).toString());
+    assertEquals(
+      "Retry{max=2,backoff=Backoff{ZERO},jitter=Jitter{NONE}}",
+      Retry.any().noBackoff().retryMax(2).toString()
+    );
   }
 
 }

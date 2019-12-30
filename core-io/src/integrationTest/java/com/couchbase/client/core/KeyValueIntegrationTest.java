@@ -118,4 +118,36 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     assertTrue(exception.getCause() instanceof TimeoutException);
   }
 
+  @Test
+  @IgnoreWhen(hasCapabilities = { Capabilities.COLLECTIONS })
+  void shortCircuitCollectionsIfNotAvailable() {
+    String id = UUID.randomUUID().toString();
+    byte[] content = "hello, world".getBytes(UTF_8);
+
+    InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
+      Duration.ofSeconds(5), core.context(), new CollectionIdentifier(
+        config().bucketname(),
+        Optional.of(CollectionIdentifier.DEFAULT_SCOPE),
+        Optional.of("my_collection_name")
+      ),
+      env.retryStrategy(), Optional.empty(), null);
+    core.send(insertRequest);
+
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> insertRequest.response().get());
+    assertTrue(exception.getCause() instanceof FeatureNotAvailableException);
+
+    InsertRequest insertRequest2 = new InsertRequest(id, content, 0, 0,
+      Duration.ofSeconds(5), core.context(), new CollectionIdentifier(
+      config().bucketname(),
+      Optional.of("my_custom_scope"),
+      Optional.of(CollectionIdentifier.DEFAULT_COLLECTION)
+    ),
+      env.retryStrategy(), Optional.empty(), null);
+    core.send(insertRequest2);
+
+    exception = assertThrows(ExecutionException.class, () -> insertRequest2.response().get());
+    assertTrue(exception.getCause() instanceof FeatureNotAvailableException);
+
+  }
+
 }
