@@ -483,13 +483,13 @@ public class AsyncCluster {
    * @return a mono once complete.
    */
   Mono<Void> disconnectInternal(final Duration timeout) {
-    return core.shutdown(timeout).flatMap(ignore -> {
+    return core.shutdown(timeout).then(Mono.defer(() -> {
       if (environment instanceof OwnedSupplier) {
         return environment.get().shutdownReactive(timeout);
       } else {
         return Mono.empty();
       }
-    });
+    }));
   }
 
   /**

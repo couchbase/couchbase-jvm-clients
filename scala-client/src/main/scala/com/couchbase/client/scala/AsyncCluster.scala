@@ -223,13 +223,13 @@ class AsyncCluster(
   def disconnect(): Future[Unit] = {
     FutureConversions
       .javaMonoToScalaMono(core.shutdown(env.timeoutConfig.disconnectTimeout()))
-      .flatMap(_ => {
+      .`then`(SMono.defer(() => {
         if (env.owned) {
           env.shutdownReactive(env.timeoutConfig.disconnectTimeout())
         } else {
           SMono.empty[Unit]
         }
-      })
+      }))
       .timeout(env.timeoutConfig.disconnectTimeout())
       .toFuture
   }
