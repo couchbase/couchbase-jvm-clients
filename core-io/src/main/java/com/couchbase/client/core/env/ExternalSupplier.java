@@ -16,11 +16,14 @@
 
 package com.couchbase.client.core.env;
 
-import com.couchbase.client.core.annotation.Stability;
-
 import java.util.function.Supplier;
 
-@Stability.Internal
+/**
+ * This supplier signals the entity passed in is not owned.
+ * <p>
+ * This class can be used with care, but usually it is better to just use the java 8 supplier interface directly
+ * or implement your own.
+ */
 public class ExternalSupplier<T> implements Supplier<T> {
 
   private final T value;
@@ -32,6 +35,11 @@ public class ExternalSupplier<T> implements Supplier<T> {
   @Override
   public T get() {
     return value;
+  }
+
+  @Override
+  public String toString() {
+    return "ExternalSupplier{" + value + '}';
   }
 
 }

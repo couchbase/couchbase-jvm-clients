@@ -37,13 +37,36 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.core.util.Validators.notNull;
+
 /**
- * The {@link IoEnvironment} holds all IO-related configuration and state.
+ * The {@link IoEnvironment} holds the I/O event loops and state.
+ * <p>
+ * Note that this class only contains tunables and state for the I/O event loops that drive the actual operations
+ * inside netty. If you are looking for general configuration if I/O properties, those are located inside the
+ * {@link IoConfig} class instead.
+ * <p>
+ * By default the IO environment creates 3 distinct {@link EventLoopGroup EventLoopGroups}. One for HTTP services
+ * (which includes query, search, analytics and views), one for the KV service and one for the management service. The
+ * HTTP and the KV service try to occupy a "fair" number of thread pools for each. Usually it will be half the number
+ * of reported logical CPUs by the JVM, but maximum of 8 and minimum of 2 each. The management service will only ever
+ * occupy one thread. The HTTP and KV thread pools are split in SDK 3 (they were not in SDK 2) so that longer running
+ * N1QL queries and larger streaming results do not interfere with high-throughput low-latency KV workloads as much.
+ * <p>
+ * By default, the SDK will use "native" event loop groups - epoll on linux and kqueue on OSX in favor of the more
+ * generic and slower NIO transport. This should work fine out of the box nearly always, but you can disable it through
+ * the {@link #enableNativeIo(boolean)} builder setting.
+ * <p>
+ * You cannot re-use your own event loop groups from your own application because the SDK ships a repackaged netty
+ * version to avoid version and classpath issues.
  *
  * @since 2.0.0
  */
 public class IoEnvironment {
 
+  /**
+   * Native IO is enabled by default.
+   */
   public static final boolean DEFAULT_NATIVE_IO_ENABLED = true;
 
   private final boolean nativeIoEnabled;
@@ -55,36 +78,115 @@ public class IoEnvironment {
   private final Supplier<EventLoopGroup> searchEventLoopGroup;
   private final Supplier<EventLoopGroup> viewEventLoopGroup;
 
+  /**
+   * Creates the {@link IoEnvironment} with default settings.
+   *
+   * @return the created environment.
+   */
   public static IoEnvironment create() {
     return builder().build();
   }
 
+  /**
+   * Creates a Builder for the {@link IoEnvironment} to customize its settings.
+   *
+   * @return the {@link Builder} to customize the settings.
+   */
   public static IoEnvironment.Builder builder() {
     return new Builder();
   }
 
-  public static Builder managerEventLoopGroup(EventLoopGroup managerEventLoopGroup) {
-    return builder().managerEventLoopGroup(managerEventLoopGroup);
+  /**
+   * Allows to specify a custom event loop group (I/O event loop thread pool) for the management service.
+   * <p>
+   * Note that you usually do not need to tweak the event loop for the manager service, only if you perform
+   * long-running management queries that interfere with regular traffic.
+   * <p>
+   * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+   * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+   * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+   * all the services and what effect a custom pool might have.
+   *
+   * @param eventLoopGroup the dedicated event loop group to use.
+   * @return this {@link Builder} for chaining purposes.
+   */
+  public static Builder managerEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+    return builder().managerEventLoopGroup(eventLoopGroup);
   }
 
-  public static Builder kvEventLoopGroup(EventLoopGroup kvEventLoopGroup) {
-    return builder().kvEventLoopGroup(kvEventLoopGroup);
+  /**
+   * Allows to specify a custom event loop group (I/O event loop thread pool) for the management service.
+   * <p>
+   * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+   * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+   * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+   * all the services and what effect a custom pool might have.
+   *
+   * @param eventLoopGroup the dedicated event loop group to use.
+   * @return this {@link Builder} for chaining purposes.
+   */
+  public static Builder kvEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+    return builder().kvEventLoopGroup(eventLoopGroup);
   }
 
-  public static Builder queryEventLoopGroup(EventLoopGroup queryEventLoopGroup) {
-    return builder().queryEventLoopGroup(queryEventLoopGroup);
+  /**
+   * Allows to specify a custom event loop group (I/O event loop thread pool) for the query service.
+   * <p>
+   * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+   * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+   * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+   * all the services and what effect a custom pool might have.
+   *
+   * @param eventLoopGroup the dedicated event loop group to use.
+   * @return this {@link Builder} for chaining purposes.
+   */
+  public static Builder queryEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+    return builder().queryEventLoopGroup(eventLoopGroup);
   }
 
-  public static Builder analyticsEventLoopGroup(EventLoopGroup analyticsEventLoopGroup) {
-    return builder().analyticsEventLoopGroup(analyticsEventLoopGroup);
+  /**
+   * Allows to specify a custom event loop group (I/O event loop thread pool) for the analytics service.
+   * <p>
+   * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+   * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+   * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+   * all the services and what effect a custom pool might have.
+   *
+   * @param eventLoopGroup the dedicated event loop group to use.
+   * @return this {@link Builder} for chaining purposes.
+   */
+  public static Builder analyticsEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+    return builder().analyticsEventLoopGroup(eventLoopGroup);
   }
 
-  public static Builder searchEventLoopGroup(EventLoopGroup searchEventLoopGroup) {
-    return builder().searchEventLoopGroup(searchEventLoopGroup);
+  /**
+   * Allows to specify a custom event loop group (I/O event loop thread pool) for the search service.
+   * <p>
+   * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+   * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+   * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+   * all the services and what effect a custom pool might have.
+   *
+   * @param eventLoopGroup the dedicated event loop group to use.
+   * @return this {@link Builder} for chaining purposes.
+   */
+  public static Builder searchEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+    return builder().searchEventLoopGroup(eventLoopGroup);
   }
 
-  public static Builder viewEventLoopGroup(EventLoopGroup viewEventLoopGroup) {
-    return builder().viewEventLoopGroup(viewEventLoopGroup);
+  /**
+   * Allows to specify a custom event loop group (I/O event loop thread pool) for the view service.
+   * <p>
+   * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+   * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+   * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+   * all the services and what effect a custom pool might have.
+   *
+   * @param eventLoopGroup the dedicated event loop group to use.
+   * @return this {@link Builder} for chaining purposes.
+   */
+  public static Builder viewEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+    return builder().viewEventLoopGroup(eventLoopGroup);
   }
 
   /**
@@ -104,6 +206,16 @@ public class IoEnvironment {
     return builder().eventLoopThreadCount(eventLoopThreadCount);
   }
 
+  /**
+   * If set to false (enabled by default) will force using the java NIO based IO transport.
+   * <p>
+   * Usually the native transports used (epoll on linux and kqueue on OSX) are going to be faster and more efficient
+   * than the generic NIO one. We recommend to only set this to false if you experience issues with the native
+   * transports or instructed by couchbase support to do so for troubleshooting reasons.
+   *
+   * @param nativeIoEnabled if native IO should be enabled or disabled.
+   * @return this {@link Builder} for chaining purposes.
+   */
   public static Builder enableNativeIo(boolean nativeIoEnabled) {
     return builder().enableNativeIo(nativeIoEnabled);
   }
@@ -113,11 +225,11 @@ public class IoEnvironment {
    */
   @Stability.Volatile
   Map<String, Object> exportAsMap() {
-    Map<String, Object> export = new LinkedHashMap<>();
+    final Map<String, Object> export = new LinkedHashMap<>();
     export.put("nativeIoEnabled", nativeIoEnabled);
     export.put("eventLoopThreadCount", eventLoopThreadCount);
 
-    Set<String> eventLoopGroups = new HashSet<>();
+    final Set<String> eventLoopGroups = new HashSet<>();
     eventLoopGroups.add(managerEventLoopGroup.get().getClass().getSimpleName());
     eventLoopGroups.add(kvEventLoopGroup.get().getClass().getSimpleName());
     eventLoopGroups.add(queryEventLoopGroup.get().getClass().getSimpleName());
@@ -246,7 +358,13 @@ public class IoEnvironment {
     return nativeIoEnabled;
   }
 
-  public Mono<Void> shutdown(Duration timeout) {
+  /**
+   * Instructs all the owned event loops to shut down.
+   *
+   * @param timeout the maximum amount of time to wait before returning back control.
+   * @return a mono that completes once finished.
+   */
+  public Mono<Void> shutdown(final Duration timeout) {
     return Flux.merge(
       shutdownGroup(managerEventLoopGroup, timeout),
       shutdownGroup(kvEventLoopGroup, timeout),
@@ -257,9 +375,16 @@ public class IoEnvironment {
     ).then();
   }
 
-  private Mono<Void> shutdownGroup(Supplier<EventLoopGroup> suppliedGroup, Duration timeout) {
-    if (suppliedGroup instanceof OwnedSupplier) {
-      EventLoopGroup group = suppliedGroup.get();
+  /**
+   * Helper method to shut down an individual event loop group.
+   *
+   * @param groupSupplier the event loop group potentially to be shutdown.
+   * @param timeout the maximum time to wait until shutdown abort.
+   * @return a mono indicating completion.
+   */
+  private static Mono<Void> shutdownGroup(final Supplier<EventLoopGroup> groupSupplier, final Duration timeout) {
+    if (groupSupplier instanceof OwnedSupplier) {
+      EventLoopGroup group = groupSupplier.get();
       if (!group.isShutdown() && !group.isShuttingDown()) {
         return Mono.create(sink -> group.shutdownGracefully(0, timeout.toMillis(), TimeUnit.MILLISECONDS)
           .addListener(future -> {
@@ -270,12 +395,9 @@ public class IoEnvironment {
             }
           })
         );
-      } else {
-        return Mono.empty();
       }
-    } else {
-      return Mono.empty();
     }
+    return Mono.empty();
   }
 
   /**
@@ -292,7 +414,7 @@ public class IoEnvironment {
    */
   private static OwnedSupplier<EventLoopGroup> createEventLoopGroup(final boolean nativeIoEnabled, final int numThreads,
                                                                     final String poolName) {
-    ThreadFactory threadFactory = new DefaultThreadFactory(poolName, true);
+    final ThreadFactory threadFactory = new DefaultThreadFactory(poolName, true);
 
     if (nativeIoEnabled && Epoll.isAvailable()) {
       return new OwnedSupplier<>(new EpollEventLoopGroup(numThreads, threadFactory));
@@ -331,37 +453,126 @@ public class IoEnvironment {
     private Supplier<EventLoopGroup> viewEventLoopGroup = null;
     private int eventLoopThreadCount = fairThreadCount();
 
-    public Builder managerEventLoopGroup(EventLoopGroup managerEventLoopGroup) {
-      this.managerEventLoopGroup = new ExternalSupplier<>(managerEventLoopGroup);
+    /**
+     * Allows to specify a custom event loop group (I/O event loop thread pool) for the management service.
+     * <p>
+     * Note that you usually do not need to tweak the event loop for the manager service, only if you perform
+     * long-running management queries that interfere with regular traffic.
+     * <p>
+     * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+     * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+     * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+     * all the services and what effect a custom pool might have.
+     *
+     * @param eventLoopGroup the dedicated event loop group to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public Builder managerEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+      this.managerEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
     }
 
-    public Builder kvEventLoopGroup(EventLoopGroup kvEventLoopGroup) {
-      this.kvEventLoopGroup = new ExternalSupplier<>(kvEventLoopGroup);
+    /**
+     * Allows to specify a custom event loop group (I/O event loop thread pool) for the management service.
+     * <p>
+     * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+     * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+     * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+     * all the services and what effect a custom pool might have.
+     *
+     * @param eventLoopGroup the dedicated event loop group to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public Builder kvEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+      this.kvEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
     }
 
-    public Builder queryEventLoopGroup(EventLoopGroup queryEventLoopGroup) {
-      this.queryEventLoopGroup = new ExternalSupplier<>(queryEventLoopGroup);
+    /**
+     * Allows to specify a custom event loop group (I/O event loop thread pool) for the query service.
+     * <p>
+     * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+     * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+     * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+     * all the services and what effect a custom pool might have.
+     *
+     * @param eventLoopGroup the dedicated event loop group to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public Builder queryEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+      this.queryEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
     }
 
-    public Builder analyticsEventLoopGroup(EventLoopGroup analyticsEventLoopGroup) {
-      this.analyticsEventLoopGroup = new ExternalSupplier<>(analyticsEventLoopGroup);
+    /**
+     * Allows to specify a custom event loop group (I/O event loop thread pool) for the analytics service.
+     * <p>
+     * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+     * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+     * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+     * all the services and what effect a custom pool might have.
+     *
+     * @param eventLoopGroup the dedicated event loop group to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public Builder analyticsEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+      this.analyticsEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
     }
 
-    public Builder searchEventLoopGroup(EventLoopGroup searchEventLoopGroup) {
-      this.searchEventLoopGroup = new ExternalSupplier<>(searchEventLoopGroup);
+    /**
+     * Allows to specify a custom event loop group (I/O event loop thread pool) for the search service.
+     * <p>
+     * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+     * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+     * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+     * all the services and what effect a custom pool might have.
+     *
+     * @param eventLoopGroup the dedicated event loop group to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public Builder searchEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+      this.searchEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
     }
 
-    public Builder viewEventLoopGroup(EventLoopGroup viewEventLoopGroup) {
-      this.viewEventLoopGroup = new ExternalSupplier<>(viewEventLoopGroup);
+    /**
+     * Allows to specify a custom event loop group (I/O event loop thread pool) for the view service.
+     * <p>
+     * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+     * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+     * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+     * all the services and what effect a custom pool might have.
+     *
+     * @param eventLoopGroup the dedicated event loop group to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public Builder viewEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+      this.viewEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
     }
 
-    public Builder enableNativeIo(boolean nativeIoEnabled) {
+    /**
+     * Helper method to perform validation on the event loop group passed in.
+     *
+     * @param eventLoopGroup the event loop group to check.
+     * @return the created external supplier.
+     */
+    private static Supplier<EventLoopGroup> checkEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+      return new ExternalSupplier<>(notNull(eventLoopGroup, "EventLoopGroup"));
+    }
+
+    /**
+     * If set to false (enabled by default) will force using the java NIO based IO transport.
+     * <p>
+     * Usually the native transports used (epoll on linux and kqueue on OSX) are going to be faster and more efficient
+     * than the generic NIO one. We recommend to only set this to false if you experience issues with the native
+     * transports or instructed by couchbase support to do so for troubleshooting reasons.
+     *
+     * @param nativeIoEnabled if native IO should be enabled or disabled.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public Builder enableNativeIo(final boolean nativeIoEnabled) {
       this.nativeIoEnabled = nativeIoEnabled;
       return this;
     }
@@ -379,7 +590,7 @@ public class IoEnvironment {
      * @param eventLoopThreadCount the number of event loops to use per pool.
      * @return this {@link Builder} for chaining purposes.
      */
-    public Builder eventLoopThreadCount(int eventLoopThreadCount) {
+    public Builder eventLoopThreadCount(final int eventLoopThreadCount) {
       if (eventLoopThreadCount < 1) {
         throw InvalidArgumentException.fromMessage("EventLoopThreadCount cannot be smaller than 1");
       }
@@ -387,9 +598,11 @@ public class IoEnvironment {
       return this;
     }
 
+    @Stability.Internal
     public IoEnvironment build() {
       return new IoEnvironment(this);
     }
+
   }
 
 }
