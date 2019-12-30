@@ -250,7 +250,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
                 // the server
                 this.cas = result.cas();
             } catch (DocumentNotFoundException e) {
-                current = JsonArray.empty();
+                current = JsonArray.create();
                 this.cas = 0;
             }
             ArrayList<E> list = new ArrayList<>(current.size());

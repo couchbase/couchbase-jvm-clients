@@ -73,7 +73,7 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
   @Test
   void sendsStartAndEndRequestEventsOnSuccess() {
     String id = UUID.randomUUID().toString();
-    collection.upsert(id, JsonObject.empty());
+    collection.upsert(id, JsonObject.create());
     collection.get(id);
 
     int totalFinished = 0;
@@ -87,7 +87,7 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
   @Test
   void sendsStartAndEndRequestEventsOnFailure() {
     String id = UUID.randomUUID().toString();
-    collection.upsert(id, JsonObject.empty());
+    collection.upsert(id, JsonObject.create());
     try {
       collection.get(id, GetOptions.getOptions().timeout(Duration.ofNanos(1)));
       fail("Expected timeout exception");

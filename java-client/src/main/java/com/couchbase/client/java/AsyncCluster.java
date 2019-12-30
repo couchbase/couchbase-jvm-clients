@@ -380,7 +380,7 @@ public class AsyncCluster {
     Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().analyticsTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
 
-    JsonObject query = JsonObject.empty();
+    JsonObject query = JsonObject.create();
     query.put("statement", statement);
     query.put("timeout", encodeDurationToMs(timeout));
     opts.injectParams(query);

@@ -64,9 +64,9 @@ class JsonArrayTest {
   void shouldConvertNumbers() {
     JsonArray arr = JsonArray.create().add(1L);
 
-    assertEquals(new Double(1.0d), arr.getDouble(0));
-    assertEquals(new Long(1L), arr.getLong(0));
-    assertEquals(new Integer(1), arr.getInt(0));
+    assertEquals(Double.valueOf(1.0d), arr.getDouble(0));
+    assertEquals(Long.valueOf(1L), arr.getLong(0));
+    assertEquals(Integer.valueOf(1), arr.getInt(0));
   }
 
   @Test
@@ -76,15 +76,15 @@ class JsonArrayTest {
     double largerThanIntMaxValue = largeValue + 0.56d;
 
     JsonArray arr = JsonArray.create().add(largerThanIntMaxValue);
-    assertEquals(new Double(largerThanIntMaxValue), arr.getDouble(0));
-    assertEquals(new Long(largeValue), arr.getLong(0));
-    assertEquals(new Integer(maxValue), arr.getInt(0));
+    assertEquals(Double.valueOf(largerThanIntMaxValue), arr.getDouble(0));
+    assertEquals(Long.valueOf(largeValue), arr.getLong(0));
+    assertEquals(Integer.valueOf(maxValue), arr.getInt(0));
   }
 
 
   @Test
   void shouldNotNullPointerOnGetNumber() {
-    JsonArray obj = JsonArray.empty();
+    JsonArray obj = JsonArray.create();
     assertThrows(IndexOutOfBoundsException.class, () -> obj.get(0));
   }
 
@@ -106,8 +106,8 @@ class JsonArrayTest {
     Double item2 = 2.0d;
     Long item3 = 3L;
     Boolean item4 = true;
-    JsonArray item5 = JsonArray.empty();
-    JsonObject item6 = JsonObject.empty();
+    JsonArray item5 = JsonArray.create();
+    JsonObject item6 = JsonObject.create();
 
     JsonArray arr = JsonArray.from(Arrays.asList(item1, item2,
       item3, item4, item5, item6));
@@ -143,7 +143,7 @@ class JsonArrayTest {
   @Test
   void shouldRecursiveParseList() {
     List<?> subList = Collections.singletonList("test");
-    List<Object> source = new ArrayList<Object>(2);
+    List<Object> source = new ArrayList<>(2);
     source.add("item1");
     source.add(subList);
 
@@ -158,7 +158,7 @@ class JsonArrayTest {
   @Test
   void shouldRecursiveParseMap() {
     Map<String, ?> subMap = Collections.singletonMap("test", 2.5d);
-    List<Object> source = new ArrayList<Object>(2);
+    List<Object> source = new ArrayList<>(2);
     source.add("item1");
     source.add(subMap);
 
@@ -167,13 +167,13 @@ class JsonArrayTest {
     assertEquals(2, arr.size());
     assertEquals("item1", arr.getString(0));
     assertEquals(JsonObject.class, arr.get(1).getClass());
-    assertEquals(new Double(2.5d), arr.getObject(1).get("test"));
+    assertEquals(2.5d, arr.getObject(1).get("test"));
   }
 
   @Test
   void shouldClassCastOnBadSubMap() {
     Map<Integer, String> badMap1 = Collections.singletonMap(1, "test");
-    Map<String, Object> badMap2 = Collections.singletonMap("key1", (Object) new CloneNotSupportedException());
+    Map<String, Object> badMap2 = Collections.singletonMap("key1", new CloneNotSupportedException());
 
     List<?> source = Collections.singletonList(badMap1);
     try {
@@ -238,7 +238,7 @@ class JsonArrayTest {
 
   @Test
   void shouldAddMapAsAJsonObject() {
-    Map<String, Object> map = new HashMap<String, Object>(2);
+    Map<String, Object> map = new HashMap<>(2);
     map.put("item1", "value1");
     map.put("item2", true);
     JsonArray arr = JsonArray.create().add(map);
@@ -252,7 +252,7 @@ class JsonArrayTest {
 
   @Test
   void shouldAddListAsAJsonArray() {
-    List<Object> list = new ArrayList<Object>(2);
+    List<Object> list = new ArrayList<>(2);
     list.add("value1");
     list.add(true);
     JsonArray arr = JsonArray.create().add(list);
@@ -350,14 +350,14 @@ class JsonArrayTest {
     String bad3 = "\"string\"";
     String bad4 = "{\"some\": \"value\"}";
 
-    try { JsonArray.fromJson(bad1); fail(); } catch (InvalidArgumentException e) { }
-    try { JsonArray.fromJson(bad2); fail(); } catch (InvalidArgumentException e) { }
-    try { JsonArray.fromJson(bad3); fail(); } catch (InvalidArgumentException e) { }
-    try { JsonArray.fromJson(bad4); fail(); } catch (InvalidArgumentException e) { }
+    assertThrows(InvalidArgumentException.class, () -> JsonArray.fromJson(bad1));
+    assertThrows(InvalidArgumentException.class, () -> JsonArray.fromJson(bad2));
+    assertThrows(InvalidArgumentException.class, () -> JsonArray.fromJson(bad3));
+    assertThrows(InvalidArgumentException.class, () -> JsonArray.fromJson(bad4));
   }
 
   @Test
-  void shouldSupportBigInteger() throws Exception {
+  void shouldSupportBigInteger() {
     BigInteger bigint = new BigInteger("12345678901234567890");
     JsonArray original = JsonArray.from(bigint);
 

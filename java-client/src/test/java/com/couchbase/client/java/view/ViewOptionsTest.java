@@ -142,7 +142,7 @@ class ViewOptionsTest {
     options = viewOptions().key(JsonArray.from("foo", 3));
     assertEquals("key=%5B%22foo%22%2C3%5D", options.export());
 
-    options = viewOptions().key(JsonObject.empty().put("foo", true));
+    options = viewOptions().key(JsonObject.create().put("foo", true));
     assertEquals("key=%7B%22foo%22%3Atrue%7D", options.export());
   }
 
@@ -194,7 +194,7 @@ class ViewOptionsTest {
     options = viewOptions().startKey(JsonArray.from("foo", 3));
     assertEquals("startkey=%5B%22foo%22%2C3%5D", options.export());
 
-    options = viewOptions().startKey(JsonObject.empty().put("foo", true));
+    options = viewOptions().startKey(JsonObject.create().put("foo", true));
     assertEquals("startkey=%7B%22foo%22%3Atrue%7D", options.export());
   }
 
@@ -215,7 +215,7 @@ class ViewOptionsTest {
     options = viewOptions().endKey(JsonArray.from("foo", 3));
     assertEquals("endkey=%5B%22foo%22%2C3%5D", options.export());
 
-    options = viewOptions().endKey(JsonObject.empty().put("foo", true));
+    options = viewOptions().endKey(JsonObject.create().put("foo", true));
     assertEquals("endkey=%7B%22foo%22%3Atrue%7D", options.export());
   }
 

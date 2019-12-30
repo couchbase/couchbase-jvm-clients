@@ -305,7 +305,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
                 current = result.contentAs(JsonArray.class);
                 this.cas = result.cas();
             } catch (DocumentNotFoundException e) {
-                current = JsonArray.empty();
+                current = JsonArray.create();
                 this.cas = 0;
             }
             //Care not to use toList, as it will convert internal JsonObject/JsonArray to Map/List
@@ -443,7 +443,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
      */
     private long createEmptyList() {
         try {
-            MutationResult resp = collection.insert(id, JsonArray.empty(), insertOptions);
+            MutationResult resp = collection.insert(id, JsonArray.create(), insertOptions);
             return resp.cas();
         } catch (DocumentExistsException ex) {
             // Ignore concurrent creations, keep on moving.

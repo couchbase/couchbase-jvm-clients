@@ -193,7 +193,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
         try {
             obj = collection.get(id, getOptions).contentAsObject();
         } catch (DocumentNotFoundException e) {
-            obj = JsonObject.empty();
+            obj = JsonObject.create();
         }
         // don't actually create the doc, yet.
         return new CouchbaseEntrySet((Map<String, E>) obj.toMap());
@@ -366,7 +366,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
 
     private long createEmpty() {
         try {
-            return collection.insert(id, JsonObject.empty(), insertOptions).cas();
+            return collection.insert(id, JsonObject.create(), insertOptions).cas();
         } catch (DocumentExistsException ex) {
             // Ignore concurrent creations, keep on moving.
             // but we need the cas, so...

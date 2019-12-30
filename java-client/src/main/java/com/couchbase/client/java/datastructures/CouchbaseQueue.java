@@ -185,7 +185,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
                 content = result.contentAsArray();
             } catch (DocumentNotFoundException e) {
                 this.cas = 0;
-                content = JsonArray.empty();
+                content = JsonArray.create();
             }
             this.delegate = (Iterator<E>) content.iterator();
         }

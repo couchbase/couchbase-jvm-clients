@@ -94,8 +94,8 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
       id,
       Arrays.asList(get("obj"), get("arr"))
     );
-    assertEquals(JsonObject.empty(), result.contentAsObject(0));
-    assertEquals(JsonArray.empty(), result.contentAsArray(1));
+    assertEquals(JsonObject.create(), result.contentAsObject(0));
+    assertEquals(JsonArray.create(), result.contentAsArray(1));
     assertTrue(result.exists(0));
     assertTrue(result.exists(1));
     assertTrue(result.cas() != 0);
@@ -105,7 +105,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   void insertPrimitive() {
     String id = UUID.randomUUID().toString();
 
-    collection.upsert(id, JsonObject.empty());
+    collection.upsert(id, JsonObject.create());
 
     MutateInResult result = collection.mutateIn(
       id,
@@ -123,7 +123,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   void pathDoesNotExistSingle() {
     String id = UUID.randomUUID().toString();
 
-    collection.upsert(id, JsonObject.empty());
+    collection.upsert(id, JsonObject.create());
 
     assertThrows(
       PathNotFoundException.class,

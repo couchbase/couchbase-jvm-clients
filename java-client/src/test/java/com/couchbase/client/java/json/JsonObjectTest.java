@@ -33,27 +33,27 @@ class JsonObjectTest {
 
   @Test
   void shouldExportEmptyObject() {
-    String result = JsonObject.empty().toString();
+    String result = JsonObject.create().toString();
     assertEquals("{}", result);
   }
 
   @Test
   void shouldExportStrings() {
-    String result = JsonObject.empty().put("key", "value").toString();
+    String result = JsonObject.create().put("key", "value").toString();
     assertEquals("{\"key\":\"value\"}", result);
   }
 
   @Test
   void shouldExportNestedObjects() {
-    JsonObject obj = JsonObject.empty()
-      .put("nested", JsonObject.empty().put("a", true));
+    JsonObject obj = JsonObject.create()
+      .put("nested", JsonObject.create().put("a", true));
     assertEquals("{\"nested\":{\"a\":true}}", obj.toString());
   }
 
   @Test
   void shouldExportNestedArrays() {
-    JsonObject obj = JsonObject.empty()
-      .put("nested", JsonArray.empty().add(true).add(4).add("foo"));
+    JsonObject obj = JsonObject.create()
+      .put("nested", JsonArray.create().add(true).add(4).add("foo"));
     assertEquals("{\"nested\":[true,4,\"foo\"]}", obj.toString());
   }
 
@@ -87,7 +87,7 @@ class JsonObjectTest {
 
   @Test
   void shouldReturnNullWhenNotFound() {
-    JsonObject obj = JsonObject.empty();
+    JsonObject obj = JsonObject.create();
     assertNull(obj.getInt("notfound"));
   }
 
@@ -110,9 +110,9 @@ class JsonObjectTest {
   void shouldConvertNumbers() {
     JsonObject obj = JsonObject.create().put("number", 1L);
 
-    assertEquals(new Double(1.0d), obj.getDouble("number"));
-    assertEquals(new Long(1L), obj.getLong("number"));
-    assertEquals(new Integer(1), obj.getInt("number"));
+    assertEquals(Double.valueOf(1.0d), obj.getDouble("number"));
+    assertEquals(Long.valueOf(1L), obj.getLong("number"));
+    assertEquals(Integer.valueOf(1), obj.getInt("number"));
   }
 
   @Test
@@ -122,14 +122,14 @@ class JsonObjectTest {
     double largerThanIntMaxValue = largeValue + 0.56d;
 
     JsonObject obj = JsonObject.create().put("number", largerThanIntMaxValue);
-    assertEquals(new Double(largerThanIntMaxValue), obj.getDouble("number"));
-    assertEquals(new Long(largeValue), obj.getLong("number"));
-    assertEquals(new Integer(maxValue), obj.getInt("number"));
+    assertEquals(Double.valueOf(largerThanIntMaxValue), obj.getDouble("number"));
+    assertEquals(Long.valueOf(largeValue), obj.getLong("number"));
+    assertEquals(Integer.valueOf(maxValue), obj.getInt("number"));
   }
 
   @Test
   void shouldNotNullPointerOnGetNumber() {
-    JsonObject obj = JsonObject.empty();
+    JsonObject obj = JsonObject.create();
 
     assertNull(obj.getDouble("number"));
     assertNull(obj.getLong("number"));
@@ -138,7 +138,7 @@ class JsonObjectTest {
 
   @Test
   void shouldConstructEmptyObjectFromEmptyMap() {
-    JsonObject obj = JsonObject.from(Collections.<String, Object>emptyMap());
+    JsonObject obj = JsonObject.from(Collections.emptyMap());
     assertNotNull(obj);
     assertTrue(obj.isEmpty());
   }
@@ -155,8 +155,8 @@ class JsonObjectTest {
     Double item2 = 2.2d;
     Long item3 = 3L;
     Boolean item4 = true;
-    JsonArray item5 = JsonArray.empty();
-    JsonObject item6 = JsonObject.empty();
+    JsonArray item5 = JsonArray.create();
+    JsonObject item6 = JsonObject.create();
     Map<String, Object> source = new HashMap<>(6);
     source.put("key1", item1);
     source.put("key2", item2);
@@ -412,10 +412,10 @@ class JsonObjectTest {
     String bad3 = "\"string\"";
     String bad4 = "[ 123 ]";
 
-    try { JsonObject.fromJson(bad1); fail(); } catch (InvalidArgumentException e) { }
-    try { JsonObject.fromJson(bad2); fail(); } catch (InvalidArgumentException e) { }
-    try { JsonObject.fromJson(bad3); fail(); } catch (InvalidArgumentException e) { }
-    try { JsonObject.fromJson(bad4); fail(); } catch (InvalidArgumentException e) { }
+    assertThrows(InvalidArgumentException.class, () -> JsonObject.fromJson(bad1));
+    assertThrows(InvalidArgumentException.class, () -> JsonObject.fromJson(bad2));
+    assertThrows(InvalidArgumentException.class, () -> JsonObject.fromJson(bad3));
+    assertThrows(InvalidArgumentException.class, () -> JsonObject.fromJson(bad4));
   }
 
   @Test

@@ -294,7 +294,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
         queryJson.put("facets", f);
       }
 
-      JsonObject control = JsonObject.empty();
+      JsonObject control = JsonObject.create();
 
       if (consistency != null && consistency != SearchScanConsistency.NOT_BOUNDED) {
         JsonObject consistencyJson = JsonObject.create();

@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Represents a JSON array that can be stored and loaded from Couchbase Server.
@@ -68,17 +69,18 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
    *
    * @return a empty {@link JsonArray}.
    */
-  public static JsonArray empty() {
+  public static JsonArray create() {
     return new JsonArray();
   }
 
   /**
    * Creates a empty {@link JsonArray}.
    *
+   * @param initialCapacity the initial capacity for this json array.
    * @return a empty {@link JsonArray}.
    */
-  public static JsonArray create() {
-    return new JsonArray();
+  public static JsonArray create(int initialCapacity) {
+    return new JsonArray(initialCapacity);
   }
 
   /**
@@ -116,11 +118,12 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
    * @return a populated {@link JsonArray}.
    * @throws InvalidArgumentException if at least one item is of unsupported type.
    */
+  @SuppressWarnings("unchecked")
   public static JsonArray from(List<?> items) {
     if (items == null) {
       throw InvalidArgumentException.fromMessage("Null list unsupported");
     } else if (items.isEmpty()) {
-      return JsonArray.empty();
+      return JsonArray.create();
     }
 
     JsonArray array = new JsonArray(items.size());
@@ -530,6 +533,16 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
     return content.size();
   }
 
+  /**
+   * Returns true if the object is part of the array.
+   *
+   * @param value the value to check.
+   * @return true if it is part of the array, false otherwise.
+   */
+  public boolean contains(Object value) {
+    return content.contains(value);
+  }
+
   @Override
   public Iterator<Object> iterator() {
     return content.iterator();
@@ -553,16 +566,13 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-
-    JsonArray array = (JsonArray) o;
-
-    if (content != null ? !content.equals(array.content) : array.content != null) return false;
-
-    return true;
+    JsonArray objects = (JsonArray) o;
+    return Objects.equals(content, objects.content);
   }
 
   @Override
   public int hashCode() {
-    return content.hashCode();
+    return Objects.hash(content);
   }
+
 }

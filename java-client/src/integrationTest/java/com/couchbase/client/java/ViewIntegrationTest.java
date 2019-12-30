@@ -95,7 +95,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
   void returnsDataJustWritten() {
     int docsToWrite = 10;
     for (int i = 0; i < docsToWrite; i++) {
-      collection.upsert("viewdoc-"+i, JsonObject.empty());
+      collection.upsert("viewdoc-"+i, JsonObject.create());
     }
 
     ViewResult viewResult = bucket.viewQuery(
@@ -108,7 +108,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
     for (ViewRow row : viewResult.rows()) {
       if (row.id().get().startsWith("viewdoc-")) {
         found++;
-        assertEquals(JsonObject.empty(), row.valueAs(JsonObject.class).get());
+        assertEquals(JsonObject.create(), row.valueAs(JsonObject.class).get());
       }
     }
     assertTrue(found >= docsToWrite);

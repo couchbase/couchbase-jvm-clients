@@ -38,7 +38,7 @@ public class ParameterizedQueryExample {
 
     result = cluster.query(
       "select * from `travel-sample` where type = $type limit 5",
-      queryOptions().parameters(JsonObject.empty().put("type", "airport"))
+      queryOptions().parameters(JsonObject.create().put("type", "airport"))
     );
     System.out.println(result.rowsAsObject());
 

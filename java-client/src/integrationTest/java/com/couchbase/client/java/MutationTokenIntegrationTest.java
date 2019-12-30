@@ -95,7 +95,7 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
   @Test
   void tokenOnSubdocMutate() {
     String id = UUID.randomUUID().toString();
-    MutationResult result = collection.upsert(id, JsonObject.empty());
+    MutationResult result = collection.upsert(id, JsonObject.create());
     assertMutationToken(result.mutationToken());
 
     MutateInResult mutateResult = collection.mutateIn(id, Arrays.asList(MutateInSpec.insert("foo", true)));
@@ -105,14 +105,14 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
   @Test
   void tokenOnUpsert() {
     String id = UUID.randomUUID().toString();
-    MutationResult result = collection.upsert(id, JsonObject.empty());
+    MutationResult result = collection.upsert(id, JsonObject.create());
     assertMutationToken(result.mutationToken());
   }
 
   @Test
   void tokenOnReplace() {
     String id = UUID.randomUUID().toString();
-    MutationResult result = collection.upsert(id, JsonObject.empty());
+    MutationResult result = collection.upsert(id, JsonObject.create());
     assertMutationToken(result.mutationToken());
 
     MutationResult replace = collection.replace(id, JsonObject.create().put("foo", true));
@@ -122,7 +122,7 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
   @Test
   void tokenOnRemove() {
     String id = UUID.randomUUID().toString();
-    MutationResult result = collection.upsert(id, JsonObject.empty());
+    MutationResult result = collection.upsert(id, JsonObject.create());
     assertMutationToken(result.mutationToken());
 
     MutationResult remove = collection.remove(id);
@@ -132,7 +132,7 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
   @Test
   void tokenOnInsert() {
     String id = UUID.randomUUID().toString();
-    MutationResult result = collection.insert(id, JsonObject.empty());
+    MutationResult result = collection.insert(id, JsonObject.create());
     assertMutationToken(result.mutationToken());
   }
 

@@ -130,7 +130,7 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
     // TODO: FIXME
     Thread.sleep(2000);
 
-    List<JsonObject> tokens = indexes.analyzeDocument(name, JsonObject.empty().put("name", "hello world"));
+    List<JsonObject> tokens = indexes.analyzeDocument(name, JsonObject.create().put("name", "hello world"));
     assertFalse(tokens.isEmpty());
   }
 

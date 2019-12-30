@@ -170,7 +170,7 @@ public class SearchRow {
             double score = hit.getDouble("score");
             JsonObject explanationJson = hit.getObject("explanation");
             if (explanationJson == null) {
-                explanationJson = JsonObject.empty();
+                explanationJson = JsonObject.create();
             }
 
             SearchRowLocations locations = SearchRowLocations.from(hit.getObject("locations"));

@@ -25,6 +25,7 @@ import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -55,23 +56,14 @@ public class JsonObject extends JsonValue implements Serializable {
      * The internal map is initialized with the default capacity.
      */
     private JsonObject() {
-        content = new HashMap<String, Object>();
+        content = new HashMap<>();
     }
 
     /**
      * Private constructor to create the object with a custom initial capacity.
      */
     private JsonObject(int initialCapacity) {
-        content = new HashMap<String, Object>(initialCapacity);
-    }
-
-    /**
-     * Creates a empty {@link JsonObject}.
-     *
-     * @return a empty {@link JsonObject}.
-     */
-    public static JsonObject empty() {
-        return new JsonObject();
+        content = new HashMap<>(initialCapacity);
     }
 
     /**
@@ -81,6 +73,16 @@ public class JsonObject extends JsonValue implements Serializable {
      */
     public static JsonObject create() {
         return new JsonObject();
+    }
+
+    /**
+     * Creates a empty {@link JsonObject}.
+     *
+     * @param initialCapacity the initial capacity for the object.
+     * @return a empty {@link JsonObject}.
+     */
+    public static JsonObject create(int initialCapacity) {
+        return new JsonObject(initialCapacity);
     }
 
     /**
@@ -105,11 +107,12 @@ public class JsonObject extends JsonValue implements Serializable {
      * @throws NullPointerException in case a null map is provided or if it contains a null key
      * @throws ClassCastException if map contains a sub-Map or sub-List not supported (see above)
      */
-    public static JsonObject from(Map<String, ?> mapData) {
+    @SuppressWarnings("unchecked")
+    public static JsonObject from(final Map<String, ?> mapData) {
         if (mapData == null) {
             throw new NullPointerException("Null input Map unsupported");
         } else if (mapData.isEmpty()) {
-            return JsonObject.empty();
+            return JsonObject.create();
         }
 
         JsonObject result = new JsonObject(mapData.size());
@@ -162,7 +165,7 @@ public class JsonObject extends JsonValue implements Serializable {
      * @return the corresponding {@link JsonObject}.
      * @throws InvalidArgumentException if the conversion cannot be done.
      */
-    public static JsonObject fromJson(String s) {
+    public static JsonObject fromJson(final String s) {
         try {
             return JacksonTransformers.stringToJsonObject(s);
         } catch (Exception e) {
@@ -170,7 +173,7 @@ public class JsonObject extends JsonValue implements Serializable {
         }
     }
 
-    public static JsonObject fromJson(byte[] s) {
+    public static JsonObject fromJson(final byte[] s) {
         try {
             return JacksonTransformers.bytesToJsonObject(s);
         } catch (Exception e) {
@@ -520,7 +523,7 @@ public class JsonObject extends JsonValue implements Serializable {
      * @return the content copied as a {@link Map}.
      */
     public Map<String, Object> toMap() {
-        Map<String, Object> copy = new HashMap<String, Object>(content.size());
+        Map<String, Object> copy = new HashMap<>(content.size());
         for (Map.Entry<String, Object> entry : content.entrySet()) {
             Object content = entry.getValue();
             if (content instanceof JsonObject) {
@@ -581,16 +584,12 @@ public class JsonObject extends JsonValue implements Serializable {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
-        JsonObject object = (JsonObject) o;
-
-        if (content != null ? !content.equals(object.content) : object.content != null) return false;
-
-        return true;
+        JsonObject that = (JsonObject) o;
+        return Objects.equals(content, that.content);
     }
 
     @Override
     public int hashCode() {
-        return content.hashCode();
+        return Objects.hash(content);
     }
 }

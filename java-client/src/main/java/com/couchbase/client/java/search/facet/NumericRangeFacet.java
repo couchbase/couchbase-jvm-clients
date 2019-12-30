@@ -40,7 +40,7 @@ public class NumericRangeFacet extends SearchFacet {
     public void injectParams(JsonObject queryJson) {
         super.injectParams(queryJson);
 
-        JsonArray numericRange = JsonArray.empty();
+        JsonArray numericRange = JsonArray.create();
         for (NumericRange nr : ranges) {
             JsonObject nrJson = JsonObject.create();
             nrJson.put("name", nr.name());

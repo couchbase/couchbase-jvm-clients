@@ -114,7 +114,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
   @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
   void verifyGetAndLockDoubleLock() {
     String validId = UUID.randomUUID().toString();
-    collection.upsert(validId, JsonObject.empty());
+    collection.upsert(validId, JsonObject.create());
     collection.getAndLock(validId, Duration.ofSeconds(5));
     TimeoutException exception = assertThrows(
       TimeoutException.class,
@@ -145,7 +145,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
   @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
   void verifyTouchingLocked() {
     String validId = UUID.randomUUID().toString();
-    collection.upsert(validId, JsonObject.empty());
+    collection.upsert(validId, JsonObject.create());
     collection.getAndLock(validId, Duration.ofSeconds(5));
     TimeoutException exception = assertThrows(
       TimeoutException.class,

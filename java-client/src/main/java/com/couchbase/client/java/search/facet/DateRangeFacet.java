@@ -40,7 +40,7 @@ public class DateRangeFacet extends SearchFacet {
     public void injectParams(JsonObject queryJson) {
         super.injectParams(queryJson);
 
-        JsonArray dateRange = JsonArray.empty();
+        JsonArray dateRange = JsonArray.create();
         for (DateRange dr : dateRanges) {
             JsonObject drJson = JsonObject.create();
             drJson.put("name", dr.name());

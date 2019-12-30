@@ -355,7 +355,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertThrows(CasMismatchException.class, () -> collection.replace(
       id,
-      JsonObject.empty(),
+      JsonObject.create(),
       ReplaceOptions.replaceOptions().cas(upsert.cas() + 1))
     );
 
@@ -368,7 +368,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     assertThrows(
       DocumentNotFoundException.class,
-      () -> collection.replace("some_doc", JsonObject.empty())
+      () -> collection.replace("some_doc", JsonObject.create())
     );
   }
 
@@ -460,7 +460,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     TimeoutException exception = assertThrows(
       TimeoutException.class,
-      () -> collection.upsert(id, JsonObject.empty(), upsertOptions().timeout(Duration.ofMillis(100))));
+      () -> collection.upsert(id, JsonObject.create(), upsertOptions().timeout(Duration.ofMillis(100))));
     assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.context().requestContext().retryReasons());
 
     assertThrows(CasMismatchException.class, () -> collection.unlock(id, locked.cas() + 1));
@@ -660,7 +660,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   @Test
   void throwsIfTooLarge() {
     String id = UUID.randomUUID().toString();
-    JsonObject content = JsonObject.empty();
+    JsonObject content = JsonObject.create();
     for (int i = 0; i < 400000; i++) {
       content.put(UUID.randomUUID().toString(), UUID.randomUUID().toString());
     }
