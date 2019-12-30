@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.kv.sasl;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.util.Bytes;
 
 import javax.crypto.Mac;
@@ -135,13 +136,13 @@ class ScramSaslClient implements SaslClient  {
             iterationCount = Integer.parseInt(entry.getValue());
             break;
           default:
-            throw new IllegalArgumentException("Invalid key supplied in the serverFirstMessage");
+            throw InvalidArgumentException.fromMessage("Invalid key supplied in the serverFirstMessage");
         }
       }
 
       // validate that all of the mandatory parameters was present!!
       if (!attributes.containsKey("r") || !attributes.containsKey("s") || !attributes.containsKey("i")) {
-        throw new IllegalArgumentException("missing mandatory key in serverFirstMessage");
+        throw InvalidArgumentException.fromMessage("missing mandatory key in serverFirstMessage");
       }
 
       // We have the salt, time to generate the salted password
@@ -355,11 +356,11 @@ class ScramSaslClient implements SaslClient  {
     for (String token : tokens) {
       int idx = token.indexOf('=');
       if (idx != 1) {
-        throw new IllegalArgumentException("the input string is not according to the spec");
+        throw InvalidArgumentException.fromMessage("the input string is not according to the spec");
       }
       String key = token.substring(0, 1);
       if (attributes.containsKey(key)) {
-        throw new IllegalArgumentException("The key " + key + " is specified multiple times");
+        throw InvalidArgumentException.fromMessage("The key " + key + " is specified multiple times");
       }
       attributes.put(key, token.substring(2));
     }

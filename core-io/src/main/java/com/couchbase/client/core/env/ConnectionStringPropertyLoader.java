@@ -16,15 +16,11 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.util.ConnectionString;
-import com.couchbase.client.core.util.DnsSrv;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * This {@link PropertyLoader} takes a connection string and applies all properties
@@ -71,7 +67,7 @@ public class ConnectionStringPropertyLoader implements PropertyLoader<CoreEnviro
         }
         setter.set(builder, key, entry.getValue());
       } catch (IllegalArgumentException e) {
-        throw new IllegalArgumentException(
+        throw InvalidArgumentException.fromMessage(
           "Failed to apply connection string property \"" + entry.getKey() + "\". " + e.getMessage(), e);
       }
     }

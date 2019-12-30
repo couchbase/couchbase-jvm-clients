@@ -17,6 +17,7 @@
 package com.couchbase.client.java.view;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -73,7 +74,7 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
    */
   public ViewOptions limit(final int limit) {
     if (limit < 0) {
-      throw new IllegalArgumentException("Limit must be >= 0.");
+      throw InvalidArgumentException.fromMessage("Limit must be >= 0.");
     }
     params.set("limit", limit);
     return this;
@@ -128,7 +129,7 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
    */
   public ViewOptions skip(final int skip) {
     if (skip < 0) {
-      throw new IllegalArgumentException("Skip must be >= 0.");
+      throw InvalidArgumentException.fromMessage("Skip must be >= 0.");
     }
     params.set("skip", skip);
     return this;

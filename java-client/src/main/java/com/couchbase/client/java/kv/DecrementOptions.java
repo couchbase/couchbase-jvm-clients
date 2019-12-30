@@ -17,6 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.InvalidArgumentException;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -65,7 +66,7 @@ public class DecrementOptions extends CommonDurabilityOptions<DecrementOptions> 
    */
   public DecrementOptions delta(long delta) {
     if (delta < 0) {
-      throw new IllegalArgumentException("The delta cannot be less than 0");
+      throw InvalidArgumentException.fromMessage("The delta cannot be less than 0");
     }
     this.delta = delta;
     return this;

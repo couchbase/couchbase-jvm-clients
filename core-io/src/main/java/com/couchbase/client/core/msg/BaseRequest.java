@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.error.AmbiguousTimeoutException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.CancellationErrorContext;
@@ -113,10 +114,10 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   public BaseRequest(final Duration timeout, final CoreContext ctx,
                      final RetryStrategy retryStrategy, final InternalSpan requestSpan) {
     if (timeout == null) {
-      throw new IllegalArgumentException("A Timeout must be provided");
+      throw InvalidArgumentException.fromMessage("A Timeout must be provided");
     }
     if (ctx == null) {
-      throw new IllegalArgumentException("A CoreContext must be provided");
+      throw InvalidArgumentException.fromMessage("A CoreContext must be provided");
     }
     this.timeout = timeout;
     this.createdAt = System.nanoTime();

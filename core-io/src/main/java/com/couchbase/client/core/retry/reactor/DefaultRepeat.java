@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.retry.reactor;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Scheduler;
@@ -71,7 +72,7 @@ public class DefaultRepeat<T> extends AbstractRetry<T, Long> implements Repeat<T
 	@Override
 	public Repeat<T> timeout(Duration timeout) {
 		if (timeout.isNegative())
-			throw new IllegalArgumentException("timeout should be >= 0");
+			throw InvalidArgumentException.fromMessage("timeout should be >= 0");
 		return new DefaultRepeat<>(repeatPredicate, maxIterations, timeout,
 				backoff, jitter, backoffScheduler, onRepeat, applicationContext);
 	}
@@ -79,7 +80,7 @@ public class DefaultRepeat<T> extends AbstractRetry<T, Long> implements Repeat<T
 	@Override
 	public Repeat<T> repeatMax(long maxRepeats) {
 		if (maxRepeats < 1)
-			throw new IllegalArgumentException("maxRepeats should be > 0");
+			throw InvalidArgumentException.fromMessage("maxRepeats should be > 0");
 		return new DefaultRepeat<>(repeatPredicate, maxRepeats, timeout, backoff, jitter,
 				backoffScheduler, onRepeat, applicationContext);
 	}

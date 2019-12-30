@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.retry.reactor;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
 import java.time.Duration;
 
@@ -169,9 +170,9 @@ public class BackoffTest {
 
   @Test
   void exponentialRejectsMaxLowerThanFirst() {
-    IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> Backoff.exponential(Duration.ofSeconds(2), Duration.ofSeconds(1), 1, false));
+    InvalidArgumentException ex = assertThrows(InvalidArgumentException.class, () -> Backoff.exponential(Duration.ofSeconds(2), Duration.ofSeconds(1), 1, false));
     assertEquals("maxBackoff must be >= firstBackoff", ex.getMessage());
-    ex = assertThrows(IllegalArgumentException.class, () -> Backoff.exponential(Duration.ofSeconds(2), Duration.ofSeconds(1), 1, true));
+    ex = assertThrows(InvalidArgumentException.class, () -> Backoff.exponential(Duration.ofSeconds(2), Duration.ofSeconds(1), 1, true));
     assertEquals("maxBackoff must be >= firstBackoff", ex.getMessage());
   }
 

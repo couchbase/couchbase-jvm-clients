@@ -1,6 +1,7 @@
 package com.couchbase.client.core.util;
 
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -73,7 +74,7 @@ class GolangTest {
   }
 
   private static void checkBadDuration(String golangDuration) {
-    assertThrows(IllegalArgumentException.class, () -> Golang.parseDuration(golangDuration));
+    assertThrows(InvalidArgumentException.class, () -> Golang.parseDuration(golangDuration));
   }
 
   private static void checkDuration(String expected, String golangDuration) {

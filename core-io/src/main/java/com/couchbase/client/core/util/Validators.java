@@ -35,14 +35,14 @@ public class Validators {
   /**
    * Check if the given input is not null.
    *
-   * <p>If it is null, a {@link IllegalArgumentException} is raised with a proper message.</p>
+   * <p>If it is null, a {@link InvalidArgumentException} is raised with a proper message.</p>
    *
    * @param input the input to check.
    * @param identifier the identifier that is part of the exception message.
    */
   public static <T> T notNull(final T input, final String identifier) {
     if (input == null) {
-      throw new IllegalArgumentException(identifier + " cannot be null");
+      throw InvalidArgumentException.fromMessage(identifier + " cannot be null");
     }
     return input;
   }
@@ -58,7 +58,7 @@ public class Validators {
   /**
    * Check if the given string is not null or empty.
    *
-   * <p>If it is null or empty, a {@link IllegalArgumentException} is raised with a
+   * <p>If it is null or empty, a {@link InvalidArgumentException} is raised with a
    * proper message.</p>
    *
    * @param input the string to check.
@@ -66,7 +66,7 @@ public class Validators {
    */
   public static String notNullOrEmpty(final String input, final String identifier) {
     if (input == null || input.isEmpty()) {
-      throw new IllegalArgumentException(identifier + " cannot be null or empty");
+      throw InvalidArgumentException.fromMessage(identifier + " cannot be null or empty");
     }
     return input;
   }
@@ -82,7 +82,7 @@ public class Validators {
 
   public static <T> List<T> notNullOrEmpty(final List<T> input, final String identifier) {
     if (input == null || input.isEmpty()) {
-      throw new IllegalArgumentException(identifier + " cannot be null or empty");
+      throw InvalidArgumentException.fromMessage(identifier + " cannot be null or empty");
     }
     return input;
   }
@@ -98,7 +98,7 @@ public class Validators {
 
   public static <T> Set<T> notNullOrEmpty(final Set<T> input, final String identifier) {
     if (input == null || input.isEmpty()) {
-      throw new IllegalArgumentException(identifier + " cannot be null or empty");
+      throw InvalidArgumentException.fromMessage(identifier + " cannot be null or empty");
     }
     return input;
   }

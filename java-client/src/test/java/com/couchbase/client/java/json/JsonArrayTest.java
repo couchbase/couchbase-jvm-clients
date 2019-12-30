@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.json;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -96,7 +97,7 @@ class JsonArrayTest {
 
   @Test
   void shouldNullPointerOnNullList() {
-    assertThrows(NullPointerException.class, () -> JsonArray.from((List) null));
+    assertThrows(InvalidArgumentException.class, () -> JsonArray.from((List) null));
   }
 
   @Test
@@ -134,7 +135,7 @@ class JsonArrayTest {
   void shouldDetectIncorrectItemInList() {
     Object badItem = new java.lang.CloneNotSupportedException();
     assertThrows(
-      IllegalArgumentException.class,
+      InvalidArgumentException.class,
       () -> JsonArray.from(Arrays.asList("item1", "item2", badItem))
     );
   }
@@ -191,8 +192,8 @@ class JsonArrayTest {
       JsonArray.from(source);
       fail("ClassCastException expected");
     } catch (ClassCastException e) {
-      if (!(e.getCause() instanceof IllegalArgumentException)) {
-        fail("ClassCastException with an IllegalArgumentException cause expected");
+      if (!(e.getCause() instanceof InvalidArgumentException)) {
+        fail("ClassCastException with an InvalidArgumentException cause expected");
       }
     } catch (Exception e) {
       fail("ClassCastException expected");
@@ -207,8 +208,8 @@ class JsonArrayTest {
       JsonArray.from(source);
       fail("ClassCastException expected");
     } catch (ClassCastException e) {
-      if (!(e.getCause() instanceof IllegalArgumentException)) {
-        fail("ClassCastException with an IllegalArgumentException cause expected");
+      if (!(e.getCause() instanceof InvalidArgumentException)) {
+        fail("ClassCastException with an InvalidArgumentException cause expected");
       }
     } catch (Exception e) {
       fail("ClassCastException expected");
@@ -305,13 +306,13 @@ class JsonArrayTest {
     try {
       arr.add(arr);
       fail();
-    } catch (IllegalArgumentException e) {
+    } catch (InvalidArgumentException e) {
       //success
     }
     try {
       arr.add((Object) arr);
       fail();
-    } catch (IllegalArgumentException e) {
+    } catch (InvalidArgumentException e) {
       //success
     }
   }
@@ -339,7 +340,7 @@ class JsonArrayTest {
   @Test
   void shouldFailToConvertBadJsonString() {
     String badJson = "This is not \"JSON\"!";
-    assertThrows(IllegalArgumentException.class, () -> JsonArray.fromJson(badJson));
+    assertThrows(InvalidArgumentException.class, () -> JsonArray.fromJson(badJson));
   }
 
   @Test
@@ -349,10 +350,10 @@ class JsonArrayTest {
     String bad3 = "\"string\"";
     String bad4 = "{\"some\": \"value\"}";
 
-    try { JsonArray.fromJson(bad1); fail(); } catch (IllegalArgumentException e) { }
-    try { JsonArray.fromJson(bad2); fail(); } catch (IllegalArgumentException e) { }
-    try { JsonArray.fromJson(bad3); fail(); } catch (IllegalArgumentException e) { }
-    try { JsonArray.fromJson(bad4); fail(); } catch (IllegalArgumentException e) { }
+    try { JsonArray.fromJson(bad1); fail(); } catch (InvalidArgumentException e) { }
+    try { JsonArray.fromJson(bad2); fail(); } catch (InvalidArgumentException e) { }
+    try { JsonArray.fromJson(bad3); fail(); } catch (InvalidArgumentException e) { }
+    try { JsonArray.fromJson(bad4); fail(); } catch (InvalidArgumentException e) { }
   }
 
   @Test

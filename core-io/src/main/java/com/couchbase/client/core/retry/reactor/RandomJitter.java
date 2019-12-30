@@ -15,6 +15,8 @@
  */
 package com.couchbase.client.core.retry.reactor;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
+
 import java.time.Duration;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -29,7 +31,7 @@ class RandomJitter implements Jitter {
 	private final double randomFactor;
 
 	public RandomJitter(double randomFactor) {
-		if (randomFactor < 0 || randomFactor > 1) throw new IllegalArgumentException("random factor must be between 0 and 1 (default 0.5)");
+		if (randomFactor < 0 || randomFactor > 1) throw InvalidArgumentException.fromMessage("random factor must be between 0 and 1 (default 0.5)");
 		this.randomFactor = randomFactor;
 	}
 
@@ -37,10 +39,10 @@ class RandomJitter implements Jitter {
 	public Duration apply(BackoffDelay backoff) {
 		//check the invariant
 		if (backoff.delay.compareTo(backoff.min) < 0) {
-			throw new IllegalArgumentException("jitter can only be applied on a delay that is >= to min backoff");
+			throw InvalidArgumentException.fromMessage("jitter can only be applied on a delay that is >= to min backoff");
 		}
 		if (backoff.delay.compareTo(backoff.max) > 0) {
-			throw new IllegalArgumentException("jitter can only be applied on a delay that is <= to max backoff");
+			throw InvalidArgumentException.fromMessage("jitter can only be applied on a delay that is <= to max backoff");
 		}
 
 		//short-circuit delay == 0 case

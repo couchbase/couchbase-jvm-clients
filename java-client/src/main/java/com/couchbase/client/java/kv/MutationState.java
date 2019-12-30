@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -56,7 +57,7 @@ public class MutationState implements Iterable<MutationToken> {
      */
     public MutationState add(final MutationToken... mutationTokens) {
         if (mutationTokens == null || mutationTokens.length == 0) {
-            throw new IllegalArgumentException("At least one MutationToken must be provided.");
+            throw InvalidArgumentException.fromMessage("At least one MutationToken must be provided.");
         }
         for (MutationToken t : mutationTokens) {
             addToken(t);

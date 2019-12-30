@@ -17,6 +17,7 @@
 package com.couchbase.client.java.json;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -89,18 +90,18 @@ public class JsonObject extends JsonValue implements Serializable {
      * keys, and all values are of a supported type.
      *
      * A null input Map or null key will lead to a {@link NullPointerException} being thrown.
-     * If any unsupported value is present in the Map, an {@link IllegalArgumentException}
+     * If any unsupported value is present in the Map, an {@link InvalidArgumentException}
      * will be thrown.
      *
      * *Sub Maps and Lists*
      * If possible, Maps and Lists contained in mapData will be converted to JsonObject and
      * JsonArray respectively. However, same restrictions apply. Any non-convertible collection
      * will raise a {@link ClassCastException}. If the sub-conversion raises an exception (like an
-     * IllegalArgumentException) then it is put as cause for the ClassCastException.
+     * InvalidArgumentException) then it is put as cause for the ClassCastException.
      *
      * @param mapData the Map to convert to a JsonObject
      * @return the resulting JsonObject
-     * @throws IllegalArgumentException in case one or more unsupported values are present
+     * @throws InvalidArgumentException in case one or more unsupported values are present
      * @throws NullPointerException in case a null map is provided or if it contains a null key
      * @throws ClassCastException if map contains a sub-Map or sub-List not supported (see above)
      */
@@ -144,7 +145,7 @@ public class JsonObject extends JsonValue implements Serializable {
                     throw c;
                 }
             } else if (!checkType(value)) {
-                throw new IllegalArgumentException("Unsupported type for JsonObject: " + value.getClass());
+                throw InvalidArgumentException.fromMessage("Unsupported type for JsonObject: " + value.getClass());
             } else {
                 result.put(key, value);
             }
@@ -159,13 +160,13 @@ public class JsonObject extends JsonValue implements Serializable {
      *
      * @param s the JSON String to convert to a {@link JsonObject}.
      * @return the corresponding {@link JsonObject}.
-     * @throws IllegalArgumentException if the conversion cannot be done.
+     * @throws InvalidArgumentException if the conversion cannot be done.
      */
     public static JsonObject fromJson(String s) {
         try {
             return JacksonTransformers.stringToJsonObject(s);
         } catch (Exception e) {
-            throw new IllegalArgumentException("Cannot convert string to JsonObject", e);
+            throw InvalidArgumentException.fromMessage("Cannot convert string to JsonObject", e);
         }
     }
 
@@ -173,14 +174,14 @@ public class JsonObject extends JsonValue implements Serializable {
         try {
             return JacksonTransformers.bytesToJsonObject(s);
         } catch (Exception e) {
-            throw new IllegalArgumentException("Cannot convert byte array to JsonObject", e);
+            throw InvalidArgumentException.fromMessage("Cannot convert byte array to JsonObject", e);
         }
     }
 
     /**
      * Stores a {@link Object} value identified by the field name.
      *
-     * Note that the value is checked and a {@link IllegalArgumentException} is thrown if not supported.
+     * Note that the value is checked and a {@link InvalidArgumentException} is thrown if not supported.
      *
      * @param name the name of the JSON field.
      * @param value the value of the JSON field.
@@ -188,13 +189,13 @@ public class JsonObject extends JsonValue implements Serializable {
      */
     public JsonObject put(final String name, final Object value) {
         if (this == value) {
-            throw new IllegalArgumentException("Cannot put self");
+            throw InvalidArgumentException.fromMessage("Cannot put self");
         } else if (value == JsonValue.NULL) {
             putNull(name);
         } else if (checkType(value)) {
             content.put(name, value);
         } else {
-            throw new IllegalArgumentException("Unsupported type for JsonObject: " + value.getClass());
+            throw InvalidArgumentException.fromMessage("Unsupported type for JsonObject: " + value.getClass());
         }
         return this;
     }
@@ -358,7 +359,7 @@ public class JsonObject extends JsonValue implements Serializable {
      */
     public JsonObject put(String name, JsonObject value) {
         if (this == value) {
-            throw new IllegalArgumentException("Cannot put self");
+            throw InvalidArgumentException.fromMessage("Cannot put self");
         }
         content.put(name, value);
         return this;

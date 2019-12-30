@@ -19,6 +19,7 @@ package com.couchbase.client.core;
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
@@ -53,7 +54,7 @@ class CoreContextTest {
   void doesNotAllowNullAlternateIdentifier() {
     CoreContext ctx = new CoreContext(mock(Core.class), 1, mock(CoreEnvironment.class), mock(Authenticator.class));
     assertEquals(Optional.empty(), ctx.alternateAddress());
-    assertThrows(IllegalArgumentException.class, () -> ctx.alternateAddress(null));
+    assertThrows(InvalidArgumentException.class, () -> ctx.alternateAddress(null));
   }
 
 }

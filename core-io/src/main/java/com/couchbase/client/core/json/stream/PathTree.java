@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.json.stream;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -68,7 +70,7 @@ class PathTree {
 
   static List<String> parseJsonPointer(String jsonPointer) {
     if (!jsonPointer.startsWith("/") && !jsonPointer.isEmpty()) {
-      throw new IllegalArgumentException("JSON pointer must be empty or start with forward slash (/) but got \"" + jsonPointer + "\"");
+      throw InvalidArgumentException.fromMessage("JSON pointer must be empty or start with forward slash (/) but got \"" + jsonPointer + "\"");
     }
 
     final int HONOR_ALL_DELIMITERS = -1;

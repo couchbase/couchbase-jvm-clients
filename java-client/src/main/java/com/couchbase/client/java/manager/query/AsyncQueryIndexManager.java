@@ -18,6 +18,7 @@ package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexesNotReadyException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.QueryException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.json.Mapper;
@@ -351,7 +352,7 @@ public class AsyncQueryIndexManager {
 
   private static String quote(String s) {
     if (s.contains("`")) {
-      throw new IllegalArgumentException("Value [" + redactMeta(s) + "] may not contain backticks.");
+      throw InvalidArgumentException.fromMessage("Value [" + redactMeta(s) + "] may not contain backticks.");
     }
     return "`" + s + "`";
   }

@@ -75,7 +75,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     byte flags = 0;
 
     if (insertDocument && upsertDocument) {
-      throw new IllegalArgumentException("Cannot both insert and upsert full document");
+      throw InvalidArgumentException.fromMessage("Cannot both insert and upsert full document");
     }
 
     if (upsertDocument) {
@@ -243,7 +243,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   public static InvalidArgumentException errIfNoCommands(ErrorContext errorContext) {
     return new InvalidArgumentException(
       "Argument validation failed",
-      new IllegalArgumentException("No SubDocument commands provided"),
+      InvalidArgumentException.fromMessage("No SubDocument commands provided"),
       errorContext
     );
   }
@@ -251,7 +251,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   public static InvalidArgumentException errIfTooManyCommands(ErrorContext errorContext) {
     return new InvalidArgumentException(
       "Argument validation failed",
-      new IllegalArgumentException("A maximum of " + SubdocMutateRequest.SUBDOC_MAX_FIELDS + " fields can be provided"),
+      InvalidArgumentException.fromMessage("A maximum of " + SubdocMutateRequest.SUBDOC_MAX_FIELDS + " fields can be provided"),
       errorContext
     );
   }

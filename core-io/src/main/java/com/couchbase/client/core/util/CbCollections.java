@@ -17,6 +17,7 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.InvalidArgumentException;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -70,14 +71,14 @@ public class CbCollections {
    * Returns an unmodifiable set containing the given items.
    *
    * @throws NullPointerException     if any item is null
-   * @throws IllegalArgumentException if there are duplicate items
+   * @throws InvalidArgumentException if there are duplicate items
    */
   @SafeVarargs
   public static <T> Set<T> setOf(T... items) {
     Set<T> result = new HashSet<>();
     for (T item : items) {
       if (!result.add(requireNonNull(item, "Set may not contain null"))) {
-        throw new IllegalArgumentException("Duplicate item: " + item);
+        throw InvalidArgumentException.fromMessage("Duplicate item: " + item);
       }
     }
     return unmodifiableSet(result);
@@ -108,7 +109,7 @@ public class CbCollections {
    * Returns an unmodifiable map containing the given key/value pairs.
    *
    * @throws NullPointerException     if any key or value is null
-   * @throws IllegalArgumentException if there are duplicate keys
+   * @throws InvalidArgumentException if there are duplicate keys
    */
   public static <K, V> Map<K, V> mapOf(K key1, V value1) {
     Map<K, V> result = new HashMap<>();
@@ -120,7 +121,7 @@ public class CbCollections {
    * Returns an unmodifiable map containing the given key/value pairs.
    *
    * @throws NullPointerException     if any key or value is null
-   * @throws IllegalArgumentException if there are duplicate keys
+   * @throws InvalidArgumentException if there are duplicate keys
    */
   public static <K, V> Map<K, V> mapOf(K key1, V value1,
                                        K key2, V value2) {
@@ -134,7 +135,7 @@ public class CbCollections {
    * Returns an unmodifiable map containing the given key/value pairs.
    *
    * @throws NullPointerException     if any key or value is null
-   * @throws IllegalArgumentException if there are duplicate keys
+   * @throws InvalidArgumentException if there are duplicate keys
    */
   public static <K, V> Map<K, V> mapOf(K key1, V value1,
                                        K key2, V value2,
@@ -150,7 +151,7 @@ public class CbCollections {
    * Returns an unmodifiable map containing the given key/value pairs.
    *
    * @throws NullPointerException     if any key or value is null
-   * @throws IllegalArgumentException if there are duplicate keys
+   * @throws InvalidArgumentException if there are duplicate keys
    */
   @SuppressWarnings("Duplicates")
   public static <K, V> Map<K, V> mapOf(K key1, V value1,
@@ -169,7 +170,7 @@ public class CbCollections {
    * Returns an unmodifiable map containing the given key/value pairs.
    *
    * @throws NullPointerException     if any key or value is null
-   * @throws IllegalArgumentException if there are duplicate keys
+   * @throws InvalidArgumentException if there are duplicate keys
    */
   @SuppressWarnings("Duplicates")
   public static <K, V> Map<K, V> mapOf(K key1, V value1,
@@ -191,7 +192,7 @@ public class CbCollections {
     requireNonNull(value, "Value may not be null.");
 
     if (map.put(key, value) != null) {
-      throw new IllegalArgumentException("Duplicate key: " + key);
+      throw InvalidArgumentException.fromMessage("Duplicate key: " + key);
     }
   }
 }

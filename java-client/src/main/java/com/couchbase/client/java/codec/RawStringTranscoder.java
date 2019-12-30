@@ -17,6 +17,7 @@
 package com.couchbase.client.java.codec;
 
 import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.java.CommonOptions;
 
@@ -31,14 +32,14 @@ public class RawStringTranscoder implements Transcoder {
   @Override
   public EncodedValue encode(final Object input) {
     if (input instanceof CommonOptions.BuiltCommonOptions || input instanceof CommonOptions) {
-      throw new IllegalArgumentException("No content provided, cannot " +
+      throw InvalidArgumentException.fromMessage("No content provided, cannot " +
         "encode " + input.getClass().getSimpleName() + " as content!");
     }
 
     if (input instanceof String) {
       return new EncodedValue(((String) input).getBytes(StandardCharsets.UTF_8), CodecFlags.STRING_COMPAT_FLAGS);
     } else {
-      throw new IllegalArgumentException("Only String is supported for the RawStringTranscoder!");
+      throw InvalidArgumentException.fromMessage("Only String is supported for the RawStringTranscoder!");
     }
   }
 

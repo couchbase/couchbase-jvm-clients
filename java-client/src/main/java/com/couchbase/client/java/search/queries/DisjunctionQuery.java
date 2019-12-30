@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.java.search.queries;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.SearchQuery;
@@ -54,10 +55,10 @@ public class DisjunctionQuery extends AbstractCompoundQuery {
     @Override
     protected void injectParams(JsonObject input) {
         if (childQueries.isEmpty()) {
-            throw new IllegalArgumentException("Compound query has no child query");
+            throw InvalidArgumentException.fromMessage("Compound query has no child query");
         }
         if (childQueries.size() < min) {
-            throw new IllegalArgumentException("Disjunction query as fewer children than the configured minimum " + min);
+            throw InvalidArgumentException.fromMessage("Disjunction query as fewer children than the configured minimum " + min);
         }
 
         if (min > 0) {

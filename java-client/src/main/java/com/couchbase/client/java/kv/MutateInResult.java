@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.SubDocumentField;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -114,7 +115,7 @@ public class MutateInResult extends MutationResult {
       return value;
     }
     else {
-      throw new IllegalArgumentException("Index " + index + " is invalid");
+      throw InvalidArgumentException.fromMessage("Index " + index + " is invalid");
     }
   }
 

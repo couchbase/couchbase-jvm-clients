@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.endpoint;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -32,7 +33,7 @@ class LazyCircuitBreakerTest {
   @Test
   void failsIfDisabled() {
     assertThrows(
-      IllegalArgumentException.class,
+      InvalidArgumentException.class,
       () -> new LazyCircuitBreaker(CircuitBreakerConfig.enabled(false).build())
     );
   }

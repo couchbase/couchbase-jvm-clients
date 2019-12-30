@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.codec;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.java.CommonOptions;
 
@@ -36,12 +37,12 @@ public class JsonTranscoder implements Transcoder {
   @Override
   public EncodedValue encode(final Object input) {
     if (input instanceof CommonOptions.BuiltCommonOptions || input instanceof CommonOptions) {
-      throw new IllegalArgumentException("No content provided, cannot " +
+      throw InvalidArgumentException.fromMessage("No content provided, cannot " +
         "encode " + input.getClass().getSimpleName() + " as content!");
     }
 
     if (input instanceof byte[]) {
-      throw new IllegalArgumentException("byte[] input is not supported for the JsonTranscoder!. " +
+      throw InvalidArgumentException.fromMessage("byte[] input is not supported for the JsonTranscoder!. " +
         "If you want to store already encoded JSON, use the RawJsonTranscoder, otherwise store it " +
         "with the RawBinaryTranscoder!");
     }
@@ -52,7 +53,7 @@ public class JsonTranscoder implements Transcoder {
   @Override
   public <T> T decode(final Class<T> target, final byte[] input, int flags) {
     if (target.isAssignableFrom(byte[].class)) {
-      throw new IllegalArgumentException("byte[] input is not supported for the JsonTranscoder!. " +
+      throw InvalidArgumentException.fromMessage("byte[] input is not supported for the JsonTranscoder!. " +
         "If you want to read already encoded JSON, use the RawJsonTranscoder, otherwise read it " +
         "with the RawBinaryTranscoder!");
     }

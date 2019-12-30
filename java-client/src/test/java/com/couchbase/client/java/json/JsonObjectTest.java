@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.json;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -201,7 +202,7 @@ class JsonObjectTest {
     Object badItem = new CloneNotSupportedException();
     Map<String, Object> badMap = new HashMap<>(1);
     badMap.put("key1", badItem);
-    assertThrows(IllegalArgumentException.class, () -> JsonObject.from(badMap));
+    assertThrows(InvalidArgumentException.class, () -> JsonObject.from(badMap));
   }
 
   @Test
@@ -266,8 +267,8 @@ class JsonObjectTest {
       JsonObject.from(sourceMap);
       fail("ClassCastException expected");
     } catch (ClassCastException e) {
-      if (!(e.getCause() instanceof IllegalArgumentException)) {
-        fail("ClassCastException with an IllegalArgumentException cause expected");
+      if (!(e.getCause() instanceof InvalidArgumentException)) {
+        fail("ClassCastException with an InvalidArgumentException cause expected");
       }
     } catch (Exception e) {
       fail("ClassCastException expected");
@@ -282,8 +283,8 @@ class JsonObjectTest {
       JsonObject.from(source);
       fail("ClassCastException expected");
     } catch (ClassCastException e) {
-      if (!(e.getCause() instanceof IllegalArgumentException)) {
-        fail("ClassCastException with an IllegalArgumentException cause expected");
+      if (!(e.getCause() instanceof InvalidArgumentException)) {
+        fail("ClassCastException with an InvalidArgumentException cause expected");
       }
     } catch (Exception e) {
       fail("ClassCastException expected");
@@ -366,13 +367,13 @@ class JsonObjectTest {
     try {
       obj.put("test", obj);
       fail();
-    } catch (IllegalArgumentException e) {
+    } catch (InvalidArgumentException e) {
       //success
     }
     try {
       obj.put("test", (Object) obj);
       fail();
-    } catch (IllegalArgumentException e) {
+    } catch (InvalidArgumentException e) {
       //success
     }
   }
@@ -401,7 +402,7 @@ class JsonObjectTest {
   @Test
   void shouldFailToConvertBadJsonString() {
     String badJson = "This is not \"JSON\"!";
-    assertThrows(IllegalArgumentException.class, () -> JsonObject.fromJson(badJson));
+    assertThrows(InvalidArgumentException.class, () -> JsonObject.fromJson(badJson));
   }
 
   @Test
@@ -411,10 +412,10 @@ class JsonObjectTest {
     String bad3 = "\"string\"";
     String bad4 = "[ 123 ]";
 
-    try { JsonObject.fromJson(bad1); fail(); } catch (IllegalArgumentException e) { }
-    try { JsonObject.fromJson(bad2); fail(); } catch (IllegalArgumentException e) { }
-    try { JsonObject.fromJson(bad3); fail(); } catch (IllegalArgumentException e) { }
-    try { JsonObject.fromJson(bad4); fail(); } catch (IllegalArgumentException e) { }
+    try { JsonObject.fromJson(bad1); fail(); } catch (InvalidArgumentException e) { }
+    try { JsonObject.fromJson(bad2); fail(); } catch (InvalidArgumentException e) { }
+    try { JsonObject.fromJson(bad3); fail(); } catch (InvalidArgumentException e) { }
+    try { JsonObject.fromJson(bad4); fail(); } catch (InvalidArgumentException e) { }
   }
 
   @Test

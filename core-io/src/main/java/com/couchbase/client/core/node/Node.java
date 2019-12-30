@@ -29,6 +29,7 @@ import com.couchbase.client.core.cnc.events.service.ServiceRemovedEvent;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ScopedRequest;
@@ -141,7 +142,7 @@ public class Node implements Stateful<NodeState> {
             // Intentionally ignored.
             break;
           default:
-            throw new IllegalStateException("Unknown unhandled state " + service
+            throw InvalidArgumentException.fromMessage("Unknown unhandled state " + service
               + ", this is a bug!");
         }
       }
@@ -426,7 +427,7 @@ public class Node implements Stateful<NodeState> {
           .build(),
           ctx, address, port);
       default:
-        throw new IllegalArgumentException("Unsupported ServiceType: " + serviceType);
+        throw InvalidArgumentException.fromMessage("Unsupported ServiceType: " + serviceType);
     }
   }
 

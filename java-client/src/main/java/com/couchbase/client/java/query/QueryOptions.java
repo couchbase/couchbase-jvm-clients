@@ -17,6 +17,7 @@
 package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.util.Golang;
 import com.couchbase.client.java.Cluster;
@@ -388,7 +389,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
       boolean positionalPresent = positionalParameters != null && !positionalParameters.isEmpty();
       if (namedParameters != null && !namedParameters.isEmpty()) {
         if (positionalPresent) {
-          throw new IllegalArgumentException("Both positional and named parameters cannot be present at the same time!");
+          throw InvalidArgumentException.fromMessage("Both positional and named parameters cannot be present at the same time!");
         }
 
         namedParameters.getNames().forEach(key -> {

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
+import com.couchbase.client.core.error.InvalidArgumentException;
 
 import javax.net.ssl.KeyManagerFactory;
 import java.security.PrivateKey;
@@ -56,7 +57,7 @@ public class CertificateAuthenticator implements Authenticator {
     this.keyManagerFactory = keyManagerFactory;
 
     if (key != null && keyManagerFactory != null) {
-      throw new IllegalArgumentException("Either a key certificate or a key manager factory" +
+      throw InvalidArgumentException.fromMessage("Either a key certificate or a key manager factory" +
         " can be provided, but not both!");
     }
   }

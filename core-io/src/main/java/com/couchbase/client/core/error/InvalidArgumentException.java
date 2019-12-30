@@ -22,4 +22,12 @@ public class InvalidArgumentException extends CouchbaseException {
     super(message, cause, ctx);
   }
 
+  public static InvalidArgumentException fromMessage(final String message) {
+    return new InvalidArgumentException(message, null, null);
+  }
+
+  public static InvalidArgumentException fromMessage(final String message, final Throwable cause) {
+    return new InvalidArgumentException(message, cause, null);
+  }
+
 }

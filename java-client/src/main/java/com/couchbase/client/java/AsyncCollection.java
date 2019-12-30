@@ -303,12 +303,12 @@ public class AsyncCollection {
 
       if (opts.withExpiry()) {
         if (opts.projections().size() > 15) {
-          throw new IllegalArgumentException("Only a maximum of 16 fields can be "
+          throw InvalidArgumentException.fromMessage("Only a maximum of 16 fields can be "
             + "projected per request due to a server limitation (includes the expiration macro as one field).");
         }
       } else {
         if (opts.projections().size() > 16) {
-          throw new IllegalArgumentException("Only a maximum of 16 fields can be "
+          throw InvalidArgumentException.fromMessage("Only a maximum of 16 fields can be "
             + "projected per request due to a server limitation.");
         }
       }

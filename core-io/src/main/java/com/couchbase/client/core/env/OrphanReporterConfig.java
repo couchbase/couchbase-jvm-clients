@@ -18,6 +18,7 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.tracing.ThresholdRequestTracer;
+import com.couchbase.client.core.error.InvalidArgumentException;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -97,7 +98,7 @@ public class OrphanReporterConfig {
      */
     public Builder emitInterval(final Duration emitInterval) {
       if (emitInterval.isZero()) {
-        throw new IllegalArgumentException("Emit interval needs to be greater than 0");
+        throw InvalidArgumentException.fromMessage("Emit interval needs to be greater than 0");
       }
 
       this.emitInterval = emitInterval;

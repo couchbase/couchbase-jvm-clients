@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.events.tracing.OverThresholdRequestsRecordedEvent;
 import com.couchbase.client.core.deps.org.jctools.queues.MpscUnboundedArrayQueue;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
@@ -436,7 +437,7 @@ public class ThresholdRequestTracer implements RequestTracer {
      */
     public Builder emitInterval(final Duration emitInterval) {
       if (emitInterval.isZero()) {
-        throw new IllegalArgumentException("Emit interval needs to be greater than 0");
+        throw InvalidArgumentException.fromMessage("Emit interval needs to be greater than 0");
       }
 
       this.emitInterval = emitInterval;

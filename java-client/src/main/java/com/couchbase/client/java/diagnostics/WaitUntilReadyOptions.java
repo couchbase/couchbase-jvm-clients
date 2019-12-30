@@ -18,6 +18,7 @@ package com.couchbase.client.java.diagnostics;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.ClusterState;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.util.Set;
@@ -74,7 +75,7 @@ public class WaitUntilReadyOptions {
   public WaitUntilReadyOptions desiredState(final ClusterState desiredState) {
     notNull(desiredState, "Desired State");
     if (desiredState == ClusterState.OFFLINE) {
-      throw new IllegalArgumentException("Offline cannot be passed in as a state to wait for");
+      throw InvalidArgumentException.fromMessage("Offline cannot be passed in as a state to wait for");
     }
 
     this.desiredState = desiredState;

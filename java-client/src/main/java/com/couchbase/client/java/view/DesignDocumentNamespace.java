@@ -17,6 +17,7 @@
 package com.couchbase.client.java.view;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.InvalidArgumentException;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.util.CbStrings.removeStart;
@@ -52,7 +53,7 @@ public enum DesignDocumentNamespace {
 
   public static String requireUnqualified(final String name) {
     if (name.startsWith(DEV_PREFIX)) {
-      throw new IllegalArgumentException(
+      throw InvalidArgumentException.fromMessage(
           "Design document name '" + redactMeta(name) + "' must not start with '" + DEV_PREFIX + "'" +
               "; instead specify the " + DEVELOPMENT.name() + " namespace when referring to the document.");
     }

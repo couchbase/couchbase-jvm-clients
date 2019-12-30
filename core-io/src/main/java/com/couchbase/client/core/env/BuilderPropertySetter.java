@@ -17,6 +17,7 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.util.Golang;
 
@@ -61,7 +62,7 @@ class BuilderPropertySetter {
           final String childBuilderAccessor = pathComponent + CHILD_BUILDER_ACCESSOR_SUFFIX;
           builder = builder.getClass().getMethod(childBuilderAccessor).invoke(builder);
         } catch (NoSuchMethodException e) {
-          throw new IllegalArgumentException("Method not found: " + e.getMessage(), e);
+          throw InvalidArgumentException.fromMessage("Method not found: " + e.getMessage(), e);
         }
       }
 
@@ -71,7 +72,7 @@ class BuilderPropertySetter {
           .collect(Collectors.toList());
 
       if (candidates.isEmpty()) {
-        throw new IllegalArgumentException("No one-arg setter for property \"" + propertyName + "\" in " + builder.getClass());
+        throw InvalidArgumentException.fromMessage("No one-arg setter for property \"" + propertyName + "\" in " + builder.getClass());
       }
 
       int remainingCandidates = candidates.size();
@@ -86,7 +87,7 @@ class BuilderPropertySetter {
           }
           failedCandidates.add(t);
           if (--remainingCandidates == 0) {
-            final IllegalArgumentException e = new IllegalArgumentException(
+            final InvalidArgumentException e = InvalidArgumentException.fromMessage(
                 "Found multiple one-arg setters for property \"" + propertyName + "\" in "
                     + builder.getClass() + " but none accepted the value \"" + propertyValue + "\".");
             failedCandidates.forEach(e::addSuppressed);
@@ -96,7 +97,7 @@ class BuilderPropertySetter {
       }
 
     } catch (IllegalAccessException e) {
-      throw new IllegalArgumentException("Failed to access the corresponding builder method.", e);
+      throw InvalidArgumentException.fromMessage("Failed to access the corresponding builder method.", e);
 
     } catch (InvocationTargetException e) {
       Throwable cause = e.getCause();
@@ -137,7 +138,7 @@ class BuilderPropertySetter {
           return converter.convert(value, this, targetType);
 
         } catch (Exception e) {
-          throw new IllegalArgumentException(
+          throw InvalidArgumentException.fromMessage(
               "Expected " + converter.expectation(targetType, this) + " but got \"" + value + "\".", e);
         }
       }
@@ -175,7 +176,7 @@ class BuilderPropertySetter {
         return Mapper.reader().forType(asTypeReference(targetType)).readValue(value);
 
       } catch (IOException e) {
-        throw new IllegalArgumentException("Expected a value Jackson can bind to " + targetType + " but got \"" + value + "\".", e);
+        throw InvalidArgumentException.fromMessage("Expected a value Jackson can bind to " + targetType + " but got \"" + value + "\".", e);
       }
     }
 
@@ -190,7 +191,7 @@ class BuilderPropertySetter {
         return array;
 
       } catch (IllegalArgumentException e) {
-        throw new IllegalArgumentException("Expected a comma-delimited list where each item is " + expectation(elementClass) + " but got \"" + value + "\".");
+        throw InvalidArgumentException.fromMessage("Expected a comma-delimited list where each item is " + expectation(elementClass) + " but got \"" + value + "\".");
       }
     }
 
@@ -205,7 +206,7 @@ class BuilderPropertySetter {
         return "one of " + Arrays.asList(enumClass.get().getEnumConstants());
       }
 
-      throw new IllegalArgumentException("No converter for " + type);
+      throw InvalidArgumentException.fromMessage("No converter for " + type);
     }
   }
 
@@ -214,7 +215,7 @@ class BuilderPropertySetter {
     try {
       return Enum.valueOf(enumClass, value);
     } catch (IllegalArgumentException e) {
-      throw new IllegalArgumentException("Expected one of " +
+      throw InvalidArgumentException.fromMessage("Expected one of " +
           Arrays.toString(enumClass.getEnumConstants()) + " but got \"" + value + "\"");
     }
   }
@@ -310,7 +311,7 @@ class BuilderPropertySetter {
 
   private static Duration requireNonNegative(Duration d) {
     if (d.isNegative()) {
-      throw new IllegalArgumentException("Duration must be non-negative but got " + d);
+      throw InvalidArgumentException.fromMessage("Duration must be non-negative but got " + d);
     }
     return d;
   }
@@ -324,7 +325,7 @@ class BuilderPropertySetter {
       case "0":
         return false;
       default:
-        throw new IllegalArgumentException("Expected 'true', 'false', '0', or '1' but got '" + value + "'");
+        throw InvalidArgumentException.fromMessage("Expected 'true', 'false', '0', or '1' but got '" + value + "'");
     }
   }
 

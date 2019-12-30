@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
@@ -52,7 +53,7 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> imp
                           final Optional<DurabilityLevel> syncReplicationType, InternalSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     if (initial.isPresent() && initial.get() < 0) {
-      throw new IllegalArgumentException("The initial needs to be >= 0");
+      throw InvalidArgumentException.fromMessage("The initial needs to be >= 0");
     }
     this.delta = delta;
     this.initial = initial;

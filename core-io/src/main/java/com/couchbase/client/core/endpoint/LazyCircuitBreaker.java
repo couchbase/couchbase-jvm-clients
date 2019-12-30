@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.endpoint;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
+
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -95,7 +97,7 @@ class LazyCircuitBreaker implements CircuitBreaker {
    */
   LazyCircuitBreaker(final CircuitBreakerConfig config) {
     if (!config.enabled()) {
-      throw new IllegalArgumentException("This CircuitBreaker always needs to be enabled");
+      throw InvalidArgumentException.fromMessage("This CircuitBreaker always needs to be enabled");
     }
 
     this.config = config;

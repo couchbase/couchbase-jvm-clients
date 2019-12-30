@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.util;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 
@@ -38,14 +39,14 @@ class SingleStatefulTest {
 
   @Test
   void failsOnNullInitialValue() {
-    assertThrows(IllegalArgumentException.class, () -> SingleStateful.fromInitial(null));
+    assertThrows(InvalidArgumentException.class, () -> SingleStateful.fromInitial(null));
   }
 
   @Test
   void failsOnNullTransitionValue() {
     SingleStateful<String> stateful = SingleStateful.fromInitial("abc");
-    assertThrows(IllegalArgumentException.class, () -> stateful.transition(null));
-    assertThrows(IllegalArgumentException.class, () -> stateful.compareAndTransition("abc", null));
+    assertThrows(InvalidArgumentException.class, () -> stateful.transition(null));
+    assertThrows(InvalidArgumentException.class, () -> stateful.compareAndTransition("abc", null));
   }
 
   @Test

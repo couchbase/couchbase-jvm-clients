@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.json;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -82,7 +84,7 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
   /**
    * Creates a new {@link JsonArray} and populates it with the values supplied.
    *
-   * If the type is not supported, a {@link IllegalArgumentException} exception is thrown.
+   * If the type is not supported, a {@link InvalidArgumentException} exception is thrown.
    * @param items the items to be stored in the {@link JsonArray}.
    * @return a populated {@link JsonArray}.
    */
@@ -92,7 +94,7 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
       if (checkType(item)) {
         array.add(item);
       } else {
-        throw new IllegalArgumentException("Unsupported type for JsonArray: " + item.getClass());
+        throw InvalidArgumentException.fromMessage("Unsupported type for JsonArray: " + item.getClass());
       }
     }
     return array;
@@ -101,23 +103,22 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
   /**
    * Creates a new {@link JsonArray} and populates it with the values in the supplied {@link List}.
    *
-   * If the type of an item is not supported, an {@link IllegalArgumentException} is thrown.
+   * If the type of an item is not supported, an {@link InvalidArgumentException} is thrown.
    * If the list is null, a {@link NullPointerException} is thrown, but null items are supported.
    *
    * *Sub Maps and Lists*
    * If possible, Maps and Lists contained in items will be converted to JsonObject and
    * JsonArray respectively. However, same restrictions apply. Any non-convertible collection
    * will raise a {@link ClassCastException}. If the sub-conversion raises an exception (like an
-   * IllegalArgumentException) then it is put as cause for the ClassCastException.
+   * InvalidArgumentException) then it is put as cause for the ClassCastException.
    *
    * @param items the list of items to be stored in the {@link JsonArray}.
    * @return a populated {@link JsonArray}.
-   * @throws IllegalArgumentException if at least one item is of unsupported type.
-   * @throws NullPointerException if the list of items is null.
+   * @throws InvalidArgumentException if at least one item is of unsupported type.
    */
   public static JsonArray from(List<?> items) {
     if (items == null) {
-      throw new NullPointerException("Null list unsupported");
+      throw InvalidArgumentException.fromMessage("Null list unsupported");
     } else if (items.isEmpty()) {
       return JsonArray.empty();
     }
@@ -157,7 +158,7 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
       } else if (checkType(item)) {
         array.add(item);
       } else {
-        throw new IllegalArgumentException("Unsupported type for JsonArray: " + item.getClass());
+        throw InvalidArgumentException.fromMessage("Unsupported type for JsonArray: " + item.getClass());
       }
     }
     return array;
@@ -172,13 +173,13 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
    *
    * @param s the JSON String to convert to a {@link JsonArray}.
    * @return the corresponding {@link JsonArray}.
-   * @throws IllegalArgumentException if the conversion cannot be done.
+   * @throws InvalidArgumentException if the conversion cannot be done.
    */
   public static JsonArray fromJson(String s) {
     try {
       return JacksonTransformers.stringToJsonArray(s);
     } catch (Exception e) {
-      throw new IllegalArgumentException("Cannot convert string to JsonArray", e);
+      throw InvalidArgumentException.fromMessage("Cannot convert string to JsonArray", e);
     }
   }
 
@@ -186,7 +187,7 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
     try {
       return JacksonTransformers.bytesToJsonArray(s);
     } catch (Exception e) {
-      throw new IllegalArgumentException("Cannot convert byte array to JsonArray", e);
+      throw InvalidArgumentException.fromMessage("Cannot convert byte array to JsonArray", e);
     }
   }
 
@@ -204,20 +205,20 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
   /**
    * Append an element to the {@link JsonArray}.
    *
-   * Note that the type is checked and a {@link IllegalArgumentException} is thrown if not supported.
+   * Note that the type is checked and a {@link InvalidArgumentException} is thrown if not supported.
    *
    * @param value the value to append.
    * @return the {@link JsonArray}.
    */
   public JsonArray add(Object value) {
     if (value == this) {
-      throw new IllegalArgumentException("Cannot add self");
+      throw InvalidArgumentException.fromMessage("Cannot add self");
     } else if (value == JsonValue.NULL) {
       addNull();
     } else if (checkType(value)) {
       content.add(value);
     } else {
-      throw new IllegalArgumentException("Unsupported type for JsonArray: " + value.getClass());
+      throw InvalidArgumentException.fromMessage("Unsupported type for JsonArray: " + value.getClass());
     }
     return this;
   }
@@ -412,7 +413,7 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
    */
   public JsonArray add(JsonArray value) {
     if (value == this) {
-      throw new IllegalArgumentException("Cannot add self");
+      throw InvalidArgumentException.fromMessage("Cannot add self");
     }
     content.add(value);
     return this;

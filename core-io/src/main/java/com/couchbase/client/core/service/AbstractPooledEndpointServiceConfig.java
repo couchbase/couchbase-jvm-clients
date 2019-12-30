@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
+
 import java.time.Duration;
 
 import static java.util.Objects.requireNonNull;
@@ -64,7 +66,7 @@ public abstract class AbstractPooledEndpointServiceConfig implements ServiceConf
 
     public SELF minEndpoints(int minEndpoints) {
       if (minEndpoints < 0) {
-        throw new IllegalArgumentException("minEndpoints must be >= 0 but got " + minEndpoints);
+        throw InvalidArgumentException.fromMessage("minEndpoints must be >= 0 but got " + minEndpoints);
       }
       this.minEndpoints = minEndpoints;
       this.maxEndpoints = Math.max(maxEndpoints, minEndpoints);
@@ -73,7 +75,7 @@ public abstract class AbstractPooledEndpointServiceConfig implements ServiceConf
 
     public SELF maxEndpoints(int maxEndpoints) {
       if (maxEndpoints < 1) {
-        throw new IllegalArgumentException("maxEndpoints must be >= 1 but got " + maxEndpoints);
+        throw InvalidArgumentException.fromMessage("maxEndpoints must be >= 1 but got " + maxEndpoints);
       }
       this.maxEndpoints = maxEndpoints;
       this.minEndpoints = Math.min(maxEndpoints, minEndpoints);
@@ -82,7 +84,7 @@ public abstract class AbstractPooledEndpointServiceConfig implements ServiceConf
 
     public SELF idleTime(Duration idleTime) {
       if (idleTime.isNegative()) {
-        throw new IllegalArgumentException("idleTime must be non-negative but got " + idleTime);
+        throw InvalidArgumentException.fromMessage("idleTime must be non-negative but got " + idleTime);
       }
       this.idleTime = requireNonNull(idleTime);
       return self();

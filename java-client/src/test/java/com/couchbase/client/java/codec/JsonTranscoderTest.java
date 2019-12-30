@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.codec;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -117,12 +118,12 @@ class JsonTranscoderTest {
 
   @Test
   void rejectsByteArrayEncode() {
-    assertThrows(IllegalArgumentException.class, () -> JSON_TRANSCODER.encode(new byte[] {}));
+    assertThrows(InvalidArgumentException.class, () -> JSON_TRANSCODER.encode(new byte[] {}));
   }
 
   @Test
   void rejectsByteArrayDecode() {
-    assertThrows(IllegalArgumentException.class, () -> JSON_TRANSCODER.decode(byte[].class, new byte[] {}, CodecFlags.JSON_COMPAT_FLAGS));
+    assertThrows(InvalidArgumentException.class, () -> JSON_TRANSCODER.decode(byte[].class, new byte[] {}, CodecFlags.JSON_COMPAT_FLAGS));
   }
 
 }

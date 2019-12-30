@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.java.search.queries;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.SearchQuery;
@@ -54,7 +55,7 @@ public class DocIdQuery extends SearchQuery {
     @Override
     protected void injectParams(JsonObject input) {
         if (docIds.isEmpty()) {
-            throw new IllegalArgumentException("DocID query needs at least one document ID");
+            throw InvalidArgumentException.fromMessage("DocID query needs at least one document ID");
         }
 
         JsonArray ids = JsonArray.from(docIds);

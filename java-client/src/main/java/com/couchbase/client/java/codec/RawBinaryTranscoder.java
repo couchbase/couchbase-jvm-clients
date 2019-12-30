@@ -17,6 +17,7 @@
 package com.couchbase.client.java.codec;
 
 import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.java.CommonOptions;
 
@@ -29,14 +30,14 @@ public class RawBinaryTranscoder implements Transcoder {
   @Override
   public EncodedValue encode(final Object input) {
     if (input instanceof CommonOptions.BuiltCommonOptions || input instanceof CommonOptions) {
-      throw new IllegalArgumentException("No content provided, cannot " +
+      throw InvalidArgumentException.fromMessage("No content provided, cannot " +
         "encode " + input.getClass().getSimpleName() + " as content!");
     }
 
     if (input instanceof byte[]) {
       return new EncodedValue((byte[]) input, CodecFlags.BINARY_COMPAT_FLAGS);
     } else {
-      throw new IllegalArgumentException("Only byte[] is supported for the RawBinaryTranscoder!");
+      throw InvalidArgumentException.fromMessage("Only byte[] is supported for the RawBinaryTranscoder!");
     }
   }
 

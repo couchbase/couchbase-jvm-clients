@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.util;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
@@ -54,7 +56,7 @@ public class Golang {
      * The internal representation is a signed long number of nanoseconds.
      * This means the longest possible duration is approximately 290 years.
      *
-     * @throws IllegalArgumentException if the input does not match the Go duration string syntax
+     * @throws com.couchbase.client.core.error.InvalidArgumentException if the input does not match the Go duration string syntax
      *                                  or if it describes a duration longer than 2^63−1 nanoseconds.
      */
     public static Duration parseDuration(final String duration) {
@@ -68,7 +70,7 @@ public class Golang {
         try {
             final Matcher validator = durationPattern.matcher(abs);
             if (!validator.matches()) {
-                throw new IllegalArgumentException("Invalid duration.");
+                throw InvalidArgumentException.fromMessage("Invalid duration.");
             }
 
             long resultNanos = 0;
@@ -83,14 +85,14 @@ public class Golang {
             return Duration.ofNanos(negative ? -resultNanos : resultNanos);
 
         } catch (ArithmeticException e) {
-            throw new IllegalArgumentException("Duration \"" + duration + "\" is too long. Maximum duration is 2^63−1 nanoseconds.", e);
+            throw InvalidArgumentException.fromMessage("Duration \"" + duration + "\" is too long. Maximum duration is 2^63−1 nanoseconds.", e);
 
         } catch (Exception e) {
             final String msg = " ; A duration string is a possibly signed sequence of decimal numbers," +
               " each with optional fraction and a unit suffix, such as \"300ms\", \"-1.5h\" or \"2h45m\"." +
               " Valid time units are \"ns\", \"us\" (or \"µs\"), \"ms\", \"s\", \"m\", \"h\"";
 
-            throw new IllegalArgumentException(
+            throw InvalidArgumentException.fromMessage(
               "Failed to parse duration \"" + duration + "\" ; " + e + msg, e);
         }
     }
@@ -104,7 +106,7 @@ public class Golang {
     private static TimeUnit parseTimeUnit(String unit) {
         switch (unit) {
             case "":
-                throw new IllegalArgumentException("Missing time unit.");
+                throw InvalidArgumentException.fromMessage("Missing time unit.");
             case "h":
                 return TimeUnit.HOURS;
             case "m":
@@ -120,7 +122,7 @@ public class Golang {
             case "ns":
                 return TimeUnit.NANOSECONDS;
             default:
-                throw new IllegalArgumentException("Unknown unit \"" + unit + "\".");
+                throw InvalidArgumentException.fromMessage("Unknown unit \"" + unit + "\".");
         }
     }
 }

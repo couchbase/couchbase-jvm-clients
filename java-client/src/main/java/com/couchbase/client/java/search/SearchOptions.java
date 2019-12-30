@@ -17,6 +17,7 @@
 package com.couchbase.client.java.search;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -208,7 +209,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
           ((SearchSort) o).injectParams(params);
           this.sort.add(params);
         } else {
-          throw new IllegalArgumentException("Only String or SearchSort " +
+          throw InvalidArgumentException.fromMessage("Only String or SearchSort " +
             "instances are allowed as sort arguments!");
         }
       }

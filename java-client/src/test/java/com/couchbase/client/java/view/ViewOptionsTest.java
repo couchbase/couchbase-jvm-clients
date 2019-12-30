@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.view;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import org.junit.jupiter.api.Test;
@@ -254,12 +255,12 @@ class ViewOptionsTest {
 
   @Test
   void shouldDisallowNegativeLimit() {
-    assertThrows(IllegalArgumentException.class, () -> viewOptions().limit(-1));
+    assertThrows(InvalidArgumentException.class, () -> viewOptions().limit(-1));
   }
 
   @Test
   void shouldDisallowNegativeSkip() {
-    assertThrows(IllegalArgumentException.class, () -> viewOptions().skip(-1));
+    assertThrows(InvalidArgumentException.class, () -> viewOptions().skip(-1));
   }
 
   @Test

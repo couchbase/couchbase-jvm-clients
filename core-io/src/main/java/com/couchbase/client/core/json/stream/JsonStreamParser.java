@@ -24,6 +24,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -104,7 +105,7 @@ public class JsonStreamParser implements Closeable {
     if (buf.hasArray() && buf.arrayOffset() == 0 && buf.maxCapacity() == Integer.MAX_VALUE) {
       return buf;
     }
-    throw new IllegalArgumentException("Expected uncapped unpooled heap buffer but got " + buf);
+    throw InvalidArgumentException.fromMessage("Expected uncapped unpooled heap buffer but got " + buf);
   }
 
   /**

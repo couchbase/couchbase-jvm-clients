@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.java.search.queries;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.SearchQuery;
 
@@ -70,7 +71,7 @@ public class BooleanQuery extends SearchQuery {
         boolean shouldIsEmpty = should == null || should.childQueries().isEmpty();
 
         if (mustIsEmpty && mustNotIsEmpty && shouldIsEmpty) {
-            throw new IllegalArgumentException("Boolean query needs at least one of must, mustNot and should");
+            throw InvalidArgumentException.fromMessage("Boolean query needs at least one of must, mustNot and should");
         }
 
         if (!mustIsEmpty) {

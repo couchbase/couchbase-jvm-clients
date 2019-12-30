@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
+
 import java.util.Properties;
 import java.util.function.BiConsumer;
 
@@ -43,7 +45,7 @@ public class SystemPropertyPropertyLoader implements PropertyLoader<CoreEnvironm
           setter.set(builder, name.substring(PREFIX.length()), value);
 
         } catch (IllegalArgumentException e) {
-          throw new IllegalArgumentException(
+          throw InvalidArgumentException.fromMessage(
             "Failed to apply system property \"" + name + "\". " + e.getMessage(), e);
         }
       }

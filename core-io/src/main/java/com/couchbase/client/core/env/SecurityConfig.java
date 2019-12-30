@@ -17,6 +17,7 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.InvalidArgumentException;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
@@ -84,11 +85,11 @@ public class SecurityConfig {
 
     if (tlsEnabled) {
       if (trustCertificates != null && trustManagerFactory != null) {
-        throw new IllegalArgumentException("Either trust certificates or a trust manager factory" +
+        throw InvalidArgumentException.fromMessage("Either trust certificates or a trust manager factory" +
           " can be provided, but not both!");
       }
       if ((trustCertificates == null || trustCertificates.isEmpty()) && trustManagerFactory == null) {
-        throw new IllegalArgumentException("Either a trust certificate or a trust manager factory" +
+        throw InvalidArgumentException.fromMessage("Either a trust certificate or a trust manager factory" +
           " must be provided when TLS is enabled!");
       }
 
@@ -155,7 +156,7 @@ public class SecurityConfig {
       try {
         Files.lines(certificatePath, StandardCharsets.UTF_8).forEach(s -> contentBuilder.append(s).append("\n"));
       } catch (IOException ex) {
-        throw new IllegalArgumentException("Could not read trust certificate from file \"" + certificatePath + "\"" , ex);
+        throw InvalidArgumentException.fromMessage("Could not read trust certificate from file \"" + certificatePath + "\"" , ex);
       }
       return trustCertificates(decodeCertificates(Collections.singletonList(contentBuilder.toString())));
     }
@@ -177,7 +178,7 @@ public class SecurityConfig {
     try {
       cf = CertificateFactory.getInstance("X.509");
     } catch (CertificateException e) {
-      throw new IllegalStateException("Could not instantiate X.509 CertificateFactory", e);
+      throw InvalidArgumentException.fromMessage("Could not instantiate X.509 CertificateFactory", e);
     }
 
     return certificates.stream().map(c -> {
@@ -186,7 +187,7 @@ public class SecurityConfig {
           new ByteArrayInputStream(c.getBytes(StandardCharsets.UTF_8))
         );
       } catch (CertificateException e) {
-        throw new IllegalArgumentException("Could not generate certificate from raw input: \"" + c + "\"", e);
+        throw InvalidArgumentException.fromMessage("Could not generate certificate from raw input: \"" + c + "\"", e);
       }
     }).collect(Collectors.toList());
   }

@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.retry.reactor;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -71,7 +72,7 @@ public interface Repeat<T> extends Function<Flux<Long>, Publisher<Long>> {
 	 */
 	static <T> Repeat<T> times(long n) {
 		if (n < 0)
-			throw new IllegalArgumentException("n should be >= 0");
+			throw InvalidArgumentException.fromMessage("n should be >= 0");
 		return DefaultRepeat.create(context -> true, n);
 	}
 

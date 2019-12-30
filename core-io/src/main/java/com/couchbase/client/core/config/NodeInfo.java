@@ -17,6 +17,7 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
@@ -58,7 +59,7 @@ public class NodeInfo {
         @JsonProperty("ports") Map<String, Integer> ports,
         @JsonProperty("alternateAddresses") Map<String, AlternateAddress> alternateAddresses) {
         if (hostname == null) {
-            throw new CouchbaseException(new IllegalArgumentException("NodeInfo hostname cannot be null"));
+            throw InvalidArgumentException.fromMessage("NodeInfo hostname cannot be null");
         }
         this.alternateAddresses = alternateAddresses == null
             ? Collections.emptyMap()
@@ -83,7 +84,7 @@ public class NodeInfo {
     public NodeInfo(String hostname, Map<ServiceType, Integer> direct,
                     Map<ServiceType, Integer> ssl, Map<String, AlternateAddress> alternateAddresses) {
         if (hostname == null) {
-            throw new CouchbaseException(new IllegalArgumentException("NodeInfo hostname cannot be null"));
+            throw InvalidArgumentException.fromMessage("NodeInfo hostname cannot be null");
         }
 
         this.hostname = hostname;

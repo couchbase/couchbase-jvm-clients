@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.Test;
 
@@ -54,7 +55,7 @@ class BuilderPropertySetterTest {
     assertFalse(io.viewCircuitBreakerConfig().enabled());
     assertFalse(io.kvCircuitBreakerConfig().enabled());
 
-    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+    InvalidArgumentException e = assertThrows(InvalidArgumentException.class,
       () -> setter.set(builder, "io.kvCircuitBreaker.enabled", "TRUE"));
 
     assertEquals("Expected a boolean (\"true\", \"false\", \"1\", or \"0\") but got \"TRUE\".",
@@ -69,7 +70,7 @@ class BuilderPropertySetterTest {
     IoConfig io = builder.ioConfig().build();
     assertEquals(76, io.maxHttpConnections());
 
-    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+    InvalidArgumentException e = assertThrows(InvalidArgumentException.class,
       () -> setter.set(builder, "io.maxHttpConnections", "garbage"));
 
     assertEquals("Expected an int but got \"garbage\".",
@@ -92,7 +93,7 @@ class BuilderPropertySetterTest {
   void rejectNegativeDuration() {
     CoreEnvironment.Builder builder = newEnvironmentBuilder();
 
-    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+    InvalidArgumentException e = assertThrows(InvalidArgumentException.class,
       () -> setter.set(builder, "service.queryService.idleTime", "-3s"));
   }
 
@@ -110,10 +111,10 @@ class BuilderPropertySetterTest {
     assertEquals(EnumSet.allOf(ServiceType.class), builder.ioConfig().build().captureTraffic());
 
 
-    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+    InvalidArgumentException e = assertThrows(InvalidArgumentException.class,
       () -> setter.set(builder, "io.captureTraffic", "garbage"));
 
-    assertEquals("Expected a comma-delimited list where each item is one of " + EnumSet.allOf(ServiceType.class) + " but got \"garbage\".",
+    assertEquals("Expected one of " + EnumSet.allOf(ServiceType.class) + " but got \"garbage\"",
       e.getMessage());
   }
 
@@ -126,7 +127,7 @@ class BuilderPropertySetterTest {
     CompressionConfig compression = builder.compressionConfig().build();
     assertEquals(3.14159, compression.minRatio());
 
-    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+    InvalidArgumentException e = assertThrows(InvalidArgumentException.class,
       () -> setter.set(builder, "compression.minRatio", "garbage"));
 
     assertEquals("Expected a double but got \"garbage\".", e.getMessage());
@@ -143,7 +144,7 @@ class BuilderPropertySetterTest {
     assertEquals(Duration.ofSeconds(2), overloads.d);
     assertEquals(singletonMap("luckyNumber", 37), overloads.m);
 
-    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+    InvalidArgumentException e = assertThrows(InvalidArgumentException.class,
       () -> setter.set(overloads, "value", "garbage"));
 
     assertTrue(e.getMessage().startsWith("Found multiple one-arg setters"));

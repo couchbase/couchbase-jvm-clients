@@ -27,6 +27,7 @@ import com.couchbase.client.core.error.DataverseExistsException;
 import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.analytics.GenericAnalyticsRequest;
 import com.couchbase.client.core.msg.analytics.GenericAnalyticsResponse;
@@ -358,7 +359,7 @@ public class AsyncAnalyticsIndexManager {
 
   private static String quote(String s) {
     if (s.contains("`")) {
-      throw new IllegalArgumentException("Value [" + redactMeta(s) + "] may not contain backticks.");
+      throw InvalidArgumentException.fromMessage("Value [" + redactMeta(s) + "] may not contain backticks.");
     }
     return "`" + s + "`";
   }

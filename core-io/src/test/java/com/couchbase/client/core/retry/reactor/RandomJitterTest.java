@@ -16,23 +16,24 @@
 
 package com.couchbase.client.core.retry.reactor;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import java.time.Duration;
 
 class RandomJitterTest {
 
   @Test
   void negativeFactorRejected() {
-    assertThatIllegalArgumentException().isThrownBy(() -> new RandomJitter(-0.1))
+    assertThatExceptionOfType(InvalidArgumentException.class).isThrownBy(() -> new RandomJitter(-0.1))
       .withMessage("random factor must be between 0 and 1 (default 0.5)");
   }
 
   @Test
   void overOneFactorRejected() {
-    assertThatIllegalArgumentException().isThrownBy(() -> new RandomJitter(1.1))
+    assertThatExceptionOfType(InvalidArgumentException.class).isThrownBy(() -> new RandomJitter(1.1))
       .withMessage("random factor must be between 0 and 1 (default 0.5)");
   }
 
@@ -45,7 +46,7 @@ class RandomJitterTest {
     BackoffDelay bd = new BackoffDelay(min, max, delay);
     RandomJitter jitter = new RandomJitter(0.5);
 
-    assertThatIllegalArgumentException().isThrownBy(() -> jitter.apply(bd))
+    assertThatExceptionOfType(InvalidArgumentException.class).isThrownBy(() -> jitter.apply(bd))
       .withMessage("jitter can only be applied on a delay that is >= to min backoff");
   }
 
@@ -58,7 +59,7 @@ class RandomJitterTest {
     BackoffDelay bd = new BackoffDelay(min, max, delay);
     RandomJitter jitter = new RandomJitter(0.5);
 
-    assertThatIllegalArgumentException().isThrownBy(() -> jitter.apply(bd))
+    assertThatExceptionOfType(InvalidArgumentException.class).isThrownBy(() -> jitter.apply(bd))
       .withMessage("jitter can only be applied on a delay that is <= to max backoff");
   }
 

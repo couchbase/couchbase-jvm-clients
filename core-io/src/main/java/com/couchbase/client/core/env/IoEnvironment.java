@@ -24,6 +24,7 @@ import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueue;
 import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.util.concurrent.DefaultThreadFactory;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -178,7 +179,7 @@ public class IoEnvironment {
    */
   private void sanityCheckEventLoop(final Supplier<EventLoopGroup> group) {
     if (!nativeIoEnabled && !(group.get() instanceof NioEventLoopGroup)) {
-      throw new IllegalStateException("Native IO is disabled and the EventLoopGroup is not a NioEventLoopGroup");
+      throw InvalidArgumentException.fromMessage("Native IO is disabled and the EventLoopGroup is not a NioEventLoopGroup");
     }
   }
 
@@ -380,7 +381,7 @@ public class IoEnvironment {
      */
     public Builder eventLoopThreadCount(int eventLoopThreadCount) {
       if (eventLoopThreadCount < 1) {
-        throw new IllegalArgumentException("EventLoopThreadCount cannot be smaller than 1");
+        throw InvalidArgumentException.fromMessage("EventLoopThreadCount cannot be smaller than 1");
       }
       this.eventLoopThreadCount = eventLoopThreadCount;
       return this;

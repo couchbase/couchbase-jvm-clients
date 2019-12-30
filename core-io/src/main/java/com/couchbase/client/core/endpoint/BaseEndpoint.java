@@ -31,6 +31,7 @@ import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollChannelOption;
 import com.couchbase.client.core.deps.io.netty.channel.local.LocalChannel;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SecurityConfig;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.netty.PipelineErrorHandler;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
 import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
@@ -205,7 +206,7 @@ public abstract class BaseEndpoint implements Endpoint {
       // Used for testing!
       return LocalChannel.class;
     } else {
-      throw new IllegalArgumentException("Unknown EventLoopGroup Type: "
+      throw InvalidArgumentException.fromMessage("Unknown EventLoopGroup Type: "
         + eventLoopGroup.getClass().getSimpleName());
     }
   }
