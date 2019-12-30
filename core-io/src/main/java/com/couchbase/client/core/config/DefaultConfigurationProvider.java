@@ -116,6 +116,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   private volatile boolean globalConfigLoadInProgress = false;
   private volatile boolean bucketConfigLoadInProgress = false;
+  private volatile boolean collectionMapRefreshInProgress = false;
 
   /**
    * Stores the current seed nodes used to bootstrap buckets and global configs.
@@ -367,6 +368,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   @Override
   public void refreshCollectionMap(final String bucket, final boolean force) {
     if (!collectionMap.hasBucketMap(bucket) || force) {
+      collectionMapRefreshInProgress = true;
       long start = System.nanoTime();
       GetCollectionManifestRequest request = new GetCollectionManifestRequest(
         core.context().environment().timeoutConfig().kvTimeout(),
@@ -384,6 +386,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             throwable,
             CollectionMapRefreshFailedEvent.Reason.FAILED
           ));
+          collectionMapRefreshInProgress = false;
           return;
         }
 
@@ -406,8 +409,14 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             ));
           }
         }
+        collectionMapRefreshInProgress = false;
       });
     }
+  }
+
+  @Override
+  public boolean collectionMapRefreshInProgress() {
+    return collectionMapRefreshInProgress;
   }
 
   /**

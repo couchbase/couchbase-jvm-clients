@@ -51,7 +51,9 @@ public class WaitUntilReadyHelper {
     return Flux
       .interval(Duration.ofMillis(10))
       .filter(i -> !(core.configurationProvider().bucketConfigLoadInProgress()
-        || core.configurationProvider().globalConfigLoadInProgress()))
+        || core.configurationProvider().globalConfigLoadInProgress()
+        || (!clusterLevel && core.configurationProvider().collectionMapRefreshInProgress()))
+      )
       .take(1)
       .flatMap(aLong -> {
         final Set<ServiceType> servicesToCheck = serviceTypes != null && !serviceTypes.isEmpty()

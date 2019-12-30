@@ -35,6 +35,7 @@ import com.couchbase.client.core.deps.io.netty.util.collection.IntObjectMap;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
+import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.Request;
@@ -193,9 +194,16 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
         if (request.internalSpan() != null) {
           request.internalSpan().startDispatch();
         }
-      }
-      catch(RuntimeException err) {
-        request.response().completeExceptionally(err);
+      } catch (Throwable err) {
+        writtenRequests.remove(opaque);
+        if (err instanceof CollectionNotFoundException) {
+          if (channelContext.collectionsEnabled()
+            && ioContext.core().configurationProvider().collectionMapRefreshInProgress()) {
+            RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.COLLECTION_MAP_REFRESH_IN_PROGRESS);
+            return;
+          }
+        }
+        request.fail(err);
       }
     } else {
       eventBus.publish(new InvalidRequestDetectedEvent(ioContext, ServiceType.KV, msg));

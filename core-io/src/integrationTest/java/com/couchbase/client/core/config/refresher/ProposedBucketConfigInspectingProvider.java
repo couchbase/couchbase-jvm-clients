@@ -94,4 +94,10 @@ public class ProposedBucketConfigInspectingProvider implements ConfigurationProv
   public boolean globalConfigLoadInProgress() {
     return false;
   }
+
+  @Override
+  public boolean collectionMapRefreshInProgress() {
+    return false;
+  }
+
 }

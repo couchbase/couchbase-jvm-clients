@@ -102,6 +102,10 @@ public enum RetryReason {
    */
   GLOBAL_CONFIG_LOAD_IN_PROGRESS(true, false),
   /**
+   * Collection map refresh is in progress.
+   */
+  COLLECTION_MAP_REFRESH_IN_PROGRESS(true, false),
+  /**
    * If the view engine indicates a temporary issue.
    */
   VIEWS_TEMPORARY_FAILURE(true, false),
