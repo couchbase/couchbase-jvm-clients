@@ -77,7 +77,7 @@ pipeline {
                     shWithEcho("mvn install -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
 
                     // This is to speed up iteration during development, skips out some stuff
-                    // shWithEcho("mvn -pl '!scala-client,!scala-implicits,!benchmarks' install -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+                    // shWithEcho("mvn -pl '!scala-client,!scala-implicits' install -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
                 }
 
                 stash includes: 'couchbase-jvm-clients/', name: 'couchbase-jvm-clients', useDefaultExcludes: false
@@ -540,10 +540,10 @@ void testAgainstServer(String serverVersion, boolean QUICK_TEST_MODE, boolean in
 
         // The -B -Dorg... stuff hides download progress messages, very verbose
         if (!QUICK_TEST_MODE) {
-            shWithEcho("mvn -pl '!benchmarks' --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+            shWithEcho("mvn --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
         } else {
             // This is for iteration during development, skips out some steps
-            shWithEcho("mvn -pl '!scala-client,!scala-implicits,!benchmarks' --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+            shWithEcho("mvn -pl '!scala-client,!scala-implicits' --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
 
             // Another iteration option, this runs just one test
             //shWithEcho("mvn package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
