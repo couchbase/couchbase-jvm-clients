@@ -17,15 +17,20 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import reactor.core.publisher.Mono;
 
 import java.util.function.Supplier;
 
+/**
+ * A special supplier which allows the SDK to distinguish passed in suppliers vs. owned ones.
+ * <p>
+ * <strong>DO NOT USE THIS CLASS DIRECTLY!</strong>
+ */
 @Stability.Internal
 public class OwnedSupplier<T> implements Supplier<T> {
 
   private final T value;
 
+  @Stability.Internal
   public OwnedSupplier(final T value) {
     this.value = value;
   }
@@ -33,6 +38,11 @@ public class OwnedSupplier<T> implements Supplier<T> {
   @Override
   public T get() {
     return value;
+  }
+
+  @Override
+  public String toString() {
+    return "OwnedSupplier{" + value + '}';
   }
 
 }
