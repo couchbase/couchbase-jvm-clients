@@ -15,14 +15,6 @@
  */
 
 /**
- * Holds all classes that are needed for the Couchbase Java SDK.
- */
-
-/**
- * Utilities and interfaces for encoding and decoding.
- */
-
-/**
  * Holds classes related to the environment and its configuration.
  */
 package com.couchbase.client.java.env;

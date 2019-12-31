@@ -18,6 +18,9 @@ package com.couchbase.client.java.env;
 
 import com.couchbase.client.core.env.PropertyLoader;
 
+/**
+ * Marker interface for additional properties that can be loaded via the cluster environment builder.
+ */
 public interface ClusterPropertyLoader extends PropertyLoader<ClusterEnvironment.Builder> {
 
 }

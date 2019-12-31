@@ -63,19 +63,6 @@ class EnvironmentSpec {
   }
 
   @Test
-  def io_env() {
-    val env = ClusterEnvironment.builder
-      .ioEnvironment(
-        IoEnvironment()
-          .managerEventLoopGroup(null)
-          .analyticsEventLoopGroup(null)
-      )
-      .build
-      .get
-    env.shutdown()
-  }
-
-  @Test
   def io_config() {
     val env = ClusterEnvironment.builder
       .ioConfig(

@@ -17,6 +17,7 @@
 package com.couchbase.client.java.env;
 
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.codec.DefaultJsonSerializer;
 import com.couchbase.client.java.codec.JacksonJsonSerializer;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -26,24 +27,44 @@ import com.couchbase.client.java.codec.Transcoder;
 import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
 import static com.couchbase.client.core.util.Validators.notNull;
 
+/**
+ * The Environment is the main place in the SDK where configuration and state lives (i.e. I/O pools).
+ * <p>
+ * If not created explicitly by the user, the SDK will create its own one internally that can also be accessed
+ * by the user. If this is the case it does not need to be shut down manually. If the environment is passed in
+ * to the {@link ClusterOptions} though the user is responsible for shutting it down after
+ * the cluster is disconnected!
+ * <p>
+ * Since the {@link ClusterEnvironment} extends the {@link CoreEnvironment}, most options can be found on the parent
+ * class for documentation purposes.
+ */
 public class ClusterEnvironment extends CoreEnvironment {
 
   private final JsonSerializer jsonSerializer;
   private final Transcoder transcoder;
 
-  private ClusterEnvironment(Builder builder) {
+  private ClusterEnvironment(final Builder builder) {
     super(builder);
-    this.jsonSerializer = defaultIfNull(builder.jsonSerializer, () -> newDefaultSerializer());
+    this.jsonSerializer = defaultIfNull(builder.jsonSerializer, this::newDefaultSerializer);
     this.transcoder = defaultIfNull(builder.transcoder, () -> JsonTranscoder.create(jsonSerializer));
   }
 
+  /**
+   * Creates the default JSON serializer, checking if an external jackson is present or not.
+   * <p>
+   * Be very careful not to reference any classes from the optional Jackson library otherwise users will get
+   * NoClassDefFoundError when Jackson is absent.
+   */
   private JsonSerializer newDefaultSerializer() {
-    // Be very careful not to reference any classes from the optional Jackson library
-    // otherwise users will get NoClassDefFoundError when Jackson is absent.
-    return jacksonIsPresent() ? JacksonJsonSerializer.create() : DefaultJsonSerializer.create();
+    return nonShadowedJacksonPresent() ? JacksonJsonSerializer.create() : DefaultJsonSerializer.create();
   }
 
-  private boolean jacksonIsPresent() {
+  /**
+   * Helper method to detect if a non-shadowed jackson object mapper is present.
+   *
+   * @return true if present, false otherwise.
+   */
+  private boolean nonShadowedJacksonPresent() {
     try {
       Class.forName("com.fasterxml.jackson.databind.ObjectMapper", false, getClass().getClassLoader());
       return true;
@@ -57,11 +78,21 @@ public class ClusterEnvironment extends CoreEnvironment {
     return "java";
   }
 
+  /**
+   * Creates a new {@link ClusterEnvironment} with default settings.
+   *
+   * @return a new environment with default settings.
+   */
   public static ClusterEnvironment create() {
     return builder().build();
   }
 
-  public static ClusterEnvironment.Builder builder() {
+  /**
+   * Creates a {@link Builder} to customize the properties of the environment.
+   *
+   * @return the {@link Builder} to customize.
+   */
+  public static Builder builder() {
     return new Builder();
   }
 
@@ -88,7 +119,14 @@ public class ClusterEnvironment extends CoreEnvironment {
       super();
     }
 
+    /**
+     * Immediately loads the properties from the given loader into the environment.
+     *
+     * @param loader the loader to load the properties from.
+     * @return this {@link Builder} for chaining purposes.
+     */
     public Builder load(final ClusterPropertyLoader loader) {
+      notNull(loader, "ClusterPropertyLoader");
       loader.load(this);
       return this;
     }
@@ -103,12 +141,11 @@ public class ClusterEnvironment extends CoreEnvironment {
      * will be used. Otherwise the client will fall back to {@link DefaultJsonSerializer}.
      *
      * @param jsonSerializer the serializer used for all JSON values.
-     * @return this builder for chaining purposes.
+     * @return this {@link Builder} for chaining purposes.
      * @see JacksonJsonSerializer
      */
     public Builder jsonSerializer(final JsonSerializer jsonSerializer) {
-      notNull(jsonSerializer, "Json Serializer");
-      this.jsonSerializer = jsonSerializer;
+      this.jsonSerializer = notNull(jsonSerializer, "JsonSerializer");
       return this;
     }
 
@@ -116,16 +153,21 @@ public class ClusterEnvironment extends CoreEnvironment {
      * Allows to override the default transcoder going to be used for all KV operations.
      *
      * @param transcoder the transcoder that should be used by default.
-     * @return this builder for chaining purposes.
+     * @return this {@link Builder} for chaining purposes.
      */
     public Builder transcoder(final Transcoder transcoder) {
-      notNull(transcoder, "Transcoder");
-      this.transcoder = transcoder;
+      this.transcoder = notNull(transcoder, "Transcoder");
       return this;
     }
 
+    /**
+     * Turns this builder into a real {@link ClusterEnvironment}.
+     *
+     * @return the created cluster environment.
+     */
     public ClusterEnvironment build() {
       return new ClusterEnvironment(this);
     }
+
   }
 }

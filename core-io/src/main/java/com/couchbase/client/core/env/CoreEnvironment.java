@@ -40,18 +40,20 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
+import static com.couchbase.client.core.util.Validators.notNull;
 import static java.util.Objects.requireNonNull;
 
 /**
- * The {@link CoreEnvironment} is an extendable, configurable and stateful
- * config designed to be passed into a core instance.
- *
- * @since 1.0.0
+ * The Environment is the main place in the SDK where configuration and state lives (i.e. I/O pools).
+ * <p>
+ * Note that unless you are using the core directly, you want to consider the child implementations for each
+ * language binding (i.e. the ClusterEnvironment for the java client).
  */
 public class CoreEnvironment {
 
@@ -87,9 +89,6 @@ public class CoreEnvironment {
    */
   private static final RetryStrategy DEFAULT_RETRY_STRATEGY = BestEffortRetryStrategy.INSTANCE;
 
-  /**
-   * Holds the user agent for this client instance.
-   */
   private final UserAgent userAgent;
   private final Supplier<EventBus> eventBus;
   private final Timer timer;
@@ -98,16 +97,12 @@ public class CoreEnvironment {
   private final CompressionConfig compressionConfig;
   private final SecurityConfig securityConfig;
   private final TimeoutConfig timeoutConfig;
-  private final DiagnosticsConfig diagnosticsConfig;
   private final OrphanReporterConfig orphanReporterConfig;
   private final Supplier<RequestTracer> requestTracer;
-
   private final LoggerConfig loggerConfig;
-
   private final RetryStrategy retryStrategy;
   private final Supplier<Scheduler> scheduler;
   private final OrphanReporter orphanReporter;
-
 
   public static CoreEnvironment create() {
     return builder().build();
@@ -140,7 +135,6 @@ public class CoreEnvironment {
     this.timeoutConfig = builder.timeoutConfig.build();
     this.retryStrategy = Optional.ofNullable(builder.retryStrategy).orElse(DEFAULT_RETRY_STRATEGY);
     this.loggerConfig = builder.loggerConfig.build();
-    this.diagnosticsConfig = builder.diagnosticsConfig.build();
     this.orphanReporterConfig = builder.orphanReporterConfig.build();
 
     if (eventBus instanceof OwnedSupplier) {
@@ -260,49 +254,75 @@ public class CoreEnvironment {
     return ioEnvironment;
   }
 
+  /**
+   * Returns the current configuration for all I/O-related settings.
+   */
   public IoConfig ioConfig() {
     return ioConfig;
   }
 
+  /**
+   * Returns the configuration for all default timeouts.
+   */
   public TimeoutConfig timeoutConfig() {
     return timeoutConfig;
   }
 
+  /**
+   * Returns the current security configuration (TLS etc.).
+   */
   public SecurityConfig securityConfig() {
     return securityConfig;
   }
 
+  /**
+   * Returns the current compression configuration.
+   */
   public CompressionConfig compressionConfig() {
     return compressionConfig;
   }
 
+  /**
+   * Returns the current logger configuration.
+   */
   public LoggerConfig loggerConfig() {
     return loggerConfig;
   }
 
+  /**
+   * Returns the scheduler used to schedule reactive, async tasks across the SDK.
+   */
   public Scheduler scheduler() {
     return scheduler.get();
   }
 
+  /**
+   * Returns the request tracer for response time observability.
+   * <p>
+   * Note that this right now is unsupported, volatile API and subject to change!
+   */
   @Stability.Volatile
   public RequestTracer requestTracer() {
     return requestTracer.get();
   }
 
   /**
-   * Holds the timer which is used to schedule tasks and trigger their callback,
-   * for example to time out requests.
-   *
-   * @return the timer used.
+   * Returns the timer used to schedule timeouts and retries amongst other tasks.
    */
   public Timer timer() {
     return timer;
   }
 
+  /**
+   * Returns the retry strategy on this environment.
+   */
   public RetryStrategy retryStrategy() {
     return retryStrategy;
   }
 
+  /**
+   * Returns the orphan reporter on this environment.
+   */
   public OrphanReporter orphanReporter() {
     return orphanReporter;
   }
@@ -414,7 +434,6 @@ public class CoreEnvironment {
     input.put("securityConfig", securityConfig.exportAsMap());
     input.put("timeoutConfig", timeoutConfig.exportAsMap());
     input.put("loggerConfig", loggerConfig.exportAsMap());
-    input.put("diagnosticsConfig", diagnosticsConfig.exportAsMap());
     input.put("orphanReporterConfig", orphanReporterConfig.exportAsMap());
 
     input.put("retryStrategy", retryStrategy.getClass().getSimpleName());
@@ -436,13 +455,11 @@ public class CoreEnvironment {
     private SecurityConfig.Builder securityConfig = SecurityConfig.builder();
     private TimeoutConfig.Builder timeoutConfig = TimeoutConfig.builder();
     private LoggerConfig.Builder loggerConfig = LoggerConfig.builder();
-    private DiagnosticsConfig.Builder diagnosticsConfig = DiagnosticsConfig.builder();
     private OrphanReporterConfig.Builder orphanReporterConfig = OrphanReporterConfig.builder();
     private Supplier<EventBus> eventBus = null;
     private Supplier<Scheduler> scheduler = null;
     private Supplier<RequestTracer> requestTracer = null;
-
-    private RetryStrategy retryStrategy;
+    private RetryStrategy retryStrategy = null;
 
     protected Builder() { }
 
@@ -451,107 +468,234 @@ public class CoreEnvironment {
       return (SELF) this;
     }
 
+    /**
+     * Immediately loads the properties from the given loader into the environment.
+     *
+     * @param loader the loader to load the properties from.
+     * @return this {@link Builder} for chaining purposes.
+     */
     public SELF load(final PropertyLoader<Builder> loader) {
+      notNull(loader, "PropertyLoader");
       loader.load(this);
       return self();
     }
 
+    /**
+     * Allows to customize I/O thread pools.
+     * <p>
+     * Note that the {@link IoEnvironment} holds thread pools and other resources. If you do not want to customize
+     * thread pool sizes, you likely want to look at the {@link IoConfig} instead.
+     *
+     * @param ioEnvironment the IO environment to customize.
+     * @return this {@link Builder} for chaining purposes.
+     */
     public SELF ioEnvironment(final IoEnvironment.Builder ioEnvironment) {
-      this.ioEnvironment = ioEnvironment;
+      this.ioEnvironment = notNull(ioEnvironment, "IoEnvironment");
       return self();
     }
 
+    /**
+     * Allows to customize various I/O-related configuration properties.
+     * <p>
+     * The I/O config is the main way to control how the SDK behaves at the lower levels. It allows to customize
+     * properties such as tcp keepalive, number of connections, circuit breakers, etc.
+     *
+     * @param ioConfig the custom I/O config to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
     public SELF ioConfig(final IoConfig.Builder ioConfig) {
-      this.ioConfig = requireNonNull(ioConfig);
+      this.ioConfig = notNull(ioConfig, "IoConfig");
       return self();
     }
 
-    public SELF orphanReporterConfig(final OrphanReporterConfig.Builder orphanReporterConfig) {
-      this.orphanReporterConfig = orphanReporterConfig;
-      return self();
-    }
-
+    /**
+     * Returns the currently stored config builder.
+     *
+     * @return the current builder.
+     */
     public IoConfig.Builder ioConfig() {
       return ioConfig;
     }
 
-    public SELF compressionConfig(final CompressionConfig.Builder compressionConfig) {
-      this.compressionConfig = requireNonNull(compressionConfig);
+    /**
+     * Allows to customize the behavior of the orphan response reporter.
+     * <p>
+     * The orphan reporter logs all responses that arrived when the requesting side is not listening anymore (usually
+     * because of a timeout). The config can be modified to tune certain properties like the sample size or the emit
+     * interval.
+     *
+     * @param orphanReporterConfig the custom orphan reporter config.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public SELF orphanReporterConfig(final OrphanReporterConfig.Builder orphanReporterConfig) {
+      this.orphanReporterConfig = notNull(orphanReporterConfig, "OrphanReporterConfig");
       return self();
     }
 
+    /**
+     * Returns the currently stored config builder.
+     *
+     * @return the current builder.
+     */
+    public OrphanReporterConfig.Builder orphanReporterConfig() {
+      return orphanReporterConfig;
+    }
+
+
+    /**
+     * Allows to customize document value compression settings.
+     * <p>
+     * Usually this does not need to be tuned, but thresholds can be modified or compression can be disabled
+     * completely if needed.
+     *
+     * @param compressionConfig the custom compression config.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public SELF compressionConfig(final CompressionConfig.Builder compressionConfig) {
+      this.compressionConfig = notNull(compressionConfig, "CompressionConfig");
+      return self();
+    }
+
+    /**
+     * Returns the currently stored config builder.
+     *
+     * @return the current builder.
+     */
     public CompressionConfig.Builder compressionConfig() {
       return compressionConfig;
     }
 
+    /**
+     * Allows to configure everything related to TLS/encrypted connections.
+     * <p>
+     * Note that if you are looking to use client certificate authentication, please refer to the
+     * {@link CertificateAuthenticator} instead.
+     *
+     * @param securityConfig the custom security config to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
     public SELF securityConfig(final SecurityConfig.Builder securityConfig) {
-      this.securityConfig = requireNonNull(securityConfig);
+      this.securityConfig = notNull(securityConfig, "SecurityConfig");
       return self();
     }
 
+    /**
+     * Returns the currently stored config builder.
+     *
+     * @return the current builder.
+     */
     public SecurityConfig.Builder securityConfig() {
       return securityConfig;
     }
 
+    /**
+     * Allows to customize the default timeouts for all operations.
+     * <p>
+     * Each timeout can also be modified on a per-request basis in their respective options blocks.
+     *
+     * @param timeoutConfig the custom timeout config to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
     public SELF timeoutConfig(final TimeoutConfig.Builder timeoutConfig) {
-      this.timeoutConfig = requireNonNull(timeoutConfig);
+      this.timeoutConfig = notNull(timeoutConfig, "TimeoutConfig");
       return self();
     }
 
+    /**
+     * Returns the currently stored config builder.
+     *
+     * @return the current builder.
+     */
     public TimeoutConfig.Builder timeoutConfig() {
       return this.timeoutConfig;
     }
 
+    /**
+     * Allows to provide a custom configuration for the default logger used.
+     * <p>
+     * The default logger attaches itself to the {@link EventBus} on the environment and logs consumed events. This
+     * configuration allows to customize its behavior, diagnostic context etc.
+     *
+     * @param loggerConfig the custom logger config to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
     public SELF loggerConfig(final LoggerConfig.Builder loggerConfig) {
-      this.loggerConfig = requireNonNull(loggerConfig);
+      this.loggerConfig = notNull(loggerConfig, "LoggerConfig");
       return self();
     }
 
+    /**
+     * Returns the currently stored config builder.
+     *
+     * @return the current builder.
+     */
     public LoggerConfig.Builder loggerConfig() {
       return loggerConfig;
     }
 
-    @Stability.Volatile
-    public SELF diagnosticsConfig(final DiagnosticsConfig.Builder diagnosticsConfig) {
-      this.diagnosticsConfig = requireNonNull(diagnosticsConfig);
-      return self();
-    }
-
-    public DiagnosticsConfig.Builder diagnosticsConfig() {
-      return diagnosticsConfig;
-    }
-
+    /**
+     * Customizes the event bus for the SDK.
+     * <p>
+     * The SDK ships with a high-performance implementation of a event bus. Only swap out if you have special needs,
+     * usually what you want instead is to register your own consumer on the event bus instead
+     * ({@link EventBus#subscribe(Consumer)})!
+     *
+     * @param eventBus the event bus to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
     @Stability.Uncommitted
     public SELF eventBus(final EventBus eventBus) {
-      this.eventBus = new ExternalSupplier<>(eventBus);
+      this.eventBus = new ExternalSupplier<>(notNull(eventBus, "EventBus"));
       return self();
     }
 
+    /**
+     * Customizes the default Reactor scheduler used for parallel operations.
+     * <p>
+     * Usually you do not need to modify the scheduler, use with care.
+     *
+     * @param scheduler a custom scheduler to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
     @Stability.Uncommitted
     public SELF scheduler(final Scheduler scheduler) {
-      this.scheduler = new ExternalSupplier<>(scheduler);
+      this.scheduler = new ExternalSupplier<>(notNull(scheduler, "Scheduler"));
       return self();
     }
 
+    /**
+     * Allows to customize the default retry strategy.
+     * <p>
+     * Note that this setting modifies the SDK-wide retry strategy. It can still be overridden on a per-request
+     * basis in the respective options block.
+     *
+     * @param retryStrategy the default retry strategy to use for all operations.
+     * @return this {@link Builder} for chaining purposes.
+     */
     public SELF retryStrategy(final RetryStrategy retryStrategy) {
-      this.retryStrategy = retryStrategy;
+      this.retryStrategy = notNull(retryStrategy, "RetryStrategy");
       return self();
     }
 
     /**
      * Allows to configure a custom tracer implementation.
      * <p>
-     * IMPORTANT: this is a volatile, likely to change API!
+     * <strong>IMPORTANT:</strong> this is a volatile, likely to change API!
      *
      * @param requestTracer the custom request tracer to use.
-     * @return this builder for chaining purposes.
+     * @return this {@link Builder} for chaining purposes.
      */
     @Stability.Volatile
     public SELF requestTracer(final RequestTracer requestTracer) {
-      this.requestTracer = new ExternalSupplier<>(requestTracer);
+      this.requestTracer = new ExternalSupplier<>(notNull(requestTracer, "RequestTracer"));
       return self();
     }
 
+    /**
+     * Turns this builder into a real {@link CoreEnvironment}.
+     *
+     * @return the created core environment.
+     */
     public CoreEnvironment build() {
       return new CoreEnvironment(this);
     }
