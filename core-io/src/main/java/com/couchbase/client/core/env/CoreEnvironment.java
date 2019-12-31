@@ -26,6 +26,8 @@ import com.couchbase.client.core.cnc.OrphanReporter;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.events.config.HighIdleHttpConnectionTimeoutConfiguredEvent;
 import com.couchbase.client.core.cnc.tracing.ThresholdRequestTracer;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
 import reactor.core.publisher.Mono;
@@ -58,7 +60,10 @@ import static java.util.Objects.requireNonNull;
 public class CoreEnvironment {
 
   private static final String CORE_AGENT_TITLE = "java-core";
-
+  /**
+   * Default maximum requests being queued in retry before performing backpressure cancellations.
+   */
+  public static final long DEFAULT_MAX_NUM_REQUESTS_IN_RETRY = 32768;
   private static final Map<String, Attributes> MANIFEST_INFOS = new ConcurrentHashMap<>();
 
   static {
@@ -103,6 +108,7 @@ public class CoreEnvironment {
   private final RetryStrategy retryStrategy;
   private final Supplier<Scheduler> scheduler;
   private final OrphanReporter orphanReporter;
+  private final long maxNumRequestsInRetry;
 
   public static CoreEnvironment create() {
     return builder().build();
@@ -117,10 +123,11 @@ public class CoreEnvironment {
     new SystemPropertyPropertyLoader().load(builder);
 
     this.userAgent = defaultUserAgent();
+    this.maxNumRequestsInRetry = builder.maxNumRequestsInRetry;
     this.eventBus = Optional
       .ofNullable(builder.eventBus)
       .orElse(new OwnedSupplier<>(DefaultEventBus.create()));
-    this.timer = Timer.createAndStart();
+    this.timer = Timer.createAndStart(maxNumRequestsInRetry);
     this.scheduler = Optional
       .ofNullable(builder.scheduler)
       .orElse(new OwnedSupplier<>(
@@ -427,6 +434,7 @@ public class CoreEnvironment {
     input.put("coreGitHash", coreHash().orElse(null));
 
     input.put("userAgent", userAgent.formattedLong());
+    input.put("maxNumRequestsInRetry", maxNumRequestsInRetry);
 
     input.put("ioEnvironment", ioEnvironment.exportAsMap());
     input.put("ioConfig", ioConfig.exportAsMap());
@@ -460,12 +468,31 @@ public class CoreEnvironment {
     private Supplier<Scheduler> scheduler = null;
     private Supplier<RequestTracer> requestTracer = null;
     private RetryStrategy retryStrategy = null;
+    private long maxNumRequestsInRetry = DEFAULT_MAX_NUM_REQUESTS_IN_RETRY;
 
     protected Builder() { }
 
     @SuppressWarnings("unchecked")
     protected SELF self() {
       return (SELF) this;
+    }
+
+    /**
+     * Allows to customize the maximum number of requests allowed in the retry timer.
+     * <p>
+     * If the {@link #DEFAULT_MAX_NUM_REQUESTS_IN_RETRY} is reached, each request that would be queued for retry is
+     * instead cancelled with a {@link CancellationReason#TOO_MANY_REQUESTS_IN_RETRY}. This acts as a form of
+     * safety net and backpressure.
+     *
+     * @param maxNumRequestsInRetry the maximum number of requests outstanding for retry.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public SELF maxNumRequestsInRetry(final long maxNumRequestsInRetry) {
+      if (maxNumRequestsInRetry < 0) {
+        throw InvalidArgumentException.fromMessage("maxNumRequestsInRetry cannot be negative");
+      }
+      this.maxNumRequestsInRetry = maxNumRequestsInRetry;
+      return self();
     }
 
     /**

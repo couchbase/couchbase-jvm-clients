@@ -26,6 +26,7 @@ import com.couchbase.client.core.deps.io.netty.util.concurrent.DefaultThreadFact
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * The {@link Timer} acts as the main timing facility for various operations, for
@@ -56,29 +57,44 @@ public class Timer {
   private volatile boolean stopped = false;
 
   /**
+   * Number of requests currently outstanding for retry.
+   */
+  private AtomicLong outstandingForRetry = new AtomicLong(0);
+
+  /**
+   * The maximum number of outstanding operations until backpressure kicks in.
+   */
+  private final long maxNumRequestsInRetry;
+
+  /**
    * Creates a new {@link Timer} with default values.
    *
+   * @param maxNumRequestsInRetry the maximum number of requests in retry allowed before backpressure hits.
    * @return the created timer.
    */
-  public static Timer create() {
-    return new Timer();
+  public static Timer create(final long maxNumRequestsInRetry) {
+    return new Timer(maxNumRequestsInRetry);
   }
 
   /**
    * Creates and starts a timer with default values.
    *
+   * @param maxNumRequestsInRetry the maximum number of requests in retry allowed before backpressure hits.
    * @return the created and started timer.
    */
-  public static Timer createAndStart() {
-    Timer timer = create();
+  public static Timer createAndStart(final long maxNumRequestsInRetry) {
+    Timer timer = create(maxNumRequestsInRetry);
     timer.start();
     return timer;
   }
 
   /**
    * Internal timer constructor.
+   *
+   * @param maxNumRequestsInRetry the maximum number of requests in retry allowed before backpressure hits.
    */
-  private Timer() {
+  private Timer(final long maxNumRequestsInRetry) {
+    this.maxNumRequestsInRetry = maxNumRequestsInRetry;
     wheelTimer = new HashedWheelTimer(
       new DefaultThreadFactory("cb-timer", true),
       DEFAULT_TICK_DURATION.toMillis(),
@@ -87,9 +103,39 @@ public class Timer {
   }
 
   /**
+   * Schedules a request to be retried after the given duration.
+   * <p>
+   * Note that this operation performs backpressure handling for the SDK by doing account towards a maximum outstanding
+   * request limit!
+   *
+   * @param core the core to eventually retry against.
+   * @param request the request to retry.
+   * @param runAfter the duration after which to retry.
+   */
+  public void scheduleForRetry(final Core core, final Request<? extends Response> request, final Duration runAfter) {
+    if (stopped) {
+      request.cancel(CancellationReason.SHUTDOWN);
+      return;
+    }
+
+    if (outstandingForRetry.get() >= maxNumRequestsInRetry) {
+      request.cancel(CancellationReason.TOO_MANY_REQUESTS_IN_RETRY);
+      return;
+    }
+
+    outstandingForRetry.incrementAndGet();
+    schedule(() -> {
+      outstandingForRetry.decrementAndGet();
+      if (!request.completed()) {
+        core.send(request, false);
+      }
+    }, runAfter);
+  }
+
+  /**
    * Schedule an arbitrary task for this timer.
    */
-  public Timeout schedule(Runnable callback, Duration runAfter) {
+  public Timeout schedule(final Runnable callback, final Duration runAfter) {
     if (stopped) {
       return null;
     }
@@ -130,4 +176,21 @@ public class Timer {
     wheelTimer.stop();
   }
 
+
+  /**
+   * Returns the number of requests currently outstanding for retry.
+   */
+  public long outstandingForRetry() {
+    return outstandingForRetry.get();
+  }
+
+  @Override
+  public String toString() {
+    return "Timer{" +
+      "wheelTimer=" + wheelTimer +
+      ", stopped=" + stopped +
+      ", outstandingForRetry=" + outstandingForRetry +
+      ", maxNumRequestsInRetry=" + maxNumRequestsInRetry +
+      '}';
+  }
 }

@@ -95,7 +95,7 @@ class RetryOrchestratorTest {
   @Test
   @SuppressWarnings({"unchecked"})
   void retryWithDelay() {
-    Timer timer = Timer.createAndStart();
+    Timer timer = Timer.createAndStart(CoreEnvironment.DEFAULT_MAX_NUM_REQUESTS_IN_RETRY);
 
     RetryStrategy retryStrategy = mock(RetryStrategy.class);
     when(retryStrategy.shouldRetry(any(Request.class), any(RetryReason.class))).thenReturn(
@@ -142,7 +142,7 @@ class RetryOrchestratorTest {
   @Test
   @SuppressWarnings({"unchecked"})
   void capsRetryDelay() {
-    Timer timer = Timer.createAndStart();
+    Timer timer = Timer.createAndStart(CoreEnvironment.DEFAULT_MAX_NUM_REQUESTS_IN_RETRY);
 
     RetryStrategy retryStrategy = mock(RetryStrategy.class);
     when(retryStrategy.shouldRetry(any(Request.class), any(RetryReason.class))).thenReturn(

@@ -138,14 +138,7 @@ public class RetryOrchestrator {
       new RequestRetryScheduledEvent(duration, request.context(), request.getClass(), reason)
     );
     request.context().incrementRetryAttempts(duration, reason);
-    ctx.environment().timer().schedule(
-      () -> {
-        if (!request.completed()) {
-          ctx.core().send(request, false);
-        }
-      },
-      duration
-    );
+    ctx.environment().timer().scheduleForRetry(ctx.core(), request, duration);
   }
 
 }

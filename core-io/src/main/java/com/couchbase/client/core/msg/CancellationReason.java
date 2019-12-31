@@ -62,6 +62,12 @@ public class CancellationReason {
   public static final CancellationReason OTHER =
     new CancellationReason("OTHER", null);
 
+  /**
+   * If too many outstanding requests are waiting to be completed. This is the SDK backpressure signal.
+   */
+  public static final CancellationReason TOO_MANY_REQUESTS_IN_RETRY =
+    new CancellationReason("TOO_MANY_REQUESTS_IN_RETRY", null);
+
   private final String identifier;
   private final Object innerReason;
 
