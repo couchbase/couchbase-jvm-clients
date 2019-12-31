@@ -96,6 +96,17 @@
                         <goals>
                             <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
+                                    <resources>
+                                        <resource>META-INF/services/com.fasterxml.jackson.core.JsonFactory</resource>
+                                        <resource>META-INF/services/com.fasterxml.jackson.core.ObjectCodec</resource>
+                                        <resource>META-INF/services/com.fasterxml.jackson.databind.Module</resource>
+                                    </resources>
+                                </transformer>
+                            </transformers>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -182,6 +193,7 @@
                     <archive>
                         <manifestEntries>
                             <Build-Time>${maven.build.timestamp}</Build-Time>
+                            <Automatic-Module-Name>com.couchbase.client.core</Automatic-Module-Name>
                         </manifestEntries>
                         <manifestSections>
                             <manifestSection>
