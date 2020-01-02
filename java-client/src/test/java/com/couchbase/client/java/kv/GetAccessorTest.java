@@ -95,7 +95,7 @@ class GetAccessorTest {
         )
       );
 
-    assertEquals(expected, JsonObject.fromJson(result));
+     assertEquals(expected, JsonObject.fromJson(result));
   }
 
   /**

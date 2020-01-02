@@ -4,7 +4,7 @@ import com.couchbase.client.scala.codec.RawJsonTranscoder
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.test.ClusterAwareIntegrationTest
+import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
@@ -136,6 +136,13 @@ class ProjectionsSpec extends ScalaIntegrationTest {
   def attributesDimensionsHeight() {
     val json = wrap(Seq("attributes.dimensions"))
     assert(json.obj("attributes").obj("dimensions").num("height") == 67)
+  }
+
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def attributesHobbiesDetailsLocation() {
+    val json = wrap(Seq("attributes.hobbies[1].details.location"))
+    assert(json.obj("attributes").arr("hobbies").obj(0).obj("details").obj("location").numLong("lat") == 49)
   }
 
 }

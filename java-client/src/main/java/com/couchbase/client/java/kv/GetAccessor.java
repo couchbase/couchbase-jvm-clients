@@ -25,7 +25,10 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.*;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.java.codec.Transcoder;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.projections.ProjectionsApplier;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -155,7 +158,7 @@ public enum GetAccessor {
    * @return the document, encoded as a byte array.
    */
   static byte[] projectRecursive(final SubdocGetResponse response) {
-    ObjectNode root = Mapper.createObjectNode();
+    JsonObject out = JsonObject.create();
 
     for (SubDocumentField value : response.values()) {
       if (value == null
@@ -165,30 +168,10 @@ public enum GetAccessor {
         continue;
       }
 
-      String path = value.path();
-      if (!path.contains(".")) {
-        root.set(path, Mapper.decodeIntoTree(value.value()));
-        continue;
-      }
-
-      String[] pathComponents = path.split("\\.");
-      ObjectNode parent = root;
-      for (int i = 0; i < pathComponents.length - 1; i++) {
-        String component = pathComponents[i];
-        ObjectNode maybe = (ObjectNode) parent.get(component);
-        if (maybe == null) {
-          maybe = Mapper.createObjectNode();
-          parent.set(component, maybe);
-        }
-        parent = maybe;
-      }
-      parent.set(
-        pathComponents[pathComponents.length-1],
-        Mapper.decodeIntoTree(value.value())
-      );
+      ProjectionsApplier.parse(out, value.path(), value.value());
     }
 
-    return Mapper.encodeAsBytes(root);
+    return out.toBytes();
   }
 
 }

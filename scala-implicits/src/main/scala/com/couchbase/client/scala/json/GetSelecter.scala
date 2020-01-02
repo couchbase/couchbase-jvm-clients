@@ -1,6 +1,22 @@
+/*
+ * Copyright (c) 2020 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.couchbase.client.scala.json
 
 import com.couchbase.client.core.error.InvalidArgumentException
+import com.couchbase.client.core.projections.{PathArray, PathElement, PathObjectOrField}
 
 import scala.annotation.tailrec
 import scala.language.dynamics
@@ -31,10 +47,10 @@ case class GetSelecter(
 ) extends Dynamic {
   private val mapped = in.left.map(_.safe).right.map(_.safe)
 
-  def selectDynamic(name: String): GetSelecter = GetSelecter(in, path :+ PathObjectOrField(name))
+  def selectDynamic(name: String): GetSelecter = GetSelecter(in, path :+ new PathObjectOrField(name))
 
   def applyDynamic(name: String)(index: Int): GetSelecter =
-    GetSelecter(in, path :+ PathArray(name, index))
+    GetSelecter(in, path :+ new PathArray(name, index))
 
   private def pathStr = path.toString()
 
@@ -146,7 +162,8 @@ private[scala] object GetSelecter {
 
       case x :: Nil =>
         x match {
-          case PathObjectOrField(name) =>
+          case v: PathObjectOrField =>
+            val name = v.str()
             cursor match {
               case Left(obj) =>
                 obj.get(name) match {
@@ -158,7 +175,9 @@ private[scala] object GetSelecter {
                 Failure(expectedObjectButFoundArray(name))
             }
 
-          case PathArray(name, idx) =>
+          case v: PathArray =>
+            val name = v.str()
+            val idx = v.idx()
             cursor match {
               case Left(obj) =>
                 obj.arr(name) match {
@@ -186,7 +205,8 @@ private[scala] object GetSelecter {
 
       case x :: xs =>
         x match {
-          case PathObjectOrField(name) =>
+          case v: PathObjectOrField =>
+            val name = v.str()
             cursor match {
               case Left(obj) =>
                 val inObj = obj.get(name)
@@ -218,7 +238,9 @@ private[scala] object GetSelecter {
                 Failure(expectedObjectButFoundArray(name))
             }
 
-          case PathArray(name, idx) =>
+          case v: PathArray =>
+            val name = v.str()
+            val idx = v.idx()
             cursor match {
               case Left(obj) =>
                 obj.arr(name) match {
