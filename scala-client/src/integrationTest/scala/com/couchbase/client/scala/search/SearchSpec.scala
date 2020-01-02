@@ -32,6 +32,7 @@ import scala.util.{Failure, Success}
 
 @IgnoreWhen(missesCapabilities = Array(Capabilities.SEARCH))
 @TestInstance(Lifecycle.PER_CLASS)
+@Disabled // SCBC-156
 class SearchSpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster  = _
