@@ -36,7 +36,7 @@ public class PartitionSelectionStrategy implements EndpointSelectionStrategy {
 
     short partition = ((KeyValueRequest<?>) request).partition();
     Endpoint endpoint = size == 1 ? endpoints.get(0) : endpoints.get(partition % size);
-    if (endpoint != null && endpoint.state() == EndpointState.CONNECTED && endpoint.free()) {
+    if (endpoint != null && endpoint.state() == EndpointState.CONNECTED && endpoint.freeToWrite()) {
       return endpoint;
     }
 

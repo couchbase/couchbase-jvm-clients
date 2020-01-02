@@ -187,7 +187,7 @@ abstract class PooledService implements Service {
       }
 
       long actualIdleTime = System.nanoTime() - endpoint.lastResponseReceived();
-      if (endpoint.free() && actualIdleTime >= serviceConfig.idleTime().toNanos()) {
+      if (endpoint.outstandingRequests() == 0 && actualIdleTime >= serviceConfig.idleTime().toNanos()) {
         this.endpoints.remove(endpoint);
         endpointStates.deregister(endpoint);
         endpoint.disconnect();

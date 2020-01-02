@@ -40,7 +40,7 @@ public class RoundRobinSelectionStrategy implements EndpointSelectionStrategy {
     //attempt to find a CONNECTED endpoint at the offset, or try following ones
     for (int i = offset; i < endpointSize; i++) {
       Endpoint endpoint = endpoints.get(i);
-      if (endpoint.state() == EndpointState.CONNECTED && endpoint.free()) {
+      if (endpoint.state() == EndpointState.CONNECTED && endpoint.freeToWrite()) {
         return endpoint;
       }
     }
@@ -49,7 +49,7 @@ public class RoundRobinSelectionStrategy implements EndpointSelectionStrategy {
     //wrap around and try from the beginning of the array
     for (int i = 0; i < offset; i++) {
       Endpoint endpoint = endpoints.get(i);
-      if (endpoint.state() == EndpointState.CONNECTED && endpoint.free()) {
+      if (endpoint.state() == EndpointState.CONNECTED && endpoint.freeToWrite()) {
         return endpoint;
       }
     }

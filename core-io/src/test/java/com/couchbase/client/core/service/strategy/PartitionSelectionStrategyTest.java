@@ -47,9 +47,9 @@ class PartitionSelectionStrategyTest {
     when(endpoint1.state()).thenReturn(EndpointState.CONNECTED);
     when(endpoint2.state()).thenReturn(EndpointState.CONNECTED);
     when(endpoint3.state()).thenReturn(EndpointState.CONNECTED);
-    when(endpoint1.free()).thenReturn(true);
-    when(endpoint2.free()).thenReturn(true);
-    when(endpoint3.free()).thenReturn(true);
+    when(endpoint1.freeToWrite()).thenReturn(true);
+    when(endpoint2.freeToWrite()).thenReturn(true);
+    when(endpoint3.freeToWrite()).thenReturn(true);
 
     List<Endpoint> endpoints = Arrays.asList(endpoint1, endpoint2, endpoint3);
 
@@ -74,9 +74,9 @@ class PartitionSelectionStrategyTest {
     when(endpoint1.state()).thenReturn(EndpointState.DISCONNECTED);
     when(endpoint2.state()).thenReturn(EndpointState.CONNECTED);
     when(endpoint3.state()).thenReturn(EndpointState.CONNECTED);
-    when(endpoint1.free()).thenReturn(true);
-    when(endpoint2.free()).thenReturn(true);
-    when(endpoint3.free()).thenReturn(true);
+    when(endpoint1.freeToWrite()).thenReturn(true);
+    when(endpoint2.freeToWrite()).thenReturn(true);
+    when(endpoint3.freeToWrite()).thenReturn(true);
 
     List<Endpoint> endpoints = Arrays.asList(endpoint1, endpoint2, endpoint3);
 

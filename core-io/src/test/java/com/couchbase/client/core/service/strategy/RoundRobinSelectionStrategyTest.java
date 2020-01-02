@@ -41,15 +41,15 @@ class RoundRobinSelectionStrategyTest {
     Endpoint d = Mockito.mock(Endpoint.class);
     Endpoint e = Mockito.mock(Endpoint.class);
     when(a.state()).thenReturn(EndpointState.CONNECTED);
-    when(a.free()).thenReturn(true);
+    when(a.freeToWrite()).thenReturn(true);
     when(b.state()).thenReturn(EndpointState.CONNECTED);
-    when(b.free()).thenReturn(true);
+    when(b.freeToWrite()).thenReturn(true);
     when(c.state()).thenReturn(EndpointState.CONNECTED);
-    when(c.free()).thenReturn(true);
+    when(c.freeToWrite()).thenReturn(true);
     when(d.state()).thenReturn(EndpointState.CONNECTED);
-    when(d.free()).thenReturn(true);
+    when(d.freeToWrite()).thenReturn(true);
     when(e.state()).thenReturn(EndpointState.CONNECTED);
-    when(e.free()).thenReturn(true);
+    when(e.freeToWrite()).thenReturn(true);
     List<Endpoint> endpoints = Arrays.asList(a, b, c, d, e);
     Request request = Mockito.mock(Request.class);
 

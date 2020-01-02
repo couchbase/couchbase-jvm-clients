@@ -488,8 +488,13 @@ public abstract class BaseEndpoint implements Endpoint {
   }
 
   @Override
-  public boolean free() {
+  public boolean freeToWrite() {
     return pipelined || outstandingRequests.get() == 0;
+  }
+
+  @Override
+  public long outstandingRequests() {
+    return outstandingRequests.get();
   }
 
   @Override
@@ -529,7 +534,7 @@ public abstract class BaseEndpoint implements Endpoint {
       && channel.isActive()
       && channel.isWritable()
       && circuitBreaker.allowsRequest()
-      && free();
+      && freeToWrite();
   }
 
   @Override

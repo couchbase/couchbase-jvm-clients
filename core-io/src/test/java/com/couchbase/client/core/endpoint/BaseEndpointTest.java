@@ -57,6 +57,7 @@ import java.util.function.Supplier;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -353,9 +354,9 @@ class BaseEndpointTest {
     when(request.response()).thenReturn(response);
     when(request.context()).thenReturn(new RequestContext(ctx, request));
 
-    assertTrue(endpoint.free());
+    assertEquals(0, endpoint.outstandingRequests());
     endpoint.send(request);
-    assertFalse(endpoint.free());
+    assertEquals(1, endpoint.outstandingRequests());
 
     assertEquals(request, channel.readOutbound());
 
@@ -363,7 +364,7 @@ class BaseEndpointTest {
     response.complete(mock(Response.class));
     endpoint.markRequestCompletion();
     assertTrue(endpoint.lastResponseReceived() > 0);
-    assertTrue(endpoint.free());
+    assertEquals(0, endpoint.outstandingRequests());
   }
 
   /**

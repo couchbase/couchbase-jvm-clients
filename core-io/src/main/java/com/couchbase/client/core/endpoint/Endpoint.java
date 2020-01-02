@@ -61,11 +61,18 @@ public interface Endpoint extends Stateful<EndpointState> {
   <R extends Request<? extends Response>> void send(R request);
 
   /**
-   * If this endpoint has currently one or more requests outstanding.
+   * If new requests can be written to this endpoint
    *
    * @return true if free, false otherwise.
    */
-  boolean free();
+  boolean freeToWrite();
+
+  /**
+   * If this endpoint has one or more outstanding requests.
+   *
+   * @return the number of outstanding requests
+   */
+  long outstandingRequests();
 
   /**
    * Holds the timestamp of the last response received (or 0 if no request ever sent).
