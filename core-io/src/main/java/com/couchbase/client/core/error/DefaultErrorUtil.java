@@ -52,6 +52,7 @@ public class DefaultErrorUtil {
             case SYNC_WRITE_RE_COMMIT_IN_PROGRESS: return new DurableWriteReCommitInProgressException(ctx);
             case TEMPORARY_FAILURE: return new TemporaryFailureException(ctx);
             case TOO_BIG: return new ValueTooLargeException(ctx);
+            case INTERNAL_SERVER_ERROR: return new InternalServerFailureException(ctx);
             default: return new CouchbaseException(
               request.getClass().getSimpleName() + " failed with unexpected status code",
               ctx
