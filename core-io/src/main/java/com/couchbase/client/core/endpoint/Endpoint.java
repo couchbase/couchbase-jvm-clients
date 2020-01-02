@@ -85,4 +85,14 @@ public interface Endpoint extends Stateful<EndpointState> {
    * Returns diagnostics information for this endpoint.
    */
   EndpointDiagnostics diagnostics();
+
+  /**
+   * On this endpoint {@link #disconnect()} has been called on.
+   * <p>
+   * This is different from an endpoint just being disconnected on the remote side and continuing reconnect
+   * attempts. Once this returns true, it is never coming back.
+   *
+   * @return true if {@link #disconnect()} has been called.
+   */
+  boolean receivedDisconnectSignal();
 }

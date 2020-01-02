@@ -42,6 +42,7 @@ public class IoConfig {
   public static final int DEFAULT_NUM_KV_CONNECTIONS = 1;
   public static final int DEFAULT_MAX_HTTP_CONNECTIONS = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS;
   public static final Duration DEFAULT_IDLE_HTTP_CONNECTION_TIMEOUT = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME;
+  public static final Duration DEFAULT_CONFIG_IDLE_REDIAL_TIMEOUT = Duration.ofMinutes(5);
 
   private final boolean mutationTokensEnabled;
   private final Duration configPollInterval;
@@ -59,6 +60,7 @@ public class IoConfig {
   private final int numKvConnections;
   private final int maxHttpConnections;
   private final Duration idleHttpConnectionTimeout;
+  private final Duration configIdleRedialTimeout;
 
   private IoConfig(Builder builder) {
     mutationTokensEnabled = builder.mutationTokensEnabled;
@@ -81,6 +83,7 @@ public class IoConfig {
     numKvConnections = builder.numKvConnections;
     maxHttpConnections = builder.maxHttpConnections;
     idleHttpConnectionTimeout = builder.idleHttpConnectionTimeout;
+    configIdleRedialTimeout = builder.configIdleRedialTimeout;
   }
 
   public static IoConfig create() {
@@ -155,6 +158,10 @@ public class IoConfig {
     return builder().idleHttpConnectionTimeout(idleHttpConnectionTimeout);
   }
 
+  public static Builder configIdleRedialTimeout(Duration configIdleRedialTimeout) {
+    return builder().configIdleRedialTimeout(configIdleRedialTimeout);
+  }
+
   public CircuitBreakerConfig kvCircuitBreakerConfig() {
     return kvCircuitBreakerConfig;
   }
@@ -219,6 +226,10 @@ public class IoConfig {
     return idleHttpConnectionTimeout;
   }
 
+  public Duration configIdleRedialTimeout() {
+    return configIdleRedialTimeout;
+  }
+
   /**
    * Returns this config as a map so it can be exported into i.e. JSON for display.
    */
@@ -241,6 +252,7 @@ public class IoConfig {
     export.put("numKvConnections", numKvConnections);
     export.put("maxHttpConnections", maxHttpConnections);
     export.put("idleHttpConnectionTimeoutMs", idleHttpConnectionTimeout.toMillis());
+    export.put("configIdleRedialTimeoutMs", configIdleRedialTimeout.toMillis());
     return export;
   }
 
@@ -262,6 +274,7 @@ public class IoConfig {
     private int numKvConnections = DEFAULT_NUM_KV_CONNECTIONS;
     private int maxHttpConnections = DEFAULT_MAX_HTTP_CONNECTIONS;
     private Duration idleHttpConnectionTimeout = DEFAULT_IDLE_HTTP_CONNECTION_TIMEOUT;
+    private Duration configIdleRedialTimeout = DEFAULT_CONFIG_IDLE_REDIAL_TIMEOUT;
 
     public IoConfig build() {
       return new IoConfig(this);
@@ -415,6 +428,11 @@ public class IoConfig {
 
     public Builder idleHttpConnectionTimeout(Duration idleHttpConnectionTimeout) {
       this.idleHttpConnectionTimeout = idleHttpConnectionTimeout;
+      return this;
+    }
+
+    public Builder configIdleRedialTimeout(final Duration configIdleRedialTimeout) {
+      this.configIdleRedialTimeout = configIdleRedialTimeout;
       return this;
     }
   }

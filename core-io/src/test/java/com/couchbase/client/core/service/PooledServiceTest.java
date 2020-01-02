@@ -39,6 +39,7 @@ import reactor.core.publisher.DirectProcessor;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -435,6 +436,61 @@ class PooledServiceTest {
 
     verify(mock1, times(1)).disconnect();
     verify(mock2, never()).disconnect();
+  }
+
+  /**
+   * Double check that terminated / disconnected connections (by the sdk) are also double checked and
+   * cleaned up to prevent leaking.
+   */
+  @Test
+  void cleansDisconnectedEndpoints() {
+    int minEndpoints = 0;
+    long now = System.nanoTime();
+
+    Endpoint mock1 = mock(Endpoint.class);
+    when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock1.states()).thenReturn(DirectProcessor.create());
+    when(mock1.outstandingRequests()).thenReturn(1L);
+    when(mock1.lastResponseReceived()).thenReturn(now);
+
+    Endpoint mock2 = mock(Endpoint.class);
+    when(mock2.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock2.states()).thenReturn(DirectProcessor.create());
+    when(mock2.outstandingRequests()).thenReturn(1L);
+    when(mock2.lastResponseReceived()).thenReturn(now);
+
+    final List<Endpoint> mocks = Arrays.asList(mock1, mock2);
+    final AtomicInteger invocation = new AtomicInteger();
+    MockedService service = new MockedService(
+      new MockedServiceConfig(minEndpoints, 2, Duration.ofMillis(500), false),
+      () -> mocks.get(invocation.getAndIncrement()),
+      new FirstEndpointSelectionStrategy()
+    );
+    service.connect();
+
+    assertTrue(service.trackedEndpoints().isEmpty());
+
+    NoopRequest request1 = new NoopRequest(
+      Duration.ofSeconds(1),
+      serviceContext,
+      BestEffortRetryStrategy.INSTANCE,
+      CollectionIdentifier.fromDefault("bucket")
+    );
+    service.send(request1);
+    NoopRequest request2 = new NoopRequest(
+      Duration.ofSeconds(1),
+      serviceContext,
+      BestEffortRetryStrategy.INSTANCE,
+      CollectionIdentifier.fromDefault("bucket")
+    );
+    service.send(request2);
+
+    waitUntilCondition(() -> service.trackedEndpoints.size() == 2);
+
+    when(mock1.receivedDisconnectSignal()).thenReturn(true);
+    when(mock2.receivedDisconnectSignal()).thenReturn(true);
+
+    waitUntilCondition(() -> service.state() == ServiceState.IDLE);
   }
 
   class MockedService extends PooledService {

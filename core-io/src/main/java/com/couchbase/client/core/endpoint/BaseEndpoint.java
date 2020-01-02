@@ -391,6 +391,11 @@ public abstract class BaseEndpoint implements Endpoint {
     }
   }
 
+  @Override
+  public boolean receivedDisconnectSignal() {
+    return disconnect.get();
+  }
+
   /**
    * This method is called from inside the channel to tell the endpoint hat it got inactive.
    *

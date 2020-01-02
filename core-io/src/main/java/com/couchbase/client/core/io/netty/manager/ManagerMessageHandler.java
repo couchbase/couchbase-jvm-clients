@@ -19,6 +19,7 @@ package com.couchbase.client.core.io.netty.manager;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
+import com.couchbase.client.core.cnc.events.io.IdleStreamingEndpointClosedEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -30,6 +31,8 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpContent;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.LastHttpContent;
+import com.couchbase.client.core.deps.io.netty.handler.timeout.IdleStateEvent;
+import com.couchbase.client.core.deps.io.netty.handler.timeout.IdleStateHandler;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.io.IoContext;
@@ -43,6 +46,7 @@ import com.couchbase.client.core.service.ServiceType;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
 
@@ -143,6 +147,12 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
       if (isStreamingConfigRequest()) {
         streamingResponse = (BucketConfigStreamingResponse) currentRequest.decode(currentResponse, null);
         currentRequest.succeed(streamingResponse);
+        ctx.pipeline().addFirst(new IdleStateHandler(
+          coreContext.environment().ioConfig().configIdleRedialTimeout().toMillis(),
+          0,
+          0,
+          TimeUnit.MILLISECONDS
+        ));
       }
     } else if (msg instanceof HttpContent) {
       currentContent.writeBytes(((HttpContent) msg).content());
@@ -168,6 +178,7 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
         if (isStreamingConfigRequest()) {
           streamingResponse.completeStream();
           streamingResponse = null;
+          ctx.pipeline().remove(IdleStateHandler.class);
         } else {
           byte[] copy = new byte[currentContent.readableBytes()];
           currentContent.readBytes(copy);
@@ -203,6 +214,19 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
       RetryOrchestrator.maybeRetry(ioContext, currentRequest, RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT);
     }
     ctx.fireChannelInactive();
+  }
+
+  @Override
+  public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) {
+    if (evt instanceof IdleStateEvent) {
+      // If we receive an idle state event the redial period has ended and this socket needs to be closed. It will
+      // be cleaned up by the pool eventually and the refresher will reconnect to a different socket for a new
+      // streaming connection.
+      endpoint.disconnect();
+      coreContext.environment().eventBus().publish(new IdleStreamingEndpointClosedEvent(ioContext));
+    } else {
+      ctx.fireUserEventTriggered(evt);
+    }
   }
 
 }

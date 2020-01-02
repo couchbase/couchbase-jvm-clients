@@ -21,9 +21,12 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultHttpContent;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultHttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultLastHttpContent;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpContent;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
@@ -34,13 +37,18 @@ import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.PasswordAuthenticator;
+import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockingDetails;
+import org.mockito.Mockito;
+import org.mockito.invocation.Invocation;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -50,6 +58,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Predicate;
 
 import static com.couchbase.client.test.Util.readResource;
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -191,6 +200,48 @@ class ManagerMessageHandlerTest {
     assertFalse(terminated.get());
     channel.close().awaitUninterruptibly();
     waitUntilCondition(terminated::get);
+  }
+
+  /**
+   * When a http streaming connection is outstanding, the handler needs to notify the endpoint that it disconnects
+   * itself in an orderly manner.
+   */
+  @Test
+  void disconnectsEndpointOnRedialTimeout() throws Exception {
+    CoreEnvironment env = CoreEnvironment.builder().ioConfig(IoConfig.configIdleRedialTimeout(Duration.ofSeconds(2))).build();
+
+    try {
+      CoreContext ctx = new CoreContext(mock(Core.class), 1, env, PasswordAuthenticator.create(USER, PASS));
+      BaseEndpoint endpoint = mock(BaseEndpoint.class);
+      EndpointContext endpointContext = mock(EndpointContext.class);
+      when(endpointContext.environment()).thenReturn(env);
+      when(endpoint.endpointContext()).thenReturn(endpointContext);
+      EmbeddedChannel channel = new EmbeddedChannel(new ManagerMessageHandler(endpoint, ctx));
+
+      BucketConfigStreamingRequest request = new BucketConfigStreamingRequest(Duration.ofSeconds(1), ctx,
+        BestEffortRetryStrategy.INSTANCE, "bucket", ctx.authenticator());
+      channel.write(request);
+
+      HttpRequest outboundHeader = channel.readOutbound();
+      assertEquals(HttpMethod.GET, outboundHeader.method());
+      assertEquals("/pools/default/bs/bucket", outboundHeader.uri());
+      assertEquals(HttpVersion.HTTP_1_1, outboundHeader.protocolVersion());
+
+      HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+      HttpContent httpContent = new DefaultHttpContent(Unpooled.copiedBuffer("{}\n\n\n\n", StandardCharsets.UTF_8));
+      channel.writeInbound(httpResponse, httpContent);
+
+      BucketConfigStreamingResponse response = request.response().get();
+      assertEquals("{}", response.configs().blockFirst());
+
+      waitUntilCondition(() -> {
+        channel.runPendingTasks();
+        MockingDetails mockingDetails = Mockito.mockingDetails(endpoint);
+        return mockingDetails.getInvocations().stream().anyMatch(i -> i.getMethod().getName().equals("disconnect"));
+      });
+    } finally {
+       env.shutdown();
+    }
   }
 
 }
