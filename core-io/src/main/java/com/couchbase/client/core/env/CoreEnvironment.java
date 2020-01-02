@@ -124,15 +124,16 @@ public class CoreEnvironment {
 
     this.userAgent = defaultUserAgent();
     this.maxNumRequestsInRetry = builder.maxNumRequestsInRetry;
-    this.eventBus = Optional
-      .ofNullable(builder.eventBus)
-      .orElse(new OwnedSupplier<>(DefaultEventBus.create()));
-    this.timer = Timer.createAndStart(maxNumRequestsInRetry);
     this.scheduler = Optional
       .ofNullable(builder.scheduler)
       .orElse(new OwnedSupplier<>(
         Schedulers.newParallel("cb-comp", Schedulers.DEFAULT_POOL_SIZE, true))
       );
+    this.eventBus = Optional
+      .ofNullable(builder.eventBus)
+      .orElse(new OwnedSupplier<>(DefaultEventBus.create(scheduler.get())));
+    this.timer = Timer.createAndStart(maxNumRequestsInRetry);
+
 
     this.securityConfig = builder.securityConfig.build();
 
@@ -382,19 +383,20 @@ public class CoreEnvironment {
       }))
       .then(ioEnvironment.shutdown(timeout))
       .then(Mono.defer(() -> {
-        if (scheduler instanceof OwnedSupplier) {
-          scheduler.get().dispose();
-        }
-        return Mono.empty();
-      }))
-      .then(Mono.defer(() -> {
         if (requestTracer instanceof OwnedSupplier) {
           return requestTracer.get().stop(timeout);
         }
         return Mono.empty();
       }))
       .then(Mono.defer(() -> orphanReporter.stop(timeout)))
-      .timeout(timeout);
+      .then(Mono.defer(() -> {
+        if (scheduler instanceof OwnedSupplier) {
+          scheduler.get().dispose();
+        }
+        return Mono.empty();
+      }))
+      .then()
+      .timeout(timeout); // this timeout cannot be on our scheduler, since our scheduler is already shut down
   }
 
   /**

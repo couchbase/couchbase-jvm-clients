@@ -20,6 +20,7 @@ import com.couchbase.client.core.deps.org.jctools.queues.QueueFactory;
 import com.couchbase.client.core.deps.org.jctools.queues.spec.ConcurrentQueueSpec;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
 
 import java.io.PrintStream;
 import java.time.Duration;
@@ -88,19 +89,25 @@ public class DefaultEventBus implements EventBus {
   private final Duration idleSleepDuration;
 
   /**
+   * The scheduler used during i.e. shutdown.
+   */
+  private final Scheduler scheduler;
+
+  /**
    * If the event bus is running, this variable holds the thread.
    */
   private volatile Thread runningThread;
 
-  public static DefaultEventBus.Builder builder() {
-    return new Builder();
+  public static DefaultEventBus.Builder builder(final Scheduler scheduler) {
+    return new Builder(scheduler);
   }
 
-  public static DefaultEventBus create() {
-    return builder().build();
+  public static DefaultEventBus create(final Scheduler scheduler) {
+    return builder(scheduler).build();
   }
 
   private DefaultEventBus(final Builder builder) {
+    scheduler = builder.scheduler;
     subscribers = new CopyOnWriteArraySet<>();
     running = new AtomicBoolean(false);
 
@@ -197,8 +204,8 @@ public class DefaultEventBus implements EventBus {
         }
         return Mono.empty();
       })
-      .then(Flux.interval(Duration.ofMillis(10)).takeUntil(i -> !runningThread.isAlive()).then())
-      .timeout(timeout);
+      .then(Flux.interval(Duration.ofMillis(10), scheduler).takeUntil(i -> !runningThread.isAlive()).then())
+      .timeout(timeout, scheduler);
   }
 
   /**
@@ -220,12 +227,16 @@ public class DefaultEventBus implements EventBus {
    */
   public static class Builder {
 
+    final Scheduler scheduler;
+
     int queueCapacity;
     Optional<PrintStream> errorLogging;
     String threadName;
     Duration idleSleepDuration;
 
-    Builder() {
+    Builder(Scheduler scheduler) {
+      this.scheduler = scheduler;
+
       queueCapacity = DEFAULT_QUEUE_CAPACITY;
       errorLogging = Optional.of(System.err);
       threadName = "cb-events";

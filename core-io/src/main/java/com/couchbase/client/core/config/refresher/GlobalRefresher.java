@@ -99,7 +99,7 @@ public class GlobalRefresher {
     this.started = false;
 
     pollRegistration = Flux
-      .interval(POLLER_INTERVAL)
+      .interval(POLLER_INTERVAL, core.context().environment().scheduler())
       .filter(v -> started)
       .flatMap(ign -> attemptUpdateGlobalConfig(filterEligibleNodes()))
       .subscribe(provider::proposeGlobalConfig);

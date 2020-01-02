@@ -134,7 +134,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
     this.configRequestTimeout = clampConfigRequestTimeout(configPollIntervalNanos);
 
     pollRegistration = Flux
-      .interval(pollerInterval())
+      .interval(pollerInterval(), core.context().environment().scheduler())
       .filter(v -> !registrations.isEmpty())
       .flatMap(ignored -> Flux
         .fromIterable(registrations.keySet())

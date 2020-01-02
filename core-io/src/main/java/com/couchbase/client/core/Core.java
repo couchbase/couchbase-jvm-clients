@@ -472,14 +472,14 @@ public class Core {
           .then(configurationProvider.shutdown())
           // every 10ms check if all nodes have been cleared, and then move on.
           // this links the config provider shutdown with our core reconfig logic
-          .then(Flux.interval(Duration.ofMillis(10)).takeUntil(i -> nodes.isEmpty()).then())
+          .then(Flux.interval(Duration.ofMillis(10), coreContext.environment().scheduler()).takeUntil(i -> nodes.isEmpty()).then())
           .doOnTerminate(() -> eventBus.publish(
             new ShutdownCompletedEvent(Duration.ofNanos(System.nanoTime() - start), coreContext)
           ))
           .then();
       }
       return Mono.empty();
-    }).timeout(timeout);
+    }).timeout(timeout, coreContext.environment().scheduler());
   }
 
   /**

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.cnc;
 
 import org.junit.jupiter.api.Test;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -41,7 +42,7 @@ class DefaultEventBusTest {
     final String threadName = UUID.randomUUID().toString();
 
     DefaultEventBus eventBus = DefaultEventBus
-      .builder()
+      .builder(Schedulers.parallel())
       .threadName(threadName)
       .build();
     assertFalse(eventBus.isRunning());
@@ -59,7 +60,7 @@ class DefaultEventBusTest {
 
   @Test
   void subscribeAndUnsubscribeFromEventBus() {
-    DefaultEventBus eventBus = DefaultEventBus.create();
+    DefaultEventBus eventBus = DefaultEventBus.create(Schedulers.parallel());
 
     assertFalse(eventBus.hasSubscribers());
     EventSubscription subscription = eventBus.subscribe(event -> {
@@ -72,7 +73,7 @@ class DefaultEventBusTest {
 
   @Test
   void receiveEvents() {
-    DefaultEventBus eventBus = DefaultEventBus.create();
+    DefaultEventBus eventBus = DefaultEventBus.create(Schedulers.parallel());
 
     AtomicInteger eventsReceived = new AtomicInteger();
     eventBus.subscribe(event -> eventsReceived.incrementAndGet());
@@ -90,7 +91,7 @@ class DefaultEventBusTest {
 
   @Test
   void shutsDownOnlyOnceAllEventsConsumed() {
-    DefaultEventBus eventBus = DefaultEventBus.create();
+    DefaultEventBus eventBus = DefaultEventBus.create(Schedulers.parallel());
     eventBus.start().block();
 
     int eventsSent = 1000;

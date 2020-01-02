@@ -49,7 +49,7 @@ public class WaitUntilReadyHelper {
     }
 
     return Flux
-      .interval(Duration.ofMillis(10))
+      .interval(Duration.ofMillis(10), core.context().environment().scheduler())
       .filter(i -> !(core.configurationProvider().bucketConfigLoadInProgress()
         || core.configurationProvider().globalConfigLoadInProgress()
         || (!clusterLevel && core.configurationProvider().collectionMapRefreshInProgress()))
@@ -65,13 +65,13 @@ public class WaitUntilReadyHelper {
           .collect(Collectors.toSet());
 
         final Flux<ClusterState> diagnostics = Flux
-          .interval(Duration.ofMillis(10))
+          .interval(Duration.ofMillis(10), core.context().environment().scheduler())
           .map(i -> diagnosticsCurrentState(core))
           .takeUntil(s -> s == desiredState);
 
         return Flux.concat(ping(core, servicesToCheck, timeout), diagnostics);
       })
-      .timeout(timeout)
+      .timeout(timeout, core.context().environment().scheduler())
       .then()
       .toFuture();
   }
