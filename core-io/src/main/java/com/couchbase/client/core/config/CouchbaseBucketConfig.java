@@ -234,12 +234,12 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
 
     @Override
     public String toString() {
-        return "DefaultCouchbaseBucketConfig{"
+        return "CouchbaseBucketConfig{"
             + "name='" + redactMeta(name()) + '\''
             + ", locator=" + locator()
             + ", uri='" + redactMeta(uri()) + '\''
             + ", streamingUri='" + redactMeta(streamingUri()) + '\''
-            + ", nodeInfo=" + redactSystem(nodes())
+            + ", nodes=" + redactSystem(nodes())
             + ", partitionInfo=" + partitionInfo
             + ", tainted=" + tainted
             + ", rev=" + rev + '}';

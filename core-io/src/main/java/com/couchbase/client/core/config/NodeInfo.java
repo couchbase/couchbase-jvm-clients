@@ -158,11 +158,11 @@ public class NodeInfo {
 
     @Override
     public String toString() {
-        return "DefaultNodeInfo{" +
-            "hostname=" + hostname +
-            ", directServices=" + directServices +
-            ", sslServices=" + sslServices +
-            ", alternateAddresses=" + alternateAddresses +
+        return "NodeInfo{" +
+            "host=" + hostname +
+            ", ports=" + directServices +
+            ", securePorts=" + sslServices +
+            ", aa=" + alternateAddresses +
             ", configPort=" + configPort +
             '}';
     }

@@ -28,12 +28,15 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonPrope
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -162,12 +165,32 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
         }
     }
 
+    /**
+     * Note that dumping the whole ring is pretty much useless, so here we focus on just dumping all the nodes
+     * that participate in the cluster instead.
+     */
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("MemcachedBucketConfig{");
-        sb.append("rev=").append(rev);
-        sb.append(", ketamaNodes=").append(redactSystem(ketamaNodes));
-        sb.append('}');
-        return sb.toString();
+        return "MemcachedBucketConfig{" +
+          "name='" + redactMeta(name()) + '\'' +
+          ", rev=" + rev +
+          ", nodes=" + redactSystem(new HashSet<>(ketamaNodes.values()).toString()) +
+          ", hash=" + hashingStrategy +
+          '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MemcachedBucketConfig that = (MemcachedBucketConfig) o;
+        return rev == that.rev &&
+          Objects.equals(ketamaNodes, that.ketamaNodes) &&
+          Objects.equals(hashingStrategy, that.hashingStrategy);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(rev, ketamaNodes, hashingStrategy);
     }
 }
