@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -67,6 +69,15 @@ class JsonArrayTest {
     assertEquals(Double.valueOf(1.0d), arr.getDouble(0));
     assertEquals(Long.valueOf(1L), arr.getLong(0));
     assertEquals(Integer.valueOf(1), arr.getInt(0));
+  }
+
+  @Test
+  void shouldConvertToBytes() {
+    JsonArray input = JsonArray.create().add("foo").add("bar");
+
+    String stringResult = input.toString();
+    byte[] bytesResult = input.toBytes();
+    assertArrayEquals(stringResult.getBytes(StandardCharsets.UTF_8), bytesResult);
   }
 
   @Test

@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.json;
 
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
 import java.io.Serializable;
@@ -559,6 +560,19 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
       return JacksonTransformers.MAPPER.writeValueAsString(this);
     } catch (Exception e) {
       throw new IllegalStateException("Cannot convert JsonArray to Json String", e);
+    }
+  }
+
+  /**
+   * Similar to {@link  #toString()} but turns this array directly into an encoded byte array.
+   *
+   * @return the byte array representing this {@link JsonArray}.
+   */
+  public byte[] toBytes() {
+    try {
+      return JacksonTransformers.MAPPER.writeValueAsBytes(this);
+    } catch (JsonProcessingException e) {
+      throw new IllegalStateException("Cannot convert JsonArray to Json byte array", e);
     }
   }
 

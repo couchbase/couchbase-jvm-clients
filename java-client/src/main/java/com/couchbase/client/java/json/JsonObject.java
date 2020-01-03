@@ -580,6 +580,19 @@ public class JsonObject extends JsonValue implements Serializable {
         }
     }
 
+    /**
+     * Similar to {@link  #toString()} but turns this object directly into an encoded byte array.
+     *
+     * @return the byte array representing this {@link JsonObject}.
+     */
+    public byte[] toBytes() {
+        try {
+            return JacksonTransformers.MAPPER.writeValueAsBytes(this);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Cannot convert JsonObject to Json byte array", e);
+        }
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

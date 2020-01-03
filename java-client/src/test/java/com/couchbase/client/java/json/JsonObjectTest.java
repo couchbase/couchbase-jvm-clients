@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,6 +42,15 @@ class JsonObjectTest {
   void shouldExportStrings() {
     String result = JsonObject.create().put("key", "value").toString();
     assertEquals("{\"key\":\"value\"}", result);
+  }
+
+  @Test
+  void shouldConvertToBytes() {
+    JsonObject input = JsonObject.create().put("key", "value");
+
+    String stringResult = input.toString();
+    byte[] bytesResult = input.toBytes();
+    assertArrayEquals(stringResult.getBytes(StandardCharsets.UTF_8), bytesResult);
   }
 
   @Test
