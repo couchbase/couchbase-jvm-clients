@@ -42,12 +42,12 @@ public class DnsSrv {
   /**
    * The default DNS prefix for not encrypted connections.
    */
-  private static final String DEFAULT_DNS_SERVICE = "_couchbase._tcp.";
+  public static final String DEFAULT_DNS_SERVICE = "_couchbase._tcp.";
 
   /**
    * The default DNS prefix for encrypted connections.
    */
-  private static final String DEFAULT_DNS_SECURE_SERVICE = "_couchbases._tcp.";
+  public static final String DEFAULT_DNS_SECURE_SERVICE = "_couchbases._tcp.";
 
   public static void setDnsEnvParameter(final String key, final String value) {
     DNS_ENV.put(key, value);
@@ -91,7 +91,7 @@ public class DnsSrv {
     if (nameServerIP == null || nameServerIP.isEmpty()) {
       ctx = new InitialDirContext(DNS_ENV);
     } else {
-      Hashtable<String, String> finalEnv = new Hashtable<String, String>(DNS_ENV);
+      Hashtable<String, String> finalEnv = new Hashtable<>(DNS_ENV);
       finalEnv.put("java.naming.provider.url", "dns://" + nameServerIP);
       ctx = new InitialDirContext(finalEnv);
     }
@@ -109,7 +109,7 @@ public class DnsSrv {
   static List<String> loadDnsRecords(final String serviceName, final DirContext ctx) throws NamingException {
     Attributes attrs = ctx.getAttributes(serviceName, new String[] { "SRV" });
     NamingEnumeration<?> servers = attrs.get("srv").getAll();
-    List<String> records = new ArrayList<String>();
+    List<String> records = new ArrayList<>();
     while (servers.hasMore()) {
       DnsRecord record = DnsRecord.fromString((String) servers.next());
       records.add(record.getHost());

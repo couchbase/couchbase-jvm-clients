@@ -354,7 +354,12 @@ object AsyncCluster {
       environment: ClusterEnvironment
   ): Set[SeedNode] = {
     ConnectionStringUtil
-      .seedNodesFromConnectionString(cs, environment.coreEnv.ioConfig.dnsSrvEnabled)
+      .seedNodesFromConnectionString(
+        cs,
+        environment.coreEnv.ioConfig.dnsSrvEnabled,
+        environment.coreEnv.securityConfig.tlsEnabled,
+        environment.coreEnv.eventBus
+      )
       .asScala
       .map(sn => SeedNode.fromCore(sn))
       .toSet

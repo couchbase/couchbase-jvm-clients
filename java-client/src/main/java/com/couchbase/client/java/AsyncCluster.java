@@ -212,11 +212,16 @@ public class AsyncCluster {
    * Extracts the relevant seed nodes from the connection string.
    *
    * @param cs the connection string where it should be extracted from.
-   * @param environment the environment to load certain properties that influence how it is loaded.
+   * @param env the environment to load certain properties that influence how it is loaded.
    * @return a set of seed nodes once extracted.
    */
-  static Set<SeedNode> seedNodesFromConnectionString(final String cs, final ClusterEnvironment environment) {
-    return ConnectionStringUtil.seedNodesFromConnectionString(cs, environment.ioConfig().dnsSrvEnabled());
+  static Set<SeedNode> seedNodesFromConnectionString(final String cs, final ClusterEnvironment env) {
+    return ConnectionStringUtil.seedNodesFromConnectionString(
+      cs,
+      env.ioConfig().dnsSrvEnabled(),
+      env.securityConfig().tlsEnabled(),
+      env.eventBus()
+    );
   }
 
   /**
