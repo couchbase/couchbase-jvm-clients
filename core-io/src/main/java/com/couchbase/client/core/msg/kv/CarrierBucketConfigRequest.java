@@ -29,8 +29,10 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
+import java.util.Map;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
 public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucketConfigResponse> implements TargetedRequest {
 
@@ -65,6 +67,15 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
   @Override
   public boolean idempotent() {
     return true;
+  }
+
+  @Override
+  public Map<String, Object> serviceContext() {
+    final Map<String, Object> ctx = super.serviceContext();
+    if (target != null) {
+      ctx.put("target", redactSystem(target.address()));
+    }
+    return ctx;
   }
 
 }

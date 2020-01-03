@@ -28,6 +28,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
+import java.util.Map;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
@@ -40,6 +41,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.tryDecompression;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
 /**
  * A request to fetch a global configuration.
@@ -82,6 +84,15 @@ public class CarrierGlobalConfigRequest
   @Override
   public boolean idempotent() {
     return true;
+  }
+
+  @Override
+  public Map<String, Object> serviceContext() {
+    final Map<String, Object> ctx = super.serviceContext();
+    if (target != null) {
+      ctx.put("target", redactSystem(target.address()));
+    }
+    return ctx;
   }
 
 }

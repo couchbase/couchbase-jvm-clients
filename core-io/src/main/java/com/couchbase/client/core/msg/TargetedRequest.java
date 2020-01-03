@@ -18,8 +18,14 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.node.NodeIdentifier;
 
+/**
+ * Marker interface to signal a request that can only be sent to the specified target node.
+ */
 public interface TargetedRequest {
 
+  /**
+   * The target where this request must be dispatched to.
+   */
   NodeIdentifier target();
 
 }

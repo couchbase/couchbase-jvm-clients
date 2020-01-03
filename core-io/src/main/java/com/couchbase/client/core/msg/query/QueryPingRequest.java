@@ -31,8 +31,11 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.TreeMap;
 
 import static com.couchbase.client.core.io.netty.HttpProtocol.decodeStatus;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
 public class QueryPingRequest extends BaseRequest<QueryPingResponse>
   implements NonChunkedHttpRequest<QueryPingResponse>, TargetedRequest {
@@ -69,6 +72,16 @@ public class QueryPingRequest extends BaseRequest<QueryPingResponse>
   @Override
   public boolean idempotent() {
     return true;
+  }
+
+  @Override
+  public Map<String, Object> serviceContext() {
+    final Map<String, Object> ctx = new TreeMap<>();
+    ctx.put("type", serviceType().ident());
+    if (target != null) {
+      ctx.put("target", redactSystem(target.address()));
+    }
+    return ctx;
   }
 
 }

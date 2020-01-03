@@ -28,8 +28,12 @@ import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.TreeMap;
 
 import static com.couchbase.client.core.io.netty.HttpProtocol.decodeStatus;
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
 public class BucketConfigRequest extends BaseManagerRequest<BucketConfigResponse> implements TargetedRequest {
 
@@ -71,6 +75,17 @@ public class BucketConfigRequest extends BaseManagerRequest<BucketConfigResponse
   @Override
   public boolean idempotent() {
     return true;
+  }
+
+  @Override
+  public Map<String, Object> serviceContext() {
+    final Map<String, Object> ctx = new TreeMap<>();
+    ctx.put("type", serviceType().ident());
+    ctx.put("bucket", redactMeta(bucketName));
+    if (target != null) {
+      ctx.put("target", redactSystem(target.address()));
+    }
+    return ctx;
   }
 
 }

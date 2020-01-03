@@ -26,6 +26,11 @@ import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.TreeMap;
+
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
 public class KvPingRequest extends NoopRequest implements TargetedRequest {
 
@@ -45,6 +50,15 @@ public class KvPingRequest extends NoopRequest implements TargetedRequest {
   @Override
   public NodeIdentifier target() {
     return target;
+  }
+
+  @Override
+  public Map<String, Object> serviceContext() {
+    final Map<String, Object> ctx = super.serviceContext();
+    if (target != null) {
+      ctx.put("target", redactSystem(target.address()));
+    }
+    return ctx;
   }
 
 }
