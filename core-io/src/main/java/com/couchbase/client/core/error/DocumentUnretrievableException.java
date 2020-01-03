@@ -15,6 +15,8 @@
  */
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.ErrorContext;
+
 /**
  * Indicates an operation completed but no successful document was retrievable.
  *

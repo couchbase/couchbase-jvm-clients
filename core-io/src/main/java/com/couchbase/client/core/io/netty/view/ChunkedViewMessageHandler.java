@@ -19,7 +19,7 @@ package com.couchbase.client.core.io.netty.view;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.ViewErrorContext;
+import com.couchbase.client.core.error.context.ViewErrorContext;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
 import com.couchbase.client.core.msg.view.ViewChunkHeader;
 import com.couchbase.client.core.msg.view.ViewChunkRow;

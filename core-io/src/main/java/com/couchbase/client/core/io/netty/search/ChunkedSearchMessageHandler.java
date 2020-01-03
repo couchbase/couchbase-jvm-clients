@@ -19,7 +19,7 @@ package com.couchbase.client.core.io.netty.search;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.SearchErrorContext;
+import com.couchbase.client.core.error.context.SearchErrorContext;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
 import com.couchbase.client.core.msg.search.*;
 import com.couchbase.client.core.retry.RetryReason;

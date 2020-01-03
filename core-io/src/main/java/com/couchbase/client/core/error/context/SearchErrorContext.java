@@ -14,36 +14,42 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.error;
+package com.couchbase.client.core.error.context;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.kv.KeyValueRequest;
 
 import java.util.Map;
 
-public class KeyValueErrorContext extends ErrorContext {
+@Stability.Volatile
+public class SearchErrorContext extends ErrorContext {
 
-  private final KeyValueRequest<?> request;
+  private final RequestContext requestContext;
+  private final int httpStatus;
 
-  protected KeyValueErrorContext(final KeyValueRequest<?> request, final ResponseStatus status) {
-    super(status);
-    this.request = request;
+  public SearchErrorContext(final ResponseStatus responseStatus, final RequestContext requestContext, final int httpStatus) {
+    super(responseStatus);
+    this.requestContext = requestContext;
+    this.httpStatus = httpStatus;
   }
 
-  public static KeyValueErrorContext completedRequest(final KeyValueRequest<?> request, final ResponseStatus status) {
-    return new KeyValueErrorContext(request, status);
+  public RequestContext requestContext() {
+    return requestContext;
   }
 
-  public static KeyValueErrorContext incompleteRequest(final KeyValueRequest<?> request) {
-    return new KeyValueErrorContext(request, null);
+  @Stability.Volatile
+  public int httpStatus() {
+    return httpStatus;
   }
 
   @Override
   public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
-    if (request != null) {
-      request.context().injectExportableParams(input);
+    if (requestContext != null) {
+      requestContext.injectExportableParams(input);
     }
+    input.put("httpStatus", httpStatus);
   }
 
 }

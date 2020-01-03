@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.ErrorContext;
+
 public class DataverseNotFoundException extends CouchbaseException {
 
   public DataverseNotFoundException(final ErrorContext ctx) {

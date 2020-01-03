@@ -13,28 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.couchbase.client.core.error.context;
 
-package com.couchbase.client.core.error;
+import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.msg.ResponseStatus;
 
-import java.util.Map;
+public class KeyValueIoErrorContext extends ErrorContext {
 
-import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+  private final EndpointContext endpointContext;
 
-public class ReducedAnalyticsErrorContext extends ErrorContext {
-
-  private final String statement;
-
-  public ReducedAnalyticsErrorContext(final String statement) {
-    super(null);
-    this.statement = statement;
-  }
-
-  @Override
-  public void injectExportableParams(final Map<String, Object> input) {
-    super.injectExportableParams(input);
-    if (statement != null) {
-      input.put("statement", redactUser(statement));
-    }
+  public KeyValueIoErrorContext(ResponseStatus responseStatus, EndpointContext endpointContext) {
+    super(responseStatus);
+    this.endpointContext = endpointContext;
   }
 
 }

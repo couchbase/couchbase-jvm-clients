@@ -14,34 +14,35 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.error;
+package com.couchbase.client.core.error.context;
 
-import com.couchbase.client.core.cnc.AbstractContext;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.KeyValueRequest;
 
 import java.util.Map;
 
-/**
- * The ErrorContext is the parent interface for all service-specific error contexts that are thrown as part of
- * the {@link CouchbaseException}.
- */
-public abstract class ErrorContext extends AbstractContext {
+public class KeyValueErrorContext extends ErrorContext {
 
-  private final ResponseStatus responseStatus;
+  private final KeyValueRequest<?> request;
 
-  protected ErrorContext(final ResponseStatus responseStatus) {
-    this.responseStatus = responseStatus;
+  protected KeyValueErrorContext(final KeyValueRequest<?> request, final ResponseStatus status) {
+    super(status);
+    this.request = request;
   }
 
-  public ResponseStatus responseStatus() {
-    return responseStatus;
+  public static KeyValueErrorContext completedRequest(final KeyValueRequest<?> request, final ResponseStatus status) {
+    return new KeyValueErrorContext(request, status);
+  }
+
+  public static KeyValueErrorContext incompleteRequest(final KeyValueRequest<?> request) {
+    return new KeyValueErrorContext(request, null);
   }
 
   @Override
   public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
-    if (responseStatus != null) {
-      input.put("status", responseStatus);
+    if (request != null) {
+      request.context().injectExportableParams(input);
     }
   }
 

@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.ErrorContext;
+
 /**
  * Every exception that has to do with authentication problems should either
  * instantiate or subclass from this type.

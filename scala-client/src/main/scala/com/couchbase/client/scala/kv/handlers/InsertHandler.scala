@@ -16,11 +16,8 @@
 
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.error.{
-  DocumentExistsException,
-  EncodingFailureException,
-  KeyValueErrorContext
-}
+import com.couchbase.client.core.error.context.KeyValueErrorContext
+import com.couchbase.client.core.error.{DocumentExistsException, EncodingFailureException}
 import com.couchbase.client.core.msg.{Request, ResponseStatus}
 import com.couchbase.client.core.msg.kv.{InsertRequest, InsertResponse, KeyValueRequest}
 import com.couchbase.client.core.retry.RetryStrategy

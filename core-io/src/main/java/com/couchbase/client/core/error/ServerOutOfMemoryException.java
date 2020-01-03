@@ -15,6 +15,8 @@
  */
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
+
 /**
  * Thrown when Couchbase Server returns with an Out of Memory error.
  *

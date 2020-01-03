@@ -15,6 +15,8 @@
  */
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
+
 /**
  * The given durability requirements are currently impossible to achieve, as not enough configured replicas
  * are currently available.

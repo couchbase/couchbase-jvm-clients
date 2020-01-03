@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.util;
 
-import com.couchbase.client.core.error.ErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
 import java.util.List;

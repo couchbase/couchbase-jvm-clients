@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.CancellationErrorContext;
+
 public class RequestCanceledException extends CouchbaseException {
 
   public RequestCanceledException(String message, CancellationErrorContext ctx) {

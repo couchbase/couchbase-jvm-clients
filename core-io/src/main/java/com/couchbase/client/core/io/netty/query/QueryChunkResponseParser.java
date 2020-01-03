@@ -25,7 +25,7 @@ import com.couchbase.client.core.error.InternalServerFailureException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.PlanningFailureException;
 import com.couchbase.client.core.error.PreparedStatementFailureException;
-import com.couchbase.client.core.error.QueryErrorContext;
+import com.couchbase.client.core.error.context.QueryErrorContext;
 import com.couchbase.client.core.error.IndexFailureException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;

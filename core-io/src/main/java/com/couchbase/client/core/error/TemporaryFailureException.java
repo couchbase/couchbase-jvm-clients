@@ -15,6 +15,8 @@
  */
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.ErrorContext;
+
 /**
  * Thrown when the server reports a temporary failure.
  *

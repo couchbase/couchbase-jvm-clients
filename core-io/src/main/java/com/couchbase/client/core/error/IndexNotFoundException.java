@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.ErrorContext;
+
 public class IndexNotFoundException extends CouchbaseException {
 
   public IndexNotFoundException(final String indexName) {

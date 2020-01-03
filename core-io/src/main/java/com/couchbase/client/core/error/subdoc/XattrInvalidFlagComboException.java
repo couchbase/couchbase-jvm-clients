@@ -17,6 +17,7 @@
 package com.couchbase.client.core.error.subdoc;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.context.SubDocumentErrorContext;
 
 /**
  * Subdocument exception thrown when a macro has been requested when not using extended attributes.

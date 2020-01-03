@@ -20,7 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.node.NodeLocatorBugIdentifiedEvent;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.core.error.GenericRequestErrorContext;
+import com.couchbase.client.core.error.context.GenericRequestErrorContext;
 import com.couchbase.client.core.error.ServiceNotAvailableException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;

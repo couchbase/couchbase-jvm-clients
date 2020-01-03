@@ -18,12 +18,11 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.error.*;
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
 
 import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
 

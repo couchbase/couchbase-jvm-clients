@@ -17,7 +17,7 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.error.DocumentExistsException;
-import com.couchbase.client.core.error.KeyValueErrorContext;
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.java.codec.JsonSerializer;

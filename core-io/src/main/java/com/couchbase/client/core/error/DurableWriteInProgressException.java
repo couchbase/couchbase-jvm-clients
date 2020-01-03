@@ -15,6 +15,8 @@
  */
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
+
 /**
  * Returned if an attempt is made to mutate a key which already has a durable write pending.
  *

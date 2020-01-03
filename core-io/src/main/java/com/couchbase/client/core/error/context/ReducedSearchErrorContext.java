@@ -14,27 +14,32 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.error;
+package com.couchbase.client.core.error.context;
 
 import java.util.Map;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
-public class ReducedQueryErrorContext extends ErrorContext {
+public class ReducedSearchErrorContext extends ErrorContext {
 
-  private final String statement;
+  private final String indexName;
+  private final Map<String, Object>  searchQuery;
 
-  public ReducedQueryErrorContext(final String statement) {
+  public ReducedSearchErrorContext(String indexName, Map<String, Object> searchQuery) {
     super(null);
-    this.statement = statement;
+    this.indexName = indexName;
+    this.searchQuery = searchQuery;
   }
 
   @Override
   public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
-    if (statement != null) {
-      input.put("statement", redactUser(statement));
+    if (indexName != null) {
+      input.put("indexName", redactMeta(indexName));
+    }
+    if (searchQuery != null) {
+      input.put("query", redactUser(searchQuery));
     }
   }
 

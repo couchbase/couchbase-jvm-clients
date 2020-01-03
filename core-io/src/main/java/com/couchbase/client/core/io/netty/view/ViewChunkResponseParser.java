@@ -17,7 +17,7 @@
 package com.couchbase.client.core.io.netty.view;
 
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.ViewErrorContext;
+import com.couchbase.client.core.error.context.ViewErrorContext;
 import com.couchbase.client.core.error.ViewNotFoundException;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;

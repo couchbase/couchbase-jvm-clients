@@ -18,12 +18,8 @@ package com.couchbase.client.scala.kv.handlers
 import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.error.{
-  CouchbaseException,
-  DocumentNotFoundException,
-  KeyValueErrorContext,
-  ReducedKeyValueErrorContext
-}
+import com.couchbase.client.core.error.context.{KeyValueErrorContext, ReducedKeyValueErrorContext}
+import com.couchbase.client.core.error.{CouchbaseException, DocumentNotFoundException}
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy

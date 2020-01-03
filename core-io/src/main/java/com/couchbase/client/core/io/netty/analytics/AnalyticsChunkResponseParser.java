@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.io.netty.analytics;
 
-import com.couchbase.client.core.error.AnalyticsErrorContext;
+import com.couchbase.client.core.error.context.AnalyticsErrorContext;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.LinkNotFoundException;

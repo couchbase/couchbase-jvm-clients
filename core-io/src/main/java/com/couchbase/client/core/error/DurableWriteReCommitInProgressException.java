@@ -15,6 +15,8 @@
  */
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
+
 /**
  * The requested key has a SyncWrite which is being re-committed.
  *

@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.error.subdoc;
+package com.couchbase.client.core.error.context;
 
-import com.couchbase.client.core.error.ErrorContext;
-import com.couchbase.client.core.error.KeyValueErrorContext;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 
 import java.util.Map;

@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
+
 /**
  * This exception is raised when a durability level has been requested that is not available on the server.
  *

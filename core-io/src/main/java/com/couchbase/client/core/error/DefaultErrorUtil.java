@@ -17,9 +17,8 @@
 package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.msg.Request;
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.msg.Response;
-import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 
 @Stability.Internal

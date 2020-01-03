@@ -16,7 +16,8 @@
 
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.error.{DocumentNotFoundException, KeyValueErrorContext}
+import com.couchbase.client.core.error.DocumentNotFoundException
+import com.couchbase.client.core.error.context.KeyValueErrorContext
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{GetRequest, GetResponse, KeyValueRequest}
 import com.couchbase.client.core.retry.RetryStrategy

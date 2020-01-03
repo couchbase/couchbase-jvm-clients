@@ -14,36 +14,33 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.error;
+package com.couchbase.client.core.error.context;
 
-import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.msg.RequestContext;
-import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-@Stability.Volatile
-public class SearchErrorContext extends ErrorContext {
+public class QueryErrorContext extends ErrorContext {
 
   private final RequestContext requestContext;
-  private final int httpStatus;
+  private final List<ErrorCodeAndMessage> errors;
 
-  public SearchErrorContext(final ResponseStatus responseStatus, final RequestContext requestContext, final int httpStatus) {
-    super(responseStatus);
+  public QueryErrorContext(final RequestContext requestContext, final List<ErrorCodeAndMessage> errors) {
+    super(null);
+    this.errors = errors;
     this.requestContext = requestContext;
-    this.httpStatus = httpStatus;
   }
 
   public RequestContext requestContext() {
     return requestContext;
   }
 
-  @Stability.Volatile
-  public int httpStatus() {
-    return httpStatus;
+  public List<ErrorCodeAndMessage> errors() {
+    return errors;
   }
 
   @Override
@@ -52,7 +49,18 @@ public class SearchErrorContext extends ErrorContext {
     if (requestContext != null) {
       requestContext.injectExportableParams(input);
     }
-    input.put("httpStatus", httpStatus);
+
+    List<Map<String, Object>> errorList = new ArrayList<>(errors.size());
+    for (ErrorCodeAndMessage error : errors) {
+      Map<String, Object> err = new TreeMap<>();
+      err.put("code", error.code());
+      err.put("message", error.message());
+      if (error.context() != null && !error.context().isEmpty()) {
+        err.put("additional", error.context());
+      }
+      errorList.add(err);
+    }
+    input.put("errors", errorList);
   }
 
 }

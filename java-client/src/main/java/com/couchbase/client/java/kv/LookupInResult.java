@@ -16,9 +16,9 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.core.error.KeyValueErrorContext;
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.PathInvalidException;
-import com.couchbase.client.core.error.subdoc.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.SubDocumentErrorContext;
 import com.couchbase.client.core.msg.kv.SubDocumentField;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.TypeRef;

@@ -17,12 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.DocumentNotFoundException;
-import com.couchbase.client.core.error.DurableWriteReCommitInProgressException;
-import com.couchbase.client.core.error.KeyValueErrorContext;
-import com.couchbase.client.core.error.ServerOutOfMemoryException;
-import com.couchbase.client.core.error.TemporaryFailureException;
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.java.codec.JsonSerializer;

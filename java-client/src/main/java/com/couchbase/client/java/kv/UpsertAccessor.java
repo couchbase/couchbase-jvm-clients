@@ -18,17 +18,6 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.DocumentLockedException;
-import com.couchbase.client.core.error.DurabilityAmbiguousException;
-import com.couchbase.client.core.error.DurabilityImpossibleException;
-import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
-import com.couchbase.client.core.error.DurableWriteInProgressException;
-import com.couchbase.client.core.error.DurableWriteReCommitInProgressException;
-import com.couchbase.client.core.error.KeyValueErrorContext;
-import com.couchbase.client.core.error.ServerOutOfMemoryException;
-import com.couchbase.client.core.error.TemporaryFailureException;
-import com.couchbase.client.core.error.ValueTooLargeException;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
 
 import java.util.concurrent.CompletableFuture;

@@ -14,52 +14,54 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.error;
+package com.couchbase.client.core.error.context;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.view.ViewError;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
-public class QueryErrorContext extends ErrorContext {
+@Stability.Volatile
+public class ViewErrorContext extends ErrorContext {
 
   private final RequestContext requestContext;
-  private final List<ErrorCodeAndMessage> errors;
+  private final ViewError viewError;
+  private final int httpStatus;
 
-  public QueryErrorContext(final RequestContext requestContext, final List<ErrorCodeAndMessage> errors) {
-    super(null);
-    this.errors = errors;
+  public ViewErrorContext(ResponseStatus responseStatus, RequestContext requestContext, ViewError viewError, int httpStatus) {
+    super(responseStatus);
     this.requestContext = requestContext;
+    this.viewError = viewError;
+    this.httpStatus = httpStatus;
   }
 
   public RequestContext requestContext() {
     return requestContext;
   }
 
-  public List<ErrorCodeAndMessage> errors() {
-    return errors;
+  @Stability.Volatile
+  public int httpStatus() {
+    return httpStatus;
+  }
+
+  @Stability.Volatile
+  public ViewError error() {
+    return viewError;
   }
 
   @Override
-  public void injectExportableParams(final Map<String, Object> input) {
+  public void injectExportableParams(Map<String, Object> input) {
     super.injectExportableParams(input);
     if (requestContext != null) {
       requestContext.injectExportableParams(input);
     }
-
-    List<Map<String, Object>> errorList = new ArrayList<>(errors.size());
-    for (ErrorCodeAndMessage error : errors) {
-      Map<String, Object> err = new TreeMap<>();
-      err.put("code", error.code());
-      err.put("message", error.message());
-      if (error.context() != null && !error.context().isEmpty()) {
-        err.put("additional", error.context());
-      }
-      errorList.add(err);
+    if (viewError != null) {
+      input.put("viewError", viewError.error());
+      input.put("viewErrorReason", viewError.reason());
     }
-    input.put("errors", errorList);
-  }
 
+    input.put("httpStatus", httpStatus);
+  }
 }

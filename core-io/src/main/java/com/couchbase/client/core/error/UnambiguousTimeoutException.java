@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.CancellationErrorContext;
+
 /**
  * This is a special case of the timeout exception, signaling that the timeout happened with no ambiguous cause.
  */

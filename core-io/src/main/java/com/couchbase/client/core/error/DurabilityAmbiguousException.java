@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
+
 /**
  * Naming TBD!
  * The synchronous replication durability work can return an ambiguous error (or we timeout waiting for the response,

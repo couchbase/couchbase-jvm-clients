@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.ErrorContext;
+
 public class LinkNotFoundException extends CouchbaseException {
   public LinkNotFoundException(final ErrorContext ctx) {
     super("The link is not found", ctx);

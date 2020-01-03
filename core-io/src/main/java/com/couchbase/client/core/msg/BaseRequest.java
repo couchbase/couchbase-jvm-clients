@@ -21,8 +21,7 @@ import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.error.AmbiguousTimeoutException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
-import com.couchbase.client.core.error.TimeoutException;
-import com.couchbase.client.core.error.CancellationErrorContext;
+import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.retry.RetryStrategy;
 

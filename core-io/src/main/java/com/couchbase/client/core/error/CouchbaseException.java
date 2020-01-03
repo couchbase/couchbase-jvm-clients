@@ -17,6 +17,7 @@
 package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.cnc.Context;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * The parent class for all exceptions created by this SDK (or clients using it).

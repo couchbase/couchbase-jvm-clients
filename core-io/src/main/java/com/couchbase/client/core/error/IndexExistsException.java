@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.ErrorContext;
+
 public class IndexExistsException extends CouchbaseException {
 
   public IndexExistsException(final ErrorContext ctx) {

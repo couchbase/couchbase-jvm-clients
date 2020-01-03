@@ -22,7 +22,7 @@ import com.couchbase.client.core.cnc.events.io.SaslMechanismsSelectedEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.SaslMechanism;
 import com.couchbase.client.core.error.AuthenticationFailureException;
-import com.couchbase.client.core.error.KeyValueIoErrorContext;
+import com.couchbase.client.core.error.context.KeyValueIoErrorContext;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.kv.sasl.CouchbaseSaslClientFactory;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;

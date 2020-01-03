@@ -16,12 +16,11 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.error.context.{KeyValueErrorContext, ReducedKeyValueErrorContext}
 import com.couchbase.client.core.error.{
   CasMismatchException,
   CouchbaseException,
-  DocumentExistsException,
-  KeyValueErrorContext,
-  ReducedKeyValueErrorContext
+  DocumentExistsException
 }
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._

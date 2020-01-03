@@ -1,6 +1,7 @@
 package com.couchbase.client.scala.kv
 
-import com.couchbase.client.core.error.{InvalidArgumentException, ReducedKeyValueErrorContext}
+import com.couchbase.client.core.error.InvalidArgumentException
+import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext
 import com.couchbase.client.core.msg.kv.{
   SubDocumentField,
   SubDocumentOpResponseStatus,

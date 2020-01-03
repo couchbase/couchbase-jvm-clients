@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
+
 /**
  * Thrown when the server reports a temporary failure that
  * is very likely to be lock-related (like an already locked

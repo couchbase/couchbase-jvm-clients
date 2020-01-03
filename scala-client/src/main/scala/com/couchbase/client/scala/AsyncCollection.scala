@@ -21,6 +21,7 @@ import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error._
+import com.couchbase.client.core.error.context.KeyValueErrorContext
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.msg.{Request, Response}

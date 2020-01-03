@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.error;
 
-import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Indicates an optimistic locking failure.

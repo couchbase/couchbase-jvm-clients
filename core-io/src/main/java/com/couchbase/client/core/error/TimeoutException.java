@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.CancellationErrorContext;
+
 public abstract class TimeoutException extends CouchbaseException {
 
   protected TimeoutException(final String message, final CancellationErrorContext ctx) {
