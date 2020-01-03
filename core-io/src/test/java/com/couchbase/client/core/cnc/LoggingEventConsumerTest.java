@@ -59,7 +59,7 @@ class LoggingEventConsumerTest {
   void formatAndLogWithDuration() {
     Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofMillis(123), null);
     loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][123000µs]");
+    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][123ms]");
   }
 
   @Test
@@ -79,7 +79,7 @@ class LoggingEventConsumerTest {
     Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofMillis(123),
       new MyContext(ctxData));
     loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][123000µs] {\"foo\":true}");
+    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][123ms] {\"foo\":true}");
   }
 
   @Test
@@ -87,7 +87,7 @@ class LoggingEventConsumerTest {
     Event event = new EventWithDescription("some text");
     loggingEventConsumer.accept(event);
     verify(logger, times(1))
-      .debug("[com.couchbase.io][EventWithDescription][3600000000µs] some text");
+      .debug("[com.couchbase.io][EventWithDescription][3600s] some text");
   }
 
   @Test
@@ -118,6 +118,25 @@ class LoggingEventConsumerTest {
     loggingEventConsumer.accept(retryEvent);
 
     verify(logger, never()).attachContext(userContext);
+  }
+
+  @Test
+  void convertsDurationsAtExpectedBoundaries() {
+    Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofMillis(1), null);
+    loggingEventConsumer.accept(event);
+    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][1000µs]");
+
+    event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofMillis(11), null);
+    loggingEventConsumer.accept(event);
+    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][11ms]");
+
+    event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofSeconds(1), null);
+    loggingEventConsumer.accept(event);
+    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][1000ms]");
+
+    event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofSeconds(11), null);
+    loggingEventConsumer.accept(event);
+    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][11s]");
   }
 
   static class MyEvent extends AbstractEvent {

@@ -22,6 +22,7 @@ import com.couchbase.client.core.msg.RequestContext;
 import org.slf4j.MDC;
 
 import java.io.PrintStream;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -104,8 +105,8 @@ public class LoggingEventConsumer implements Consumer<Event> {
     if (!event.duration().isZero()) {
       logLineBuilder
         .append("[")
-        .append(TimeUnit.NANOSECONDS.toMicros(event.duration().toNanos()))
-        .append("µs]");
+        .append(convertEventDuration(event.duration()))
+        .append("]");
     }
 
     String description = event.description();
@@ -171,6 +172,28 @@ public class LoggingEventConsumer implements Consumer<Event> {
 
     if (diagnosticContext) {
       logger.clearContext();
+    }
+  }
+
+  /**
+   * Converts the event duration into a reasonable string format.
+   * <p>
+   * Note that the units are not cut directly at the "kilo" boundary but rather at kilo * 10 so that the precision
+   * at the lower ends is not lost. So 1ms will be shown as 10000 micros and 1s as 10000 millis.
+   *
+   * @param duration the duration to convert.
+   * @return the converted duration.
+   */
+  private static String convertEventDuration(final Duration duration) {
+    long nanos = duration.toNanos();
+    if (nanos < 1000L) { // everything below a microsecond is ns
+      return nanos + "ns";
+    } else if (nanos < 1000_000_0L) {
+      return TimeUnit.NANOSECONDS.toMicros(nanos) + "µs"; // everything below 10ms is micros
+    } else if (nanos < 1000_000_000_0L) { // everything below 10s is millis
+      return TimeUnit.NANOSECONDS.toMillis(nanos) + "ms";
+    } else { // everything higher than 10s is seconds
+      return TimeUnit.NANOSECONDS.toSeconds(nanos) + "s";
     }
   }
 
