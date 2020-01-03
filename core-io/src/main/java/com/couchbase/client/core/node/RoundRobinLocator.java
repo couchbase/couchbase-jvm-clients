@@ -20,6 +20,8 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.node.NodeLocatorBugIdentifiedEvent;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.GenericRequestErrorContext;
+import com.couchbase.client.core.error.ServiceNotAvailableException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.TargetedRequest;
@@ -90,7 +92,16 @@ public class RoundRobinLocator implements Locator {
 
     List<Node> filteredNodes = filterNodes(nodes, request, config);
     if (filteredNodes.isEmpty()) {
-      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NODE_NOT_AVAILABLE);
+      // No node in the cluster has the service enabled, so we need to cancel the request with a
+      // service not available exception. Either the cluster is not configured with the service
+      // in the first place or a failover happened and suddenly there is no node in the cluster
+      // anymore which can serve the request. In any case sending it into retry will not help
+      // resolve the situation so let's make it clear in the exception what's going on.
+      request.fail(new ServiceNotAvailableException(
+        "The " + request.serviceType().ident()
+        + " service is not available in the cluster.",
+        new GenericRequestErrorContext(request)
+      ));
       return;
     }
 
