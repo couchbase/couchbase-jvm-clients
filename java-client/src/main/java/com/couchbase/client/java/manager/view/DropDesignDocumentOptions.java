@@ -33,5 +33,6 @@ public class DropDesignDocumentOptions extends CommonOptions<DropDesignDocumentO
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

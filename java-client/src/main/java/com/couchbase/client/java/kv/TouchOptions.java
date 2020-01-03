@@ -34,6 +34,8 @@ public class TouchOptions extends CommonOptions<TouchOptions> {
 
   public class Built extends BuiltCommonOptions {
 
+    Built() { }
+
   }
 
 }

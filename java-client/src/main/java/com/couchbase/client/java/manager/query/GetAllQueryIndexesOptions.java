@@ -34,5 +34,6 @@ public class GetAllQueryIndexesOptions extends CommonOptions<GetAllQueryIndexesO
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

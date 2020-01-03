@@ -52,6 +52,8 @@ public class InsertOptions extends CommonDurabilityOptions<InsertOptions> {
 
   public class Built extends BuiltCommonDurabilityOptions {
 
+    Built() { }
+
     public Duration expiry() {
       return expiry;
     }

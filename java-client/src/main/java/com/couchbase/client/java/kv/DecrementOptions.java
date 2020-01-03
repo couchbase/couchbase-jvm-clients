@@ -112,6 +112,8 @@ public class DecrementOptions extends CommonDurabilityOptions<DecrementOptions> 
 
   public class Built extends BuiltCommonDurabilityOptions {
 
+    Built() { }
+
     public Duration expiry() {
       return expiry;
     }

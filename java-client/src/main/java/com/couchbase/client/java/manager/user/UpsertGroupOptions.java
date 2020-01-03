@@ -32,5 +32,6 @@ public class UpsertGroupOptions extends CommonOptions<UpsertGroupOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

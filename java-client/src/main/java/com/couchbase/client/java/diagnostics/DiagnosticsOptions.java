@@ -64,6 +64,8 @@ public class DiagnosticsOptions {
 
   @Stability.Internal
   public class Built {
+
+    Built() { }
     public Optional<String> reportId() {
       return reportId;
     }

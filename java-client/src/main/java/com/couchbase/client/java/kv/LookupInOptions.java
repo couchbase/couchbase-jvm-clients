@@ -57,6 +57,8 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
 
   public class Built extends BuiltCommonOptions {
 
+    Built() { }
+
     public JsonSerializer serializer() {
       return serializer;
     }

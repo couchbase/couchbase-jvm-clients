@@ -32,5 +32,6 @@ public class GetAllGroupsOptions extends CommonOptions<GetAllGroupsOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

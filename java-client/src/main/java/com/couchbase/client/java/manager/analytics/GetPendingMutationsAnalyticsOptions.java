@@ -34,5 +34,6 @@ public class GetPendingMutationsAnalyticsOptions extends CommonOptions<GetPendin
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

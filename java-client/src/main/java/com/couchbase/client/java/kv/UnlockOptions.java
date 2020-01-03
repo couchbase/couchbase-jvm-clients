@@ -35,6 +35,8 @@ public class UnlockOptions extends CommonOptions<UnlockOptions> {
 
   public class Built extends BuiltCommonOptions {
 
+    Built() { }
+
   }
 
 }

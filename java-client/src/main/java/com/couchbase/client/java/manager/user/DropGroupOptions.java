@@ -32,5 +32,6 @@ public class DropGroupOptions extends CommonOptions<DropGroupOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

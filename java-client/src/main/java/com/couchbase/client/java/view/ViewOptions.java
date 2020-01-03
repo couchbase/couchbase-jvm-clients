@@ -351,6 +351,8 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
 
   public class Built extends BuiltCommonOptions {
 
+    Built() { }
+
     public JsonSerializer serializer() {
       return serializer;
     }

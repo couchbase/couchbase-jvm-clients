@@ -246,6 +246,8 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
 
   public class Built extends BuiltCommonOptions {
 
+    Built() { }
+
     public JsonSerializer serializer() {
       return serializer;
     }

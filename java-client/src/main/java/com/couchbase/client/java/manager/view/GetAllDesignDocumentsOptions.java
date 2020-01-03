@@ -33,5 +33,6 @@ public class GetAllDesignDocumentsOptions extends CommonOptions<GetAllDesignDocu
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

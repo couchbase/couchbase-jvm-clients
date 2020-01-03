@@ -80,6 +80,7 @@ public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptio
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
     public boolean ignoreIfExists() {
       return ignoreIfExists;
     }

@@ -49,6 +49,9 @@ public class CreateIndexAnalyticsOptions extends CommonOptions<CreateIndexAnalyt
   }
 
   public class Built extends BuiltCommonOptions {
+
+    Built() { }
+
     public boolean ignoreIfExists() {
       return ignoreIfExists;
     }

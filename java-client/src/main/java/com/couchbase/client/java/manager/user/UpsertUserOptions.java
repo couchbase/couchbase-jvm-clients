@@ -32,5 +32,6 @@ public class UpsertUserOptions extends CommonOptions<UpsertUserOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

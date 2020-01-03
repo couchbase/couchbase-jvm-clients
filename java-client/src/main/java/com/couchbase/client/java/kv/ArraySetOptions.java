@@ -30,7 +30,7 @@ public static ArraySetOptions arraySetOptions() { return new ArraySetOptions(); 
     }
 
     public class Built extends BuiltCommonDatastructureOptions {
-
+        Built() { }
 
     }
 }

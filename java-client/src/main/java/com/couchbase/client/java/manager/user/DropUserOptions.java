@@ -32,5 +32,6 @@ public class DropUserOptions extends CommonOptions<DropUserOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

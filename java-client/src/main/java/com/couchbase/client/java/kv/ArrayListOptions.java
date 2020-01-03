@@ -32,7 +32,7 @@ public class ArrayListOptions extends CommonDatastructureOptions<ArrayListOption
 
     @Stability.Internal
     public class Built extends BuiltCommonDatastructureOptions {
-
+        Built() { }
 
     }
 }

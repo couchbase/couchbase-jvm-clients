@@ -49,6 +49,9 @@ public class DropIndexAnalyticsOptions extends CommonOptions<DropIndexAnalyticsO
   }
 
   public class Built extends BuiltCommonOptions {
+
+    Built() { }
+
     public boolean ignoreIfNotExists() {
       return ignoreIfNotExists;
     }

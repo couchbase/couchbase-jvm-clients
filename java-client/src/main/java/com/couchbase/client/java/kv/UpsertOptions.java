@@ -52,6 +52,8 @@ public class UpsertOptions extends CommonDurabilityOptions<UpsertOptions> {
 
   public class Built extends BuiltCommonDurabilityOptions {
 
+    Built() { }
+
     public Duration expiry() {
       return expiry;
     }

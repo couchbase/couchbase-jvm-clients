@@ -33,6 +33,10 @@ public class ExistsOptions extends CommonOptions<ExistsOptions> {
   }
 
   @Stability.Internal
-  public class Built extends BuiltCommonOptions { }
+  public class Built extends BuiltCommonOptions {
+
+    Built() { }
+
+  }
 
 }

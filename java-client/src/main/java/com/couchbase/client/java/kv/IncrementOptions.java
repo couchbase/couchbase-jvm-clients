@@ -112,6 +112,8 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
 
   public class Built extends BuiltCommonDurabilityOptions {
 
+    Built() { }
+
     public Duration expiry() {
       return expiry;
     }

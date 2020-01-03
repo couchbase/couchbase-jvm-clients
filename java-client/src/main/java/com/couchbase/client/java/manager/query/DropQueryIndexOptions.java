@@ -44,6 +44,7 @@ public class DropQueryIndexOptions extends CommonOptions<DropQueryIndexOptions> 
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
     public boolean ignoreIfNotExists() {
       return ignoreIfNotExists;
     }

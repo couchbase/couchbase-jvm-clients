@@ -34,5 +34,6 @@ public class GetAllDatasetsAnalyticsOptions extends CommonOptions<GetAllDatasets
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

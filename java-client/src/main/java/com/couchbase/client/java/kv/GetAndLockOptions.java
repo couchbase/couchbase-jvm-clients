@@ -49,6 +49,8 @@ public class GetAndLockOptions extends CommonOptions<GetAndLockOptions> {
 
   public class Built extends BuiltCommonOptions {
 
+    Built() { }
+
     public Transcoder transcoder() {
       return transcoder;
     }

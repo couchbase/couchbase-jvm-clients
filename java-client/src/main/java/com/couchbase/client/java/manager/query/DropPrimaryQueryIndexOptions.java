@@ -44,6 +44,7 @@ public class DropPrimaryQueryIndexOptions extends CommonOptions<DropPrimaryQuery
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
     public boolean ignoreIfNotExists() {
       return ignoreIfNotExists;
     }

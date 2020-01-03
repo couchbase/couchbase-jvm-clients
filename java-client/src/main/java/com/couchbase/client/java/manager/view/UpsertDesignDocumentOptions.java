@@ -33,5 +33,6 @@ public class UpsertDesignDocumentOptions extends CommonOptions<UpsertDesignDocum
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

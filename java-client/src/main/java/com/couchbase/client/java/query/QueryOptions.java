@@ -370,6 +370,8 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   @Stability.Internal
   public class Built extends BuiltCommonOptions {
 
+    Built() { }
+
     boolean adhoc() {
       return adhoc;
     }

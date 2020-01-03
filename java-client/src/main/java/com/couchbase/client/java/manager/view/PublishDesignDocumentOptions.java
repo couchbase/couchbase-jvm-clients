@@ -33,5 +33,6 @@ public class PublishDesignDocumentOptions extends CommonOptions<PublishDesignDoc
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

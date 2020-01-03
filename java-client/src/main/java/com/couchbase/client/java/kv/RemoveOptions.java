@@ -41,6 +41,8 @@ public class RemoveOptions extends CommonDurabilityOptions<RemoveOptions> {
 
   public class Built extends BuiltCommonDurabilityOptions {
 
+    Built() { }
+
     public long cas() {
       return cas;
     }

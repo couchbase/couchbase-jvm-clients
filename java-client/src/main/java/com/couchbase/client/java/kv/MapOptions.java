@@ -31,6 +31,7 @@ public class MapOptions extends CommonDatastructureOptions<MapOptions> {
 
     public class Built extends BuiltCommonDatastructureOptions {
 
+        Built() { }
 
     }
 }

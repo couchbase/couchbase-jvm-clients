@@ -206,6 +206,8 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
   @Stability.Internal
   public class Built extends BuiltCommonOptions {
 
+    Built() { }
+
     public boolean readonly() {
       return readonly;
     }

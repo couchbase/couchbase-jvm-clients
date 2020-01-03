@@ -138,6 +138,8 @@ public class GetOptions extends CommonOptions<GetOptions> {
   @Stability.Internal
   public class Built extends BuiltCommonOptions {
 
+    Built() { }
+
     public boolean withExpiry() {
       return withExpiry;
     }

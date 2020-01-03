@@ -31,6 +31,7 @@ public class QueueOptions extends CommonDatastructureOptions<QueueOptions> {
 
     public class Built extends BuiltCommonDatastructureOptions {
 
+        Built() { }
 
     }
 }

@@ -49,6 +49,8 @@ public class DisconnectLinkAnalyticsOptions extends CommonOptions<DisconnectLink
 
   public class Built extends BuiltCommonOptions {
 
+    Built() { }
+
     public Optional<String> dataverseName() {
       return dataverseName;
     }

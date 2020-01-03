@@ -46,6 +46,8 @@ public class GetAndTouchOptions extends CommonOptions<GetAndTouchOptions> {
 
   public class Built extends BuiltCommonOptions {
 
+    Built() { }
+
     public Transcoder transcoder() {
       return transcoder;
     }

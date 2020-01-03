@@ -91,6 +91,7 @@ public class CreatePrimaryQueryIndexOptions extends CommonOptions<CreatePrimaryQ
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
     public boolean ignoreIfExists() {
       return ignoreIfExists;
     }

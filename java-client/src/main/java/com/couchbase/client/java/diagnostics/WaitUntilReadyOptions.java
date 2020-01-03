@@ -90,6 +90,8 @@ public class WaitUntilReadyOptions {
   @Stability.Internal
   public class Built {
 
+    Built() { }
+
     public Set<ServiceType> serviceTypes() {
       return serviceTypes;
     }

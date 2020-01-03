@@ -41,6 +41,9 @@ public class CreateDataverseAnalyticsOptions extends CommonOptions<CreateDataver
   }
 
   public class Built extends BuiltCommonOptions {
+
+    Built() { }
+
     public boolean ignoreIfExists() {
       return ignoreIfExists;
     }

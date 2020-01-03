@@ -32,5 +32,6 @@ public class GetAllUsersOptions extends CommonOptions<GetAllUsersOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

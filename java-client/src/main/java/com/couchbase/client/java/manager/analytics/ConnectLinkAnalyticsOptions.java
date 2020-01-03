@@ -63,6 +63,8 @@ public class ConnectLinkAnalyticsOptions extends CommonOptions<ConnectLinkAnalyt
 
   public class Built extends BuiltCommonOptions {
 
+    Built() { }
+
     public Optional<String> dataverseName() {
       return dataverseName;
     }

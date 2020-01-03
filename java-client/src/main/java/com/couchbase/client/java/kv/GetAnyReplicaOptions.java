@@ -60,6 +60,8 @@ public class GetAnyReplicaOptions extends CommonOptions<GetAnyReplicaOptions> {
 
   public class Built extends BuiltCommonOptions {
 
+    Built() { }
+
     public Transcoder transcoder() {
       return transcoder;
     }

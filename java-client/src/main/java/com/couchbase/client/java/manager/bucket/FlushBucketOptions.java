@@ -34,5 +34,6 @@ public class FlushBucketOptions extends CommonOptions<FlushBucketOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

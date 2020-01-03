@@ -34,5 +34,6 @@ public class GetAllIndexesAnalyticsOptions extends CommonOptions<GetAllIndexesAn
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

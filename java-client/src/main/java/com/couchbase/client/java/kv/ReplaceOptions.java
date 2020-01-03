@@ -58,6 +58,8 @@ public class ReplaceOptions extends CommonDurabilityOptions<ReplaceOptions> {
 
   public class Built extends BuiltCommonDurabilityOptions {
 
+    Built() { }
+
     public Duration expiry() {
       return expiry;
     }

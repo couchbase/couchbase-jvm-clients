@@ -32,5 +32,6 @@ public class GetRolesOptions extends CommonOptions<GetRolesOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

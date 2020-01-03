@@ -49,6 +49,7 @@ public class DropDatasetAnalyticsOptions extends CommonOptions<DropDatasetAnalyt
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
     public boolean ignoreIfNotExists() {
       return ignoreIfNotExists;
     }

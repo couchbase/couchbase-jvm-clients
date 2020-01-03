@@ -55,6 +55,9 @@ public class CreateDatasetAnalyticsOptions extends CommonOptions<CreateDatasetAn
   }
 
   public class Built extends BuiltCommonOptions {
+
+    Built() { }
+
     public boolean ignoreIfExists() {
       return ignoreIfExists;
     }

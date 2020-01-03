@@ -46,6 +46,7 @@ public class WatchQueryIndexesOptions {
   }
 
   public class Built {
+    Built() { }
     public boolean watchPrimary() {
       return watchPrimary;
     }

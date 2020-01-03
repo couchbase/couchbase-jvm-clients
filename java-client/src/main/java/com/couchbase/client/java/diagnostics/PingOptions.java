@@ -125,6 +125,9 @@ public class PingOptions {
 
   @Stability.Internal
   public class Built {
+
+    Built() { }
+
     public Optional<String> reportId() {
       return reportId;
     }

@@ -77,6 +77,8 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
 
   public class Built extends BuiltCommonDurabilityOptions {
 
+    Built() { }
+
     public Duration expiry() {
       return expiry;
     }

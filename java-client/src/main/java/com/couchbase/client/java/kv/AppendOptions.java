@@ -57,6 +57,8 @@ public class AppendOptions extends CommonDurabilityOptions<AppendOptions> {
 
   public class Built extends BuiltCommonDurabilityOptions {
 
+    Built() { }
+
     public long cas() {
       return cas;
     }

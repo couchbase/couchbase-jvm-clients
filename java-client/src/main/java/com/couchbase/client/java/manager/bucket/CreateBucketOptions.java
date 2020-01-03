@@ -34,5 +34,6 @@ public class CreateBucketOptions extends CommonOptions<CreateBucketOptions> {
   }
 
   public class Built extends BuiltCommonOptions {
+    Built() { }
   }
 }

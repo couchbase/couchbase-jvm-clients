@@ -60,6 +60,8 @@ public class ClusterOptions {
 
   public class Built {
 
+    Built() { }
+
     public Authenticator authenticator() {
       return authenticator;
     }
