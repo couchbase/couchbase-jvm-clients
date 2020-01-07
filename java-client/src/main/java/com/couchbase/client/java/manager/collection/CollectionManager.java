@@ -25,6 +25,12 @@ import com.couchbase.client.core.error.ScopeNotFoundException;
 import java.util.List;
 
 import static com.couchbase.client.java.AsyncUtils.block;
+import static com.couchbase.client.java.manager.collection.CreateCollectionOptions.createCollectionOptions;
+import static com.couchbase.client.java.manager.collection.CreateScopeOptions.createScopeOptions;
+import static com.couchbase.client.java.manager.collection.DropCollectionOptions.dropCollectionOptions;
+import static com.couchbase.client.java.manager.collection.DropScopeOptions.dropScopeOptions;
+import static com.couchbase.client.java.manager.collection.GetAllScopesOptions.getAllScopesOptions;
+import static com.couchbase.client.java.manager.collection.GetScopeOptions.getScopeOptions;
 
 /**
  * The {@link CollectionManager} provides APIs to manage bucket collections and scopes.
@@ -46,7 +52,18 @@ public class CollectionManager {
    * @throws ScopeNotFoundException if the specified scope does not exist.
    */
   public void createCollection(final CollectionSpec collectionSpec) {
-    block(asyncCollectionManager.createCollection(collectionSpec));
+    createCollection(collectionSpec, createCollectionOptions());
+  }
+
+  /**
+   * Creates a collection if it does not already exist.
+   *
+   * @param collectionSpec the collection spec that contains the properties of the collection.
+   * @throws CollectionExistsException if the collection already exists
+   * @throws ScopeNotFoundException if the specified scope does not exist.
+   */
+  public void createCollection(final CollectionSpec collectionSpec, final CreateCollectionOptions options) {
+    block(asyncCollectionManager.createCollection(collectionSpec, options));
   }
 
   /**
@@ -57,7 +74,18 @@ public class CollectionManager {
    * @throws ScopeNotFoundException if the specified scope does not exist.
    */
   public void dropCollection(final CollectionSpec collectionSpec) {
-    block(asyncCollectionManager.dropCollection(collectionSpec));
+    dropCollection(collectionSpec, dropCollectionOptions());
+  }
+
+  /**
+   * Drops a collection if it exists.
+   *
+   * @param collectionSpec the collection spec that contains the properties of the collection.
+   * @throws CollectionNotFoundException if the collection did not exist.
+   * @throws ScopeNotFoundException if the specified scope does not exist.
+   */
+  public void dropCollection(final CollectionSpec collectionSpec, final DropCollectionOptions options) {
+    block(asyncCollectionManager.dropCollection(collectionSpec, options));
   }
 
   /**
@@ -67,7 +95,17 @@ public class CollectionManager {
    * @throws ScopeExistsException if the scope already exists.
    */
   public void createScope(final String scopeName) {
-    block(asyncCollectionManager.createScope(scopeName));
+    createScope(scopeName, createScopeOptions());
+  }
+
+  /**
+   * Creates a scope if it does not already exist.
+   *
+   * @param scopeName the name of the scope to create.
+   * @throws ScopeExistsException if the scope already exists.
+   */
+  public void createScope(final String scopeName, final CreateScopeOptions options) {
+    block(asyncCollectionManager.createScope(scopeName, options));
   }
 
   /**
@@ -77,7 +115,17 @@ public class CollectionManager {
    * @throws ScopeNotFoundException if the scope did not exist.
    */
   public void dropScope(final String scopeName) {
-    block(asyncCollectionManager.dropScope(scopeName));
+    dropScope(scopeName, dropScopeOptions());
+  }
+
+  /**
+   * Drops a scope if it exists.
+   *
+   * @param scopeName the name of the scope to drop.
+   * @throws ScopeNotFoundException if the scope did not exist.
+   */
+  public void dropScope(final String scopeName, final DropScopeOptions options) {
+    block(asyncCollectionManager.dropScope(scopeName, options));
   }
 
   /**
@@ -88,7 +136,18 @@ public class CollectionManager {
    * @throws ScopeNotFoundException if scope does not exist
    */
   public ScopeSpec getScope(final String scopeName) {
-    return block(asyncCollectionManager.getScope(scopeName));
+    return getScope(scopeName, getScopeOptions());
+  }
+
+  /**
+   * Returns the scope if it exists.
+   *
+   * @param scopeName the name of the scope.
+   * @return information about the requested scope.
+   * @throws ScopeNotFoundException if scope does not exist
+   */
+  public ScopeSpec getScope(final String scopeName, final GetScopeOptions options) {
+    return block(asyncCollectionManager.getScope(scopeName, options));
   }
 
   /**
@@ -97,7 +156,16 @@ public class CollectionManager {
    * @return a list of all scopes in this bucket.
    */
   public List<ScopeSpec> getAllScopes() {
-    return block(asyncCollectionManager.getAllScopes());
+    return getAllScopes(getAllScopesOptions());
+  }
+
+  /**
+   * Returns all scopes in this bucket.
+   *
+   * @return a list of all scopes in this bucket.
+   */
+  public List<ScopeSpec> getAllScopes(final GetAllScopesOptions options) {
+    return block(asyncCollectionManager.getAllScopes(options));
   }
 
 }

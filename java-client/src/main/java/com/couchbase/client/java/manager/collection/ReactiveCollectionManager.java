@@ -25,6 +25,12 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import static com.couchbase.client.core.Reactor.toMono;
+import static com.couchbase.client.java.manager.collection.CreateCollectionOptions.createCollectionOptions;
+import static com.couchbase.client.java.manager.collection.CreateScopeOptions.createScopeOptions;
+import static com.couchbase.client.java.manager.collection.DropCollectionOptions.dropCollectionOptions;
+import static com.couchbase.client.java.manager.collection.DropScopeOptions.dropScopeOptions;
+import static com.couchbase.client.java.manager.collection.GetAllScopesOptions.getAllScopesOptions;
+import static com.couchbase.client.java.manager.collection.GetScopeOptions.getScopeOptions;
 
 /**
  * The {@link ReactiveCollectionManager} provides APIs to manage bucket collections and scopes.
@@ -45,8 +51,70 @@ public class ReactiveCollectionManager {
    * @throws CollectionExistsException (async) if the collection already exists
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    */
+  public Mono<Void> createCollection(final CollectionSpec collectionSpec, final CreateCollectionOptions options) {
+    return toMono(() -> async.createCollection(collectionSpec, options));
+  }
+
+  /**
+   * Drops a collection if it exists.
+   *
+   * @param collectionSpec the collection spec that contains the properties of the collection.
+   * @throws CollectionNotFoundException (async) if the collection did not exist.
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   */
+  public Mono<Void> dropCollection(final CollectionSpec collectionSpec, final DropCollectionOptions options) {
+    return toMono(() -> async.dropCollection(collectionSpec, options));
+  }
+
+  /**
+   * Creates a scope if it does not already exist.
+   *
+   * @param scopeName the name of the scope to create.
+   * @throws ScopeExistsException (async) if the scope already exists.
+   */
+  public Mono<Void> createScope(final String scopeName, final CreateScopeOptions options) {
+    return toMono(() -> async.createScope(scopeName, options));
+  }
+
+  /**
+   * Drops a scope if it exists.
+   *
+   * @param scopeName the name of the scope to drop.
+   * @throws ScopeNotFoundException (async) if the scope did not exist.
+   */
+  public Mono<Void> dropScope(final String scopeName, final DropScopeOptions options) {
+    return toMono(() -> async.dropScope(scopeName, options));
+  }
+
+  /**
+   * Returns the scope if it exists.
+   *
+   * @param scopeName the name of the scope.
+   * @return a mono containing information about the scope.
+   * @throws ScopeNotFoundException (async) if scope does not exist.
+   */
+  public Mono<ScopeSpec> getScope(final String scopeName, final GetScopeOptions options) {
+    return toMono(() -> async.getScope(scopeName, options));
+  }
+
+  /**
+   * Returns all scopes in this bucket.
+   *
+   * @return a flux of all scopes in this bucket.
+   */
+  public Flux<ScopeSpec> getAllScopes(final GetAllScopesOptions options) {
+    return toMono(() -> async.getAllScopes(options)).flatMapMany(Flux::fromIterable);
+  }
+
+  /**
+   * Creates a collection if it does not already exist.
+   *
+   * @param collectionSpec the collection spec that contains the properties of the collection.
+   * @throws CollectionExistsException (async) if the collection already exists
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   */
   public Mono<Void> createCollection(final CollectionSpec collectionSpec) {
-    return toMono(() -> async.createCollection(collectionSpec));
+    return createCollection(collectionSpec, createCollectionOptions());
   }
 
   /**
@@ -57,7 +125,7 @@ public class ReactiveCollectionManager {
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    */
   public Mono<Void> dropCollection(final CollectionSpec collectionSpec) {
-    return toMono(() -> async.dropCollection(collectionSpec));
+    return dropCollection(collectionSpec, dropCollectionOptions());
   }
 
   /**
@@ -67,7 +135,7 @@ public class ReactiveCollectionManager {
    * @throws ScopeExistsException (async) if the scope already exists.
    */
   public Mono<Void> createScope(final String scopeName) {
-    return toMono(() -> async.createScope(scopeName));
+    return createScope(scopeName, createScopeOptions());
   }
 
   /**
@@ -77,7 +145,7 @@ public class ReactiveCollectionManager {
    * @throws ScopeNotFoundException (async) if the scope did not exist.
    */
   public Mono<Void> dropScope(final String scopeName) {
-    return toMono(() -> async.dropScope(scopeName));
+    return dropScope(scopeName, dropScopeOptions());
   }
 
   /**
@@ -88,7 +156,7 @@ public class ReactiveCollectionManager {
    * @throws ScopeNotFoundException (async) if scope does not exist.
    */
   public Mono<ScopeSpec> getScope(final String scopeName) {
-    return toMono(() -> async.getScope(scopeName));
+    return getScope(scopeName, getScopeOptions());
   }
 
   /**
@@ -97,8 +165,7 @@ public class ReactiveCollectionManager {
    * @return a flux of all scopes in this bucket.
    */
   public Flux<ScopeSpec> getAllScopes() {
-    return toMono(() -> async.getAllScopes())
-            .flatMapMany(scopes -> Flux.fromIterable(scopes));
+    return getAllScopes(getAllScopesOptions());
   }
 
 }
