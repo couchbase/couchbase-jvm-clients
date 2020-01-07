@@ -47,7 +47,8 @@ case class GetSelecter(
 ) extends Dynamic {
   private val mapped = in.left.map(_.safe).right.map(_.safe)
 
-  def selectDynamic(name: String): GetSelecter = GetSelecter(in, path :+ new PathObjectOrField(name))
+  def selectDynamic(name: String): GetSelecter =
+    GetSelecter(in, path :+ new PathObjectOrField(name))
 
   def applyDynamic(name: String)(index: Int): GetSelecter =
     GetSelecter(in, path :+ new PathArray(name, index))
@@ -177,7 +178,7 @@ private[scala] object GetSelecter {
 
           case v: PathArray =>
             val name = v.str()
-            val idx = v.idx()
+            val idx  = v.idx()
             cursor match {
               case Left(obj) =>
                 obj.arr(name) match {
@@ -240,7 +241,7 @@ private[scala] object GetSelecter {
 
           case v: PathArray =>
             val name = v.str()
-            val idx = v.idx()
+            val idx  = v.idx()
             cursor match {
               case Left(obj) =>
                 obj.arr(name) match {

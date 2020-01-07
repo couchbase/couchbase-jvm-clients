@@ -77,10 +77,10 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
       durability: Durability = Disabled,
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy
-  ): Future[MutationResult] = {
+  ): SMono[MutationResult] = {
     val req =
       async.binaryAppendHandler.request(id, content, cas, durability, timeout, retryStrategy)
-    async.async.wrapWithDurability(req, id, async.binaryAppendHandler, durability, false, timeout)
+    wrap(req, id, async.binaryAppendHandler)
   }
 
   /** Add bytes to the beginning of a Couchbase binary document.
@@ -94,10 +94,10 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
       durability: Durability = Disabled,
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy
-  ): Future[MutationResult] = {
+  ): SMono[MutationResult] = {
     val req =
       async.binaryPrependHandler.request(id, content, cas, durability, timeout, retryStrategy)
-    async.async.wrapWithDurability(req, id, async.binaryPrependHandler, durability, false, timeout)
+    wrap(req, id, async.binaryPrependHandler)
   }
 
   /** Increment a Couchbase 'counter' document.
@@ -113,7 +113,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
       expiry: Duration = 0.seconds,
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy
-  ): Future[CounterResult] = {
+  ): SMono[CounterResult] = {
     val req = async.binaryIncrementHandler.request(
       id,
       delta,
@@ -124,14 +124,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
       timeout,
       retryStrategy
     )
-    async.async.wrapWithDurability(
-      req,
-      id,
-      async.binaryIncrementHandler,
-      durability,
-      false,
-      timeout
-    )
+    wrap(req, id, async.binaryIncrementHandler)
   }
 
   /** Decrement a Couchbase 'counter' document.
@@ -147,7 +140,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
       expiry: Duration = 0.seconds,
       timeout: Duration = kvTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy
-  ): Future[CounterResult] = {
+  ): SMono[CounterResult] = {
     val req = async.binaryDecrementHandler.request(
       id,
       delta,
@@ -158,13 +151,6 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
       timeout,
       retryStrategy
     )
-    async.async.wrapWithDurability(
-      req,
-      id,
-      async.binaryDecrementHandler,
-      durability,
-      false,
-      timeout
-    )
+    wrap(req, id, async.binaryDecrementHandler)
   }
 }

@@ -117,5 +117,18 @@ class BinarySpec extends ScalaIntegrationTest {
       case Failure(err)                            => assert(false, s"unexpected error $err")
     }
   }
+  @Test
+  def blockingIncrementReactive() {
+    val docId  = TestUtils.docId()
+    val result = coll.reactive.increment(docId, 3, Option(0)).block()
+    assert(result.content == 0) // initial value returned
+  }
+
+  @Test
+  def blockingDecrementReactive() {
+    val docId  = TestUtils.docId()
+    val result = coll.reactive.decrement(docId, 3, Option(0)).block()
+    assert(result.content == 0) // initial value returned
+  }
 
 }
