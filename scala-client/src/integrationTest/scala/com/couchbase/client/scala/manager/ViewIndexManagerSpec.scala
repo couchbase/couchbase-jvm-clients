@@ -28,6 +28,7 @@ import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+@Disabled("to be fixed in SCBC-161")
 class ViewIndexManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster        = _
   private var views: ViewIndexManager = _

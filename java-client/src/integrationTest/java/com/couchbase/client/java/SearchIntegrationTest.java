@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Verifies the basic functionality of analytics queries in an end-to-end fashion.
  */
 @IgnoreWhen( missesCapabilities = { Capabilities.SEARCH })
+@Disabled("to be fixed in JCBC-1557")
 class SearchIntegrationTest extends JavaIntegrationTest {
 
     private static Cluster cluster;
