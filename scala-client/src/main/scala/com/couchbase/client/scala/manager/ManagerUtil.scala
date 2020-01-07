@@ -39,8 +39,10 @@ import scala.util.{Failure, Success, Try}
 
 object ManagerUtil {
   def sendRequest(core: Core, request: GenericManagerRequest): SMono[GenericManagerResponse] = {
-    core.send(request)
-    FutureConversions.javaCFToScalaMono(request, request.response, true)
+    SMono.defer(() => {
+      core.send(request)
+      FutureConversions.javaCFToScalaMono(request, request.response, true)
+    })
   }
 
   def sendRequest(

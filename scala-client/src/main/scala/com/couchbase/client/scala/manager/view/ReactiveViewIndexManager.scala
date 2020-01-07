@@ -131,10 +131,12 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
           req
         }, false, bucket)
 
-        core.send(request)
-        FutureConversions
-          .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .map(_ => Unit)
+        SMono.defer(() => {
+          core.send(request)
+          FutureConversions
+            .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+            .map(_ => Unit)
+        })
       case Failure(err) =>
         SMono.raiseError(err)
     }
@@ -230,8 +232,10 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
   }
 
   private def sendRequest(request: GenericViewRequest): SMono[GenericViewResponse] = {
-    core.send(request)
-    FutureConversions.wrap(request, request.response, propagateCancellation = true)
+    SMono.defer(() => {
+      core.send(request)
+      FutureConversions.wrap(request, request.response, propagateCancellation = true)
+    })
   }
 
   private def sendRequest(

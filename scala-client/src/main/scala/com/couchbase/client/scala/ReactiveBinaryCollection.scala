@@ -56,11 +56,13 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
   ): SMono[Res] = {
     in match {
       case Success(request) =>
-        async.async.core.send[Resp](request)
+        SMono.defer(() => {
+          async.async.core.send[Resp](request)
 
-        FutureConversions
-          .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .map(r => handler.response(request, id, r))
+          FutureConversions
+            .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+            .map(r => handler.response(request, id, r))
+        })
 
       case Failure(err) => SMono.raiseError(err)
     }

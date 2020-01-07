@@ -212,8 +212,10 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
     */
   private def queryInternal(request: QueryRequest, options: QueryOptions, adhoc: Boolean) = {
     if (adhoc) {
-      core.send(request)
-      FutureConversions.wrap(request, request.response, propagateCancellation = true)
+      SMono.defer(() => {
+        core.send(request)
+        FutureConversions.wrap(request, request.response, propagateCancellation = true)
+      })
     } else maybePrepareAndExecute(request, options)
   }
 
@@ -304,8 +306,10 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
       request: QueryRequest,
       options: QueryOptions
   ): SMono[ReactiveQueryResult] = {
-    queryInternal(request, options, options.adhoc)
-      .map(v => convertResponse(v))
+    SMono.defer(() => {
+      queryInternal(request, options, options.adhoc)
+        .map(v => convertResponse(v))
+    })
   }
 
   /** Builds the request to prepare a prepared statement.
