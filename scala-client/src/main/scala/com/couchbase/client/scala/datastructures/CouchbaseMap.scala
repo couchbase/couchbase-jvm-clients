@@ -44,7 +44,7 @@ class CouchbaseMap[T](
     case _       => CouchbaseCollectionOptions(collection)
   }
 
-  override def get(key: String): Option[T] = {
+  def getInternal(key: String): Try[Option[T]] = {
     val op = collection.lookupIn(
       id,
       Array(LookupInSpec.get(key)),
@@ -60,17 +60,29 @@ class CouchbaseMap[T](
       }
     })
 
+    result
+  }
+
+  override def get(key: String): Option[T] = {
+    val result = getInternal(key)
+
     result match {
-      case Success(value)                      => value
-      case Failure(err: PathNotFoundException) => None
-      case Failure(err)                        => throw err
+      case Success(value)                          => value
+      case Failure(err: PathNotFoundException)     => None
+      case Failure(err: DocumentNotFoundException) => None
+      case Failure(err)                            => throw err
     }
   }
 
   override def apply(key: String): T = {
-    get(key) match {
-      case Some(value) => value
-      case _           => throw new NoSuchElementException(s"Key ${key} not found")
+    val result = getInternal(key)
+
+    result match {
+      case Success(Some(value)) => value
+      case Success(None) | Failure(_: DocumentNotFoundException) |
+          Failure(_: PathNotFoundException) =>
+        throw new NoSuchElementException(s"Key $key not found")
+      case Failure(err) => throw err
     }
   }
 
@@ -83,11 +95,15 @@ class CouchbaseMap[T](
         timeout = opts.timeout,
         retryStrategy = opts.retryStrategy,
         durability = opts.durability
-      )
-      .get
+      ) match {
+      case Success(_)                              =>
+      case Failure(err: DocumentNotFoundException) =>
+      case Failure(err: PathNotFoundException)     =>
+      case Failure(err)                            => throw err
+    }
   }
 
-  // Note `remoteAt` is more performant as it does not have to return the removed element
+  // Note `removeAt` is more performant as it does not have to return the removed element
   override def remove(key: String): Option[T] = {
     val op = collection.lookupIn(
       id,
@@ -117,7 +133,9 @@ class CouchbaseMap[T](
           case Failure(err) => throw err
         }
 
-      case Failure(err) => throw err
+      case Failure(err: DocumentNotFoundException) => None
+      case Failure(err: PathNotFoundException)     => None
+      case Failure(err)                            => throw err
     }
   }
 

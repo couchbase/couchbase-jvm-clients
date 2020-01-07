@@ -37,7 +37,6 @@ import scala.util.{Failure, Success, Try}
   * then use [[GetSelecterSafe]].
   *
   * @define SupportedNumTypes the supported number types (Int, Double, Float, Long, Short)
-  *
   * @author Graham Pople
   * @since 1.0.0
   */

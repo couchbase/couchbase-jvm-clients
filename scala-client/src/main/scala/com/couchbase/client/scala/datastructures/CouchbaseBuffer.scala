@@ -15,7 +15,12 @@
  */
 package com.couchbase.client.scala.datastructures
 
-import com.couchbase.client.core.error.{CasMismatchException, DocumentNotFoundException}
+import com.couchbase.client.core.error.subdoc.PathNotFoundException
+import com.couchbase.client.core.error.{
+  CasMismatchException,
+  CouchbaseException,
+  DocumentNotFoundException
+}
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSerializer}
 import com.couchbase.client.scala.json.JsonArraySafe
@@ -52,7 +57,10 @@ class CouchbaseBuffer[T](
 
     result match {
       case Success(value) => value
-      case Failure(err)   => throw err
+      case Failure(err) =>
+        throw new IndexOutOfBoundsException(
+          s"Index $index out of bounds, with root cause: ${err.getMessage}"
+        )
     }
   }
 
@@ -65,8 +73,18 @@ class CouchbaseBuffer[T](
         timeout = opts.timeout,
         retryStrategy = opts.retryStrategy,
         durability = opts.durability
-      )
-      .get
+      ) match {
+      case Success(_) =>
+      case Failure(err: DocumentNotFoundException) =>
+        throw new IndexOutOfBoundsException(
+          "Failed to remove element with root cause: " + err.getMessage
+        )
+      case Failure(err: PathNotFoundException) =>
+        throw new IndexOutOfBoundsException(
+          "Failed to remove element with root cause: " + err.getMessage
+        )
+      case Failure(err) => throw err
+    }
   }
 
   // Note `remoteAt` is more performant as it does not have to return the removed element
@@ -96,9 +114,21 @@ class CouchbaseBuffer[T](
           case Failure(err: CasMismatchException) =>
             // Recurse to try again
             remove(index)
-          case Failure(err) => throw err
+          case Failure(err) =>
+            throw new CouchbaseException(
+              s"Found element at index $index but was unable to remove it",
+              err
+            )
         }
 
+      case Failure(err: DocumentNotFoundException) =>
+        throw new IndexOutOfBoundsException(
+          "Failed to remove element with root cause: " + err.getMessage
+        )
+      case Failure(err: PathNotFoundException) =>
+        throw new IndexOutOfBoundsException(
+          "Failed to remove element with root cause: " + err.getMessage
+        )
       case Failure(err) => throw err
     }
   }
@@ -198,7 +228,7 @@ class CouchbaseBuffer[T](
   override def update(index: Int, value: T): Unit = {
     val result = collection.mutateIn(
       id,
-      Array(MutateInSpec.upsert("[" + index + "]", value)),
+      Array(MutateInSpec.replace("[" + index + "]", value)),
       timeout = opts.timeout,
       retryStrategy = opts.retryStrategy,
       durability = opts.durability
@@ -206,6 +236,8 @@ class CouchbaseBuffer[T](
 
     result match {
       case Success(_) =>
+      case Failure(_: PathNotFoundException) =>
+        throw new IndexOutOfBoundsException()
       case Failure(_: DocumentNotFoundException) =>
         initialize()
         update(index, value)

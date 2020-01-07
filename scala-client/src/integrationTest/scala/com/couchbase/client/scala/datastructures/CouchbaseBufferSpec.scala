@@ -55,6 +55,39 @@ class CouchbaseBufferSpec extends ScalaIntegrationTest {
   private def makeCollection = coll.buffer[Int](docId)
 
   @Test
+  def desired(): Unit = {
+    val l = ArrayBuffer.empty[Int]
+
+    try {
+      l(0)
+      assert(false)
+    } catch {
+      case err: IndexOutOfBoundsException =>
+      case NonFatal(err)                  => assert(false)
+    }
+
+    try {
+      l.remove(0)
+      assert(false)
+    } catch {
+      case err: IndexOutOfBoundsException =>
+      case NonFatal(err)                  => assert(false)
+    }
+
+    try {
+      l.update(0, 6)
+      assert(false)
+    } catch {
+      case err: IndexOutOfBoundsException =>
+      case NonFatal(err)                  => assert(false)
+    }
+
+    assert(l.size == 0)
+    assert(l.indexOf(10) == -1)
+
+  }
+
+  @Test
   def prepend(): Unit = {
     val l = makeCollection
 
@@ -74,6 +107,16 @@ class CouchbaseBufferSpec extends ScalaIntegrationTest {
     l += 7
 
     assert(l.toSeq == Seq(5, 6, 7))
+  }
+
+  @Test
+  def update(): Unit = {
+    val l = makeCollection
+
+    l.append(5)
+    l.update(0, 2)
+
+    assert(l.toSeq == Seq(2))
   }
 
   @Test
@@ -183,8 +226,64 @@ class CouchbaseBufferSpec extends ScalaIntegrationTest {
       l(0)
       assert(false)
     } catch {
-      case err: DocumentNotFoundException =>
+      case err: IndexOutOfBoundsException =>
       case NonFatal(err)                  => assert(false)
     }
+
+    try {
+      l.remove(0)
+      assert(false)
+    } catch {
+      case err: IndexOutOfBoundsException =>
+      case NonFatal(err) =>
+        println(err)
+        assert(false)
+    }
+
+    try {
+      l.removeAt(0)
+      assert(false)
+    } catch {
+      case err: IndexOutOfBoundsException =>
+      case NonFatal(err) =>
+        println(err)
+        assert(false)
+    }
+
+    try {
+      l.update(0, 6)
+      assert(false)
+    } catch {
+      case err: IndexOutOfBoundsException =>
+      case NonFatal(err) =>
+        println(err)
+        assert(false)
+    }
   }
+
+  @Test
+  def getMissingElement(): Unit = {
+    val l = makeCollection
+
+    l.append(5)
+
+    try {
+      l(1)
+      assert(false)
+    } catch {
+      case err: IndexOutOfBoundsException =>
+      case NonFatal(err)                  => assert(false)
+    }
+
+    try {
+      l.update(3, 6)
+      assert(false)
+    } catch {
+      case err: IndexOutOfBoundsException =>
+      case NonFatal(err) =>
+        println(err)
+        assert(false)
+    }
+  }
+
 }
