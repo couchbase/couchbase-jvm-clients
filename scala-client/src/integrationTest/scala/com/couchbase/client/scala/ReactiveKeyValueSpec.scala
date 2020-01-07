@@ -17,7 +17,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.{DocumentNotFoundException, TimeoutException}
-
+import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -54,6 +54,15 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     } catch {
       case NonFatal(err) => Failure(err)
     }
+  }
+
+  @Test
+  def unsubscribedRemoveDoesNothing(): Unit = {
+    val docId = TestUtils.docId()
+    coll.upsert(docId, JsonObject.create).block()
+    coll.remove(docId)
+    Thread.sleep(50)
+    coll.get(docId).block()
   }
 
   @Test

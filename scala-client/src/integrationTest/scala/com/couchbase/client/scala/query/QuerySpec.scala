@@ -489,4 +489,12 @@ class QuerySpec extends ScalaIntegrationTest {
         println(s"Error: $err")
     }
   }
+
+  @Test
+  def reactiveQueryDoesNothingIfNotSubscribedTo(): Unit = {
+    val docId = TestUtils.docId()
+    cluster.reactive.query(s"""UPSERT INTO `${bucketName}` (KEY, VALUE) VALUES ("${docId}", { "type" : "hotel", "name" : "new hotel" })""")
+    Thread.sleep(50)
+    assert(coll.get(docId).isFailure)
+  }
 }

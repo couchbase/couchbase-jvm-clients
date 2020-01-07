@@ -173,17 +173,19 @@ class ReactiveCollection(async: AsyncCollection) {
     if (project.nonEmpty) {
       async.getSubDocHandler.requestProject(id, project, timeout, retryStrategy) match {
         case Success(request) =>
-          core.send(request)
+          SMono.defer(() => {
+            core.send(request)
 
-          FutureConversions
-            .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-            .map(
-              r =>
-                async.getSubDocHandler.responseProject(request, id, r, transcoder) match {
-                  case Success(v)   => v
-                  case Failure(err) => throw err
-                }
-            )
+            FutureConversions
+              .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+              .map(
+                r =>
+                  async.getSubDocHandler.responseProject(request, id, r, transcoder) match {
+                    case Success(v)   => v
+                    case Failure(err) => throw err
+                  }
+              )
+          })
 
         case Failure(err) => SMono.raiseError(err)
       }
@@ -226,11 +228,13 @@ class ReactiveCollection(async: AsyncCollection) {
   ): SMono[LookupInResult] = {
     async.getSubDocHandler.request(id, spec, withExpiry, timeout, retryStrategy) match {
       case Success(request) =>
-        core.send(request)
+        SMono.defer(() => {
+          core.send(request)
 
-        FutureConversions
-          .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .map(r => async.getSubDocHandler.response(request, id, r, withExpiry, transcoder))
+          FutureConversions
+            .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+            .map(r => async.getSubDocHandler.response(request, id, r, withExpiry, transcoder))
+        })
 
       case Failure(err) => SMono.raiseError(err)
     }
@@ -267,11 +271,13 @@ class ReactiveCollection(async: AsyncCollection) {
     )
     req match {
       case Success(request) =>
-        core.send(request)
+        SMono.defer(() => {
+          core.send(request)
 
-        FutureConversions
-          .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .map(r => async.mutateInHandler.response(request, id, document, r))
+          FutureConversions
+            .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+            .map(r => async.mutateInHandler.response(request, id, document, r))
+        })
 
       case Failure(err) => SMono.raiseError(err)
     }
@@ -363,24 +369,26 @@ class ReactiveCollection(async: AsyncCollection) {
       case Failure(err) => SFlux.raiseError(err)
 
       case Success(reqs: Seq[GetRequest]) =>
-        val monos: Seq[SMono[GetReplicaResult]] = reqs.map(request => {
-          core.send(request)
+        SFlux.defer({
+          val monos: Seq[SMono[GetReplicaResult]] = reqs.map(request => {
+            core.send(request)
 
-          FutureConversions
-            .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-            .flatMap(r => {
-              val isReplica = request match {
-                case _: GetRequest => false
-                case _             => true
-              }
-              async.getFromReplicaHandler.response(request, id, r, isReplica, transcoder) match {
-                case Some(getResult) => SMono.just(getResult)
-                case _               => SMono.empty[GetReplicaResult]
-              }
-            })
+            FutureConversions
+              .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+              .flatMap(r => {
+                val isReplica = request match {
+                  case _: GetRequest => false
+                  case _             => true
+                }
+                async.getFromReplicaHandler.response(request, id, r, isReplica, transcoder) match {
+                  case Some(getResult) => SMono.just(getResult)
+                  case _               => SMono.empty[GetReplicaResult]
+                }
+              })
+          })
+
+          SFlux.mergeSequential(monos).timeout(timeout)
         })
-
-        SFlux.mergeSequential(monos).timeout(timeout)
     }
 
   }
@@ -405,11 +413,13 @@ class ReactiveCollection(async: AsyncCollection) {
   ): SMono[Res] = {
     in match {
       case Success(request) =>
-        core.send[Resp](request)
+        SMono.defer(() => {
+          core.send[Resp](request)
 
-        FutureConversions
-          .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .map(r => handler.response(request, id, r))
+          FutureConversions
+            .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+            .map(r => handler.response(request, id, r))
+        })
 
       case Failure(err) => SMono.raiseError(err)
     }
@@ -423,11 +433,13 @@ class ReactiveCollection(async: AsyncCollection) {
   ): SMono[Res] = {
     in match {
       case Success(request) =>
-        core.send[Resp](request)
+        SMono.defer(() => {
+          core.send[Resp](request)
 
-        FutureConversions
-          .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .map(r => handler.response(request, id, r, transcoder))
+          FutureConversions
+            .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+            .map(r => handler.response(request, id, r, transcoder))
+        })
 
       case Failure(err) => SMono.raiseError(err)
     }
