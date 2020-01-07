@@ -3,7 +3,12 @@ package com.couchbase.client.scala.kv
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json._
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.projections.{JsonPathParser, PathArray, PathElement, PathObjectOrField}
+import com.couchbase.client.core.projections.{
+  JsonPathParser,
+  PathArray,
+  PathElement,
+  PathObjectOrField
+}
 
 import scala.annotation.tailrec
 import scala.util.control.NonFatal
@@ -103,12 +108,12 @@ private[scala] object ProjectionsApplier {
               case Left(obj) =>
                 val createIn = obj.safe.obj(v.str()) match {
                   case Success(o) => o.o
-                  case _ => JsonObject.create
+                  case _          => JsonObject.create
                 }
                 obj.put(v.str, createIn)
                 parseRec(Left(createIn), xs, content)
               case Right(arr) =>
-                val toCreate = JsonObject.create
+                val toCreate     = JsonObject.create
                 val nextToCreate = JsonObject.create
                 toCreate.put(v.str, nextToCreate)
                 arr.add(toCreate)

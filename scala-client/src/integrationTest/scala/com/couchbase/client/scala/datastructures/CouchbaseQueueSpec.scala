@@ -54,6 +54,29 @@ class CouchbaseQueueSpec extends ScalaIntegrationTest {
   private def makeCollection = coll.queue[Int](docId)
 
   @Test
+  def desired(): Unit = {
+    val l = collection.mutable.Queue.empty[Int]
+
+    try {
+      l(0)
+      assert(false)
+    } catch {
+      case err: IndexOutOfBoundsException =>
+      case NonFatal(err)                  => assert(false)
+    }
+
+    try {
+      l.dequeue()
+      assert(false)
+    } catch {
+      case err: NoSuchElementException =>
+      case NonFatal(err) =>
+        println(err)
+        assert(false)
+    }
+  }
+
+  @Test
   def prepend(): Unit = {
     val l = makeCollection
 
@@ -198,8 +221,35 @@ class CouchbaseQueueSpec extends ScalaIntegrationTest {
       l(0)
       assert(false)
     } catch {
-      case err: DocumentNotFoundException =>
+      case err: IndexOutOfBoundsException =>
       case NonFatal(err)                  => assert(false)
     }
+
+    try {
+      l.dequeue()
+      assert(false)
+    } catch {
+      case err: NoSuchElementException =>
+      case NonFatal(err)               => assert(false)
+    }
   }
+
+  @Test
+  def getMissingElement(): Unit = {
+    val l = makeCollection
+
+    l.append(5)
+    l.dequeue()
+
+    try {
+      l.dequeue()
+      assert(false)
+    } catch {
+      case err: NoSuchElementException =>
+      case NonFatal(err) =>
+        println(err)
+        assert(false)
+    }
+  }
+
 }

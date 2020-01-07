@@ -55,6 +55,22 @@ class CouchbaseSetSpec extends ScalaIntegrationTest {
   private def makeCollection = coll.set[Int](docId)
 
   @Test
+  def desired(): Unit = {
+    val l = collection.mutable.Set.empty[Int]
+
+    try {
+      l.head
+      assert(false)
+    } catch {
+      case err: NoSuchElementException =>
+      case NonFatal(err)               => assert(false)
+    }
+
+    l.remove(5)
+    l -= 5
+  }
+
+  @Test
   def append(): Unit = {
     val l = makeCollection
 
@@ -159,5 +175,41 @@ class CouchbaseSetSpec extends ScalaIntegrationTest {
     assert(l(5))
     assert(l(6))
     assert(!l(7))
+  }
+  @Test
+  def uncreatedColl(): Unit = {
+    val l = makeCollection
+
+    assert(l.size == 0)
+
+    try {
+      l.head
+      assert(false)
+    } catch {
+      case err: NoSuchElementException =>
+      case NonFatal(err)               => assert(false)
+    }
+
+    assert(!l.remove(5))
+    l -= 5
+  }
+
+  @Test
+  def getMissingElement(): Unit = {
+    val l = makeCollection
+
+    l.add(5)
+    l.remove(5)
+
+    try {
+      l.head
+      assert(false)
+    } catch {
+      case err: NoSuchElementException =>
+      case NonFatal(err)               => assert(false)
+    }
+
+    assert(!l.remove(5))
+    l -= 5
   }
 }

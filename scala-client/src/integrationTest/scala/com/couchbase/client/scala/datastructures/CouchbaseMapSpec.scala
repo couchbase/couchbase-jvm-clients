@@ -54,6 +54,22 @@ class CouchbaseMapSpec extends ScalaIntegrationTest {
   private def makeCollection = coll.map[Int](docId)
 
   @Test
+  def desired(): Unit = {
+    val l = collection.mutable.Map.empty[String, Int]
+
+    try {
+      l("key1")
+      assert(false)
+    } catch {
+      case err: NoSuchElementException =>
+      case NonFatal(err)               => assert(false)
+    }
+
+    l -= "key1"
+    assert(l.remove("key1").isEmpty)
+  }
+
+  @Test
   def exists(): Unit = {
     val l = makeCollection
 
@@ -160,6 +176,36 @@ class CouchbaseMapSpec extends ScalaIntegrationTest {
     assert(next._1 == "key2")
     assert(next._2 == 6)
     assert(!it.hasNext)
+  }
+
+  @Test
+  def uncreatedColl(): Unit = {
+    val l = makeCollection
+
+    assert(l.size == 0)
+    assert(l.get("no_exist").isEmpty)
+    assert(l.remove("no_exist").isEmpty)
+    l.removeAt("no_exist")
+    l -= "no_exist"
+  }
+  @Test
+  def getMissingElement(): Unit = {
+    val l = makeCollection
+
+    l += "key1" -> 5
+
+    assert(l.get("no_exist").isEmpty)
+
+    try {
+      l("no_exist")
+      assert(false)
+    } catch {
+      case err: NoSuchElementException =>
+    }
+
+    assert(l.remove("no_exist").isEmpty)
+    l.removeAt("no_exist")
+    l -= "no_exist"
   }
 
   @Test

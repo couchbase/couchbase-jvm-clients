@@ -142,7 +142,15 @@ class ProjectionsSpec extends ScalaIntegrationTest {
   @Test
   def attributesHobbiesDetailsLocation() {
     val json = wrap(Seq("attributes.hobbies[1].details.location"))
-    assert(json.obj("attributes").arr("hobbies").obj(0).obj("details").obj("location").numLong("lat") == 49)
+    assert(
+      json
+        .obj("attributes")
+        .arr("hobbies")
+        .obj(0)
+        .obj("details")
+        .obj("location")
+        .numLong("lat") == 49
+    )
   }
 
 }
