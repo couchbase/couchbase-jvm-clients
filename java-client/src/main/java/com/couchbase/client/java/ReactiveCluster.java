@@ -50,7 +50,9 @@ import com.couchbase.client.java.search.result.ReactiveSearchResult;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -101,6 +103,11 @@ public class ReactiveCluster {
    * Holds the underlying async cluster reference.
    */
   private final AsyncCluster asyncCluster;
+
+  /**
+   * Stores already opened buckets for reuse.
+   */
+  private final Map<String, ReactiveBucket> bucketCache = new ConcurrentHashMap<>();
 
   /**
    * Connect to a Couchbase cluster with a username and a password as credentials.
@@ -321,7 +328,7 @@ public class ReactiveCluster {
    * @return a {@link ReactiveBucket} once opened.
    */
   public ReactiveBucket bucket(final String bucketName) {
-    return new ReactiveBucket(asyncCluster.bucket(bucketName));
+    return bucketCache.computeIfAbsent(bucketName, n -> new ReactiveBucket(asyncCluster.bucket(n)));
   }
 
   /**

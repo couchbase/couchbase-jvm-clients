@@ -23,6 +23,7 @@ import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.ViewNotFoundException;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -32,6 +33,8 @@ import com.couchbase.client.java.view.ViewOptions;
 import com.couchbase.client.java.view.ViewResult;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.ReactiveBucket.DEFAULT_VIEW_OPTIONS;
@@ -54,6 +57,11 @@ public class Bucket {
   private final CollectionManager collectionManager;
 
   private final ViewIndexManager viewManager;
+
+  /**
+   * Stores already opened scopes for reuse.
+   */
+  private final Map<String, Scope> scopeCache = new ConcurrentHashMap<>();
 
   /**
    * Constructs a new {@link Bucket}.
@@ -124,7 +132,7 @@ public class Bucket {
    */
   @Stability.Volatile
   public Scope scope(final String name) {
-    return new Scope(asyncBucket.scope(name));
+    return scopeCache.computeIfAbsent(name, n -> new Scope(asyncBucket.scope(n)));
   }
 
   /**
@@ -134,7 +142,10 @@ public class Bucket {
    */
   @Stability.Volatile
   public Scope defaultScope() {
-    return new Scope(asyncBucket.defaultScope());
+    return scopeCache.computeIfAbsent(
+      CollectionIdentifier.DEFAULT_SCOPE,
+      n -> new Scope(asyncBucket.defaultScope())
+    );
   }
 
   /**

@@ -45,7 +45,9 @@ import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -135,6 +137,11 @@ public class Cluster {
    * Allows to manage analytics indexes.
    */
   private final AnalyticsIndexManager analyticsIndexManager;
+
+  /**
+   * Stores already opened buckets for reuse.
+   */
+  private final Map<String, Bucket> bucketCache = new ConcurrentHashMap<>();
 
   /**
    * Connect to a Couchbase cluster with a username and a password as credentials.
@@ -443,7 +450,7 @@ public class Cluster {
    * @return a {@link Bucket} once opened.
    */
   public Bucket bucket(final String bucketName) {
-    return new Bucket(asyncCluster.bucket(bucketName));
+    return bucketCache.computeIfAbsent(bucketName, n -> new Bucket(asyncCluster.bucket(n)));
   }
 
   /**

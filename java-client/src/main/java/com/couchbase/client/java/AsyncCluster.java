@@ -63,9 +63,11 @@ import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -133,6 +135,11 @@ public class AsyncCluster {
   private final AsyncAnalyticsIndexManager analyticsIndexManager;
 
   private final Authenticator authenticator;
+
+  /**
+   * Stores already opened buckets for reuse.
+   */
+  private final Map<String, AsyncBucket> bucketCache = new ConcurrentHashMap<>();
 
   /**
    * Connect to a Couchbase cluster with a username and a password as authentication credentials.
@@ -450,8 +457,10 @@ public class AsyncCluster {
    */
   public AsyncBucket bucket(final String bucketName) {
     notNullOrEmpty(bucketName, "Name");
-    core.openBucket(bucketName);
-    return new AsyncBucket(bucketName, core, environment.get());
+    return bucketCache.computeIfAbsent(bucketName, n -> {
+      core.openBucket(n);
+      return new AsyncBucket(n, core, environment.get());
+    });
   }
 
   /**

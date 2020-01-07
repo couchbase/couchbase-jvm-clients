@@ -40,8 +40,10 @@ import com.couchbase.client.java.view.ViewResult;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -75,6 +77,11 @@ public class AsyncBucket {
   private final AsyncViewIndexManager viewManager;
 
   private final Authenticator authenticator;
+
+  /**
+   * Stores already opened scopes for reuse.
+   */
+  private final Map<String, AsyncScope> scopeCache = new ConcurrentHashMap<>();
 
   /**
    * Creates a new {@link AsyncBucket}.
@@ -134,7 +141,7 @@ public class AsyncBucket {
    */
   @Stability.Volatile
   public AsyncScope scope(final String name) {
-    return new AsyncScope(name, this.name, core, environment);
+    return maybeCreateAsyncScope(name);
   }
 
   /**
@@ -144,7 +151,17 @@ public class AsyncBucket {
    */
   @Stability.Volatile
   public AsyncScope defaultScope() {
-    return new AsyncScope(CollectionIdentifier.DEFAULT_SCOPE, name, core, environment);
+    return maybeCreateAsyncScope(CollectionIdentifier.DEFAULT_SCOPE);
+  }
+
+  /**
+   * Helper method to create the scope or load it from the cache if present.
+   *
+   * @param scopeName the name of the scope.
+   * @return the created or cached scope.
+   */
+  private AsyncScope maybeCreateAsyncScope(final String scopeName) {
+    return scopeCache.computeIfAbsent(scopeName, ignored -> new AsyncScope(scopeName, name, core, environment));
   }
 
   /**

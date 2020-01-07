@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.error.context.ReducedViewErrorContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
@@ -32,6 +33,8 @@ import com.couchbase.client.java.view.ViewOptions;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_PING_OPTIONS;
@@ -51,6 +54,11 @@ public class ReactiveBucket {
   private final AsyncBucket asyncBucket;
 
   private final ReactiveCollectionManager collectionManager;
+
+  /**
+   * Stores already opened scopes for reuse.
+   */
+  private final Map<String, ReactiveScope> scopeCache = new ConcurrentHashMap<>();
 
   /**
    * Constructs a new {@link ReactiveBucket}.
@@ -106,7 +114,7 @@ public class ReactiveBucket {
    */
   @Stability.Volatile
   public ReactiveScope scope(final String name) {
-    return new ReactiveScope(asyncBucket.scope(name));
+    return scopeCache.computeIfAbsent(name, n -> new ReactiveScope(asyncBucket.scope(n)));
   }
 
   /**
@@ -116,7 +124,10 @@ public class ReactiveBucket {
    */
   @Stability.Volatile
   public ReactiveScope defaultScope() {
-    return new ReactiveScope(asyncBucket.defaultScope());
+    return scopeCache.computeIfAbsent(
+      CollectionIdentifier.DEFAULT_SCOPE,
+      n -> new ReactiveScope(asyncBucket.defaultScope())
+    );
   }
 
   /**

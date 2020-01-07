@@ -20,11 +20,9 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import reactor.core.publisher.Mono;
 
-import java.util.concurrent.CompletableFuture;
-
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The scope identifies a group of collections and allows high application
@@ -55,6 +53,11 @@ public class AsyncScope {
    * The attached environment to pass on and use.
    */
   private final ClusterEnvironment environment;
+
+  /**
+   * Stores already opened collections for reuse.
+   */
+  private final Map<String, AsyncCollection> collectionCache = new ConcurrentHashMap<>();
 
   /**
    * Creates a new {@link AsyncScope}.
@@ -111,7 +114,10 @@ public class AsyncScope {
    * @return the default collection once opened.
    */
   AsyncCollection defaultCollection() {
-    return new AsyncCollection(CollectionIdentifier.DEFAULT_COLLECTION, scopeName, bucketName, core, environment);
+    return maybeCreateAsyncCollection(
+      CollectionIdentifier.DEFAULT_COLLECTION,
+      !scopeName.equals(CollectionIdentifier.DEFAULT_SCOPE)
+    );
   }
 
   /**
@@ -122,8 +128,23 @@ public class AsyncScope {
    */
   @Stability.Volatile
   public AsyncCollection collection(final String collectionName) {
-    core.configurationProvider().refreshCollectionMap(bucketName, false);
-    return new AsyncCollection(collectionName, scopeName, bucketName, core, environment);
+    return maybeCreateAsyncCollection(collectionName, true);
+  }
+
+  /**
+   * Helper method to maybe create a new collection or load it from the cache.
+   *
+   * @param collectionName the name of the collection.
+   * @param refreshMap if the collection map should be refreshed on the config provider.
+   * @return a collection, either from the cache or a freshly populated one.
+   */
+  private AsyncCollection maybeCreateAsyncCollection(final String collectionName, final boolean refreshMap) {
+    return collectionCache.computeIfAbsent(collectionName, name -> {
+      if (refreshMap) {
+        core.configurationProvider().refreshCollectionMap(bucketName, false);
+      }
+      return new AsyncCollection(name, scopeName, bucketName, core, environment);
+    });
   }
 
 }

@@ -18,7 +18,11 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.env.ClusterEnvironment;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The scope identifies a group of collections and allows high application
@@ -34,6 +38,11 @@ public class ReactiveScope {
    * The underlying async scope which actually performs the actions.
    */
   private final AsyncScope asyncScope;
+
+  /**
+   * Stores already opened collections for reuse.
+   */
+  private final Map<String, ReactiveCollection> collectionCache = new ConcurrentHashMap<>();
 
   /**
    * Creates a new {@link ReactiveScope}.
@@ -90,7 +99,10 @@ public class ReactiveScope {
    * @return the default collection once opened.
    */
   ReactiveCollection defaultCollection() {
-    return new ReactiveCollection(asyncScope.defaultCollection());
+    return collectionCache.computeIfAbsent(
+      CollectionIdentifier.DEFAULT_COLLECTION,
+      n -> new ReactiveCollection(asyncScope.defaultCollection())
+    );
   }
 
   /**
@@ -101,7 +113,7 @@ public class ReactiveScope {
    */
   @Stability.Volatile
   public ReactiveCollection collection(final String collectionName) {
-    return new ReactiveCollection(asyncScope.collection(collectionName));
+    return collectionCache.computeIfAbsent(collectionName, n -> new ReactiveCollection(asyncScope.collection(n)));
   }
 
 }
