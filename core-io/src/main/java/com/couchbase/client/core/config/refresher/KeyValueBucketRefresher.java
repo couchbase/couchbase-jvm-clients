@@ -36,8 +36,6 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -108,7 +106,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
   /**
    * Holds all tainted bucket configs (those undergoing rebalance at the moment).
    */
-  private final Set<String> tainted = Collections.synchronizedSet(new HashSet<>());
+  private final Set<String> tainted = ConcurrentHashMap.newKeySet();
 
   /**
    * Holds the allowable config poll interval in nanoseconds.
