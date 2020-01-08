@@ -40,6 +40,7 @@ import com.couchbase.client.java.manager.analytics.ReactiveAnalyticsIndexManager
 import com.couchbase.client.java.manager.bucket.ReactiveBucketManager;
 import com.couchbase.client.java.manager.query.AsyncQueryIndexManager;
 import com.couchbase.client.java.manager.query.ReactiveQueryIndexManager;
+import com.couchbase.client.java.manager.search.ReactiveSearchIndexManager;
 import com.couchbase.client.java.manager.user.ReactiveUserManager;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
@@ -210,6 +211,13 @@ public class ReactiveCluster {
    */
   public ReactiveAnalyticsIndexManager analyticsIndexes() {
     return new ReactiveAnalyticsIndexManager(async());
+  }
+
+  /**
+   * Provides access to the search index management services.
+   */
+  public ReactiveSearchIndexManager searchIndexes() {
+    return new ReactiveSearchIndexManager(async().searchIndexes());
   }
 
   /**

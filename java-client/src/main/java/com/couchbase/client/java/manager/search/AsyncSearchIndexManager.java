@@ -48,6 +48,18 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static com.couchbase.client.java.manager.search.AllowQueryingSearchIndexOptions.allowQueryingSearchIndexOptions;
+import static com.couchbase.client.java.manager.search.AnalyzeDocumentOptions.analyzeDocumentOptions;
+import static com.couchbase.client.java.manager.search.DisallowQueryingSearchIndexOptions.disallowQueryingSearchIndexOptions;
+import static com.couchbase.client.java.manager.search.DropSearchIndexOptions.dropSearchIndexOptions;
+import static com.couchbase.client.java.manager.search.FreezePlanSearchIndexOptions.freezePlanSearchIndexOptions;
+import static com.couchbase.client.java.manager.search.GetAllSearchIndexesOptions.getAllSearchIndexesOptions;
+import static com.couchbase.client.java.manager.search.GetIndexedSearchIndexOptions.getIndexedSearchIndexOptions;
+import static com.couchbase.client.java.manager.search.GetSearchIndexOptions.getSearchIndexOptions;
+import static com.couchbase.client.java.manager.search.PauseIngestSearchIndexOptions.pauseIngestSearchIndexOptions;
+import static com.couchbase.client.java.manager.search.ResumeIngestSearchIndexOptions.resumeIngestSearchIndexOptions;
+import static com.couchbase.client.java.manager.search.UnfreezePlanSearchIndexOptions.unfreezePlanSearchIndexOptions;
+import static com.couchbase.client.java.manager.search.UpsertSearchIndexOptions.upsertSearchIndexOptions;
 
 /**
  * The {@link AsyncSearchIndexManager} allows to manage search index structures in a couchbase cluster.
@@ -111,6 +123,16 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} the found index once complete.
    */
   public CompletableFuture<SearchIndex> getIndex(final String name) {
+    return getIndex(name, getSearchIndexOptions());
+  }
+
+  /**
+   * Fetches an index from the server if it exists.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} the found index once complete.
+   */
+  public CompletableFuture<SearchIndex> getIndex(final String name, GetSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
     GenericSearchRequest request = getIndexRequest(name);
     core.send(request);
@@ -133,6 +155,15 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} with all index definitions once complete.
    */
   public CompletableFuture<List<SearchIndex>> getAllIndexes() {
+    return getAllIndexes(getAllSearchIndexesOptions());
+  }
+
+  /**
+   * Fetches all indexes from the server.
+   *
+   * @return a {@link CompletableFuture} with all index definitions once complete.
+   */
+  public CompletableFuture<List<SearchIndex>> getAllIndexes(final GetAllSearchIndexesOptions options) {
     GenericSearchRequest request = getAllIndexesRequest();
     core.send(request);
     return request.response().thenApply(response -> {
@@ -157,6 +188,16 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} with the indexed documents count once complete.
    */
   public CompletableFuture<Long> getIndexedDocumentsCount(final String name) {
+    return getIndexedDocumentsCount(name, getIndexedSearchIndexOptions());
+  }
+
+  /**
+   * Retrieves the number of documents that have been indexed for an index.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} with the indexed documents count once complete.
+   */
+  public CompletableFuture<Long> getIndexedDocumentsCount(final String name, final GetIndexedSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
     GenericSearchRequest request = getIndexedDocumentsCountRequest(name);
     core.send(request);
@@ -185,6 +226,16 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> upsertIndex(final SearchIndex index) {
+    return upsertIndex(index, upsertSearchIndexOptions());
+  }
+
+  /**
+   * Creates, or updates, an index.
+   *
+   * @param index the index definition to upsert.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> upsertIndex(final SearchIndex index, final UpsertSearchIndexOptions options) {
     notNull(index, "Search Index");
     GenericSearchRequest request = upsertIndexRequest(index);
     core.send(request);
@@ -214,6 +265,16 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> dropIndex(final String name) {
+    return dropIndex(name, dropSearchIndexOptions());
+  }
+
+  /**
+   * Drops an index.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> dropIndex(final String name, final DropSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
     GenericSearchRequest request = dropIndexRequest(name);
     core.send(request);
@@ -240,6 +301,18 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} with analyzed document parts once complete.
    */
   public CompletableFuture<List<JsonObject>> analyzeDocument(final String name, final JsonObject document) {
+    return analyzeDocument(name, document, analyzeDocumentOptions());
+  }
+
+  /**
+   * Allows to see how a document is analyzed against a specific index.
+   *
+   * @param name the name of the search index.
+   * @param document the document to analyze.
+   * @return a {@link CompletableFuture} with analyzed document parts once complete.
+   */
+  public CompletableFuture<List<JsonObject>> analyzeDocument(final String name, final JsonObject document,
+                                                             final AnalyzeDocumentOptions options) {
     notNullOrEmpty(name, "Search Index Name");
     notNull(document, "Document");
     GenericSearchRequest request = analyzeDocumentRequest(name, document);
@@ -286,6 +359,16 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> pauseIngest(final String name) {
+    return pauseIngest(name, pauseIngestSearchIndexOptions());
+  }
+
+  /**
+   * Pauses updates and maintenance for an index.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> pauseIngest(final String name, final PauseIngestSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
     GenericSearchRequest request = pauseIngestRequest(name);
     core.send(request);
@@ -310,6 +393,16 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> resumeIngest(final String name) {
+    return resumeIngest(name, resumeIngestSearchIndexOptions());
+  }
+
+  /**
+   * Resumes updates and maintenance for an index.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> resumeIngest(final String name, final ResumeIngestSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
     GenericSearchRequest request = resumeIngestRequest(name);
     core.send(request);
@@ -334,6 +427,16 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> allowQuerying(final String name) {
+    return allowQuerying(name, allowQueryingSearchIndexOptions());
+  }
+
+  /**
+   * Allows querying against an index.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> allowQuerying(final String name, final AllowQueryingSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
     GenericSearchRequest request = allowQueryingRequest(name);
     core.send(request);
@@ -358,6 +461,16 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> disallowQuerying(final String name) {
+    return disallowQuerying(name, disallowQueryingSearchIndexOptions());
+  }
+
+  /**
+   * Disallows querying against an index.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> disallowQuerying(final String name, final DisallowQueryingSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
     GenericSearchRequest request = disallowQueryingRequest(name);
     core.send(request);
@@ -382,6 +495,16 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> freezePlan(final String name) {
+    return freezePlan(name, freezePlanSearchIndexOptions());
+  }
+
+  /**
+   * Freeze the assignment of index partitions to nodes.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> freezePlan(final String name, final FreezePlanSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
     GenericSearchRequest request = freezePlanRequest(name);
     core.send(request);
@@ -406,6 +529,16 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> unfreezePlan(final String name) {
+    return unfreezePlan(name, unfreezePlanSearchIndexOptions());
+  }
+
+  /**
+   * Unfreeze the assignment of index partitions to nodes.
+   *
+   * @param name the name of the search index.
+   * @return a {@link CompletableFuture} indicating request completion.
+   */
+  public CompletableFuture<Void> unfreezePlan(final String name, final UnfreezePlanSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
     GenericSearchRequest request = unfreezePlanRequest(name);
     core.send(request);
