@@ -32,9 +32,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -47,12 +49,12 @@ public class SearchRow {
     private final String id;
     private final double score;
     private final JsonObject explanation;
-    private final SearchRowLocations locations;
+    private final Optional<SearchRowLocations> locations;
     private final Map<String, List<String>> fragments;
     private final byte[] fields;
     private final JsonSerializer serializer;
 
-    public SearchRow(String index, String id, double score, JsonObject explanation, SearchRowLocations locations,
+    public SearchRow(String index, String id, double score, JsonObject explanation, Optional<SearchRowLocations> locations,
                      Map<String, List<String>> fragments, byte[] fields, JsonSerializer serializer) {
         this.index = index;
         this.id = id;
@@ -95,7 +97,7 @@ public class SearchRow {
     /**
      * This rows's location, as an {@link SearchRowLocations} map-like object.
      */
-    public SearchRowLocations locations() {
+    public Optional<SearchRowLocations> locations() {
         return this.locations;
     }
 
@@ -168,12 +170,10 @@ public class SearchRow {
             String index = hit.getString("index");
             String id = hit.getString("id");
             double score = hit.getDouble("score");
-            JsonObject explanationJson = hit.getObject("explanation");
-            if (explanationJson == null) {
-                explanationJson = JsonObject.create();
-            }
+            JsonObject explanationJson = defaultIfNull(hit.getObject("explanation"), JsonObject::create);
 
-            SearchRowLocations locations = SearchRowLocations.from(hit.getObject("locations"));
+            Optional<SearchRowLocations> locations = Optional.ofNullable(hit.getObject("locations"))
+                .map(SearchRowLocations::from);
 
             JsonObject fragmentsJson = hit.getObject("fragments");
             Map<String, List<String>> fragments;

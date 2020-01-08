@@ -24,38 +24,38 @@ import java.util.List;
 /**
  * Implementation of a {@link TermSearchFacetResult}.
  *
- * @author Simon Baslé
- * @author Michael Nitschinger
  * @since 2.3.0
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TermSearchFacetResult extends AbstractSearchFacetResult {
 
-    private final List<SearchTermRange> terms;
+  private final List<SearchTermRange> terms;
 
-    @JsonCreator
-    public TermSearchFacetResult(
+  @JsonCreator
+  public TermSearchFacetResult(
+      @JsonProperty("$name") String name,
       @JsonProperty("field") String field,
       @JsonProperty("total") long total,
       @JsonProperty("missing") long missing,
       @JsonProperty("other") long other,
       @JsonProperty("terms") List<SearchTermRange> terms) {
-        super(field, total, missing, other);
-        this.terms = terms;
-    }
+    super(name, field, total, missing, other);
+    this.terms = terms;
+  }
 
-    public List<SearchTermRange> terms() {
-        return this.terms;
-    }
+  public List<SearchTermRange> terms() {
+    return this.terms;
+  }
 
-    @Override
-    public String toString() {
-        return "TermSearchFacetResult{" +
-          "field='" + field + '\'' +
-          ", total=" + total +
-          ", missing=" + missing +
-          ", other=" + other +
-          ", terms=" + terms +
-          '}';
-    }
+  @Override
+  public String toString() {
+    return "TermSearchFacetResult{" +
+        "name='" + name + '\'' +
+        ", field='" + field + '\'' +
+        ", total=" + total +
+        ", missing=" + missing +
+        ", other=" + other +
+        ", terms=" + terms +
+        '}';
+  }
 }

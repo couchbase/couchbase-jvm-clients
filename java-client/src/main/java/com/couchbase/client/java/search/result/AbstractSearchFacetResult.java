@@ -17,35 +17,42 @@ package com.couchbase.client.java.search.result;
 
 public abstract class AbstractSearchFacetResult implements SearchFacetResult {
 
-    protected final String field;
-    protected final long total;
-    protected final long missing;
-    protected final long other;
+  protected final String name;
+  protected final String field;
+  protected final long total;
+  protected final long missing;
+  protected final long other;
 
-    protected AbstractSearchFacetResult(String field, long total, long missing, long other) {
-        this.field = field;
-        this.total = total;
-        this.missing = missing;
-        this.other = other;
-    }
+  protected AbstractSearchFacetResult(String facetName, String field, long total, long missing, long other) {
+    this.name = facetName;
+    this.field = field;
+    this.total = total;
+    this.missing = missing;
+    this.other = other;
+  }
 
-    @Override
-    public String field() {
-        return this.field;
-    }
+  @Override
+  public String name() {
+    return this.name;
+  }
 
-    @Override
-    public long missing() {
-        return this.missing;
-    }
+  @Override
+  public String field() {
+    return this.field;
+  }
 
-    @Override
-    public long other() {
-        return this.other;
-    }
+  @Override
+  public long missing() {
+    return this.missing;
+  }
 
-    @Override
-    public long total() {
-        return this.total;
-    }
+  @Override
+  public long other() {
+    return this.other;
+  }
+
+  @Override
+  public long total() {
+    return this.total;
+  }
 }

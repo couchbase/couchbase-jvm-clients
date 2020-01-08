@@ -20,11 +20,11 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.TextNode;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.search.SearchChunkTrailer;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.msg.search.SearchResponse;
-import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.search.result.DateRangeSearchFacetResult;
 import com.couchbase.client.java.search.result.NumericRangeSearchFacetResult;
@@ -37,15 +37,15 @@ import com.couchbase.client.java.search.result.SearchStatus;
 import com.couchbase.client.java.search.result.TermSearchFacetResult;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.SignalType;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Internal helper to access and convert view requests and responses.
@@ -93,26 +93,28 @@ public class SearchAccessor {
         return Collections.emptyMap();
       }
 
-      JsonNode tree = Mapper.decodeIntoTree(rawFacets);
+      ObjectNode objectNode = (ObjectNode) Mapper.decodeIntoTree(rawFacets);
       Map<String, SearchFacetResult> facets = new HashMap<>();
-      if (tree.isObject()) {
-        ObjectNode objectNode = (ObjectNode) tree;
-        Iterator<Map.Entry<String, JsonNode>> iter = objectNode.fields();
-        while (iter.hasNext()) {
-          Map.Entry<String, JsonNode> entry = iter.next();
-          JsonNode facetEntry = entry.getValue();
-          if (facetEntry.has("numeric_ranges")) {
-            facets.put(entry.getKey(), Mapper.convertValue(facetEntry, NumericRangeSearchFacetResult.class));
-          } else if (facetEntry.has("date_ranges")) {
-            facets.put(entry.getKey(), Mapper.convertValue(facetEntry, DateRangeSearchFacetResult.class));
-          } else {
-            facets.put(entry.getKey(), Mapper.convertValue(facetEntry, TermSearchFacetResult.class));
-          }
+
+      forEachField(objectNode, (facetName, facetEntry) -> {
+        // Copy the facet name into the facet JSON node to simplify data binding
+        ((ObjectNode) facetEntry).set("$name", new TextNode(facetName));
+
+        if (facetEntry.has("numeric_ranges")) {
+          facets.put(facetName, Mapper.convertValue(facetEntry, NumericRangeSearchFacetResult.class));
+        } else if (facetEntry.has("date_ranges")) {
+          facets.put(facetName, Mapper.convertValue(facetEntry, DateRangeSearchFacetResult.class));
+        } else {
+          facets.put(facetName, Mapper.convertValue(facetEntry, TermSearchFacetResult.class));
         }
-      } else {
-        throw new IllegalStateException("Expected facets root to be an object!");
-      }
+      });
+
       return facets;
+    }
+
+    private static void forEachField(ObjectNode node, BiConsumer<String, JsonNode> consumer) {
+      requireNonNull(consumer);
+      node.fields().forEachRemaining(entry -> consumer.accept(entry.getKey(), entry.getValue()));
     }
 
     private static SearchMetaData parseMeta(final SearchResponse response, final SearchChunkTrailer trailer) {

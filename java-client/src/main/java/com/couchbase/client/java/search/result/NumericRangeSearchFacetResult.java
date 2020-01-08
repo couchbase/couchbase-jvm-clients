@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.java.search.result;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -24,37 +23,37 @@ import java.util.List;
 /**
  * Implementation of a {@link NumericRangeSearchFacetResult}.
  *
- * @author Simon Baslé
- * @author Michael Nitschinger
  * @since 2.3.0
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class NumericRangeSearchFacetResult extends AbstractSearchFacetResult {
 
-    private final List<SearchNumericRange> numericRanges;
+  private final List<SearchNumericRange> numericRanges;
 
-    public NumericRangeSearchFacetResult(
+  public NumericRangeSearchFacetResult(
+      @JsonProperty("$name") String name,
       @JsonProperty("field") String field,
       @JsonProperty("total") long total,
       @JsonProperty("missing") long missing,
       @JsonProperty("other") long other,
       @JsonProperty("numeric_ranges") List<SearchNumericRange> numericRanges) {
-        super(field, total, missing, other);
-        this.numericRanges = numericRanges;
-    }
+    super(name, field, total, missing, other);
+    this.numericRanges = numericRanges;
+  }
 
-    public List<SearchNumericRange> numericRanges() {
-        return this.numericRanges;
-    }
+  public List<SearchNumericRange> numericRanges() {
+    return this.numericRanges;
+  }
 
-    @Override
-    public String toString() {
-        return "NumericRangeSearchFacetResult{" +
-          ", field='" + field + '\'' +
-          ", total=" + total +
-          ", missing=" + missing +
-          ", other=" + other +
-          ", ranges=" + numericRanges +
-          '}';
-    }
+  @Override
+  public String toString() {
+    return "NumericRangeSearchFacetResult{" +
+        "name='" + name + '\'' +
+        ", field='" + field + '\'' +
+        ", total=" + total +
+        ", missing=" + missing +
+        ", other=" + other +
+        ", ranges=" + numericRanges +
+        '}';
+  }
 }

@@ -348,14 +348,14 @@ public class Cluster {
   }
 
   /**
-   * The analytics index manager allows to modify and create indexes for the query service.
+   * The query index manager allows to modify and create indexes for the query service.
    */
   public QueryIndexManager queryIndexes() {
     return queryIndexManager;
   }
 
   /**
-   * The analytics index manager allows to modify and create indexes for the search service.
+   * The search index manager allows to modify and create indexes for the search service.
    */
   public SearchIndexManager searchIndexes() {
     return searchIndexManager;

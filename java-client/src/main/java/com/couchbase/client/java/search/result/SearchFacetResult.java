@@ -20,11 +20,14 @@ import com.couchbase.client.java.search.facet.SearchFacet;
 /**
  * Base interface for all facet results.
  *
- * @author Simon Baslé
- * @author Michael Nitschinger
  * @since 2.3.0
  */
 public interface SearchFacetResult {
+
+    /**
+     * @return the name of the facet.
+     */
+    String name();
 
     /**
      * @return the field the {@link SearchFacet} was targeting.
