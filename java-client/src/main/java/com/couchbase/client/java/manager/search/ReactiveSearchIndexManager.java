@@ -63,7 +63,7 @@ public class ReactiveSearchIndexManager {
    * @return all currently present indexes.
    */
   public Flux<SearchIndex> getAllIndexes(final GetAllSearchIndexesOptions options) {
-    return Reactor.toMono(() -> asyncIndexManager.getAllIndexes(options)).flux().flatMap(Flux::fromIterable);
+    return Reactor.toFlux(() -> asyncIndexManager.getAllIndexes(options));
   }
 
   /**
@@ -84,7 +84,7 @@ public class ReactiveSearchIndexManager {
    * @return the analyzed sections for the document.
    */
   public Flux<JsonObject> analyzeDocument(final String name, final JsonObject document, final AnalyzeDocumentOptions options) {
-    return Reactor.toMono(() -> asyncIndexManager.analyzeDocument(name, document, options)).flux().flatMap(Flux::fromIterable);
+    return Reactor.toFlux(() -> asyncIndexManager.analyzeDocument(name, document, options));
   }
 
   /**

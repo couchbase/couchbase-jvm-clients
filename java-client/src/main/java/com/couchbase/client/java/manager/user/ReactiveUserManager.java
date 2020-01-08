@@ -17,14 +17,11 @@
 package com.couchbase.client.java.manager.user;
 
 import com.couchbase.client.core.Reactor;
-import com.couchbase.client.core.annotation.Stability;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
-@Stability.Volatile
 public class ReactiveUserManager {
 
   private final AsyncUserManager async;
@@ -41,20 +38,20 @@ public class ReactiveUserManager {
     return Reactor.toMono(() -> async.getUser(domain, username, options));
   }
 
-  public Mono<List<UserAndMetadata>> getAllUsers() {
-    return Reactor.toMono(() -> async.getAllUsers());
+  public Flux<UserAndMetadata> getAllUsers() {
+    return Reactor.toFlux(() -> async.getAllUsers());
   }
 
-  public Mono<List<UserAndMetadata>> getAllUsers(GetAllUsersOptions options) {
-    return Reactor.toMono(() -> async.getAllUsers(options));
+  public Flux<UserAndMetadata> getAllUsers(GetAllUsersOptions options) {
+    return Reactor.toFlux(() -> async.getAllUsers(options));
   }
 
-  public Mono<List<RoleAndDescription>> getRoles() {
-    return Reactor.toMono(() -> async.getRoles());
+  public Flux<RoleAndDescription> getRoles() {
+    return Reactor.toFlux(() -> async.getRoles());
   }
 
-  public Mono<List<RoleAndDescription>> getRoles(GetRolesOptions options) {
-    return Reactor.toMono(() -> async.getRoles(options));
+  public Flux<RoleAndDescription> getRoles(GetRolesOptions options) {
+    return Reactor.toFlux(() -> async.getRoles(options));
   }
 
   public Mono<Void> upsertUser(User user) {
@@ -81,12 +78,12 @@ public class ReactiveUserManager {
     return Reactor.toMono(() -> async.getGroup(groupName, options));
   }
 
-  public Mono<List<Group>> getAllGroups() {
-    return Reactor.toMono(() -> async.getAllGroups());
+  public Flux<Group> getAllGroups() {
+    return Reactor.toFlux(() -> async.getAllGroups());
   }
 
-  public Mono<List<Group>> getAllGroups(GetAllGroupsOptions options) {
-    return Reactor.toMono(() -> async.getAllGroups(options));
+  public Flux<Group> getAllGroups(GetAllGroupsOptions options) {
+    return Reactor.toFlux(() -> async.getAllGroups(options));
   }
 
   public Mono<Void> upsertGroup(Group group) {

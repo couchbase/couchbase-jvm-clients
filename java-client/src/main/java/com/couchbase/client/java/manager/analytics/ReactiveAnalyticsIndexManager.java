@@ -19,11 +19,12 @@ package com.couchbase.client.java.manager.analytics;
 import com.couchbase.client.core.error.DataverseExistsException;
 import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.java.AsyncCluster;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
 import java.util.Map;
 
+import static com.couchbase.client.core.Reactor.toFlux;
 import static com.couchbase.client.core.Reactor.toMono;
 
 public class ReactiveAnalyticsIndexManager {
@@ -63,8 +64,8 @@ public class ReactiveAnalyticsIndexManager {
     return toMono(() -> async.dropDataverse(dataverseName, options));
   }
 
-  public Mono<List<AnalyticsDataverse>> getAllDataverses() {
-    return toMono(() -> async.getAllDataverses());
+  public Flux<AnalyticsDataverse> getAllDataverses() {
+    return toFlux(() -> async.getAllDataverses());
   }
 
   public Mono<Void> createDataset(String datasetName, String bucketName) {
@@ -83,12 +84,12 @@ public class ReactiveAnalyticsIndexManager {
     return toMono(() -> async.dropDataset(datasetName, options));
   }
 
-  public Mono<List<AnalyticsDataset>> getAllDatasets() {
-    return toMono(() -> async.getAllDatasets());
+  public Flux<AnalyticsDataset> getAllDatasets() {
+    return toFlux(() -> async.getAllDatasets());
   }
 
-  public Mono<List<AnalyticsDataset>> getAllDatasets(GetAllDatasetsAnalyticsOptions options) {
-    return toMono(() -> async.getAllDatasets(options));
+  public Flux<AnalyticsDataset> getAllDatasets(GetAllDatasetsAnalyticsOptions options) {
+    return toFlux(() -> async.getAllDatasets(options));
   }
 
   public Mono<Void> createIndex(String indexName, String datasetName, Map<String, AnalyticsDataType> fields) {
@@ -107,12 +108,12 @@ public class ReactiveAnalyticsIndexManager {
     return toMono(() -> async.dropIndex(indexName, datasetName, options));
   }
 
-  public Mono<List<AnalyticsIndex>> getAllIndexes() {
-    return toMono(() -> async.getAllIndexes());
+  public Flux<AnalyticsIndex> getAllIndexes() {
+    return toFlux(() -> async.getAllIndexes());
   }
 
-  public Mono<List<AnalyticsIndex>> getAllIndexes(GetAllIndexesAnalyticsOptions options) {
-    return toMono(() -> async.getAllIndexes(options));
+  public Flux<AnalyticsIndex> getAllIndexes(GetAllIndexesAnalyticsOptions options) {
+    return toFlux(() -> async.getAllIndexes(options));
   }
 
   public Mono<Void> connectLink() {

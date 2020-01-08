@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java.manager.view;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DesignDocumentNotFoundException;
 import com.couchbase.client.core.error.TimeoutException;
@@ -27,7 +26,6 @@ import java.util.List;
 import static com.couchbase.client.java.AsyncUtils.block;
 import static java.util.Objects.requireNonNull;
 
-@Stability.Volatile
 public class ViewIndexManager {
   private final AsyncViewIndexManager async;
 

@@ -27,6 +27,7 @@ import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.collection.ReactiveCollectionManager;
+import com.couchbase.client.java.manager.view.ReactiveViewIndexManager;
 import com.couchbase.client.java.view.ReactiveViewResult;
 import com.couchbase.client.java.view.ViewAccessor;
 import com.couchbase.client.java.view.ViewOptions;
@@ -55,6 +56,8 @@ public class ReactiveBucket {
 
   private final ReactiveCollectionManager collectionManager;
 
+  private final ReactiveViewIndexManager viewIndexManager;
+
   /**
    * Stores already opened scopes for reuse.
    */
@@ -68,6 +71,7 @@ public class ReactiveBucket {
   ReactiveBucket(final AsyncBucket asyncBucket) {
     this.asyncBucket = asyncBucket;
     this.collectionManager = new ReactiveCollectionManager(asyncBucket.collections());
+    this.viewIndexManager = new ReactiveViewIndexManager(asyncBucket.viewIndexes());
   }
 
   /**
@@ -94,9 +98,12 @@ public class ReactiveBucket {
     return asyncBucket.core();
   }
 
-  @Stability.Volatile
   public ReactiveCollectionManager collections() {
     return collectionManager;
+  }
+
+  public ReactiveViewIndexManager viewIndexes() {
+    return viewIndexManager;
   }
 
   /**

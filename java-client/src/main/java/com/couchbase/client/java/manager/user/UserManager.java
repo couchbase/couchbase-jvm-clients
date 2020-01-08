@@ -16,14 +16,11 @@
 
 package com.couchbase.client.java.manager.user;
 
-import com.couchbase.client.core.annotation.Stability;
-
 import java.util.List;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 import static java.util.Objects.requireNonNull;
 
-@Stability.Volatile
 public class UserManager {
 
   private final AsyncUserManager async;

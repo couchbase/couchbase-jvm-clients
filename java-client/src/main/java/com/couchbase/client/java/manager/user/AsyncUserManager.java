@@ -17,7 +17,6 @@
 package com.couchbase.client.java.manager.user;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.error.GroupNotFoundException;
 import com.couchbase.client.core.error.UserNotFoundException;
@@ -36,17 +35,16 @@ import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMet
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
-import static com.couchbase.client.java.manager.user.GetRolesOptions.getRolesOptions;
 import static com.couchbase.client.java.manager.user.DropGroupOptions.dropGroupOptions;
 import static com.couchbase.client.java.manager.user.DropUserOptions.dropUserOptions;
 import static com.couchbase.client.java.manager.user.GetAllGroupsOptions.getAllGroupsOptions;
 import static com.couchbase.client.java.manager.user.GetAllUsersOptions.getAllUsersOptions;
 import static com.couchbase.client.java.manager.user.GetGroupOptions.getGroupOptions;
+import static com.couchbase.client.java.manager.user.GetRolesOptions.getRolesOptions;
 import static com.couchbase.client.java.manager.user.GetUserOptions.getUserOptions;
 import static com.couchbase.client.java.manager.user.UpsertGroupOptions.upsertGroupOptions;
 import static com.couchbase.client.java.manager.user.UpsertUserOptions.upsertUserOptions;
 
-@Stability.Volatile
 public class AsyncUserManager extends ManagerSupport {
   // https://docs.couchbase.com/server/5.5/rest-api/rbac.html
 

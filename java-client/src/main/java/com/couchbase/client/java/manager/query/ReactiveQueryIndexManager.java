@@ -16,12 +16,13 @@
 
 package com.couchbase.client.java.manager.query;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Collection;
-import java.util.List;
 
+import static com.couchbase.client.core.Reactor.toFlux;
 import static com.couchbase.client.core.Reactor.toMono;
 import static java.util.Objects.requireNonNull;
 
@@ -48,12 +49,12 @@ public class ReactiveQueryIndexManager {
     return toMono(() -> async.createPrimaryIndex(bucketName, options));
   }
 
-  public Mono<List<QueryIndex>> getAllIndexes(String bucketName) {
-    return toMono(() -> async.getAllIndexes(bucketName));
+  public Flux<QueryIndex> getAllIndexes(String bucketName) {
+    return toFlux(() -> async.getAllIndexes(bucketName));
   }
 
-  public Mono<List<QueryIndex>> getAllIndexes(String bucketName, GetAllQueryIndexesOptions options) {
-    return toMono(() -> async.getAllIndexes(bucketName, options));
+  public Flux<QueryIndex> getAllIndexes(String bucketName, GetAllQueryIndexesOptions options) {
+    return toFlux(() -> async.getAllIndexes(bucketName, options));
   }
 
   public Mono<Void> dropPrimaryIndex(String bucketName) {

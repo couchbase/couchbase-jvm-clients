@@ -24,6 +24,7 @@ import reactor.core.CoreSubscriber;
 import reactor.core.Exceptions;
 import reactor.core.Fuseable;
 import reactor.core.Scannable;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.core.publisher.SignalType;
@@ -86,7 +87,18 @@ public class Reactor {
         .onErrorMap(t -> t instanceof CompletionException ? t.getCause() : t);
   }
 
-   /**
+  /**
+   * Helper method to wrap an async call into a reactive one and translate
+   * exceptions appropriately.
+   *
+   * @param input a supplier that will be called on every subscription.
+   * @return a flux that invokes the given supplier on each subscription.
+   */
+  public static <T, C extends Iterable<T>> Flux<T> toFlux(Supplier<CompletableFuture<C>> input) {
+    return toMono(input).flux().flatMap(Flux::fromIterable);
+  }
+
+  /**
    * Emits the value or error produced by the wrapped CompletionStage.
    * <p>
    * Note that if Subscribers cancel their subscriptions, the CompletionStage

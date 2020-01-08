@@ -50,7 +50,6 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.ReactiveBucket.DEFAULT_VIEW_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_PING_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_WAIT_UNTIL_READY_OPTIONS;
-import static reactor.core.publisher.Mono.fromFuture;
 
 /**
  * Provides access to a Couchbase bucket in an async fashion.
@@ -123,12 +122,10 @@ public class AsyncBucket {
     return core;
   }
 
-  @Stability.Volatile
   public AsyncCollectionManager collections() {
     return collectionManager;
   }
 
-  @Stability.Volatile
   public AsyncViewIndexManager viewIndexes() {
     return viewManager;
   }

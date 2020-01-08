@@ -103,13 +103,10 @@ public class Bucket {
     return asyncBucket.environment();
   }
 
-
-  @Stability.Volatile
   public CollectionManager collections() {
     return collectionManager;
   }
 
-  @Stability.Volatile
   public ViewIndexManager viewIndexes() {
     return viewManager;
   }
