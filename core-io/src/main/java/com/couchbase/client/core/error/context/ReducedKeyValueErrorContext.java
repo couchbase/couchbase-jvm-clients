@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.error.context;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import java.util.Map;
 import java.util.Optional;
@@ -23,6 +24,7 @@ import java.util.Optional;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
+@Stability.Uncommitted
 public class ReducedKeyValueErrorContext extends ErrorContext {
 
   private final String id;

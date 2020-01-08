@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.error.context;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.msg.RequestContext;
 
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+@Stability.Uncommitted
 public class QueryErrorContext extends ErrorContext {
 
   private final RequestContext requestContext;

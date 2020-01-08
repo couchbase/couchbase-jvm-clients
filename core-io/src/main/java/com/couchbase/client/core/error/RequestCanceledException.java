@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 
 public class RequestCanceledException extends CouchbaseException {
@@ -25,6 +26,7 @@ public class RequestCanceledException extends CouchbaseException {
   }
 
   @Override
+  @Stability.Uncommitted
   public CancellationErrorContext context() {
     return (CancellationErrorContext) super.context();
   }

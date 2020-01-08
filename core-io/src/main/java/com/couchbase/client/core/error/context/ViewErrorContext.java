@@ -23,7 +23,7 @@ import com.couchbase.client.core.msg.view.ViewError;
 
 import java.util.Map;
 
-@Stability.Volatile
+@Stability.Uncommitted
 public class ViewErrorContext extends ErrorContext {
 
   private final RequestContext requestContext;
@@ -41,12 +41,10 @@ public class ViewErrorContext extends ErrorContext {
     return requestContext;
   }
 
-  @Stability.Volatile
   public int httpStatus() {
     return httpStatus;
   }
 
-  @Stability.Volatile
   public ViewError error() {
     return viewError;
   }

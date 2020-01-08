@@ -16,11 +16,13 @@
 
 package com.couchbase.client.core.error.context;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 
 import java.util.Map;
 
+@Stability.Uncommitted
 public class KeyValueErrorContext extends ErrorContext {
 
   private final KeyValueRequest<?> request;

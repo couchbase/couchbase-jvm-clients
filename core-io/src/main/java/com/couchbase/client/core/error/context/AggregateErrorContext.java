@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.error.context;
 
+import com.couchbase.client.core.annotation.Stability;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +26,7 @@ import java.util.Map;
 /**
  * An error context which combines more than one context to dump.
  */
+@Stability.Uncommitted
 public class AggregateErrorContext extends ErrorContext {
 
   private final List<ErrorContext> innerContexts;

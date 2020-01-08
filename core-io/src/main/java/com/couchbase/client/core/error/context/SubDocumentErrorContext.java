@@ -16,12 +16,14 @@
 
 package com.couchbase.client.core.error.context;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 
 import java.util.Map;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
+@Stability.Uncommitted
 public class SubDocumentErrorContext extends ErrorContext {
 
   private final KeyValueErrorContext kvContext;

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.error.subdoc;
 
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.context.SubDocumentErrorContext;
 
@@ -34,6 +35,7 @@ public class ValueTooDeepException extends CouchbaseException {
     }
 
     @Override
+    @Stability.Uncommitted
     public SubDocumentErrorContext context() {
         return (SubDocumentErrorContext) super.context();
     }

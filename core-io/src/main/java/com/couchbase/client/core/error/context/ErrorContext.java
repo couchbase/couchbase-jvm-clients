@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.error.context;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.AbstractContext;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -26,6 +27,7 @@ import java.util.Map;
  * The ErrorContext is the parent interface for all service-specific error contexts that are thrown as part of
  * the {@link CouchbaseException}.
  */
+@Stability.Uncommitted
 public abstract class ErrorContext extends AbstractContext {
 
   private final ResponseStatus responseStatus;

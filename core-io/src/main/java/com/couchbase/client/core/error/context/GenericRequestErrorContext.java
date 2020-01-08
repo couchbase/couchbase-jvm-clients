@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.error.context;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.Request;
 
 import java.util.Map;
@@ -24,6 +25,7 @@ import java.util.Map;
  * This generic error context can be constructed from any request and will pull out as much information
  * as possible.
  */
+@Stability.Uncommitted
 public class GenericRequestErrorContext extends ErrorContext {
 
   private final Request<?> request;

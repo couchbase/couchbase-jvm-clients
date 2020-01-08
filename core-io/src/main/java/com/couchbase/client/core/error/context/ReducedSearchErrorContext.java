@@ -16,11 +16,14 @@
 
 package com.couchbase.client.core.error.context;
 
+import com.couchbase.client.core.annotation.Stability;
+
 import java.util.Map;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
+@Stability.Uncommitted
 public class ReducedSearchErrorContext extends ErrorContext {
 
   private final String indexName;

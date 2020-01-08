@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.error.context.ErrorContext;
 
@@ -72,6 +73,7 @@ public class CouchbaseException extends RuntimeException {
   /**
    * Returns the error context, if present.
    */
+  @Stability.Uncommitted
   public ErrorContext context() {
     return ctx;
   }

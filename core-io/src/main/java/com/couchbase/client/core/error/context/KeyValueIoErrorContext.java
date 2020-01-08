@@ -15,9 +15,11 @@
  */
 package com.couchbase.client.core.error.context;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 
+@Stability.Uncommitted
 public class KeyValueIoErrorContext extends ErrorContext {
 
   private final EndpointContext endpointContext;

@@ -25,6 +25,7 @@ import java.util.Map;
  * When a cancellation (i.e. timeout) occurs we do only have the information available that is currently with the
  * request, so this context is not service-specific and just dumps what's in there.
  */
+@Stability.Uncommitted
 public class CancellationErrorContext extends ErrorContext {
 
   private final RequestContext requestContext;
@@ -45,7 +46,6 @@ public class CancellationErrorContext extends ErrorContext {
   /**
    * Returns the underlying request context for debug reasons.
    */
-  @Stability.Volatile
   public RequestContext requestContext() {
     return requestContext;
   }

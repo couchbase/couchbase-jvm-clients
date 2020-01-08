@@ -22,7 +22,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.util.Map;
 
-@Stability.Volatile
+@Stability.Uncommitted
 public class SearchErrorContext extends ErrorContext {
 
   private final RequestContext requestContext;
@@ -38,7 +38,6 @@ public class SearchErrorContext extends ErrorContext {
     return requestContext;
   }
 
-  @Stability.Volatile
   public int httpStatus() {
     return httpStatus;
   }
