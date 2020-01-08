@@ -50,7 +50,9 @@ import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
@@ -74,13 +76,17 @@ import static org.mockito.Mockito.when;
 class QueryMessageHandlerBackpressureTest {
 
   private ChunkServer chunkServer;
-  private EventLoopGroup eventLoopGroup;
+  private static EventLoopGroup eventLoopGroup;
   private CoreEnvironment environment;
   private Core core;
 
+  @BeforeAll
+  static void beforeAll() {
+    eventLoopGroup = new DefaultEventLoopGroup();
+  }
+
   @BeforeEach
   void beforeEach() {
-    eventLoopGroup = new DefaultEventLoopGroup();
     chunkServer = new ChunkServer(eventLoopGroup);
     environment = CoreEnvironment.create();
     core = Core.create(environment, PasswordAuthenticator.create("admin", "password"), SeedNode.LOCALHOST);
@@ -89,9 +95,13 @@ class QueryMessageHandlerBackpressureTest {
   @AfterEach
   void afterEach() {
     chunkServer.shutdown();
-    eventLoopGroup.shutdownGracefully(0, 1, TimeUnit.SECONDS);
     core.shutdown().block();
     environment.shutdown();
+  }
+
+  @AfterAll
+  static void afterAll() {
+    eventLoopGroup.shutdownGracefully(2, 5, TimeUnit.SECONDS);
   }
 
   /**
