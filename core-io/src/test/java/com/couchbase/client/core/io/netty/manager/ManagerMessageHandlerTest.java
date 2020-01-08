@@ -200,6 +200,7 @@ class ManagerMessageHandlerTest {
     assertFalse(terminated.get());
     channel.close().awaitUninterruptibly();
     waitUntilCondition(terminated::get);
+    channel.finish();
   }
 
   /**
@@ -239,6 +240,8 @@ class ManagerMessageHandlerTest {
         MockingDetails mockingDetails = Mockito.mockingDetails(endpoint);
         return mockingDetails.getInvocations().stream().anyMatch(i -> i.getMethod().getName().equals("disconnect"));
       });
+
+      channel.finish();
     } finally {
        env.shutdown();
     }
