@@ -18,7 +18,10 @@ package com.couchbase.client.core.node;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.node.NodeLocatorBugIdentifiedEvent;
+import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
+import com.couchbase.client.core.config.NodeInfo;
+import com.couchbase.client.core.config.PortInfo;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.context.GenericRequestErrorContext;
 import com.couchbase.client.core.error.ServiceNotAvailableException;
@@ -92,16 +95,24 @@ public class RoundRobinLocator implements Locator {
 
     List<Node> filteredNodes = filterNodes(nodes, request, config);
     if (filteredNodes.isEmpty()) {
-      // No node in the cluster has the service enabled, so we need to cancel the request with a
-      // service not available exception. Either the cluster is not configured with the service
-      // in the first place or a failover happened and suddenly there is no node in the cluster
-      // anymore which can serve the request. In any case sending it into retry will not help
-      // resolve the situation so let's make it clear in the exception what's going on.
-      request.fail(new ServiceNotAvailableException(
-        "The " + request.serviceType().ident()
-        + " service is not available in the cluster.",
-        new GenericRequestErrorContext(request)
-      ));
+      if (serviceShowsUpInConfig(config)) {
+        // No node has the service enabled, but it shows up in the config. This is a race condition,
+        // likely the node/service is currently in progress of being configured, so let's send it into
+        // retry and wait until it can be dispatched.
+        RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NODE_NOT_AVAILABLE);
+      } else {
+        // No node in the cluster has the service enabled and it does not show up in the bucket config,
+        // so we need to cancel the request with a service not available exception. Either the cluster is
+        // not configured with the service in the first place or a failover happened and suddenly there
+        // is no node in the cluster anymore which can serve the request. In any case sending it into
+        // retry will not help resolve the situation so let's make it clear in the exception what's
+        //going on.
+        request.fail(new ServiceNotAvailableException(
+          "The " + request.serviceType().ident()
+            + " service is not available in the cluster.",
+          new GenericRequestErrorContext(request)
+        ));
+      }
       return;
     }
 
@@ -110,6 +121,32 @@ public class RoundRobinLocator implements Locator {
     } else {
       dispatchUntargeted(request, filteredNodes, ctx);
     }
+  }
+
+  /**
+   * Helper method to check if a given services shows up in a config on the cluster.
+   *
+   * @param clusterConfig the config to check against.
+   * @return true if it shows up at least once, false otherwise.
+   */
+  private boolean serviceShowsUpInConfig(final ClusterConfig clusterConfig) {
+    if (clusterConfig.globalConfig() != null) {
+      for (PortInfo portInfo : clusterConfig.globalConfig().portInfos()) {
+        if (portInfo.ports().containsKey(serviceType)) {
+          return true;
+        }
+      }
+    }
+
+    for (BucketConfig bucketConfig : clusterConfig.bucketConfigs().values()) {
+      for (NodeInfo nodeInfo : bucketConfig.nodes()) {
+        if (nodeInfo.services().containsKey(serviceType)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   /**
