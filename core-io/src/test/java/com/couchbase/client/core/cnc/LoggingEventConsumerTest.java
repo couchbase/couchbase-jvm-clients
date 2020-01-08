@@ -124,7 +124,7 @@ class LoggingEventConsumerTest {
   void convertsDurationsAtExpectedBoundaries() {
     Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofMillis(1), null);
     loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][1000µs]");
+    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][1000us]");
 
     event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofMillis(11), null);
     loggingEventConsumer.accept(event);

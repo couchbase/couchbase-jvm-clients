@@ -189,7 +189,7 @@ public class LoggingEventConsumer implements Consumer<Event> {
     if (nanos < 1000L) { // everything below a microsecond is ns
       return nanos + "ns";
     } else if (nanos < 1000_000_0L) {
-      return TimeUnit.NANOSECONDS.toMicros(nanos) + "µs"; // everything below 10ms is micros
+      return TimeUnit.NANOSECONDS.toMicros(nanos) + "us"; // everything below 10ms is micros
     } else if (nanos < 1000_000_000_0L) { // everything below 10s is millis
       return TimeUnit.NANOSECONDS.toMillis(nanos) + "ms";
     } else { // everything higher than 10s is seconds
