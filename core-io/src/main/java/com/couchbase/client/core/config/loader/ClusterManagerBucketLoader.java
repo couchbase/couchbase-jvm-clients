@@ -56,7 +56,7 @@ public class ClusterManagerBucketLoader extends BaseBucketLoader {
 
     return Mono.defer(() -> {
       BucketConfigRequest request = new BucketConfigRequest(
-        ctx.environment().timeoutConfig().managementTimeout(),
+        ctx.environment().timeoutConfig().connectTimeout(),
         ctx,
         BestEffortRetryStrategy.INSTANCE,
         bucket,

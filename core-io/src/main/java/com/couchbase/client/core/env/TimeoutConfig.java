@@ -264,7 +264,7 @@ public class TimeoutConfig {
     }
 
     /**
-     * Sets the timeout to use for connection operations.
+     * Sets the timeout to use for connecting and socket connects.
      *
      * <p>The default is 10 seconds.</p>
      *
