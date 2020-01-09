@@ -34,58 +34,58 @@ public class ReactiveQueryIndexManager {
   }
 
   public Mono<Void> createIndex(String bucketName, String indexName, Collection<String> fields) {
-    return toMono(() -> async.createIndex(bucketName, indexName, fields));
+    return Mono.defer(() -> toMono(() -> async.createIndex(bucketName, indexName, fields)));
   }
 
   public Mono<Void> createIndex(String bucketName, String indexName, Collection<String> fields, CreateQueryIndexOptions options) {
-    return toMono(() -> async.createIndex(bucketName, indexName, fields, options));
+    return Mono.defer(() -> toMono(() -> async.createIndex(bucketName, indexName, fields, options)));
   }
 
   public Mono<Void> createPrimaryIndex(String bucketName) {
-    return toMono(() -> async.createPrimaryIndex(bucketName));
+    return Mono.defer(() -> toMono(() -> async.createPrimaryIndex(bucketName)));
   }
 
   public Mono<Void> createPrimaryIndex(String bucketName, CreatePrimaryQueryIndexOptions options) {
-    return toMono(() -> async.createPrimaryIndex(bucketName, options));
+    return Mono.defer(() -> toMono(() -> async.createPrimaryIndex(bucketName, options)));
   }
 
   public Flux<QueryIndex> getAllIndexes(String bucketName) {
-    return toFlux(() -> async.getAllIndexes(bucketName));
+    return Flux.defer(() -> toFlux(() -> async.getAllIndexes(bucketName)));
   }
 
   public Flux<QueryIndex> getAllIndexes(String bucketName, GetAllQueryIndexesOptions options) {
-    return toFlux(() -> async.getAllIndexes(bucketName, options));
+    return Flux.defer(() -> toFlux(() -> async.getAllIndexes(bucketName, options)));
   }
 
   public Mono<Void> dropPrimaryIndex(String bucketName) {
-    return toMono(() -> async.dropPrimaryIndex(bucketName));
+    return Mono.defer(() -> toMono(() -> async.dropPrimaryIndex(bucketName)));
   }
 
   public Mono<Void> dropPrimaryIndex(String bucketName, DropPrimaryQueryIndexOptions options) {
-    return toMono(() -> async.dropPrimaryIndex(bucketName, options));
+    return Mono.defer(() -> toMono(() -> async.dropPrimaryIndex(bucketName, options)));
   }
 
   public Mono<Void> dropIndex(String bucketName, String indexName) {
-    return toMono(() -> async.dropIndex(bucketName, indexName));
+    return Mono.defer(() -> toMono(() -> async.dropIndex(bucketName, indexName)));
   }
 
   public Mono<Void> dropIndex(String bucketName, String indexName, DropQueryIndexOptions options) {
-    return toMono(() -> async.dropIndex(bucketName, indexName, options));
+    return Mono.defer(() -> toMono(() -> async.dropIndex(bucketName, indexName, options)));
   }
 
   public Mono<Void> buildDeferredIndexes(String bucketName) {
-    return toMono(() -> async.buildDeferredIndexes(bucketName));
+    return Mono.defer(() -> toMono(() -> async.buildDeferredIndexes(bucketName)));
   }
 
   public Mono<Void> buildDeferredIndexes(String bucketName, BuildQueryIndexOptions options) {
-    return toMono(() -> async.buildDeferredIndexes(bucketName, options));
+    return Mono.defer(() -> toMono(() -> async.buildDeferredIndexes(bucketName, options)));
   }
 
   public Mono<Void> watchIndexes(String bucketName, Collection<String> indexNames, Duration timeout) {
-    return toMono(() -> async.watchIndexes(bucketName, indexNames, timeout));
+    return Mono.defer(() -> toMono(() -> async.watchIndexes(bucketName, indexNames, timeout)));
   }
 
   public Mono<Void> watchIndexes(String bucketName, Collection<String> indexNames, Duration timeout, WatchQueryIndexesOptions options) {
-    return toMono(() -> async.watchIndexes(bucketName, indexNames, timeout, options));
+    return Mono.defer(() -> toMono(() -> async.watchIndexes(bucketName, indexNames, timeout, options)));
   }
 }

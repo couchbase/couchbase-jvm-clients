@@ -16,10 +16,11 @@
 
 package com.couchbase.client.java.manager.user;
 
-import com.couchbase.client.core.Reactor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import static com.couchbase.client.core.Reactor.toFlux;
+import static com.couchbase.client.core.Reactor.toMono;
 import static java.util.Objects.requireNonNull;
 
 public class ReactiveUserManager {
@@ -31,74 +32,74 @@ public class ReactiveUserManager {
   }
 
   public Mono<UserAndMetadata> getUser(AuthDomain domain, String username) {
-    return Reactor.toMono(() -> async.getUser(domain, username));
+    return Mono.defer(() -> toMono(() -> async.getUser(domain, username)));
   }
 
   public Mono<UserAndMetadata> getUser(AuthDomain domain, String username, GetUserOptions options) {
-    return Reactor.toMono(() -> async.getUser(domain, username, options));
+    return Mono.defer(() -> toMono(() -> async.getUser(domain, username, options)));
   }
 
   public Flux<UserAndMetadata> getAllUsers() {
-    return Reactor.toFlux(() -> async.getAllUsers());
+    return Flux.defer(() -> toFlux(async::getAllUsers));
   }
 
   public Flux<UserAndMetadata> getAllUsers(GetAllUsersOptions options) {
-    return Reactor.toFlux(() -> async.getAllUsers(options));
+    return Flux.defer(() -> toFlux(() -> async.getAllUsers(options)));
   }
 
   public Flux<RoleAndDescription> getRoles() {
-    return Reactor.toFlux(() -> async.getRoles());
+    return Flux.defer(() -> toFlux(async::getRoles));
   }
 
   public Flux<RoleAndDescription> getRoles(GetRolesOptions options) {
-    return Reactor.toFlux(() -> async.getRoles(options));
+    return Flux.defer(() -> toFlux(() -> async.getRoles(options)));
   }
 
   public Mono<Void> upsertUser(User user) {
-    return Reactor.toMono(() -> async.upsertUser(user));
+    return Mono.defer(() -> toMono(() -> async.upsertUser(user)));
   }
 
   public Mono<Void> upsertUser(User user, UpsertUserOptions options) {
-    return Reactor.toMono(() -> async.upsertUser(user, options));
+    return Mono.defer(() -> toMono(() -> async.upsertUser(user, options)));
   }
 
   public Mono<Void> dropUser(String username) {
-    return Reactor.toMono(() -> async.dropUser(username));
+    return Mono.defer(() -> toMono(() -> async.dropUser(username)));
   }
 
   public Mono<Void> dropUser(String username, DropUserOptions options) {
-    return Reactor.toMono(() -> async.dropUser(username, options));
+    return Mono.defer(() -> toMono(() -> async.dropUser(username, options)));
   }
 
   public Mono<Group> getGroup(String groupName) {
-    return Reactor.toMono(() -> async.getGroup(groupName));
+    return Mono.defer(() -> toMono(() -> async.getGroup(groupName)));
   }
 
   public Mono<Group> getGroup(String groupName, GetGroupOptions options) {
-    return Reactor.toMono(() -> async.getGroup(groupName, options));
+    return Mono.defer(() -> toMono(() -> async.getGroup(groupName, options)));
   }
 
   public Flux<Group> getAllGroups() {
-    return Reactor.toFlux(() -> async.getAllGroups());
+    return Flux.defer(() -> toFlux(async::getAllGroups));
   }
 
   public Flux<Group> getAllGroups(GetAllGroupsOptions options) {
-    return Reactor.toFlux(() -> async.getAllGroups(options));
+    return Flux.defer(() -> toFlux(() -> async.getAllGroups(options)));
   }
 
   public Mono<Void> upsertGroup(Group group) {
-    return Reactor.toMono(() -> async.upsertGroup(group));
+    return Mono.defer(() -> toMono(() -> async.upsertGroup(group)));
   }
 
   public Mono<Void> upsertGroup(Group group, UpsertGroupOptions options) {
-    return Reactor.toMono(() -> async.upsertGroup(group, options));
+    return Mono.defer(() -> toMono(() -> async.upsertGroup(group, options)));
   }
 
   public Mono<Void> dropGroup(String groupName) {
-    return Reactor.toMono(() -> async.dropGroup(groupName));
+    return Mono.defer(() -> toMono(() -> async.dropGroup(groupName)));
   }
 
   public Mono<Void> dropGroup(String groupName, DropGroupOptions options) {
-    return Reactor.toMono(() -> async.dropGroup(groupName, options));
+    return Mono.defer(() -> toMono(() -> async.dropGroup(groupName, options)));
   }
 }
