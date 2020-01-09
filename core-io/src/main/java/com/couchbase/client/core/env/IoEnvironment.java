@@ -23,6 +23,7 @@ import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollEventLoopGroup
 import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueue;
 import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import com.couchbase.client.core.deps.io.netty.util.concurrent.DefaultThreadFactory;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import reactor.core.publisher.Flux;
@@ -37,6 +38,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
@@ -63,6 +65,15 @@ import static com.couchbase.client.core.util.Validators.notNull;
  * @since 2.0.0
  */
 public class IoEnvironment {
+
+  static {
+    final String samplingProperty = "com.couchbase.client.core.deps.io.netty.leakDetection.samplingInterval";
+    final long defaultSamplingInterval = 65536;
+
+    if (isNullOrEmpty(System.getProperty(samplingProperty))) {
+      System.setProperty(samplingProperty, Long.toString(defaultSamplingInterval));
+    }
+  }
 
   /**
    * Native IO is enabled by default.

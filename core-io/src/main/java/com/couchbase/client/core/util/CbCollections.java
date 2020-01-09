@@ -67,6 +67,10 @@ public class CbCollections {
     return m == null || m.isEmpty();
   }
 
+  public static boolean isNullOrEmpty(String s) {
+    return s == null || s.isEmpty();
+  }
+
   /**
    * Returns an unmodifiable set containing the given items.
    *
