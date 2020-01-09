@@ -93,7 +93,7 @@ class ChunkedViewMessageHandler
      * @return true if it needs to be retried, false otherwise.
      */
     private static Optional<RetryReason> analyse404Response(final ViewError error) {
-        return error.reason().contains("missing") ? Optional.of(RetryReason.VIEWS_TEMPORARY_FAILURE) : Optional.empty();
+        return error.reason().equals("missing") ? Optional.of(RetryReason.VIEWS_TEMPORARY_FAILURE) : Optional.empty();
     }
 
     /**
