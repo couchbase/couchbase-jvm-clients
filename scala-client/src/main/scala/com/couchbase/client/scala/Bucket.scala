@@ -21,9 +21,10 @@ import java.util.UUID
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.manager.collection.CollectionManager
 import com.couchbase.client.scala.manager.view.ViewIndexManager
-import com.couchbase.client.scala.util.AsyncUtils
+import com.couchbase.client.scala.util.{AsyncUtils, TimeoutUtil}
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
 import com.couchbase.client.scala.view.{ViewOptions, ViewResult}
 
@@ -43,7 +44,6 @@ import scala.util.Try
   */
 class Bucket private[scala] (val async: AsyncBucket) {
   private[scala] implicit val ec: ExecutionContext = async.ec
-  private[scala] val kvTimeout                     = javaDurationToScala(async.environment.timeoutConfig.kvTimeout())
 
   /** Returns the name of this bucket. */
   def name: String = async.name

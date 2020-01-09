@@ -112,7 +112,6 @@ case class IoEnvironment(
     copy(eventLoopThreadCount = Some(eventLoopThreadCount))
   }
 
-
   private[scala] def toCore = {
     val builder = core.env.IoEnvironment.builder()
 

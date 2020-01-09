@@ -15,20 +15,13 @@
  */
 package com.couchbase.client.scala
 
-import java.util.UUID
-
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
-import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.manager.collection.{AsyncCollectionManager, CollectionManager}
-import com.couchbase.client.scala.manager.view.{AsyncViewIndexManager}
-import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
-import com.couchbase.client.scala.util.FutureConversions
+import com.couchbase.client.scala.manager.collection.AsyncCollectionManager
+import com.couchbase.client.scala.manager.view.AsyncViewIndexManager
 import com.couchbase.client.scala.view.{ViewOptions, ViewResult}
 
-import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 /** Represents a Couchbase bucket resource.
@@ -50,7 +43,6 @@ class AsyncBucket private[scala] (
     private[scala] val environment: ClusterEnvironment
 ) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
-  private[scala] val kvTimeout                     = javaDurationToScala(environment.timeoutConfig.kvTimeout())
   val reactive                                     = new ReactiveBucket(this)
 
   @Stability.Volatile
