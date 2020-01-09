@@ -28,7 +28,9 @@ case class IoEnvironment(
     private[scala] val queryEventLoopGroup: Option[EventLoopGroup] = None,
     private[scala] val analyticsEventLoopGroup: Option[EventLoopGroup] = None,
     private[scala] val searchEventLoopGroup: Option[EventLoopGroup] = None,
-    private[scala] val viewEventLoopGroup: Option[EventLoopGroup] = None
+    private[scala] val viewEventLoopGroup: Option[EventLoopGroup] = None,
+    private[scala] val nativeIoEnabled: Option[Boolean] = None,
+    private[scala] val eventLoopThreadCount: Option[Int] = None
 ) {
 
   /** Sets the [[EventLoopGroup]] to be used for config traffic.
@@ -79,7 +81,39 @@ case class IoEnvironment(
     copy(viewEventLoopGroup = Some(value))
   }
 
-  private[scala] def toCore: core.env.IoEnvironment.Builder = {
+  /** If set to false (enabled by default) will force using the JVM NIO based IO transport.
+    *
+    * Usually the native transports used (epoll on linux and kqueue on OSX) are going to be faster and more efficient
+    * than the generic NIO one. We recommend to only set this to false if you experience issues with the native
+    * transports or instructed by couchbase support to do so for troubleshooting reasons.
+    *
+    * @param nativeIoEnabled if native IO should be enabled or disabled.
+    *
+    * @return this, for chaining
+    */
+  def enableNativeIo(nativeIoEnabled: Boolean): IoEnvironment = {
+    copy(nativeIoEnabled = Some(nativeIoEnabled))
+  }
+
+  /**
+    * Overrides the number of threads used per event loop.
+    *
+    * If not manually overridden, a fair thread count is calculated.
+    *
+    * Note that the count provided will only be used by event loops that the SDK creates. If you configure a custom
+    * event loop (i.e. through [[.kvEventLoopGroup]]  you are responsible for sizing it
+    * appropriately on your own.
+    *
+    * @param eventLoopThreadCount the number of event loops to use per pool.
+    *
+    * @return this, for chaining
+    */
+  def eventLoopThreadCount(eventLoopThreadCount: Int): IoEnvironment = {
+    copy(eventLoopThreadCount = Some(eventLoopThreadCount))
+  }
+
+
+  private[scala] def toCore = {
     val builder = core.env.IoEnvironment.builder()
 
     managerEventLoopGroup.foreach(v => builder.managerEventLoopGroup(v))
@@ -88,6 +122,8 @@ case class IoEnvironment(
     analyticsEventLoopGroup.foreach(v => builder.analyticsEventLoopGroup(v))
     searchEventLoopGroup.foreach(v => builder.searchEventLoopGroup(v))
     viewEventLoopGroup.foreach(v => builder.viewEventLoopGroup(v))
+    nativeIoEnabled.foreach(v => builder.enableNativeIo(v))
+    eventLoopThreadCount.foreach(v => builder.eventLoopThreadCount(v))
 
     builder
   }

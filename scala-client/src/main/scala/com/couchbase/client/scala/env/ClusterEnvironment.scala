@@ -19,13 +19,16 @@ package com.couchbase.client.scala.env
 import java.util.concurrent.{Executors, ThreadFactory}
 
 import com.couchbase.client.core
-import com.couchbase.client.core.cnc.RequestTracer
+import com.couchbase.client.core.annotation.Stability.{Uncommitted, Volatile}
+import com.couchbase.client.core.cnc.{EventBus, RequestTracer}
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader
 import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.scala.codec.Transcoder
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
 import reactor.core.scala.scheduler.ExecutionContextScheduler
+import reactor.core.scheduler.Scheduler
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
@@ -58,8 +61,12 @@ object ClusterEnvironment {
       private[scala] val securityConfig: Option[SecurityConfig] = None,
       private[scala] val timeoutConfig: Option[TimeoutConfig] = None,
       private[scala] val loggerConfig: Option[LoggerConfig] = None,
+      private[scala] val orphanReporterConfig: Option[OrphanReporterConfig] = None,
+      private[scala] val eventBus: Option[EventBus] = None,
+      private[scala] val scheduler: Option[Scheduler] = None,
       private[scala] val retryStrategy: Option[RetryStrategy] = None,
-      private[scala] val requestTracer: Option[RequestTracer] = None
+      private[scala] val requestTracer: Option[RequestTracer] = None,
+      private[scala] val maxNumRequestsInRetry: Option[Int] = None
   ) {
 
     def build: Try[ClusterEnvironment] = Try(new ClusterEnvironment(this))
@@ -119,6 +126,32 @@ object ClusterEnvironment {
       copy(loggerConfig = Some(config))
     }
 
+    /** Sets the [[OrphanReporterConfig]] config.
+      *
+      * @return this, for chaining
+      */
+    def orphanReporterConfig(config: OrphanReporterConfig): ClusterEnvironment.Builder = {
+      copy(orphanReporterConfig = Some(config))
+    }
+
+    /** Sets the `EventBus`.
+      *
+      * @return this, for chaining
+      */
+    @Uncommitted
+    def eventBus(eventBus: EventBus): ClusterEnvironment.Builder = {
+      copy(eventBus = Some(eventBus))
+    }
+
+    /** Sets the reactive `Scheduler` to use for operations.
+      *
+      * @return this, for chaining
+      */
+    @Uncommitted
+    def scheduler(scheduler: Scheduler): ClusterEnvironment.Builder = {
+      copy(scheduler = Some(scheduler))
+    }
+
     /** Sets the default [[com.couchbase.client.core.retry.RetryStrategy]] to use for all operations.
       *
       * @return this, for chaining
@@ -131,8 +164,20 @@ object ClusterEnvironment {
       *
       * @return this, for chaining
       */
+    @Volatile
     def requestTracer(requestTracer: RequestTracer): ClusterEnvironment.Builder = {
       copy(requestTracer = Some(requestTracer))
+    }
+
+    /** Customize the maximum number of requests allowed in the retry timer.
+      *
+      * If the limit is reached, each request that would be queued for retry is instead cancelled with a
+      * `CancellationReason` of TOO_MANY_REQUESTS_IN_RETRY.  This acts as a form of backpressure.
+      *
+      * @return this, for chaining
+      */
+    def maxNumRequestsInRetry(value: Int): ClusterEnvironment.Builder = {
+      copy(maxNumRequestsInRetry = Some(value))
     }
   }
 }
@@ -190,8 +235,12 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
   builder.securityConfig.foreach(v => coreBuilder.securityConfig(v.toCore))
   builder.timeoutConfig.foreach(v => coreBuilder.timeoutConfig(v.toCore))
   builder.loggerConfig.foreach(v => coreBuilder.loggerConfig(v.toCore))
+  builder.orphanReporterConfig.foreach(v => coreBuilder.orphanReporterConfig(v.toCore))
+  builder.eventBus.foreach(v => coreBuilder.eventBus(v))
+  builder.scheduler.foreach(v => coreBuilder.scheduler(v))
   builder.retryStrategy.foreach(rs => coreBuilder.retryStrategy(rs))
   builder.requestTracer.foreach(v => coreBuilder.requestTracer(v))
+  builder.maxNumRequestsInRetry.foreach(v => coreBuilder.maxNumRequestsInRetry(v))
 
   private[scala] val coreEnv = new CoreEnvironment(coreBuilder)
 

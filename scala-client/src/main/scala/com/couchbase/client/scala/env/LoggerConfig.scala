@@ -20,18 +20,20 @@ import com.couchbase.client.core.cnc.LoggingEventConsumer
 
 case class LoggerConfig(
     private[scala] val customLogger: Option[LoggingEventConsumer.Logger] = None,
-    private[scala] val fallbackToConsole: Boolean = false,
-    private[scala] val disableSlf4J: Boolean = false,
-    private[scala] val loggerName: Option[String] = None
+    private[scala] val fallbackToConsole: Option[Boolean] = None,
+    private[scala] val disableSlf4J: Option[Boolean] = None,
+    private[scala] val loggerName: Option[String] = None,
+    private[scala] val diagnosticContextEnabled: Option[Boolean] = None
 ) {
 
   private[scala] def toCore: core.env.LoggerConfig.Builder = {
     val builder = new core.env.LoggerConfig.Builder
 
     customLogger.foreach(v => builder.customLogger(v))
-    builder.fallbackToConsole(fallbackToConsole)
-    builder.disableSlf4J(disableSlf4J)
+    fallbackToConsole.foreach(v => builder.fallbackToConsole(v))
+    disableSlf4J.foreach(v => builder.disableSlf4J(v))
     loggerName.foreach(v => builder.loggerName(v))
+    diagnosticContextEnabled.foreach(v => builder.enableDiagnosticContext(v))
 
     builder
   }
@@ -41,14 +43,19 @@ case class LoggerConfig(
   }
 
   def fallbackToConsole(value: Boolean): LoggerConfig = {
-    copy(fallbackToConsole = value)
+    copy(fallbackToConsole = Some(value))
   }
 
   def disableSlf4J(value: Boolean): LoggerConfig = {
-    copy(disableSlf4J = value)
+    copy(disableSlf4J = Some(value))
   }
 
   def loggerName(value: String): LoggerConfig = {
     copy(loggerName = Some(value))
   }
+
+  def diagnosticContextEnabled(value: Boolean): LoggerConfig = {
+    copy(diagnosticContextEnabled = Some(value))
+  }
+
 }

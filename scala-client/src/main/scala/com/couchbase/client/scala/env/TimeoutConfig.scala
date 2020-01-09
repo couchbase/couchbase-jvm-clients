@@ -16,6 +16,7 @@
 package com.couchbase.client.scala.env
 
 import com.couchbase.client.core
+import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.duration.Duration
@@ -32,29 +33,29 @@ import scala.concurrent.duration.Duration
   * @param disconnectTimeout the default timeout to use for disconnection operations
   */
 case class TimeoutConfig(
-    private[scala] val kvTimeout: Duration = core.env.TimeoutConfig.DEFAULT_KV_TIMEOUT,
-    private[scala] val managementTimeout: Duration =
-      core.env.TimeoutConfig.DEFAULT_MANAGEMENT_TIMEOUT,
-    private[scala] val queryTimeout: Duration = core.env.TimeoutConfig.DEFAULT_QUERY_TIMEOUT,
-    private[scala] val viewTimeout: Duration = core.env.TimeoutConfig.DEFAULT_VIEW_TIMEOUT,
-    private[scala] val searchTimeout: Duration = core.env.TimeoutConfig.DEFAULT_SEARCH_TIMEOUT,
-    private[scala] val analyticsTimeout: Duration = core.env.TimeoutConfig.DEFAULT_ANALYTICS_TIMEOUT,
-    private[scala] val connectTimeout: Duration = core.env.TimeoutConfig.DEFAULT_CONNECT_TIMEOUT,
-    private[scala] val disconnectTimeout: Duration =
-      core.env.TimeoutConfig.DEFAULT_DISCONNECT_TIMEOUT
+    private[scala] val kvTimeout: Option[Duration] = None,
+    private[scala] val kvDurableTimeout: Option[Duration] = None,
+    private[scala] val managementTimeout: Option[Duration] = None,
+    private[scala] val queryTimeout: Option[Duration] = None,
+    private[scala] val viewTimeout: Option[Duration] = None,
+    private[scala] val searchTimeout: Option[Duration] = None,
+    private[scala] val analyticsTimeout: Option[Duration] = None,
+    private[scala] val connectTimeout: Option[Duration] = None,
+    private[scala] val disconnectTimeout: Option[Duration] = None,
 ) {
 
   private[scala] def toCore: core.env.TimeoutConfig.Builder = {
     val builder = new core.env.TimeoutConfig.Builder
 
-    builder.kvTimeout(kvTimeout)
-    builder.managementTimeout(managementTimeout)
-    builder.queryTimeout(queryTimeout)
-    builder.viewTimeout(viewTimeout)
-    builder.searchTimeout(searchTimeout)
-    builder.analyticsTimeout(analyticsTimeout)
-    builder.connectTimeout(connectTimeout)
-    builder.disconnectTimeout(disconnectTimeout)
+    kvTimeout.foreach(v => builder.kvTimeout(v))
+    kvDurableTimeout.foreach(v => builder.kvDurableTimeout(v))
+    managementTimeout.foreach(v => builder.managementTimeout(v))
+    queryTimeout.foreach(v => builder.queryTimeout(v))
+    viewTimeout.foreach(v => builder.viewTimeout(v))
+    searchTimeout.foreach(v => builder.searchTimeout(v))
+    analyticsTimeout.foreach(v => builder.analyticsTimeout(v))
+    connectTimeout.foreach(v => builder.connectTimeout(v))
+    disconnectTimeout.foreach(v => builder.disconnectTimeout(v))
 
     builder
   }
@@ -66,7 +67,22 @@ case class TimeoutConfig(
     * @return this, for chaining
     */
   def kvTimeout(value: Duration): TimeoutConfig = {
-    copy(kvTimeout = value)
+    copy(kvTimeout = Some(value))
+  }
+
+  /** Sets the timeout to use for persist-level key-value operations.
+    *
+    * This includes any with [[com.couchbase.client.scala.durability.Durability.MajorityAndPersistToActive]]
+    * or [[com.couchbase.client.scala.durability.Durability.PersistToMajority]] or
+    * [[com.couchbase.client.scala.durability.Durability.ClientVerified]] with `persistTo` set.
+    *
+    * The default is 10 seconds.
+    *
+    * @return this, for chaining
+    */
+  @Volatile
+  def kvDurableTimeout(value: Duration): TimeoutConfig = {
+    copy(kvDurableTimeout = Some(value))
   }
 
   /** Sets the timeout to use for management operations.
@@ -76,7 +92,7 @@ case class TimeoutConfig(
     * @return this, for chaining
     */
   def managementTimeout(value: Duration): TimeoutConfig = {
-    copy(managementTimeout = value)
+    copy(managementTimeout = Some(value))
   }
 
   /** Sets the timeout to use for query operations.
@@ -86,7 +102,7 @@ case class TimeoutConfig(
     * @return this, for chaining
     */
   def queryTimeout(value: Duration): TimeoutConfig = {
-    copy(queryTimeout = value)
+    copy(queryTimeout = Some(value))
   }
 
   /** Sets the timeout to use for view operations.
@@ -96,7 +112,7 @@ case class TimeoutConfig(
     * @return this, for chaining
     */
   def viewTimeout(value: Duration): TimeoutConfig = {
-    copy(viewTimeout = value)
+    copy(viewTimeout = Some(value))
   }
 
   /** Sets the timeout to use for search operations.
@@ -106,7 +122,7 @@ case class TimeoutConfig(
     * @return this, for chaining
     */
   def searchTimeout(value: Duration): TimeoutConfig = {
-    copy(searchTimeout = value)
+    copy(searchTimeout = Some(value))
   }
 
   /** Sets the timeout to use for analytics operations.
@@ -116,7 +132,7 @@ case class TimeoutConfig(
     * @return this, for chaining
     */
   def analyticsTimeout(value: Duration): TimeoutConfig = {
-    copy(analyticsTimeout = value)
+    copy(analyticsTimeout = Some(value))
   }
 
   /** Sets the timeout to use for connection operations.
@@ -126,7 +142,7 @@ case class TimeoutConfig(
     * @return this, for chaining
     */
   def connectTimeout(value: Duration): TimeoutConfig = {
-    copy(connectTimeout = value)
+    copy(connectTimeout = Some(value))
   }
 
   /** Sets the timeout to use for disconnection operations.
@@ -136,7 +152,7 @@ case class TimeoutConfig(
     * @return this, for chaining
     */
   def disconnectTimeout(value: Duration): TimeoutConfig = {
-    copy(disconnectTimeout = value)
+    copy(disconnectTimeout = Some(value))
   }
 
 }

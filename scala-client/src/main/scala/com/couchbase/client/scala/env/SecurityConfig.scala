@@ -21,14 +21,16 @@ import com.couchbase.client.core
 import javax.net.ssl.TrustManagerFactory
 
 case class SecurityConfig(
-    private[scala] val tlsEnabled: Boolean = false,
+    private[scala] val tlsEnabled: Option[Boolean] = None,
+    private[scala] val nativeTlsEnabled: Option[Boolean] = None,
     private[scala] val trustCertificates: Option[Seq[X509Certificate]] = None,
     private[scala] val trustManagerFactory: Option[TrustManagerFactory] = None
 ) {
   private[scala] def toCore: core.env.SecurityConfig.Builder = {
     val builder = new core.env.SecurityConfig.Builder
 
-    builder.enableTls(tlsEnabled)
+    tlsEnabled.foreach(v => builder.enableTls(v))
+    nativeTlsEnabled.foreach(v => builder.enableNativeTls(v))
     trustCertificates.foreach(
       t => builder.trustCertificates(scala.collection.JavaConverters.seqAsJavaList(t))
     )
@@ -37,8 +39,12 @@ case class SecurityConfig(
     builder
   }
 
-  def tlsEnabled(value: Boolean): SecurityConfig = {
-    copy(tlsEnabled = value)
+  def enableTls(value: Boolean): SecurityConfig = {
+    copy(tlsEnabled = Some(value))
+  }
+
+  def enableNativeTls(value: Boolean): SecurityConfig = {
+    copy(nativeTlsEnabled = Some(value))
   }
 
   def trustCertificates(values: Seq[X509Certificate]): SecurityConfig = {
