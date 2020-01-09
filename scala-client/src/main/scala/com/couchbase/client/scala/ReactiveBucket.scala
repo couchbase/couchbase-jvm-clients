@@ -120,34 +120,25 @@ class ReactiveBucket private[scala] (val async: AsyncBucket) {
         SMono.raiseError(err)
 
       case Success(request) =>
-        FutureConversions
-          .javaCFToScalaMono(request, request.response(), false)
-          .map(response => {
+        SMono.defer(() => {
+          async.core.send(request)
 
-            val rows: SFlux[ViewRow] = FutureConversions
-              .javaFluxToScalaFlux(response.rows())
-              .map[ViewRow](bytes => ViewRow(bytes.data()))
-              .flatMap(_ => FutureConversions.javaMonoToScalaMono(response.trailer()))
+          FutureConversions
+            .javaCFToScalaMono(request, request.response(), false)
+            .map(response => {
 
-              // Check for errors
-              .flatMap(trailer => {
-                trailer.error().asScala match {
-                  case Some(err) =>
-                    val msg = "Encountered view error '" + err.error() + "' with reason '" + err
-                      .reason() + "'"
-                    val error = new ViewServiceException(msg)
-                    SMono.raiseError(error)
-                  case _ => SMono.empty
-                }
-              })
+              val rows: SFlux[ViewRow] = FutureConversions
+                .javaFluxToScalaFlux(response.rows())
+                .map[ViewRow](bytes => ViewRow(bytes.data()))
 
-            val meta = ViewMetaData(
-              response.header().debug().asScala.getOrElse(Array.empty),
-              response.header().totalRows()
-            )
+              val meta = ViewMetaData(
+                response.header().debug().asScala,
+                response.header().totalRows()
+              )
 
-            ReactiveViewResult(SMono.just(meta), rows)
-          })
+              ReactiveViewResult(SMono.just(meta), rows)
+            })
+        })
     }
   }
 

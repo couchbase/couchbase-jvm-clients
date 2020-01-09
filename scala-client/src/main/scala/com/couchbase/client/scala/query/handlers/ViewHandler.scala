@@ -82,7 +82,7 @@ private[scala] class ViewHandler() {
 
       val bytes = options.keys.map(s => s.getBytes(UTF_8))
 
-      val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.queryTimeout())
+      val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.viewTimeout())
       val retryStrategy     = options.retryStrategy.getOrElse(environment.retryStrategy)
 
       val isDevelopment = options.namespace match {

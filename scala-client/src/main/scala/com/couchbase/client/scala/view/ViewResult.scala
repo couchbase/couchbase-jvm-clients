@@ -28,20 +28,20 @@ import scala.util.{Success, Try}
 /** The results of a view request.
   *
   * @param rows            all rows returned from the view
-  * @param meta            any additional information associated with the view result
+  * @param metaData            any additional information associated with the view result
   *
   * @author Graham Pople
   * @since 1.0.0
   */
-case class ViewResult(meta: ViewMetaData, rows: Seq[ViewRow])
+case class ViewResult(metaData: ViewMetaData, rows: Seq[ViewRow])
 
 /** The results of a N1QL view, as returned by the reactive API.
   *
   * @param rows            a Flux of any returned rows.  If the view service returns an error while returning the
   *                        rows, it will be raised on this Flux
-  * @param meta            contains additional information related to the view.
+  * @param metaData            contains additional information related to the view.
   */
-case class ReactiveViewResult(meta: SMono[ViewMetaData], rows: SFlux[ViewRow])
+case class ReactiveViewResult(metaData: SMono[ViewMetaData], rows: SFlux[ViewRow])
 
 /** An individual view result row.
   *
@@ -60,7 +60,10 @@ case class ViewRow(private val _content: Array[Byte]) {
   def valueAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     rootNode
       .map(rn => rn.get("value"))
-      .flatMap(key => deserializer.deserialize(key.binaryValue()))
+      .flatMap(value => {
+        val bytes = ViewRow.writer.writeValueAsBytes(value)
+        deserializer.deserialize(bytes)
+      })
   }
 
   /** Return the key, converted into the application's preferred representation.
@@ -70,14 +73,20 @@ case class ViewRow(private val _content: Array[Byte]) {
   def keyAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     rootNode
       .map(rn => rn.get("key"))
-      .flatMap(key => deserializer.deserialize(key.binaryValue()))
+      .flatMap(key => {
+        val bytes = ViewRow.writer.writeValueAsBytes(key)
+        deserializer.deserialize(bytes)
+      })
   }
 
   /** The id of this row.
+    *
+    * It's optional as it's not present on reduces.
     */
-  def id: Try[String] = {
+  def id: Option[String] = {
     rootNode
       .map(rn => rn.get("id").asText())
+      .toOption
   }
 
   override def toString: String = rootNode match {
@@ -86,12 +95,16 @@ case class ViewRow(private val _content: Array[Byte]) {
   }
 }
 
+private[scala] object ViewRow {
+  val writer = JacksonTransformers.MAPPER.writer
+}
+
 /** Additional information returned by the view service aside from any rows and errors.
   *
   * @param debug            any debug information available from the view service
   * @param totalRows        the total number of returned rows
   */
-case class ViewMetaData(private val debug: Array[Byte], totalRows: Long) {
+case class ViewMetaData(private val debug: Option[Array[Byte]], totalRows: Long) {
 
   /** Return the content, converted into the application's preferred representation.
     *
@@ -100,7 +113,15 @@ case class ViewMetaData(private val debug: Array[Byte], totalRows: Long) {
     *
     * @tparam T $SupportedTypes
     */
-  def debugAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
-    deserializer.deserialize(debug)
+  def debugAs[T](implicit deserializer: JsonDeserializer[T]): Option[T] = {
+    debug match {
+      case Some(v) => deserializer.deserialize(v) match {
+        case Success(x) => Some(x)
+        case _ =>
+          // This discards the reason for failure, but makes for a simpler API
+          None
+      }
+      case _ => None
+    }
   }
 }
