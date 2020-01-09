@@ -37,7 +37,7 @@ public class PipelineErrorHandler extends ChannelInboundHandlerAdapter {
 
   public PipelineErrorHandler(final BaseEndpoint endpoint) {
     this.endpoint = endpoint;
-    this.endpointContext = endpoint.endpointContext();
+    this.endpointContext = endpoint.context();
     this.eventBus = endpointContext.environment().eventBus();
   }
 

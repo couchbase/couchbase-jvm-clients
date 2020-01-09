@@ -190,6 +190,11 @@ public abstract class BaseEndpoint implements Endpoint {
     this.serviceType = serviceType;
   }
 
+  @Override
+  public EndpointContext context() {
+    return endpointContext.get();
+  }
+
   /**
    * Helper method to locate the right socket channel class based on the injected
    * event loop group.
@@ -582,13 +587,6 @@ public abstract class BaseEndpoint implements Endpoint {
   }
 
   /**
-   * Returns the current endpoint context for external use.
-   */
-  public EndpointContext endpointContext() {
-    return endpointContext.get();
-  }
-
-  /**
    * Returns true if this endpoint is pipelined, false otherwise.
    */
   public boolean pipelined() {
@@ -621,7 +619,7 @@ public abstract class BaseEndpoint implements Endpoint {
 
 
     final Optional<String> id = Optional.ofNullable(channel).map(c -> "0x" + c.id().asShortText());
-    return new EndpointDiagnostics(endpointContext().serviceType(), state(), remote, local, endpointContext().bucket(),
+    return new EndpointDiagnostics(context().serviceType(), state(), remote, local, context().bucket(),
       lastActivity, id);
   }
 

@@ -118,7 +118,7 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
         currentRequest = (ManagerRequest<Response>) msg;
         FullHttpRequest encoded = currentRequest.encode();
         encoded.headers().set(HttpHeaderNames.HOST, remoteHost);
-        encoded.headers().set(HttpHeaderNames.USER_AGENT, endpoint.endpointContext().environment().userAgent().formattedLong());
+        encoded.headers().set(HttpHeaderNames.USER_AGENT, endpoint.context().environment().userAgent().formattedLong());
         ctx.writeAndFlush(encoded);
       } catch (Throwable t) {
         currentRequest.response().completeExceptionally(t);

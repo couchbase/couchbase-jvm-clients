@@ -55,7 +55,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new KeyValuePipelineInitializer(endpointContext(), bucketname, authenticator);
+    return new KeyValuePipelineInitializer(context(), bucketname, authenticator);
   }
 
   public static class KeyValuePipelineInitializer implements PipelineInitializer {

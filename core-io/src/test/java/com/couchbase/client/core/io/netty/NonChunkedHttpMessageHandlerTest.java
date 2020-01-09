@@ -75,7 +75,7 @@ class NonChunkedHttpMessageHandlerTest {
     EndpointContext endpointContext = mock(EndpointContext.class);
     when(endpointContext.environment()).thenReturn(env);
     when(endpointContext.authenticator()).thenReturn(PasswordAuthenticator.create("user", "pass"));
-    when(endpoint.endpointContext()).thenReturn(endpointContext);
+    when(endpoint.context()).thenReturn(endpointContext);
     channel = new EmbeddedChannel();
   }
 
@@ -124,7 +124,7 @@ class NonChunkedHttpMessageHandlerTest {
 
     GenericViewRequest request = new GenericViewRequest(
       Duration.ofSeconds(1),
-      endpoint.endpointContext(),
+      endpoint.context(),
       BestEffortRetryStrategy.INSTANCE,
       () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"),
       true,

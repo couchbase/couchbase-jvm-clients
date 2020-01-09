@@ -30,7 +30,7 @@ public class ManagerEndpoint extends BaseEndpoint {
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new ManagerPipelineInitializer(endpointContext());
+    return new ManagerPipelineInitializer(context());
   }
 
   public static class ManagerPipelineInitializer implements PipelineInitializer {

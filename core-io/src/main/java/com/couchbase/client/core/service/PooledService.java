@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.cnc.events.service.IdleEndpointRemovedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceConnectInitiatedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiatedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceStateChangedEvent;
@@ -191,6 +192,7 @@ abstract class PooledService implements Service {
       boolean receivedDisconnect = endpoint.receivedDisconnectSignal();
       boolean idleTooLong = endpoint.outstandingRequests() == 0 && actualIdleTime >= serviceConfig.idleTime().toNanos();
       if (receivedDisconnect || idleTooLong) {
+        serviceContext.environment().eventBus().publish(new IdleEndpointRemovedEvent(endpoint.context()));
         this.endpoints.remove(endpoint);
         endpointStates.deregister(endpoint);
         if (!receivedDisconnect) {

@@ -105,7 +105,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
 
   protected NonChunkedHttpMessageHandler(final BaseEndpoint endpoint, final ServiceType serviceType) {
     this.endpoint = endpoint;
-    this.endpointContext = endpoint.endpointContext();
+    this.endpointContext = endpoint.context();
     this.eventBus = endpointContext.environment().eventBus();
     this.serviceType = serviceType;
   }

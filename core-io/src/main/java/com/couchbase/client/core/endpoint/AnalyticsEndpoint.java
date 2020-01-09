@@ -32,7 +32,7 @@ public class AnalyticsEndpoint extends BaseEndpoint {
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new AnalyticsPipelineInitializer(endpointContext());
+    return new AnalyticsPipelineInitializer(context());
   }
 
   public static class AnalyticsPipelineInitializer implements PipelineInitializer {
