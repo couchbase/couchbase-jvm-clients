@@ -69,7 +69,7 @@ class ReactiveCollection(async: AsyncCollection) {
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     val req = async.insertHandler.request(
@@ -96,7 +96,7 @@ class ReactiveCollection(async: AsyncCollection) {
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     val req = async.replaceHandler.request(
@@ -123,7 +123,7 @@ class ReactiveCollection(async: AsyncCollection) {
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance,
+      transcoder: Transcoder = environment.transcoder,
       parentSpan: Option[RequestSpan] = None
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
@@ -165,7 +165,7 @@ class ReactiveCollection(async: AsyncCollection) {
       project: Seq[String] = Seq.empty,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   ): SMono[GetResult] = {
 
     // Implementation note: Option is returned because SMono.empty is hard to work with.  See JCBC-1310.
@@ -249,7 +249,7 @@ class ReactiveCollection(async: AsyncCollection) {
       expiry: Duration,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance,
+      transcoder: Transcoder = environment.transcoder,
       @Stability.Internal accessDeleted: Boolean = false
   ): SMono[MutateInResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
@@ -285,7 +285,7 @@ class ReactiveCollection(async: AsyncCollection) {
       lockTime: Duration,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   ): SMono[GetResult] = {
     val req = async.getAndLockHandler.request(id, lockTime, timeout, retryStrategy)
     wrap(req, id, async.getAndLockHandler, transcoder)
@@ -312,7 +312,7 @@ class ReactiveCollection(async: AsyncCollection) {
       expiry: Duration,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   ): SMono[GetResult] = {
     val req = async.getAndTouchHandler.request(id, expiry, timeout, retryStrategy)
     wrap(req, id, async.getAndTouchHandler, transcoder)
@@ -328,7 +328,7 @@ class ReactiveCollection(async: AsyncCollection) {
       withExpiry: Boolean = false,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   ): SMono[LookupInResult] = {
     getSubDoc(id, spec, withExpiry, timeout, retryStrategy, transcoder)
   }
@@ -340,7 +340,7 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   ): SMono[GetReplicaResult] = {
     getAllReplicas(id, timeout, retryStrategy, transcoder)
       .timeout(timeout)
@@ -354,7 +354,7 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   ): SFlux[GetReplicaResult] = {
     val reqsTry: Try[Seq[GetRequest]] =
       async.getFromReplicaHandler.requestAll(id, timeout, retryStrategy)

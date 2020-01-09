@@ -23,7 +23,7 @@ import com.couchbase.client.core.annotation.Stability.{Uncommitted, Volatile}
 import com.couchbase.client.core.cnc.{EventBus, RequestTracer}
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.codec.Transcoder
+import com.couchbase.client.scala.codec.{JsonTranscoder, Transcoder}
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
@@ -66,7 +66,8 @@ object ClusterEnvironment {
       private[scala] val scheduler: Option[Scheduler] = None,
       private[scala] val retryStrategy: Option[RetryStrategy] = None,
       private[scala] val requestTracer: Option[RequestTracer] = None,
-      private[scala] val maxNumRequestsInRetry: Option[Int] = None
+      private[scala] val maxNumRequestsInRetry: Option[Int] = None,
+      private[scala] val transcoder: Option[Transcoder] = None
   ) {
 
     def build: Try[ClusterEnvironment] = Try(new ClusterEnvironment(this))
@@ -179,6 +180,15 @@ object ClusterEnvironment {
     def maxNumRequestsInRetry(value: Int): ClusterEnvironment.Builder = {
       copy(maxNumRequestsInRetry = Some(value))
     }
+
+    /**
+      * Allows to override the default transcoder to be used for all KV operations.
+      *
+      * @return this, for chaining purposes.
+      */
+    def transcoder(transcoder: Transcoder): ClusterEnvironment.Builder = {
+      copy(transcoder = Some(transcoder))
+    }
   }
 }
 
@@ -204,6 +214,8 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
   private[scala] def timeoutConfig = coreEnv.timeoutConfig()
 
   private[scala] def retryStrategy = coreEnv.retryStrategy()
+
+  private[scala] def transcoder = builder.transcoder.getOrElse(JsonTranscoder.Instance)
 
   // Create the thread pool that will be used for all `Future`s throughout the SDK.
   // Note that the app will also need its own ExecutionContext to do anything with the returned `Future`. It could be

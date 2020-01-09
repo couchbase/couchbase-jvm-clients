@@ -142,7 +142,7 @@ class Collection(
       project: Seq[String] = Seq.empty,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = async.environment.transcoder
   ): Try[GetResult] =
     block(
       async
@@ -169,7 +169,7 @@ class Collection(
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = async.environment.transcoder
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     block(
@@ -207,7 +207,7 @@ class Collection(
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = async.environment.transcoder
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
 
@@ -246,7 +246,7 @@ class Collection(
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance,
+      transcoder: Transcoder = async.environment.transcoder,
       parentSpan: Option[RequestSpan] = None
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
@@ -320,7 +320,7 @@ class Collection(
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance,
+      transcoder: Transcoder = async.environment.transcoder,
       @Stability.Internal accessDeleted: Boolean = false
   ): Try[MutateInResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
@@ -360,7 +360,7 @@ class Collection(
       lockTime: Duration,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = async.environment.transcoder
   ): Try[GetResult] =
     block(
       async.getAndLock(id, lockTime, timeout, retryStrategy, transcoder)
@@ -402,7 +402,7 @@ class Collection(
       expiry: Duration,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = async.environment.transcoder
   ): Try[GetResult] =
     block(
       async.getAndTouch(
@@ -437,7 +437,7 @@ class Collection(
       withExpiry: Boolean = false,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = async.environment.transcoder
   ): Try[LookupInResult] =
     block(async.lookupIn(id, spec, withExpiry, timeout, retryStrategy, transcoder))
 
@@ -462,7 +462,7 @@ class Collection(
       id: String,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = async.environment.transcoder
   ): Try[GetReplicaResult] =
     Try(
       reactive
@@ -490,7 +490,7 @@ class Collection(
       id: String,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = async.environment.transcoder
   ): Iterable[GetReplicaResult] =
     reactive.getAllReplicas(id, timeout, retryStrategy, transcoder).toIterable()
 
