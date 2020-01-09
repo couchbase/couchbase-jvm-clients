@@ -31,7 +31,7 @@ public class SearchEndpoint extends BaseEndpoint {
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new SearchPipelineInitializer(endpointContext());
+    return new SearchPipelineInitializer(context());
   }
 
   public static class SearchPipelineInitializer implements PipelineInitializer {

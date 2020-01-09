@@ -32,7 +32,7 @@ public class QueryEndpoint extends BaseEndpoint {
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new QueryPipelineInitializer(endpointContext());
+    return new QueryPipelineInitializer(context());
   }
 
   public static class QueryPipelineInitializer implements PipelineInitializer {

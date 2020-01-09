@@ -73,7 +73,7 @@ class ChunkedHandlerSwitcherTest {
     endpointContext = mock(EndpointContext.class);
     when(endpointContext.environment()).thenReturn(env);
     endpoint = mock(BaseEndpoint.class);
-    when(endpoint.endpointContext()).thenReturn(endpointContext);
+    when(endpoint.context()).thenReturn(endpointContext);
     when(endpoint.pipelined()).thenReturn(false);
     channel = setupChannel();
   }

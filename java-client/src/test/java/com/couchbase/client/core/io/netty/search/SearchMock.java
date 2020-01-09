@@ -122,7 +122,7 @@ public class SearchMock {
                     Optional.of("bucket"), null);
 
             BaseEndpoint endpoint = mock(BaseEndpoint.class);
-            when(endpoint.endpointContext()).thenReturn(endpointContext);
+            when(endpoint.context()).thenReturn(endpointContext);
             when(endpoint.pipelined()).thenReturn(false);
 
             // ChunkedSearchMessageHandler does most of the work in handling responses from the service

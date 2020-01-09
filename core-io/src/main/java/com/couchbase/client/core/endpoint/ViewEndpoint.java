@@ -32,7 +32,7 @@ public class ViewEndpoint extends BaseEndpoint {
 
   @Override
   protected PipelineInitializer pipelineInitializer() {
-    return new ViewPipelineInitializer(endpointContext());
+    return new ViewPipelineInitializer(context());
   }
 
   public static class ViewPipelineInitializer implements PipelineInitializer {

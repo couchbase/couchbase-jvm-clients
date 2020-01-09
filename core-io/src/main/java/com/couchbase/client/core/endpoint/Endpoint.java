@@ -95,4 +95,12 @@ public interface Endpoint extends Stateful<EndpointState> {
    * @return true if {@link #disconnect()} has been called.
    */
   boolean receivedDisconnectSignal();
+
+  /**
+   * Returns the context for this endpoint.
+   *
+   * @return the context.
+   */
+  EndpointContext context();
+
 }
