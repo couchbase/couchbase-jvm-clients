@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java.manager.view;
 
-import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DesignDocumentNotFoundException;
 import com.couchbase.client.core.error.TimeoutException;
@@ -24,6 +23,8 @@ import com.couchbase.client.java.view.DesignDocumentNamespace;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import static com.couchbase.client.core.Reactor.toFlux;
+import static com.couchbase.client.core.Reactor.toMono;
 import static java.util.Objects.requireNonNull;
 
 public class ReactiveViewIndexManager {
@@ -44,7 +45,7 @@ public class ReactiveViewIndexManager {
    * @throws CouchbaseException (async) for all other error reasons (acts as a base type and catch-all).
    */
   public Mono<DesignDocument> getDesignDocument(String name, DesignDocumentNamespace namespace) {
-    return Reactor.toMono(() -> async.getDesignDocument(name, namespace));
+    return Mono.defer(() -> toMono(() -> async.getDesignDocument(name, namespace)));
   }
 
   /**
@@ -58,7 +59,7 @@ public class ReactiveViewIndexManager {
    * @throws CouchbaseException (async) for all other error reasons (acts as a base type and catch-all).
    */
   public Mono<DesignDocument> getDesignDocument(String name, DesignDocumentNamespace namespace, GetDesignDocumentOptions options) {
-    return Reactor.toMono(() -> async.getDesignDocument(name, namespace, options));
+    return Mono.defer(() -> toMono(() -> async.getDesignDocument(name, namespace, options)));
   }
 
   /**
@@ -71,7 +72,7 @@ public class ReactiveViewIndexManager {
    * @throws CouchbaseException (async) for all other error reasons (acts as a base type and catch-all).
    */
   public Mono<Void> upsertDesignDocument(DesignDocument designDocument, DesignDocumentNamespace namespace) {
-    return Reactor.toMono(() -> async.upsertDesignDocument(designDocument, namespace));
+    return Mono.defer(() -> toMono(() -> async.upsertDesignDocument(designDocument, namespace)));
   }
 
   /**
@@ -85,7 +86,7 @@ public class ReactiveViewIndexManager {
    * @throws CouchbaseException (async) for all other error reasons (acts as a base type and catch-all).
    */
   public Mono<Void> upsertDesignDocument(DesignDocument designDocument, DesignDocumentNamespace namespace, UpsertDesignDocumentOptions options) {
-    return Reactor.toMono(() -> async.upsertDesignDocument(designDocument, namespace, options));
+    return Mono.defer(() -> toMono(() -> async.upsertDesignDocument(designDocument, namespace, options)));
   }
 
   /**
@@ -98,7 +99,7 @@ public class ReactiveViewIndexManager {
    * @throws CouchbaseException (async) for all other error reasons (acts as a base type and catch-all).
    */
   public Mono<Void> publishDesignDocument(String name) {
-    return Reactor.toMono(() -> async.publishDesignDocument(name));
+    return Mono.defer(() -> toMono(() -> async.publishDesignDocument(name)));
   }
 
   /**
@@ -112,7 +113,7 @@ public class ReactiveViewIndexManager {
    * @throws CouchbaseException (async) for all other error reasons (acts as a base type and catch-all).
    */
   public Mono<Void> publishDesignDocument(String name, PublishDesignDocumentOptions options) {
-    return Reactor.toMono(() -> async.publishDesignDocument(name, options));
+    return Mono.defer(() -> toMono(() -> async.publishDesignDocument(name, options)));
   }
 
   /**
@@ -125,7 +126,7 @@ public class ReactiveViewIndexManager {
    * @throws CouchbaseException (async) for all other error reasons (acts as a base type and catch-all).
    */
   public Mono<Void> dropDesignDocument(String name, DesignDocumentNamespace namespace) {
-    return Reactor.toMono(() -> async.dropDesignDocument(name, namespace));
+    return Mono.defer(() -> toMono(() -> async.dropDesignDocument(name, namespace)));
   }
 
   /**
@@ -139,7 +140,7 @@ public class ReactiveViewIndexManager {
    * @throws CouchbaseException (async) for all other error reasons (acts as a base type and catch-all).
    */
   public Mono<Void> dropDesignDocument(String name, DesignDocumentNamespace namespace, DropDesignDocumentOptions options) {
-    return Reactor.toMono(() -> async.dropDesignDocument(name, namespace, options));
+    return Mono.defer(() -> toMono(() -> async.dropDesignDocument(name, namespace, options)));
   }
 
   /**
@@ -150,7 +151,7 @@ public class ReactiveViewIndexManager {
    * @throws CouchbaseException (async) for all other error reasons (acts as a base type and catch-all).
    */
   public Flux<DesignDocument> getAllDesignDocuments(DesignDocumentNamespace namespace) {
-    return Reactor.toFlux(() -> async.getAllDesignDocuments(namespace));
+    return Flux.defer(() -> toFlux(() -> async.getAllDesignDocuments(namespace)));
   }
 
   /**
@@ -162,6 +163,6 @@ public class ReactiveViewIndexManager {
    * @throws CouchbaseException (async) for all other error reasons (acts as a base type and catch-all).
    */
   public Flux<DesignDocument> getAllDesignDocuments(DesignDocumentNamespace namespace, GetAllDesignDocumentsOptions options) {
-    return Reactor.toFlux(() -> async.getAllDesignDocuments(namespace, options));
+    return Flux.defer(() -> toFlux(() -> async.getAllDesignDocuments(namespace, options)));
   }
 }
