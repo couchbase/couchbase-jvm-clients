@@ -78,7 +78,7 @@ public class GlobalLoader {
 
     return Mono.defer(() -> {
       CarrierGlobalConfigRequest request = new CarrierGlobalConfigRequest(
-        ctx.environment().timeoutConfig().kvTimeout(),
+        ctx.environment().timeoutConfig().connectTimeout(),
         ctx,
         BestEffortRetryStrategy.INSTANCE,
         seed

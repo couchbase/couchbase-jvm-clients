@@ -60,7 +60,7 @@ public class KeyValueBucketLoader extends BaseBucketLoader {
 
     return Mono.defer(() -> {
       CarrierBucketConfigRequest request = new CarrierBucketConfigRequest(
-        ctx.environment().timeoutConfig().kvTimeout(),
+        ctx.environment().timeoutConfig().connectTimeout(),
         ctx,
         new CollectionIdentifier(bucket, Optional.empty(), Optional.empty()),
         BestEffortRetryStrategy.INSTANCE,

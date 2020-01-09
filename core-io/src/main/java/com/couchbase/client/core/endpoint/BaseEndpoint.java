@@ -64,6 +64,7 @@ import com.couchbase.client.core.util.SingleStateful;
 import com.couchbase.client.core.util.HostAndPort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -76,6 +77,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
@@ -567,10 +569,16 @@ public abstract class BaseEndpoint implements Endpoint {
       if (f.isSuccess()) {
         completableFuture.complete(f.channel());
       } else {
-        completableFuture.completeExceptionally(f.cause());
+        if (!completableFuture.isCancelled()) {
+          completableFuture.completeExceptionally(f.cause());
+        }
       }
     });
-    return Mono.fromFuture(completableFuture);
+    return Mono.fromFuture(completableFuture).doFinally(signalType -> {
+      if (signalType == SignalType.CANCEL) {
+        completableFuture.cancel(false);
+      }
+    });
   }
 
   /**
