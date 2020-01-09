@@ -134,7 +134,7 @@ class AsyncCollection(
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     val req = insertHandler.request(
@@ -161,7 +161,7 @@ class AsyncCollection(
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     val req = replaceHandler.request(
@@ -188,7 +188,7 @@ class AsyncCollection(
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance,
+      transcoder: Transcoder = environment.transcoder,
       parentSpan: Option[RequestSpan] = None
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
@@ -230,7 +230,7 @@ class AsyncCollection(
       project: Seq[String] = Seq.empty,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   ): Future[GetResult] = {
     if (project.nonEmpty) {
       getSubDocHandler.requestProject(id, project, timeout, retryStrategy) match {
@@ -313,7 +313,7 @@ class AsyncCollection(
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance,
+      transcoder: Transcoder = environment.transcoder,
       @Stability.Internal accessDeleted: Boolean = false
   ): Future[MutateInResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
@@ -380,7 +380,7 @@ class AsyncCollection(
       lockTime: Duration = 30.seconds,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   ): Future[GetResult] = {
     val req = getAndLockHandler.request(id, lockTime, timeout, retryStrategy)
     AsyncCollection.wrapGet(req, id, getAndLockHandler, transcoder, core)
@@ -407,7 +407,7 @@ class AsyncCollection(
       expiry: Duration,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   ): Future[GetResult] = {
     val in = getAndTouchHandler.request(id, expiry, timeout, retryStrategy)
     AsyncCollection.wrapGet(in, id, getAndTouchHandler, transcoder, core)
@@ -423,7 +423,7 @@ class AsyncCollection(
       withExpiry: Boolean = false,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   ): Future[LookupInResult] = {
     getSubDoc(id, spec, withExpiry, timeout, retryStrategy, transcoder)
   }
@@ -435,7 +435,7 @@ class AsyncCollection(
       id: String,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   ): Future[GetReplicaResult] = {
     getAllReplicas(id, timeout, retryStrategy, transcoder).take(1).head
   }
@@ -447,7 +447,7 @@ class AsyncCollection(
       id: String,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = JsonTranscoder.Instance
+      transcoder: Transcoder = environment.transcoder
   ): Seq[Future[GetReplicaResult]] = {
     val reqsTry: Try[Seq[GetRequest]] = getFromReplicaHandler.requestAll(id, timeout, retryStrategy)
 
