@@ -40,7 +40,7 @@ case class IoConfig(
     private[scala] val numKvConnections: Option[Int] = None,
     private[scala] val maxHttpConnections: Option[Int] = None,
     private[scala] val idleHttpConnectionTimeout: Option[Duration] = None,
-    private[scala] val configIdleRedialTimeout: Option[Duration] = None,
+    private[scala] val configIdleRedialTimeout: Option[Duration] = None
 ) {
 
   private[scala] def toCore: core.env.IoConfig.Builder = {
@@ -55,7 +55,7 @@ case class IoConfig(
     searchCircuitBreakerConfig.foreach(v => builder.searchCircuitBreakerConfig(v.toCore))
     analyticsCircuitBreakerConfig.foreach(v => builder.analyticsCircuitBreakerConfig(v.toCore))
     managerCircuitBreakerConfig.foreach(v => builder.managerCircuitBreakerConfig(v.toCore))
-    captureTraffic.foreach(v => builder.captureTraffic(v.toSeq : _*))
+    captureTraffic.foreach(v => builder.captureTraffic(v.toSeq: _*))
     networkResolution.foreach(v => builder.networkResolution(v))
     tcpKeepAlivesEnabled.foreach(v => builder.enableTcpKeepAlives(v))
     tcpKeepAliveTime.foreach(v => builder.tcpKeepAliveTime(v))

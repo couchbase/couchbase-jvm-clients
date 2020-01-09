@@ -73,7 +73,6 @@ class AsyncCluster(
   private[scala] val core =
     Core.create(environment.coreEnv, authenticator, seedNodes.map(_.toCore).asJava)
   private[scala] val env                        = environment
-  private[scala] val kvTimeout                  = javaDurationToScala(env.timeoutConfig.kvTimeout())
   private[scala] val searchTimeout              = javaDurationToScala(env.timeoutConfig.searchTimeout())
   private[scala] val analyticsTimeout           = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
   private[scala] val retryStrategy              = env.retryStrategy

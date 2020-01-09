@@ -25,6 +25,7 @@ import com.couchbase.client.scala.datastructures._
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv._
+import com.couchbase.client.scala.util.TimeoutUtil
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -113,8 +114,9 @@ class Collection(
   /** Provides access to less-commonly used methods. */
   val binary = new BinaryCollection(async.binary)
 
-  private[scala] val kvTimeout     = async.kvTimeout
-  private[scala] val retryStrategy = async.retryStrategy
+  private[scala] val kvTimeout: Durability => Duration = TimeoutUtil.kvTimeout(async.environment)
+  private[scala] val kvReadTimeout: Duration           = async.kvReadTimeout
+  private[scala] val retryStrategy                     = async.retryStrategy
 
   private def block[T](in: Future[T]) =
     Collection.block(in)
@@ -138,7 +140,7 @@ class Collection(
       id: String,
       withExpiry: Boolean = false,
       project: Seq[String] = Seq.empty,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   ): Try[GetResult] =
@@ -165,21 +167,23 @@ class Collection(
       content: T,
       durability: Durability = Disabled,
       expiry: Duration = 0.seconds,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
-  )(implicit serializer: JsonSerializer[T]): Try[MutationResult] =
+  )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
+    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     block(
       async.insert(
         id,
         content,
         durability,
         expiry,
-        timeout,
+        timeoutActual,
         retryStrategy,
         transcoder
       )
     )
+  }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
     *
@@ -201,10 +205,12 @@ class Collection(
       cas: Long = 0,
       durability: Durability = Disabled,
       expiry: Duration = 0.seconds,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
-  )(implicit serializer: JsonSerializer[T]): Try[MutationResult] =
+  )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
+    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
+
     block(
       async.replace(
         id,
@@ -212,11 +218,12 @@ class Collection(
         cas,
         durability,
         expiry,
-        timeout,
+        timeoutActual,
         retryStrategy,
         transcoder
       )
     )
+  }
 
   /** Upserts the contents of a full document in this collection.
     *
@@ -237,23 +244,26 @@ class Collection(
       content: T,
       durability: Durability = Disabled,
       expiry: Duration = 0.seconds,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance,
       parentSpan: Option[RequestSpan] = None
-  )(implicit serializer: JsonSerializer[T]): Try[MutationResult] =
+  )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
+    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
+
     block(
       async.upsert(
         id,
         content,
         durability,
         expiry,
-        timeout,
+        timeoutActual,
         retryStrategy,
         transcoder,
         parentSpan
       )
     )
+  }
 
   /** Removes a document from this collection, if it exists.
     *
@@ -271,12 +281,15 @@ class Collection(
       id: String,
       cas: Long = 0,
       durability: Durability = Disabled,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = retryStrategy
-  ): Try[MutationResult] =
+  ): Try[MutationResult] = {
+    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
+
     block(
-      async.remove(id, cas, durability, timeout, retryStrategy)
+      async.remove(id, cas, durability, timeoutActual, retryStrategy)
     )
+  }
 
   /** SubDocument mutations allow modifying parts of a JSON document directly, which can be more efficiently than
     * fetching and modifying the full document.
@@ -305,11 +318,13 @@ class Collection(
       document: StoreSemantics = StoreSemantics.Replace,
       durability: Durability = Disabled,
       expiry: Duration = 0.seconds,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance,
       @Stability.Internal accessDeleted: Boolean = false
-  ): Try[MutateInResult] =
+  ): Try[MutateInResult] = {
+    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
+
     block(
       async.mutateIn(
         id,
@@ -318,12 +333,13 @@ class Collection(
         document,
         durability,
         expiry,
-        timeout,
+        timeoutActual,
         retryStrategy,
         transcoder,
         accessDeleted
       )
     )
+  }
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
     *
@@ -342,7 +358,7 @@ class Collection(
   def getAndLock(
       id: String,
       lockTime: Duration,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   ): Try[GetResult] =
@@ -365,7 +381,7 @@ class Collection(
   def unlock(
       id: String,
       cas: Long,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy
   ): Try[Unit] =
     block(async.unlock(id, cas, timeout, retryStrategy))
@@ -384,7 +400,7 @@ class Collection(
   def getAndTouch(
       id: String,
       expiry: Duration,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   ): Try[GetResult] =
@@ -419,7 +435,7 @@ class Collection(
       id: String,
       spec: Seq[LookupInSpec],
       withExpiry: Boolean = false,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   ): Try[LookupInResult] =
@@ -444,7 +460,7 @@ class Collection(
     **/
   def getAnyReplica(
       id: String,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   ): Try[GetReplicaResult] =
@@ -472,7 +488,7 @@ class Collection(
     **/
   def getAllReplicas(
       id: String,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   ): Iterable[GetReplicaResult] =
@@ -493,7 +509,7 @@ class Collection(
     **/
   def exists(
       id: String,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy
   ): Try[ExistsResult] =
     block(async.exists(id, timeout, retryStrategy))
@@ -511,7 +527,7 @@ class Collection(
   def touch(
       id: String,
       expiry: Duration,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy
   ): Try[MutationResult] = {
     block(async.touch(id, expiry, timeout, retryStrategy))

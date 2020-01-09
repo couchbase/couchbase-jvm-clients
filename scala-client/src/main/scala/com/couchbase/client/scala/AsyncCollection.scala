@@ -35,7 +35,7 @@ import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.kv.handlers._
-import com.couchbase.client.scala.util.FutureConversions
+import com.couchbase.client.scala.util.{FutureConversions, TimeoutUtil}
 
 import scala.compat.java8.FutureConverters
 import scala.compat.java8.OptionConverters._
@@ -73,8 +73,9 @@ class AsyncCollection(
 
   import com.couchbase.client.scala.util.DurationConversions._
 
-  private[scala] val kvTimeout     = javaDurationToScala(environment.timeoutConfig.kvTimeout())
-  private[scala] val retryStrategy = environment.retryStrategy
+  private[scala] val kvTimeout: Durability => Duration = TimeoutUtil.kvTimeout(environment)
+  private[scala] val kvReadTimeout: Duration           = environment.timeoutConfig.kvTimeout()
+  private[scala] val retryStrategy                     = environment.retryStrategy
   private[scala] val collectionIdentifier =
     new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(name))
   private[scala] val hp                    = HandlerParams(core, bucketName, collectionIdentifier, environment)
@@ -131,21 +132,22 @@ class AsyncCollection(
       content: T,
       durability: Durability = Disabled,
       expiry: Duration = 0.seconds,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
+    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     val req = insertHandler.request(
       id,
       content,
       durability,
       expiry,
-      timeout,
+      timeoutActual,
       retryStrategy,
       transcoder,
       serializer
     )
-    wrapWithDurability(req, id, insertHandler, durability, false, timeout)
+    wrapWithDurability(req, id, insertHandler, durability, false, timeoutActual)
   }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
@@ -157,22 +159,23 @@ class AsyncCollection(
       cas: Long = 0,
       durability: Durability = Disabled,
       expiry: Duration = 0.seconds,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
+    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     val req = replaceHandler.request(
       id,
       content,
       cas,
       durability,
       expiry,
-      timeout,
+      timeoutActual,
       retryStrategy,
       transcoder,
       serializer
     )
-    wrapWithDurability(req, id, replaceHandler, durability, false, timeout)
+    wrapWithDurability(req, id, replaceHandler, durability, false, timeoutActual)
   }
 
   /** Upserts the contents of a full document in this collection.
@@ -183,23 +186,24 @@ class AsyncCollection(
       content: T,
       durability: Durability = Disabled,
       expiry: Duration = 0.seconds,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance,
       parentSpan: Option[RequestSpan] = None
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
+    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     val req = upsertHandler.request(
       id,
       content,
       durability,
       expiry,
-      timeout,
+      timeoutActual,
       retryStrategy,
       transcoder,
       serializer,
       parentSpan
     )
-    wrapWithDurability(req, id, upsertHandler, durability, false, timeout)
+    wrapWithDurability(req, id, upsertHandler, durability, false, timeoutActual)
   }
 
   /** Removes a document from this collection, if it exists.
@@ -209,11 +213,12 @@ class AsyncCollection(
       id: String,
       cas: Long = 0,
       durability: Durability = Disabled,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy
   ): Future[MutationResult] = {
-    val req = removeHandler.request(id, cas, durability, timeout, retryStrategy)
-    wrapWithDurability(req, id, removeHandler, durability, true, timeout)
+    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
+    val req           = removeHandler.request(id, cas, durability, timeoutActual, retryStrategy)
+    wrapWithDurability(req, id, removeHandler, durability, true, timeoutActual)
   }
 
   /** Fetches a full document from this collection.
@@ -223,11 +228,10 @@ class AsyncCollection(
       id: String,
       withExpiry: Boolean = false,
       project: Seq[String] = Seq.empty,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   ): Future[GetResult] = {
-
     if (project.nonEmpty) {
       getSubDocHandler.requestProject(id, project, timeout, retryStrategy) match {
         case Success(request) =>
@@ -265,8 +269,8 @@ class AsyncCollection(
 
   private def getFullDoc(
       id: String,
-      timeout: Duration = kvTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
+      timeout: Duration,
+      retryStrategy: RetryStrategy,
       transcoder: Transcoder
   ): Future[GetResult] = {
     val req = getFullDocHandler.request(id, timeout, retryStrategy)
@@ -277,8 +281,8 @@ class AsyncCollection(
       id: String,
       spec: Seq[LookupInSpec],
       withExpiry: Boolean,
-      timeout: Duration = kvTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
+      timeout: Duration,
+      retryStrategy: RetryStrategy,
       transcoder: Transcoder
   ): Future[LookupInResult] = {
     val req = getSubDocHandler.request(id, spec, withExpiry, timeout, retryStrategy)
@@ -307,12 +311,12 @@ class AsyncCollection(
       document: StoreSemantics = StoreSemantics.Replace,
       durability: Durability = Disabled,
       expiry: Duration = 0.seconds,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance,
       @Stability.Internal accessDeleted: Boolean = false
   ): Future[MutateInResult] = {
-
+    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     val req = mutateInHandler.request(
       id,
       spec,
@@ -320,7 +324,7 @@ class AsyncCollection(
       document,
       durability,
       expiry,
-      timeout,
+      timeoutActual,
       retryStrategy,
       accessDeleted,
       transcoder
@@ -347,7 +351,7 @@ class AsyncCollection(
                 collectionIdentifier,
                 id,
                 false,
-                timeout,
+                timeoutActual,
                 request.internalSpan().toRequestSpan()
               )
 
@@ -374,7 +378,7 @@ class AsyncCollection(
   def getAndLock(
       id: String,
       lockTime: Duration = 30.seconds,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   ): Future[GetResult] = {
@@ -388,7 +392,7 @@ class AsyncCollection(
   def unlock(
       id: String,
       cas: Long,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy
   ): Future[Unit] = {
     val req = unlockHandler.request(id, cas, timeout, retryStrategy)
@@ -401,7 +405,7 @@ class AsyncCollection(
   def getAndTouch(
       id: String,
       expiry: Duration,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   ): Future[GetResult] = {
@@ -417,7 +421,7 @@ class AsyncCollection(
       id: String,
       spec: Seq[LookupInSpec],
       withExpiry: Boolean = false,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   ): Future[LookupInResult] = {
@@ -429,7 +433,7 @@ class AsyncCollection(
     * See [[com.couchbase.client.scala.Collection.getAnyReplica]] for details.  $Same */
   def getAnyReplica(
       id: String,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   ): Future[GetReplicaResult] = {
@@ -441,7 +445,7 @@ class AsyncCollection(
     * See [[com.couchbase.client.scala.Collection.getAllReplicas]] for details.  $Same */
   def getAllReplicas(
       id: String,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = JsonTranscoder.Instance
   ): Seq[Future[GetReplicaResult]] = {
@@ -477,7 +481,7 @@ class AsyncCollection(
     * See [[com.couchbase.client.scala.Collection.exists]] for details.  $Same */
   def exists(
       id: String,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy
   ): Future[ExistsResult] = {
     val req = existsHandler.request(id, timeout, retryStrategy)
@@ -490,7 +494,7 @@ class AsyncCollection(
   def touch(
       id: String,
       expiry: Duration,
-      timeout: Duration = kvTimeout,
+      timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy
   ): Future[MutationResult] = {
     val req = touchHandler.request(id, expiry, timeout, retryStrategy)

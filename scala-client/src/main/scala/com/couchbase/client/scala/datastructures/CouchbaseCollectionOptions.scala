@@ -18,23 +18,25 @@ package com.couchbase.client.scala.datastructures
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.durability.Durability
-import com.couchbase.client.scala.util.DurationConversions
+import com.couchbase.client.scala.util.{DurationConversions, TimeoutUtil}
 
 import scala.concurrent.duration.Duration
 
 case class CouchbaseCollectionOptions(
     timeout: Duration,
     retryStrategy: RetryStrategy,
-    durability: Durability = Durability.Disabled
+    durability: Durability
 )
 
 object CouchbaseCollectionOptions {
-  def apply(collection: Collection): CouchbaseCollectionOptions = {
+  def apply(
+      collection: Collection,
+      durability: Durability = Durability.Disabled
+  ): CouchbaseCollectionOptions = {
     CouchbaseCollectionOptions(
-      timeout = DurationConversions.javaDurationToScala(
-        collection.async.environment.timeoutConfig.kvTimeout()
-      ),
-      retryStrategy = collection.async.environment.retryStrategy
+      timeout = TimeoutUtil.kvTimeout(collection.async.environment)(durability),
+      retryStrategy = collection.async.environment.retryStrategy,
+      durability
     )
   }
 }

@@ -20,8 +20,8 @@ import com.couchbase.client.scala.util.DurationConversions._
 case class OrphanReporterConfig(
     private[scala] val emitInterval: Option[Duration] = None,
     private[scala] val sampleSize: Option[Int] = None,
-    private[scala] val queueLength: Option[Int] = None,
-                               ) {
+    private[scala] val queueLength: Option[Int] = None
+) {
 
   /** Customize the emit interval.
     *
