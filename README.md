@@ -20,17 +20,7 @@ and [Scala](https://docs.couchbase.com/scala-sdk/1.0/start-using-sdk.html)
  
 ## Usage
 
-We've started to publish artifacts to our own maven repository:
-
-```xml
-<repositories>
-    <repository>
-      <id>couchbase</id>
-      <name>Couchbase Preview Repository</name>
-      <url>http://files.couchbase.com/maven2</url>
-    </repository>
-</repositories>
-```
+Stable releases are pushed to maven central.
 
 For Java:
 
@@ -39,7 +29,7 @@ For Java:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>java-client</artifactId>
-        <version>3.0.0-beta.2</version>
+        <version>3.0.0</version>
     </dependency>
 </dependencies>
 ```
@@ -51,7 +41,7 @@ For Scala:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>scala-client_2.12</artifactId>
-        <version>1.0.0-beta.1</version>
+        <version>1.0.0</version>
     </dependency>
 </dependencies>
 ```
@@ -87,6 +77,22 @@ You can test like this:
 ```
 $ mvn clean test -fae
 ```
+
+### Branches & Release Trains
+
+Since this monorepo houses different versions of different artifacts, release train names have been chosen
+to identify a collection of releases that belong to the same train.
+
+These trains are named after historic computers for your delight.
+
+Tags in each branch are named `branchname-ga` for the initial GA release, and then subsequently `branchname-sr-n` for
+each service release. See the tag information for specifics of what's in there.
+
+ - [Colossus](https://en.wikipedia.org/wiki/Colossus_computer) (Initial Release 2020-01-10)
+
+| Release Train | Java-Client | Scala-Client | Core-Io | Tracing-Opentelemetry | Tracing-Opentracing |
+| ------------- | ----------- | ------------ | ------- | --------------------- | ------------------- |
+| colossus      | 3.0.x       | 1.0.x        | 2.0.x   | 0.2.x                 | 0.2.x               |
 
 ### Testing Infos
 
