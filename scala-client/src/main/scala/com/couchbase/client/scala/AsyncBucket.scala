@@ -113,7 +113,7 @@ class AsyncBucket private[scala] (
         response.rows
           .collectSeq()
           .flatMap(rows => {
-            response.meta.map(meta => ViewResult(meta, rows))
+            response.metaData.map(meta => ViewResult(meta, rows))
           })
       })
       .toFuture

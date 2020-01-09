@@ -129,7 +129,7 @@ class Cluster private[scala] (
   ): Try[AnalyticsResult] = {
     val timeout: java.time.Duration = options.timeout match {
       case Some(v) => v
-      case _       => env.timeoutConfig.queryTimeout()
+      case _       => env.timeoutConfig.analyticsTimeout()
     }
 
     AsyncUtils.block(async.analyticsQuery(statement, options), timeout)

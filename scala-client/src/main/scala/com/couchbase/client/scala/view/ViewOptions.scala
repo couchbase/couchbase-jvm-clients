@@ -50,7 +50,10 @@ case class ViewOptions(
     private[scala] val timeout: Option[Duration] = None,
     private[scala] val scanConsistency: Option[ViewScanConsistency] = None
 ) {
-
+  /** Sets in which namespace the view exists.
+    *
+    * @return this for further chaining
+    */
   def namespace(value: DesignDocumentNamespace): ViewOptions = {
     copy(namespace = Some(value))
   }
@@ -84,7 +87,7 @@ case class ViewOptions(
     copy(group = Some(value))
   }
 
-  /** Specify the group level to be used.
+  /** Specifies the depth within the key to group results.
     *
     * Important: this setter and `groupLevel` should not be used
     * together. It is sufficient to only set the
@@ -137,7 +140,7 @@ case class ViewOptions(
     copy(order = Some(value))
   }
 
-  /** Return the documents in descending key order.
+  /** Specifies a specific key to fetch from the index.
     *
     * @return this for further chaining
     */
@@ -148,14 +151,29 @@ case class ViewOptions(
     }
   }
 
+  /** Specifies the document id to start returning results at within a number of results should `startKey` have multiple
+    * entries within the index.
+    *
+    * @return this for further chaining
+    */
   def startKeyDocId(value: String): ViewOptions = {
     copy(startKeyDocId = Some(value))
   }
 
+  /** Specifies the document id to stop returning results at within a number of results should `endKey` have multiple
+    * entries within the index.
+    *
+    * @return this for further chaining
+    */
   def endKeyDocId(value: String): ViewOptions = {
     copy(endKeyDocId = Some(value))
   }
 
+
+  /** Specifies the key to stop returning results at.
+    *
+    * @return this for further chaining
+    */
   def endKey(value: Any): ViewOptions = {
     value match {
       case s: String =>
@@ -164,6 +182,10 @@ case class ViewOptions(
     }
   }
 
+  /** Specifies the key to skip to before beginning to return results.
+    *
+    * @return this for further chaining
+    */
   def startKey(value: Any): ViewOptions = {
     value match {
       case s: String =>
@@ -172,16 +194,25 @@ case class ViewOptions(
     }
   }
 
-  def keys(value: Any): ViewOptions = {
-    value match {
-      case v: String                 => copy(keys = Some(v))
-      case JsonArray | JsonArraySafe => copy(keys = Some(value.toString))
-      case _                         =>
-        // This will trigger a validation failure later
-        copy(keys = null)
-    }
+  /** Specifies a specific set of keys to fetch from the index.
+    *
+    * @return this for further chaining
+    */
+  def keys(values: Seq[Any]): ViewOptions = {
+    val arr = JsonArray.create
+    values.foreach(v => {
+      arr.add(v match {
+        case x: String => '"' + x + '"'
+        case _ => v.toString
+      })
+    })
+    copy(keys = Some(arr.toString))
   }
 
+  /** When to timeout the operation.
+    *
+    * @return this for further chaining
+    */
   def timeout(timeout: Duration): ViewOptions = {
     copy(timeout = Option(timeout))
   }
@@ -202,7 +233,7 @@ case class ViewOptions(
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def retryStrategy(scanConsistency: ViewScanConsistency): ViewOptions = {
+  def scanConsistency(scanConsistency: ViewScanConsistency): ViewOptions = {
     copy(scanConsistency = Some(scanConsistency))
   }
 
@@ -221,9 +252,9 @@ case class ViewOptions(
     })
 
     limit.foreach(v => {
-      sb.append("limit='")
+      sb.append("limit=")
       sb.append(v.toString)
-      sb.append("'&")
+      sb.append("&")
     })
 
     group.foreach(v => {
@@ -245,9 +276,9 @@ case class ViewOptions(
     })
 
     skip.foreach(v => {
-      sb.append("skip='")
+      sb.append("skip=")
       sb.append(v.toString)
-      sb.append("'&")
+      sb.append("&")
     })
 
     onError.foreach(v => {
