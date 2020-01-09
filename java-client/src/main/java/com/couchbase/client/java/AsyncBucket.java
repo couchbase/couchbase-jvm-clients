@@ -199,7 +199,7 @@ public class AsyncBucket {
     Optional<byte[]> keysJson = Optional.ofNullable(opts.keys()).map(s -> s.getBytes(StandardCharsets.UTF_8));
     boolean development = opts.development();
 
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().analyticsTimeout());
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().viewTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
     final InternalSpan span = environment()
