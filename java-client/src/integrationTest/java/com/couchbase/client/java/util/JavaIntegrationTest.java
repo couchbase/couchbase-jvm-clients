@@ -86,8 +86,8 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
   protected static Set<SeedNode> seedNodes() {
     return config().nodes().stream().map(cfg -> SeedNode.create(
       cfg.hostname(),
-      Optional.of(cfg.ports().get(Services.KV)),
-      Optional.of(cfg.ports().get(Services.MANAGER))
+      Optional.ofNullable(cfg.ports().get(Services.KV)),
+      Optional.ofNullable(cfg.ports().get(Services.MANAGER))
     )).collect(Collectors.toSet());
   }
 

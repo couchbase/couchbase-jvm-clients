@@ -94,7 +94,6 @@ class GetProjectionIntegrationTest extends JavaIntegrationTest {
   @Test
   void age() {
     JsonObject decoded = collection.get(DOC_ID, getOptions().project("age")).contentAsObject();
-    System.out.println(decoded);
     assertEquals(26, decoded.getInt("age").intValue());
     assertEquals(1, decoded.size());
   }
@@ -110,7 +109,6 @@ class GetProjectionIntegrationTest extends JavaIntegrationTest {
   @Test
   void animals_0() {
     JsonObject decoded = collection.get(DOC_ID, getOptions().project("animals[0]")).contentAsObject();
-    System.out.println(decoded);
     JsonArray arr = decoded.getArray("animals");
     assertEquals(1, arr.size());
     assertEquals("cat", arr.get(0));
@@ -183,7 +181,6 @@ class GetProjectionIntegrationTest extends JavaIntegrationTest {
   @Test
   void attributes_hobbies_0_type() {
     JsonObject decoded = collection.get(DOC_ID, getOptions().project("attributes.hobbies[0].type")).contentAsObject();
-    System.out.println(decoded);
     JsonArray arr = decoded.getObject("attributes").getArray("hobbies");
     assertEquals(1, arr.size());
     assertEquals("winter sports", arr.getObject(0).getString("type"));
@@ -203,7 +200,6 @@ class GetProjectionIntegrationTest extends JavaIntegrationTest {
   @Test
   void attributes_hobbies_1_details_location() {
     JsonObject decoded = collection.get(DOC_ID, getOptions().project("attributes.hobbies[1].details.location")).contentAsObject();
-    System.out.println(decoded);
     JsonArray arr = decoded.getObject("attributes").getArray("hobbies");
     JsonObject obj = arr.getObject(0).getObject("details").getObject("location");
     assertEquals(1, arr.size());
