@@ -27,6 +27,7 @@ import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.Golang.encodeDurationToMs
 import com.couchbase.client.core.util.LRUCache
 import com.couchbase.client.core.{Core, Reactor}
+import com.couchbase.client.scala.HandlerBasicParams
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
@@ -60,8 +61,8 @@ private[scala] case class QueryCacheEntry(name: String, fullPlan: Boolean, value
   * @author Graham Pople
   * @since 1.0.0
   */
-private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
-
+private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: ExecutionContext) {
+  private val core = hp.core
   import DurationConversions._
 
   private val QueryCacheSize = 5000
@@ -109,6 +110,7 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
       _ <- Validate.optNotNull(options.scanCap, "scanCap")
       _ <- Validate.optNotNull(options.scanConsistency, "scanConsistency")
       _ <- Validate.optNotNull(options.timeout, "timeout")
+      _ <- Validate.optNotNull(options.parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
@@ -136,7 +138,7 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
               queryBytes,
               options.readonly.getOrElse(false),
               params.str("client_context_id"),
-              null /* TODO: RTO */
+              hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, options.parentSpan.orNull)
             )
 
             request
@@ -339,7 +341,7 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
       query.toString.getBytes(StandardCharsets.UTF_8),
       true,
       query.str("client_context_id"),
-      null /* TODO: RTO */
+      hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, options.parentSpan.orNull)
     )
   }
 
@@ -372,7 +374,7 @@ private[scala] class QueryHandler(core: Core)(implicit ec: ExecutionContext) {
       query.toString.getBytes(StandardCharsets.UTF_8),
       originalOptions.readonly.getOrElse(false),
       query.str("client_context_id"),
-      null /* TODO: RTO */
+      hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, originalOptions.parentSpan.orNull)
     )
   }
 

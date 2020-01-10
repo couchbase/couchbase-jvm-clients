@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api.{CounterResult, MutationResult}
 import com.couchbase.client.scala.durability.Durability
@@ -102,10 +103,13 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
       cas: Long = 0,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy
+      retryStrategy: RetryStrategy = environment.retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Try[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-    Collection.block(async.append(id, value, cas, durability, timeoutActual, retryStrategy))
+    Collection.block(
+      async.append(id, value, cas, durability, timeoutActual, retryStrategy, parentSpan)
+    )
 
   }
 
@@ -130,10 +134,13 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
       cas: Long = 0,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy
+      retryStrategy: RetryStrategy = environment.retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Try[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-    Collection.block(async.prepend(id, value, cas, durability, timeoutActual, retryStrategy))
+    Collection.block(
+      async.prepend(id, value, cas, durability, timeoutActual, retryStrategy, parentSpan)
+    )
   }
 
   /** Increment a Couchbase 'counter' document.  $CounterDoc
@@ -162,11 +169,22 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
       durability: Durability = Disabled,
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy
+      retryStrategy: RetryStrategy = environment.retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Try[CounterResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     Collection.block(
-      async.increment(id, delta, initial, cas, durability, expiry, timeoutActual, retryStrategy)
+      async.increment(
+        id,
+        delta,
+        initial,
+        cas,
+        durability,
+        expiry,
+        timeoutActual,
+        retryStrategy,
+        parentSpan
+      )
     )
   }
 
@@ -196,11 +214,22 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
       durability: Durability = Disabled,
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy
+      retryStrategy: RetryStrategy = environment.retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Try[CounterResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     Collection.block(
-      async.decrement(id, delta, initial, cas, durability, expiry, timeoutActual, retryStrategy)
+      async.decrement(
+        id,
+        delta,
+        initial,
+        cas,
+        durability,
+        expiry,
+        timeoutActual,
+        retryStrategy,
+        parentSpan
+      )
     )
   }
 

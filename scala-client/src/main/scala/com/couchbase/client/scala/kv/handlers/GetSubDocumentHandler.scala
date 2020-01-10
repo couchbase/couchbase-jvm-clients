@@ -17,6 +17,7 @@ package com.couchbase.client.scala.kv.handlers
 
 import java.util.concurrent.TimeUnit
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.context.{KeyValueErrorContext, ReducedKeyValueErrorContext}
 import com.couchbase.client.core.error.{CouchbaseException, DocumentNotFoundException}
@@ -47,13 +48,15 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
       spec: Seq[LookupInSpec],
       withExpiration: Boolean,
       timeout: java.time.Duration,
-      retryStrategy: RetryStrategy
+      retryStrategy: RetryStrategy,
+      parentSpan: Option[RequestSpan]
   ): Try[SubdocGetRequest] = {
     val validations: Try[SubdocGetRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(spec, "spec")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
@@ -91,7 +94,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
             id,
             0,
             commands,
-            null /* todo: add rto */
+            hp.tracer.internalSpan(SubdocGetRequest.OPERATION_NAME, parentSpan.orNull)
           )
         )
       }
@@ -102,7 +105,8 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
       id: String,
       project: Seq[String],
       timeout: java.time.Duration,
-      retryStrategy: RetryStrategy
+      retryStrategy: RetryStrategy,
+      parentSpan: Option[RequestSpan]
   ): Try[SubdocGetRequest] = {
     val validations: Try[SubdocGetRequest] = for {
       _ <- Validate.notNullOrEmpty(project, "project")
@@ -119,7 +123,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
     } else {
       val spec = project.map(v => LookupInSpec.get(v))
 
-      request(id, spec, false, timeout, retryStrategy)
+      request(id, spec, false, timeout, retryStrategy, parentSpan)
     }
   }
 

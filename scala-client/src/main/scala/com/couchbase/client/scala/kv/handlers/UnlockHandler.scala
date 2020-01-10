@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{KeyValueRequest, UnlockRequest, UnlockResponse}
 import com.couchbase.client.core.retry.RetryStrategy
@@ -38,13 +39,15 @@ private[scala] class UnlockHandler(hp: HandlerParams)
       id: String,
       cas: Long,
       timeout: java.time.Duration,
-      retryStrategy: RetryStrategy
+      retryStrategy: RetryStrategy,
+      parentSpan: Option[RequestSpan]
   ): Try[UnlockRequest] = {
     val validations: Try[UnlockRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(cas, "cas")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
@@ -58,7 +61,7 @@ private[scala] class UnlockHandler(hp: HandlerParams)
           retryStrategy,
           id,
           cas,
-          null /* todo: rto */
+          hp.tracer.internalSpan(UnlockRequest.OPERATION_NAME, parentSpan.orNull)
         )
       )
     }

@@ -123,18 +123,27 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
     pathForDesignDocument(indexData.name, namespace) match {
       case Success(path) =>
         val body = toJson(indexData)
-        val request = new GenericViewRequest(timeout, core.context, retryStrategy, () => {
-          val content: ByteBuf = Unpooled.copiedBuffer(Mapper.encodeAsBytes(body))
-          val req              = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, path, content)
-          req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_JSON)
-          req.headers.add("Content-Length", content.readableBytes)
-          req
-        }, false, bucket)
+        val request = new GenericViewRequest(
+          timeout,
+          core.context,
+          retryStrategy,
+          () => {
+            val content: ByteBuf = Unpooled.copiedBuffer(Mapper.encodeAsBytes(body))
+            val req =
+              new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, path, content)
+            req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_JSON)
+            req.headers.add("Content-Length", content.readableBytes)
+            req
+          },
+          false,
+          bucket
+        )
 
         SMono.defer(() => {
           core.send(request)
           FutureConversions
             .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+            .doOnTerminate(() => request.context().logicallyComplete())
             .map(_ => Unit)
         })
       case Failure(err) =>
@@ -234,7 +243,9 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
   private def sendRequest(request: GenericViewRequest): SMono[GenericViewResponse] = {
     SMono.defer(() => {
       core.send(request)
-      FutureConversions.wrap(request, request.response, propagateCancellation = true)
+      FutureConversions
+        .wrap(request, request.response, propagateCancellation = true)
+        .doOnTerminate(() => request.context().logicallyComplete())
     })
   }
 
@@ -263,13 +274,22 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
       retryStrategy: RetryStrategy,
       body: Any
   ): SMono[GenericViewResponse] = {
-    sendRequest(new GenericViewRequest(timeout, core.context, retryStrategy, () => {
-      val content = Unpooled.copiedBuffer(Mapper.encodeAsBytes(body))
-      val req     = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content)
-      req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_JSON)
-      req.headers.add("Content-Length", content.readableBytes)
-      req
-    }, method == GET, bucket))
+    sendRequest(
+      new GenericViewRequest(
+        timeout,
+        core.context,
+        retryStrategy,
+        () => {
+          val content = Unpooled.copiedBuffer(Mapper.encodeAsBytes(body))
+          val req     = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content)
+          req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_JSON)
+          req.headers.add("Content-Length", content.readableBytes)
+          req
+        },
+        method == GET,
+        bucket
+      )
+    )
   }
 }
 

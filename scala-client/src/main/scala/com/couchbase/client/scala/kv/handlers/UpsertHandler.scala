@@ -58,16 +58,16 @@ private[scala] class UpsertHandler(hp: HandlerParams)
       _ <- Validate.notNull(expiration, "expiration")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
     } yield null
-
-    val span =
-      hp.env.coreEnv.requestTracer.internalSpan(UpsertRequest.OPERATION_NAME, parentSpan.orNull)
-    val start = System.nanoTime()
-    span.startPayloadEncoding()
 
     if (validations.isFailure) {
       validations
     } else {
+      val span  = hp.tracer.internalSpan(UpsertRequest.OPERATION_NAME, parentSpan.orNull)
+      val start = System.nanoTime()
+      span.startPayloadEncoding()
+
       val encoded: Try[EncodedValue] = transcoder match {
         case x: TranscoderWithSerializer    => x.encode(content, serializer)
         case x: TranscoderWithoutSerializer => x.encode(content)

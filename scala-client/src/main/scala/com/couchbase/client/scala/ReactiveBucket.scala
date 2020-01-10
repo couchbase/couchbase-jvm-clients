@@ -53,7 +53,8 @@ import scala.util.{Failure, Success, Try}
   */
 class ReactiveBucket private[scala] (val async: AsyncBucket) {
   private[scala] implicit val ec: ExecutionContext = async.ec
-  private[scala] val viewHandler                   = new ViewHandler
+  private[scala] val hp                            = HandlerBasicParams(async.core, async.environment)
+  private[scala] val viewHandler                   = new ViewHandler(hp)
 
   @Stability.Volatile
   lazy val collections = new ReactiveCollectionManager(async)
@@ -137,6 +138,7 @@ class ReactiveBucket private[scala] (val async: AsyncBucket) {
 
               ReactiveViewResult(SMono.just(meta), rows)
             })
+            .doOnTerminate(() => request.context().logicallyComplete())
         })
     }
   }

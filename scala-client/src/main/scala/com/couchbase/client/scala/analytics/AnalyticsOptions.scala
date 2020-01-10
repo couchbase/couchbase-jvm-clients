@@ -18,6 +18,8 @@ package com.couchbase.client.scala.analytics
 
 import java.util.UUID
 
+import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 
@@ -37,8 +39,18 @@ case class AnalyticsOptions(
     private[scala] val timeout: Option[Duration] = None,
     private[scala] val priority: Boolean = false,
     private[scala] val readonly: Option[Boolean] = None,
-    private[scala] val scanConsistency: Option[AnalyticsScanConsistency] = None
+    private[scala] val scanConsistency: Option[AnalyticsScanConsistency] = None,
+    private[scala] val parentSpan: Option[RequestSpan] = None
 ) {
+
+  /** Sets the parent `RequestSpan`.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  @Volatile
+  def parentSpan(value: RequestSpan): AnalyticsOptions = {
+    copy(parentSpan = Some(value))
+  }
 
   /** Provides named parameters for queries parameterised that way.
     *

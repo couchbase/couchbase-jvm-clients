@@ -16,9 +16,10 @@
 
 package com.couchbase.client.scala.view
 
+import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.json.{JsonArray, JsonArraySafe, JsonObject}
-import com.couchbase.client.scala.query.QueryOptions
+import com.couchbase.client.scala.json.JsonArray
 import com.couchbase.client.scala.transformers.JacksonTransformers
 
 import scala.concurrent.duration.Duration
@@ -48,8 +49,18 @@ case class ViewOptions(
     private[scala] val keys: Option[String] = None,
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
     private[scala] val timeout: Option[Duration] = None,
-    private[scala] val scanConsistency: Option[ViewScanConsistency] = None
+    private[scala] val scanConsistency: Option[ViewScanConsistency] = None,
+    private[scala] val parentSpan: Option[RequestSpan] = None
 ) {
+
+  /** Sets the parent `RequestSpan`.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  @Volatile
+  def parentSpan(value: RequestSpan): ViewOptions = {
+    copy(parentSpan = Some(value))
+  }
 
   /** Sets in which namespace the view exists.
     *

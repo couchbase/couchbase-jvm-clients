@@ -17,18 +17,15 @@
 package com.couchbase.client.scala.query.handlers
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.msg.search.{SearchChunkTrailer, SearchRequest, SearchResponse}
+import com.couchbase.client.scala.HandlerBasicParams
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.JsonObjectSafe
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.SearchFacetResult._
 import com.couchbase.client.scala.search.result.{SearchFacetResult, SearchMetaData, SearchMetrics}
-import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.{CouchbasePickler, DurationConversions, Validate}
 
 import scala.collection.GenMap
@@ -41,7 +38,7 @@ import scala.util.{Failure, Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   */
-private[scala] class SearchHandler() {
+private[scala] class SearchHandler(hp: HandlerBasicParams) {
 
   import DurationConversions._
 
@@ -68,6 +65,7 @@ private[scala] class SearchHandler() {
       _ <- Validate.notNull(options.scanConsistency, "scanConsistency")
       _ <- Validate.notNull(options.timeout, "timeout")
       _ <- Validate.notNull(options.retryStrategy, "retryStrategy")
+      _ <- Validate.optNotNull(options.parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
@@ -90,7 +88,7 @@ private[scala] class SearchHandler() {
           core.context().authenticator(),
           indexName,
           queryBytes,
-          null /* todo: rto */
+          hp.tracer.internalSpan(SearchRequest.OPERATION_NAME, options.parentSpan.orNull)
         )
       )
     }

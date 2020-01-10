@@ -131,6 +131,7 @@ class Collection(
     *                       is set to None, meaning a normal full document fetch will be performed.
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -142,11 +143,12 @@ class Collection(
       project: Seq[String] = Seq.empty,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder
+      transcoder: Transcoder = async.environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   ): Try[GetResult] =
     block(
       async
-        .get(id, withExpiry, project, timeout, retryStrategy, transcoder)
+        .get(id, withExpiry, project, timeout, retryStrategy, transcoder, parentSpan)
     )
 
   /** Inserts a full document into this collection, if it does not exist already.
@@ -157,6 +159,7 @@ class Collection(
     * @param expiry        $Expiry
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentAlreadyExistsException`, indicating the document already exists.
@@ -169,7 +172,8 @@ class Collection(
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder
+      transcoder: Transcoder = async.environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     block(
@@ -180,7 +184,8 @@ class Collection(
         expiry,
         timeoutActual,
         retryStrategy,
-        transcoder
+        transcoder,
+        parentSpan
       )
     )
   }
@@ -194,6 +199,7 @@ class Collection(
     * @param expiry        $Expiry
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -207,7 +213,8 @@ class Collection(
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder
+      transcoder: Transcoder = async.environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
 
@@ -220,7 +227,8 @@ class Collection(
         expiry,
         timeoutActual,
         retryStrategy,
-        transcoder
+        transcoder,
+        parentSpan
       )
     )
   }
@@ -272,6 +280,7 @@ class Collection(
     * @param durability    $Durability
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -282,12 +291,13 @@ class Collection(
       cas: Long = 0,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = retryStrategy
+      retryStrategy: RetryStrategy = retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Try[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
 
     block(
-      async.remove(id, cas, durability, timeoutActual, retryStrategy)
+      async.remove(id, cas, durability, timeoutActual, retryStrategy, parentSpan)
     )
   }
 
@@ -306,6 +316,7 @@ class Collection(
     * @param expiry        $Expiry
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(MutateInResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -321,6 +332,7 @@ class Collection(
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = retryStrategy,
       transcoder: Transcoder = async.environment.transcoder,
+      parentSpan: Option[RequestSpan] = None,
       @Stability.Internal accessDeleted: Boolean = false
   ): Try[MutateInResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
@@ -336,6 +348,7 @@ class Collection(
         timeoutActual,
         retryStrategy,
         transcoder,
+        parentSpan,
         accessDeleted
       )
     )
@@ -350,6 +363,7 @@ class Collection(
     * @param lockTime        how long to lock the document for
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param parentSpan    $ParentSpan
     *
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -360,10 +374,11 @@ class Collection(
       lockTime: Duration,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder
+      transcoder: Transcoder = async.environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   ): Try[GetResult] =
     block(
-      async.getAndLock(id, lockTime, timeout, retryStrategy, transcoder)
+      async.getAndLock(id, lockTime, timeout, retryStrategy, transcoder, parentSpan)
     )
 
   /** Unlock a locked document.
@@ -373,6 +388,7 @@ class Collection(
     *                       unlock the document
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(Unit)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -382,9 +398,10 @@ class Collection(
       id: String,
       cas: Long,
       timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = retryStrategy
+      retryStrategy: RetryStrategy = retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Try[Unit] =
-    block(async.unlock(id, cas, timeout, retryStrategy))
+    block(async.unlock(id, cas, timeout, retryStrategy, parentSpan))
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
     *
@@ -392,6 +409,7 @@ class Collection(
     * @param expiry         $Expiry
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param parentSpan    $ParentSpan
     *
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -402,7 +420,8 @@ class Collection(
       expiry: Duration,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder
+      transcoder: Transcoder = async.environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   ): Try[GetResult] =
     block(
       async.getAndTouch(
@@ -410,7 +429,8 @@ class Collection(
         expiry,
         timeout,
         retryStrategy,
-        transcoder
+        transcoder,
+        parentSpan
       )
     )
 
@@ -426,6 +446,7 @@ class Collection(
     * @param withExpiry    $WithExpiry
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -437,9 +458,10 @@ class Collection(
       withExpiry: Boolean = false,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder
+      transcoder: Transcoder = async.environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   ): Try[LookupInResult] =
-    block(async.lookupIn(id, spec, withExpiry, timeout, retryStrategy, transcoder))
+    block(async.lookupIn(id, spec, withExpiry, timeout, retryStrategy, transcoder, parentSpan))
 
   /** Retrieves any available version of the document.
     *
@@ -453,6 +475,7 @@ class Collection(
     * @param id            $Id
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -462,11 +485,12 @@ class Collection(
       id: String,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder
+      transcoder: Transcoder = async.environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   ): Try[GetReplicaResult] =
     Try(
       reactive
-        .getAnyReplica(id, timeout, retryStrategy, transcoder)
+        .getAnyReplica(id, timeout, retryStrategy, transcoder, parentSpan)
         .block(timeout)
     )
 
@@ -481,6 +505,7 @@ class Collection(
     * @param id            $Id
     * @param timeout       $Timeout
     * @param retryStrategy $RetryStrategy
+    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -490,9 +515,10 @@ class Collection(
       id: String,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder
+      transcoder: Transcoder = async.environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   ): Iterable[GetReplicaResult] =
-    reactive.getAllReplicas(id, timeout, retryStrategy, transcoder).toIterable()
+    reactive.getAllReplicas(id, timeout, retryStrategy, transcoder, parentSpan).toIterable()
 
   /** Checks if a document exists.
     *
@@ -502,6 +528,7 @@ class Collection(
     * @param id             $Id
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -510,15 +537,17 @@ class Collection(
   def exists(
       id: String,
       timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = retryStrategy
+      retryStrategy: RetryStrategy = retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Try[ExistsResult] =
-    block(async.exists(id, timeout, retryStrategy))
+    block(async.exists(id, timeout, retryStrategy, parentSpan))
 
   /** Updates the expiry of the document with the given id.
     *
     * @param id             $Id
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -528,9 +557,10 @@ class Collection(
       id: String,
       expiry: Duration,
       timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = retryStrategy
+      retryStrategy: RetryStrategy = retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Try[MutationResult] = {
-    block(async.touch(id, expiry, timeout, retryStrategy))
+    block(async.touch(id, expiry, timeout, retryStrategy, parentSpan))
   }
 
   /** Returns a [[com.couchbase.client.scala.datastructures.CouchbaseBuffer]] backed by this collection.

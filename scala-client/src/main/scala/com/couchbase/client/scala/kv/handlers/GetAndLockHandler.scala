@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.error.context.KeyValueErrorContext
 import com.couchbase.client.core.msg.ResponseStatus
@@ -25,7 +26,7 @@ import com.couchbase.client.scala.codec.Transcoder
 import com.couchbase.client.scala.kv.{DefaultErrors, GetResult}
 import com.couchbase.client.scala.util.Validate
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 /**
   * Handles requests and responses for KV get-and-lock operations.
@@ -40,13 +41,15 @@ private[scala] class GetAndLockHandler(hp: HandlerParams)
       id: String,
       expiration: java.time.Duration,
       timeout: java.time.Duration,
-      retryStrategy: RetryStrategy
+      retryStrategy: RetryStrategy,
+      parentSpan: Option[RequestSpan]
   ): Try[GetAndLockRequest] = {
     val validations: Try[GetAndLockRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(expiration, "expiration")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
@@ -60,7 +63,7 @@ private[scala] class GetAndLockHandler(hp: HandlerParams)
           hp.collectionIdentifier,
           retryStrategy,
           expiration,
-          null /* todo: add rto */
+          hp.tracer.internalSpan(GetAndLockRequest.OPERATION_NAME, parentSpan.orNull)
         )
       )
     }

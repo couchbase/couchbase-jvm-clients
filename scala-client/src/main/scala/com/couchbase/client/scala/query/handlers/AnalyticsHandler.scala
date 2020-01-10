@@ -19,6 +19,7 @@ package com.couchbase.client.scala.query.handlers
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest
+import com.couchbase.client.scala.HandlerBasicParams
 import com.couchbase.client.scala.analytics.AnalyticsOptions
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.transformers.JacksonTransformers
@@ -33,7 +34,7 @@ import scala.util.Try
   * @author Graham Pople
   * @since 1.0.0
   */
-private[scala] class AnalyticsHandler() {
+private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
   import DurationConversions._
 
   def request[T](
@@ -53,6 +54,7 @@ private[scala] class AnalyticsHandler() {
       _ <- Validate.optNotNull(options.timeout, "timeout")
       _ <- Validate.notNull(options.priority, "priority")
       _ <- Validate.optNotNull(options.readonly, "readonly")
+      _ <- Validate.optNotNull(options.parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
@@ -78,7 +80,7 @@ private[scala] class AnalyticsHandler() {
           options.readonly.getOrElse(false),
           params.str("client_context_id"),
           statement,
-          null /* todo: rto */
+          hp.tracer.internalSpan(AnalyticsRequest.OPERATION_NAME, options.parentSpan.orNull)
         )
       })
     }

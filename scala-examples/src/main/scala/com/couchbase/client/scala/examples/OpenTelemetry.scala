@@ -14,14 +14,23 @@
  * limitations under the License.
  */
 package com.couchbase.client.scala.examples
+import java.time.Duration
+
+import com.couchbase.client.core.cnc.{RequestSpan, RequestTracer}
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.{Cluster, ClusterOptions}
-import com.couchbase.client.tracing.opentelemetry.OpenTelemetryRequestTracer
+import com.couchbase.client.tracing.opentelemetry.{
+  OpenTelemetryInternalSpan,
+  OpenTelemetryRequestSpan,
+  OpenTelemetryRequestTracer
+}
 import io.opentelemetry.exporters.inmemory.InMemorySpanExporter
 import io.opentelemetry.sdk.trace.TracerSdkFactory
 import io.opentelemetry.sdk.trace.export.SimpleSpansProcessor
+import io.opentelemetry.trace.{Span, Tracer}
+import reactor.core.publisher.Mono
 
 import scala.util.{Failure, Success}
 

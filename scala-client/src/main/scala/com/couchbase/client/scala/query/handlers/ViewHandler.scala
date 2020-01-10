@@ -28,6 +28,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 
 import scala.compat.java8.OptionConverters._
 import com.couchbase.client.core.msg.view.ViewRequest
+import com.couchbase.client.scala.HandlerBasicParams
 import com.couchbase.client.scala.view.DesignDocumentNamespace.Development
 
 import scala.concurrent.duration.Duration
@@ -39,7 +40,7 @@ import scala.util.Try
   * @author Graham Pople
   * @since 1.0.0
   */
-private[scala] class ViewHandler() {
+private[scala] class ViewHandler(hp: HandlerBasicParams) {
   import DurationConversions._
 
   def request[T](
@@ -73,6 +74,7 @@ private[scala] class ViewHandler() {
       _ <- Validate.optNotNull(options.keys, "keys")
       _ <- Validate.optNotNull(options.timeout, "timeout")
       _ <- Validate.optNotNull(options.retryStrategy, "retryStrategy")
+      _ <- Validate.optNotNull(options.parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
@@ -102,7 +104,7 @@ private[scala] class ViewHandler() {
           params,
           bytes.asJava,
           isDevelopment,
-          null /* todo: rto */
+          hp.tracer.internalSpan(ViewRequest.OPERATION_NAME, options.parentSpan.orNull)
         )
       )
     }
