@@ -115,12 +115,13 @@ case class ViewMetaData(private val debug: Option[Array[Byte]], totalRows: Long)
     */
   def debugAs[T](implicit deserializer: JsonDeserializer[T]): Option[T] = {
     debug match {
-      case Some(v) => deserializer.deserialize(v) match {
-        case Success(x) => Some(x)
-        case _ =>
-          // This discards the reason for failure, but makes for a simpler API
-          None
-      }
+      case Some(v) =>
+        deserializer.deserialize(v) match {
+          case Success(x) => Some(x)
+          case _          =>
+            // This discards the reason for failure, but makes for a simpler API
+            None
+        }
       case _ => None
     }
   }

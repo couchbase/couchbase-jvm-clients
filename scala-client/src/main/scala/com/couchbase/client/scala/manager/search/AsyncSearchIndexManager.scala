@@ -62,7 +62,8 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
     core.send(request)
     request.response.toScala
       .map((response: GenericSearchResponse) => {
-        CouchbasePickler.read[SearchIndexWrapper](response.content()).indexDef
+        val read = CouchbasePickler.read[SearchIndexWrapper](response.content())
+        read.indexDef.copy(numPlanPIndexes = read.numPlanPIndexes)
       }) transform {
       case s @ Success(_) => s
       case Failure(err) =>

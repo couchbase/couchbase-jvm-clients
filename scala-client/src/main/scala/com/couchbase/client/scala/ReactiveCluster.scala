@@ -193,12 +193,17 @@ class ReactiveCluster(val async: AsyncCluster) {
                 .javaMonoToScalaMono(response.trailer())
                 .map(trailer => SearchHandler.parseSearchMeta(response, trailer))
 
+              val facets = FutureConversions
+                .javaMonoToScalaMono(response.trailer())
+                .map(trailer => SearchHandler.parseSearchFacets(trailer))
+
               val rows = FutureConversions
                 .javaFluxToScalaFlux(response.rows())
                 .map(row => SearchRow.fromResponse(row))
 
               ReactiveSearchResult(
                 rows,
+                facets,
                 meta
               )
             })

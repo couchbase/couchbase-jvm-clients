@@ -47,10 +47,12 @@ class ViewSpec extends ScalaIntegrationTest {
     // TODO replace when SCBC-135 waitForBucketReady is available
     Thread.sleep(2000)
 
-    val designDoc = DesignDocument(DesignDocName,
-                                   Map(
-                                     ViewName -> View("function(doc,meta) { emit(meta.id, doc) }")
-                                   ))
+    val designDoc = DesignDocument(
+      DesignDocName,
+      Map(
+        ViewName -> View("function(doc,meta) { emit(meta.id, doc) }")
+      )
+    )
     bucket.viewIndexes.upsertDesignDocument(designDoc, DesignDocumentNamespace.Production).get
     Util.waitUntilCondition(() => {
       bucket.viewIndexes
@@ -121,9 +123,11 @@ class ViewSpec extends ScalaIntegrationTest {
     }
 
     val viewResult = bucket
-      .viewQuery(DesignDocName,
-                 ViewName,
-                 ViewOptions().scanConsistency(ViewScanConsistency.RequestPlus))
+      .viewQuery(
+        DesignDocName,
+        ViewName,
+        ViewOptions().scanConsistency(ViewScanConsistency.RequestPlus)
+      )
       .get
 
     assert(viewResult.metaData.totalRows == 10)
@@ -144,9 +148,11 @@ class ViewSpec extends ScalaIntegrationTest {
     }
 
     val viewResult = bucket.reactive
-      .viewQuery(DesignDocName,
-                 ViewName,
-                 ViewOptions().scanConsistency(ViewScanConsistency.RequestPlus))
+      .viewQuery(
+        DesignDocName,
+        ViewName,
+        ViewOptions().scanConsistency(ViewScanConsistency.RequestPlus)
+      )
       .block()
 
     val rows = viewResult.rows.collectSeq.block()
