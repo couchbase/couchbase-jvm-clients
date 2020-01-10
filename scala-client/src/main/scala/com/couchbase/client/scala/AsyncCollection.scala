@@ -49,7 +49,13 @@ case class HandlerParams(
     bucketName: String,
     collectionIdentifier: CollectionIdentifier,
     env: ClusterEnvironment
-)
+) {
+  def tracer = env.coreEnv.requestTracer()
+}
+
+case class HandlerBasicParams(core: Core, env: ClusterEnvironment) {
+  def tracer = env.coreEnv.requestTracer()
+}
 
 /** Provides asynchronous access to all collection APIs, based around Scala `Future`s.  This is the main entry-point
   * for key-value (KV) operations.
@@ -134,7 +140,8 @@ class AsyncCollection(
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder
+      transcoder: Transcoder = environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     val req = insertHandler.request(
@@ -145,7 +152,8 @@ class AsyncCollection(
       timeoutActual,
       retryStrategy,
       transcoder,
-      serializer
+      serializer,
+      parentSpan
     )
     wrapWithDurability(req, id, insertHandler, durability, false, timeoutActual)
   }
@@ -161,7 +169,8 @@ class AsyncCollection(
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder
+      transcoder: Transcoder = environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     val req = replaceHandler.request(
@@ -173,7 +182,8 @@ class AsyncCollection(
       timeoutActual,
       retryStrategy,
       transcoder,
-      serializer
+      serializer,
+      parentSpan
     )
     wrapWithDurability(req, id, replaceHandler, durability, false, timeoutActual)
   }
@@ -214,10 +224,11 @@ class AsyncCollection(
       cas: Long = 0,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy
+      retryStrategy: RetryStrategy = environment.retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Future[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-    val req           = removeHandler.request(id, cas, durability, timeoutActual, retryStrategy)
+    val req           = removeHandler.request(id, cas, durability, timeoutActual, retryStrategy, parentSpan)
     wrapWithDurability(req, id, removeHandler, durability, true, timeoutActual)
   }
 
@@ -230,14 +241,15 @@ class AsyncCollection(
       project: Seq[String] = Seq.empty,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder
+      transcoder: Transcoder = environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   ): Future[GetResult] = {
     if (project.nonEmpty) {
-      getSubDocHandler.requestProject(id, project, timeout, retryStrategy) match {
+      getSubDocHandler.requestProject(id, project, timeout, retryStrategy, parentSpan) match {
         case Success(request) =>
           core.send(request)
 
-          FutureConverters
+          val out = FutureConverters
             .toScala(request.response())
             .flatMap(response => {
               getSubDocHandler.responseProject(request, id, response, transcoder) match {
@@ -246,24 +258,35 @@ class AsyncCollection(
               }
             })
 
+          out.onComplete(_ => request.context.logicallyComplete())
+
+          out
+
         case Failure(err) => Future.failed(err)
       }
 
     } else if (withExpiry) {
-      getSubDoc(id, AsyncCollection.getFullDoc, withExpiry, timeout, retryStrategy, transcoder)
-        .map(
-          lookupInResult =>
-            GetResult(
-              id,
-              Left(lookupInResult.contentAs[Array[Byte]](0).get),
-              lookupInResult.flags,
-              lookupInResult.cas,
-              lookupInResult.expiry,
-              transcoder
-            )
-        )
+      getSubDoc(
+        id,
+        AsyncCollection.getFullDoc,
+        withExpiry,
+        timeout,
+        retryStrategy,
+        transcoder,
+        parentSpan
+      ).map(
+        lookupInResult =>
+          GetResult(
+            id,
+            Left(lookupInResult.contentAs[Array[Byte]](0).get),
+            lookupInResult.flags,
+            lookupInResult.cas,
+            lookupInResult.expiry,
+            transcoder
+          )
+      )
     } else {
-      getFullDoc(id, timeout, retryStrategy, transcoder)
+      getFullDoc(id, timeout, retryStrategy, transcoder, parentSpan)
     }
   }
 
@@ -271,9 +294,10 @@ class AsyncCollection(
       id: String,
       timeout: Duration,
       retryStrategy: RetryStrategy,
-      transcoder: Transcoder
+      transcoder: Transcoder,
+      parentSpan: Option[RequestSpan]
   ): Future[GetResult] = {
-    val req = getFullDocHandler.request(id, timeout, retryStrategy)
+    val req = getFullDocHandler.request(id, timeout, retryStrategy, parentSpan)
     AsyncCollection.wrapGet(req, id, getFullDocHandler, transcoder, core)
   }
 
@@ -283,18 +307,23 @@ class AsyncCollection(
       withExpiry: Boolean,
       timeout: Duration,
       retryStrategy: RetryStrategy,
-      transcoder: Transcoder
+      transcoder: Transcoder,
+      parentSpan: Option[RequestSpan]
   ): Future[LookupInResult] = {
-    val req = getSubDocHandler.request(id, spec, withExpiry, timeout, retryStrategy)
+    val req = getSubDocHandler.request(id, spec, withExpiry, timeout, retryStrategy, parentSpan)
     req match {
       case Success(request) =>
         core.send(request)
 
-        FutureConverters
+        val out = FutureConverters
           .toScala(request.response())
           .map(response => {
             getSubDocHandler.response(request, id, response, withExpiry, transcoder)
           })
+
+        out.onComplete(_ => request.context.logicallyComplete())
+
+        out
 
       case Failure(err) => Future.failed(err)
     }
@@ -314,6 +343,7 @@ class AsyncCollection(
       timeout: Duration = Duration.MinusInf,
       retryStrategy: RetryStrategy = environment.retryStrategy,
       transcoder: Transcoder = environment.transcoder,
+      parentSpan: Option[RequestSpan] = None,
       @Stability.Internal accessDeleted: Boolean = false
   ): Future[MutateInResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
@@ -327,7 +357,8 @@ class AsyncCollection(
       timeoutActual,
       retryStrategy,
       accessDeleted,
-      transcoder
+      transcoder,
+      parentSpan
     )
 
     req match {
@@ -337,6 +368,8 @@ class AsyncCollection(
         val out = FutureConverters
           .toScala(request.response())
           .map(response => mutateInHandler.response(request, id, document, response))
+
+        out.onComplete(_ => request.context.logicallyComplete())
 
         durability match {
           case ClientVerified(replicateTo, persistTo) =>
@@ -380,9 +413,10 @@ class AsyncCollection(
       lockTime: Duration = 30.seconds,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder
+      transcoder: Transcoder = environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   ): Future[GetResult] = {
-    val req = getAndLockHandler.request(id, lockTime, timeout, retryStrategy)
+    val req = getAndLockHandler.request(id, lockTime, timeout, retryStrategy, parentSpan)
     AsyncCollection.wrapGet(req, id, getAndLockHandler, transcoder, core)
   }
 
@@ -393,9 +427,10 @@ class AsyncCollection(
       id: String,
       cas: Long,
       timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy
+      retryStrategy: RetryStrategy = environment.retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Future[Unit] = {
-    val req = unlockHandler.request(id, cas, timeout, retryStrategy)
+    val req = unlockHandler.request(id, cas, timeout, retryStrategy, parentSpan)
     wrap(req, id, unlockHandler)
   }
 
@@ -407,9 +442,10 @@ class AsyncCollection(
       expiry: Duration,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder
+      transcoder: Transcoder = environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   ): Future[GetResult] = {
-    val in = getAndTouchHandler.request(id, expiry, timeout, retryStrategy)
+    val in = getAndTouchHandler.request(id, expiry, timeout, retryStrategy, parentSpan)
     AsyncCollection.wrapGet(in, id, getAndTouchHandler, transcoder, core)
   }
 
@@ -423,9 +459,10 @@ class AsyncCollection(
       withExpiry: Boolean = false,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder
+      transcoder: Transcoder = environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   ): Future[LookupInResult] = {
-    getSubDoc(id, spec, withExpiry, timeout, retryStrategy, transcoder)
+    getSubDoc(id, spec, withExpiry, timeout, retryStrategy, transcoder, parentSpan)
   }
 
   /** Retrieves any available version of the document.
@@ -435,9 +472,10 @@ class AsyncCollection(
       id: String,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder
+      transcoder: Transcoder = environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   ): Future[GetReplicaResult] = {
-    getAllReplicas(id, timeout, retryStrategy, transcoder).take(1).head
+    getAllReplicas(id, timeout, retryStrategy, transcoder, parentSpan).take(1).head
   }
 
   /** Retrieves all available versions of the document.
@@ -447,9 +485,11 @@ class AsyncCollection(
       id: String,
       timeout: Duration = kvReadTimeout,
       retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder
+      transcoder: Transcoder = environment.transcoder,
+      parentSpan: Option[RequestSpan] = None
   ): Seq[Future[GetReplicaResult]] = {
-    val reqsTry: Try[Seq[GetRequest]] = getFromReplicaHandler.requestAll(id, timeout, retryStrategy)
+    val reqsTry: Try[Seq[GetRequest]] =
+      getFromReplicaHandler.requestAll(id, timeout, retryStrategy, parentSpan)
 
     reqsTry match {
       case Failure(err) => Seq(Future.failed(err))
@@ -458,7 +498,7 @@ class AsyncCollection(
         reqs.map(request => {
           core.send(request)
 
-          FutureConverters
+          val out = FutureConverters
             .toScala(request.response())
             .flatMap(response => {
               val isReplica = request match {
@@ -472,6 +512,9 @@ class AsyncCollection(
                   Future.failed(new DocumentNotFoundException(ctx))
               }
             })
+
+          out.onComplete(_ => request.context.logicallyComplete())
+          out
         })
     }
   }
@@ -482,9 +525,10 @@ class AsyncCollection(
   def exists(
       id: String,
       timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy
+      retryStrategy: RetryStrategy = environment.retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Future[ExistsResult] = {
-    val req = existsHandler.request(id, timeout, retryStrategy)
+    val req = existsHandler.request(id, timeout, retryStrategy, parentSpan)
     wrap(req, id, existsHandler)
   }
 
@@ -495,9 +539,10 @@ class AsyncCollection(
       id: String,
       expiry: Duration,
       timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = retryStrategy
+      retryStrategy: RetryStrategy = retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Future[MutationResult] = {
-    val req = touchHandler.request(id, expiry, timeout, retryStrategy)
+    val req = touchHandler.request(id, expiry, timeout, retryStrategy, parentSpan)
     wrap(req, id, touchHandler)
   }
 }
@@ -538,11 +583,15 @@ object AsyncCollection {
       case Success(request) =>
         core.send(request)
 
-        FutureConverters
+        val out = FutureConverters
           .toScala(request.response())
           .map(response => {
             handler.response(request, id, response, transcoder)
           })
+
+        out.onComplete(_ => request.context.logicallyComplete())
+
+        out
 
       case Failure(err) => Future.failed(err)
     }
@@ -562,6 +611,8 @@ object AsyncCollection {
         val out = FutureConverters
           .toScala(request.response())
           .map(response => handler.response(request, id, response, transcoder))
+
+        out.onComplete(_ => request.context.logicallyComplete())
 
         out
 

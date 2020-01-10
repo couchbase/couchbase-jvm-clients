@@ -41,7 +41,9 @@ object ManagerUtil {
   def sendRequest(core: Core, request: GenericManagerRequest): SMono[GenericManagerResponse] = {
     SMono.defer(() => {
       core.send(request)
-      FutureConversions.javaCFToScalaMono(request, request.response, true)
+      FutureConversions
+        .javaCFToScalaMono(request, request.response, true)
+        .doOnTerminate(() => request.context().logicallyComplete())
     })
   }
 

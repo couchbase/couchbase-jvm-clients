@@ -54,6 +54,11 @@
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
+                <artifactId>scala-client_2.12</artifactId>
+                <version>1.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.couchbase.client</groupId>
                 <artifactId>test-utils</artifactId>
                 <version>1.0.1-SNAPSHOT</version>
             </dependency>
@@ -61,6 +66,11 @@
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>scala-implicits_${scala.compat.version}</artifactId>
                 <version>1.0.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.couchbase.client</groupId>
+                <artifactId>tracing-opentelemetry</artifactId>
+                <version>0.3.0-SNAPSHOT</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

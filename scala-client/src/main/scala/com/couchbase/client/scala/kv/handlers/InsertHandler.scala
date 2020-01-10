@@ -16,9 +16,10 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error.context.KeyValueErrorContext
 import com.couchbase.client.core.error.{DocumentExistsException, EncodingFailureException}
-import com.couchbase.client.core.msg.{Request, ResponseStatus}
+import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{InsertRequest, InsertResponse, KeyValueRequest}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
@@ -48,7 +49,8 @@ private[scala] class InsertHandler(hp: HandlerParams)
       timeout: java.time.Duration,
       retryStrategy: RetryStrategy,
       transcoder: Transcoder,
-      serializer: JsonSerializer[T]
+      serializer: JsonSerializer[T],
+      parentSpan: Option[RequestSpan]
   ): Try[InsertRequest] = {
 
     val validations: Try[InsertRequest] = for {
@@ -58,32 +60,43 @@ private[scala] class InsertHandler(hp: HandlerParams)
       _ <- Validate.notNull(expiration, "expiration")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
       validations
     } else {
+      val span  = hp.tracer.internalSpan(InsertRequest.OPERATION_NAME, parentSpan.orNull)
+      val start = System.nanoTime()
+      span.startPayloadEncoding()
+
       val encoded: Try[EncodedValue] = transcoder match {
         case x: TranscoderWithSerializer    => x.encode(content, serializer)
         case x: TranscoderWithoutSerializer => x.encode(content)
       }
 
+      span.stopPayloadEncoding()
+      val end = System.nanoTime()
+
       encoded match {
         case Success(en) =>
-          Success(
-            new InsertRequest(
-              id,
-              en.encoded,
-              expiration.getSeconds,
-              en.flags,
-              timeout,
-              hp.core.context(),
-              hp.collectionIdentifier,
-              retryStrategy,
-              durability.toDurabilityLevel,
-              null /* todo: add rto */
-            )
+          val out = new InsertRequest(
+            id,
+            en.encoded,
+            expiration.getSeconds,
+            en.flags,
+            timeout,
+            hp.core.context(),
+            hp.collectionIdentifier,
+            retryStrategy,
+            durability.toDurabilityLevel,
+            span
           )
+          out
+            .context()
+            .encodeLatency(end - start)
+          Success(out)
+
         case Failure(err) =>
           Failure(new EncodingFailureException(err))
       }

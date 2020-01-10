@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.error.context.KeyValueErrorContext
 import com.couchbase.client.core.msg.ResponseStatus
@@ -40,12 +41,14 @@ private[scala] class GetFullDocHandler(hp: HandlerParams)
   def request[T](
       id: String,
       timeout: java.time.Duration,
-      retryStrategy: RetryStrategy
+      retryStrategy: RetryStrategy,
+      parentSpan: Option[RequestSpan]
   ): Try[GetRequest] = {
     val validations: Try[GetRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
@@ -58,7 +61,7 @@ private[scala] class GetFullDocHandler(hp: HandlerParams)
           hp.core.context(),
           hp.collectionIdentifier,
           retryStrategy,
-          null /* todo: add rto */
+          hp.tracer.internalSpan(GetRequest.OPERATION_NAME, parentSpan.orNull)
         )
       )
     }

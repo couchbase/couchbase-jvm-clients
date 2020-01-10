@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{
   InsertResponse,
@@ -48,7 +49,8 @@ private[scala] class BinaryPrependHandler(hp: HandlerParams)
       cas: Long = 0,
       durability: Durability,
       timeout: java.time.Duration,
-      retryStrategy: RetryStrategy
+      retryStrategy: RetryStrategy,
+      parentSpan: Option[RequestSpan]
   ): Try[PrependRequest] = {
 
     val validations: Try[PrependRequest] = for {
@@ -58,6 +60,7 @@ private[scala] class BinaryPrependHandler(hp: HandlerParams)
       _ <- Validate.notNull(durability, "durability")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
@@ -73,7 +76,7 @@ private[scala] class BinaryPrependHandler(hp: HandlerParams)
           content,
           cas,
           durability.toDurabilityLevel,
-          null /* todo: rto */
+          hp.tracer.internalSpan(PrependRequest.OPERATION_NAME, parentSpan.orNull)
         )
       )
     }

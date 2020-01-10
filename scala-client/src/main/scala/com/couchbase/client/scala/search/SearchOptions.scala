@@ -15,12 +15,15 @@
  */
 package com.couchbase.client.scala.search
 
+import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.scala.analytics.AnalyticsOptions
 import com.couchbase.client.scala.json.{JsonArray, JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.search.facet.SearchFacet
 import com.couchbase.client.scala.search.queries._
-import com.couchbase.client.scala.search.result.{SearchRow, SearchResult}
+import com.couchbase.client.scala.search.result.{SearchResult, SearchRow}
 import com.couchbase.client.scala.search.sort.SearchSort
 
 import scala.concurrent.duration.Duration
@@ -41,8 +44,18 @@ case class SearchOptions(
     private[scala] val deferredError: Option[RuntimeException] = None,
     private[scala] val scanConsistency: Option[SearchScanConsistency] = None,
     private[scala] val timeout: Option[Duration] = None,
-    private[scala] val retryStrategy: Option[RetryStrategy] = None
+    private[scala] val retryStrategy: Option[RetryStrategy] = None,
+    private[scala] val parentSpan: Option[RequestSpan] = None
 ) {
+
+  /** Sets the parent `RequestSpan`.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  @Volatile
+  def parentSpan(value: RequestSpan): SearchOptions = {
+    copy(parentSpan = Some(value))
+  }
 
   /** Add a limit to the query on the number of rows it can return.
     *

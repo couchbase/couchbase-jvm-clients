@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error.context.{KeyValueErrorContext, ReducedKeyValueErrorContext}
 import com.couchbase.client.core.error.{
   CasMismatchException,
@@ -52,7 +53,8 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
       timeout: java.time.Duration,
       retryStrategy: RetryStrategy,
       accessDeleted: Boolean,
-      transcoder: Transcoder
+      transcoder: Transcoder,
+      parentSpan: Option[RequestSpan]
   ): Try[SubdocMutateRequest] = {
     val validations: Try[SubdocMutateRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
@@ -61,6 +63,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
       _ <- Validate.notNull(expiration, "expiration")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
@@ -92,6 +95,9 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
               SubdocMutateRequest.errIfTooManyCommands(ReducedKeyValueErrorContext.create(id))
             )
           } else {
+            // The encoding has already been done by this point
+            val span = hp.tracer.internalSpan(SubdocMutateRequest.OPERATION_NAME, parentSpan.orNull)
+
             Try(
               new SubdocMutateRequest(
                 timeout,
@@ -106,7 +112,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
                 expiration.getSeconds,
                 cas,
                 durability.toDurabilityLevel,
-                null /* todo: rto */
+                span
               )
             )
           }

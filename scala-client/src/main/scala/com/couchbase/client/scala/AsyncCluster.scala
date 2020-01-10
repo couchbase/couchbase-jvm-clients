@@ -73,12 +73,13 @@ class AsyncCluster(
   private[scala] val core =
     Core.create(environment.coreEnv, authenticator, seedNodes.map(_.toCore).asJava)
   private[scala] val env                        = environment
+  private[scala] val hp                         = HandlerBasicParams(core, env)
   private[scala] val searchTimeout              = javaDurationToScala(env.timeoutConfig.searchTimeout())
   private[scala] val analyticsTimeout           = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
   private[scala] val retryStrategy              = env.retryStrategy
-  private[scala] val queryHandler               = new QueryHandler(core)
-  private[scala] val analyticsHandler           = new AnalyticsHandler()
-  private[scala] val searchHandler              = new SearchHandler()
+  private[scala] val queryHandler               = new QueryHandler(hp)
+  private[scala] val analyticsHandler           = new AnalyticsHandler(hp)
+  private[scala] val searchHandler              = new SearchHandler(hp)
   private[scala] lazy val reactiveUserManager   = new ReactiveUserManager(core)
   private[scala] lazy val reactiveBucketManager = new ReactiveBucketManager(core)
   private[scala] lazy val reactiveAnalyticsIndexManager = new ReactiveAnalyticsIndexManager(
@@ -184,6 +185,7 @@ class AsyncCluster(
           )
           .toFuture
 
+        ret.onComplete(_ => request.context.logicallyComplete())
         ret
 
       case Failure(err) => Future.failed(err)
@@ -307,7 +309,9 @@ object AsyncCluster {
       })
   }
 
-  private[client] def searchQuery(request: SearchRequest, core: Core): Future[SearchResult] = {
+  private[client] def searchQuery(request: SearchRequest, core: Core)(
+      implicit ec: ExecutionContext
+  ): Future[SearchResult] = {
     core.send(request)
 
     val ret: Future[SearchResult] =
@@ -335,6 +339,7 @@ object AsyncCluster {
               )
         )
         .toFuture
+    ret.onComplete(_ => request.context.logicallyComplete())
 
     ret
   }

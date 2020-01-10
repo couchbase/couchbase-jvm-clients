@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
@@ -41,7 +42,8 @@ private[scala] class RemoveHandler(hp: HandlerParams)
       cas: Long,
       durability: Durability,
       timeout: java.time.Duration,
-      retryStrategy: RetryStrategy
+      retryStrategy: RetryStrategy,
+      parentSpan: Option[RequestSpan]
   ): Try[RemoveRequest] = {
     val validations: Try[RemoveRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
@@ -49,11 +51,13 @@ private[scala] class RemoveHandler(hp: HandlerParams)
       _ <- Validate.notNull(durability, "durability")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
       validations
     } else {
+
       Success(
         new RemoveRequest(
           id,
@@ -63,7 +67,7 @@ private[scala] class RemoveHandler(hp: HandlerParams)
           hp.collectionIdentifier,
           retryStrategy,
           durability.toDurabilityLevel,
-          null /* todo: add rto */
+          hp.tracer.internalSpan(RemoveRequest.OPERATION_NAME, parentSpan.orNull)
         )
       )
     }

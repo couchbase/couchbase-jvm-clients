@@ -60,7 +60,7 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
   ): Future[SearchIndex] = {
     val request = getIndexRequest(indexName, timeout, retryStrategy)
     core.send(request)
-    request.response.toScala
+    val out = request.response.toScala
       .map((response: GenericSearchResponse) => {
         val read = CouchbasePickler.read[SearchIndexWrapper](response.content())
         read.indexDef.copy(numPlanPIndexes = read.numPlanPIndexes)
@@ -71,6 +71,8 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
           Failure(new IndexNotFoundException(indexName))
         } else Failure(err)
     }
+    out.onComplete(_ => request.context.logicallyComplete())
+    out
   }
 
   def getAllIndexes(
@@ -80,10 +82,12 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
     val request = searchRequest(HttpMethod.GET, indexesPath, timeout, retryStrategy)
 
     core.send(request)
-    request.response.toScala
+    val out = request.response.toScala
       .map((response: GenericSearchResponse) => {
         AsyncSearchIndexManager.parseIndexes(response.content())
       })
+    out.onComplete(_ => request.context.logicallyComplete())
+    out
   }
 
   def upsertIndex(
@@ -107,9 +111,10 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
     val request = searchRequest(req, idempotent = false, timeout, retryStrategy)
 
     core.send(request)
-    request.response.toScala
+    val out = request.response.toScala
       .transform[GenericSearchResponse](transformer(indexDefinition.name))
-      .map(_ => Unit)
+    out.onComplete(_ => request.context.logicallyComplete())
+    out.map(_ => Unit)
   }
 
   def dropIndex(
@@ -121,6 +126,7 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
 
     core.send(request)
     val out = request.response.toScala
+    out.onComplete(_ => request.context.logicallyComplete())
     out
       .transform[GenericSearchResponse](transformer(indexName))
       .map(_ => Unit)

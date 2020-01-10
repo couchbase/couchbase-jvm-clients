@@ -38,6 +38,7 @@ import org.mockito.Mockito._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+import concurrent.ExecutionContext.Implicits.global
 
 /**
   * Mocks out the search code to allow doing unit tests against the search service.

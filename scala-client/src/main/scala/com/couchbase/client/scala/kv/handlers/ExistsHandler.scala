@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{
   GetMetaRequest,
@@ -42,12 +43,14 @@ private[scala] class ExistsHandler(hp: HandlerParams)
   def request(
       id: String,
       timeout: java.time.Duration,
-      retryStrategy: RetryStrategy
+      retryStrategy: RetryStrategy,
+      parentSpan: Option[RequestSpan]
   ): Try[GetMetaRequest] = {
     val validations: Try[GetMetaRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
@@ -60,7 +63,7 @@ private[scala] class ExistsHandler(hp: HandlerParams)
           hp.core.context(),
           hp.collectionIdentifier,
           retryStrategy,
-          null /* todo: add rto */
+          hp.tracer.internalSpan(GetMetaRequest.OPERATION_NAME_EXISTS, parentSpan.orNull)
         )
       )
   }

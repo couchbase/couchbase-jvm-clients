@@ -149,6 +149,7 @@ class ReactiveCluster(val async: AsyncCluster) {
                     AnalyticsStatus.from(trailer.status)
                   )
                 })
+                .doOnTerminate(() => request.context().logicallyComplete())
 
               val rows = FutureConversions.javaFluxToScalaFlux(response.rows())
 
@@ -207,6 +208,7 @@ class ReactiveCluster(val async: AsyncCluster) {
                 meta
               )
             })
+            .doOnTerminate(() => request.context().logicallyComplete())
         })
 
       case Failure(err) =>

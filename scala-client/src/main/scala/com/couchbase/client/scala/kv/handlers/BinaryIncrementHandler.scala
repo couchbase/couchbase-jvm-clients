@@ -18,6 +18,7 @@ package com.couchbase.client.scala.kv.handlers
 
 import java.util.Optional
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{IncrementRequest, IncrementResponse, KeyValueRequest}
 import com.couchbase.client.core.retry.RetryStrategy
@@ -47,7 +48,8 @@ private[scala] class BinaryIncrementHandler(hp: HandlerParams)
       durability: Durability,
       expiration: java.time.Duration,
       timeout: java.time.Duration,
-      retryStrategy: RetryStrategy
+      retryStrategy: RetryStrategy,
+      parentSpan: Option[RequestSpan]
   ): Try[IncrementRequest] = {
 
     val validations: Try[IncrementRequest] = for {
@@ -58,6 +60,7 @@ private[scala] class BinaryIncrementHandler(hp: HandlerParams)
       _ <- Validate.notNull(durability, "durability")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
@@ -80,7 +83,7 @@ private[scala] class BinaryIncrementHandler(hp: HandlerParams)
           i,
           expiration.getSeconds.toInt,
           durability.toDurabilityLevel,
-          null /* todo: rto */
+          hp.tracer.internalSpan(IncrementRequest.OPERATION_NAME, parentSpan.orNull)
         )
       )
     }

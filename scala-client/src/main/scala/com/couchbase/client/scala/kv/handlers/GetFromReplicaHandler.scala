@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.config.CouchbaseBucketConfig
 import com.couchbase.client.core.error.CommonExceptions
 import com.couchbase.client.core.msg.ResponseStatus
@@ -44,12 +45,14 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
   def requestAll[T](
       id: String,
       timeout: java.time.Duration,
-      retryStrategy: RetryStrategy
+      retryStrategy: RetryStrategy,
+      parentSpan: Option[RequestSpan]
   ): Try[Seq[GetRequest]] = {
     val validations: Try[Seq[GetRequest]] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
@@ -69,7 +72,7 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
                   hp.collectionIdentifier,
                   retryStrategy,
                   (replicaIndex + 1).shortValue(),
-                  null /* todo: add rto */
+                  hp.tracer.internalSpan(ReplicaGetRequest.OPERATION_NAME, parentSpan.orNull)
                 )
             )
 
@@ -80,7 +83,7 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
               hp.core.context(),
               hp.collectionIdentifier,
               retryStrategy,
-              null /* todo: add rto */
+              hp.tracer.internalSpan(GetRequest.OPERATION_NAME, parentSpan.orNull)
             )
 
           val requests: Seq[GetRequest] = activeRequest +: replicaRequests

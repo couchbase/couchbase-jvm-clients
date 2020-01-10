@@ -37,6 +37,11 @@
         </dependency>
         <dependency>
             <groupId>com.couchbase.client</groupId>
+            <artifactId>scala-client_2.12</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.couchbase.client</groupId>
             <artifactId>test-utils</artifactId>
             <scope>test</scope>
         </dependency>
@@ -145,6 +150,7 @@
             <properties>
                 <!-- by default, add also the int tests -->
                 <test-source-directory>src/integrationTest/java</test-source-directory>
+                <test-source-directory>src/integrationTest/scala</test-source-directory>
                 <test-resource-directory>src/integrationTest/resources</test-resource-directory>
             </properties>
         </profile>

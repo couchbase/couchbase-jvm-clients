@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.api.{CounterResult, MutationResult}
 import com.couchbase.client.scala.durability.Durability
@@ -63,11 +64,20 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       cas: Long = 0,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy
+      retryStrategy: RetryStrategy = environment.retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Future[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     val req =
-      binaryAppendHandler.request(id, content, cas, durability, timeoutActual, retryStrategy)
+      binaryAppendHandler.request(
+        id,
+        content,
+        cas,
+        durability,
+        timeoutActual,
+        retryStrategy,
+        parentSpan
+      )
     async.wrapWithDurability(req, id, binaryAppendHandler, durability, false, timeoutActual)
   }
 
@@ -81,11 +91,20 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       cas: Long = 0,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy
+      retryStrategy: RetryStrategy = environment.retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Future[MutationResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     val req =
-      binaryPrependHandler.request(id, content, cas, durability, timeoutActual, retryStrategy)
+      binaryPrependHandler.request(
+        id,
+        content,
+        cas,
+        durability,
+        timeoutActual,
+        retryStrategy,
+        parentSpan
+      )
     async.wrapWithDurability(req, id, binaryPrependHandler, durability, false, timeoutActual)
   }
 
@@ -101,7 +120,8 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       durability: Durability = Disabled,
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy
+      retryStrategy: RetryStrategy = environment.retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Future[CounterResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     val req = binaryIncrementHandler.request(
@@ -112,7 +132,8 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       durability,
       expiry,
       timeoutActual,
-      retryStrategy
+      retryStrategy,
+      parentSpan
     )
     async.wrapWithDurability(req, id, binaryIncrementHandler, durability, false, timeoutActual)
   }
@@ -129,7 +150,8 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       durability: Durability = Disabled,
       expiry: Duration = 0.seconds,
       timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy
+      retryStrategy: RetryStrategy = environment.retryStrategy,
+      parentSpan: Option[RequestSpan] = None
   ): Future[CounterResult] = {
     val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
 
@@ -141,7 +163,8 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       durability,
       expiry,
       timeoutActual,
-      retryStrategy
+      retryStrategy,
+      parentSpan
     )
     async.wrapWithDurability(req, id, binaryDecrementHandler, durability, false, timeoutActual)
   }

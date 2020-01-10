@@ -18,6 +18,8 @@ package com.couchbase.client.scala.query
 
 import java.util.UUID
 
+import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.logging.RedactableArgument.redactUser
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.retry.RetryStrategy
@@ -28,7 +30,6 @@ import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.collection.GenMap
 import scala.concurrent.duration.Duration
-import scala.util.Success
 
 /** Customize the execution of a N1QL query.
   *
@@ -52,8 +53,18 @@ case class QueryOptions(
     private[scala] val consistentWith: Option[Seq[MutationToken]] = None,
     private[scala] val timeout: Option[Duration] = None,
     private[scala] val adhoc: Boolean = true,
-    private[scala] val deferredException: Option[RuntimeException] = None
+    private[scala] val deferredException: Option[RuntimeException] = None,
+    private[scala] val parentSpan: Option[RequestSpan] = None
 ) {
+
+  /** Sets the parent `RequestSpan`.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  @Volatile
+  def parentSpan(value: RequestSpan): QueryOptions = {
+    copy(parentSpan = Some(value))
+  }
 
   /** Provides named parameters for queries parameterised that way.
     *

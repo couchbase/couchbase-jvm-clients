@@ -16,8 +16,14 @@
 
 package com.couchbase.client.scala.kv.handlers
 
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{AppendRequest, AppendResponse, KeyValueRequest}
+import com.couchbase.client.core.msg.kv.{
+  AppendRequest,
+  AppendResponse,
+  KeyValueRequest,
+  UpsertRequest
+}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.api.MutationResult
@@ -43,7 +49,8 @@ private[scala] class BinaryAppendHandler(hp: HandlerParams)
       cas: Long = 0,
       durability: Durability,
       timeout: java.time.Duration,
-      retryStrategy: RetryStrategy
+      retryStrategy: RetryStrategy,
+      parentSpan: Option[RequestSpan]
   ): Try[AppendRequest] = {
 
     val validations: Try[AppendRequest] = for {
@@ -53,6 +60,7 @@ private[scala] class BinaryAppendHandler(hp: HandlerParams)
       _ <- Validate.notNull(durability, "durability")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
+      _ <- Validate.notNull(parentSpan, "parentSpan")
     } yield null
 
     if (validations.isFailure) {
@@ -68,7 +76,7 @@ private[scala] class BinaryAppendHandler(hp: HandlerParams)
           content,
           cas,
           durability.toDurabilityLevel,
-          null /* todo: rto */
+          hp.tracer.internalSpan(AppendRequest.OPERATION_NAME, parentSpan.orNull)
         )
       )
     }
