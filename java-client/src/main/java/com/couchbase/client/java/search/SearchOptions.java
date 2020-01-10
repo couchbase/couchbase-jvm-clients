@@ -18,7 +18,6 @@ package com.couchbase.client.java.search;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonArray;
@@ -30,9 +29,10 @@ import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.search.sort.SearchSort;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
+
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 public class SearchOptions extends CommonOptions<SearchOptions> {
 
@@ -47,12 +47,36 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   private Map<String, SearchFacet> facets;
   private String[] fields;
   private JsonSerializer serializer;
+  private Map<String, Object> raw;
 
   public static SearchOptions searchOptions() {
     return new SearchOptions();
   }
 
   private SearchOptions() {
+  }
+
+  /**
+   * Allows providing custom JSON key/value pairs for advanced usage.
+   * <p>
+   * If available, it is recommended to use the methods on this object to customize the search query. This method should
+   * only be used if no such setter can be found (i.e. if an undocumented property should be set or you are using
+   * an older client and a new server-configuration property has been added to the cluster).
+   * <p>
+   * Note that the value will be passed through a JSON encoder, so do not provide already encoded JSON as the value. If
+   * you want to pass objects or arrays, you can use {@link JsonObject} and {@link JsonArray} respectively.
+   *
+   * @param key the parameter name (key of the JSON property)  or empty.
+   * @param value the parameter value (value of the JSON property).
+   * @return the same {@link QueryOptions} for chaining purposes.
+   */
+  public SearchOptions raw(final String key, final Object value) {
+    notNullOrEmpty(key, "Key");
+    if (raw == null) {
+      raw = new HashMap<>();
+    }
+    raw.put(key, value);
+    return this;
   }
 
   /**
@@ -314,6 +338,12 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
       //if any control was set, inject it
       if (!control.isEmpty()) {
         queryJson.put("ctl", control);
+      }
+
+      if (raw != null) {
+        for (Map.Entry<String, Object> entry : raw.entrySet()) {
+          queryJson.put(entry.getKey(), entry.getValue());
+        }
       }
     }
 
