@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.GetResponse;
@@ -83,8 +84,8 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   private Set<SeedNode> secureSeeds() {
     return config().nodes().stream().map(cfg -> SeedNode.create(
       cfg.hostname(),
-      Optional.of(cfg.ports().get(Services.KV_TLS)),
-      Optional.of(cfg.ports().get(Services.MANAGER_TLS))
+      Optional.ofNullable(cfg.ports().get(Services.KV_TLS)),
+      Optional.ofNullable(cfg.ports().get(Services.MANAGER_TLS))
     )).collect(Collectors.toSet());
   }
 
@@ -166,14 +167,14 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   @Test
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void failsIfNoTrustPresent() {
-    assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig.enableTls(true), null));
+    assertThrows(InvalidArgumentException.class, () -> secureEnvironment(SecurityConfig.enableTls(true), null));
   }
 
   @Test
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   @SuppressWarnings("unchecked")
   void failsIfMoreThanOneTrustPresent() {
-    assertThrows(IllegalArgumentException.class, () -> secureEnvironment(SecurityConfig
+    assertThrows(InvalidArgumentException.class, () -> secureEnvironment(SecurityConfig
       .enableTls(true)
       .trustManagerFactory(mock(TrustManagerFactory.class))
       .trustCertificates(mock(List.class)), null)

@@ -76,7 +76,7 @@ class SyncReplicationIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(),
+      Duration.ofSeconds(2), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(),
       Optional.of(DurabilityLevel.MAJORITY), null);
     core.send(upsertRequest);
 
