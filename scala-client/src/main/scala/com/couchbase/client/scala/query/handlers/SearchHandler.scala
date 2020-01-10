@@ -17,15 +17,19 @@
 package com.couchbase.client.scala.query.handlers
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.msg.search.{SearchChunkTrailer, SearchRequest, SearchResponse}
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.json.{JsonArray, JsonObject, JsonObjectSafe}
+import com.couchbase.client.scala.json.JsonObjectSafe
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
-import com.couchbase.client.scala.search.result.{SearchMetaData, SearchMetrics}
+import com.couchbase.client.scala.search.result.SearchFacetResult._
+import com.couchbase.client.scala.search.result.{SearchFacetResult, SearchMetaData, SearchMetrics}
 import com.couchbase.client.scala.transformers.JacksonTransformers
-import com.couchbase.client.scala.util.{DurationConversions, Validate}
+import com.couchbase.client.scala.util.{CouchbasePickler, DurationConversions, Validate}
 
 import scala.collection.GenMap
 import scala.concurrent.duration.Duration
@@ -131,6 +135,58 @@ object SearchHandler {
           SearchMetrics(Duration.Zero, 0, 0, 0, 0, 0),
           Map.empty[String, String]
         )
+    }
+  }
+
+  private[scala] def parseSearchFacets(
+      trailer: SearchChunkTrailer
+  ): Map[String, SearchFacetResult] = {
+    val rawFacets = trailer.facets()
+    if (rawFacets == null || rawFacets.isEmpty) {
+      Map.empty
+    } else {
+
+      val tree: ujson.Value = ujson.read(rawFacets)
+      val facets            = collection.mutable.Map.empty[String, SearchFacetResult]
+
+      tree match {
+        case x: ujson.Obj =>
+          x.value.foreach(kv => {
+            val key        = kv._1
+            val entry      = kv._2
+            val facetEntry = entry.asInstanceOf[ujson.Obj]
+
+            val field   = facetEntry.value("field").str
+            val total   = facetEntry.value("total").num.longValue()
+            val missing = facetEntry.value("missing").num.longValue()
+            val other   = facetEntry.value("other").num.longValue()
+
+            facetEntry.value.get("numeric_ranges") match {
+              case Some(tr) =>
+                val ranges = CouchbasePickler.read[Seq[NumericRange]](tr)
+                val result =
+                  NumericRangeSearchFacetResult(key, field, total, missing, other, ranges)
+                facets += key -> result
+              case _ =>
+                facetEntry.value.get("date_ranges") match {
+                  case Some(tr) =>
+                    val ranges = CouchbasePickler.read[Seq[DateRange]](tr)
+                    val result =
+                      DateRangeSearchFacetResult(key, field, total, missing, other, ranges)
+                    facets += key -> result
+                  case _ =>
+                    val terms = facetEntry.value.get("terms") match {
+                      case Some(tr) => CouchbasePickler.read[Seq[TermRange]](tr)
+                      case _        => Seq.empty
+                    }
+                    val result = TermSearchFacetResult(key, field, total, missing, other, terms)
+                    facets += key -> result
+                }
+            }
+          })
+        case _ =>
+      }
+      facets.toMap
     }
   }
 }

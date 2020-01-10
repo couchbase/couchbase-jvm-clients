@@ -50,6 +50,7 @@ case class ViewOptions(
     private[scala] val timeout: Option[Duration] = None,
     private[scala] val scanConsistency: Option[ViewScanConsistency] = None
 ) {
+
   /** Sets in which namespace the view exists.
     *
     * @return this for further chaining
@@ -169,7 +170,6 @@ case class ViewOptions(
     copy(endKeyDocId = Some(value))
   }
 
-
   /** Specifies the key to stop returning results at.
     *
     * @return this for further chaining
@@ -203,7 +203,7 @@ case class ViewOptions(
     values.foreach(v => {
       arr.add(v match {
         case x: String => '"' + x + '"'
-        case _ => v.toString
+        case _         => v.toString
       })
     })
     copy(keys = Some(arr.toString))

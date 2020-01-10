@@ -328,6 +328,7 @@ object AsyncCluster {
                       trailer =>
                         SearchResult(
                           rows,
+                          SearchHandler.parseSearchFacets(trailer),
                           SearchHandler.parseSearchMeta(response, trailer)
                         )
                     )

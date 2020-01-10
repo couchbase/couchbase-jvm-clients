@@ -40,8 +40,8 @@ class SearchSpec {
       "facet1" -> SearchFacet.TermFacet("field1", Some(10)),
       "facet2" -> SearchFacet.NumericRangeFacet(
         "field2",
-        Some(10),
-        Seq(NumericRange("range1", Some(10), Some(20)), NumericRange("range2", Some(20), None))
+        Seq(NumericRange("range1", Some(10), Some(20)), NumericRange("range2", Some(20), None)),
+        Some(10)
       ),
       "facet3" -> SearchFacet.DateRangeFacet(
         "field3",

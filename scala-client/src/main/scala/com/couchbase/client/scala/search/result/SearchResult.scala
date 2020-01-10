@@ -36,7 +36,7 @@ import scala.util.{Failure, Success, Try}
   */
 case class SearchResult(
     private[scala] val _rows: Seq[SearchRow],
-    // facets: Map[String, SearchFacetResult],
+    facets: Map[String, SearchFacetResult],
     metaData: SearchMetaData
 ) {
 
@@ -55,6 +55,6 @@ case class SearchResult(
   */
 case class ReactiveSearchResult(
     rows: SFlux[SearchRow],
-    // facets: SMono[Map[String, SearchFacetResult]],
+    facets: SMono[Map[String, SearchFacetResult]],
     meta: SMono[SearchMetaData]
 )

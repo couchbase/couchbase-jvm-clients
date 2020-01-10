@@ -21,7 +21,15 @@ import java.time.Duration
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.MutationState
 import com.couchbase.client.scala.manager.search.SearchIndex
+import com.couchbase.client.scala.search.facet.SearchFacet
+import com.couchbase.client.scala.search.facet.SearchFacet.{DateRange, NumericRange}
 import com.couchbase.client.scala.search.queries.SearchQuery
+import com.couchbase.client.scala.search.result.SearchFacetResult.{
+  DateRangeSearchFacetResult,
+  NumericRangeSearchFacetResult,
+  TermRange,
+  TermSearchFacetResult
+}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection}
 import com.couchbase.client.test.{Capabilities, IgnoreWhen, Util}
@@ -32,7 +40,6 @@ import scala.util.{Failure, Success}
 
 @IgnoreWhen(missesCapabilities = Array(Capabilities.SEARCH))
 @TestInstance(Lifecycle.PER_CLASS)
-@Disabled // SCBC-156
 class SearchSpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster  = _
@@ -45,13 +52,47 @@ class SearchSpec extends ScalaIntegrationTest {
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
 
-    val result =
-      coll.insert("test", JsonObject("name" -> "John Smith", "address" -> "123 Fake Street")).get
+    val result1 =
+      coll
+        .upsert(
+          "test-1",
+          JsonObject(
+            "name"    -> "John Smith",
+            "address" -> "123 Fake Street",
+            "type"    -> "user",
+            "age"     -> 32,
+            "dob"     -> "2000-03-01T00:00:00"
+          )
+        )
+        .get
 
-    ms = MutationState(Seq(result.mutationToken.get))
+    val result2 =
+      coll
+        .upsert(
+          "test-2",
+          JsonObject(
+            "name"    -> "Richard Smith",
+            "address" -> "123 Fake Street",
+            "type"    -> "admin",
+            "age"     -> 27,
+            "dob"     -> "1995-03-01T00:00:00"
+          )
+        )
+        .get
+
+    ms = MutationState(Seq(result1.mutationToken.get, result2.mutationToken.get))
 
     val index = SearchIndex(indexName, config.bucketname)
     cluster.searchIndexes.upsertIndex(index).get
+    Util.waitUntilCondition(() => {
+      val fetched = cluster.searchIndexes.getIndex(indexName).get
+      fetched.numPlanPIndexes > 0
+    })
+
+    // Despite the above wait for numPlanPIndexes, still get "mismatched partition" errors intermittently without this sleep
+    // grahamp: at some point need to find a better solution, but spent enough time on it already. Advice from FTS team
+    // is already implemented (poll until getIndex returns success).
+    Thread.sleep(15000)
   }
 
   private def indexName = "idx-" + config.bucketname
@@ -64,27 +105,56 @@ class SearchSpec extends ScalaIntegrationTest {
 
   @Test
   def simple() {
-    // The wait is to try and get around an issue on CI where the search service repeatedly returns
-    // "pindex not available" errors
-    Util.waitUntilCondition(
-      () => {
-        cluster.searchQuery(
-          indexName,
-          SearchQuery.matchPhrase("John Smith"),
-          SearchOptions().scanConsistency(SearchScanConsistency.ConsistentWith(ms))
-        ) match {
-          case Success(result) =>
-            result.metaData.errors.foreach(err => println(s"Err: ${err}"))
-            println(s"Rows: ${result.rows}")
-            1 == result.rows.size && result.rows.head.id == "test"
-          case Failure(ex) =>
-            println(ex.getMessage)
-            Thread.sleep(500) // let's also sleep a bit longer in between to give the server
-            // a chance to recover ...
-            false
-        }
-      },
-      Duration.ofMinutes(5)
-    )
+    cluster.searchQuery(
+      indexName,
+      SearchQuery.matchPhrase("John Smith"),
+      SearchOptions().scanConsistency(SearchScanConsistency.ConsistentWith(ms))
+    ) match {
+      case Success(result) =>
+        println(result)
+
+        result.metaData.errors.foreach(err => println(s"Err: ${err}"))
+        println(s"Rows: ${result.rows}")
+        assert(1 == result.rows.size)
+      case Failure(ex) =>
+        println(ex.getMessage)
+        assert(false)
+    }
   }
+
+  @Test
+  def facets() {
+    cluster.searchQuery(
+      indexName,
+      SearchQuery.matchPhrase("Smith"),
+      SearchOptions()
+        .scanConsistency(SearchScanConsistency.ConsistentWith(ms))
+        .facets(
+          Map(
+            "type_facet" -> SearchFacet.TermFacet("type", Some(10))
+          )
+        )
+    ) match {
+      case Success(result) =>
+        println(result)
+        println(result.facets)
+        assert(result.facets.nonEmpty)
+
+        result.facets("type_facet") match {
+          case TermSearchFacetResult(name, field, total, missing, other, terms) =>
+            assert(name == "type_facet")
+            assert(field == "type")
+            assert(total == 2)
+            assert(missing == 0)
+            assert(other == 0)
+            assert(terms.toSet == Set(TermRange("user", 1), TermRange("admin", 1)))
+          case _ => assert(false)
+        }
+
+      case Failure(exception) =>
+        println(exception)
+        assert(false)
+    }
+  }
+
 }

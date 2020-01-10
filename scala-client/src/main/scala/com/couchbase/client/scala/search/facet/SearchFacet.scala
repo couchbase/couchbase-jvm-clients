@@ -55,8 +55,8 @@ object SearchFacet {
     */
   case class NumericRangeFacet(
       field: String,
-      size: Option[Int] = None,
-      numericRanges: Seq[NumericRange]
+      numericRanges: Seq[NumericRange],
+      size: Option[Int] = None
   ) extends SearchFacet {
 
     override def injectParams(queryJson: JsonObject): Unit = {

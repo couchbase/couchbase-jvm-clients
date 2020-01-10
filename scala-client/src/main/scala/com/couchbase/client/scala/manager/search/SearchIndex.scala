@@ -24,7 +24,15 @@ import com.couchbase.client.scala.util.CouchbasePickler
 
 import scala.util.{Failure, Try}
 
-private[scala] case class SearchIndexWrapper private (indexDef: SearchIndex)
+private[scala] case class SearchIndexWrapper private (
+    indexDef: SearchIndex,
+    planPIndexes: Option[Seq[ujson.Obj]]
+) {
+  def numPlanPIndexes = planPIndexes match {
+    case Some(v) => v.size
+    case _       => 0
+  }
+}
 
 private[scala] object SearchIndexWrapper {
   implicit val rw: CouchbasePickler.ReadWriter[SearchIndexWrapper] = CouchbasePickler.macroRW
@@ -47,7 +55,8 @@ case class SearchIndex private (
     @upickle.implicits.key("uuid") sourceUUID: Option[String] = None,
     private[scala] val sourceParams: Option[ujson.Obj] = None,
     sourceType: Option[String] = None,
-    private[scala] val planParams: Option[ujson.Obj] = None
+    private[scala] val planParams: Option[ujson.Obj] = None,
+    private[scala] val numPlanPIndexes: Int = 0
 ) {
   private val DefaultSouceType = "couchbase"
   private val DefaultType      = "fulltext-index"

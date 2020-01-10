@@ -237,7 +237,7 @@ case class SearchOptions(
   private def convertMutationTokens(tokens: Seq[MutationToken]): JsonObject = {
     val result = JsonObjectSafe.create
     for (token <- tokens) {
-      val tokenKey = token.partitionID.toString
+      val tokenKey = token.partitionID.toString + "/" + token.partitionUUID
 
       result.numLong(tokenKey) match {
         case Success(seqno) =>
