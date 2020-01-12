@@ -8,6 +8,7 @@
     <packaging>pom</packaging>
 
     <name>Couchbase JVM Client Parent</name>
+    <description>Parent POM for Couchbase JVM projects</description>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
