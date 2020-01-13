@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala.diagnostics
 
+import com.couchbase.client.core.diagnostics.{PingResult, PingState}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Bucket, Cluster}
@@ -23,17 +24,24 @@ import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, Igno
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
+
+import scala.collection.JavaConverters._
+import scala.concurrent.duration._
+
+
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
 class PingSpec extends ScalaIntegrationTest {
   private var cluster: Cluster   = _
   private var bucket: Bucket     = _
   private var bucketName: String = _
+
   @BeforeAll
   def setup(): Unit = {
     cluster = connectToCluster()
     bucketName = ClusterAwareIntegrationTest.config().bucketname()
     bucket = cluster.bucket(bucketName)
+    bucket.waitUntilReady(10 seconds)
   }
 
   @AfterAll
@@ -43,13 +51,9 @@ class PingSpec extends ScalaIntegrationTest {
 
   @Test
   def ping(): Unit = {
-    // TODO: Force a bucket connection. Needs to wait for bucket to be ready.
-    bucket.defaultCollection.get("does_not_exist")
-
-    /* val pr = bucket.ping().get
-    assert(!pr.services.isEmpty)
-    val psh = pr.services.stream.filter(_.`type` == ServiceType.KV).findFirst.get
-    assertTrue(psh.latency != 0)
-    assertEquals(PingServiceHealth.PingState.OK, psh.state)*/
+    val pr: PingResult = bucket.ping().get
+    assert(!pr.endpoints().isEmpty)
+    val psh = pr.endpoints().asScala(ServiceType.KV).get(0)
+    assertEquals(PingState.OK, psh.state)
   }
 }

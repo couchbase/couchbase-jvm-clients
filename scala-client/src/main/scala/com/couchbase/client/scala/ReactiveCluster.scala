@@ -20,19 +20,14 @@ import java.util.UUID
 import java.util.stream.Collectors
 
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diagnostics.DiagnosticsResult
+import com.couchbase.client.core.diagnostics.{ClusterState, DiagnosticsResult, PingResult}
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.AsyncCluster.{
-  extractClusterEnvironment,
-  seedNodesFromConnectionString
-}
+import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.scala.AsyncCluster.{extractClusterEnvironment, seedNodesFromConnectionString}
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.manager.analytics.{
-  AnalyticsIndexManager,
-  ReactiveAnalyticsIndexManager
-}
+import com.couchbase.client.scala.manager.analytics.{AnalyticsIndexManager, ReactiveAnalyticsIndexManager}
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
 import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
 import com.couchbase.client.scala.manager.search.ReactiveSearchIndexManager
@@ -42,7 +37,7 @@ import com.couchbase.client.scala.query.{ReactiveQueryResult, _}
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchMetaData, SearchRow}
-import com.couchbase.client.scala.util.FutureConversions
+import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions}
 import reactor.core.scala.publisher.SMono
 
 import scala.collection.JavaConverters._
@@ -247,9 +242,48 @@ class ReactiveCluster(val async: AsyncCluster) {
     *
     * @return a { @link DiagnosticsResult}
     */
-  @Stability.Volatile
   def diagnostics(reportId: String = UUID.randomUUID.toString): SMono[DiagnosticsResult] = {
     SMono.fromFuture(async.diagnostics(reportId))
+  }
+
+  /**
+    * Performs application-level ping requests with custom options against services in the Couchbase cluster.
+    *
+    * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
+    * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
+    * the functionality of both APIs as needed, which is [[.waitUntilReady} is doing in its
+    * implementation as well.
+    *
+    * @param reportId a custom report ID to be returned in the `PingResult`.  If none is provided, a unique one is
+    *                 automatically generated.
+    * @param serviceTypes the set of services to ping.  If empty, all possible services will be pinged.
+    * @param timeout the timeout to use for the operation
+    *
+    * @return the `PingResult` once complete.
+    */
+  def ping(serviceTypes: Set[ServiceType] = Set(),
+           reportId: Option[String] = None,
+           timeout: Option[Duration] = None,
+           retryStrategy: RetryStrategy = env.retryStrategy): SMono[PingResult] = {
+    SMono.fromFuture(async.ping(serviceTypes, reportId, timeout, retryStrategy))
+  }
+
+  /**
+    * Waits until the desired `ClusterState` is reached.
+    *
+    * This method will wait until either the cluster state is "online", or the timeout is reached. Since the SDK is
+    * bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
+    * and usable before moving on.
+    *
+    * @param timeout the maximum time to wait until readiness.
+    * @param desiredState the cluster state to wait for, usually ONLINE.
+    * @param serviceTypes the set of service types to check, if empty all services found in the cluster config will be
+    *                     checked.
+    */
+  def waitUntilReady(timeout: Duration,
+                     desiredState: ClusterState = ClusterState.ONLINE,
+                     serviceTypes: Set[ServiceType] = Set()): SMono[Unit] = {
+    SMono.fromFuture(async.waitUntilReady(timeout, desiredState, serviceTypes))
   }
 }
 

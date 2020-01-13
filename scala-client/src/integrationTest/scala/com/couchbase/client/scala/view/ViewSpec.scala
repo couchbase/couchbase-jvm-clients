@@ -25,7 +25,9 @@ import com.couchbase.client.test.{ClusterType, IgnoreWhen, Util}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 
+import scala.concurrent.duration.Duration._
 import scala.util.Failure
+import scala.concurrent.duration._
 
 @TestInstance(Lifecycle.PER_CLASS)
 class ViewSpec extends ScalaIntegrationTest {
@@ -42,10 +44,6 @@ class ViewSpec extends ScalaIntegrationTest {
 
     bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-
-    // Wait for the bucket to be ready
-    // TODO replace when SCBC-135 waitForBucketReady is available
-    Thread.sleep(2000)
 
     val designDoc = DesignDocument(
       DesignDocName,
