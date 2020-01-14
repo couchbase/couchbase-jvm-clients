@@ -40,7 +40,8 @@ case class AnalyticsOptions(
     private[scala] val priority: Boolean = false,
     private[scala] val readonly: Option[Boolean] = None,
     private[scala] val scanConsistency: Option[AnalyticsScanConsistency] = None,
-    private[scala] val parentSpan: Option[RequestSpan] = None
+    private[scala] val parentSpan: Option[RequestSpan] = None,
+    private[scala] val raw: Option[Map[String, Any]] = None
 ) {
 
   /** Sets the parent `RequestSpan`.
@@ -131,6 +132,21 @@ case class AnalyticsOptions(
     */
   def readonly(readonly: Boolean): AnalyticsOptions = copy(readonly = Option(readonly))
 
+  /** Allows providing custom JSON key/value pairs for advanced usage.
+    *
+    * If available, it is recommended to use the methods on this object to customize the query. This method should
+    * only be used if no such setter can be found (i.e. if an undocumented property should be set or you are using
+    * an older client and a new server-configuration property has been added to the cluster).
+    *
+    * Note that the values will be passed through a JSON encoder, so do not provide already encoded JSON as the value. If
+    * you want to pass objects or arrays, you can use [[JsonObject]] and [[JsonArray]] respectively.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def raw(raw: Map[String, Any]): AnalyticsOptions = {
+    copy(raw = Some(raw))
+  }
+
   private[scala] def durationToN1qlFormat(duration: Duration) = {
     if (duration.toSeconds > 0) duration.toSeconds + "s"
     else duration.toNanos + "ns"
@@ -167,6 +183,8 @@ case class AnalyticsOptions(
         out.put("scan_consistency", toPut)
       case _ =>
     }
+
+    raw.foreach(_.foreach(x => out.put(x._1, x._2)))
 
     out
   }

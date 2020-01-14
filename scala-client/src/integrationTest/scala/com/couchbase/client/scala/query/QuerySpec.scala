@@ -125,6 +125,16 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
+  def rawOptions() {
+    cluster.query("""select 'hello world' as Greeting""", QueryOptions().raw(Map("metrics" -> true))) match {
+      case Success(result) =>
+        val out = result.metaData
+        assert(out.metrics.isDefined)
+      case Failure(err) => throw err
+    }
+  }
+
+  @Test
   def hello_world_content_as_JsonObject_for_comp() {
     (for {
       result <- cluster.query(
