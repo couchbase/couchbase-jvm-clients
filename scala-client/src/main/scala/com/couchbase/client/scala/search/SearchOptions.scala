@@ -19,11 +19,10 @@ import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.analytics.AnalyticsOptions
 import com.couchbase.client.scala.json.{JsonArray, JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.search.facet.SearchFacet
 import com.couchbase.client.scala.search.queries._
-import com.couchbase.client.scala.search.result.{SearchResult, SearchRow}
+import com.couchbase.client.scala.search.result.SearchRow
 import com.couchbase.client.scala.search.sort.SearchSort
 
 import scala.concurrent.duration.Duration
@@ -45,7 +44,8 @@ case class SearchOptions(
     private[scala] val scanConsistency: Option[SearchScanConsistency] = None,
     private[scala] val timeout: Option[Duration] = None,
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
-    private[scala] val parentSpan: Option[RequestSpan] = None
+    private[scala] val parentSpan: Option[RequestSpan] = None,
+    private[scala] val raw: Option[Map[String, Any]] = None
 ) {
 
   /** Sets the parent `RequestSpan`.
@@ -183,6 +183,21 @@ case class SearchOptions(
     copy(facets = Some(facets))
   }
 
+  /** Allows providing custom JSON key/value pairs for advanced usage.
+    *
+    * If available, it is recommended to use the methods on this object to customize the query. This method should
+    * only be used if no such setter can be found (i.e. if an undocumented property should be set or you are using
+    * an older client and a new server-configuration property has been added to the cluster).
+    *
+    * Note that the values will be passed through a JSON encoder, so do not provide already encoded JSON as the value. If
+    * you want to pass objects or arrays, you can use [[JsonObject]] and [[JsonArray]] respectively.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def raw(raw: Map[String, Any]): SearchOptions = {
+    copy(raw = Some(raw))
+  }
+
   /** Exports the whole query as a [[JsonObject]].
     */
   private[scala] def export(indexName: String, query: SearchQuery): JsonObject = {
@@ -245,6 +260,8 @@ case class SearchOptions(
     }
 
     if (!control.isEmpty) queryJson.put("ctl", control)
+
+    raw.foreach(_.foreach(x => queryJson.put(x._1, x._2)))
   }
 
   private def convertMutationTokens(tokens: Seq[MutationToken]): JsonObject = {
