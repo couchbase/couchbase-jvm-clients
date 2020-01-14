@@ -184,7 +184,7 @@ class AsyncCluster(
                           )
                         )
                       })
-              )
+                )
           )
           .toFuture
 
@@ -273,10 +273,12 @@ class AsyncCluster(
     *
     * @return the `PingResult` once complete.
     */
-  def ping(serviceTypes: Set[ServiceType] = Set(),
-           reportId: Option[String] = None,
-           timeout: Option[Duration] = None,
-           retryStrategy: RetryStrategy = env.retryStrategy): Future[PingResult] = {
+  def ping(
+      serviceTypes: Set[ServiceType] = Set(),
+      reportId: Option[String] = None,
+      timeout: Option[Duration] = None,
+      retryStrategy: RetryStrategy = env.retryStrategy
+  ): Future[PingResult] = {
 
     import scala.collection.JavaConverters._
 
@@ -306,16 +308,21 @@ class AsyncCluster(
     * @param serviceTypes the set of service types to check, if empty all services found in the cluster config will be
     *                     checked.
     */
-  def waitUntilReady(timeout: Duration,
-                     desiredState: ClusterState = ClusterState.ONLINE,
-                     serviceTypes: Set[ServiceType] = Set()): Future[Unit] = {
+  def waitUntilReady(
+      timeout: Duration,
+      desiredState: ClusterState = ClusterState.ONLINE,
+      serviceTypes: Set[ServiceType] = Set()
+  ): Future[Unit] = {
     FutureConversions
       .javaCFToScalaFuture(
-        WaitUntilReadyHelper.waitUntilReady(core,
-                                            if (serviceTypes.isEmpty) null else serviceTypes.asJava,
-                                            timeout,
-                                            desiredState,
-                                            true))
+        WaitUntilReadyHelper.waitUntilReady(
+          core,
+          if (serviceTypes.isEmpty) null else serviceTypes.asJava,
+          timeout,
+          desiredState,
+          true
+        )
+      )
       .map(_ => Unit)
   }
 
@@ -397,9 +404,9 @@ object AsyncCluster {
                           rows,
                           SearchHandler.parseSearchFacets(trailer),
                           SearchHandler.parseSearchMeta(response, trailer)
-                      )
-                  )
-            )
+                        )
+                    )
+              )
         )
         .toFuture
     ret.onComplete(_ => request.context.logicallyComplete())

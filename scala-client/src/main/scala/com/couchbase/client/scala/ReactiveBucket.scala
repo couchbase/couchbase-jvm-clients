@@ -23,7 +23,10 @@ import com.couchbase.client.core.error.ViewServiceException
 import com.couchbase.client.core.msg.view.ViewRequest
 import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.service.ServiceType
-import com.couchbase.client.scala.manager.collection.{AsyncCollectionManager, ReactiveCollectionManager}
+import com.couchbase.client.scala.manager.collection.{
+  AsyncCollectionManager,
+  ReactiveCollectionManager
+}
 import com.couchbase.client.scala.manager.view.{ReactiveViewIndexManager, ViewIndexManager}
 import com.couchbase.client.scala.query.handlers.ViewHandler
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
@@ -156,10 +159,12 @@ class ReactiveBucket private[scala] (val async: AsyncBucket) {
     *
     * @return the `PingResult` once complete.
     */
-  def ping(serviceTypes: Set[ServiceType] = Set(),
-           reportId: Option[String] = None,
-           timeout: Option[Duration] = None,
-           retryStrategy: RetryStrategy = async.environment.retryStrategy): SMono[PingResult] = {
+  def ping(
+      serviceTypes: Set[ServiceType] = Set(),
+      reportId: Option[String] = None,
+      timeout: Option[Duration] = None,
+      retryStrategy: RetryStrategy = async.environment.retryStrategy
+  ): SMono[PingResult] = {
     SMono.fromFuture(async.ping(serviceTypes, reportId, timeout, retryStrategy))
   }
 
@@ -175,9 +180,11 @@ class ReactiveBucket private[scala] (val async: AsyncBucket) {
     * @param serviceTypes the set of service types to check, if empty all services found in the cluster config will be
     *                     checked.
     */
-  def waitUntilReady(timeout: Duration,
-                     desiredState: ClusterState = ClusterState.ONLINE,
-                     serviceTypes: Set[ServiceType] = Set()): SMono[Unit] = {
+  def waitUntilReady(
+      timeout: Duration,
+      desiredState: ClusterState = ClusterState.ONLINE,
+      serviceTypes: Set[ServiceType] = Set()
+  ): SMono[Unit] = {
     SMono.fromFuture(async.waitUntilReady(timeout, desiredState, serviceTypes))
   }
 }

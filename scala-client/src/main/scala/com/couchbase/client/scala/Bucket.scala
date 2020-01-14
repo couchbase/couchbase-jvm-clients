@@ -19,14 +19,22 @@ package com.couchbase.client.scala
 import java.util.UUID
 
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diagnostics.{ClusterState, HealthPinger, PingResult, WaitUntilReadyHelper}
+import com.couchbase.client.core.diagnostics.{
+  ClusterState,
+  HealthPinger,
+  PingResult,
+  WaitUntilReadyHelper
+}
 import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.manager.collection.CollectionManager
 import com.couchbase.client.scala.manager.view.ViewIndexManager
 import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions, TimeoutUtil}
-import com.couchbase.client.scala.util.DurationConversions.{javaDurationToScala, scalaDurationToJava}
+import com.couchbase.client.scala.util.DurationConversions.{
+  javaDurationToScala,
+  scalaDurationToJava
+}
 import com.couchbase.client.scala.view.{ViewOptions, ViewResult}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -123,10 +131,12 @@ class Bucket private[scala] (val async: AsyncBucket) {
     *
     * @return the `PingResult` once complete.
     */
-  def ping(serviceTypes: Set[ServiceType] = Set(),
-           reportId: Option[String] = None,
-           timeout: Option[Duration] = None,
-           retryStrategy: RetryStrategy = async.environment.retryStrategy): Try[PingResult] = {
+  def ping(
+      serviceTypes: Set[ServiceType] = Set(),
+      reportId: Option[String] = None,
+      timeout: Option[Duration] = None,
+      retryStrategy: RetryStrategy = async.environment.retryStrategy
+  ): Try[PingResult] = {
     AsyncUtils.block(async.ping(serviceTypes, reportId, timeout, retryStrategy))
   }
 
@@ -142,9 +152,11 @@ class Bucket private[scala] (val async: AsyncBucket) {
     * @param serviceTypes the set of service types to check, if empty all services found in the cluster config will be
     *                     checked.
     */
-  def waitUntilReady(timeout: Duration,
-                     desiredState: ClusterState = ClusterState.ONLINE,
-                     serviceTypes: Set[ServiceType] = Set()): Try[Unit] = {
+  def waitUntilReady(
+      timeout: Duration,
+      desiredState: ClusterState = ClusterState.ONLINE,
+      serviceTypes: Set[ServiceType] = Set()
+  ): Try[Unit] = {
     AsyncUtils.block(async.waitUntilReady(timeout, desiredState, serviceTypes))
   }
 }

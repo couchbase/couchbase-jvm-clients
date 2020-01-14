@@ -174,7 +174,7 @@ class Cluster private[scala] (
     * @return a { @link DiagnosticsResult}
     */
   def diagnostics(reportId: String = UUID.randomUUID.toString): Try[DiagnosticsResult] = {
-   AsyncUtils.block(async.diagnostics(reportId))
+    AsyncUtils.block(async.diagnostics(reportId))
   }
 
   /**
@@ -192,10 +192,12 @@ class Cluster private[scala] (
     *
     * @return the `PingResult` once complete.
     */
-  def ping(serviceTypes: Set[ServiceType] = Set(),
-           reportId: Option[String] = None,
-           timeout: Option[Duration] = None,
-           retryStrategy: RetryStrategy = env.retryStrategy): Try[PingResult] = {
+  def ping(
+      serviceTypes: Set[ServiceType] = Set(),
+      reportId: Option[String] = None,
+      timeout: Option[Duration] = None,
+      retryStrategy: RetryStrategy = env.retryStrategy
+  ): Try[PingResult] = {
     AsyncUtils.block(async.ping(serviceTypes, reportId, timeout, retryStrategy))
   }
 
@@ -211,9 +213,11 @@ class Cluster private[scala] (
     * @param serviceTypes the set of service types to check, if empty all services found in the cluster config will be
     *                     checked.
     */
-  def waitUntilReady(timeout: Duration,
-                     desiredState: ClusterState = ClusterState.ONLINE,
-                     serviceTypes: Set[ServiceType] = Set()): Try[Unit] = {
+  def waitUntilReady(
+      timeout: Duration,
+      desiredState: ClusterState = ClusterState.ONLINE,
+      serviceTypes: Set[ServiceType] = Set()
+  ): Try[Unit] = {
     AsyncUtils.block(async.waitUntilReady(timeout, desiredState, serviceTypes))
   }
 }

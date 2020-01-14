@@ -27,8 +27,6 @@ import org.junit.jupiter.api._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
-
-
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
 class PingSpec extends ScalaIntegrationTest {

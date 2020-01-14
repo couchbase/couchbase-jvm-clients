@@ -17,7 +17,12 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diagnostics.{ClusterState, HealthPinger, PingResult, WaitUntilReadyHelper}
+import com.couchbase.client.core.diagnostics.{
+  ClusterState,
+  HealthPinger,
+  PingResult,
+  WaitUntilReadyHelper
+}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.env.ClusterEnvironment
@@ -138,10 +143,12 @@ class AsyncBucket private[scala] (
     *
     * @return the `PingResult` once complete.
     */
-  def ping(serviceTypes: Set[ServiceType] = Set(),
-           reportId: Option[String] = None,
-           timeout: Option[Duration] = None,
-           retryStrategy: RetryStrategy = environment.retryStrategy): Future[PingResult] = {
+  def ping(
+      serviceTypes: Set[ServiceType] = Set(),
+      reportId: Option[String] = None,
+      timeout: Option[Duration] = None,
+      retryStrategy: RetryStrategy = environment.retryStrategy
+  ): Future[PingResult] = {
 
     import scala.collection.JavaConverters._
 
@@ -171,16 +178,21 @@ class AsyncBucket private[scala] (
     * @param serviceTypes the set of service types to check, if empty all services found in the cluster config will be
     *                     checked.
     */
-  def waitUntilReady(timeout: Duration,
-                     desiredState: ClusterState = ClusterState.ONLINE,
-                     serviceTypes: Set[ServiceType] = Set()): Future[Unit] = {
+  def waitUntilReady(
+      timeout: Duration,
+      desiredState: ClusterState = ClusterState.ONLINE,
+      serviceTypes: Set[ServiceType] = Set()
+  ): Future[Unit] = {
     FutureConversions
       .javaCFToScalaFuture(
-        WaitUntilReadyHelper.waitUntilReady(core,
+        WaitUntilReadyHelper.waitUntilReady(
+          core,
           if (serviceTypes.isEmpty) null else serviceTypes.asJava,
           timeout,
           desiredState,
-          false))
+          false
+        )
+      )
       .map(_ => Unit)
   }
 }
