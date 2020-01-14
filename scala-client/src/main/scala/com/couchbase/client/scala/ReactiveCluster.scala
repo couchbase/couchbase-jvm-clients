@@ -25,9 +25,15 @@ import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.ServiceType
-import com.couchbase.client.scala.AsyncCluster.{extractClusterEnvironment, seedNodesFromConnectionString}
+import com.couchbase.client.scala.AsyncCluster.{
+  extractClusterEnvironment,
+  seedNodesFromConnectionString
+}
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.manager.analytics.{AnalyticsIndexManager, ReactiveAnalyticsIndexManager}
+import com.couchbase.client.scala.manager.analytics.{
+  AnalyticsIndexManager,
+  ReactiveAnalyticsIndexManager
+}
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
 import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
 import com.couchbase.client.scala.manager.search.ReactiveSearchIndexManager
@@ -261,10 +267,12 @@ class ReactiveCluster(val async: AsyncCluster) {
     *
     * @return the `PingResult` once complete.
     */
-  def ping(serviceTypes: Set[ServiceType] = Set(),
-           reportId: Option[String] = None,
-           timeout: Option[Duration] = None,
-           retryStrategy: RetryStrategy = env.retryStrategy): SMono[PingResult] = {
+  def ping(
+      serviceTypes: Set[ServiceType] = Set(),
+      reportId: Option[String] = None,
+      timeout: Option[Duration] = None,
+      retryStrategy: RetryStrategy = env.retryStrategy
+  ): SMono[PingResult] = {
     SMono.fromFuture(async.ping(serviceTypes, reportId, timeout, retryStrategy))
   }
 
@@ -280,9 +288,11 @@ class ReactiveCluster(val async: AsyncCluster) {
     * @param serviceTypes the set of service types to check, if empty all services found in the cluster config will be
     *                     checked.
     */
-  def waitUntilReady(timeout: Duration,
-                     desiredState: ClusterState = ClusterState.ONLINE,
-                     serviceTypes: Set[ServiceType] = Set()): SMono[Unit] = {
+  def waitUntilReady(
+      timeout: Duration,
+      desiredState: ClusterState = ClusterState.ONLINE,
+      serviceTypes: Set[ServiceType] = Set()
+  ): SMono[Unit] = {
     SMono.fromFuture(async.waitUntilReady(timeout, desiredState, serviceTypes))
   }
 }

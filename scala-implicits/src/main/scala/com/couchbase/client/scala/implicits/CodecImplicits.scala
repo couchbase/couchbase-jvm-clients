@@ -59,6 +59,9 @@ trait CodecWrapper[-A, B] extends JsonSerializer[A] with JsonDeserializer[B]
 trait Codec[A]            extends CodecWrapper[A, A]
 
 private[scala] object CodecImplicits {
+  // SCBC-158: Note on withSetMaxInsertNumber(100000) below.  The default number of items allowed in Sets and Maps is a
+  // conservative 1,024.  Adjusting this to an arbitrary 100k.
+
   // Implementation detail: the excellent JSON library Jsoniter, with the extensions from com.github.plokhotnyuk.jsoniter_scala,
   // is currently used to encode and decode case classes.  This is purely an implementation detail and should not be
   // relied upon.
@@ -72,7 +75,7 @@ private[scala] object CodecImplicits {
       import com.github.plokhotnyuk.jsoniter_scala.macros._
 
       implicit val jsonIterDecodeCodec: JsonValueCodec[$e] =
-        JsonCodecMaker.make[$e](CodecMakerConfig)
+        JsonCodecMaker.make[$e](CodecMakerConfig.withSetMaxInsertNumber(100000).withMapMaxInsertNumber(100000))
 
       override def deserialize(bytes: Array[Byte]): scala.util.Try[$e] = {
         scala.util.Try(readFromArray(bytes))
@@ -91,7 +94,7 @@ private[scala] object CodecImplicits {
       import com.github.plokhotnyuk.jsoniter_scala.macros._
 
       implicit val jsonIterEncodeCodec: JsonValueCodec[$e] =
-       JsonCodecMaker.make[$e](CodecMakerConfig)
+       JsonCodecMaker.make[$e](CodecMakerConfig.withSetMaxInsertNumber(100000).withMapMaxInsertNumber(100000))
 
       override def serialize(content: $e): scala.util.Try[Array[Byte]] = {
         scala.util.Try(writeToArray(content))
@@ -112,7 +115,7 @@ private[scala] object CodecImplicits {
       import scala.util.{Failure, Success, Try}
 
       val jsonIterCodec: JsonValueCodec[$e] =
-       JsonCodecMaker.make[$e](CodecMakerConfig)
+       JsonCodecMaker.make[$e](CodecMakerConfig.withSetMaxInsertNumber(100000).withMapMaxInsertNumber(100000))
 
       override def serialize(input: $e): Try[Array[Byte]] = {
         scala.util.Try(writeToArray(input)(jsonIterCodec))

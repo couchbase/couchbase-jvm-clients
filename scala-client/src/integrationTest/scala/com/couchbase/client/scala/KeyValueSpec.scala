@@ -15,6 +15,7 @@ import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, Igno
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
+import scala.collection.{GenMap, GenSet}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
@@ -380,5 +381,47 @@ class KeyValueSpec extends ScalaIntegrationTest {
       .query(statement)
       .flatMap(_.rowsAs[User])
 
+  }
+
+  case class LargeDocTest(values: Map[String, String])
+
+  object LargeDocTest {
+    implicit val codec: Codec[LargeDocTest] = Codec.codec[LargeDocTest]
+  }
+
+  @Test
+  def convertLargeObject(): Unit = {
+    val count   = 100000
+    val content = collection.mutable.Map.empty[String, String]
+    for (x <- Range(0, count)) {
+      content.put(x.toString, "a")
+    }
+    val id  = TestUtils.docId()
+    val obj = LargeDocTest(content.toMap)
+    coll.upsert(id, obj).get
+    val result = coll.get(id).get
+    val as     = result.contentAs[LargeDocTest].get
+    assert(as.values.size == count)
+  }
+
+  case class LargeDocTest2(values: Set[Int])
+
+  object LargeDocTest2 {
+    implicit val codec: Codec[LargeDocTest2] = Codec.codec[LargeDocTest2]
+  }
+
+  @Test
+  def convertLargeSet(): Unit = {
+    val count   = 100000
+    val content = collection.mutable.Set.empty[Int]
+    for (x <- Range(0, count)) {
+      content.add(x)
+    }
+    val obj = LargeDocTest2(content.toSet)
+    val id  = TestUtils.docId()
+    coll.upsert(id, obj).get
+    val result = coll.get(id).get
+    val as     = result.contentAs[LargeDocTest2].get
+    assert(as.values.size == count)
   }
 }

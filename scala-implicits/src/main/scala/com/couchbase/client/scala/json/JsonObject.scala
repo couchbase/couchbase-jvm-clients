@@ -21,7 +21,7 @@ import java.util
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.scala.transformers.JacksonTransformers
 
-import scala.collection.{GenSet, mutable}
+import scala.collection.{GenMap, GenSet, mutable}
 import scala.language.dynamics
 import scala.util.control.NonFatal
 
@@ -366,7 +366,7 @@ object JsonObject {
     * Note, benchmarking indicates it's roughly twice as fast to use `create` and then `put` all fields, so that
     * should be preferred.
     */
-  def apply(values: Map[String, Any]): JsonObject = {
+  def apply(values: GenMap[String, Any]): JsonObject = {
     val map = new util.HashMap[String, Any](values.size)
     values.foreach(v => map.put(v._1, v._2))
     new JsonObject(map)
