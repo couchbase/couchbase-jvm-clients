@@ -15,9 +15,6 @@
  */
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.cnc.RequestSpan
-import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.api.{CounterResult, MutationResult}
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv.handlers.{
@@ -26,8 +23,9 @@ import com.couchbase.client.scala.kv.handlers.{
   BinaryIncrementHandler,
   BinaryPrependHandler
 }
+import com.couchbase.client.scala.kv._
 
-import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 /** Operations on non-JSON Couchbase documents.
@@ -63,22 +61,40 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       content: Array[Byte],
       cas: Long = 0,
       durability: Durability = Disabled,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   ): Future[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
+    append(
+      id,
+      content,
+      AppendOptions()
+        .cas(cas)
+        .durability(durability)
+        .timeout(timeout)
+    )
+  }
+
+  /** Add bytes to the end of a Couchbase binary document.
+    *
+    * See [[BinaryCollection.append]] for details.  $Same
+    */
+  def append(
+      id: String,
+      content: Array[Byte],
+      options: AppendOptions
+  ): Future[MutationResult] = {
+    val timeoutActual =
+      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
     val req =
       binaryAppendHandler.request(
         id,
         content,
-        cas,
-        durability,
+        options.cas,
+        options.durability,
         timeoutActual,
-        retryStrategy,
-        parentSpan
+        options.retryStrategy.getOrElse(environment.retryStrategy),
+        options.parentSpan
       )
-    async.wrapWithDurability(req, id, binaryAppendHandler, durability, false, timeoutActual)
+    async.wrapWithDurability(req, id, binaryAppendHandler, options.durability, false, timeoutActual)
   }
 
   /** Add bytes to the beginning of a Couchbase binary document.
@@ -90,22 +106,47 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       content: Array[Byte],
       cas: Long = 0,
       durability: Durability = Disabled,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   ): Future[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
+    prepend(
+      id,
+      content,
+      PrependOptions()
+        .cas(cas)
+        .durability(durability)
+        .timeout(timeout)
+    )
+  }
+
+  /** Add bytes to the beginning of a Couchbase binary document.
+    *
+    * See [[BinaryCollection.prepend]] for details.  $Same
+    * */
+  def prepend(
+      id: String,
+      content: Array[Byte],
+      options: PrependOptions
+  ): Future[MutationResult] = {
+    val timeoutActual =
+      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
     val req =
       binaryPrependHandler.request(
         id,
         content,
-        cas,
-        durability,
+        options.cas,
+        options.durability,
         timeoutActual,
-        retryStrategy,
-        parentSpan
+        options.retryStrategy.getOrElse(environment.retryStrategy),
+        options.parentSpan
       )
-    async.wrapWithDurability(req, id, binaryPrependHandler, durability, false, timeoutActual)
+    async.wrapWithDurability(
+      req,
+      id,
+      binaryPrependHandler,
+      options.durability,
+      false,
+      timeoutActual
+    )
   }
 
   /** Increment a Couchbase 'counter' document.
@@ -118,24 +159,46 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       initial: Option[Long] = None,
       cas: Long = 0,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   ): Future[CounterResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
+    var opts = IncrementOptions()
+      .cas(cas)
+      .durability(durability)
+      .timeout(timeout)
+    initial.foreach(v => opts = opts.initial(v))
+    increment(id, delta, opts)
+  }
+
+  /** Increment a Couchbase 'counter' document.
+    *
+    * See [[BinaryCollection.increment]] for details.  $Same
+    * */
+  def increment(
+      id: String,
+      delta: Long,
+      options: IncrementOptions
+  ): Future[CounterResult] = {
+    val timeoutActual =
+      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
     val req = binaryIncrementHandler.request(
       id,
       delta,
-      initial,
-      cas,
-      durability,
-      expiry,
+      options.initial,
+      options.cas,
+      options.durability,
+      options.expiry,
       timeoutActual,
-      retryStrategy,
-      parentSpan
+      options.retryStrategy.getOrElse(environment.retryStrategy),
+      options.parentSpan
     )
-    async.wrapWithDurability(req, id, binaryIncrementHandler, durability, false, timeoutActual)
+    async.wrapWithDurability(
+      req,
+      id,
+      binaryIncrementHandler,
+      options.durability,
+      false,
+      timeoutActual
+    )
   }
 
   /** Decrement a Couchbase 'counter' document.
@@ -148,24 +211,45 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       initial: Option[Long] = None,
       cas: Long = 0,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   ): Future[CounterResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
+    var opts = DecrementOptions()
+      .cas(cas)
+      .durability(durability)
+      .timeout(timeout)
+    initial.foreach(v => opts = opts.initial(v))
+    decrement(id, delta, opts)
+  }
 
+  /** Decrement a Couchbase 'counter' document.
+    *
+    * See [[BinaryCollection.increment]] for details.  $Same
+    * */
+  def decrement(
+      id: String,
+      delta: Long,
+      options: DecrementOptions
+  ): Future[CounterResult] = {
+    val timeoutActual =
+      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
     val req = binaryDecrementHandler.request(
       id,
       delta,
-      initial,
-      cas,
-      durability,
-      expiry,
+      options.initial,
+      options.cas,
+      options.durability,
+      options.expiry,
       timeoutActual,
-      retryStrategy,
-      parentSpan
+      options.retryStrategy.getOrElse(environment.retryStrategy),
+      options.parentSpan
     )
-    async.wrapWithDurability(req, id, binaryDecrementHandler, durability, false, timeoutActual)
+    async.wrapWithDurability(
+      req,
+      id,
+      binaryDecrementHandler,
+      options.durability,
+      false,
+      timeoutActual
+    )
   }
 }

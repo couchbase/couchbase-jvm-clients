@@ -46,11 +46,13 @@ import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchMet
 import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions}
 import reactor.core.scala.publisher.SMono
 
+import scala.collection.GenMap
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
+import com.couchbase.client.scala.util.DurationConversions._
 
 /** Represents a connection to a Couchbase cluster.
   *
@@ -100,9 +102,40 @@ class ReactiveCluster(val async: AsyncCluster) {
     **/
   def query(
       statement: String,
-      options: QueryOptions = QueryOptions()
+      options: QueryOptions
   ): SMono[ReactiveQueryResult] = {
     async.queryHandler.queryReactive(statement, options, env)
+  }
+
+  /** Performs a N1QL query against the cluster.
+    *
+    * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster.async]] for an asynchronous version.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[QueryOptions]] instead, which supports all available options.
+    *
+    * @param statement the N1QL statement to execute
+    * @param parameters provides named or positional parameters for queries parameterised that way.
+    * @param timeout sets a maximum timeout for processing.
+    * @param adhoc if true (the default), adhoc mode is enabled: queries are just run.  If false, adhoc mode is disabled
+    *              and transparent prepared statement mode is enabled: queries are first prepared so they can be executed
+    *              more efficiently in the future.
+    *
+    * @return a `Mono` containing a [[ReactiveQueryResult]] which includes a Flux giving streaming access to any
+    *         returned rows
+    */
+  def query(
+      statement: String,
+      parameters: QueryParameters = QueryParameters.None,
+      timeout: Duration = env.timeoutConfig.queryTimeout(),
+      adhoc: Boolean = true
+  ): SMono[ReactiveQueryResult] = {
+    val opts = QueryOptions()
+      .adhoc(adhoc)
+      .timeout(timeout)
+      .parameters(parameters)
+    query(statement, opts)
   }
 
   /** Performs an Analytics query against the cluster.
@@ -118,7 +151,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     */
   def analyticsQuery(
       statement: String,
-      options: AnalyticsOptions = AnalyticsOptions()
+      options: AnalyticsOptions
   ): SMono[ReactiveAnalyticsResult] = {
     async.analyticsHandler.request(statement, options, async.core, async.env) match {
       case Success(request) =>
@@ -165,6 +198,29 @@ class ReactiveCluster(val async: AsyncCluster) {
     }
   }
 
+  /** Performs an Analytics query against the cluster.
+    *
+    * This is a reactive API.  See [[Cluster.async]] for an asynchronous version of this API, and
+    * [[Cluster]] for a blocking version.
+    *
+    * @param statement the Analytics query to execute
+    * @param parameters provides named or positional parameters for queries parameterised that way.
+    * @param timeout sets a maximum timeout for processing.
+    *
+    * @return a `Mono` containing a [[analytics.ReactiveAnalyticsResult]] which includes a Flux giving streaming access to any
+    *         returned rows
+    */
+  def analyticsQuery(
+      statement: String,
+      parameters: AnalyticsParameters = AnalyticsParameters.None,
+      timeout: Duration = env.timeoutConfig.queryTimeout()
+  ): SMono[ReactiveAnalyticsResult] = {
+    val opts = AnalyticsOptions()
+      .timeout(timeout)
+      .parameters(parameters)
+    analyticsQuery(statement, opts)
+  }
+
   /** Performs a Full Text Search (FTS) query against the cluster.
     *
     * This is a reactive API.  See [[Cluster.async]] for an asynchronous version of this API, and
@@ -181,7 +237,7 @@ class ReactiveCluster(val async: AsyncCluster) {
   def searchQuery(
       indexName: String,
       query: SearchQuery,
-      options: SearchOptions = SearchOptions()
+      options: SearchOptions
   ): SMono[ReactiveSearchResult] = {
     async.searchHandler.request(indexName, query, options, async.core, async.env) match {
       case Success(request) =>
@@ -215,6 +271,30 @@ class ReactiveCluster(val async: AsyncCluster) {
       case Failure(err) =>
         SMono.raiseError(err)
     }
+  }
+
+  /** Performs a Full Text Search (FTS) query against the cluster.
+    *
+    * This is a reactive API.  See [[Cluster.async]] for an asynchronous version of this API, and
+    * [[Cluster]] for a blocking version.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[SearchOptions]] instead, which supports all available options.
+    *
+    * @param indexName         the name of the search index to use
+    * @param query             the FTS query to execute.  See
+    *                          [[com.couchbase.client.scala.search.queries.SearchQuery]] for more
+    * @param timeout   how long the operation is allowed to take
+    *
+    * @return a `Mono` containing a [[search.result.ReactiveSearchResult]] which includes a Flux giving streaming access to any
+    *         returned rows
+    */
+  def searchQuery(
+      indexName: String,
+      query: SearchQuery,
+      timeout: Duration = async.env.timeoutConfig.searchTimeout()
+  ): SMono[ReactiveSearchResult] = {
+    searchQuery(indexName, query, SearchOptions(timeout = Some(timeout)))
   }
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.

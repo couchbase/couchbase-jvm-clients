@@ -20,7 +20,7 @@ import com.couchbase.client.core.error.{CasMismatchException, DocumentNotFoundEx
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.codec.{JsonDeserializer, JsonSerializer}
 import com.couchbase.client.scala.json.JsonArraySafe
-import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
+import com.couchbase.client.scala.kv._
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -41,10 +41,29 @@ class CouchbaseSet[T](
     case _       => CouchbaseCollectionOptions(collection)
   }
 
+  private val lookupInOptions = LookupInOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+  private val mutateInOptions = MutateInOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+    .durability(opts.durability)
+  private val getOptions = GetOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+  private val insertOptions = InsertOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+    .durability(opts.durability)
+  private val removeOptions = RemoveOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+    .durability(opts.durability)
+
   override def remove(elem: T): Boolean = {
     var out = false
 
-    val op = collection.get(id, timeout = opts.timeout, retryStrategy = opts.retryStrategy)
+    val op = collection.get(id, getOptions)
 
     val result = op
       .flatMap(_.contentAs[JsonArraySafe])
@@ -62,10 +81,7 @@ class CouchbaseSet[T](
             val mutateResult = collection.mutateIn(
               id,
               Array(MutateInSpec.remove("[" + index + "]")),
-              cas = op.get.cas,
-              timeout = opts.timeout,
-              retryStrategy = opts.retryStrategy,
-              durability = opts.durability
+              mutateInOptions.cas(op.get.cas)
             )
 
             out = mutateResult match {
@@ -105,9 +121,7 @@ class CouchbaseSet[T](
       .insert(
         id,
         JsonArraySafe.create,
-        timeout = opts.timeout,
-        retryStrategy = opts.retryStrategy,
-        durability = opts.durability
+        insertOptions
       )
       .get
   }
@@ -116,8 +130,7 @@ class CouchbaseSet[T](
     val op = collection.lookupIn(
       id,
       Array(LookupInSpec.count("")),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy
+      lookupInOptions
     )
 
     val result = op.flatMap(result => result.contentAs[Int](0))
@@ -130,7 +143,7 @@ class CouchbaseSet[T](
   }
 
   private def all(): Set[T] = {
-    val op = collection.get(id, timeout = opts.timeout, retryStrategy = opts.retryStrategy)
+    val op = collection.get(id, getOptions)
 
     val result = op
       .flatMap(_.contentAs[JsonArraySafe])
@@ -155,9 +168,7 @@ class CouchbaseSet[T](
     val result = collection.mutateIn(
       id,
       Array(MutateInSpec.arrayAddUnique("", elem)),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy,
-      durability = opts.durability
+      mutateInOptions
     )
 
     result match {

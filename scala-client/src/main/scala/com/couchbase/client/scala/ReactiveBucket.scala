@@ -108,11 +108,33 @@ class ReactiveBucket private[scala] (val async: AsyncBucket) {
   def viewQuery(
       designDoc: String,
       viewName: String,
-      options: ViewOptions = ViewOptions()
+      options: ViewOptions
   ): SMono[ReactiveViewResult] = {
     val req =
       viewHandler.request(designDoc, viewName, options, async.core, async.environment, async.name)
     viewQuery(req)
+  }
+
+  /** Performs a view query against the cluster.
+    *
+    * This is a reactive streaming version of this API.  See [[Bucket]] for a synchronous blocking version, and
+    * [[Bucket.async]] for an async version.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[ViewOptions]] instead, which supports all available options.
+    *
+    * @param designDoc the view design document to use
+    * @param viewName  the view to use
+    * @param timeout   how long the operation is allowed to take
+    *
+    * @return a `Mono` containing a [[view.ViewResult]] (which includes any returned rows)
+    */
+  def viewQuery(
+      designDoc: String,
+      viewName: String,
+      timeout: Duration = async.environment.timeoutConfig.viewTimeout()
+  ): SMono[ReactiveViewResult] = {
+    viewQuery(designDoc, viewName, ViewOptions(timeout = Some(timeout)))
   }
 
   private def viewQuery(req: Try[ViewRequest]): SMono[ReactiveViewResult] = {

@@ -16,10 +16,6 @@
 
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.cnc.RequestSpan
-import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.datastructures._
 import com.couchbase.client.scala.durability.Durability
@@ -29,9 +25,9 @@ import com.couchbase.client.scala.util.TimeoutUtil
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.reflect.runtime.universe._
 import scala.util.control.NonFatal
 import scala.util.{Failure, Try}
-import scala.reflect.runtime.universe._
 
 object Collection {
   private[scala] def block[T](in: Future[T]): Try[T] = {
@@ -116,22 +112,17 @@ class Collection(
 
   private[scala] val kvTimeout: Durability => Duration = TimeoutUtil.kvTimeout(async.environment)
   private[scala] val kvReadTimeout: Duration           = async.kvReadTimeout
-  private[scala] val retryStrategy                     = async.retryStrategy
 
   private def block[T](in: Future[T]) =
     Collection.block(in)
 
   /** Fetches a full document from this collection.
     *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[GetOptions]] instead, which supports all available options.
+    *
     * @param id             $Id
-    * @param withExpiry     $WithExpiry
-    * @param project        projection is an advanced feature allowing one or more fields to be fetched from a JSON
-    *                       document, and the results
-    *                       combined into a [[json.JsonObject]] result.  By default this
-    *                       is set to None, meaning a normal full document fetch will be performed.
     * @param timeout        $Timeout
-    * @param retryStrategy  $RetryStrategy
-    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -139,27 +130,37 @@ class Collection(
     **/
   def get(
       id: String,
-      withExpiry: Boolean = false,
-      project: Seq[String] = Seq.empty,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
+  ): Try[GetResult] =
+    get(id, GetOptions().timeout(timeout))
+
+  /** Fetches a full document from this collection.
+    *
+    * @param id             $Id
+    * @param options        $Options
+    *
+    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found.  $ErrorHandling
+    **/
+  def get(
+      id: String,
+      options: GetOptions
   ): Try[GetResult] =
     block(
       async
-        .get(id, withExpiry, project, timeout, retryStrategy, transcoder, parentSpan)
+        .get(id, options)
     )
 
   /** Inserts a full document into this collection, if it does not exist already.
     *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[InsertOptions]] instead, which supports all available options.
+    *
     * @param id            $Id
     * @param content       $SupportedTypes
     * @param durability    $Durability
-    * @param expiry        $Expiry
     * @param timeout       $Timeout
-    * @param retryStrategy $RetryStrategy
-    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentAlreadyExistsException`, indicating the document already exists.
@@ -169,37 +170,52 @@ class Collection(
       id: String,
       content: T,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     block(
       async.insert(
         id,
         content,
         durability,
-        expiry,
-        timeoutActual,
-        retryStrategy,
-        transcoder,
-        parentSpan
+        timeout
+      )
+    )
+  }
+
+  /** Inserts a full document into this collection, if it does not exist already.
+    *
+    * @param id            $Id
+    * @param content       $SupportedTypes
+    * @param options       $Options
+    *
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentAlreadyExistsException`, indicating the document already exists.
+    *         $ErrorHandling
+    **/
+  def insert[T](
+      id: String,
+      content: T,
+      options: InsertOptions
+  )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
+    block(
+      async.insert(
+        id,
+        content,
+        options
       )
     )
   }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
     *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[ReplaceOptions]] instead, which supports all available options.
+    *
     * @param id            $Id
     * @param content       $SupportedTypes
     * @param cas           $CAS
     * @param durability    $Durability
-    * @param expiry        $Expiry
     * @param timeout       $Timeout
-    * @param retryStrategy $RetryStrategy
-    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -210,25 +226,39 @@ class Collection(
       content: T,
       cas: Long = 0,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-
     block(
       async.replace(
         id,
         content,
         cas,
         durability,
-        expiry,
-        timeoutActual,
-        retryStrategy,
-        transcoder,
-        parentSpan
+        timeout
+      )
+    )
+  }
+
+  /** Replaces the contents of a full document in this collection, if it already exists.
+    *
+    * @param id            $Id
+    * @param content       $SupportedTypes
+    * @param options       $Options
+    *
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found. $ErrorHandling
+    **/
+  def replace[T](
+      id: String,
+      content: T,
+      options: ReplaceOptions
+  )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
+    block(
+      async.replace(
+        id,
+        content,
+        options
       )
     )
   }
@@ -237,13 +267,13 @@ class Collection(
     *
     * Upsert here means to insert the document if it does not exist, or replace the content if it does.
     *
+    * This overloads provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[UpsertOptions]] instead, which supports all available options.
+    *
     * @param id            $Id
     * @param content       $SupportedTypes
     * @param durability    $Durability
-    * @param expiry        $Expiry
     * @param timeout       $Timeout
-    * @param retryStrategy $RetryStrategy
-    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  $ErrorHandling
     */
@@ -251,36 +281,38 @@ class Collection(
       id: String,
       content: T,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
+    block(async.upsert(id, content, durability, timeout))
+  }
 
-    block(
-      async.upsert(
-        id,
-        content,
-        durability,
-        expiry,
-        timeoutActual,
-        retryStrategy,
-        transcoder,
-        parentSpan
-      )
-    )
+  /** Upserts the contents of a full document in this collection.
+    *
+    * Upsert here means to insert the document if it does not exist, or replace the content if it does.
+    *
+    * @param id            $Id
+    * @param content       $SupportedTypes
+    * @param options       $Options
+    *
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  $ErrorHandling
+    */
+  def upsert[T](
+      id: String,
+      content: T,
+      options: UpsertOptions
+  )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
+    block(async.upsert(id, content, options))
   }
 
   /** Removes a document from this collection, if it exists.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[RemoveOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param cas           $CAS
     * @param durability    $Durability
     * @param timeout       $Timeout
-    * @param retryStrategy $RetryStrategy
-    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -290,21 +322,38 @@ class Collection(
       id: String,
       cas: Long = 0,
       durability: Durability = Disabled,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   ): Try[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-
     block(
-      async.remove(id, cas, durability, timeoutActual, retryStrategy, parentSpan)
+      async.remove(id, cas, durability, timeout)
     )
   }
 
-  /** SubDocument mutations allow modifying parts of a JSON document directly, which can be more efficiently than
+  /** Removes a document from this collection, if it exists.
+    *
+    * @param id            $Id
+    * @param options       $Options
+    *
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found. $ErrorHandling
+    **/
+  def remove(
+      id: String,
+      options: RemoveOptions
+  ): Try[MutationResult] = {
+    block(
+      async.remove(id, options)
+    )
+  }
+
+  /** Sub-Document mutations allow modifying parts of a JSON document directly, which can be more efficiently than
     * fetching and modifying the full document.
     *
     * Mutations are all-or-nothing: if one fails, then no mutation will be performed.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[MutateInOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param spec          a sequence of `MutateInSpec` specifying what mutations to apply to the document.  See
@@ -313,10 +362,7 @@ class Collection(
     * @param document      controls whether the document should be inserted, upserted, or not touched.  See
     *                      [[kv.StoreSemantics]] for details.
     * @param durability    $Durability
-    * @param expiry        $Expiry
     * @param timeout       $Timeout
-    * @param retryStrategy $RetryStrategy
-    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(MutateInResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -328,15 +374,8 @@ class Collection(
       cas: Long = 0,
       document: StoreSemantics = StoreSemantics.Replace,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder,
-      parentSpan: Option[RequestSpan] = None,
-      @Stability.Internal accessDeleted: Boolean = false
+      timeout: Duration = Duration.MinusInf
   ): Try[MutateInResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-
     block(
       async.mutateIn(
         id,
@@ -344,15 +383,63 @@ class Collection(
         cas,
         document,
         durability,
-        expiry,
-        timeoutActual,
-        retryStrategy,
-        transcoder,
-        parentSpan,
-        accessDeleted
+        timeout
       )
     )
   }
+
+  /** Sub-Document mutations allow modifying parts of a JSON document directly, which can be more efficiently than
+    * fetching and modifying the full document.
+    *
+    * Mutations are all-or-nothing: if one fails, then no mutation will be performed.
+    *
+    * @param id            $Id
+    * @param spec          a sequence of `MutateInSpec` specifying what mutations to apply to the document.  See
+    *                      [[kv.MutateInSpec]] for more details.
+    * @param options       $Options
+    *
+    * @return on success, a `Success(MutateInResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found. $ErrorHandling
+    **/
+  def mutateIn(
+      id: String,
+      spec: Seq[MutateInSpec],
+      options: MutateInOptions
+  ): Try[MutateInResult] = {
+    block(
+      async.mutateIn(
+        id,
+        spec,
+        options
+      )
+    )
+  }
+
+  /** Fetches a full document from this collection, and simultaneously lock the document from writes.
+    *
+    * The CAS value returned in the [[kv.GetResult]] is the document's 'key': during the locked period, the document
+    * may only be modified by providing this CAS.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[GetAndLockOptions]] instead, which supports all available options.
+    *
+    * @param id             $Id
+    * @param lockTime        how long to lock the document for
+    * @param timeout        $Timeout
+    *
+    * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found.  $ErrorHandling
+    **/
+  def getAndLock(
+      id: String,
+      lockTime: Duration,
+      timeout: Duration = kvReadTimeout
+  ): Try[GetResult] =
+    block(
+      async.getAndLock(id, lockTime, timeout)
+    )
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
     *
@@ -372,23 +459,21 @@ class Collection(
   def getAndLock(
       id: String,
       lockTime: Duration,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      options: GetAndLockOptions
   ): Try[GetResult] =
     block(
-      async.getAndLock(id, lockTime, timeout, retryStrategy, transcoder, parentSpan)
+      async.getAndLock(id, lockTime, options)
     )
 
   /** Unlock a locked document.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[UnlockOptions]] instead, which supports all available options.
     *
     * @param id             $Id
     * @param cas            must match the CAS value return from a previous [[Collection.getAndLock]] to successfully
     *                       unlock the document
     * @param timeout        $Timeout
-    * @param retryStrategy  $RetryStrategy
-    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(Unit)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -397,19 +482,33 @@ class Collection(
   def unlock(
       id: String,
       cas: Long,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): Try[Unit] =
-    block(async.unlock(id, cas, timeout, retryStrategy, parentSpan))
+    block(async.unlock(id, cas, timeout))
+
+  /** Unlock a locked document.
+    *
+    * @param id             $Id
+    * @param cas            must match the CAS value return from a previous [[Collection.getAndLock]] to successfully
+    *                       unlock the document
+    * @param options        $Options
+    *
+    * @return on success, a `Success(Unit)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found.  $ErrorHandling
+    **/
+  def unlock(
+      id: String,
+      cas: Long,
+      options: UnlockOptions
+  ): Try[Unit] =
+    block(async.unlock(id, cas, options))
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
     *
     * @param id             $Id
     * @param expiry         $Expiry
-    * @param timeout        $Timeout
-    * @param retryStrategy  $RetryStrategy
-    * @param parentSpan    $ParentSpan
+    * @param options        $Options
     *
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -418,21 +517,66 @@ class Collection(
   def getAndTouch(
       id: String,
       expiry: Duration,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      options: GetAndTouchOptions
   ): Try[GetResult] =
     block(
       async.getAndTouch(
         id,
         expiry,
-        timeout,
-        retryStrategy,
-        transcoder,
-        parentSpan
+        options
       )
     )
+
+  /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[GetAndTouchOptions]] instead, which supports all available options.
+    *
+    * @param id             $Id
+    * @param expiry         $Expiry
+    * @param timeout        $Timeout
+    *
+    * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found.  $ErrorHandling
+    **/
+  def getAndTouch(
+      id: String,
+      expiry: Duration,
+      timeout: Duration = kvReadTimeout
+  ): Try[GetResult] =
+    block(
+      async.getAndTouch(
+        id,
+        expiry,
+        timeout
+      )
+    )
+
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInResult]] for details on
+    * how to process the results.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[LookupInOptions]] instead, which supports all available options.
+    *
+    * @param id            $Id
+    * @param spec          a sequence of `LookupInSpec` specifying what fields to fetch.  See
+    *                      [[kv.LookupInSpec]] for more details.
+    * @param timeout       $Timeout
+    *
+    * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found. $ErrorHandling
+    **/
+  def lookupIn(
+      id: String,
+      spec: Seq[LookupInSpec],
+      timeout: Duration = kvReadTimeout
+  ): Try[LookupInResult] =
+    block(async.lookupIn(id, spec, timeout))
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
     * retrieving the entire document.
@@ -443,10 +587,7 @@ class Collection(
     * @param id            $Id
     * @param spec          a sequence of `LookupInSpec` specifying what fields to fetch.  See
     *                      [[kv.LookupInSpec]] for more details.
-    * @param withExpiry    $WithExpiry
-    * @param timeout       $Timeout
-    * @param retryStrategy $RetryStrategy
-    * @param parentSpan    $ParentSpan
+    * @param options       $Options
     *
     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -455,13 +596,38 @@ class Collection(
   def lookupIn(
       id: String,
       spec: Seq[LookupInSpec],
-      withExpiry: Boolean = false,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      options: LookupInOptions
   ): Try[LookupInResult] =
-    block(async.lookupIn(id, spec, withExpiry, timeout, retryStrategy, transcoder, parentSpan))
+    block(async.lookupIn(id, spec, options))
+
+  /** Retrieves any available version of the document.
+    *
+    * The application should default to using [[Collection.get]] instead.  This method is intended for high-availability
+    * situations where, say, a [[Collection.get]] operation has failed, and the
+    * application wants to return any - even possibly stale - data as soon as possible.
+    *
+    * Under the hood this sends a request to all configured replicas for the document, including the active, and
+    * whichever returns first is returned.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[GetAnyReplicaOptions]] instead, which supports all available options.
+    *
+    * @param id            $Id
+    * @param timeout       $Timeout
+    *
+    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found. $ErrorHandling
+    **/
+  def getAnyReplica(
+      id: String,
+      timeout: Duration = kvReadTimeout
+  ): Try[GetReplicaResult] =
+    Try(
+      reactive
+        .getAnyReplica(id, timeout)
+        .block(timeout)
+    )
 
   /** Retrieves any available version of the document.
     *
@@ -473,9 +639,7 @@ class Collection(
     * whichever returns first is returned.
     *
     * @param id            $Id
-    * @param timeout       $Timeout
-    * @param retryStrategy $RetryStrategy
-    * @param parentSpan    $ParentSpan
+    * @param options       $Options
     *
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -483,16 +647,39 @@ class Collection(
     **/
   def getAnyReplica(
       id: String,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
-  ): Try[GetReplicaResult] =
+      options: GetAnyReplicaOptions
+  ): Try[GetReplicaResult] = {
+    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
     Try(
       reactive
-        .getAnyReplica(id, timeout, retryStrategy, transcoder, parentSpan)
+        .getAnyReplica(id, options)
         .block(timeout)
     )
+  }
+
+  /** Retrieves all available versions of the document.
+    *
+    * The application should default to using [[Collection.get]] instead.  This method is intended for advanced scenarios,
+    * including where a particular write has ambiguously failed (e.g. it may or may not have succeeded), and the
+    * application wants to attempt manual verification and resolution.
+    *
+    * The returned `Iterable` will block on each call to `next` until the next replica has responded.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[GetAllReplicasOptions]] instead, which supports all available options.
+    *
+    * @param id            $Id
+    * @param timeout       $Timeout
+    *
+    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found. $ErrorHandling
+    **/
+  def getAllReplicas(
+      id: String,
+      timeout: Duration = kvReadTimeout
+  ): Iterable[GetReplicaResult] =
+    reactive.getAllReplicas(id, timeout).toIterable()
 
   /** Retrieves all available versions of the document.
     *
@@ -503,9 +690,7 @@ class Collection(
     * The returned `Iterable` will block on each call to `next` until the next replica has responded.
     *
     * @param id            $Id
-    * @param timeout       $Timeout
-    * @param retryStrategy $RetryStrategy
-    * @param parentSpan    $ParentSpan
+    * @param options       $Options
     *
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -513,22 +698,20 @@ class Collection(
     **/
   def getAllReplicas(
       id: String,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = retryStrategy,
-      transcoder: Transcoder = async.environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      options: GetAllReplicasOptions
   ): Iterable[GetReplicaResult] =
-    reactive.getAllReplicas(id, timeout, retryStrategy, transcoder, parentSpan).toIterable()
+    reactive.getAllReplicas(id, options).toIterable()
 
   /** Checks if a document exists.
     *
-    * This doesn't fetch the document so if the appplication simply needs to know if the document exists, this is the
+    * This doesn't fetch the document so if the application simply needs to know if the document exists, this is the
     * most efficient method.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[ExistsOptions]] instead, which supports all available options.
     *
     * @param id             $Id
     * @param timeout        $Timeout
-    * @param retryStrategy  $RetryStrategy
-    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -536,18 +719,35 @@ class Collection(
     **/
   def exists(
       id: String,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): Try[ExistsResult] =
-    block(async.exists(id, timeout, retryStrategy, parentSpan))
+    block(async.exists(id, timeout))
+
+  /** Checks if a document exists.
+    *
+    * This doesn't fetch the document so if the application simply needs to know if the document exists, this is the
+    * most efficient method.
+    *
+    * @param id             $Id
+    * @param options       $Options
+    *
+    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found.  $ErrorHandling
+    **/
+  def exists(
+      id: String,
+      options: ExistsOptions
+  ): Try[ExistsResult] =
+    block(async.exists(id, options))
 
   /** Updates the expiry of the document with the given id.
     *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[TouchOptions]] instead, which supports all available options.
+    *
     * @param id             $Id
     * @param timeout        $Timeout
-    * @param retryStrategy  $RetryStrategy
-    * @param parentSpan    $ParentSpan
     *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -556,11 +756,26 @@ class Collection(
   def touch(
       id: String,
       expiry: Duration,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): Try[MutationResult] = {
-    block(async.touch(id, expiry, timeout, retryStrategy, parentSpan))
+    block(async.touch(id, expiry, timeout))
+  }
+
+  /** Updates the expiry of the document with the given id.
+    *
+    * @param id             $Id
+    * @param options       $Options
+    *
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found.  $ErrorHandling
+    */
+  def touch(
+      id: String,
+      expiry: Duration,
+      options: TouchOptions
+  ): Try[MutationResult] = {
+    block(async.touch(id, expiry, options))
   }
 
   /** Returns a [[com.couchbase.client.scala.datastructures.CouchbaseBuffer]] backed by this collection.

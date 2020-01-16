@@ -20,24 +20,26 @@ import java.util.UUID
 import java.util.stream.Collectors
 
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.{Authenticator, PasswordAuthenticator}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.AsyncCluster.seedNodesFromConnectionString
-import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
+import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsParameters, AnalyticsResult}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.manager.analytics.AnalyticsIndexManager
 import com.couchbase.client.scala.manager.bucket.BucketManager
 import com.couchbase.client.scala.manager.query.QueryIndexManager
 import com.couchbase.client.scala.manager.search.SearchIndexManager
 import com.couchbase.client.scala.manager.user.UserManager
-import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
+import com.couchbase.client.scala.query.{QueryOptions, QueryParameters, QueryResult}
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
 import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions}
 
+import scala.collection.GenMap
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -58,7 +60,6 @@ class Cluster private[scala] (
     authenticator: Authenticator,
     seedNodes: Set[SeedNode]
 ) {
-
   private[scala] implicit val ec: ExecutionContext = env.ec
 
   /** Access an asynchronous version of this API. */
@@ -105,13 +106,40 @@ class Cluster private[scala] (
     * @return a `Try` containing a `Success(QueryResult)` (which includes any returned rows) if successful, else a
     *         `Failure`
     */
-  def query(statement: String, options: QueryOptions = QueryOptions()): Try[QueryResult] = {
+  def query(statement: String, options: QueryOptions): Try[QueryResult] = {
     val timeout: java.time.Duration = options.timeout match {
       case Some(v) => v
       case _       => env.timeoutConfig.queryTimeout()
     }
 
     AsyncUtils.block(async.query(statement, options))
+  }
+
+  /** Performs a N1QL query against the cluster.
+    *
+    * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster.async]] for an asynchronous version.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[QueryOptions]] instead, which supports all available options.
+    *
+    * @param statement the N1QL statement to execute
+    * @param parameters provides named or positional parameters for queries parameterised that way.
+    * @param timeout sets a maximum timeout for processing.
+    * @param adhoc if true (the default), adhoc mode is enabled: queries are just run.  If false, adhoc mode is disabled
+    *              and transparent prepared statement mode is enabled: queries are first prepared so they can be executed
+    *              more efficiently in the future.
+    *
+    * @return a `Try` containing a `Success(QueryResult)` (which includes any returned rows) if successful, else a
+    *         `Failure`
+    */
+  def query(
+      statement: String,
+      parameters: QueryParameters = QueryParameters.None,
+      timeout: Duration = env.timeoutConfig.queryTimeout(),
+      adhoc: Boolean = true
+  ): Try[QueryResult] = {
+    AsyncUtils.block(async.query(statement, parameters, timeout, adhoc))
   }
 
   /** Performs an Analytics query against the cluster.
@@ -127,14 +155,34 @@ class Cluster private[scala] (
     */
   def analyticsQuery(
       statement: String,
-      options: AnalyticsOptions = AnalyticsOptions()
+      options: AnalyticsOptions
   ): Try[AnalyticsResult] = {
-    val timeout: java.time.Duration = options.timeout match {
-      case Some(v) => v
-      case _       => env.timeoutConfig.analyticsTimeout()
-    }
+    AsyncUtils.block(async.analyticsQuery(statement, options))
+  }
 
-    AsyncUtils.block(async.analyticsQuery(statement, options), timeout)
+  /** Performs an Analytics query against the cluster.
+    *
+    * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster.async]] for an asynchronous version.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[AnalyticsOptions]] instead, which supports all available options.
+    *
+    * @param statement the Analytics query to execute
+    * @param parameters provides named or positional parameters for queries parameterised that way.
+    * @param timeout sets a maximum timeout for processing.
+    *
+    * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  def analyticsQuery(
+      statement: String,
+      parameters: AnalyticsParameters = AnalyticsParameters.None,
+      timeout: Duration = env.timeoutConfig.queryTimeout()
+  ): Try[AnalyticsResult] = {
+    AsyncUtils.block(
+      async.analyticsQuery(statement, parameters, timeout)
+    )
   }
 
   /** Performs a Full Text Search (FTS) query against the cluster.
@@ -153,9 +201,33 @@ class Cluster private[scala] (
   def searchQuery(
       indexName: String,
       query: SearchQuery,
-      options: SearchOptions = SearchOptions()
+      options: SearchOptions
   ): Try[SearchResult] = {
     AsyncUtils.block(async.searchQuery(indexName, query, options))
+  }
+
+  /** Performs a Full Text Search (FTS) query against the cluster.
+    *
+    * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster.async]] for an asynchronous version.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[SearchOptions]] instead, which supports all available options.
+    *
+    * @param indexName         the name of the search index to use
+    * @param query             the FTS query to execute.  See
+    *                          [[com.couchbase.client.scala.search.queries.SearchQuery]] for more
+    * @param timeout   how long the operation is allowed to take
+    *
+    * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  def searchQuery(
+      indexName: String,
+      query: SearchQuery,
+      timeout: Duration = async.env.timeoutConfig.searchTimeout()
+  ): Try[SearchResult] = {
+    AsyncUtils.block(async.searchQuery(indexName, query, timeout))
   }
 
   /** Shutdown all cluster resources.

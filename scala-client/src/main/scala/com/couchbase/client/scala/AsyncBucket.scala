@@ -114,7 +114,7 @@ class AsyncBucket private[scala] (
   def viewQuery(
       designDoc: String,
       viewName: String,
-      options: ViewOptions = ViewOptions()
+      options: ViewOptions
   ): Future[ViewResult] = {
     reactive
       .viewQuery(designDoc, viewName, options)
@@ -126,6 +126,29 @@ class AsyncBucket private[scala] (
           })
       })
       .toFuture
+  }
+
+  /** Performs a view query against the cluster.
+    *
+    * This is asynchronous.  See [[Bucket.reactive]] for a reactive streaming version of this API, and
+    * [[Bucket]] for a blocking version.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[ViewOptions]] instead, which supports all available options.
+    *
+    * @param designDoc the view design document to use
+    * @param viewName  the view to use
+    * @param timeout   how long the operation is allowed to take
+    *
+    * @return a `Future` containing a `Success(ViewResult)` (which includes any returned rows) if successful, else a
+    *         `Failure`
+    */
+  def viewQuery(
+      designDoc: String,
+      viewName: String,
+      timeout: Duration = environment.timeoutConfig.viewTimeout()
+  ): Future[ViewResult] = {
+    viewQuery(designDoc, viewName, ViewOptions(timeout = Some(timeout)))
   }
 
   /**

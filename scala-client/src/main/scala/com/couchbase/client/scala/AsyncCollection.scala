@@ -28,7 +28,6 @@ import com.couchbase.client.core.msg.{Request, Response}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.kv.{Observe, ObserveContext}
 import com.couchbase.client.scala.AsyncCollection.wrap
-import com.couchbase.client.scala.api._
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability._
@@ -81,7 +80,6 @@ class AsyncCollection(
 
   private[scala] val kvTimeout: Durability => Duration = TimeoutUtil.kvTimeout(environment)
   private[scala] val kvReadTimeout: Duration           = environment.timeoutConfig.kvTimeout()
-  private[scala] val retryStrategy                     = environment.retryStrategy
   private[scala] val collectionIdentifier =
     new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(name))
   private[scala] val hp                    = HandlerParams(core, bucketName, collectionIdentifier, environment)
@@ -137,25 +135,34 @@ class AsyncCollection(
       id: String,
       content: T,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
+    val opts = InsertOptions().durability(durability).timeout(timeout)
+    insert(id, content, opts)
+  }
+
+  /** Inserts a full document into this collection, if it does not exist already.
+    *
+    * See [[com.couchbase.client.scala.Collection.insert]] for details.  $Same */
+  def insert[T](
+      id: String,
+      content: T,
+      options: InsertOptions
+  )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
+    val timeoutActual =
+      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
     val req = insertHandler.request(
       id,
       content,
-      durability,
-      expiry,
+      options.durability,
+      options.expiry,
       timeoutActual,
-      retryStrategy,
-      transcoder,
+      options.retryStrategy.getOrElse(environment.retryStrategy),
+      options.transcoder.getOrElse(environment.transcoder),
       serializer,
-      parentSpan
+      options.parentSpan
     )
-    wrapWithDurability(req, id, insertHandler, durability, false, timeoutActual)
+    wrapWithDurability(req, id, insertHandler, options.durability, false, timeoutActual)
   }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
@@ -166,26 +173,35 @@ class AsyncCollection(
       content: T,
       cas: Long = 0,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
+    val opts = ReplaceOptions().cas(cas).durability(durability).timeout(timeout)
+    replace(id, content, opts)
+  }
+
+  /** Replaces the contents of a full document in this collection, if it already exists.
+    *
+    * See [[com.couchbase.client.scala.Collection.replace]] for details.  $Same */
+  def replace[T](
+      id: String,
+      content: T,
+      options: ReplaceOptions
+  )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
+    val timeoutActual =
+      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
     val req = replaceHandler.request(
       id,
       content,
-      cas,
-      durability,
-      expiry,
+      options.cas,
+      options.durability,
+      options.expiry,
       timeoutActual,
-      retryStrategy,
-      transcoder,
+      options.retryStrategy.getOrElse(environment.retryStrategy),
+      options.transcoder.getOrElse(environment.transcoder),
       serializer,
-      parentSpan
+      options.parentSpan
     )
-    wrapWithDurability(req, id, replaceHandler, durability, false, timeoutActual)
+    wrapWithDurability(req, id, replaceHandler, options.durability, false, timeoutActual)
   }
 
   /** Upserts the contents of a full document in this collection.
@@ -195,25 +211,34 @@ class AsyncCollection(
       id: String,
       content: T,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
+    val opts = UpsertOptions().durability(durability).timeout(timeout)
+    upsert(id, content, opts)
+  }
+
+  /** Upserts the contents of a full document in this collection.
+    *
+    * See [[com.couchbase.client.scala.Collection.upsert]] for details.  $Same */
+  def upsert[T](
+      id: String,
+      content: T,
+      options: UpsertOptions
+  )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
+    val timeoutActual =
+      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
     val req = upsertHandler.request(
       id,
       content,
-      durability,
-      expiry,
+      options.durability,
+      options.expiry,
       timeoutActual,
-      retryStrategy,
-      transcoder,
+      options.retryStrategy.getOrElse(environment.retryStrategy),
+      options.transcoder.getOrElse(environment.transcoder),
       serializer,
-      parentSpan
+      options.parentSpan
     )
-    wrapWithDurability(req, id, upsertHandler, durability, false, timeoutActual)
+    wrapWithDurability(req, id, upsertHandler, options.durability, false, timeoutActual)
   }
 
   /** Removes a document from this collection, if it exists.
@@ -223,13 +248,30 @@ class AsyncCollection(
       id: String,
       cas: Long = 0,
       durability: Durability = Disabled,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   ): Future[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-    val req           = removeHandler.request(id, cas, durability, timeoutActual, retryStrategy, parentSpan)
-    wrapWithDurability(req, id, removeHandler, durability, true, timeoutActual)
+    val opts = RemoveOptions().cas(cas).durability(durability).timeout(timeout)
+    remove(id, opts)
+  }
+
+  /** Removes a document from this collection, if it exists.
+    *
+    * See [[com.couchbase.client.scala.Collection.remove]] for details.  $Same */
+  def remove(
+      id: String,
+      options: RemoveOptions
+  ): Future[MutationResult] = {
+    val timeoutActual =
+      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
+    val req = removeHandler.request(
+      id,
+      options.cas,
+      options.durability,
+      timeoutActual,
+      options.retryStrategy.getOrElse(environment.retryStrategy),
+      options.parentSpan
+    )
+    wrapWithDurability(req, id, removeHandler, options.durability, true, timeoutActual)
   }
 
   /** Fetches a full document from this collection.
@@ -237,13 +279,26 @@ class AsyncCollection(
     * See [[com.couchbase.client.scala.Collection.get]] for details.  $Same */
   def get(
       id: String,
-      withExpiry: Boolean = false,
-      project: Seq[String] = Seq.empty,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): Future[GetResult] = {
+    val opts = GetOptions().timeout(timeout)
+    get(id, opts)
+  }
+
+  /** Fetches a full document from this collection.
+    *
+    * See [[com.couchbase.client.scala.Collection.get]] for details.  $Same */
+  def get(
+      id: String,
+      options: GetOptions
+  ): Future[GetResult] = {
+    val project       = options.project
+    val timeout       = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
+    val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
+    val parentSpan    = options.parentSpan
+    val transcoder    = options.transcoder.getOrElse(environment.transcoder)
+    val withExpiry    = options.withExpiry
+
     if (project.nonEmpty) {
       getSubDocHandler.requestProject(id, project, timeout, retryStrategy, parentSpan) match {
         case Success(request) =>
@@ -329,7 +384,7 @@ class AsyncCollection(
     }
   }
 
-  /** SubDocument mutations allow modifying parts of a JSON document directly, which can be more efficiently than
+  /** Sub-Document mutations allow modifying parts of a JSON document directly, which can be more efficiently than
     * fetching and modifying the full document.
     *
     * See [[com.couchbase.client.scala.Collection.mutateIn]] for details.  $Same */
@@ -339,26 +394,36 @@ class AsyncCollection(
       cas: Long = 0,
       document: StoreSemantics = StoreSemantics.Replace,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None,
-      @Stability.Internal accessDeleted: Boolean = false
+      timeout: Duration = Duration.MinusInf
   ): Future[MutateInResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
+    val opts = MutateInOptions().cas(cas).document(document).durability(durability).timeout(timeout)
+    mutateIn(id, spec, opts)
+  }
+
+  /** Sub-Document mutations allow modifying parts of a JSON document directly, which can be more efficiently than
+    * fetching and modifying the full document.
+    *
+    * See [[com.couchbase.client.scala.Collection.mutateIn]] for details.  $Same */
+  def mutateIn(
+      id: String,
+      spec: Seq[MutateInSpec],
+      options: MutateInOptions
+  ): Future[MutateInResult] = {
+
+    val timeoutActual =
+      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
     val req = mutateInHandler.request(
       id,
       spec,
-      cas,
-      document,
-      durability,
-      expiry,
+      options.cas,
+      options.document,
+      options.durability,
+      options.expiry,
       timeoutActual,
-      retryStrategy,
-      accessDeleted,
-      transcoder,
-      parentSpan
+      options.retryStrategy.getOrElse(environment.retryStrategy),
+      options.accessDeleted,
+      options.transcoder.getOrElse(environment.transcoder),
+      options.parentSpan
     )
 
     req match {
@@ -367,11 +432,11 @@ class AsyncCollection(
 
         val out = FutureConverters
           .toScala(request.response())
-          .map(response => mutateInHandler.response(request, id, document, response))
+          .map(response => mutateInHandler.response(request, id, options.document, response))
 
         out.onComplete(_ => request.context.logicallyComplete())
 
-        durability match {
+        options.durability match {
           case ClientVerified(replicateTo, persistTo) =>
             out.flatMap(response => {
 
@@ -410,14 +475,36 @@ class AsyncCollection(
     * See [[com.couchbase.client.scala.Collection.getAndLock]] for details.  $Same */
   def getAndLock(
       id: String,
-      lockTime: Duration = 30.seconds,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      lockTime: Duration,
+      timeout: Duration = kvReadTimeout
   ): Future[GetResult] = {
-    val req = getAndLockHandler.request(id, lockTime, timeout, retryStrategy, parentSpan)
-    AsyncCollection.wrapGet(req, id, getAndLockHandler, transcoder, core)
+    val opts = GetAndLockOptions().timeout(timeout)
+    getAndLock(id, lockTime, opts)
+  }
+
+  /** Fetches a full document from this collection, and simultaneously lock the document from writes.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAndLock]] for details.  $Same */
+  def getAndLock(
+      id: String,
+      lockTime: Duration,
+      options: GetAndLockOptions
+  ): Future[GetResult] = {
+    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
+    val req = getAndLockHandler.request(
+      id,
+      lockTime,
+      timeout,
+      options.retryStrategy.getOrElse(environment.retryStrategy),
+      options.parentSpan
+    )
+    AsyncCollection.wrapGet(
+      req,
+      id,
+      getAndLockHandler,
+      options.transcoder.getOrElse(environment.transcoder),
+      core
+    )
   }
 
   /** Unlock a locked document.
@@ -426,11 +513,28 @@ class AsyncCollection(
   def unlock(
       id: String,
       cas: Long,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): Future[Unit] = {
-    val req = unlockHandler.request(id, cas, timeout, retryStrategy, parentSpan)
+    val opts = UnlockOptions().timeout(timeout)
+    unlock(id, cas, opts)
+  }
+
+  /** Unlock a locked document.
+    *
+    * See [[com.couchbase.client.scala.Collection.unlock]] for details.  $Same */
+  def unlock(
+      id: String,
+      cas: Long,
+      options: UnlockOptions
+  ): Future[Unit] = {
+    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
+    val req = unlockHandler.request(
+      id,
+      cas,
+      timeout,
+      options.retryStrategy.getOrElse(environment.retryStrategy),
+      options.parentSpan
+    )
     wrap(req, id, unlockHandler)
   }
 
@@ -440,13 +544,35 @@ class AsyncCollection(
   def getAndTouch(
       id: String,
       expiry: Duration,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): Future[GetResult] = {
-    val in = getAndTouchHandler.request(id, expiry, timeout, retryStrategy, parentSpan)
-    AsyncCollection.wrapGet(in, id, getAndTouchHandler, transcoder, core)
+    val opts = GetAndTouchOptions().timeout(timeout)
+    getAndTouch(id, expiry, opts)
+  }
+
+  /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAndTouch]] for details.  $Same */
+  def getAndTouch(
+      id: String,
+      expiry: Duration,
+      options: GetAndTouchOptions
+  ): Future[GetResult] = {
+    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
+    val in = getAndTouchHandler.request(
+      id,
+      expiry,
+      timeout,
+      options.retryStrategy.getOrElse(environment.retryStrategy),
+      options.parentSpan
+    )
+    AsyncCollection.wrapGet(
+      in,
+      id,
+      getAndTouchHandler,
+      options.transcoder.getOrElse(environment.transcoder),
+      core
+    )
   }
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
@@ -456,13 +582,31 @@ class AsyncCollection(
   def lookupIn(
       id: String,
       spec: Seq[LookupInSpec],
-      withExpiry: Boolean = false,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): Future[LookupInResult] = {
-    getSubDoc(id, spec, withExpiry, timeout, retryStrategy, transcoder, parentSpan)
+    val opts = LookupInOptions().timeout(timeout)
+    lookupIn(id, spec, opts)
+  }
+
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * See [[com.couchbase.client.scala.Collection.lookupIn]] for details.  $Same */
+  def lookupIn(
+      id: String,
+      spec: Seq[LookupInSpec],
+      options: LookupInOptions
+  ): Future[LookupInResult] = {
+    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
+    getSubDoc(
+      id,
+      spec,
+      options.withExpiry,
+      timeout,
+      options.retryStrategy.getOrElse(environment.retryStrategy),
+      options.transcoder.getOrElse(environment.transcoder),
+      options.parentSpan
+    )
   }
 
   /** Retrieves any available version of the document.
@@ -470,12 +614,20 @@ class AsyncCollection(
     * See [[com.couchbase.client.scala.Collection.getAnyReplica]] for details.  $Same */
   def getAnyReplica(
       id: String,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): Future[GetReplicaResult] = {
-    getAllReplicas(id, timeout, retryStrategy, transcoder, parentSpan).take(1).head
+    val opts = GetAnyReplicaOptions().timeout(timeout)
+    getAnyReplica(id, opts)
+  }
+
+  /** Retrieves any available version of the document.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAnyReplica]] for details.  $Same */
+  def getAnyReplica(
+      id: String,
+      options: GetAnyReplicaOptions
+  ): Future[GetReplicaResult] = {
+    getAllReplicas(id, options.convert).take(1).head
   }
 
   /** Retrieves all available versions of the document.
@@ -483,13 +635,27 @@ class AsyncCollection(
     * See [[com.couchbase.client.scala.Collection.getAllReplicas]] for details.  $Same */
   def getAllReplicas(
       id: String,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): Seq[Future[GetReplicaResult]] = {
+    val opts = GetAllReplicasOptions().timeout(timeout)
+    getAllReplicas(id, opts)
+  }
+
+  /** Retrieves all available versions of the document.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAllReplicas]] for details.  $Same */
+  def getAllReplicas(
+      id: String,
+      options: GetAllReplicasOptions
+  ): Seq[Future[GetReplicaResult]] = {
+    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
     val reqsTry: Try[Seq[GetRequest]] =
-      getFromReplicaHandler.requestAll(id, timeout, retryStrategy, parentSpan)
+      getFromReplicaHandler.requestAll(
+        id,
+        timeout,
+        options.retryStrategy.getOrElse(environment.retryStrategy),
+        options.parentSpan
+      )
 
     reqsTry match {
       case Failure(err) => Seq(Future.failed(err))
@@ -505,7 +671,13 @@ class AsyncCollection(
                 case _: GetRequest => false
                 case _             => true
               }
-              getFromReplicaHandler.response(request, id, response, isReplica, transcoder) match {
+              getFromReplicaHandler.response(
+                request,
+                id,
+                response,
+                isReplica,
+                options.transcoder.getOrElse(environment.transcoder)
+              ) match {
                 case Some(x) => Future.successful(x)
                 case _ =>
                   val ctx = KeyValueErrorContext.completedRequest(request, response.status())
@@ -524,11 +696,26 @@ class AsyncCollection(
     * See [[com.couchbase.client.scala.Collection.exists]] for details.  $Same */
   def exists(
       id: String,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): Future[ExistsResult] = {
-    val req = existsHandler.request(id, timeout, retryStrategy, parentSpan)
+    val opts = ExistsOptions().timeout(timeout)
+    exists(id, opts)
+  }
+
+  /** Checks if a document exists.
+    *
+    * See [[com.couchbase.client.scala.Collection.exists]] for details.  $Same */
+  def exists(
+      id: String,
+      options: ExistsOptions
+  ): Future[ExistsResult] = {
+    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
+    val req = existsHandler.request(
+      id,
+      timeout,
+      options.retryStrategy.getOrElse(environment.retryStrategy),
+      options.parentSpan
+    )
     wrap(req, id, existsHandler)
   }
 
@@ -538,11 +725,28 @@ class AsyncCollection(
   def touch(
       id: String,
       expiry: Duration,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): Future[MutationResult] = {
-    val req = touchHandler.request(id, expiry, timeout, retryStrategy, parentSpan)
+    val opts = TouchOptions().timeout(timeout)
+    touch(id, expiry, opts)
+  }
+
+  /** Updates the expiry of the document with the given id.
+    *
+    * See [[com.couchbase.client.scala.Collection.touch]] for details.  $Same */
+  def touch(
+      id: String,
+      expiry: Duration,
+      options: TouchOptions
+  ): Future[MutationResult] = {
+    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
+    val req = touchHandler.request(
+      id,
+      expiry,
+      timeout,
+      options.retryStrategy.getOrElse(environment.retryStrategy),
+      options.parentSpan
+    )
     wrap(req, id, touchHandler)
   }
 }

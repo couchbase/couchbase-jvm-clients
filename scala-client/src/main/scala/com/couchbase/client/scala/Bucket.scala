@@ -111,9 +111,32 @@ class Bucket private[scala] (val async: AsyncBucket) {
   def viewQuery(
       designDoc: String,
       viewName: String,
-      options: ViewOptions = ViewOptions()
+      options: ViewOptions
   ): Try[ViewResult] = {
     AsyncUtils.block(async.viewQuery(designDoc, viewName, options))
+  }
+
+  /** Performs a view query against the cluster.
+    *
+    * This is synchronous (blocking).  See [[Bucket.reactive]] for a reactive streaming version of this API, and
+    * [[Bucket.async]] for an async version.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[ViewOptions]] instead, which supports all available options.
+    *
+    * @param designDoc the view design document to use
+    * @param viewName  the view to use
+    * @param timeout   how long the operation is allowed to take
+    *
+    * @return a `Try` containing a `Success(ViewResult)` (which includes any returned rows) if successful, else a
+    *         `Failure`
+    */
+  def viewQuery(
+      designDoc: String,
+      viewName: String,
+      timeout: Duration = async.environment.timeoutConfig.viewTimeout()
+  ): Try[ViewResult] = {
+    AsyncUtils.block(async.viewQuery(designDoc, viewName, timeout))
   }
 
   /**

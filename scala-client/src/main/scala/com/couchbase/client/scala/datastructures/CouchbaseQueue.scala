@@ -23,7 +23,7 @@ import com.couchbase.client.core.error.{
 }
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSerializer}
-import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
+import com.couchbase.client.scala.kv._
 
 import scala.util.{Failure, Success}
 import scala.reflect.runtime.universe._
@@ -38,14 +38,21 @@ class CouchbaseQueue[T](
 )(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: WeakTypeTag[T])
     extends CouchbaseBuffer(id, collection, options) {
 
+  private val lookupInOptions = LookupInOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+  private val mutateInOptions = MutateInOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+    .durability(opts.durability)
+
   def enqueue(elems: T*): Unit = this ++= elems
 
   def dequeue(): T = {
     val op = collection.lookupIn(
       id,
       Array(LookupInSpec.get("[-1]")),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy
+      lookupInOptions
     )
 
     val result = op.flatMap(result => result.contentAs[T](0))
@@ -55,10 +62,7 @@ class CouchbaseQueue[T](
         val mutateResult = collection.mutateIn(
           id,
           Array(MutateInSpec.remove("[-1]")),
-          timeout = opts.timeout,
-          retryStrategy = opts.retryStrategy,
-          cas = op.get.cas,
-          durability = opts.durability
+          mutateInOptions.cas(op.get.cas)
         )
 
         mutateResult match {

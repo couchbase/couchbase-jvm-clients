@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.scala.api
+package com.couchbase.client.scala.kv
 
 import com.couchbase.client.core.msg.kv.MutationToken
 

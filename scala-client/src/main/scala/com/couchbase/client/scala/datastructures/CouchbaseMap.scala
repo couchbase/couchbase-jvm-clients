@@ -21,7 +21,7 @@ import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSerializer}
 import com.couchbase.client.scala.json.{JsonArraySafe, JsonObjectSafe}
-import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
+import com.couchbase.client.scala.kv._
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -44,12 +44,30 @@ class CouchbaseMap[T](
     case _       => CouchbaseCollectionOptions(collection)
   }
 
+  private val lookupInOptions = LookupInOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+  private val mutateInOptions = MutateInOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+    .durability(opts.durability)
+  private val getOptions = GetOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+  private val insertOptions = InsertOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+    .durability(opts.durability)
+  private val removeOptions = RemoveOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+    .durability(opts.durability)
+
   def getInternal(key: String): Try[Option[T]] = {
     val op = collection.lookupIn(
       id,
       Array(LookupInSpec.get(key)),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy
+      lookupInOptions
     )
 
     val result: Try[Option[T]] = op.map(result => {
@@ -92,9 +110,7 @@ class CouchbaseMap[T](
       .mutateIn(
         id,
         Array(MutateInSpec.remove(key)),
-        timeout = opts.timeout,
-        retryStrategy = opts.retryStrategy,
-        durability = opts.durability
+        mutateInOptions
       ) match {
       case Success(_)                              =>
       case Failure(err: DocumentNotFoundException) =>
@@ -108,8 +124,7 @@ class CouchbaseMap[T](
     val op = collection.lookupIn(
       id,
       Array(LookupInSpec.get(key)),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy
+      lookupInOptions
     )
 
     val result = op.flatMap(result => result.contentAs[T](0))
@@ -119,10 +134,7 @@ class CouchbaseMap[T](
         val mutateResult = collection.mutateIn(
           id,
           Array(MutateInSpec.remove(key)),
-          cas = op.get.cas,
-          timeout = opts.timeout,
-          retryStrategy = opts.retryStrategy,
-          durability = opts.durability
+          mutateInOptions.cas(op.get.cas)
         )
 
         mutateResult match {
@@ -160,8 +172,7 @@ class CouchbaseMap[T](
     val op = collection.lookupIn(
       id,
       Array(LookupInSpec.count("")),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy
+      lookupInOptions
     )
 
     val result = op.flatMap(result => result.contentAs[Int](0))
@@ -174,7 +185,7 @@ class CouchbaseMap[T](
   }
 
   private def all(): Map[String, T] = {
-    val op = collection.get(id, timeout = opts.timeout, retryStrategy = opts.retryStrategy)
+    val op = collection.get(id, getOptions)
 
     val result = op
       .flatMap(_.contentAs[JsonObjectSafe])
@@ -192,9 +203,7 @@ class CouchbaseMap[T](
       collection.mutateIn(
         id,
         Array(MutateInSpec.upsert(kv._1, kv._2)),
-        timeout = opts.timeout,
-        retryStrategy = opts.retryStrategy,
-        durability = opts.durability
+        mutateInOptions
       )
     retryIfDocDoesNotExist(f)
     this
@@ -204,9 +213,7 @@ class CouchbaseMap[T](
     val result = collection.mutateIn(
       id,
       Array(MutateInSpec.remove(key)),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy,
-      durability = opts.durability
+      mutateInOptions
     )
 
     result match {
