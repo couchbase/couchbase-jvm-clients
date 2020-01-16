@@ -2,6 +2,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.kv.{DecrementOptions, IncrementOptions}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -30,7 +31,7 @@ class BinarySpec extends ScalaIntegrationTest {
   @Test
   def blocking_increment() {
     val docId = TestUtils.docId()
-    coll.increment(docId, 3, Option(0)) match {
+    coll.increment(docId, 3, IncrementOptions().initial(0)) match {
       case Success(result) => assert(result.content == 0) // initial value returned
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
@@ -39,8 +40,8 @@ class BinarySpec extends ScalaIntegrationTest {
   @Test
   def blocking_increment_exists() {
     val docId = TestUtils.docId()
-    coll.increment(docId, 0, Option(0))
-    coll.increment(docId, 5, Option(999)) match {
+    coll.increment(docId, 0, IncrementOptions().initial(0))
+    coll.increment(docId, 5, IncrementOptions().initial(999)) match {
       case Success(result) => assert(result.content == 5) // new value value returned
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
@@ -49,7 +50,7 @@ class BinarySpec extends ScalaIntegrationTest {
   @Test
   def blocking_increment_exists_no_initial() {
     val docId = TestUtils.docId()
-    coll.increment(docId, 0, Option(0))
+    coll.increment(docId, 0, IncrementOptions().initial(0))
     coll.increment(docId, 5) match {
       case Success(result) => assert(result.content == 5) // new value value returned
       case Failure(err)    => assert(false, s"unexpected error $err")
@@ -68,7 +69,7 @@ class BinarySpec extends ScalaIntegrationTest {
   @Test
   def blocking_decrement() {
     val docId = TestUtils.docId()
-    coll.decrement(docId, 3, Option(0)) match {
+    coll.decrement(docId, 3, DecrementOptions().initial(0)) match {
       case Success(result) => assert(result.content == 0) // initial value returned
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
@@ -78,8 +79,8 @@ class BinarySpec extends ScalaIntegrationTest {
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   def blocking_decrement_exists_at_0() {
     val docId = TestUtils.docId()
-    coll.decrement(docId, 0, Option(0))
-    coll.decrement(docId, 5, Option(999)) match {
+    coll.decrement(docId, 0, DecrementOptions().initial(0))
+    coll.decrement(docId, 5, DecrementOptions().initial(999)) match {
       case Success(result) =>
         assert(result.content == 0) // remember decrement won't go below 0
       case Failure(err) => assert(false, s"unexpected error $err")
@@ -89,8 +90,8 @@ class BinarySpec extends ScalaIntegrationTest {
   @Test
   def blocking_decrement_exists_at_100() {
     val docId = TestUtils.docId()
-    coll.decrement(docId, 0, Option(100))
-    coll.decrement(docId, 5, Option(999)) match {
+    coll.decrement(docId, 0, DecrementOptions().initial(100))
+    coll.decrement(docId, 5, DecrementOptions().initial(999)) match {
       case Success(result) => assert(result.content == 95)
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
@@ -100,7 +101,7 @@ class BinarySpec extends ScalaIntegrationTest {
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   def blocking_decrement_exists_no_initial() {
     val docId = TestUtils.docId()
-    coll.decrement(docId, 0, Option(0))
+    coll.decrement(docId, 0, DecrementOptions().initial(0))
     coll.decrement(docId, 5) match {
       case Success(result) =>
         assert(result.content == 0) // remember decrement won't go below 0
@@ -120,14 +121,14 @@ class BinarySpec extends ScalaIntegrationTest {
   @Test
   def blockingIncrementReactive() {
     val docId  = TestUtils.docId()
-    val result = coll.reactive.increment(docId, 3, Option(0)).block()
+    val result = coll.reactive.increment(docId, 3, IncrementOptions().initial(0)).block()
     assert(result.content == 0) // initial value returned
   }
 
   @Test
   def blockingDecrementReactive() {
     val docId  = TestUtils.docId()
-    val result = coll.reactive.decrement(docId, 3, Option(0)).block()
+    val result = coll.reactive.decrement(docId, 3, DecrementOptions().initial(0)).block()
     assert(result.content == 0) // initial value returned
   }
 

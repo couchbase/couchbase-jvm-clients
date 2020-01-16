@@ -32,8 +32,7 @@ import scala.concurrent.duration.Duration
   * @since 1.0.0
   */
 case class AnalyticsOptions(
-    private[scala] val namedParameters: Option[GenMap[String, Any]] = None,
-    private[scala] val positionalParameters: Option[Seq[Any]] = None,
+    private[scala] val parameters: Option[AnalyticsParameters] = None,
     private[scala] val clientContextId: Option[String] = None,
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
     private[scala] val timeout: Option[Duration] = None,
@@ -53,40 +52,16 @@ case class AnalyticsOptions(
     copy(parentSpan = Some(value))
   }
 
-  /** Provides named parameters for queries parameterised that way.
+  /** Provides named or positional parameters, for queries parameterised that way.
     *
-    * Overrides any previously-supplied named parameters.
-    *
-    * @return a copy of this with the change applied, for chaining.
-    */
-  def parameters(values: Map[String, Any]): AnalyticsOptions = {
-    copy(namedParameters = Option(values), positionalParameters = None)
-  }
-
-  /** Provides named parameters for queries parameterised that way.
-    *
-    * Overrides any previously-supplied named parameters.
+    * See [[AnalyticsParameters]] for details.
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def parameters(values: JsonObject): AnalyticsOptions = {
-    copy(namedParameters = Option(values.toMap), positionalParameters = None)
-  }
-
-  /** Provides positional parameters for queries parameterised that way.
-    *
-    * @return a copy of this with the change applied, for chaining.
-    */
-  def parameters(values: Seq[Any]): AnalyticsOptions = {
-    copy(positionalParameters = Option(values), namedParameters = None)
-  }
-
-  /** Provides positional parameters for queries parameterised that way.
-    *
-    * @return a copy of this with the change applied, for chaining.
-    */
-  def parameters(values: JsonArray): AnalyticsOptions = {
-    copy(positionalParameters = Option(values.toSeq), namedParameters = None)
+  def parameters(values: AnalyticsParameters): AnalyticsOptions = {
+    copy(
+      parameters = Some(values)
+    )
   }
 
   /** Adds a client context ID to the request, that will be sent back in the response, allowing clients
@@ -155,18 +130,20 @@ case class AnalyticsOptions(
   private[scala] def encode() = {
     val out = JsonObject.create
 
-    namedParameters.foreach(p => {
-      p.foreach(k => {
-        out.put('$' + k._1, k._2)
-      })
-    })
-    positionalParameters.foreach(p => {
-      val arr = JsonArray.create
-      p.foreach(k => {
-        arr.add(k)
-      })
-      out.put("args", arr)
-    })
+    parameters match {
+      case Some(AnalyticsParameters.Named(named)) =>
+        named.foreach(k => {
+          out.put('$' + k._1, k._2)
+        })
+      case Some(AnalyticsParameters.Positional(values)) =>
+        val arr = JsonArray.create
+        values.foreach(k => {
+          arr.add(k)
+        })
+        out.put("args", arr)
+
+      case _ =>
+    }
 
     clientContextId
       .getOrElse(UUID.randomUUID.toString)

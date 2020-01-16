@@ -9,7 +9,7 @@ import com.couchbase.client.core.error.subdoc.{PathExistsException, PathNotFound
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.scala.kv.MutateInSpec._
-import com.couchbase.client.scala.kv.{MutateInMacro, MutateInSpec, StoreSemantics}
+import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.test.{ClusterType, IgnoreWhen}
@@ -19,6 +19,7 @@ import org.junit.jupiter.api._
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
+import concurrent.duration._
 
 @TestInstance(Lifecycle.PER_CLASS)
 class SubdocMutateSpec extends ScalaIntegrationTest {
@@ -762,12 +763,12 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     val content      = ujson.Obj("hello" -> "world")
     val (docId, cas) = prepare(content)
 
-    coll.mutateIn(docId, Array(insert("foo2", "bar2")), expiry = 10.seconds) match {
+    coll.mutateIn(docId, Array(insert("foo2", "bar2")), MutateInOptions().expiry(10.seconds)) match {
       case Success(result) => assert(result.cas != cas)
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
 
-    coll.get(docId, withExpiry = true) match {
+    coll.get(docId, GetOptions().withExpiry(true)) match {
       case Success(result) =>
         assert(result.expiry.isDefined)
         assert(result.expiry.get.toSeconds != 0)

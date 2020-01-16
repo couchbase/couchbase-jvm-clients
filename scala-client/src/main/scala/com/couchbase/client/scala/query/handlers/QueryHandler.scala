@@ -96,8 +96,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
     val validations = for {
       _ <- Validate.notNullOrEmpty(statement, "statement")
       _ <- Validate.notNull(options, "options")
-      _ <- Validate.optNotNull(options.namedParameters, "namedParameters")
-      _ <- Validate.optNotNull(options.positionalParameters, "positionalParameters")
+      _ <- Validate.optNotNull(options.parameters, "parameters")
       _ <- Validate.optNotNull(options.clientContextId, "clientContextId")
       _ <- Validate.optNotNull(options.credentials, "credentials")
       _ <- Validate.optNotNull(options.maxParallelism, "maxParallelism")

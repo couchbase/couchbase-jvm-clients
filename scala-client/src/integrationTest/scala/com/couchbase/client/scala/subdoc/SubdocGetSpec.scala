@@ -9,7 +9,7 @@ import com.couchbase.client.scala.codec.JsonDeserializer.Passthrough
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
-import com.couchbase.client.scala.kv.{LookupInMacro, LookupInSpec, MutateInSpec}
+import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
@@ -22,6 +22,7 @@ import com.couchbase.client.test.{
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
+import concurrent.duration._
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
@@ -58,7 +59,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
-    val insertResult = coll.insert(docId, content, expiry = Duration(60, TimeUnit.SECONDS)).get
+    val insertResult = coll.insert(docId, content, InsertOptions().expiry(60.seconds)).get
 
     coll.lookupIn(docId, Array(get("foo"), get("age"))) match {
       case Success(result) =>
@@ -76,9 +77,9 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   def lookupInWithExpiration() {
     val docId        = TestUtils.docId()
     val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
-    val insertResult = coll.upsert(docId, content, expiry = Duration(60, TimeUnit.SECONDS)).get
+    val insertResult = coll.upsert(docId, content, UpsertOptions().expiry(60.seconds)).get
 
-    coll.lookupIn(docId, Array(get("foo"), get("age")), withExpiry = true) match {
+    coll.lookupIn(docId, Array(get("foo"), get("age")), LookupInOptions().withExpiry(true)) match {
       case Success(result) =>
         assert(result.cas != 0)
         assert(result.cas == insertResult.cas)
@@ -276,9 +277,13 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world")
     val docId   = TestUtils.docId(0)
     coll.remove(docId)
-    coll.insert(docId, content, expiry = Duration.apply(20, TimeUnit.SECONDS)).get
+    coll.insert(docId, content, InsertOptions().expiry(20.seconds)).get
 
-    coll.lookupIn(docId, Array(get("hello"), exists("does_not_exist").xattr), withExpiry = true) match {
+    coll.lookupIn(
+      docId,
+      Array(get("hello"), exists("does_not_exist").xattr),
+      LookupInOptions().withExpiry(true)
+    ) match {
       case Success(result) =>
         assert(result.expiry.isDefined)
         assert(result.contentAs[String](0).get == "world")
@@ -296,7 +301,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world")
     val docId   = TestUtils.docId(0)
     coll.remove(docId)
-    coll.insert(docId, content, expiry = Duration.apply(20, TimeUnit.SECONDS)).get
+    coll.insert(docId, content, InsertOptions().expiry(20.seconds)).get
 
     // doc level error
     coll.lookupIn("does-not-exist", Array(LookupInSpec.get("hello")))

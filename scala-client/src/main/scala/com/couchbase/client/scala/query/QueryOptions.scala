@@ -28,7 +28,7 @@ import com.couchbase.client.scala.json.{JsonArray, JsonArraySafe, JsonObject, Js
 import com.couchbase.client.scala.query.QueryScanConsistency.{ConsistentWith, RequestPlus}
 import com.couchbase.client.scala.util.DurationConversions._
 
-import scala.collection.GenMap
+import scala.collection.{GenIterable, GenMap}
 import scala.concurrent.duration.Duration
 
 /** Customize the execution of a N1QL query.
@@ -37,8 +37,7 @@ import scala.concurrent.duration.Duration
   * @since 1.0.0
   */
 case class QueryOptions(
-    private[scala] val namedParameters: Option[GenMap[String, Any]] = None,
-    private[scala] val positionalParameters: Option[Seq[Any]] = None,
+    private[scala] val parameters: Option[QueryParameters] = None,
     private[scala] val clientContextId: Option[String] = None,
     private[scala] val credentials: Option[Map[String, String]] = None,
     private[scala] val maxParallelism: Option[Int] = None,
@@ -67,51 +66,25 @@ case class QueryOptions(
     copy(parentSpan = Some(value))
   }
 
-  /** Provides named parameters for queries parameterised that way.
+  /** Provides named or positional parameters, for queries parameterised that way.
     *
-    * Overrides any previously-supplied named parameters.
+    * See [[QueryParameters]] for details.
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def parameters(values: Map[String, Any]): QueryOptions = {
+  def parameters(values: QueryParameters): QueryOptions = {
+    val de = deferredException.orElse(values match {
+      case QueryParameters.Named(params) => checkTypes(params.values)
+      case v: QueryParameters.Positional => checkTypes(v.parameters)
+      case _                             => None
+    })
     copy(
-      namedParameters = Option(values),
-      positionalParameters = None,
-      deferredException = deferredException.orElse(checkTypes(values.values))
+      parameters = Some(values),
+      deferredException = de
     )
   }
 
-  /** Provides named parameters for queries parameterised that way.
-    *
-    * Overrides any previously-supplied named parameters.
-    *
-    * @return a copy of this with the change applied, for chaining.
-    */
-  def parameters(values: JsonObject): QueryOptions = {
-    copy(namedParameters = Option(values.toMap), positionalParameters = None)
-  }
-
-  /** Provides positional parameters for queries parameterised that way.
-    *
-    * @return a copy of this with the change applied, for chaining.
-    */
-  def parameters(values: Seq[Any]): QueryOptions = {
-    copy(
-      positionalParameters = Option(values),
-      namedParameters = None,
-      deferredException = deferredException.orElse(checkTypes(values))
-    )
-  }
-
-  /** Provides positional parameters for queries parameterised that way.
-    *
-    * @return a copy of this with the change applied, for chaining.
-    */
-  def parameters(values: JsonArray): QueryOptions = {
-    copy(positionalParameters = Option(values.toSeq), namedParameters = None)
-  }
-
-  private def checkTypes(in: Iterable[Any]): Option[RuntimeException] = {
+  private def checkTypes(in: GenIterable[Any]): Option[RuntimeException] = {
     var out: Option[RuntimeException] = None
 
     in.foreach(value => {
@@ -260,8 +233,6 @@ case class QueryOptions(
     * If false, adhoc mode is disabled and transparent prepared statement mode is enabled: queries
     * are first prepared so they can be executed more efficiently in the future.
     *
-    * @param strategy the retry strategy to use
-    *
     * @return a copy of this with the change applied, for chaining.
     */
   def adhoc(adhoc: Boolean): QueryOptions = {
@@ -306,22 +277,25 @@ case class QueryOptions(
       }
     })
 
-    namedParameters.foreach(p => {
-      p.foreach(k => {
-        if (k._1.startsWith("$")) {
-          out.put(k._1, k._2)
-        } else {
-          out.put('$' + k._1, k._2)
-        }
-      })
-    })
-    positionalParameters.foreach(p => {
-      val arr = JsonArray.create
-      p.foreach(k => {
-        arr.add(k)
-      })
-      out.put("args", arr)
-    })
+    parameters match {
+      case Some(QueryParameters.Named(named)) =>
+        named.foreach(k => {
+          if (k._1.startsWith("$")) {
+            out.put(k._1, k._2)
+          } else {
+            out.put('$' + k._1, k._2)
+          }
+        })
+      case Some(v: QueryParameters.Positional) =>
+        val arr = JsonArray.create
+        v.parameters.foreach(k => {
+          arr.add(k)
+        })
+        out.put("args", arr)
+
+      case _ =>
+    }
+
     scanConsistency match {
       case Some(x: ConsistentWith) =>
         out.put("scan_consistency", x.encoded)

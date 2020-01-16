@@ -16,23 +16,15 @@
 
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.cnc.RequestSpan
-import com.couchbase.client.core.msg.kv.{GetRequest, KeyValueRequest}
-import com.couchbase.client.core.msg.{Request, Response}
-import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.api._
-import com.couchbase.client.scala.codec.{Conversions, JsonSerializer, JsonTranscoder, Transcoder}
+import com.couchbase.client.core.msg.kv.GetRequest
+import com.couchbase.client.scala.codec.JsonSerializer
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv._
-import com.couchbase.client.scala.kv.handlers.{
-  KeyValueRequestHandler,
-  KeyValueRequestHandlerWithTranscoder
-}
 import com.couchbase.client.scala.util.{FutureConversions, TimeoutUtil}
 import reactor.core.scala.publisher.{SFlux, SMono}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
@@ -54,6 +46,7 @@ class ReactiveCollection(async: AsyncCollection) {
   private[scala] val kvReadTimeout: Duration           = async.kvReadTimeout
   private val environment                              = async.environment
   private val core                                     = async.core
+  private implicit val ec: ExecutionContext            = async.ec
 
   import com.couchbase.client.scala.util.DurationConversions._
 
@@ -66,25 +59,20 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       content: T,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-    val req = async.insertHandler.request(
-      id,
-      content,
-      durability,
-      expiry,
-      timeoutActual,
-      retryStrategy,
-      transcoder,
-      serializer,
-      parentSpan
-    )
-    wrap(req, id, async.insertHandler)
+    SMono.defer(() => SMono.fromFuture(async.insert(id, content, durability, timeout)))
+  }
+
+  /** Inserts a full document into this collection, if it does not exist already.
+    *
+    * See [[com.couchbase.client.scala.Collection.insert]] for details.  $Same */
+  def insert[T](
+      id: String,
+      content: T,
+      options: InsertOptions
+  )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
+    SMono.defer(() => SMono.fromFuture(async.insert(id, content, options)))
   }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
@@ -95,26 +83,20 @@ class ReactiveCollection(async: AsyncCollection) {
       content: T,
       cas: Long = 0,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-    val req = async.replaceHandler.request(
-      id,
-      content,
-      cas,
-      durability,
-      expiry,
-      timeoutActual,
-      retryStrategy,
-      transcoder,
-      serializer,
-      parentSpan
-    )
-    wrap(req, id, async.replaceHandler)
+    SMono.defer(() => SMono.fromFuture(async.replace(id, content, cas, durability, timeout)))
+  }
+
+  /** Replaces the contents of a full document in this collection, if it already exists.
+    *
+    * See [[com.couchbase.client.scala.Collection.replace]] for details.  $Same */
+  def replace[T](
+      id: String,
+      content: T,
+      options: ReplaceOptions
+  )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
+    SMono.defer(() => SMono.fromFuture(async.replace(id, content, options)))
   }
 
   /** Upserts the contents of a full document in this collection.
@@ -124,25 +106,20 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       content: T,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-    val req = async.upsertHandler.request(
-      id,
-      content,
-      durability,
-      expiry,
-      timeoutActual,
-      retryStrategy,
-      transcoder,
-      serializer,
-      parentSpan
-    )
-    wrap(req, id, async.upsertHandler)
+    SMono.defer(() => SMono.fromFuture(async.upsert(id, content, durability, timeout)))
+  }
+
+  /** Upserts the contents of a full document in this collection.
+    *
+    * See [[com.couchbase.client.scala.Collection.upsert]] for details.  $Same */
+  def upsert[T](
+      id: String,
+      content: T,
+      options: UpsertOptions
+  )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
+    SMono.defer(() => SMono.fromFuture(async.upsert(id, content, options)))
   }
 
   /** Removes a document from this collection, if it exists.
@@ -152,14 +129,19 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       cas: Long = 0,
       durability: Durability = Disabled,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   ): SMono[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-    val req =
-      async.removeHandler.request(id, cas, durability, timeoutActual, retryStrategy, parentSpan)
-    wrap(req, id, async.removeHandler)
+    SMono.defer(() => SMono.fromFuture(async.remove(id, cas, durability, timeout)))
+  }
+
+  /** Removes a document from this collection, if it exists.
+    *
+    * See [[com.couchbase.client.scala.Collection.remove]] for details.  $Same */
+  def remove(
+      id: String,
+      options: RemoveOptions
+  ): SMono[MutationResult] = {
+    SMono.defer(() => SMono.fromFuture(async.remove(id, options)))
   }
 
   /** Fetches a full document from this collection.
@@ -167,95 +149,19 @@ class ReactiveCollection(async: AsyncCollection) {
     * See [[com.couchbase.client.scala.Collection.get]] for details.  $Same */
   def get(
       id: String,
-      withExpiry: Boolean = false,
-      project: Seq[String] = Seq.empty,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): SMono[GetResult] = {
-
-    // Implementation note: Option is returned because SMono.empty is hard to work with.  See JCBC-1310.
-
-    if (project.nonEmpty) {
-      async.getSubDocHandler.requestProject(id, project, timeout, retryStrategy, parentSpan) match {
-        case Success(request) =>
-          SMono.defer(() => {
-            core.send(request)
-
-            FutureConversions
-              .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-              .map(
-                r =>
-                  async.getSubDocHandler.responseProject(request, id, r, transcoder) match {
-                    case Success(v)   => v
-                    case Failure(err) => throw err
-                  }
-              )
-              .doOnTerminate(() => request.context().logicallyComplete())
-          })
-
-        case Failure(err) => SMono.raiseError(err)
-      }
-
-    } else if (withExpiry) {
-      getSubDoc(
-        id,
-        AsyncCollection.getFullDoc,
-        withExpiry,
-        timeout,
-        retryStrategy,
-        transcoder,
-        parentSpan
-      ).map(
-        v =>
-          GetResult(
-            id,
-            Left(v.contentAs[Array[Byte]](0).get),
-            v.flags,
-            v.cas,
-            v.expiry,
-            transcoder
-          )
-      )
-    } else {
-      getFullDoc(id, timeout, retryStrategy, transcoder)
-    }
+    SMono.defer(() => SMono.fromFuture(async.get(id, timeout)))
   }
 
-  private def getFullDoc(
+  /** Fetches a full document from this collection.
+    *
+    * See [[com.couchbase.client.scala.Collection.get]] for details.  $Same */
+  def get(
       id: String,
-      timeout: Duration,
-      retryStrategy: RetryStrategy,
-      transcoder: Transcoder,
-      parentSpan: Option[RequestSpan] = None
+      options: GetOptions
   ): SMono[GetResult] = {
-    val req = async.getFullDocHandler.request(id, timeout, retryStrategy, parentSpan)
-    wrap(req, id, async.getFullDocHandler, transcoder)
-  }
-
-  private def getSubDoc(
-      id: String,
-      spec: Seq[LookupInSpec],
-      withExpiry: Boolean,
-      timeout: Duration,
-      retryStrategy: RetryStrategy,
-      transcoder: Transcoder,
-      parentSpan: Option[RequestSpan] = None
-  ): SMono[LookupInResult] = {
-    async.getSubDocHandler.request(id, spec, withExpiry, timeout, retryStrategy, parentSpan) match {
-      case Success(request) =>
-        SMono.defer(() => {
-          core.send(request)
-
-          FutureConversions
-            .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-            .map(r => async.getSubDocHandler.response(request, id, r, withExpiry, transcoder))
-            .doOnTerminate(() => request.context().logicallyComplete())
-        })
-
-      case Failure(err) => SMono.raiseError(err)
-    }
+    SMono.defer(() => SMono.fromFuture(async.get(id, options)))
   }
 
   /** SubDocument mutations allow modifying parts of a JSON document directly, which can be more efficiently than
@@ -268,40 +174,23 @@ class ReactiveCollection(async: AsyncCollection) {
       cas: Long = 0,
       document: StoreSemantics = StoreSemantics.Replace,
       durability: Durability = Disabled,
-      expiry: Duration,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None,
-      @Stability.Internal accessDeleted: Boolean = false
+      timeout: Duration = Duration.MinusInf
   ): SMono[MutateInResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-    val req = async.mutateInHandler.request(
-      id,
-      spec,
-      cas,
-      document,
-      durability,
-      expiry,
-      timeoutActual,
-      retryStrategy,
-      accessDeleted,
-      transcoder,
-      parentSpan
+    SMono.defer(
+      () => SMono.fromFuture(async.mutateIn(id, spec, cas, document, durability, timeout))
     )
-    req match {
-      case Success(request) =>
-        SMono.defer(() => {
-          core.send(request)
+  }
 
-          FutureConversions
-            .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-            .map(r => async.mutateInHandler.response(request, id, document, r))
-            .doOnTerminate(() => request.context().logicallyComplete())
-        })
-
-      case Failure(err) => SMono.raiseError(err)
-    }
+  /** SubDocument mutations allow modifying parts of a JSON document directly, which can be more efficiently than
+    * fetching and modifying the full document.
+    *
+    * See [[com.couchbase.client.scala.Collection.mutateIn]] for details.  $Same */
+  def mutateIn(
+      id: String,
+      spec: Seq[MutateInSpec],
+      options: MutateInOptions
+  ): SMono[MutateInResult] = {
+    SMono.defer(() => SMono.fromFuture(async.mutateIn(id, spec, options)))
   }
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
@@ -310,13 +199,20 @@ class ReactiveCollection(async: AsyncCollection) {
   def getAndLock(
       id: String,
       lockTime: Duration,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): SMono[GetResult] = {
-    val req = async.getAndLockHandler.request(id, lockTime, timeout, retryStrategy, parentSpan)
-    wrap(req, id, async.getAndLockHandler, transcoder)
+    SMono.defer(() => SMono.fromFuture(async.getAndLock(id, lockTime, timeout)))
+  }
+
+  /** Fetches a full document from this collection, and simultaneously lock the document from writes.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAndLock]] for details.  $Same */
+  def getAndLock(
+      id: String,
+      lockTime: Duration,
+      options: GetAndLockOptions
+  ): SMono[GetResult] = {
+    SMono.defer(() => SMono.fromFuture(async.getAndLock(id, lockTime, options)))
   }
 
   /** Unlock a locked document.
@@ -325,12 +221,20 @@ class ReactiveCollection(async: AsyncCollection) {
   def unlock(
       id: String,
       cas: Long,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = async.environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): SMono[Unit] = {
-    val req = async.unlockHandler.request(id, cas, timeout, retryStrategy, parentSpan)
-    wrap(req, id, async.unlockHandler)
+    SMono.defer(() => SMono.fromFuture(async.unlock(id, cas, timeout)))
+  }
+
+  /** Unlock a locked document.
+    *
+    * See [[com.couchbase.client.scala.Collection.unlock]] for details.  $Same */
+  def unlock(
+      id: String,
+      cas: Long,
+      options: UnlockOptions
+  ): SMono[Unit] = {
+    SMono.defer(() => SMono.fromFuture(async.unlock(id, cas, options)))
   }
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
@@ -339,13 +243,20 @@ class ReactiveCollection(async: AsyncCollection) {
   def getAndTouch(
       id: String,
       expiry: Duration,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): SMono[GetResult] = {
-    val req = async.getAndTouchHandler.request(id, expiry, timeout, retryStrategy, parentSpan)
-    wrap(req, id, async.getAndTouchHandler, transcoder)
+    SMono.defer(() => SMono.fromFuture(async.getAndTouch(id, expiry, timeout)))
+  }
+
+  /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAndTouch]] for details.  $Same */
+  def getAndTouch(
+      id: String,
+      expiry: Duration,
+      options: GetAndTouchOptions
+  ): SMono[GetResult] = {
+    SMono.defer(() => SMono.fromFuture(async.getAndTouch(id, expiry, options)))
   }
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
@@ -355,13 +266,21 @@ class ReactiveCollection(async: AsyncCollection) {
   def lookupIn(
       id: String,
       spec: Seq[LookupInSpec],
-      withExpiry: Boolean = false,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): SMono[LookupInResult] = {
-    getSubDoc(id, spec, withExpiry, timeout, retryStrategy, transcoder, parentSpan)
+    SMono.defer(() => SMono.fromFuture(async.lookupIn(id, spec, timeout)))
+  }
+
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * See [[com.couchbase.client.scala.Collection.lookupIn]] for details.  $Same */
+  def lookupIn(
+      id: String,
+      spec: Seq[LookupInSpec],
+      options: LookupInOptions
+  ): SMono[LookupInResult] = {
+    SMono.defer(() => SMono.fromFuture(async.lookupIn(id, spec, options)))
   }
 
   /** Retrieves any available version of the document.
@@ -369,12 +288,20 @@ class ReactiveCollection(async: AsyncCollection) {
     * See [[com.couchbase.client.scala.Collection.getAnyReplica]] for details.  $Same */
   def getAnyReplica(
       id: String,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): SMono[GetReplicaResult] = {
-    getAllReplicas(id, timeout, retryStrategy, transcoder, parentSpan)
+    SMono.defer(() => getAnyReplica(id, GetAnyReplicaOptions().timeout(timeout)))
+  }
+
+  /** Retrieves any available version of the document.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAnyReplica]] for details.  $Same */
+  def getAnyReplica(
+      id: String,
+      options: GetAnyReplicaOptions
+  ): SMono[GetReplicaResult] = {
+    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
+    getAllReplicas(id, options.convert)
       .timeout(timeout)
       .next()
   }
@@ -384,13 +311,24 @@ class ReactiveCollection(async: AsyncCollection) {
     * See [[com.couchbase.client.scala.Collection.getAllReplicas]] for details.  $Same */
   def getAllReplicas(
       id: String,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      transcoder: Transcoder = environment.transcoder,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): SFlux[GetReplicaResult] = {
+    getAllReplicas(id, GetAllReplicasOptions().timeout(timeout))
+  }
+
+  /** Retrieves all available versions of the document.
+    *
+    * See [[com.couchbase.client.scala.Collection.getAllReplicas]] for details.  $Same */
+  def getAllReplicas(
+      id: String,
+      options: GetAllReplicasOptions
+  ): SFlux[GetReplicaResult] = {
+    val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
+    val transcoder    = options.transcoder.getOrElse(environment.transcoder)
+    val timeout       = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
+
     val reqsTry: Try[Seq[GetRequest]] =
-      async.getFromReplicaHandler.requestAll(id, timeout, retryStrategy, parentSpan)
+      async.getFromReplicaHandler.requestAll(id, timeout, retryStrategy, options.parentSpan)
 
     reqsTry match {
       case Failure(err) => SFlux.raiseError(err)
@@ -427,53 +365,20 @@ class ReactiveCollection(async: AsyncCollection) {
   def touch(
       id: String,
       expiry: Duration,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): SMono[MutationResult] = {
-    val req = async.touchHandler.request(id, expiry, timeout, retryStrategy, parentSpan)
-    wrap(req, id, async.touchHandler)
+    SMono.defer(() => SMono.fromFuture(async.touch(id, expiry, timeout)))
   }
 
-  private def wrap[Resp <: Response, Res](
-      in: Try[KeyValueRequest[Resp]],
+  /** Updates the expiry of the document with the given id.
+    *
+    * See [[com.couchbase.client.scala.Collection.touch]] for details.  $Same */
+  def touch(
       id: String,
-      handler: KeyValueRequestHandler[Resp, Res]
-  ): SMono[Res] = {
-    in match {
-      case Success(request) =>
-        SMono.defer(() => {
-          core.send[Resp](request)
-
-          FutureConversions
-            .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-            .map(r => handler.response(request, id, r))
-            .doOnTerminate(() => request.context().logicallyComplete())
-        })
-
-      case Failure(err) => SMono.raiseError(err)
-    }
-  }
-
-  private def wrap[Resp <: Response, Res](
-      in: Try[KeyValueRequest[Resp]],
-      id: String,
-      handler: KeyValueRequestHandlerWithTranscoder[Resp, Res],
-      transcoder: Transcoder
-  ): SMono[Res] = {
-    in match {
-      case Success(request) =>
-        SMono.defer(() => {
-          core.send[Resp](request)
-
-          FutureConversions
-            .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-            .map(r => handler.response(request, id, r, transcoder))
-            .doOnTerminate(() => request.context().logicallyComplete())
-        })
-
-      case Failure(err) => SMono.raiseError(err)
-    }
+      expiry: Duration,
+      options: TouchOptions
+  ): SMono[MutationResult] = {
+    SMono.defer(() => SMono.fromFuture(async.touch(id, expiry, options)))
   }
 
   /** Checks if a document exists.
@@ -481,12 +386,18 @@ class ReactiveCollection(async: AsyncCollection) {
     * See [[com.couchbase.client.scala.Collection.exists]] for details.  $Same */
   def exists(
       id: String,
-      timeout: Duration = kvReadTimeout,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = kvReadTimeout
   ): SMono[ExistsResult] = {
-    val req = async.existsHandler.request(id, timeout, retryStrategy, parentSpan)
-    wrap(req, id, async.existsHandler)
+    SMono.defer(() => SMono.fromFuture(async.exists(id, timeout)))
   }
 
+  /** Checks if a document exists.
+    *
+    * See [[com.couchbase.client.scala.Collection.exists]] for details.  $Same */
+  def exists(
+      id: String,
+      options: ExistsOptions
+  ): SMono[ExistsResult] = {
+    SMono.defer(() => SMono.fromFuture(async.exists(id, options)))
+  }
 }

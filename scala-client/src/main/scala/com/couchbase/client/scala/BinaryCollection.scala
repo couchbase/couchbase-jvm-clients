@@ -15,15 +15,13 @@
  */
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.cnc.RequestSpan
-import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.api.{CounterResult, MutationResult}
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
+import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.util.TimeoutUtil
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.duration.Duration
 import scala.util.Try
 
 /** Operations on non-JSON Couchbase documents.
@@ -86,12 +84,14 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     *
     * $OnlyBinary
     *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[AppendOptions]] instead, which supports all available options.
+    *
     * @param id            $Id
-    * @param value       the bytes to append
+    * @param content       the bytes to append
     * @param cas           $CAS
     * @param durability    $Durability
     * @param timeout       $Timeout
-    * @param retryStrategy $RetryStrategy
     *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
@@ -99,16 +99,36 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * */
   def append(
       id: String,
-      value: Array[Byte],
+      content: Array[Byte],
       cas: Long = 0,
       durability: Durability = Disabled,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   ): Try[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     Collection.block(
-      async.append(id, value, cas, durability, timeoutActual, retryStrategy, parentSpan)
+      async.append(id, content, cas, durability, timeout)
+    )
+
+  }
+
+  /** Add bytes to the end of a Couchbase binary document.
+    *
+    * $OnlyBinary
+    *
+    * @param id            $Id
+    * @param content         the bytes to append
+    * @param options       $Options
+    *
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    *         found.  $ErrorHandling
+    * */
+  def append(
+      id: String,
+      content: Array[Byte],
+      options: AppendOptions
+  ): Try[MutationResult] = {
+    Collection.block(
+      async.append(id, content, options)
     )
 
   }
@@ -117,12 +137,14 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     *
     * $OnlyBinary
     *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[PrependOptions]] instead, which supports all available options.
+    *
     * @param id            $Id
-    * @param value       the bytes to append
+    * @param content       the bytes to append
     * @param cas           $CAS
     * @param durability    $Durability
     * @param timeout       $Timeout
-    * @param retryStrategy $RetryStrategy
     *
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
@@ -130,22 +152,44 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * */
   def prepend(
       id: String,
-      value: Array[Byte],
+      content: Array[Byte],
       cas: Long = 0,
       durability: Durability = Disabled,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   ): Try[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     Collection.block(
-      async.prepend(id, value, cas, durability, timeoutActual, retryStrategy, parentSpan)
+      async.prepend(id, content, cas, durability, timeout)
+    )
+  }
+
+  /** Add bytes to the beginning of a Couchbase binary document.
+    *
+    * $OnlyBinary
+    *
+    * @param id            $Id
+    * @param content       the bytes to append
+    * @param options       $Options
+    *
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    *         found.  $ErrorHandling
+    * */
+  def prepend(
+      id: String,
+      content: Array[Byte],
+      options: PrependOptions
+  ): Try[MutationResult] = {
+    Collection.block(
+      async.prepend(id, content, options)
     )
   }
 
   /** Increment a Couchbase 'counter' document.  $CounterDoc
     *
     * $OnlyCounter
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[IncrementOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param delta         the amount to increment by
@@ -155,7 +199,6 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @param cas           $CAS
     * @param durability    $Durability
     * @param timeout       $Timeout
-    * @param retryStrategy $RetryStrategy
     *
     * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
@@ -163,16 +206,12 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * */
   def increment(
       id: String,
-      delta: Long = 1,
+      delta: Long,
       initial: Option[Long] = None,
       cas: Long = 0,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   ): Try[CounterResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     Collection.block(
       async.increment(
         id,
@@ -180,10 +219,73 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
         initial,
         cas,
         durability,
-        expiry,
-        timeoutActual,
-        retryStrategy,
-        parentSpan
+        timeout
+      )
+    )
+  }
+
+  /** Increment a Couchbase 'counter' document.  $CounterDoc
+    *
+    * $OnlyCounter
+    *
+    * @param id            $Id
+    * @param delta         the amount to increment by
+    * @param options       $Options
+    *
+    * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    *         found.  $ErrorHandling
+    * */
+  def increment(
+      id: String,
+      delta: Long,
+      options: IncrementOptions
+  ): Try[CounterResult] = {
+    Collection.block(
+      async.increment(
+        id,
+        delta,
+        options
+      )
+    )
+  }
+
+  /** Decrement a Couchbase 'counter' document.  $CounterDoc
+    *
+    * $OnlyCounter
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[DecrementOptions]] instead, which supports all available options.
+    *
+    * @param id            $Id
+    * @param delta         the amount to decrement by, which should be a positive amount
+    * @param initial       if not-None, the amount to initialise the document too, if it does not exist.  If this is
+    *                      not set, and the document does not exist, Failure(DocumentDoesNotExistException) will be
+    *                      returned
+    * @param cas           $CAS
+    * @param durability    $Durability
+    * @param timeout       $Timeout
+    *
+    * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    *         found.  $ErrorHandling
+    * */
+  def decrement(
+      id: String,
+      delta: Long,
+      initial: Option[Long] = None,
+      cas: Long = 0,
+      durability: Durability = Disabled,
+      timeout: Duration = Duration.MinusInf
+  ): Try[CounterResult] = {
+    Collection.block(
+      async.decrement(
+        id,
+        delta,
+        initial,
+        cas,
+        durability,
+        timeout
       )
     )
   }
@@ -194,13 +296,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     *
     * @param id            $Id
     * @param delta         the amount to decrement by, which should be a positive amount
-    * @param initial       if not-None, the amount to initialise the document too, if it does not exist.  If this is
-    *                      not set, and the document does not exist, Failure(DocumentDoesNotExistException) will be
-    *                      returned
-    * @param cas           $CAS
-    * @param durability    $Durability
-    * @param timeout       $Timeout
-    * @param retryStrategy $RetryStrategy
+    * @param options       $Options
     *
     * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
     *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
@@ -208,27 +304,14 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * */
   def decrement(
       id: String,
-      delta: Long = 1,
-      initial: Option[Long] = None,
-      cas: Long = 0,
-      durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      delta: Long,
+      options: DecrementOptions
   ): Try[CounterResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
     Collection.block(
       async.decrement(
         id,
         delta,
-        initial,
-        cas,
-        durability,
-        expiry,
-        timeoutActual,
-        retryStrategy,
-        parentSpan
+        options
       )
     )
   }

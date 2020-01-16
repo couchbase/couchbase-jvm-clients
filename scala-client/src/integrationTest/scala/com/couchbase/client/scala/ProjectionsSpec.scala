@@ -3,6 +3,7 @@ package com.couchbase.client.scala
 import com.couchbase.client.scala.codec.RawJsonTranscoder
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.kv.{GetOptions, UpsertOptions}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -52,7 +53,7 @@ class ProjectionsSpec extends ScalaIntegrationTest {
         |    }
         |}
         |""".stripMargin
-    coll.upsert(docId, raw, transcoder = RawJsonTranscoder.Instance)
+    coll.upsert(docId, raw, UpsertOptions().transcoder(RawJsonTranscoder.Instance))
 
   }
 
@@ -62,7 +63,7 @@ class ProjectionsSpec extends ScalaIntegrationTest {
   }
 
   private def wrap(project: Seq[String]): JsonObject = {
-    coll.get(docId, project = project) match {
+    coll.get(docId, GetOptions().project(project)) match {
       case Success(result) =>
         result.contentAs[JsonObject] match {
           case Success(body) => body

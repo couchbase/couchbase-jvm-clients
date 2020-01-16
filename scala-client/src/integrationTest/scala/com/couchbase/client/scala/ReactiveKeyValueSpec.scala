@@ -18,6 +18,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.error.{DocumentNotFoundException, TimeoutException}
 import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.kv.{GetOptions, InsertOptions}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -122,7 +123,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
-    assert(wrap(coll.insert(docId, content, expiry = 5.seconds)).isSuccess)
+    assert(wrap(coll.insert(docId, content, InsertOptions().expiry(5.seconds))).isSuccess)
 
     wrap(coll.get(docId)) match {
       case Success(result) => assert(result.expiry.isEmpty)
@@ -137,9 +138,9 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
-    assert(wrap(coll.insert(docId, content, expiry = 5.seconds)).isSuccess)
+    assert(wrap(coll.insert(docId, content, InsertOptions().expiry(5.seconds))).isSuccess)
 
-    wrap(coll.get(docId, withExpiry = true)) match {
+    wrap(coll.get(docId, GetOptions().withExpiry(true))) match {
       case Success(result) => assert(result.expiry.isDefined)
       case Failure(err)    => assert(false, s"unexpected error $err")
       case _               => assert(false, s"unexpected error")
@@ -177,7 +178,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     val docId = TestUtils.docId()
     wrap(coll.remove(docId))
     val content      = ujson.Obj("hello" -> "world")
-    val insertResult = wrap(coll.insert(docId, content, expiry = 10.seconds)).get
+    val insertResult = wrap(coll.insert(docId, content, InsertOptions().expiry(10.seconds))).get
 
     assert(insertResult.cas != 0)
 

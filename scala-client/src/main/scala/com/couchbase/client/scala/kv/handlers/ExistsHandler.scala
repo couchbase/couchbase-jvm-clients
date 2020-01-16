@@ -18,17 +18,10 @@ package com.couchbase.client.scala.kv.handlers
 
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{
-  GetMetaRequest,
-  GetMetaResponse,
-  KeyValueRequest,
-  ObserveViaCasRequest,
-  ObserveViaCasResponse
-}
+import com.couchbase.client.core.msg.kv.{GetMetaRequest, GetMetaResponse, KeyValueRequest}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
-import com.couchbase.client.scala.api.ExistsResult
-import com.couchbase.client.scala.kv.DefaultErrors
+import com.couchbase.client.scala.kv.{DefaultErrors, ExistsResult}
 import com.couchbase.client.scala.util.Validate
 
 import scala.util.{Success, Try}

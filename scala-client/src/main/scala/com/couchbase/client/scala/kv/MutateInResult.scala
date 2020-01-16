@@ -3,11 +3,10 @@ package com.couchbase.client.scala.kv
 import java.util.NoSuchElementException
 
 import com.couchbase.client.core.msg.kv.{MutationToken, SubDocumentField}
-import com.couchbase.client.scala.api.HasDurabilityTokens
-import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer}
+import com.couchbase.client.scala.codec.JsonDeserializer
 
-import scala.util.{Failure, Try}
 import scala.compat.java8.OptionConverters._
+import scala.util.{Failure, Try}
 
 /** The results of a SubDocument `mutateIn` operation.
   *

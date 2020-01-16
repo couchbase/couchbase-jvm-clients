@@ -24,7 +24,7 @@ import com.couchbase.client.core.error.{
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSerializer}
 import com.couchbase.client.scala.json.JsonArraySafe
-import com.couchbase.client.scala.kv.{LookupInSpec, MutateInSpec}
+import com.couchbase.client.scala.kv._
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -45,12 +45,30 @@ class CouchbaseBuffer[T](
     case _       => CouchbaseCollectionOptions(collection)
   }
 
+  private val lookupInOptions = LookupInOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+  private val mutateInOptions = MutateInOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+    .durability(opts.durability)
+  private val getOptions = GetOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+  private val insertOptions = InsertOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+    .durability(opts.durability)
+  private val removeOptions = RemoveOptions()
+    .timeout(opts.timeout)
+    .retryStrategy(opts.retryStrategy)
+    .durability(opts.durability)
+
   override def apply(index: Int): T = {
     val op = collection.lookupIn(
       id,
       Array(LookupInSpec.get("[" + index + "]")),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy
+      lookupInOptions
     )
 
     val result = op.flatMap(result => result.contentAs[T](0))
@@ -70,9 +88,7 @@ class CouchbaseBuffer[T](
       .mutateIn(
         id,
         Array(MutateInSpec.remove("[" + index + "]")),
-        timeout = opts.timeout,
-        retryStrategy = opts.retryStrategy,
-        durability = opts.durability
+        mutateInOptions
       ) match {
       case Success(_) =>
       case Failure(err: DocumentNotFoundException) =>
@@ -92,8 +108,7 @@ class CouchbaseBuffer[T](
     val op = collection.lookupIn(
       id,
       Array(LookupInSpec.get("[" + index + "]")),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy
+      lookupInOptions
     )
 
     val result = op.flatMap(result => result.contentAs[T](0))
@@ -103,10 +118,7 @@ class CouchbaseBuffer[T](
         val mutateResult = collection.mutateIn(
           id,
           Array(MutateInSpec.remove("[" + index + "]")),
-          cas = op.get.cas,
-          timeout = opts.timeout,
-          retryStrategy = opts.retryStrategy,
-          durability = opts.durability
+          mutateInOptions.cas(op.get.cas)
         )
 
         mutateResult match {
@@ -150,9 +162,7 @@ class CouchbaseBuffer[T](
       collection.mutateIn(
         id,
         Array(MutateInSpec.arrayAppend("", Seq(value))),
-        timeout = opts.timeout,
-        retryStrategy = opts.retryStrategy,
-        durability = opts.durability
+        mutateInOptions
       )
     retryIfDocDoesNotExist(f)
     this
@@ -163,9 +173,7 @@ class CouchbaseBuffer[T](
       collection.mutateIn(
         id,
         Array(MutateInSpec.arrayPrepend("", Seq(value))),
-        timeout = opts.timeout,
-        retryStrategy = opts.retryStrategy,
-        durability = opts.durability
+        mutateInOptions
       )
     retryIfDocDoesNotExist(f)
     this
@@ -177,9 +185,7 @@ class CouchbaseBuffer[T](
       .insert(
         id,
         JsonArraySafe.create,
-        timeout = opts.timeout,
-        retryStrategy = opts.retryStrategy,
-        durability = opts.durability
+        insertOptions
       )
       .get
   }
@@ -188,8 +194,7 @@ class CouchbaseBuffer[T](
     val op = collection.lookupIn(
       id,
       Array(LookupInSpec.count("")),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy
+      lookupInOptions
     )
 
     val result = op.flatMap(result => result.contentAs[Int](0))
@@ -202,7 +207,7 @@ class CouchbaseBuffer[T](
   }
 
   private def all(): Seq[T] = {
-    val op = collection.get(id, timeout = opts.timeout, retryStrategy = opts.retryStrategy)
+    val op = collection.get(id, getOptions)
 
     val result = op
       .flatMap(_.contentAs[JsonArraySafe])
@@ -229,9 +234,7 @@ class CouchbaseBuffer[T](
     val result = collection.mutateIn(
       id,
       Array(MutateInSpec.replace("[" + index + "]", value)),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy,
-      durability = opts.durability
+      mutateInOptions
     )
 
     result match {
@@ -250,9 +253,7 @@ class CouchbaseBuffer[T](
   override def clear(): Unit = {
     collection.remove(
       id,
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy,
-      durability = opts.durability
+      removeOptions
     ) match {
       case Failure(_: DocumentNotFoundException) =>
       case Failure(err)                          => throw err
@@ -266,9 +267,7 @@ class CouchbaseBuffer[T](
     val result = collection.mutateIn(
       id,
       Array(MutateInSpec.arrayAppend("[" + index + "]", values.toSeq)),
-      timeout = opts.timeout,
-      retryStrategy = opts.retryStrategy,
-      durability = opts.durability
+      mutateInOptions
     )
 
     result match {

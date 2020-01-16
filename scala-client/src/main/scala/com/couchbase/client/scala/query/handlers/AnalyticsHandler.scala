@@ -47,8 +47,7 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
     val validations: Try[AnalyticsRequest] = for {
       _ <- Validate.notNullOrEmpty(statement, "statement")
       _ <- Validate.notNull(options, "options")
-      _ <- Validate.optNotNull(options.namedParameters, "namedParameters")
-      _ <- Validate.optNotNull(options.positionalParameters, "positionalParameters")
+      _ <- Validate.optNotNull(options.parameters, "parameters")
       _ <- Validate.optNotNull(options.clientContextId, "clientContextId")
       _ <- Validate.optNotNull(options.retryStrategy, "retryStrategy")
       _ <- Validate.optNotNull(options.timeout, "timeout")

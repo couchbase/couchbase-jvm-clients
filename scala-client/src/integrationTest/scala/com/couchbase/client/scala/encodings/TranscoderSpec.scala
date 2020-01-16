@@ -17,6 +17,7 @@ package com.couchbase.client.scala.encodings
 
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.kv.InsertOptions
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -85,7 +86,7 @@ class TranscoderSpec extends ScalaIntegrationTest {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world")
-    val insertResult = coll.insert(docId, content, expiry = 10.seconds).get
+    val insertResult = coll.insert(docId, content, InsertOptions().expiry(10.seconds)).get
 
     assert(insertResult.cas != 0)
 

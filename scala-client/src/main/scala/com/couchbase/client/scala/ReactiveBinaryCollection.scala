@@ -15,20 +15,14 @@
  */
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.cnc.RequestSpan
-import com.couchbase.client.core.msg.kv.KeyValueRequest
-import com.couchbase.client.core.msg.{Request, Response}
-import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.api.{CounterResult, MutationResult}
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
-import com.couchbase.client.scala.kv.handlers.KeyValueRequestHandler
-import com.couchbase.client.scala.util.{FutureConversions, TimeoutUtil}
+import com.couchbase.client.scala.kv._
+import com.couchbase.client.scala.util.TimeoutUtil
 import reactor.core.scala.publisher.SMono
 
-import scala.concurrent.duration.{Duration, _}
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
 
 /** Operations on non-JSON Couchbase documents.
   *
@@ -45,29 +39,8 @@ import scala.util.{Failure, Success, Try}
 class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
   private[scala] implicit val ec: ExecutionContext = async.ec
 
-  import com.couchbase.client.scala.util.DurationConversions._
-
   private[scala] val kvTimeout: Durability => Duration = TimeoutUtil.kvTimeout(async.environment)
   private[scala] val environment                       = async.environment
-
-  private def wrap[Resp <: Response, Res](
-      in: Try[KeyValueRequest[Resp]],
-      id: String,
-      handler: KeyValueRequestHandler[Resp, Res]
-  ): SMono[Res] = {
-    in match {
-      case Success(request) =>
-        SMono.defer(() => {
-          async.async.core.send[Resp](request)
-
-          FutureConversions
-            .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-            .map(r => handler.response(request, id, r))
-        })
-
-      case Failure(err) => SMono.raiseError(err)
-    }
-  }
 
   /** Add bytes to the end of a Couchbase binary document.
     *
@@ -78,22 +51,21 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
       content: Array[Byte],
       cas: Long = 0,
       durability: Durability = Disabled,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   ): SMono[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-    val req =
-      async.binaryAppendHandler.request(
-        id,
-        content,
-        cas,
-        durability,
-        timeoutActual,
-        retryStrategy,
-        parentSpan
-      )
-    wrap(req, id, async.binaryAppendHandler)
+    SMono.defer(() => SMono.fromFuture(async.append(id, content, cas, durability, timeout)))
+  }
+
+  /** Add bytes to the end of a Couchbase binary document.
+    *
+    * See [[BinaryCollection.append]] for details.  $Same
+    */
+  def append(
+      id: String,
+      content: Array[Byte],
+      options: AppendOptions
+  ): SMono[MutationResult] = {
+    SMono.defer(() => SMono.fromFuture(async.append(id, content, options)))
   }
 
   /** Add bytes to the beginning of a Couchbase binary document.
@@ -105,22 +77,21 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
       content: Array[Byte],
       cas: Long = 0,
       durability: Durability = Disabled,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   ): SMono[MutationResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-    val req =
-      async.binaryPrependHandler.request(
-        id,
-        content,
-        cas,
-        durability,
-        timeoutActual,
-        retryStrategy,
-        parentSpan
-      )
-    wrap(req, id, async.binaryPrependHandler)
+    SMono.defer(() => SMono.fromFuture(async.prepend(id, content, cas, durability, timeout)))
+  }
+
+  /** Add bytes to the beginning of a Couchbase binary document.
+    *
+    * See [[BinaryCollection.prepend]] for details.  $Same
+    * */
+  def prepend(
+      id: String,
+      content: Array[Byte],
+      options: PrependOptions
+  ): SMono[MutationResult] = {
+    SMono.defer(() => SMono.fromFuture(async.prepend(id, content, options)))
   }
 
   /** Increment a Couchbase 'counter' document.
@@ -133,24 +104,23 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
       initial: Option[Long] = None,
       cas: Long = 0,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   ): SMono[CounterResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-    val req = async.binaryIncrementHandler.request(
-      id,
-      delta,
-      initial,
-      cas,
-      durability,
-      expiry,
-      timeoutActual,
-      retryStrategy,
-      parentSpan
+    SMono.defer(
+      () => SMono.fromFuture(async.increment(id, delta, initial, cas, durability, timeout))
     )
-    wrap(req, id, async.binaryIncrementHandler)
+  }
+
+  /** Increment a Couchbase 'counter' document.
+    *
+    * See [[BinaryCollection.increment]] for details.  $Same
+    * */
+  def increment(
+      id: String,
+      delta: Long,
+      options: IncrementOptions
+  ): SMono[CounterResult] = {
+    SMono.defer(() => SMono.fromFuture(async.increment(id, delta, options)))
   }
 
   /** Decrement a Couchbase 'counter' document.
@@ -163,23 +133,22 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
       initial: Option[Long] = None,
       cas: Long = 0,
       durability: Durability = Disabled,
-      expiry: Duration = 0.seconds,
-      timeout: Duration = Duration.MinusInf,
-      retryStrategy: RetryStrategy = environment.retryStrategy,
-      parentSpan: Option[RequestSpan] = None
+      timeout: Duration = Duration.MinusInf
   ): SMono[CounterResult] = {
-    val timeoutActual = if (timeout == Duration.MinusInf) kvTimeout(durability) else timeout
-    val req = async.binaryDecrementHandler.request(
-      id,
-      delta,
-      initial,
-      cas,
-      durability,
-      expiry,
-      timeoutActual,
-      retryStrategy,
-      parentSpan
+    SMono.defer(
+      () => SMono.fromFuture(async.decrement(id, delta, initial, cas, durability, timeout))
     )
-    wrap(req, id, async.binaryDecrementHandler)
+  }
+
+  /** Decrement a Couchbase 'counter' document.
+    *
+    * See [[BinaryCollection.increment]] for details.  $Same
+    * */
+  def decrement(
+      id: String,
+      delta: Long,
+      options: DecrementOptions
+  ): SMono[CounterResult] = {
+    SMono.defer(() => SMono.fromFuture(async.decrement(id, delta, options)))
   }
 }

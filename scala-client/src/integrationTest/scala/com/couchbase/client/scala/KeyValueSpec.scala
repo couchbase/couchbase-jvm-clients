@@ -9,6 +9,7 @@ import com.couchbase.client.core.retry.RetryReason
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
+import com.couchbase.client.scala.kv.{GetOptions, InsertOptions}
 import com.couchbase.client.scala.query.QueryOptions
 import com.couchbase.client.scala.util.{ScalaIntegrationTest, Validate}
 import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
@@ -98,7 +99,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
-    assert(coll.insert(docId, content, expiry = 5.seconds).isSuccess)
+    assert(coll.insert(docId, content, InsertOptions().expiry(5.seconds)).isSuccess)
 
     coll.get(docId) match {
       case Success(result) => assert(result.expiry.isEmpty)
@@ -112,9 +113,9 @@ class KeyValueSpec extends ScalaIntegrationTest {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
-    assert(coll.insert(docId, content, expiry = 5.seconds).isSuccess)
+    assert(coll.insert(docId, content, InsertOptions().expiry(5.seconds)).isSuccess)
 
-    coll.get(docId, withExpiry = true) match {
+    coll.get(docId, GetOptions().withExpiry(true)) match {
       case Success(result) => assert(result.expiry.isDefined)
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
@@ -126,11 +127,11 @@ class KeyValueSpec extends ScalaIntegrationTest {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
-    assert(coll.insert(docId, content, expiry = 5.seconds).isSuccess)
+    assert(coll.insert(docId, content, InsertOptions().expiry(5.seconds)).isSuccess)
 
     assert(coll.touch(docId, expiry = 10.seconds).isSuccess)
 
-    coll.get(docId, withExpiry = true) match {
+    coll.get(docId, GetOptions().withExpiry(true)) match {
       case Success(result) => assert(result.expiry.isDefined)
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
@@ -195,7 +196,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world")
-    val insertResult = coll.insert(docId, content, expiry = 10.seconds).get
+    val insertResult = coll.insert(docId, content, InsertOptions().expiry(10.seconds)).get
 
     assert(insertResult.cas != 0)
 

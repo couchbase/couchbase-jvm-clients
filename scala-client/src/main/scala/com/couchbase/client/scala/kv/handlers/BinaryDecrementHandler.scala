@@ -20,17 +20,11 @@ import java.util.Optional
 
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.kv.{
-  AppendRequest,
-  DecrementRequest,
-  DecrementResponse,
-  KeyValueRequest
-}
+import com.couchbase.client.core.msg.kv.{DecrementRequest, DecrementResponse, KeyValueRequest}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.HandlerParams
-import com.couchbase.client.scala.api.CounterResult
 import com.couchbase.client.scala.durability.Durability
-import com.couchbase.client.scala.kv.DefaultErrors
+import com.couchbase.client.scala.kv.{CounterResult, DefaultErrors}
 import com.couchbase.client.scala.util.Validate
 
 import scala.compat.java8.OptionConverters._

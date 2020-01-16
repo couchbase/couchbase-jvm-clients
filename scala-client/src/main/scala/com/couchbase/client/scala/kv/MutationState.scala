@@ -1,7 +1,6 @@
 package com.couchbase.client.scala.kv
 
 import com.couchbase.client.core.msg.kv.MutationToken
-import com.couchbase.client.scala.api.MutationResult
 
 /** Represents the tokens from one or more mutations. */
 case class MutationState(tokens: Seq[MutationToken]) {
