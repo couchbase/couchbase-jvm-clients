@@ -39,7 +39,6 @@ import scala.concurrent.duration.Duration
 case class QueryOptions(
     private[scala] val parameters: Option[QueryParameters] = None,
     private[scala] val clientContextId: Option[String] = None,
-    private[scala] val credentials: Option[Map[String, String]] = None,
     private[scala] val maxParallelism: Option[Int] = None,
     private[scala] val metrics: Boolean = false,
     private[scala] val pipelineBatch: Option[Int] = None,
@@ -118,16 +117,6 @@ case class QueryOptions(
     * @return a copy of this with the change applied, for chaining.
     */
   def clientContextId(contextId: String): QueryOptions = copy(clientContextId = Option(contextId))
-
-  /** Additional credentials for the query
-    *
-    * @param user     the user name
-    * @param password the user password
-    *
-    * @return a copy of this with the change applied, for chaining.
-    */
-  def credentials(user: String, password: String): QueryOptions =
-    copy(credentials = Option(Map(user -> password)))
 
   /** Allows to override the default maximum parallelism for the query execution on the server side.
     *
@@ -264,19 +253,6 @@ case class QueryOptions(
   }
 
   private[scala] def encode(out: JsonObject): JsonObject = {
-    credentials.foreach(creds => {
-      val credsArr = JsonArray.create
-
-      creds.foreach(k => {
-        val c = JsonObject("user" -> k._1, "pass" -> k._2)
-        credsArr.add(c)
-      })
-
-      if (credsArr.nonEmpty) {
-        out.put("creds", creds)
-      }
-    })
-
     parameters match {
       case Some(QueryParameters.Named(named)) =>
         named.foreach(k => {
