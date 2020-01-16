@@ -22,9 +22,6 @@
         <jackson.version>2.10.1</jackson.version>
         <reactor.version>3.3.1.RELEASE</reactor.version>
 
-        <!--Can override this with mvn -Dscala.compat.version=2.11-->
-        <scala.compat.version>2.12</scala.compat.version>
-        <scala.compat.library.version>2.12.10</scala.compat.library.version>
         <gpg.keyname></gpg.keyname>
         <gpg.passphrase></gpg.passphrase>
     </properties>
@@ -54,7 +51,7 @@
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
-                <artifactId>scala-client_2.12</artifactId>
+                <artifactId>scala-client_${scala.compat.version}</artifactId>
                 <version>1.1.0-SNAPSHOT</version>
             </dependency>
             <dependency>

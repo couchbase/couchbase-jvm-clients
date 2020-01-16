@@ -30,7 +30,7 @@
     <dependencies>
         <dependency>
             <groupId>com.couchbase.client</groupId>
-            <artifactId>scala-client_2.12</artifactId>
+            <artifactId>scala-client_${scala.compat.version}</artifactId>
         </dependency>
 
         <dependency>
@@ -63,8 +63,9 @@
         <plugins>
             <plugin>
                 <groupId>org.antipathy</groupId>
-                <artifactId>mvn-scalafmt_${scala.compat.version}</artifactId>
-                <version>1.0.1</version>
+                <!-- use mvn-scalafmt_2.13 for all scala.compat.version -->
+                <artifactId>mvn-scalafmt_2.13</artifactId>
+                <version>1.0.2</version>
                 <configuration>
                     <configLocation>${project.basedir}/../.scalafmt.conf</configLocation>
                     <skipTestSources>false</skipTestSources>

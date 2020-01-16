@@ -45,6 +45,10 @@ For Scala:
     </dependency>
 </dependencies>
 ```
+or if you use sbt:
+```sbt
+libraryDependencies += "com.couchbase.client" %% "scala-client" % "1.0.0"
+```
 
 ## Building
 You can always also just build it from source:
@@ -58,24 +62,29 @@ $ make
 Yes, we need `make` because maven doesn't support the setup we need and neither does gradle. If you
 want to build for different scala versions, after the first `make` you can do this through:
 
+```shell script
+$ ./mvnw -Dscala.compat.version=2.13 -Dscala.compat.library.version=2.13.1 clean install
+$ ./mvnw -Dscala.compat.version=2.11 -Dscala.compat.library.version=2.11.12 clean install
 ```
-$ mvn -Dscala.compat.version=2.12 -Dscala.compat.library.version=2.12.8 clean install
-$ mvn -Dscala.compat.version=2.11 -Dscala.compat.library.version=2.11.12 clean install
-```
 
-(The two `mvn` runs are to cross-compile the Scala SDK for Scala 2.11 and 2.12.
-
-(You can always go into one of the sub-directories like `core-io` to only build or test an 
-individual project.)
-
-Use `-DskipTests` to skip testing.
+Notes:
++ The two `mvn` runs are to cross-compile the Scala SDK for Scala 2.11, and 2.13
++ When build for scala 2.11, jdk 8 should be used. If use jdk 11 then goal scala:doc-jar will fail
++ Default `scala.compat.`X properties are defined in file [.mvn/maven.config]
++ You can always go into one of the sub-directories like `core-io` to only build or test an 
+individual project:
+    ```shell script
+    cd scala-client
+    ../mvnw -DskipTests clean install
+    ```
++ Use `-DskipTests` to skip testing.
 
 ### Testing 
 
 You can test like this:
 
-```
-$ mvn clean test -fae
+```shell script
+$ ./mvnw clean test -fae
 ```
 
 ### Branches & Release Trains

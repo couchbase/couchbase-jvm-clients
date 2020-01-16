@@ -31,7 +31,7 @@
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-scala-extensions_${scala.compat.version}</artifactId>
-            <version>0.4.6</version>
+            <version>0.5.0</version>
         </dependency>
 
         <dependency>
@@ -51,6 +51,11 @@
             <artifactId>scala-java8-compat_${scala.compat.version}</artifactId>
             <version>0.9.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.scala-lang.modules</groupId>
+            <artifactId>scala-collection-compat_${scala.compat.version}</artifactId>
+            <version>2.1.3</version>
+        </dependency>
 
         <!-- Test Dependencies -->
         <dependency>
@@ -68,107 +73,43 @@
         </dependency>
 
         <dependency>
-            <groupId>org.scalacheck</groupId>
-            <artifactId>scalacheck_${scala.compat.version}</artifactId>
-            <version>1.14.0</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>test-utils</artifactId>
             <scope>test</scope>
         </dependency>
 
         <dependency>
-            <groupId>com.lihaoyi</groupId>
-            <artifactId>upickle_${scala.compat.version}</artifactId>
-            <version>0.7.1</version>
-        </dependency>
-
-        <dependency>
-            <groupId>io.circe</groupId>
-            <artifactId>circe-core_${scala.compat.version}</artifactId>
-            <version>0.10.0</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.circe</groupId>
-            <artifactId>circe-core_${scala.compat.version}</artifactId>
-            <version>0.10.0</version>
-            <optional>true</optional>
-        </dependency>
-
-        <dependency>
-            <groupId>io.circe</groupId>
-            <artifactId>circe-generic_${scala.compat.version}</artifactId>
-            <version>0.10.0</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.circe</groupId>
-            <artifactId>circe-parser_${scala.compat.version}</artifactId>
-            <version>0.10.0</version>
-            <scope>test</scope>
-        </dependency>
-
-        <!--Only used for circe-->
-        <dependency>
-            <groupId>org.scalamacros</groupId>
-            <!--A 2.11 build does not exist-->
-            <artifactId>paradise_2.12.7</artifactId>
-            <version>2.1.1</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.typesafe.play</groupId>
-            <artifactId>play-json_${scala.compat.version}</artifactId>
-            <version>2.8.1</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.typesafe.play</groupId>
-            <artifactId>play-json_${scala.compat.version}</artifactId>
-            <version>2.8.1</version>
-            <optional>true</optional>
-        </dependency>
-
-        <dependency>
             <groupId>org.json4s</groupId>
             <artifactId>json4s-jackson_${scala.compat.version}</artifactId>
-            <version>3.6.4</version>
+            <version>3.6.7</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.json4s</groupId>
             <artifactId>json4s-native_${scala.compat.version}</artifactId>
-            <version>3.6.4</version>
+            <version>3.6.7</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.json4s</groupId>
             <artifactId>json4s-jackson_${scala.compat.version}</artifactId>
-            <version>3.6.4</version>
+            <version>3.6.7</version>
             <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>org.typelevel</groupId>
             <artifactId>jawn-ast_${scala.compat.version}</artifactId>
-            <version>0.14.0</version>
+            <version>0.14.3</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.typelevel</groupId>
             <artifactId>jawn-ast_${scala.compat.version}</artifactId>
-            <version>0.14.0</version>
+            <version>0.14.3</version>
             <optional>true</optional>
         </dependency>
 
@@ -185,9 +126,178 @@
             <version>${jackson.version}</version>
             <optional>true</optional>
         </dependency>
-
-
     </dependencies>
+
+    <profiles>
+        <profile>
+            <!-- We need 2 profile scala_2.13 & scala_NOT_2.13 to Cross-building custom scala collections.
+                 See https://docs.scala-lang.org/overviews/core/custom-collections.html#appendix-cross-building-custom-collections -->
+            <id>scala_2.13</id>
+            <activation>
+                <property>
+                    <name>scala.compat.version</name>
+                    <value>2.13</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>add-source</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>add-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>src/main/scala-2.13+</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>scala_NOT_2.13</id>
+            <activation>
+                <property>
+                    <name>scala.compat.version</name>
+                    <value>!2.13</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>add-source</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>add-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>src/main/scala-2.13-</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>scala_2.11</id>
+            <activation>
+                <property>
+                    <name>scala.compat.version</name>
+                    <value>2.11</value>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>com.lihaoyi</groupId>
+                    <artifactId>upickle_${scala.compat.version}</artifactId>
+                    <version>0.7.4</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.circe</groupId>
+                    <artifactId>circe-core_${scala.compat.version}</artifactId>
+                    <version>0.11.2</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>io.circe</groupId>
+                    <artifactId>circe-core_${scala.compat.version}</artifactId>
+                    <version>0.11.2</version>
+                    <optional>true</optional>
+                </dependency>
+                <dependency>
+                    <groupId>io.circe</groupId>
+                    <artifactId>circe-generic_${scala.compat.version}</artifactId>
+                    <version>0.11.2</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>io.circe</groupId>
+                    <artifactId>circe-parser_${scala.compat.version}</artifactId>
+                    <version>0.11.2</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.typesafe.play</groupId>
+                    <artifactId>play-json_${scala.compat.version}</artifactId>
+                    <version>2.7.4</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.typesafe.play</groupId>
+                    <artifactId>play-json_${scala.compat.version}</artifactId>
+                    <version>2.7.4</version>
+                    <optional>true</optional>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>scala_NOT_2.11</id>
+            <activation>
+                <property>
+                    <name>scala.compat.version</name>
+                    <value>!2.11</value>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>com.lihaoyi</groupId>
+                    <artifactId>upickle_${scala.compat.version}</artifactId>
+                    <version>0.9.8</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.circe</groupId>
+                    <artifactId>circe-core_${scala.compat.version}</artifactId>
+                    <version>0.12.3</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>io.circe</groupId>
+                    <artifactId>circe-core_${scala.compat.version}</artifactId>
+                    <version>0.12.3</version>
+                    <optional>true</optional>
+                </dependency>
+                <dependency>
+                    <groupId>io.circe</groupId>
+                    <artifactId>circe-generic_${scala.compat.version}</artifactId>
+                    <version>0.12.3</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>io.circe</groupId>
+                    <artifactId>circe-parser_${scala.compat.version}</artifactId>
+                    <version>0.12.3</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.typesafe.play</groupId>
+                    <artifactId>play-json_${scala.compat.version}</artifactId>
+                    <version>2.8.1</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.typesafe.play</groupId>
+                    <artifactId>play-json_${scala.compat.version}</artifactId>
+                    <version>2.8.1</version>
+                    <optional>true</optional>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 
     <build>
         <sourceDirectory>src/main/scala</sourceDirectory>
@@ -207,17 +317,18 @@
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
-                <version>4.0.1</version>
+                <version>4.3.0</version>
 
                 <configuration>
                     <args>
                         <!--Required for Scala 2.11 build, this enables support for Java SAM.  This is on by default in-->
                         <!--Scala 2.12+ -->
                         <arg>-Xexperimental</arg>
+                        <arg>-target:jvm-1.8</arg>
                     </args>
                 </configuration>
 
-                <!--Seem to need this to get any Scala compiled-->
+                <!--Seem to need this to get any Scala compiled TODO check this-->
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -245,8 +356,9 @@
 
             <plugin>
                 <groupId>org.antipathy</groupId>
-                <artifactId>mvn-scalafmt_${scala.compat.version}</artifactId>
-                <version>1.0.1</version>
+                <!-- use mvn-scalafmt_2.13 for all scala.compat.version -->
+                <artifactId>mvn-scalafmt_2.13</artifactId>
+                <version>1.0.2</version>
                 <configuration>
                     <configLocation>${project.basedir}/../.scalafmt.conf</configLocation>
                     <skipTestSources>false</skipTestSources>
@@ -254,6 +366,8 @@
                     <respectVersion>false</respectVersion>
                     <sourceDirectories>
                         <param>${project.basedir}/src/main/scala</param>
+                        <param>${project.basedir}/src/main/scala-2.13-</param>
+                        <param>${project.basedir}/src/main/scala-2.13+</param>
                     </sourceDirectories>
                     <testSourceDirectories>
                         <param>${project.basedir}/src/test/scala</param>
