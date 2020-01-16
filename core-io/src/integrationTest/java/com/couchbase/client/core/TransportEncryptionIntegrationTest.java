@@ -62,6 +62,7 @@ import static org.mockito.Mockito.mock;
  * <p>Note that since the mock does not support encrypted connections, they are ignored
  * on it.</p>
  */
+@IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
 class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
 
   /**
@@ -90,7 +91,6 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void performsKeyValueIgnoringServerCert() throws Exception {
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .enableTls(true)
@@ -126,8 +126,6 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
-  @Disabled("With hostname validation the server cert SAN validation fails, need to figure out how to fix that")
   void performsKeyValueWithServerCert() throws Exception {
     if (!config().clusterCert().isPresent()) {
       fail("Cluster Certificate must be present for this test!");
@@ -165,13 +163,11 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void failsIfNoTrustPresent() {
     assertThrows(InvalidArgumentException.class, () -> secureEnvironment(SecurityConfig.enableTls(true), null));
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   @SuppressWarnings("unchecked")
   void failsIfMoreThanOneTrustPresent() {
     assertThrows(InvalidArgumentException.class, () -> secureEnvironment(SecurityConfig
@@ -182,7 +178,6 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   @SuppressWarnings("unchecked")
   void failsIfWrongCertPresent() {
     SimpleEventBus eventBus = new SimpleEventBus(true);
@@ -211,9 +206,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     } finally {
       core.shutdown().block();
       env.shutdown();
-    }
-
-
+  }
   }
 
 }

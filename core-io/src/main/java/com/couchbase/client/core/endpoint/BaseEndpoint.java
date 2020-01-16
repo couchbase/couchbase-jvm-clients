@@ -77,7 +77,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
@@ -288,7 +287,7 @@ public abstract class BaseEndpoint implements Endpoint {
               SecurityConfig config = env.securityConfig();
               if (config.tlsEnabled()) {
                 try {
-                  pipeline.addFirst(SslHandlerFactory.get(ch.alloc(), config, endpointContext.authenticator()));
+                  pipeline.addFirst(SslHandlerFactory.get(ch.alloc(), config, endpointContext));
                 } catch (Exception e) {
                   throw new SecurityException("Could not instantiate SSL Handler", e);
                 }
