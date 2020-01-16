@@ -24,7 +24,7 @@ import com.couchbase.client.scala.util.CouchbasePickler
 
 import scala.util.{Failure, Try}
 
-private[scala] case class SearchIndexWrapper private (
+private[scala] case class SearchIndexWrapper(
     indexDef: SearchIndex,
     planPIndexes: Option[Seq[ujson.Obj]]
 ) {
@@ -38,13 +38,13 @@ private[scala] object SearchIndexWrapper {
   implicit val rw: CouchbasePickler.ReadWriter[SearchIndexWrapper] = CouchbasePickler.macroRW
 }
 
-private[scala] case class SearchIndexesWrapper private (indexDefs: Map[String, SearchIndex])
+private[scala] case class SearchIndexesWrapper(indexDefs: Map[String, SearchIndex])
 
 private[scala] object SearchIndexesWrapper {
   implicit val rw: CouchbasePickler.ReadWriter[SearchIndexesWrapper] = CouchbasePickler.macroRW
 }
 
-case class SearchIndex private (
+case class SearchIndex(
     name: String,
     sourceName: String,
     // The UUID is server-assigned. It should not be present on a created index, but must
