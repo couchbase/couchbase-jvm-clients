@@ -78,31 +78,6 @@ case class ReactiveQueryResult(
   }
 }
 
-/** If an error is returned by the query service as it is processing rows, this will be raised. */
-case class QueryError(private val content: Array[Byte]) extends CouchbaseException {
-  private lazy val str  = new String(content, CharsetUtil.UTF_8)
-  private lazy val json = JsonObjectSafe.fromJson(str)
-
-  /** A human-readable error code. */
-  def msg: String = {
-    json match {
-      case Success(j) =>
-        j.str("msg") match {
-          case Success(msg) => msg
-          case Failure(_)   => s"unknown error ($str)"
-        }
-      case Failure(err) => s"unknown error ($str)"
-    }
-  }
-
-  /** The raw error code returned by the query service. */
-  def code: Try[Int] = {
-    json.flatMap(_.num("code"))
-  }
-
-  override def toString: String = msg
-}
-
 /** A warning returned from the query service. */
 case class QueryWarning(code: Int, message: String)
 

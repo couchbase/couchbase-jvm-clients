@@ -43,7 +43,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 import scala.util.{Failure, Success, Try}
 
-case class HandlerParams(
+private[scala] case class HandlerParams(
     core: Core,
     bucketName: String,
     collectionIdentifier: CollectionIdentifier,
@@ -52,7 +52,7 @@ case class HandlerParams(
   def tracer = env.coreEnv.requestTracer()
 }
 
-case class HandlerBasicParams(core: Core, env: ClusterEnvironment) {
+private[scala] case class HandlerBasicParams(core: Core, env: ClusterEnvironment) {
   def tracer = env.coreEnv.requestTracer()
 }
 
