@@ -9,7 +9,7 @@ import concurrent.duration._
 
 class EnvironmentSpec {
   @Test
-  def basic() {
+  def basic(): Unit = {
     val env = ClusterEnvironment.create
 
     val cluster = Cluster
@@ -24,7 +24,7 @@ class EnvironmentSpec {
   }
 
   @Test
-  def badConnstrReturnsErr() {
+  def badConnstrReturnsErr(): Unit = {
     Cluster.connect("not:a:valid:conn:str", "user", "pass") match {
       case Success(env) => assert(false)
       case _            =>
@@ -32,7 +32,7 @@ class EnvironmentSpec {
   }
 
   @Test
-  def connectWithSeedNodes() {
+  def connectWithSeedNodes(): Unit = {
     Cluster.connect("node1,node2", "user", "pass") match {
       case Success(cluster) =>
         assert(cluster.async.seedNodes.size == 2)
@@ -43,7 +43,7 @@ class EnvironmentSpec {
   }
 
   @Test
-  def basic_unowned() {
+  def basic_unowned(): Unit = {
     val env     = ClusterEnvironment.create
     val cluster = Cluster.connect("localhost", "Administrator", "password").get
     assert(!env.owned)
@@ -54,7 +54,7 @@ class EnvironmentSpec {
   }
 
   @Test
-  def basic_owned() {
+  def basic_owned(): Unit = {
     val cluster = Cluster.connect("localhost", "Administrator", "password").get
     val env     = cluster.async.env
     assert(env.owned)
@@ -64,7 +64,7 @@ class EnvironmentSpec {
   }
 
   @Test
-  def io_config() {
+  def io_config(): Unit = {
     val env = ClusterEnvironment.builder
       .ioConfig(
         IoConfig()
@@ -83,7 +83,7 @@ class EnvironmentSpec {
   }
 
   @Test
-  def logging_config() {
+  def logging_config(): Unit = {
     val env = ClusterEnvironment.builder
       .loggerConfig(
         LoggerConfig()
@@ -161,7 +161,7 @@ class EnvironmentSpec {
   }
 
   @Test
-  def dnsSrv() {
+  def dnsSrv(): Unit = {
     val env = ClusterEnvironment.builder
       .ioConfig(
         IoConfig()

@@ -17,14 +17,10 @@
 package com.couchbase.client.scala
 
 import java.util.UUID
-import java.util.stream.Collectors
 
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.{Authenticator, PasswordAuthenticator}
-import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.AsyncCluster.seedNodesFromConnectionString
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsParameters, AnalyticsResult}
 import com.couchbase.client.scala.diagnostics.{
@@ -42,11 +38,10 @@ import com.couchbase.client.scala.query.{QueryOptions, QueryParameters, QueryRes
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
-import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions}
+import com.couchbase.client.scala.util.AsyncUtils
 
-import scala.collection.GenMap
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
-import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 /** Represents a connection to a Couchbase cluster.

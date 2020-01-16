@@ -82,7 +82,7 @@ class ReactiveBucketManager(core: Core) {
         } else {
           ManagerUtil.checkStatus(response, "create bucket [" + redactMeta(settings) + "]") match {
             case Failure(err) => SMono.raiseError(err)
-            case _            => SMono.just(0).map(_ => Unit)
+            case _            => SMono.just(())
           }
         }
       })
@@ -139,7 +139,7 @@ class ReactiveBucketManager(core: Core) {
         } else {
           ManagerUtil.checkStatus(response, "drop bucket [" + redactMeta(bucketName) + "]") match {
             case Failure(err) => SMono.raiseError(err)
-            case _            => SMono.just(0).map(_ => Unit)
+            case _            => SMono.just(())
           }
         }
       })
@@ -195,7 +195,7 @@ class ReactiveBucketManager(core: Core) {
         } else {
           ManagerUtil.checkStatus(response, "flush bucket [" + redactMeta(bucketName) + "]") match {
             case Failure(err) => SMono.raiseError(err)
-            case _            => SMono.just(0).map(_ => Unit)
+            case _            => SMono.just(())
           }
         }
       })

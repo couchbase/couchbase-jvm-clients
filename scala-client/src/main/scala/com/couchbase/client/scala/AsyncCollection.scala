@@ -18,16 +18,14 @@ package com.couchbase.client.scala
 import java.util.Optional
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error._
 import com.couchbase.client.core.error.context.KeyValueErrorContext
 import com.couchbase.client.core.io.CollectionIdentifier
+import com.couchbase.client.core.msg.Response
 import com.couchbase.client.core.msg.kv._
-import com.couchbase.client.core.msg.{Request, Response}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.kv.{Observe, ObserveContext}
-import com.couchbase.client.scala.AsyncCollection.wrap
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability._
@@ -358,7 +356,7 @@ class AsyncCollection(
 
   private def getSubDoc(
       id: String,
-      spec: Seq[LookupInSpec],
+      spec: collection.Seq[LookupInSpec],
       withExpiry: Boolean,
       timeout: Duration,
       retryStrategy: RetryStrategy,
@@ -390,7 +388,7 @@ class AsyncCollection(
     * $Same */
   def mutateIn(
       id: String,
-      spec: Seq[MutateInSpec],
+      spec: collection.Seq[MutateInSpec],
       cas: Long = 0,
       document: StoreSemantics = StoreSemantics.Replace,
       durability: Durability = Disabled,
@@ -406,7 +404,7 @@ class AsyncCollection(
     * $Same */
   def mutateIn(
       id: String,
-      spec: Seq[MutateInSpec],
+      spec: collection.Seq[MutateInSpec],
       options: MutateInOptions
   ): Future[MutateInResult] = {
 
@@ -456,7 +454,6 @@ class AsyncCollection(
 
               FutureConversions
                 .javaMonoToScalaFuture(Observe.poll(observeCtx))
-
                 // After the observe return the original response
                 .map(_ => response)
             })
@@ -582,7 +579,7 @@ class AsyncCollection(
     * $Same */
   def lookupIn(
       id: String,
-      spec: Seq[LookupInSpec],
+      spec: collection.Seq[LookupInSpec],
       timeout: Duration = kvReadTimeout
   ): Future[LookupInResult] = {
     val opts = LookupInOptions().timeout(timeout)
@@ -595,7 +592,7 @@ class AsyncCollection(
     * $Same */
   def lookupIn(
       id: String,
-      spec: Seq[LookupInSpec],
+      spec: collection.Seq[LookupInSpec],
       options: LookupInOptions
   ): Future[LookupInResult] = {
     val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
@@ -857,7 +854,6 @@ object AsyncCollection {
 
           FutureConversions
             .javaMonoToScalaFuture(Observe.poll(observeCtx))
-
             // After the observe return the original response
             .map(_ => response)
         })

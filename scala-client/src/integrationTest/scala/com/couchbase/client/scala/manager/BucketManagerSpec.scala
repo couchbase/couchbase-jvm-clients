@@ -54,7 +54,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def access() {
+  def access(): Unit = {
     val buckets: BucketManager          = cluster.buckets
     val reactive: ReactiveBucketManager = cluster.reactive.buckets
     val async: AsyncBucketManager       = cluster.async.buckets

@@ -51,7 +51,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def encode_encoded_json_string() {
+  def encode_encoded_json_string(): Unit = {
     val content = """{"hello":"world"}"""
     val docId   = TestUtils.docId()
     coll.insert(docId, content).get
@@ -62,7 +62,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def encode_encoded_json_string_directly_as_string() {
+  def encode_encoded_json_string_directly_as_string(): Unit = {
     val content = """{"hello":"world"}"""
     val docId   = TestUtils.docId()
     coll.insert(docId, content, InsertOptions().transcoder(RawStringTranscoder.Instance)).get
@@ -73,7 +73,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def decode_encoded_json_string_as_json() {
+  def decode_encoded_json_string_as_json(): Unit = {
     val content = """{"hello":"world"}"""
     val docId   = TestUtils.docId()
     coll.insert(docId, content).get
@@ -86,7 +86,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def decode_encoded_json_string() {
+  def decode_encoded_json_string(): Unit = {
     val content = """{"hello":"world"}"""
     val docId   = TestUtils.docId()
     coll.insert(docId, content, InsertOptions().transcoder(RawJsonTranscoder.Instance)).get
@@ -120,7 +120,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
     }
   }
   @Test
-  def encode_raw_string() {
+  def encode_raw_string(): Unit = {
     val content = """hello, world!"""
     val docId   = TestUtils.docId()
     coll.insert(docId, content).get
@@ -131,7 +131,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
     assert(doc.flags == DocumentFlags.Json)
   }
   @Test
-  def encode_raw_string_directly_as_string() {
+  def encode_raw_string_directly_as_string(): Unit = {
     val content = """hello, world!"""
     val docId   = TestUtils.docId()
     coll.insert(docId, content, InsertOptions().transcoder(RawStringTranscoder.Instance)).get
@@ -141,7 +141,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
     assert(doc.flags == DocumentFlags.String)
   }
   @Test
-  def decode_raw_string_as_json_should_fail() {
+  def decode_raw_string_as_json_should_fail(): Unit = {
     val content = """hello, world!"""
     val docId   = TestUtils.docId()
     coll.insert(docId, content).get
@@ -154,7 +154,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def decode_raw_string() {
+  def decode_raw_string(): Unit = {
     val content = """hello, world!"""
     val docId   = TestUtils.docId()
     coll.insert(docId, content, InsertOptions().transcoder(RawStringTranscoder.Instance)).get
@@ -174,7 +174,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
     }
   }
   @Test
-  def encode_json_bytes() {
+  def encode_json_bytes(): Unit = {
     val content              = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId                = TestUtils.docId()
@@ -186,7 +186,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def decode_json_bytes_as_json() {
+  def decode_json_bytes_as_json(): Unit = {
     val content              = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId                = TestUtils.docId()
@@ -200,7 +200,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def decode_json_bytes_as_string() {
+  def decode_json_bytes_as_string(): Unit = {
     val content              = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId                = TestUtils.docId()
@@ -222,7 +222,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def decode_json_bytes_as_string_with_transcoder() {
+  def decode_json_bytes_as_string_with_transcoder(): Unit = {
     val content              = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId                = TestUtils.docId()
@@ -238,7 +238,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def decode_json_bytes_written_directly_as_json_into() {
+  def decode_json_bytes_written_directly_as_json_into(): Unit = {
     val content              = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId                = TestUtils.docId()
@@ -252,7 +252,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def decode_json_bytes_written_directly_as_binary_into() {
+  def decode_json_bytes_written_directly_as_binary_into(): Unit = {
     val content              = ujson.Obj("hello" -> "world")
     val encoded: Array[Byte] = ujson.transform(content, ujson.BytesRenderer()).toBytes
     val docId                = TestUtils.docId()
@@ -266,7 +266,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def encode_raw_bytes() {
+  def encode_raw_bytes(): Unit = {
     val content = Array[Byte](1, 2, 3, 4)
     val docId   = TestUtils.docId()
     coll.insert(docId, content, InsertOptions().transcoder(RawBinaryTranscoder.Instance)).get
@@ -277,7 +277,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def raw_json_bytes_as_json_should_fail() {
+  def raw_json_bytes_as_json_should_fail(): Unit = {
     val content = Array[Byte](1, 2, 3, 4)
     val docId   = TestUtils.docId()
     coll.insert(docId, content, InsertOptions().transcoder(RawJsonTranscoder.Instance)).get
@@ -290,7 +290,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def decode_raw_bytes_written_directly_as_binary_as_string() {
+  def decode_raw_bytes_written_directly_as_binary_as_string(): Unit = {
     val content = Array[Byte](1, 2, 3, 4)
     val docId   = TestUtils.docId()
     coll.insert(docId, content, InsertOptions().transcoder(RawBinaryTranscoder.Instance)).get
@@ -303,7 +303,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def decode_raw_bytes_as_bytes() {
+  def decode_raw_bytes_as_bytes(): Unit = {
     val content = Array[Byte](1, 2, 3, 4)
     val docId   = TestUtils.docId()
     coll.insert(docId, content, InsertOptions().transcoder(RawJsonTranscoder.Instance)).get
@@ -318,7 +318,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def decode_raw_bytes_written_directly_as_binary_as() {
+  def decode_raw_bytes_written_directly_as_binary_as(): Unit = {
     val content = Array[Byte](1, 2, 3, 4)
     val docId   = TestUtils.docId()
     coll.insert(docId, content, InsertOptions().transcoder(RawBinaryTranscoder.Instance)).get

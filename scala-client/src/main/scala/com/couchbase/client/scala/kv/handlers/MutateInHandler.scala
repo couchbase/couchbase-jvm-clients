@@ -45,7 +45,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
 
   def request[T](
       id: String,
-      spec: Seq[MutateInSpec],
+      spec: collection.Seq[MutateInSpec],
       cas: Long,
       document: StoreSemantics = StoreSemantics.Replace,
       durability: Durability,
@@ -71,12 +71,12 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
       validations
     } else {
       // Find any decode failure
-      val failed: Option[MutateInSpec] = spec
-        .filter(_.isInstanceOf[MutateInSpecStandard])
-        .find(v => v.asInstanceOf[MutateInSpecStandard].fragment.isFailure)
+      val failed = spec.collectFirst {
+        case v: MutateInSpecStandard if v.fragment.isFailure => v
+      }
 
       failed match {
-        case Some(failed: MutateInSpecStandard) =>
+        case Some(failed) =>
           // If any of the decodes failed, abort
           Failure(failed.fragment.failed.get)
 

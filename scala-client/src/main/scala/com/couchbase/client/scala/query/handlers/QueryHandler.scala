@@ -21,14 +21,13 @@ import java.util.Collections
 
 import com.couchbase.client.core.config.{ClusterCapabilities, ClusterConfig}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.error.{CouchbaseException, ErrorCodeAndMessage, QueryException}
+import com.couchbase.client.core.error.{CouchbaseException, ErrorCodeAndMessage}
 import com.couchbase.client.core.msg.query.{QueryChunkRow, QueryRequest, QueryResponse}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.Golang.encodeDurationToMs
 import com.couchbase.client.core.util.LRUCache
-import com.couchbase.client.core.{Core, Reactor}
 import com.couchbase.client.scala.HandlerBasicParams
-import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer}
+import com.couchbase.client.scala.codec.JsonDeserializer
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.query._
@@ -37,8 +36,9 @@ import com.couchbase.client.scala.util.{DurationConversions, FutureConversions, 
 import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -152,14 +152,12 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
     * @return a ReactiveQueryResult
     */
   private def convertResponse(response: QueryResponse): ReactiveQueryResult = {
-    import collection.JavaConverters._
-
     val rows: SFlux[QueryChunkRow] = FutureConversions.javaFluxToScalaFlux(response.rows())
 
     val meta: SMono[QueryMetaData] = FutureConversions
       .javaMonoToScalaMono(response.trailer())
       .map(addl => {
-        val warnings: Seq[QueryWarning] = addl.warnings.asScala
+        val warnings: collection.Seq[QueryWarning] = addl.warnings.asScala
           .map(
             warnings =>
               ErrorCodeAndMessage
@@ -267,7 +265,6 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
           FutureConversions.wrap(req, req.response, propagateCancellation = true)
         })
         .flatMapMany(result => result.rows())
-
         // Only expect one row back, but no harm handling multiple
         .doOnNext(row => {
           val json: Try[JsonObjectSafe] =
@@ -333,7 +330,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
     new QueryRequest(
       original.timeout,
       original.context,
-      original.retryStrategy,
+      original.retryStrategy(),
       original.credentials,
       statement,
       query.toString.getBytes(StandardCharsets.UTF_8),
@@ -366,7 +363,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
     new QueryRequest(
       original.timeout,
       original.context,
-      original.retryStrategy,
+      original.retryStrategy(),
       original.credentials,
       original.statement,
       query.toString.getBytes(StandardCharsets.UTF_8),

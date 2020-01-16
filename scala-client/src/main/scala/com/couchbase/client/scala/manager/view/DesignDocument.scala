@@ -16,9 +16,7 @@
 
 package com.couchbase.client.scala.manager.view
 
-import scala.collection.GenMap
-
-case class DesignDocument(name: String, views: GenMap[String, View] = Map()) {
+case class DesignDocument(name: String, views: collection.Map[String, View] = Map()) {
   def putView(name: String, view: View): DesignDocument = {
     copy(views = views + (name -> view))
   }

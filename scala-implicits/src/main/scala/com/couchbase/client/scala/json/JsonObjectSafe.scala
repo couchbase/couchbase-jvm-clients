@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.json
 
-import scala.collection.GenSet
+import scala.collection.{Map => CMap, Set => CSet}
 import scala.language.dynamics
 import scala.util.{Success, Try}
 
@@ -188,8 +188,8 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
     */
   def containsKey(name: String): Boolean = o.containsKey(name)
 
-  /** Returns a `GenSet` of all keys in this. */
-  def names: GenSet[String] = o.names
+  /** Returns a `collection.Set` of all keys in this. */
+  def names: CSet[String] = o.names
 
   /** Returns true if this contains no keys. */
   def isEmpty: Boolean = o.isEmpty
@@ -199,10 +199,10 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
 
   /** Converts this and its contents recursively into Scala collections representing the same JSON.
     *
-    * [[JsonObject]] and [[JsonObjectSafe]] will be converted into `GenMap[String, Any]`, and [[JsonArray]] and
+    * [[JsonObject]] and [[JsonObjectSafe]] will be converted into `collection.Map[String, Any]`, and [[JsonArray]] and
     * [[JsonArraySafe]] will be converted into `Seq[Any]`.
     */
-  def toMap: collection.GenMap[String, Any] = o.toMap
+  def toMap: CMap[String, Any] = o.toMap
 
   /** Returns the number of keys in this. */
   def size: Int = o.size

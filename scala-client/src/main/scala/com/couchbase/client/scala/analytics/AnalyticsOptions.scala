@@ -22,9 +22,7 @@ import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
-import com.couchbase.client.scala.query.{QueryOptions, QueryScanConsistency}
 
-import scala.collection.GenMap
 import scala.concurrent.duration.Duration
 
 /** Customize the execution of an analytics query.
@@ -132,24 +130,17 @@ case class AnalyticsOptions(
   def scanConsistency(scanConsistency: AnalyticsScanConsistency): AnalyticsOptions =
     copy(scanConsistency = Some(scanConsistency))
 
-  private[scala] def durationToN1qlFormat(duration: Duration) = {
-    if (duration.toSeconds > 0) duration.toSeconds + "s"
-    else duration.toNanos + "ns"
-  }
-
   private[scala] def encode() = {
     val out = JsonObject.create
 
     parameters match {
       case Some(AnalyticsParameters.Named(named)) =>
-        named.foreach(k => {
-          out.put('$' + k._1, k._2)
-        })
+        for { (k, v) <- named } {
+          out.put("$" + k, v)
+        }
       case Some(AnalyticsParameters.Positional(values)) =>
         val arr = JsonArray.create
-        values.foreach(k => {
-          arr.add(k)
-        })
+        values foreach arr.add
         out.put("args", arr)
 
       case _ =>

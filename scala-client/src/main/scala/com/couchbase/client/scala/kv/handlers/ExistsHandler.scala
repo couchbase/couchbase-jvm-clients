@@ -68,9 +68,9 @@ private[scala] class ExistsHandler(hp: HandlerParams)
   ): ExistsResult = {
     val deleted = response.deleted()
     response.status() match {
-      case ResponseStatus.SUCCESS if !deleted => ExistsResult(true, response.cas())
+      case ResponseStatus.SUCCESS if !deleted                => ExistsResult(true, response.cas())
       case ResponseStatus.SUCCESS | ResponseStatus.NOT_FOUND => ExistsResult(false, 0)
-      case _  => throw DefaultErrors.throwOnBadResult(request, response)
+      case _                                                 => throw DefaultErrors.throwOnBadResult(request, response)
     }
   }
 }

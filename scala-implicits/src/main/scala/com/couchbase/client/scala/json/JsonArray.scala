@@ -5,7 +5,7 @@ import java.util
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.scala.transformers.JacksonTransformers
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -179,7 +179,7 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
 
   /** Converts this and its contents recursively into Scala collections representing the same JSON.
     *
-    * [[JsonObject]] and [[JsonObjectSafe]] will be converted into `GenMap[String, Any]`, and [[JsonArray]] and
+    * [[JsonObject]] and [[JsonObjectSafe]] will be converted into `collection.Map[String, Any]`, and [[JsonArray]] and
     * [[JsonArraySafe]] will be converted into `Seq[Any]`.
     */
   def toSeq: Seq[Any] = {
@@ -195,7 +195,7 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
         case _                 => value
       })
     }
-    copy
+    copy.toSeq
   }
 
   /** Returns a [[GetSelecter]] providing `Dynamic` access to this. */

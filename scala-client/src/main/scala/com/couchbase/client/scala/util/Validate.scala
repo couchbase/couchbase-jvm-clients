@@ -49,7 +49,7 @@ private[scala] object Validate {
     else Success(input)
   }
 
-  def notNullOrEmpty(input: Seq[_], identifier: String): Try[Seq[_]] = {
+  def notNullOrEmpty(input: collection.Seq[_], identifier: String): Try[collection.Seq[_]] = {
     if (input == null || input.isEmpty)
       Failure(new IllegalArgumentException(identifier + " cannot be null or empty"))
     else Success(input)

@@ -158,7 +158,7 @@ case class ViewOptions(
     */
   def key(value: Any): ViewOptions = {
     value match {
-      case s: String => copy(key = Some('"' + s + "'"))
+      case s: String => copy(key = Some("\"" + s + "\""))
       case _         => copy(key = Some(value.toString))
     }
   }
@@ -209,11 +209,11 @@ case class ViewOptions(
     *
     * @return this for further chaining
     */
-  def keys(values: Seq[Any]): ViewOptions = {
+  def keys(values: Iterable[Any]): ViewOptions = {
     val arr = JsonArray.create
     values.foreach(v => {
       arr.add(v match {
-        case x: String => '"' + x + '"'
+        case x: String => "\"" + x + "\""
         case _         => v.toString
       })
     })
@@ -248,106 +248,28 @@ case class ViewOptions(
     copy(scanConsistency = Some(scanConsistency))
   }
 
-  private[scala] def durationToN1qlFormat(duration: Duration) = {
-    if (duration.toSeconds > 0) duration.toSeconds + "s"
-    else duration.toNanos + "ns"
-  }
-
   private[scala] def encode() = {
     val sb = new StringBuilder()
-
-    reduce.foreach(v => {
-      sb.append("reduce=")
-      sb.append(v.toString)
-      sb.append('&')
-    })
-
-    limit.foreach(v => {
-      sb.append("limit=")
-      sb.append(v.toString)
-      sb.append("&")
-    })
-
-    group.foreach(v => {
-      sb.append("group=")
-      sb.append(v.toString)
-      sb.append('&')
-    })
-
-    groupLevel.foreach(v => {
-      sb.append("group_level=")
-      sb.append(v.toString)
-      sb.append('&')
-    })
-
-    inclusiveEnd.foreach(v => {
-      sb.append("inclusive_end=")
-      sb.append(v.toString)
-      sb.append('&')
-    })
-
-    skip.foreach(v => {
-      sb.append("skip=")
-      sb.append(v.toString)
-      sb.append("&")
-    })
-
-    onError.foreach(v => {
-      sb.append("on_error=")
-      sb.append(v.encode)
-      sb.append('&')
-    })
-
-    debug.foreach(v => {
-      sb.append("debug=")
-      sb.append(v.toString)
-      sb.append('&')
-    })
-
-    order.foreach(v => {
-      sb.append("descending=")
-      sb.append(v.toString)
-      sb.append('&')
-    })
-
-    key.foreach(v => {
-      sb.append("key=")
-      sb.append(v.toString)
-      sb.append('&')
-    })
-
-    startKeyDocId.foreach(v => {
-      sb.append("startkey_docid=")
-      sb.append(v.toString)
-      sb.append('&')
-    })
-
-    endKeyDocId.foreach(v => {
-      sb.append("endkey_docid=")
-      sb.append(v.toString)
-      sb.append('&')
-    })
-
-    endKey.foreach(v => {
-      sb.append("endkey=")
-      sb.append(v.toString)
-      sb.append('&')
-    })
-
-    startKey.foreach(v => {
-      sb.append("startkey=")
-      sb.append(v.toString)
-      sb.append('&')
-    })
-
-    scanConsistency match {
-      case Some(sc) =>
-        sb.append("stale=")
-        sb.append(sc.encoded)
-        sb.append('&')
-      case _ =>
+    Seq(
+      "reduce"         -> reduce,
+      "limit"          -> limit,
+      "group"          -> group,
+      "group_level"    -> groupLevel,
+      "inclusive_end"  -> inclusiveEnd,
+      "skip"           -> skip,
+      "on_error"       -> onError.map(_.encode),
+      "debug"          -> debug,
+      "descending"     -> order,
+      "key"            -> key,
+      "startkey_docid" -> startKeyDocId,
+      "endkey_docid"   -> endKeyDocId,
+      "endkey"         -> endKey,
+      "startkey"       -> startKey,
+      "stale"          -> scanConsistency.map(_.encoded)
+    ).foreach {
+      case (key, valueOpt) =>
+        valueOpt.foreach(sb ++= key += '=' ++= _.toString += '&')
     }
-
     sb.toString.stripSuffix("&")
   }
 }

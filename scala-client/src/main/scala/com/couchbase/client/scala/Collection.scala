@@ -363,7 +363,7 @@ class Collection(
     **/
   def mutateIn(
       id: String,
-      spec: Seq[MutateInSpec],
+      spec: collection.Seq[MutateInSpec],
       cas: Long = 0,
       document: StoreSemantics = StoreSemantics.Replace,
       durability: Durability = Disabled,
@@ -397,7 +397,7 @@ class Collection(
     **/
   def mutateIn(
       id: String,
-      spec: Seq[MutateInSpec],
+      spec: collection.Seq[MutateInSpec],
       options: MutateInOptions
   ): Try[MutateInResult] = {
     block(
@@ -566,7 +566,7 @@ class Collection(
     **/
   def lookupIn(
       id: String,
-      spec: Seq[LookupInSpec],
+      spec: collection.Seq[LookupInSpec],
       timeout: Duration = kvReadTimeout
   ): Try[LookupInResult] =
     block(async.lookupIn(id, spec, timeout))
@@ -588,7 +588,7 @@ class Collection(
     **/
   def lookupIn(
       id: String,
-      spec: Seq[LookupInSpec],
+      spec: collection.Seq[LookupInSpec],
       options: LookupInOptions
   ): Try[LookupInResult] =
     block(async.lookupIn(id, spec, options))

@@ -1,13 +1,14 @@
 package com.couchbase.client.scala.encodings
 
 import com.couchbase.client.scala._
-import com.couchbase.client.scala.codec.{RawBinaryTranscoder, RawJsonTranscoder}
-import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.codec.RawJsonTranscoder
 import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
-import com.couchbase.client.scala.kv.{GetOptions, GetResult, InsertOptions}
+import com.couchbase.client.scala.kv.{GetOptions, InsertOptions}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.ClusterAwareIntegrationTest
+import io.circe.Decoder
+import com.github.plokhotnyuk.jsoniter_scala.macros.named
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
@@ -35,7 +36,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
   }
 
   trait Source {
-    def insert(id: String)
+    def insert(id: String): Unit
   }
 
   case class Address(address: String)
@@ -67,7 +68,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
   object Source {
 
     case object JsonObjectAST extends Source {
-      def insert(id: String) {
+      def insert(id: String): Unit = {
         val content = JsonObject.create
           .put("name", "John Smith")
           .put("age", 29)
@@ -82,7 +83,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
     }
 
     case object UpickleAST extends Source {
-      def insert(id: String) {
+      def insert(id: String): Unit = {
         val content = ujson.Obj(
           "name" -> "John Smith",
           "age"  -> 29,
@@ -240,7 +241,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
   }
 
   trait Sink {
-    def decode(docId: String)
+    def decode(docId: String): Unit
   }
 
   object Sink {
@@ -307,16 +308,17 @@ class JsonInteropSpec extends ScalaIntegrationTest {
       def decode(docId: String): Unit = {
         val in = coll.get(docId).get
         val c  = in.contentAs[io.circe.Json].get
-        assert(c.hcursor.downField("name").as[String].right.get == "John Smith")
-        assert(c.hcursor.downField("age").as[Int].right.get == 29)
+        def equals[A](r: Decoder.Result[A], value: A) = r match {
+          case Left(_)  => false
+          case Right(a) => a == a
+        }
+        assert(equals(c.hcursor.downField("name").as[String], "John Smith"))
+        assert(equals(c.hcursor.downField("age").as[Int], 29))
         assert(
-          c.hcursor
-            .downField("addresses")
-            .downArray
-            .downField("address")
-            .as[String]
-            .right
-            .get == "123 Fake Street"
+          equals(
+            c.hcursor.downField("addresses").downArray.downField("address").as[String],
+            "123 Fake Street"
+          )
         )
       }
     }
@@ -374,7 +376,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
         val JString(name) = c \ "name"
         assert(name.toString == "John Smith")
         val JInt(age) = c \ "age"
-        assert(age.intValue() == 29)
+        assert(age.intValue == 29)
         val JString(address) = (c \ "addresses")(0) \ "address"
         assert(address.toString == "123 Fake Street")
       }
@@ -383,7 +385,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def test_all_permutations() {
+  def test_all_permutations(): Unit = {
     val sources = Seq(
       Source.JsonObjectAST,
       Source.UpickleAST,
@@ -428,42 +430,42 @@ class JsonInteropSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def JacksonEncodedString_to_PlayAST() {
+  def JacksonEncodedString_to_PlayAST(): Unit = {
     val source = Source.JacksonEncodedString
     val sink   = Sink.PlayAST
     compare(source, sink)
   }
 
   @Test
-  def JsonObjectAST_to_JawnAST() {
+  def JsonObjectAST_to_JawnAST(): Unit = {
     val source = Source.JsonObjectAST
     val sink   = Sink.JawnAST
     compare(source, sink)
   }
 
   @Test
-  def CirceAST_to_JsonObjectAST() {
+  def CirceAST_to_JsonObjectAST(): Unit = {
     val source = Source.CirceAST
     val sink   = Sink.JsonObjectAST
     compare(source, sink)
   }
 
   @Test
-  def CirceAST_to_Json4sAST() {
+  def CirceAST_to_Json4sAST(): Unit = {
     val source = Source.CirceAST
     val sink   = Sink.Json4sAST
     compare(source, sink)
   }
 
   @Test
-  def JsonObjectAST_to_Jsoniter() {
+  def JsonObjectAST_to_Jsoniter(): Unit = {
     val source = Source.JsonObjectAST
     val sink   = Sink.Jsoniter
     compare(source, sink)
   }
 
   @Test
-  def UpickleCaseClassToBytes_to_JsonObjectAST() {
+  def UpickleCaseClassToBytes_to_JsonObjectAST(): Unit = {
     val source = Source.UpickleCaseClassToBytes
     val sink   = Sink.JsonObjectAST
     compare(source, sink)

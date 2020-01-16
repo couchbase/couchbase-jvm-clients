@@ -21,13 +21,13 @@ import java.util
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.scala.transformers.JacksonTransformers
 
-import scala.collection.{GenMap, GenSet, mutable}
+import scala.collection.{Map => CMap, Set => CSet, mutable}
 import scala.language.dynamics
 import scala.util.control.NonFatal
 
 //import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /** A representation of a JSON object.
   *
@@ -277,8 +277,8 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
     content.containsKey(name)
   }
 
-  /** Returns a `GenSet` of all keys in this. */
-  def names: GenSet[String] = {
+  /** Returns a `collection.Set` of all keys in this. */
+  def names: CSet[String] = {
     content.keySet.asScala
   }
 
@@ -294,12 +294,11 @@ case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]
 
   /** Converts this and its contents recursively into Scala collections representing the same JSON.
     *
-    * [[JsonObject]] and [[JsonObjectSafe]] will be converted into `GenMap[String, Any]`, and [[JsonArray]] and
+    * [[JsonObject]] and [[JsonObjectSafe]] will be converted into `collection.Map[String, Any]`, and [[JsonArray]] and
     * [[JsonArraySafe]] will be converted into `Seq[Any]`.
     */
-  def toMap: collection.GenMap[String, Any] = {
+  def toMap: CMap[String, Any] = {
     val copy = new mutable.AnyRefMap[String, Any](content.size)
-    import scala.collection.JavaConverters._
     for (entry <- content.entrySet.asScala) {
       val content = entry.getValue
       content match {
@@ -366,7 +365,7 @@ object JsonObject {
     * Note, benchmarking indicates it's roughly twice as fast to use `create` and then `put` all fields, so that
     * should be preferred.
     */
-  def apply(values: GenMap[String, Any]): JsonObject = {
+  def apply(values: CMap[String, Any]): JsonObject = {
     val map = new util.HashMap[String, Any](values.size)
     values.foreach(v => map.put(v._1, v._2))
     new JsonObject(map)

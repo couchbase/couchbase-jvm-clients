@@ -1,23 +1,15 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.{
-  DocumentLockedException,
-  DocumentNotFoundException,
-  TimeoutException
-}
+import com.couchbase.client.core.error.{DocumentNotFoundException, TimeoutException}
 import com.couchbase.client.core.retry.RetryReason
-import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.implicits.Codec
-import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
+import com.couchbase.client.scala.json.JsonObjectSafe
 import com.couchbase.client.scala.kv.{GetOptions, InsertOptions}
-import com.couchbase.client.scala.query.QueryOptions
 import com.couchbase.client.scala.util.{ScalaIntegrationTest, Validate}
-import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
+import com.couchbase.client.test.{ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
-import scala.collection.{GenMap, GenSet}
-import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
@@ -42,7 +34,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def insert() {
+  def insert(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -61,7 +53,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
 
   @Test
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
-  def exists() {
+  def exists(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
 
@@ -92,7 +84,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def insert_returns_cas() {
+  def insert_returns_cas(): Unit = {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
@@ -102,7 +94,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     }
   }
   @Test
-  def insert_without_expiry() {
+  def insert_without_expiry(): Unit = {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
@@ -116,7 +108,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
 
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
-  def insert_with_expiry() {
+  def insert_with_expiry(): Unit = {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
@@ -130,7 +122,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
 
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
-  def touch() {
+  def touch(): Unit = {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
@@ -146,7 +138,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
 
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
-  def get_and_lock() {
+  def get_and_lock(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world")
@@ -172,7 +164,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def unlock() {
+  def unlock(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world")
@@ -199,7 +191,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
   }
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
-  def get_and_touch() {
+  def get_and_touch(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world")
@@ -217,7 +209,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def remove() {
+  def remove(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -232,7 +224,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     }
   }
   @Test
-  def upsert_when_doc_does_not_exist() {
+  def upsert_when_doc_does_not_exist(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world")
@@ -253,7 +245,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     }
   }
   @Test
-  def upsert_when_doc_does_exist() {
+  def upsert_when_doc_does_exist(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world")
@@ -280,7 +272,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     }
   }
   @Test
-  def replace_when_doc_does_not_exist() {
+  def replace_when_doc_does_not_exist(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world")
@@ -293,7 +285,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     }
   }
   @Test
-  def replace_when_doc_does_exist_with_2() {
+  def replace_when_doc_does_exist_with_2(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world")
@@ -320,7 +312,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     }
   }
   @Test
-  def replace_when_doc_does_exist_with_3() {
+  def replace_when_doc_does_exist_with_3(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world")
@@ -348,12 +340,21 @@ class KeyValueSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def validations() {
+  def validations(): Unit = {
     val validations: Try[Any] = for {
       _ <- Validate.notNullOrEmpty("", "id")
     } yield null
 
     assert(validations.isFailure)
+  }
+
+  case class Address(line1: String)
+  // Need define case class & object here - not in `all` method
+  // or else, scala 2.11 will not compile, with error:
+  // User is already defined as (compiler-generated) case class companion object User
+  case class User(name: String, age: Int, addresses: Seq[Address])
+  object User {
+    implicit val codec: Codec[User] = Codec.codec[User]
   }
 
   @Test
@@ -373,19 +374,13 @@ class KeyValueSpec extends ScalaIntegrationTest {
       case Failure(err)    => println("Error: " + err)
     }
 
-    case class Address(line1: String)
-    case class User(name: String, age: Int, addresses: Seq[Address])
-    object User {
-      implicit val codec: Codec[User] = Codec.codec[User]
-    }
-
     val user = User("user1", 21, Seq(Address("address1")))
 
     coll.upsert("user1", user).get
 
     val statement = s"""select * from `users` where meta().id like 'user%';"""
 
-    val users: Try[Seq[User]] = cluster
+    val users: Try[scala.collection.Seq[User]] = cluster
       .query(statement)
       .flatMap(_.rowsAs[User])
 

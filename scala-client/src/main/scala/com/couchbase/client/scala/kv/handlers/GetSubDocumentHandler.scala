@@ -28,7 +28,7 @@ import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.codec.{DocumentFlags, Transcoder}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv._
-import com.couchbase.client.scala.util.{FunctionalUtil, Validate}
+import com.couchbase.client.scala.util.Validate
 
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
@@ -45,7 +45,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
 
   def request[T](
       id: String,
-      spec: Seq[LookupInSpec],
+      spec: collection.Seq[LookupInSpec],
       withExpiration: Boolean,
       timeout: java.time.Duration,
       retryStrategy: RetryStrategy,
@@ -103,7 +103,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
 
   def requestProject[T](
       id: String,
-      project: Seq[String],
+      project: collection.Seq[String],
       timeout: java.time.Duration,
       retryStrategy: RetryStrategy,
       parentSpan: Option[RequestSpan]
@@ -136,7 +136,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
   ): LookupInResult = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        val values: Seq[SubDocumentField] = response.values()
+        val values: collection.Seq[SubDocumentField] = response.values()
 
         if (withExpiration) {
           var exptime: Option[Duration] = None
@@ -188,18 +188,17 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
   ): Try[GetResult] = {
     response.status() match {
       case ResponseStatus.SUCCESS =>
-        val values: Seq[SubDocumentField] = response.values()
-
-        val out = JsonObject.create
-
-        val x: Seq[Try[JsonObject]] = values.map(value => {
-          ProjectionsApplier.parse(out, value.path(), value.value())
-        })
-
+        val values: collection.Seq[SubDocumentField] = response.values()
+        val out                                      = JsonObject.create
+        var parsed: Try[JsonObject]                  = Success(out)
         // If any op failed, return the first failure
-        val y: Try[Seq[JsonObject]] = FunctionalUtil.traverse(x.toList)
+        // that is captured in `parsed` variable
+        values.find { v =>
+          parsed = ProjectionsApplier.parse(out, v.path(), v.value())
+          parsed.isFailure
+        }
 
-        y.map(
+        parsed.map(
           _ => GetResult(id, Right(out), DocumentFlags.Json, response.cas(), None, transcoder)
         )
 

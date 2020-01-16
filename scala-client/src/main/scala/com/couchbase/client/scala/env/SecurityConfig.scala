@@ -19,6 +19,7 @@ import java.security.cert.X509Certificate
 
 import com.couchbase.client.core
 import javax.net.ssl.TrustManagerFactory
+import scala.jdk.CollectionConverters._
 
 case class SecurityConfig(
     private[scala] val tlsEnabled: Option[Boolean] = None,
@@ -31,9 +32,7 @@ case class SecurityConfig(
 
     tlsEnabled.foreach(v => builder.enableTls(v))
     nativeTlsEnabled.foreach(v => builder.enableNativeTls(v))
-    trustCertificates.foreach(
-      t => builder.trustCertificates(scala.collection.JavaConverters.seqAsJavaList(t))
-    )
+    trustCertificates.foreach(t => builder.trustCertificates(t.asJava))
     trustManagerFactory.foreach(v => builder.trustManagerFactory(v))
 
     builder

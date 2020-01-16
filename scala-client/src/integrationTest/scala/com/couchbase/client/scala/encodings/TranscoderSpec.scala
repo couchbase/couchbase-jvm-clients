@@ -63,7 +63,7 @@ class TranscoderSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def insert() {
+  def insert(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content = ujson.Obj("hello" -> "world")
@@ -82,7 +82,7 @@ class TranscoderSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def get_and_touch() {
+  def get_and_touch(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world")

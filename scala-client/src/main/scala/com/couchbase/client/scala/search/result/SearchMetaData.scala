@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 package com.couchbase.client.scala.search.result
-import scala.collection.GenMap
 
 /** Additional information returned by the FTS service after any rows and errors.
   *
@@ -22,4 +21,4 @@ import scala.collection.GenMap
   * @param errors         any errors returned by the request.  Note that FTS can return partial success: e.g. some
   *                       rows in the presence of some errors
   */
-case class SearchMetaData(metrics: SearchMetrics, errors: GenMap[String, String])
+case class SearchMetaData(metrics: SearchMetrics, errors: collection.Map[String, String])

@@ -16,12 +16,11 @@
 package com.couchbase.client.scala.env
 
 import com.couchbase.client.core
-import com.couchbase.client.core.env.{NetworkResolution, SaslMechanism}
+import com.couchbase.client.core.env.NetworkResolution
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.duration.Duration
-import scala.collection.JavaConverters._
-import com.couchbase.client.scala.util.DurationConversions._
 
 case class IoConfig(
     private[scala] val mutationTokensEnabled: Boolean = true,

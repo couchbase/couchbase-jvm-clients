@@ -32,7 +32,7 @@ import scala.util.{Failure, Success, Try}
   **/
 case class LookupInResult(
     id: String,
-    private val content: Seq[SubDocumentField],
+    private val content: collection.Seq[SubDocumentField],
     private[scala] val flags: Int,
     cas: Long,
     expiry: Option[Duration],

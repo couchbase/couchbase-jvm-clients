@@ -45,13 +45,11 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
   /** Maps any raw errors into more useful ones. */
   private def transformer(
       indexName: String
-  ): Try[GenericSearchResponse] => Try[GenericSearchResponse] = {
-    case s @ Success(_) => s
-    case Failure(err) =>
+  ): Throwable => Throwable =
+    err =>
       if (err.getMessage.contains("index not found")) {
-        Failure(new IndexNotFoundException(indexName))
-      } else Failure(err)
-  }
+        new IndexNotFoundException(indexName)
+      } else err
 
   def getIndex(
       indexName: String,
@@ -64,13 +62,8 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
       .map((response: GenericSearchResponse) => {
         val read = CouchbasePickler.read[SearchIndexWrapper](response.content())
         read.indexDef.copy(numPlanPIndexes = read.numPlanPIndexes)
-      }) transform {
-      case s @ Success(_) => s
-      case Failure(err) =>
-        if (err.getMessage.contains("index not found")) {
-          Failure(new IndexNotFoundException(indexName))
-        } else Failure(err)
-    }
+      })
+      .transform(identity, transformer(indexName))
     out.onComplete(_ => request.context.logicallyComplete())
     out
   }
@@ -112,9 +105,9 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
 
     core.send(request)
     val out = request.response.toScala
-      .transform[GenericSearchResponse](transformer(indexDefinition.name))
+      .transform(identity, transformer(indexDefinition.name))
     out.onComplete(_ => request.context.logicallyComplete())
-    out.map(_ => Unit)
+    out.map(_ => ())
   }
 
   def dropIndex(
@@ -128,8 +121,8 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
     val out = request.response.toScala
     out.onComplete(_ => request.context.logicallyComplete())
     out
-      .transform[GenericSearchResponse](transformer(indexName))
-      .map(_ => Unit)
+      .transform(identity, transformer(indexName))
+      .map(_ => ())
   }
 
   private def indexesPath = "/api/index"

@@ -15,17 +15,16 @@
  */
 package com.couchbase.client.scala.datastructures
 
-import com.couchbase.client.core.error.{CasMismatchException, DocumentNotFoundException}
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
-import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus
+import com.couchbase.client.core.error.{CasMismatchException, DocumentNotFoundException}
 import com.couchbase.client.scala.Collection
-import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSerializer}
-import com.couchbase.client.scala.json.{JsonArraySafe, JsonObjectSafe}
+import com.couchbase.client.scala.codec.{JsonDeserializer, JsonSerializer}
+import com.couchbase.client.scala.json.JsonObjectSafe
 import com.couchbase.client.scala.kv._
 
 import scala.collection.mutable
-import scala.util.{Failure, Success, Try}
 import scala.reflect.runtime.universe._
+import scala.util.{Failure, Success, Try}
 
 /** Presents a Scala Map interface on top of a mutable persistent data structure, in the form of a document stored
   * on the cluster.
@@ -35,7 +34,7 @@ class CouchbaseMap[T](
     collection: Collection,
     options: Option[CouchbaseCollectionOptions] = None
 )(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: WeakTypeTag[T])
-    extends mutable.Map[String, T] {
+    extends mutable.AbstractMap[String, T] {
 
   private val Values = "values."
 
@@ -66,7 +65,7 @@ class CouchbaseMap[T](
   def getInternal(key: String): Try[Option[T]] = {
     val op = collection.lookupIn(
       id,
-      Array(LookupInSpec.get(key)),
+      Seq(LookupInSpec.get(key)),
       lookupInOptions
     )
 
@@ -109,7 +108,7 @@ class CouchbaseMap[T](
     collection
       .mutateIn(
         id,
-        Array(MutateInSpec.remove(key)),
+        Seq(MutateInSpec.remove(key)),
         mutateInOptions
       ) match {
       case Success(_)                              =>
@@ -123,7 +122,7 @@ class CouchbaseMap[T](
   override def remove(key: String): Option[T] = {
     val op = collection.lookupIn(
       id,
-      Array(LookupInSpec.get(key)),
+      Seq(LookupInSpec.get(key)),
       lookupInOptions
     )
 
@@ -133,7 +132,7 @@ class CouchbaseMap[T](
       case Success(value) =>
         val mutateResult = collection.mutateIn(
           id,
-          Array(MutateInSpec.remove(key)),
+          Seq(MutateInSpec.remove(key)),
           mutateInOptions.cas(op.get.cas)
         )
 
@@ -171,7 +170,7 @@ class CouchbaseMap[T](
   override def size(): Int = {
     val op = collection.lookupIn(
       id,
-      Array(LookupInSpec.count("")),
+      Seq(LookupInSpec.count("")),
       lookupInOptions
     )
 
@@ -198,21 +197,21 @@ class CouchbaseMap[T](
     }
   }
 
-  override def +=(kv: (String, T)): CouchbaseMap.this.type = {
+  override def +=(kv: (String, T)): this.type = {
     val f = () =>
       collection.mutateIn(
         id,
-        Array(MutateInSpec.upsert(kv._1, kv._2)),
+        Seq(MutateInSpec.upsert(kv._1, kv._2)),
         mutateInOptions
       )
     retryIfDocDoesNotExist(f)
     this
   }
 
-  override def -=(key: String): CouchbaseMap.this.type = {
+  override def -=(key: String): this.type = {
     val result = collection.mutateIn(
       id,
-      Array(MutateInSpec.remove(key)),
+      Seq(MutateInSpec.remove(key)),
       mutateInOptions
     )
 

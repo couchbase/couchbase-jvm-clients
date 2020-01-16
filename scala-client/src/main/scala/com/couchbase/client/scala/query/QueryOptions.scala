@@ -28,7 +28,6 @@ import com.couchbase.client.scala.json.{JsonArray, JsonArraySafe, JsonObject, Js
 import com.couchbase.client.scala.query.QueryScanConsistency.{ConsistentWith, RequestPlus}
 import com.couchbase.client.scala.util.DurationConversions._
 
-import scala.collection.{GenIterable, GenMap}
 import scala.concurrent.duration.Duration
 
 /** Customize the execution of a N1QL query.
@@ -83,7 +82,7 @@ case class QueryOptions(
     )
   }
 
-  private def checkTypes(in: GenIterable[Any]): Option[RuntimeException] = {
+  private def checkTypes(in: Iterable[Any]): Option[RuntimeException] = {
     var out: Option[RuntimeException] = None
 
     in.foreach(value => {
@@ -243,11 +242,6 @@ case class QueryOptions(
     copy(raw = Some(raw))
   }
 
-  private[scala] def durationToN1qlFormat(duration: Duration) = {
-    if (duration.toSeconds > 0) duration.toSeconds + "s"
-    else duration.toNanos + "ns"
-  }
-
   private[scala] def encode(): JsonObject = {
     encode(JsonObject.create)
   }
@@ -255,18 +249,14 @@ case class QueryOptions(
   private[scala] def encode(out: JsonObject): JsonObject = {
     parameters match {
       case Some(QueryParameters.Named(named)) =>
-        named.foreach(k => {
-          if (k._1.startsWith("$")) {
-            out.put(k._1, k._2)
-          } else {
-            out.put('$' + k._1, k._2)
-          }
-        })
+        for { (k, v) <- named } {
+          val key = if (k.startsWith("$")) k else "$" + k
+          out.put(key, v)
+        }
+
       case Some(v: QueryParameters.Positional) =>
         val arr = JsonArray.create
-        v.parameters.foreach(k => {
-          arr.add(k)
-        })
+        v.parameters foreach arr.add
         out.put("args", arr)
 
       case _ =>

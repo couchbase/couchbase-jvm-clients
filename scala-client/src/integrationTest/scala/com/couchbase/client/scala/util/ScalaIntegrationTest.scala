@@ -29,7 +29,7 @@ import com.couchbase.client.test.{
 }
 import org.junit.jupiter.api.Timeout
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration._
 
 /**
@@ -98,7 +98,7 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
 
   protected def connectToCluster(): Cluster = {
     val out = Cluster.connect(connectionString, clusterOptions).get
-    out.waitUntilReady(10 seconds)
+    out.waitUntilReady(10.seconds)
     out
   }
 }
