@@ -40,12 +40,12 @@ class ProjectionsApplierSpec {
     ProjectionsApplier.parse(path, bytes).get
   }
   @Test
-  def parse_string() {
+  def parse_string(): Unit = {
     assert(ProjectionsApplier.parseContent("hello".getBytes(CharsetUtil.UTF_8)).get == "hello")
   }
 
   @Test
-  def parse_obj() {
+  def parse_obj(): Unit = {
     val out = ProjectionsApplier
       .parseContent("""{"hello":"world"}""".getBytes(CharsetUtil.UTF_8))
       .get
@@ -54,7 +54,7 @@ class ProjectionsApplierSpec {
   }
 
   @Test
-  def parse_arr() {
+  def parse_arr(): Unit = {
     val out = ProjectionsApplier
       .parseContent("""["hello","world"]""".getBytes(CharsetUtil.UTF_8))
       .get
@@ -63,7 +63,7 @@ class ProjectionsApplierSpec {
   }
 
   @Test
-  def name() {
+  def name(): Unit = {
     val out = wrap("name", "Emmy-lou Dickerson")
     assert(out.str("name") == "Emmy-lou Dickerson")
   }
@@ -100,13 +100,13 @@ class ProjectionsApplierSpec {
       |""".stripMargin
   val obj = JsonObject.fromJson(raw)
   @Test
-  def age() {
+  def age(): Unit = {
     val json = wrap("age", obj.num("age"))
     assert(json.num("age") == 26)
   }
 
   @Test
-  def animals() {
+  def animals(): Unit = {
     val json = wrap("animals", obj.arr("animals"))
     val arr  = json.arr("animals")
     assert(arr.size == 3)
@@ -114,27 +114,27 @@ class ProjectionsApplierSpec {
   }
 
   @Test
-  def animals_0() {
+  def animals_0(): Unit = {
     val json = wrap("animals[0]", obj.arr("animals").str(0))
     val arr  = json.arr("animals")
     assert(arr.toSeq == Seq("cat"))
   }
 
   @Test
-  def animals_2() {
+  def animals_2(): Unit = {
     val json = wrap("animals[2]", obj.arr("animals").str(2))
     val arr  = json.arr("animals")
     assert(arr.toSeq == Seq("parrot"))
   }
 
   @Test
-  def addresses_0_address() {
+  def addresses_0_address(): Unit = {
     val json = wrap("addresses[0].address", obj.arr("addresses").obj(0).str("address"))
     assert(json.arr("addresses").obj(0).str("address") == "123 Fake Street")
   }
 
   @Test
-  def attributes() {
+  def attributes(): Unit = {
     val json  = wrap("attributes", obj.obj("attributes"))
     val field = json.obj("attributes")
     assert(field.size == 3)
@@ -143,27 +143,27 @@ class ProjectionsApplierSpec {
   }
 
   @Test
-  def attributes_hair() {
+  def attributes_hair(): Unit = {
     val json = wrap("attributes.hair", obj.obj("attributes").str("hair"))
     assert(json.obj("attributes").str("hair") == "brown")
   }
 
   @Test
-  def attributes_dimensions() {
+  def attributes_dimensions(): Unit = {
     val json = wrap("attributes.dimensions", obj.obj("attributes").obj("dimensions"))
     assert(json.obj("attributes").obj("dimensions").num("height") == 67)
     assert(json.obj("attributes").obj("dimensions").num("weight") == 175)
   }
 
   @Test
-  def attributes_dimensions_height() {
+  def attributes_dimensions_height(): Unit = {
     val json =
       wrap("attributes.dimensions.height", obj.obj("attributes").obj("dimensions").num("height"))
     assert(json.obj("attributes").obj("dimensions").num("height") == 67)
   }
 
   @Test
-  def attributes_hobbies_1_type() {
+  def attributes_hobbies_1_type(): Unit = {
     val json =
       wrap("attributes.hobbies[1].type", obj.obj("attributes").arr("hobbies").obj(1).str("type"))
     assert(json.obj("attributes").arr("hobbies").obj(0).str("type") == "summer sports")

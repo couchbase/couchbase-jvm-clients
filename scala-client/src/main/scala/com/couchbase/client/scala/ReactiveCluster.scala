@@ -17,19 +17,11 @@
 package com.couchbase.client.scala
 
 import java.util.UUID
-import java.util.stream.Collectors
 
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diagnostics.{
-  ClusterState,
-  DiagnosticsResult,
-  EndpointDiagnostics,
-  PingResult
-}
+import com.couchbase.client.core.diagnostics.{DiagnosticsResult, PingResult}
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.error.ErrorCodeAndMessage
-import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.AsyncCluster.{
   extractClusterEnvironment,
   seedNodesFromConnectionString
@@ -40,15 +32,8 @@ import com.couchbase.client.scala.diagnostics.{
   PingOptions,
   WaitUntilReadyOptions
 }
-import com.couchbase.client.scala.manager.analytics.{
-  AnalyticsIndexManager,
-  ReactiveAnalyticsIndexManager
-}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
-import com.couchbase.client.scala.manager.analytics.{
-  AnalyticsIndexManager,
-  ReactiveAnalyticsIndexManager
-}
+import com.couchbase.client.scala.manager.analytics.ReactiveAnalyticsIndexManager
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
 import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
 import com.couchbase.client.scala.manager.search.ReactiveSearchIndexManager
@@ -58,16 +43,15 @@ import com.couchbase.client.scala.query.{ReactiveQueryResult, _}
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchMetaData, SearchRow}
-import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions}
+import com.couchbase.client.scala.util.DurationConversions._
+import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
 
-import scala.collection.GenMap
-import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
-import com.couchbase.client.scala.util.DurationConversions._
 
 /** Represents a connection to a Couchbase cluster.
   *
@@ -181,7 +165,7 @@ class ReactiveCluster(val async: AsyncCluster) {
               val meta: SMono[AnalyticsMetaData] = FutureConversions
                 .javaMonoToScalaMono(response.trailer())
                 .map(trailer => {
-                  val warnings: Seq[AnalyticsWarning] = trailer.warnings.asScala
+                  val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
                     .map(
                       warnings =>
                         ErrorCodeAndMessage
@@ -372,7 +356,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     *
     * @param timeout the timeout to use for the operation
     *
-    * @return the PingResult` once complete.
+    * @return the PingResult once complete.
     */
   def ping(
       timeout: Option[Duration] = None
@@ -387,7 +371,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     *
     * @param options options to customize the ping
     *
-    * @return the PingResult` once complete.
+    * @return the PingResult once complete.
     */
   def ping(options: PingOptions): SMono[PingResult] = {
     SMono.defer(() => SMono.fromFuture(async.ping(options)))

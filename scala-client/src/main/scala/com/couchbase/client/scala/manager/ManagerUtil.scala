@@ -96,6 +96,6 @@ object ManagerUtil {
             "body=" + new String(response.content, UTF_8)
         )
       )
-    } else Success()
+    } else Success(())
   }
 }

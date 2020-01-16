@@ -28,7 +28,6 @@ import com.couchbase.client.scala.search.result.SearchFacetResult._
 import com.couchbase.client.scala.search.result.{SearchFacetResult, SearchMetaData, SearchMetrics}
 import com.couchbase.client.scala.util.{CouchbasePickler, DurationConversions, Validate}
 
-import scala.collection.GenMap
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
@@ -121,7 +120,7 @@ object SearchHandler {
       meta <- Try(
         SearchMetaData(
           metrics,
-          errors.toMap.asInstanceOf[GenMap[String, String]]
+          errors.toMap.asInstanceOf[collection.Map[String, String]]
         )
       )
     } yield meta

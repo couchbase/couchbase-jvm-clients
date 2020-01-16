@@ -181,7 +181,7 @@ case class JsonArraySafe(private[scala] val a: JsonArray) {
 
   /** Converts this and its contents recursively into Scala collections representing the same JSON.
     *
-    * [[JsonObject]] and [[JsonObjectSafe]] will be converted into `GenMap[String, Any]`, and [[JsonArray]] and
+    * [[JsonObject]] and [[JsonObjectSafe]] will be converted into `collection.Map[String, Any]`, and [[JsonArray]] and
     * [[JsonArraySafe]] will be converted into `Seq[Any]`.
     */
   def toSeq: Seq[Any] = a.toSeq

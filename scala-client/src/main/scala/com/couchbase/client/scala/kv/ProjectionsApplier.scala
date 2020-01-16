@@ -13,7 +13,7 @@ import com.couchbase.client.core.projections.{
 import scala.annotation.tailrec
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
-import collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 private[scala] object ProjectionsApplier {
   // Down the line, could support generating any type of Json - ujson, Json4s, etc.  Will need to take an implicit
@@ -33,12 +33,13 @@ private[scala] object ProjectionsApplier {
       case 'n' => Success(null)
       case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' =>
         val str = new String(content, CharsetUtil.UTF_8)
-        val out = try {
-          if (str.contains('.')) str.toDouble else str.toLong
-        } catch {
-          // Try it as a number and fallback to a string
-          case NonFatal(_) => str
-        }
+        val out =
+          try {
+            if (str.contains('.')) str.toDouble else str.toLong
+          } catch {
+            // Try it as a number and fallback to a string
+            case NonFatal(_) => str
+          }
         Success(out)
       case _ =>
         Try(new String(content, CharsetUtil.UTF_8))
@@ -70,7 +71,7 @@ private[scala] object ProjectionsApplier {
       content: Any
   ): Try[Unit] = {
     path match {
-      case Nil => Success()
+      case Nil => Success(())
 
       case x :: Nil =>
         x match {

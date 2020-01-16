@@ -45,7 +45,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def no_commands() {
+  def no_commands(): Unit = {
     val docId = TestUtils.docId()
     coll.lookupIn(docId, Array[LookupInSpec]()) match {
       case Success(result)                        => assert(false, s"unexpected success")
@@ -55,7 +55,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     }
   }
   @Test
-  def lookupIn() {
+  def lookupIn(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
@@ -74,7 +74,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
 
   @Test
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
-  def lookupInWithExpiration() {
+  def lookupInWithExpiration(): Unit = {
     val docId        = TestUtils.docId()
     val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
     val insertResult = coll.upsert(docId, content, UpsertOptions().expiry(60.seconds)).get
@@ -92,7 +92,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def get_array() {
+  def get_array(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("animals" -> ujson.Arr("cat", "dog"))
@@ -114,7 +114,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def path_does_not_exist_single() {
+  def path_does_not_exist_single(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world")
@@ -128,7 +128,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def path_does_not_exist_multi() {
+  def path_does_not_exist_multi(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world")
@@ -148,7 +148,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def lookupIn_with_doc() {
+  def lookupIn_with_doc(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
@@ -168,7 +168,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def exists_single() {
+  def exists_single(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> ujson.Arr("world"))
@@ -186,7 +186,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def exists_multi() {
+  def exists_multi(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> ujson.Arr("world"), "foo" -> "bar", "age" -> 22)
@@ -221,7 +221,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def count() {
+  def count(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
     val content      = ujson.Obj("hello" -> ujson.Arr("world"), "foo" -> "bar", "age" -> 22)
@@ -256,7 +256,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def xattrIsReordered() {
+  def xattrIsReordered(): Unit = {
     val docId = prepare()
 
     coll.lookupIn(docId, Array(get("hello"), exists("does_not_exist").xattr)) match {
@@ -273,7 +273,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
 
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
-  def xattrIsReorderedWithExpiry() {
+  def xattrIsReorderedWithExpiry(): Unit = {
     val content = ujson.Obj("hello" -> "world")
     val docId   = TestUtils.docId(0)
     coll.remove(docId)
@@ -297,7 +297,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def demo() {
+  def demo(): Unit = {
     val content = ujson.Obj("hello" -> "world")
     val docId   = TestUtils.docId(0)
     coll.remove(docId)
@@ -332,7 +332,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     missesCapabilities = Array(Capabilities.SYNC_REPLICATION)
   )
   @Test
-  def macros() {
+  def macros(): Unit = {
     // Document.LastModified is only available when memcached has done a flush, so force one
     // with durability.
     val docId = TestUtils.docId(0)
@@ -370,7 +370,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     missesCapabilities = Array(Capabilities.SYNC_REPLICATION)
   )
   @Test
-  def revidMacro() {
+  def revidMacro(): Unit = {
     val docId = prepare()
 
     val result = coll

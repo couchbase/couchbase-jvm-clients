@@ -29,7 +29,7 @@ object MutateInSpec {
     *
     * @param path       the path identifying where to insert the value.
     * @param value      the value to insert.  $SupportedTypes
-    * @param ev         $JsonSerializer
+    * @param serializer         $JsonSerializer
     */
   def insert[T](path: String, value: T)(implicit serializer: JsonSerializer[T]): Insert = {
     val expandMacro = value match {
@@ -49,7 +49,7 @@ object MutateInSpec {
     *
     * @param path  the path identifying where to replace the value.
     * @param value the value to replace.  $SupportedTypes
-    * @param ev    $JsonSerializer
+    * @param serializer    $JsonSerializer
     */
   def replace[T](path: String, value: T)(implicit serializer: JsonSerializer[T]): Replace = {
     val expandMacro = value match {
@@ -65,7 +65,7 @@ object MutateInSpec {
     *
     * @param path       the path identifying where to upsert the value.
     * @param value      the value to upsert.  $SupportedTypes
-    * @param ev         $JsonSerializer
+    * @param serializer         $JsonSerializer
     */
   def upsert[T](path: String, value: T)(implicit serializer: JsonSerializer[T]): Upsert = {
     val expandMacro = value match {
@@ -93,9 +93,9 @@ object MutateInSpec {
     *
     * @param path       the path identifying an array to which to append the value.
     * @param values     the values to append.  $SupportedTypes
-    * @param ev         $JsonSerializer
+    * @param serializer         $JsonSerializer
     */
-  def arrayAppend[T](path: String, values: Seq[T])(
+  def arrayAppend[T](path: String, values: collection.Seq[T])(
       implicit serializer: JsonSerializer[T]
   ): ArrayAppend = {
     if (values.size == 1) {
@@ -111,7 +111,10 @@ object MutateInSpec {
   }
 
   /** Encode all provided values into one, comma-separated, Array[Byte] */
-  private def encodeMulti[T](serializer: JsonSerializer[T], values: Seq[T]): Try[Array[Byte]] = {
+  private def encodeMulti[T](
+      serializer: JsonSerializer[T],
+      values: Iterable[T]
+  ): Try[Array[Byte]] = {
     if (values.isEmpty) {
       Failure(new IllegalArgumentException("Empty set of values provided"))
     } else {
@@ -125,11 +128,9 @@ object MutateInSpec {
       traversed.map(v => {
         val out = new ArrayBuffer[Byte]()
 
-        v.foreach(value => {
-          val bytes = value
-          out.append(bytes: _*)
-          out.append(',') // multiple values are comma separated
-        })
+        v.foreach { bytes =>
+          out ++= bytes += ',' // multiple values are comma separated
+        }
 
         // Should be covered by values.isEmpty check, but to be safe
         if (out.nonEmpty) {
@@ -147,20 +148,20 @@ object MutateInSpec {
     *
     * @param path       the path identifying an array to which to prepend the value.
     * @param values     the value(s) to prepend.  $SupportedTypes
-    * @param ev         $JsonSerializer
+    * @param serializer         $JsonSerializer
     */
-  def arrayPrepend[T](path: String, values: Seq[T])(
+  def arrayPrepend[T](path: String, values: collection.Seq[T])(
       implicit serializer: JsonSerializer[T]
   ): ArrayPrepend = {
-    if (values.size == 1) {
-      val value = values.head
-      val expandMacro = value match {
-        case v: MutateInMacro => true
-        case _                => false
-      }
-      ArrayPrepend(path, serializer.serialize(value), _expandMacro = expandMacro)
-    } else {
-      ArrayPrepend(path, encodeMulti(serializer, values))
+    values match {
+      case value :: Nil =>
+        ArrayPrepend(
+          path,
+          serializer.serialize(value),
+          _expandMacro = value.isInstanceOf[MutateInMacro]
+        )
+      case _ =>
+        ArrayPrepend(path, encodeMulti(serializer, values))
     }
   }
 
@@ -169,21 +170,21 @@ object MutateInSpec {
     * Will error if the last element of the path does not exist or is not an array.
     *
     * @param path       the path identifying an array to which to append the value, and an index.  E.g. "foo.bar[3]"
-    * @param value      the value(s) to insert.  $SupportedTypes
-    * @param ev         $JsonSerializer
+    * @param values      the value(s) to insert.  $SupportedTypes
+    * @param serializer         $JsonSerializer
     */
-  def arrayInsert[T](path: String, values: Seq[T])(
+  def arrayInsert[T](path: String, values: collection.Seq[T])(
       implicit serializer: JsonSerializer[T]
   ): ArrayInsert = {
-    if (values.size == 1) {
-      val value = values.head
-      val expandMacro = value match {
-        case v: MutateInMacro => true
-        case _                => false
-      }
-      ArrayInsert(path, serializer.serialize(value), _expandMacro = expandMacro)
-    } else {
-      ArrayInsert(path, encodeMulti(serializer, values))
+    values match {
+      case value :: Nil =>
+        ArrayInsert(
+          path,
+          serializer.serialize(value),
+          _expandMacro = value.isInstanceOf[MutateInMacro]
+        )
+      case _ =>
+        ArrayInsert(path, encodeMulti(serializer, values))
     }
   }
 
@@ -198,11 +199,11 @@ object MutateInSpec {
   def arrayAddUnique[T](path: String, value: T)(
       implicit serializer: JsonSerializer[T]
   ): ArrayAddUnique = {
-    val expandMacro = value match {
-      case v: MutateInMacro => true
-      case _                => false
-    }
-    ArrayAddUnique(path, serializer.serialize(value), _expandMacro = expandMacro)
+    ArrayAddUnique(
+      path,
+      serializer.serialize(value),
+      _expandMacro = value.isInstanceOf[MutateInMacro]
+    )
   }
 
   /** Returns a `MutateInSpec` with the intent of incrementing a numerical field in a JSON object.

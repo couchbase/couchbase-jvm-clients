@@ -78,19 +78,19 @@ class ProjectionsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def name() {
+  def name(): Unit = {
     val json = wrap(Seq("name"))
     assert(json.str("name") == "Emmy-lou Dickerson")
   }
 
   @Test
-  def age() {
+  def age(): Unit = {
     val json = wrap(Seq("age"))
     assert(json.num("age") == 26)
   }
 
   @Test
-  def animals() {
+  def animals(): Unit = {
     val json = wrap(Seq("animals"))
     val arr  = json.arr("animals")
     assert(arr.size == 3)
@@ -98,21 +98,21 @@ class ProjectionsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def animals0() {
+  def animals0(): Unit = {
     val json = wrap(Seq("animals[0]"))
     val arr  = json.arr("animals")
     assert(arr.toSeq == Seq("cat"))
   }
 
   @Test
-  def animals2() {
+  def animals2(): Unit = {
     val json = wrap(Seq("animals[2]"))
     val arr  = json.arr("animals")
     assert(arr.toSeq == Seq("parrot"))
   }
 
   @Test
-  def attributes() {
+  def attributes(): Unit = {
     val json  = wrap(Seq("attributes"))
     val field = json.obj("attributes")
     assert(field.size == 3)
@@ -121,27 +121,27 @@ class ProjectionsSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def attributesHair() {
+  def attributesHair(): Unit = {
     val json = wrap(Seq("attributes.hair"))
     assert(json.obj("attributes").str("hair") == "brown")
   }
 
   @Test
-  def attributesDimensions() {
+  def attributesDimensions(): Unit = {
     val json = wrap(Seq("attributes.dimensions"))
     assert(json.obj("attributes").obj("dimensions").num("height") == 67)
     assert(json.obj("attributes").obj("dimensions").num("weight") == 175)
   }
 
   @Test
-  def attributesDimensionsHeight() {
+  def attributesDimensionsHeight(): Unit = {
     val json = wrap(Seq("attributes.dimensions"))
     assert(json.obj("attributes").obj("dimensions").num("height") == 67)
   }
 
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
-  def attributesHobbiesDetailsLocation() {
+  def attributesHobbiesDetailsLocation(): Unit = {
     val json = wrap(Seq("attributes.hobbies[1].details.location"))
     assert(
       json

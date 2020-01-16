@@ -17,12 +17,11 @@
 package com.couchbase.client.scala.analytics
 
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.error.{CouchbaseException, ErrorCodeAndMessage}
+import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow
 import com.couchbase.client.core.util.Golang
-import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer}
-import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
-import com.couchbase.client.scala.query.QueryOptions
+import com.couchbase.client.scala.codec.JsonDeserializer
+import com.couchbase.client.scala.json.JsonObjectSafe
 import com.couchbase.client.scala.util.{DurationConversions, RowTraversalUtil}
 import reactor.core.scala.publisher.{SFlux, SMono}
 
@@ -51,7 +50,7 @@ case class AnalyticsResult(
     *
     * @return either `Success` if all rows could be decoded successfully, or a Failure containing the first error
     */
-  def rowsAs[T](implicit deserializer: JsonDeserializer[T]): Try[Seq[T]] = {
+  def rowsAs[T](implicit deserializer: JsonDeserializer[T]): Try[collection.Seq[T]] = {
     val all = rows.iterator.map(row => deserializer.deserialize(row.data()))
     RowTraversalUtil.traverse(all)
   }
@@ -158,7 +157,7 @@ case class AnalyticsMetaData(
     clientContextId: String,
     private val signatureContent: Option[Array[Byte]],
     metrics: AnalyticsMetrics,
-    warnings: Seq[AnalyticsWarning],
+    warnings: collection.Seq[AnalyticsWarning],
     status: AnalyticsStatus
 ) {
 

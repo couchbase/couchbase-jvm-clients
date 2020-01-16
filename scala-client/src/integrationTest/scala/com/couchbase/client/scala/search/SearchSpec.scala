@@ -106,7 +106,7 @@ class SearchSpec extends ScalaIntegrationTest {
 
   @Timeout(value = 2, unit = TimeUnit.MINUTES)
   @Test
-  def simple() {
+  def simple(): Unit = {
     def runTest(): Unit = {
       Thread.sleep(50)
 
@@ -140,7 +140,7 @@ class SearchSpec extends ScalaIntegrationTest {
 
   @Timeout(value = 2, unit = TimeUnit.MINUTES)
   @Test
-  def consistentWith() {
+  def consistentWith(): Unit = {
     def runTest(): Unit = {
       Thread.sleep(50)
 
@@ -172,7 +172,7 @@ class SearchSpec extends ScalaIntegrationTest {
 
   @Timeout(value = 2, unit = TimeUnit.MINUTES)
   @Test
-  def facets() {
+  def facets(): Unit = {
     def runTest(): Unit = {
       Thread.sleep(50)
 

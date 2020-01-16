@@ -12,7 +12,7 @@ class JsonObjectSpec {
       |"address":[{"address":"123 Fake Street","regional":{"county:":"essex"}}]}""".stripMargin
   val json = JsonObject.fromJson(raw)
   @Test
-  def decode() {
+  def decode(): Unit = {
     val encoded = Conversions.encode(json).get
     val str     = new String(encoded)
     val decoded = Conversions.decode[JsonObject](encoded).get
@@ -21,7 +21,7 @@ class JsonObjectSpec {
   }
 
   @Test
-  def int_to_everything() {
+  def int_to_everything(): Unit = {
     val r = """{"hello":29}"""
     val j = JsonObject.fromJson(r)
     assert(j.num("hello") == 29)
@@ -36,7 +36,7 @@ class JsonObjectSpec {
   }
 
   @Test
-  def double_to_everything() {
+  def double_to_everything(): Unit = {
     val r = """{"hello":29.34}"""
     val j = JsonObject.fromJson(r)
     assert(j.num("hello") == 29)
@@ -51,7 +51,7 @@ class JsonObjectSpec {
   }
 
   @Test
-  def obj_to_everything() {
+  def obj_to_everything(): Unit = {
     val r = """{"hello":{"foo":"bar"}}"""
     val j = JsonObject.fromJson(r)
     assert(j.obj("hello").nonEmpty)
@@ -65,7 +65,7 @@ class JsonObjectSpec {
   }
 
   @Test
-  def arr_to_everything() {
+  def arr_to_everything(): Unit = {
     val r = """{"hello":["foo","bar"]}"""
     val j = JsonObject.fromJson(r)
     assert(j.arr("hello").nonEmpty)

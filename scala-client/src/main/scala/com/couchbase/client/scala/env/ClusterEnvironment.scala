@@ -296,7 +296,7 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
             coreEnv
               .shutdownReactive(timeout)
           )
-          .then(SMono.defer[Unit](() => {
+          .`then`(SMono.defer[Unit](() => {
             threadPool.shutdownNow()
             defaultScheduler.dispose()
             SMono.empty

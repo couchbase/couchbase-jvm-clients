@@ -50,7 +50,7 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Try[Seq[QueryIndex]] = {
+  ): Try[collection.Seq[QueryIndex]] = {
     Collection.block(async.getAllIndexes(bucketName, timeout, retryStrategy))
   }
 
@@ -68,7 +68,7 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
   def createIndex(
       bucketName: String,
       indexName: String,
-      fields: Seq[String],
+      fields: Iterable[String],
       ignoreIfExists: Boolean = false,
       numReplicas: Option[Int] = None,
       deferred: Option[Boolean] = None,
@@ -171,7 +171,7 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
     */
   def watchIndexes(
       bucketName: String,
-      indexNames: Seq[String],
+      indexNames: Iterable[String],
       timeout: Duration,
       watchPrimary: Boolean = false,
       retryStrategy: RetryStrategy = DefaultRetryStrategy

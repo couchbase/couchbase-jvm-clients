@@ -82,7 +82,7 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
   def createIndex(
       bucketName: String,
       indexName: String,
-      fields: Seq[String],
+      fields: Iterable[String],
       ignoreIfExists: Boolean = false,
       numReplicas: Option[Int] = None,
       deferred: Option[Boolean] = None,
@@ -184,7 +184,7 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
     */
   def watchIndexes(
       bucketName: String,
-      indexNames: Seq[String],
+      indexNames: Iterable[String],
       timeout: Duration,
       watchPrimary: Boolean = false,
       retryStrategy: RetryStrategy = DefaultRetryStrategy

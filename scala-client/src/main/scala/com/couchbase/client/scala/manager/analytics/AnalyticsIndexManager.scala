@@ -16,9 +16,7 @@
 package com.couchbase.client.scala.manager.analytics
 
 import com.couchbase.client.core.retry.RetryStrategy
-import reactor.core.scala.publisher.SMono
 
-import scala.collection.GenMap
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
@@ -92,7 +90,7 @@ class AnalyticsIndexManager(reactive: ReactiveAnalyticsIndexManager) {
   def createIndex(
       indexName: String,
       datasetName: String,
-      fields: GenMap[String, AnalyticsDataType],
+      fields: collection.Map[String, AnalyticsDataType],
       dataverseName: Option[String] = None,
       ignoreIfExists: Boolean = false,
       timeout: Duration = DefaultTimeout,

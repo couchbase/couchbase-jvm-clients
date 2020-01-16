@@ -17,18 +17,26 @@ package com.couchbase.client.scala.util
 
 import java.util.concurrent.TimeUnit
 
+import scala.concurrent.duration.Duration
+import scala.language.implicitConversions
+
 /** Functions to convert between Java and Scala Duration.
   *
   * @author Graham Pople
   * @since 1.0.0
   */
 private[scala] object DurationConversions {
-  implicit def scalaDurationToJava(in: scala.concurrent.duration.Duration): java.time.Duration = {
+  implicit def scalaDurationToJava(in: Duration): java.time.Duration = {
     java.time.Duration.ofNanos(in.toNanos)
   }
 
-  implicit def javaDurationToScala(in: java.time.Duration): scala.concurrent.duration.Duration = {
+  implicit def javaDurationToScala(in: java.time.Duration): Duration = {
     scala.concurrent.duration.Duration(in.toNanos, TimeUnit.NANOSECONDS)
   }
 
+  implicit class DurationOps(private val d: Duration) extends AnyVal {
+    def toN1qlFormat: String =
+      if (d.toSeconds > 0) d.toSeconds.toString + "s"
+      else d.toNanos.toString + "ns"
+  }
 }

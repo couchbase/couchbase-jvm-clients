@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration._
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
@@ -39,7 +39,7 @@ class PingSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     bucketName = ClusterAwareIntegrationTest.config().bucketname()
     bucket = cluster.bucket(bucketName)
-    bucket.waitUntilReady(10 seconds)
+    bucket.waitUntilReady(10.seconds)
   }
 
   @AfterAll

@@ -30,7 +30,7 @@
     <dependencies>
         <dependency>
             <groupId>com.couchbase.client</groupId>
-            <artifactId>scala-client_2.12</artifactId>
+            <artifactId>scala-client_${scala.compat.version}</artifactId>
         </dependency>
 
         <dependency>
@@ -63,21 +63,15 @@
         <plugins>
             <plugin>
                 <groupId>org.antipathy</groupId>
-                <artifactId>mvn-scalafmt_${scala.compat.version}</artifactId>
-                <version>1.0.1</version>
+                <!-- use mvn-scalafmt_2.13 for all scala.compat.version -->
+                <artifactId>mvn-scalafmt_2.13</artifactId>
+                <version>1.0.3</version>
                 <configuration>
                     <configLocation>${project.basedir}/../.scalafmt.conf</configLocation>
-                    <skipTestSources>false</skipTestSources>
-                    <skipSources>false</skipSources>
-                    <respectVersion>false</respectVersion>
-                    <sourceDirectories>
-                        <param>${project.basedir}/src/main/scala</param>
-                    </sourceDirectories>
                     <testSourceDirectories>
                         <param>${project.basedir}/src/test/scala</param>
                         <param>${project.basedir}/src/integrationTest/scala</param>
                     </testSourceDirectories>
-                    <validateOnly>false</validateOnly> <!-- check formatting without changing files -->
                 </configuration>
                 <executions>
                     <execution>

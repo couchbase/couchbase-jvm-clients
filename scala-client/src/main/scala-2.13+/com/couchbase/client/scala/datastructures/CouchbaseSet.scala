@@ -23,8 +23,8 @@ import com.couchbase.client.scala.json.JsonArraySafe
 import com.couchbase.client.scala.kv._
 
 import scala.collection.mutable
-import scala.util.{Failure, Success, Try}
 import scala.reflect.runtime.universe._
+import scala.util.{Failure, Success}
 
 /** Presents a Scala Set interface on top of a mutable persistent data structure, in the form of a document stored
   * on the cluster.
@@ -34,7 +34,7 @@ class CouchbaseSet[T](
     collection: Collection,
     options: Option[CouchbaseCollectionOptions] = None
 )(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: WeakTypeTag[T])
-    extends mutable.Set[T] {
+    extends mutable.AbstractSet[T] {
 
   private val opts: CouchbaseCollectionOptions = options match {
     case Some(v) => v
@@ -55,7 +55,7 @@ class CouchbaseSet[T](
     .timeout(opts.timeout)
     .retryStrategy(opts.retryStrategy)
     .durability(opts.durability)
-  private val removeOptions = RemoveOptions()
+  private val upsertOptions = UpsertOptions()
     .timeout(opts.timeout)
     .retryStrategy(opts.retryStrategy)
     .durability(opts.durability)
@@ -80,7 +80,7 @@ class CouchbaseSet[T](
           if (e == elem) {
             val mutateResult = collection.mutateIn(
               id,
-              Array(MutateInSpec.remove("[" + index + "]")),
+              Seq(MutateInSpec.remove("[" + index + "]")),
               mutateInOptions.cas(op.get.cas)
             )
 
@@ -103,18 +103,6 @@ class CouchbaseSet[T](
     out
   }
 
-  private def retryIfDocDoesNotExist[_](f: () => Try[_]): Unit = {
-    val result: Try[_] = f()
-
-    result match {
-      case Success(_) =>
-      case Failure(_: DocumentNotFoundException) =>
-        initialize()
-        retryIfDocDoesNotExist(f)
-      case Failure(err) => throw err
-    }
-  }
-
   private def initialize(): Unit = {
     // The .get will throw if anything goes wrong
     collection
@@ -125,11 +113,20 @@ class CouchbaseSet[T](
       )
       .get
   }
+  override def clear(): Unit = {
+    collection
+      .upsert(
+        id,
+        JsonArraySafe.create,
+        upsertOptions
+      )
+      .get
+  }
 
   override def size(): Int = {
     val op = collection.lookupIn(
       id,
-      Array(LookupInSpec.count("")),
+      Seq(LookupInSpec.count("")),
       lookupInOptions
     )
 
@@ -164,10 +161,10 @@ class CouchbaseSet[T](
     all().iterator
   }
 
-  override def +=(elem: T): this.type = {
+  override def addOne(elem: T): this.type = {
     val result = collection.mutateIn(
       id,
-      Array(MutateInSpec.arrayAddUnique("", elem)),
+      Seq(MutateInSpec.arrayAddUnique("", elem)),
       mutateInOptions
     )
 
@@ -181,7 +178,7 @@ class CouchbaseSet[T](
     }
   }
 
-  override def -=(elem: T): CouchbaseSet.this.type = {
+  override def subtractOne(elem: T): this.type = {
     remove(elem)
     this
   }

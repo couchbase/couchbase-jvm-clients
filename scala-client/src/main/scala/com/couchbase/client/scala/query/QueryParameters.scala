@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 package com.couchbase.client.scala.query
-import scala.collection.GenMap
 
 sealed trait QueryParameters
 
@@ -24,7 +23,7 @@ object QueryParameters {
   case object None extends QueryParameters
 
   /** Provides named parameters for queries parameterised that way. */
-  case class Named(parameters: GenMap[String, Any]) extends QueryParameters
+  case class Named(parameters: collection.Map[String, Any]) extends QueryParameters
 
   case object Named {
     def apply(values: (String, Any)*): Named = new Named(values.toMap)

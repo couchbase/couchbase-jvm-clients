@@ -36,6 +36,7 @@ private[scala] object FunctionalUtil {
           val y: List[T]         = List(v)
           rest.map(z => y ++ z)
         })
+      case Nil => Success(Nil)
     }
   }
 
@@ -49,6 +50,7 @@ private[scala] object FunctionalUtil {
           val y: Seq[T]         = Seq(v)
           rest.map(z => y ++ z)
         })
+      case Nil => Success(Nil)
     }
   }
 

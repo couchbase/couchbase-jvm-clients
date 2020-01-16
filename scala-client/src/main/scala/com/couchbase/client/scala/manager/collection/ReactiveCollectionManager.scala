@@ -20,13 +20,7 @@ import java.nio.charset.StandardCharsets
 
 import com.couchbase.client.core.config.CollectionsManifest
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod
-import com.couchbase.client.core.error.{
-  CollectionExistsException,
-  CollectionNotFoundException,
-  CouchbaseException,
-  ScopeExistsException,
-  ScopeNotFoundException
-}
+import com.couchbase.client.core.error._
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.manager.GenericManagerResponse
 import com.couchbase.client.core.retry.RetryStrategy
@@ -38,8 +32,8 @@ import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
 import reactor.core.scala.publisher.{SFlux, SMono}
 
-import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
+import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
 
 class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
@@ -104,7 +98,7 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
           .scopes()
           .asScala
           .map(scope => {
-            val collections: Seq[CollectionSpec] = scope.collections.asScala
+            val collections: collection.Seq[CollectionSpec] = scope.collections.asScala
               .map(coll => CollectionSpec(coll.name, scope.name))
 
             ScopeSpec(scope.name, collections)
@@ -223,7 +217,7 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
       collectionName: String
   ): Try[Unit] = {
     if (response.status.success) {
-      Success(Unit)
+      Success(())
     } else {
       val error = new String(response.content, StandardCharsets.UTF_8)
 

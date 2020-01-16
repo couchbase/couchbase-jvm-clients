@@ -170,7 +170,7 @@ class ReactiveCollection(async: AsyncCollection) {
     * $Same */
   def mutateIn(
       id: String,
-      spec: Seq[MutateInSpec],
+      spec: collection.Seq[MutateInSpec],
       cas: Long = 0,
       document: StoreSemantics = StoreSemantics.Replace,
       durability: Durability = Disabled,
@@ -187,7 +187,7 @@ class ReactiveCollection(async: AsyncCollection) {
     * $Same */
   def mutateIn(
       id: String,
-      spec: Seq[MutateInSpec],
+      spec: collection.Seq[MutateInSpec],
       options: MutateInOptions
   ): SMono[MutateInResult] = {
     SMono.defer(() => SMono.fromFuture(async.mutateIn(id, spec, options)))
@@ -265,7 +265,7 @@ class ReactiveCollection(async: AsyncCollection) {
     * $Same */
   def lookupIn(
       id: String,
-      spec: Seq[LookupInSpec],
+      spec: collection.Seq[LookupInSpec],
       timeout: Duration = kvReadTimeout
   ): SMono[LookupInResult] = {
     SMono.defer(() => SMono.fromFuture(async.lookupIn(id, spec, timeout)))
@@ -277,7 +277,7 @@ class ReactiveCollection(async: AsyncCollection) {
     * $Same */
   def lookupIn(
       id: String,
-      spec: Seq[LookupInSpec],
+      spec: collection.Seq[LookupInSpec],
       options: LookupInOptions
   ): SMono[LookupInResult] = {
     SMono.defer(() => SMono.fromFuture(async.lookupIn(id, spec, options)))

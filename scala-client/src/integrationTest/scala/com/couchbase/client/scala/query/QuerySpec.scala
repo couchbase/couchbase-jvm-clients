@@ -87,7 +87,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def hello_world() {
+  def hello_world(): Unit = {
     cluster.query("""select 'hello world' as Greeting""") match {
       case Success(result) =>
         assert(result.rows.size == 1)
@@ -102,7 +102,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def hello_world_content_as_JsonObject() {
+  def hello_world_content_as_JsonObject(): Unit = {
     cluster.query("""select 'hello world 2' as Greeting""", QueryOptions().metrics(true)) match {
       case Success(result) =>
         assert(result.metaData.clientContextId != "")
@@ -126,7 +126,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def rawOptions() {
+  def rawOptions(): Unit = {
     cluster.query(
       """select 'hello world' as Greeting""",
       QueryOptions().raw(Map("metrics" -> true))
@@ -139,7 +139,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def hello_world_content_as_JsonObject_for_comp() {
+  def hello_world_content_as_JsonObject_for_comp(): Unit = {
     (for {
       result <- cluster.query(
         """select 'hello world 2' as Greeting""",
@@ -166,7 +166,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def hello_world_with_quotes() {
+  def hello_world_with_quotes(): Unit = {
     cluster.query("""select "hello world" as Greeting""") match {
       case Success(result) =>
         assert(result.rows.size == 1)
@@ -178,7 +178,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def read_2_docs_use_keys() {
+  def read_2_docs_use_keys(): Unit = {
     val (docId1, _) = prepare(ujson.Obj("name" -> "Andy"))
     val (docId2, _) = prepare(ujson.Obj("name" -> "Beth"))
 
@@ -196,7 +196,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def error_due_to_bad_syntax() {
+  def error_due_to_bad_syntax(): Unit = {
     val x = cluster.query("""select*from""")
     x match {
       case Success(result)                       => assert(false)
@@ -206,7 +206,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def reactive_hello_world() {
+  def reactive_hello_world(): Unit = {
     import com.couchbase.client.scala.codec.JsonDeserializer.Passthrough._
 
     cluster.reactive
@@ -228,7 +228,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def reactive_additional() {
+  def reactive_additional(): Unit = {
 
     val rowsKeeper = new AtomicReference[Seq[JsonObject]]()
 
@@ -255,7 +255,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def reactive_error_due_to_bad_syntax() {
+  def reactive_error_due_to_bad_syntax(): Unit = {
     Assertions.assertThrows(
       classOf[ParsingFailureException],
       () => {
@@ -273,7 +273,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def options_profile() {
+  def options_profile(): Unit = {
     cluster.query(
       """select 'hello world' as Greeting""",
       QueryOptions().profile(QueryProfile.Timings)
@@ -293,7 +293,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def options_named_params() {
+  def options_named_params(): Unit = {
     coll.insert(TestUtils.docId(), JsonObject("name" -> "Eric Wimp"))
 
     cluster.query(
@@ -309,7 +309,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def options_positional_params() {
+  def options_positional_params(): Unit = {
     coll.insert(TestUtils.docId(), JsonObject("name" -> "Eric Wimp"))
 
     cluster.query(
@@ -326,7 +326,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def options_clientContextId() {
+  def options_clientContextId(): Unit = {
     cluster.query("""select 'hello world' as Greeting""", QueryOptions().clientContextId("test")) match {
       case Success(result) => assert(result.metaData.clientContextId.contains("test"))
       case Failure(err)    => throw err
@@ -334,7 +334,7 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def options_disableMetrics() {
+  def options_disableMetrics(): Unit = {
     cluster.query("""select 'hello world' as Greeting""", QueryOptions().metrics(true)) match {
       case Success(result) =>
         assert(result.metaData.metrics.get.errorCount == 0)
@@ -344,7 +344,7 @@ class QuerySpec extends ScalaIntegrationTest {
 
   // Can't really test these so just make sure the server doesn't barf on our encodings
   @Test
-  def options_unusual() {
+  def options_unusual(): Unit = {
     cluster.query(
       """select 'hello world' as Greeting""",
       QueryOptions()
@@ -479,15 +479,17 @@ class QuerySpec extends ScalaIntegrationTest {
     assert(1 == rows.size)
   }
 
+  case class Address(line1: String)
+  // Need define case class & object here - not in caseClassesDecodedToN1QL method
+  // or else, scala 2.11 will not compile, with error:
+  // User is already defined as (compiler-generated) case class companion object User
+  case class User(name: String, age: Int, addresses: Seq[Address])
+  object User {
+    implicit val codec: Codec[User] = Codec.codec[User]
+  }
   // SCBC-70
   @Test
   def caseClassesDecodedToN1QL(): Unit = {
-    case class Address(line1: String)
-    case class User(name: String, age: Int, addresses: Seq[Address])
-    object User {
-      implicit val codec: Codec[User] = Codec.codec[User]
-    }
-
     val user   = User("user1", 21, Seq(Address("address1")))
     val result = coll.upsert("user1", user).get
 
@@ -496,7 +498,7 @@ class QuerySpec extends ScalaIntegrationTest {
     cluster
       .query(statement, QueryOptions().scanConsistency(ConsistentWith(MutationState.from(result))))
       .flatMap(_.rowsAs[JsonObject]) match {
-      case Success(rows: Seq[JsonObject]) =>
+      case Success(rows) =>
         assert(rows.nonEmpty)
         rows.foreach(row => println(row))
       case Failure(err) =>

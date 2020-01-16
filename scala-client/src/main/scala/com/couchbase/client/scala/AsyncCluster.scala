@@ -50,10 +50,10 @@ import com.couchbase.client.scala.util.DurationConversions.{javaDurationToScala,
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
 
-import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
 
 /** Represents a connection to a Couchbase cluster.
@@ -201,7 +201,7 @@ class AsyncCluster(
                     FutureConversions
                       .javaMonoToScalaMono(response.trailer())
                       .map(trailer => {
-                        val warnings: Seq[AnalyticsWarning] = trailer.warnings.asScala
+                        val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
                           .map(
                             warnings =>
                               ErrorCodeAndMessage
@@ -385,8 +385,6 @@ class AsyncCluster(
     */
   def ping(options: PingOptions): Future[PingResult] = {
 
-    import scala.collection.JavaConverters._
-
     val future = HealthPinger
       .ping(
         core,
@@ -436,10 +434,10 @@ class AsyncCluster(
           true
         )
       )
-      .map(_ => Unit)
+      .map(_ => ())
   }
 
-  private[scala] def performGlobalConnect() {
+  private[scala] def performGlobalConnect(): Unit = {
     core.initGlobalConfig()
   }
 }
@@ -518,7 +516,7 @@ object AsyncCluster {
         .flatMap(
           response =>
             FutureConversions
-              .javaFluxToScalaFlux(response.rows)
+              .javaFluxToScalaFlux(response.rows())
               // This can throw, which will return a failed Future as desired
               .map(row => SearchRow.fromResponse(row))
               .collectSeq()

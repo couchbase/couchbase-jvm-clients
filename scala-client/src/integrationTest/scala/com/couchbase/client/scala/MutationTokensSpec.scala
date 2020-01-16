@@ -28,7 +28,7 @@ class MutationTokensSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def insert() {
+  def insert(): Unit = {
     val docId   = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
     coll.insert(docId, content) match {

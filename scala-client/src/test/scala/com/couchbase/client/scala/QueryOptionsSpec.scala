@@ -5,14 +5,14 @@ import org.junit.jupiter.api.Test
 
 class QueryOptionsSpec {
   @Test
-  def named_params_single() {
+  def named_params_single(): Unit = {
     val qo = QueryOptions().parameters(QueryParameters.Named("key1" -> "value1"))
     assert(qo.parameters.get.asInstanceOf[QueryParameters.Named].parameters("key1") == "value1")
     assert(qo.deferredException.isEmpty)
   }
 
   @Test
-  def named_params_3() {
+  def named_params_3(): Unit = {
     val qo =
       QueryOptions().parameters(
         QueryParameters.Named("key1" -> "value1", "key2" -> "value2", "key3" -> "value3")

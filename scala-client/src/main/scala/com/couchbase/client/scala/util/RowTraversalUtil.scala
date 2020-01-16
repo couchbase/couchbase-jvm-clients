@@ -4,7 +4,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
 
 object RowTraversalUtil {
-  def traverse[T](it: Iterator[Try[T]]): Try[Seq[T]] = {
+  def traverse[T](it: Iterator[Try[T]]): Try[collection.Seq[T]] = {
     // Not a functional implementation, going for performance
     var outFail: Try[_] = null
     val out             = ArrayBuffer.empty[T]

@@ -121,7 +121,8 @@ case class RoleAndOrigins(role: Role, origins: Seq[Origin]) {
     */
   def innate: Boolean = origins.exists(_.typ == "user")
 
-  override def toString: String = role + "<-" + origins.mkString("[", ",", "]") // match Java output
+  override def toString: String =
+    role.toString + "<-" + origins.mkString("[", ",", "]") // match Java output
 }
 
 object RoleAndOrigins {

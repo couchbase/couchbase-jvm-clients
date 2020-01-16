@@ -28,7 +28,7 @@ import upickle.default.{macroRW, ReadWriter => RW}
   * @param username    the user's username
   * @param displayName the user's display name
   * @param groups      any groups that the user belongs to
-  * @param roles       any roles directly assigned to the user (not those inherited through groups)
+  * @param _roles       any roles directly assigned to the user (not those inherited through groups)
   */
 @Volatile
 case class User(

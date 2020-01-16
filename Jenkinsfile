@@ -105,6 +105,49 @@ pipeline {
             }
         }
 
+        // Scala 2.11 & 2.13 aren't officially distributed or supported, but we have community depending on it so check
+        // they at least compile
+        stage('build Scala 2.11') {
+            agent { label DEFAULT_PLATFORM }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
+                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    // 2.11 must be built with JDK 8
+                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_8)
+
+                    dir('couchbase-jvm-clients') {
+                        shWithEcho("make deps-only")
+                        shWithEcho("mvn -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Dscala.compat.version=2.11 -Dscala.compat.library.version=2.11.12 clean compile")
+                    }
+                }
+            }
+        }
+
+        stage('build Scala 2.13') {
+            agent { label DEFAULT_PLATFORM }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
+                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_11)
+
+                    dir('couchbase-jvm-clients') {
+                        shWithEcho("make deps-only")
+                        shWithEcho("mvn -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Dscala.compat.version=2.13 -Dscala.compat.library.version=2.13.1 clean compile")
+                    }
+                }
+            }
+        }
+
         // Test against mock - this skips a lot of tests, and is intended for quick validation
         stage('validation testing (mock, Oracle JDK 8)') {
             agent { label LINUX_AGENTS }

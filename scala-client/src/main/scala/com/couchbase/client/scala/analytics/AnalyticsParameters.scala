@@ -15,8 +15,6 @@
  */
 package com.couchbase.client.scala.analytics
 
-import scala.collection.GenMap
-
 sealed trait AnalyticsParameters
 
 object AnalyticsParameters {
@@ -25,7 +23,7 @@ object AnalyticsParameters {
   case object None extends AnalyticsParameters
 
   /** Provides named parameters for queries parameterised that way. */
-  case class Named(parameters: GenMap[String, Any]) extends AnalyticsParameters
+  case class Named(parameters: collection.Map[String, Any]) extends AnalyticsParameters
 
   /** Provides positional parameters for queries parameterised that way. */
   case class Positional(parameters: Seq[Any]) extends AnalyticsParameters

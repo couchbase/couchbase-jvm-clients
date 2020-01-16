@@ -15,6 +15,4 @@
  */
 package com.couchbase.client.scala.manager.collection
 
-import scala.collection.GenSeq
-
-case class ScopeSpec(name: String, collections: GenSeq[CollectionSpec] = Seq())
+case class ScopeSpec(name: String, collections: collection.Seq[CollectionSpec] = Seq())

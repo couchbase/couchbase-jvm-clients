@@ -15,25 +15,19 @@
  */
 package com.couchbase.client.scala.manager.analytics
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus
-import com.couchbase.client.core.error.{
-  AnalyticsException,
-  CouchbaseException,
-  FeatureNotAvailableException,
-  HttpStatusCodeException
-}
+import com.couchbase.client.core.error.{FeatureNotAvailableException, HttpStatusCodeException}
 import com.couchbase.client.core.logging.RedactableArgument.redactMeta
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.CbThrowables.findCause
-import com.couchbase.client.scala.{Cluster, ReactiveCluster}
+import com.couchbase.client.scala.ReactiveCluster
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, ReactiveAnalyticsResult}
+import com.couchbase.client.scala.util.DurationConversions._
+import com.couchbase.client.scala.util.RowTraversalUtil
 import reactor.core.scala.publisher.{SFlux, SMono}
 
-import scala.collection.GenMap
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
-import com.couchbase.client.scala.util.DurationConversions._
-import com.couchbase.client.scala.util.RowTraversalUtil
 
 class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
 
@@ -54,7 +48,7 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
           else out
         }
 
-        exec(statement, dataverseName, timeout, retryStrategy).map(_ => Unit)
+        exec(statement, dataverseName, timeout, retryStrategy).map(_ => ())
 
       case Failure(err) => SMono.raiseError(err)
     }
@@ -74,7 +68,7 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
           else out
         }
 
-        exec(statement, dataverseName, timeout, retryStrategy).map(_ => Unit)
+        exec(statement, dataverseName, timeout, retryStrategy).map(_ => ())
 
       case Failure(err) => SMono.raiseError(err)
     }
@@ -111,7 +105,7 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
     } yield statement
 
     statement match {
-      case Success(st)  => exec(st, datasetName, timeout, retryStrategy).map(_ => Unit)
+      case Success(st)  => exec(st, datasetName, timeout, retryStrategy).map(_ => ())
       case Failure(err) => SMono.raiseError(err)
     }
   }
@@ -131,7 +125,7 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
           else out
         }
 
-        exec(statement, datasetName, timeout, retryStrategy).map(_ => Unit)
+        exec(statement, datasetName, timeout, retryStrategy).map(_ => ())
 
       case Failure(err) => SMono.raiseError(err)
     }
@@ -149,7 +143,7 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
   def createIndex(
       indexName: String,
       datasetName: String,
-      fields: GenMap[String, AnalyticsDataType],
+      fields: collection.Map[String, AnalyticsDataType],
       dataverseName: Option[String] = None,
       ignoreIfExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
@@ -169,12 +163,12 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
     } yield statement
 
     statement match {
-      case Success(st)  => exec(st, indexName, timeout, retryStrategy).map(_ => Unit)
+      case Success(st)  => exec(st, indexName, timeout, retryStrategy).map(_ => ())
       case Failure(err) => SMono.raiseError(err)
     }
   }
 
-  private def formatIndexFields(fields: GenMap[String, AnalyticsDataType]) = {
+  private def formatIndexFields(fields: collection.Map[String, AnalyticsDataType]) = {
     fields
       .map(v => {
         val dt: String = v._2 match {
@@ -203,7 +197,7 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
           else out
         }
 
-        exec(statement, datasetName, timeout, retryStrategy).map(_ => Unit)
+        exec(statement, datasetName, timeout, retryStrategy).map(_ => ())
 
       case Failure(err) => SMono.raiseError(err)
     }

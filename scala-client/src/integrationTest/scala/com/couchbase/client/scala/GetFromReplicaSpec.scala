@@ -33,7 +33,7 @@ class GetFromReplicaSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def any_async() {
+  def any_async(): Unit = {
     val docId   = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
 
@@ -50,7 +50,7 @@ class GetFromReplicaSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def any_blocking() {
+  def any_blocking(): Unit = {
     val docId   = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
     assert(coll.insert(docId, content).isSuccess)
@@ -62,7 +62,7 @@ class GetFromReplicaSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def any_reactive() {
+  def any_reactive(): Unit = {
     val docId   = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
     assert(coll.insert(docId, content).isSuccess)
@@ -74,7 +74,7 @@ class GetFromReplicaSpec extends ScalaIntegrationTest {
   }
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
-  def all_async() {
+  def all_async(): Unit = {
     val docId   = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
 
@@ -94,7 +94,7 @@ class GetFromReplicaSpec extends ScalaIntegrationTest {
 
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
-  def all_blocking() {
+  def all_blocking(): Unit = {
     val docId   = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
     assert(coll.insert(docId, content).isSuccess)
@@ -108,7 +108,7 @@ class GetFromReplicaSpec extends ScalaIntegrationTest {
 
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
-  def all_reactive() {
+  def all_reactive(): Unit = {
     val docId   = TestUtils.docId()
     val content = ujson.Obj("hello" -> "world")
     assert(coll.insert(docId, content).isSuccess)

@@ -67,7 +67,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def insert() {
+  def insert(): Unit = {
     val docId = TestUtils.docId()
     wrap(coll.remove(docId))
     val content = ujson.Obj("hello" -> "world")
@@ -86,7 +86,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
 
   @Test
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
-  def exists() {
+  def exists(): Unit = {
     val docId = TestUtils.docId()
     wrap(coll.remove(docId))
 
@@ -109,7 +109,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def insert_returns_cas() {
+  def insert_returns_cas(): Unit = {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
@@ -119,7 +119,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     }
   }
   @Test
-  def insert_without_expiry() {
+  def insert_without_expiry(): Unit = {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
@@ -134,7 +134,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
 
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
-  def insert_with_expiry() {
+  def insert_with_expiry(): Unit = {
     val docId = cleanupDoc()
 
     val content = ujson.Obj("hello" -> "world")
@@ -149,7 +149,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
 
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
-  def get_and_lock() {
+  def get_and_lock(): Unit = {
     val docId = TestUtils.docId()
     wrap(coll.remove(docId))
     val content      = ujson.Obj("hello" -> "world")
@@ -174,7 +174,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
 
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
-  def get_and_touch() {
+  def get_and_touch(): Unit = {
     val docId = TestUtils.docId()
     wrap(coll.remove(docId))
     val content      = ujson.Obj("hello" -> "world")
@@ -193,7 +193,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def remove() {
+  def remove(): Unit = {
     val docId = TestUtils.docId()
     wrap(coll.remove(docId))
     val content = ujson.Obj("hello" -> "world")
@@ -209,7 +209,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def upsert_when_doc_does_not_exist() {
+  def upsert_when_doc_does_not_exist(): Unit = {
     val docId = TestUtils.docId()
     wrap(coll.remove(docId))
     val content      = ujson.Obj("hello" -> "world")
@@ -232,7 +232,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def upsert_when_doc_does_exist() {
+  def upsert_when_doc_does_exist(): Unit = {
     val docId = TestUtils.docId()
     wrap(coll.remove(docId))
     val content      = ujson.Obj("hello" -> "world")
@@ -260,7 +260,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     }
   }
   @Test
-  def replace_when_doc_does_not_exist() {
+  def replace_when_doc_does_not_exist(): Unit = {
     val docId = TestUtils.docId()
     wrap(coll.remove(docId))
     val content      = ujson.Obj("hello" -> "world")
@@ -273,7 +273,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     }
   }
   @Test
-  def replace_when_doc_does_exist_with() {
+  def replace_when_doc_does_exist_with(): Unit = {
     val docId = TestUtils.docId()
     wrap(coll.remove(docId))
     val content      = ujson.Obj("hello" -> "world")
@@ -301,7 +301,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     }
   }
   @Test
-  def replace_when_doc_does_exist_with_2() {
+  def replace_when_doc_does_exist_with_2(): Unit = {
     val docId = TestUtils.docId()
     wrap(coll.remove(docId))
     val content      = ujson.Obj("hello" -> "world")

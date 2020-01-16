@@ -25,7 +25,6 @@ import com.couchbase.client.scala.codec.JsonDeserializer
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.transformers.JacksonTransformers
 
-import scala.collection.GenMap
 import scala.util.{Success, Try}
 
 /** An FTS row (or "hit")
@@ -47,7 +46,7 @@ case class SearchRow(
     score: Double,
     private val _explanation: Try[Array[Byte]],
     locations: Option[SearchRowLocations],
-    fragments: GenMap[String, Seq[String]],
+    fragments: collection.Map[String, Seq[String]],
     private[scala] val fields: Try[Array[Byte]]
 ) {
 
@@ -87,7 +86,7 @@ object SearchRow {
         .obj("locations")
         .flatMap(x => SearchRowLocations.from(x.o))
 
-      val fragments: GenMap[String, Seq[String]] = safe.obj("fragments") match {
+      val fragments: collection.Map[String, Seq[String]] = safe.obj("fragments") match {
         case Success(fragmentsJson) =>
           fragmentsJson.names
             .map(field => {

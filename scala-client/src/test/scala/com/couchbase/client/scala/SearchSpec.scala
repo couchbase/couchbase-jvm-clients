@@ -28,14 +28,14 @@ class SearchSpec {
   val defaultQuery: SearchQuery = SearchQuery.booleanField(true)
 
   @Test
-  def sort() {
+  def sort(): Unit = {
     SearchOptions().sort(Seq(SearchSort.IdSort()))
     SearchOptions().sort(Seq(SearchSort.FieldSort("test")))
     SearchOptions().sort(Seq(SearchSort.FieldSort("test", descending = Some(true))))
   }
 
   @Test
-  def facets() {
+  def facets(): Unit = {
     val facets = Map(
       "facet1" -> SearchFacet.TermFacet("field1", Some(10)),
       "facet2" -> SearchFacet.NumericRangeFacet(
@@ -52,7 +52,7 @@ class SearchSpec {
   }
 
   @Test
-  def alltimeouts() {
+  def alltimeouts(): Unit = {
     val json   = getClass.getClassLoader.getResourceAsStream("sdk-testcases/search/alltimeouts.json")
     val result = SearchMock.loadSearchTestCase(json)
 

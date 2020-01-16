@@ -16,8 +16,7 @@
 package com.couchbase.client.scala.search.result
 
 import com.couchbase.client.scala.json.JsonObject
-
-import scala.collection.{GenMap, GenSet}
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Success, Try}
 
@@ -28,19 +27,21 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 case class SearchRowLocations(
-    private val locations: GenMap[String, GenMap[String, Seq[SearchRowLocation]]]
+    private val locations: collection.Map[String, collection.Map[String, collection.Seq[
+      SearchRowLocation
+    ]]]
 ) {
 
   /** Gets all locations, for any field and term. */
   def getAll: Seq[SearchRowLocation] = {
-    locations.flatMap(_._2).flatMap(_._2).seq.toSeq
+    locations.flatMap(_._2).flatMap(_._2).toSeq
   }
 
   /** Gets all locations for a given field (any term). */
   def get(field: String): Seq[SearchRowLocation] = {
     locations
       .get(field)
-      .map(_.flatMap(_._2).seq.toSeq)
+      .map(_.flatMap(_._2).toSeq)
       .getOrElse(Seq.empty)
   }
 
@@ -50,15 +51,16 @@ case class SearchRowLocations(
       .get(field)
       .flatMap(_.get(term))
       .getOrElse(Seq.empty)
+      .toSeq
   }
 
   /** Gets all fields in these locations. */
   def fields: Seq[String] = {
-    locations.keys.seq.toSeq
+    locations.keys.toSeq
   }
 
   /** Gets all terms in these locations. */
-  def terms: GenSet[String] = {
+  def terms: collection.Set[String] = {
     locations.flatMap(_._2).keySet
   }
 
@@ -66,7 +68,7 @@ case class SearchRowLocations(
   def termsFor(field: String): Seq[String] = {
     locations
       .get(field)
-      .map(_.keys.seq.toSeq)
+      .map(_.keys.toSeq)
       .getOrElse(Seq.empty)
   }
 }
@@ -74,8 +76,8 @@ case class SearchRowLocations(
 object SearchRowLocations {
   private[scala] def from(locationsJson: JsonObject): Try[SearchRowLocations] = {
     Try({
-      val hitLocations = collection.mutable.Map
-        .empty[String, collection.mutable.Map[String, ArrayBuffer[SearchRowLocation]]]
+      val hitLocations =
+        mutable.Map.empty[String, mutable.Map[String, ArrayBuffer[SearchRowLocation]]]
 
       for (field <- locationsJson.names) {
         val termsJson = locationsJson.obj(field)
@@ -96,10 +98,10 @@ object SearchRowLocations {
               case _ => None
             }
 
-            val byTerm: collection.mutable.Map[String, ArrayBuffer[SearchRowLocation]] =
+            val byTerm: mutable.Map[String, ArrayBuffer[SearchRowLocation]] =
               hitLocations.getOrElseUpdate(
                 field,
-                collection.mutable.Map.empty[String, ArrayBuffer[SearchRowLocation]]
+                mutable.Map.empty[String, ArrayBuffer[SearchRowLocation]]
               )
 
             val list: ArrayBuffer[SearchRowLocation] =

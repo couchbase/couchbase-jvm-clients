@@ -239,7 +239,10 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     })
 
     userMeta = users.getUser(Username, AuthDomain.Local).get
-    assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard), userMeta.effectiveRoles.map(_.role).toSet)
+    assertEquals(
+      Set(SecurityAdmin, BucketFullAccessWildcard),
+      userMeta.effectiveRoles.map(_.role).toSet
+    )
   }
 
   @Test

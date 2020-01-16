@@ -17,7 +17,6 @@ package com.couchbase.client.scala.manager.analytics
 
 import com.couchbase.client.core.retry.RetryStrategy
 
-import scala.collection.GenMap
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
@@ -89,7 +88,7 @@ class AsyncAnalyticsIndexManager(reactive: ReactiveAnalyticsIndexManager) {
   def createIndex(
       indexName: String,
       datasetName: String,
-      fields: GenMap[String, AnalyticsDataType],
+      fields: collection.Map[String, AnalyticsDataType],
       dataverseName: Option[String] = None,
       ignoreIfExists: Boolean = false,
       timeout: Duration = DefaultTimeout,

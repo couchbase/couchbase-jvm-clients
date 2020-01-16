@@ -17,30 +17,19 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diagnostics.{
-  ClusterState,
-  HealthPinger,
-  PingResult,
-  WaitUntilReadyHelper
-}
-import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.core.diagnostics.{HealthPinger, PingResult, WaitUntilReadyHelper}
 import com.couchbase.client.scala.diagnostics.{PingOptions, WaitUntilReadyOptions}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.manager.collection.AsyncCollectionManager
 import com.couchbase.client.scala.manager.view.AsyncViewIndexManager
-import com.couchbase.client.scala.util.DurationConversions.scalaDurationToJava
-import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions}
+import com.couchbase.client.scala.util.DurationConversions.{scalaDurationToJava, _}
+import com.couchbase.client.scala.util.FutureConversions
 import com.couchbase.client.scala.view.{ViewOptions, ViewResult}
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{ExecutionContext, Future}
-import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
-import com.couchbase.client.scala.util.DurationConversions._
+import scala.jdk.CollectionConverters._
 
 /** Represents a Couchbase bucket resource.
   *
@@ -49,8 +38,6 @@ import com.couchbase.client.scala.util.DurationConversions._
   * Applications should not create these manually, but instead use the functions in [[Cluster]].
   *
   * @param name the name of this bucket
-  * @param ec   an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
-  *             opened in the normal way, starting from functions in [[Cluster]]
   *
   * @author Graham Pople
   * @since 1.0.0
@@ -162,7 +149,7 @@ class AsyncBucket private[scala] (
     *
     * @param timeout the timeout to use for the operation
     *
-    * @return the PingResult` once complete.
+    * @return the PingResult once complete.
     */
   def ping(timeout: Option[Duration] = None): Future[PingResult] = {
     var opts = PingOptions()
@@ -180,8 +167,6 @@ class AsyncBucket private[scala] (
     * @return the `PingResult` once complete.
     */
   def ping(options: PingOptions): Future[PingResult] = {
-
-    import scala.collection.JavaConverters._
 
     val future = HealthPinger
       .ping(
@@ -232,6 +217,6 @@ class AsyncBucket private[scala] (
           false
         )
       )
-      .map(_ => Unit)
+      .map(_ => ())
   }
 }
