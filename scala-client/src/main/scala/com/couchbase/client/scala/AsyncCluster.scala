@@ -162,7 +162,7 @@ class AsyncCluster(
                     FutureConversions
                       .javaMonoToScalaMono(response.trailer())
                       .map(trailer => {
-                        val warnings: Seq[AnalyticsWarning] = trailer.warnings.asScala
+                        val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
                           .map(
                             warnings =>
                               ErrorCodeAndMessage
@@ -323,7 +323,7 @@ class AsyncCluster(
           true
         )
       )
-      .map(_ => Unit)
+      .map(_ => ())
   }
 
   private[scala] def performGlobalConnect() {
@@ -390,7 +390,7 @@ object AsyncCluster {
         .flatMap(
           response =>
             FutureConversions
-              .javaFluxToScalaFlux(response.rows)
+              .javaFluxToScalaFlux(response.rows())
               // This can throw, which will return a failed Future as desired
               .map(row => SearchRow.fromResponse(row))
               .collectSeq()

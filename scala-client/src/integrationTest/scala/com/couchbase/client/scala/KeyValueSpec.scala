@@ -348,6 +348,15 @@ class KeyValueSpec extends ScalaIntegrationTest {
     assert(validations.isFailure)
   }
 
+  case class Address(line1: String)
+  // Need define case class & object here - not in caseClassesDecodedToN1QL method
+  // or else, scala 2.11 will not compile, with error:
+  // User is already defined as (compiler-generated) case class companion object User
+  case class User(name: String, age: Int, addresses: Seq[Address])
+  object User {
+    implicit val codec: Codec[User] = Codec.codec[User]
+  }
+
   @Test
   def all(): Unit = {
     val collection = coll
@@ -365,19 +374,13 @@ class KeyValueSpec extends ScalaIntegrationTest {
       case Failure(err)    => println("Error: " + err)
     }
 
-    case class Address(line1: String)
-    case class User(name: String, age: Int, addresses: Seq[Address])
-    object User {
-      implicit val codec: Codec[User] = Codec.codec[User]
-    }
-
     val user = User("user1", 21, Seq(Address("address1")))
 
     coll.upsert("user1", user).get
 
     val statement = s"""select * from `users` where meta().id like 'user%';"""
 
-    val users: Try[Seq[User]] = cluster
+    val users: Try[scala.collection.Seq[User]] = cluster
       .query(statement)
       .flatMap(_.rowsAs[User])
 

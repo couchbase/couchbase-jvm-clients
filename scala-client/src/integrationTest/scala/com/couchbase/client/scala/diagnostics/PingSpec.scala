@@ -39,7 +39,7 @@ class PingSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     bucketName = ClusterAwareIntegrationTest.config().bucketname()
     bucket = cluster.bucket(bucketName)
-    bucket.waitUntilReady(10 seconds)
+    bucket.waitUntilReady(10.seconds)
   }
 
   @AfterAll

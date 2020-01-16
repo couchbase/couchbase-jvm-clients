@@ -53,7 +53,7 @@ case class AnalyticsResult(
     *
     * @return either `Success` if all rows could be decoded successfully, or a Failure containing the first error
     */
-  def rowsAs[T](implicit deserializer: JsonDeserializer[T]): Try[Seq[T]] = {
+  def rowsAs[T](implicit deserializer: JsonDeserializer[T]): Try[collection.Seq[T]] = {
     val all = rows.iterator.map(row => deserializer.deserialize(row.data()))
     RowTraversalUtil.traverse(all)
   }
@@ -157,7 +157,7 @@ case class AnalyticsMetaData(
     clientContextId: String,
     private val signatureContent: Option[Array[Byte]],
     metrics: AnalyticsMetrics,
-    warnings: Seq[AnalyticsWarning],
+    warnings: collection.Seq[AnalyticsWarning],
     status: AnalyticsStatus
 ) {
 

@@ -107,11 +107,11 @@ class CouchbaseQueueSpec extends ScalaIntegrationTest {
     l += 7
 
     assert(l.dequeue() == 7)
-    assert(l.size() == 2)
+    assert(l.size == 2)
     assert(l.dequeue() == 6)
-    assert(l.size() == 1)
+    assert(l.size == 1)
     assert(l.dequeue() == 5)
-    assert(l.size() == 0)
+    assert(l.size == 0)
   }
 
   @Test

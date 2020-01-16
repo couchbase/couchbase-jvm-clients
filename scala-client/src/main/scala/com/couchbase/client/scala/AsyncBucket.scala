@@ -48,8 +48,6 @@ import com.couchbase.client.scala.util.DurationConversions._
   * Applications should not create these manually, but instead use the functions in [[Cluster]].
   *
   * @param name the name of this bucket
-  * @param ec   an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
-  *             opened in the normal way, starting from functions in [[Cluster]]
   *
   * @author Graham Pople
   * @since 1.0.0
@@ -193,6 +191,6 @@ class AsyncBucket private[scala] (
           false
         )
       )
-      .map(_ => Unit)
+      .map(_ => ())
   }
 }

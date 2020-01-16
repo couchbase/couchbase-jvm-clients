@@ -54,7 +54,7 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
           else out
         }
 
-        exec(statement, dataverseName, timeout, retryStrategy).map(_ => Unit)
+        exec(statement, dataverseName, timeout, retryStrategy).map(_ => ())
 
       case Failure(err) => SMono.raiseError(err)
     }
@@ -74,7 +74,7 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
           else out
         }
 
-        exec(statement, dataverseName, timeout, retryStrategy).map(_ => Unit)
+        exec(statement, dataverseName, timeout, retryStrategy).map(_ => ())
 
       case Failure(err) => SMono.raiseError(err)
     }
@@ -111,7 +111,7 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
     } yield statement
 
     statement match {
-      case Success(st)  => exec(st, datasetName, timeout, retryStrategy).map(_ => Unit)
+      case Success(st)  => exec(st, datasetName, timeout, retryStrategy).map(_ => ())
       case Failure(err) => SMono.raiseError(err)
     }
   }
@@ -131,7 +131,7 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
           else out
         }
 
-        exec(statement, datasetName, timeout, retryStrategy).map(_ => Unit)
+        exec(statement, datasetName, timeout, retryStrategy).map(_ => ())
 
       case Failure(err) => SMono.raiseError(err)
     }
@@ -169,7 +169,7 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
     } yield statement
 
     statement match {
-      case Success(st)  => exec(st, indexName, timeout, retryStrategy).map(_ => Unit)
+      case Success(st)  => exec(st, indexName, timeout, retryStrategy).map(_ => ())
       case Failure(err) => SMono.raiseError(err)
     }
   }
@@ -203,7 +203,7 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
           else out
         }
 
-        exec(statement, datasetName, timeout, retryStrategy).map(_ => Unit)
+        exec(statement, datasetName, timeout, retryStrategy).map(_ => ())
 
       case Failure(err) => SMono.raiseError(err)
     }

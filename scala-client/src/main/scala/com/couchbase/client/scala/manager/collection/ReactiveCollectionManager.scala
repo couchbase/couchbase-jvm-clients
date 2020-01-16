@@ -104,7 +104,7 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
           .scopes()
           .asScala
           .map(scope => {
-            val collections: Seq[CollectionSpec] = scope.collections.asScala
+            val collections: collection.Seq[CollectionSpec] = scope.collections.asScala
               .map(coll => CollectionSpec(coll.name, scope.name))
 
             ScopeSpec(scope.name, collections)
@@ -223,7 +223,7 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
       collectionName: String
   ): Try[Unit] = {
     if (response.status.success) {
-      Success(Unit)
+      Success()
     } else {
       val error = new String(response.content, StandardCharsets.UTF_8)
 

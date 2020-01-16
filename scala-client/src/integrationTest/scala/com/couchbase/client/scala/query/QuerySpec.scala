@@ -126,7 +126,10 @@ class QuerySpec extends ScalaIntegrationTest {
 
   @Test
   def rawOptions() {
-    cluster.query("""select 'hello world' as Greeting""", QueryOptions().raw(Map("metrics" -> true))) match {
+    cluster.query(
+      """select 'hello world' as Greeting""",
+      QueryOptions().raw(Map("metrics" -> true))
+    ) match {
       case Success(result) =>
         val out = result.metaData
         assert(out.metrics.isDefined)
@@ -475,15 +478,17 @@ class QuerySpec extends ScalaIntegrationTest {
     assert(1 == rows.size)
   }
 
+  case class Address(line1: String)
+  // Need define case class & object here - not in caseClassesDecodedToN1QL method
+  // or else, scala 2.11 will not compile, with error:
+  // User is already defined as (compiler-generated) case class companion object User
+  case class User(name: String, age: Int, addresses: Seq[Address])
+  object User {
+    implicit val codec: Codec[User] = Codec.codec[User]
+  }
   // SCBC-70
   @Test
   def caseClassesDecodedToN1QL(): Unit = {
-    case class Address(line1: String)
-    case class User(name: String, age: Int, addresses: Seq[Address])
-    object User {
-      implicit val codec: Codec[User] = Codec.codec[User]
-    }
-
     val user   = User("user1", 21, Seq(Address("address1")))
     val result = coll.upsert("user1", user).get
 

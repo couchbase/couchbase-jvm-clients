@@ -34,7 +34,7 @@ class CouchbaseSet[T](
     collection: Collection,
     options: Option[CouchbaseCollectionOptions] = None
 )(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: WeakTypeTag[T])
-    extends mutable.Set[T] {
+    extends mutable.AbstractSet[T] {
 
   private val opts: CouchbaseCollectionOptions = options match {
     case Some(v) => v
@@ -111,6 +111,18 @@ class CouchbaseSet[T](
       )
       .get
   }
+  override def clear(): Unit = {
+    collection.replace(
+      id,
+      JsonArraySafe.create,
+      timeout = opts.timeout,
+      retryStrategy = opts.retryStrategy,
+      durability = opts.durability
+    ) match {
+      case Success(_) | Failure(_: DocumentNotFoundException) =>
+      case Failure(err)                                       => throw err
+    }
+  }
 
   override def size(): Int = {
     val op = collection.lookupIn(
@@ -151,7 +163,7 @@ class CouchbaseSet[T](
     all().iterator
   }
 
-  override def +=(elem: T): this.type = {
+  override def addOne(elem: T): this.type = {
     val result = collection.mutateIn(
       id,
       Array(MutateInSpec.arrayAddUnique("", elem)),
@@ -170,7 +182,7 @@ class CouchbaseSet[T](
     }
   }
 
-  override def -=(elem: T): CouchbaseSet.this.type = {
+  override def subtractOne(elem: T): this.type = {
     remove(elem)
     this
   }

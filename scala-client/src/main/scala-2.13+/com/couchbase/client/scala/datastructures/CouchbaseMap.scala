@@ -35,7 +35,7 @@ class CouchbaseMap[T](
     collection: Collection,
     options: Option[CouchbaseCollectionOptions] = None
 )(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: WeakTypeTag[T])
-    extends mutable.Map[String, T] {
+    extends mutable.AbstractMap[String, T] {
 
   private val Values = "values."
 
@@ -187,7 +187,7 @@ class CouchbaseMap[T](
     }
   }
 
-  override def +=(kv: (String, T)): CouchbaseMap.this.type = {
+  override def addOne(kv: (String, T)): this.type = {
     val f = () =>
       collection.mutateIn(
         id,
@@ -200,7 +200,7 @@ class CouchbaseMap[T](
     this
   }
 
-  override def -=(key: String): CouchbaseMap.this.type = {
+  override def subtractOne(key: String): this.type = {
     val result = collection.mutateIn(
       id,
       Array(MutateInSpec.remove(key)),

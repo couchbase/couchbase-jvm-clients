@@ -38,7 +38,7 @@ class CouchbaseBuffer[T](
     collection: Collection,
     options: Option[CouchbaseCollectionOptions] = None
 )(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: WeakTypeTag[T])
-    extends mutable.Buffer[T] {
+    extends mutable.AbstractBuffer[T] {
 
   protected val opts: CouchbaseCollectionOptions = options match {
     case Some(v) => v
@@ -64,12 +64,17 @@ class CouchbaseBuffer[T](
     }
   }
 
-  // A fast version of `remove` that does not have to return the element
-  def removeAt(index: Int): Unit = {
+  // A fast version of `remove(index)` that does not have to return the element
+  def removeAt(index: Int): Unit = remove(index, 1)
+
+  override def remove(idx: Int, count: Int): Unit = {
+    val spec = Range(idx, idx + count).map { i =>
+      MutateInSpec.remove(s"[$i]")
+    }
     collection
       .mutateIn(
         id,
-        Array(MutateInSpec.remove("[" + index + "]")),
+        spec,
         timeout = opts.timeout,
         retryStrategy = opts.retryStrategy,
         durability = opts.durability
@@ -87,7 +92,7 @@ class CouchbaseBuffer[T](
     }
   }
 
-  // Note `remoteAt` is more performant as it does not have to return the removed element
+  // Note `remoteAt` or `remove(idx, count)` are more performant as it does not have to return the removed element
   override def remove(index: Int): T = {
     val op = collection.lookupIn(
       id,
@@ -145,7 +150,7 @@ class CouchbaseBuffer[T](
     }
   }
 
-  def append(value: T): this.type = {
+  def addOne(value: T): this.type = {
     val f = () =>
       collection.mutateIn(
         id,
@@ -157,6 +162,8 @@ class CouchbaseBuffer[T](
     retryIfDocDoesNotExist(f)
     this
   }
+
+  def insert(idx: Int, elem: T): Unit = insertAll(idx, Seq(elem))
 
   def prepend(value: T): this.type = {
     val f = () =>
@@ -184,7 +191,7 @@ class CouchbaseBuffer[T](
       .get
   }
 
-  override def size(): Int = {
+  override def length: Int = {
     val op = collection.lookupIn(
       id,
       Array(LookupInSpec.count("")),
@@ -223,8 +230,6 @@ class CouchbaseBuffer[T](
     all().iterator
   }
 
-  override def length: Int = size()
-
   override def update(index: Int, value: T): Unit = {
     val result = collection.mutateIn(
       id,
@@ -245,7 +250,38 @@ class CouchbaseBuffer[T](
     }
   }
 
-  override def +=(elem: T): this.type = append(elem)
+  // see scala.collection.mutable.IndexedBuffer.patchInPlace
+  override def patchInPlace(from: Int, patch: IterableOnce[T], replaced: Int): this.type = {
+    val len  = length
+    val i    = math.min(math.max(from, 0), len)
+    val n    = math.min(math.max(replaced, 0), len)
+    val spec = mutable.ListBuffer.empty[MutateInSpec]
+    var j    = 0
+    val iter = patch.iterator
+    while (iter.hasNext && j < n && i + j < len) {
+      spec += MutateInSpec.replace(s"[${i + j}]", iter.next())
+      j += 1
+    }
+    if (iter.hasNext) {
+      spec += MutateInSpec.arrayAppend(s"[${i + j}]", iter.toSeq)
+    } else if (j < n) {
+      val start = i + j
+      val end   = math.min(i + n, len)
+      for (idx <- start until end)
+        spec += MutateInSpec.remove(s"[$idx]")
+    }
+    val f = () =>
+      collection
+        .mutateIn(
+          id,
+          spec.toList,
+          timeout = opts.timeout,
+          retryStrategy = opts.retryStrategy,
+          durability = opts.durability
+        )
+    retryIfDocDoesNotExist(f)
+    this
+  }
 
   override def clear(): Unit = {
     collection.remove(
@@ -260,9 +296,7 @@ class CouchbaseBuffer[T](
     }
   }
 
-  override def +=:(elem: T): this.type = prepend(elem)
-
-  override def insertAll(index: Int, values: Traversable[T]): Unit = {
+  override def insertAll(index: Int, values: IterableOnce[T]): Unit = {
     val result = collection.mutateIn(
       id,
       Array(MutateInSpec.arrayAppend("[" + index + "]", values.toSeq)),
@@ -279,5 +313,4 @@ class CouchbaseBuffer[T](
       case Failure(err) => throw err
     }
   }
-
 }

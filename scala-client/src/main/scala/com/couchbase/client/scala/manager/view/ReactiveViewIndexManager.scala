@@ -41,6 +41,7 @@ import com.couchbase.client.scala.view.DesignDocumentNamespace
 import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.collection.GenMap
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
@@ -144,7 +145,7 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
           FutureConversions
             .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
             .doOnTerminate(() => request.context().logicallyComplete())
-            .map(_ => Unit)
+            .map(_ => ())
         })
       case Failure(err) =>
         SMono.raiseError(err)
@@ -163,7 +164,7 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
           .onErrorResume(err => SMono.raiseError(mapNotFoundError(err, designDocName, namespace)))
           .flatMap(response => {
             response.status match {
-              case ResponseStatus.SUCCESS => SMono.just(Unit)
+              case ResponseStatus.SUCCESS => SMono.just()
               case _ =>
                 SMono.raiseError(
                   new CouchbaseException(
@@ -235,7 +236,7 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
       viewNode.put("map", value.map)
       value.reduce.foreach((r: String) => viewNode.put("reduce", r))
       views.set(key, viewNode)
-      Unit
+      ()
     })
     root
   }
@@ -297,7 +298,7 @@ object ReactiveViewIndexManager {
   private[scala] def parseAllDesignDocuments(
       in: String,
       namespace: DesignDocumentNamespace
-  ): Try[Seq[DesignDocument]] = {
+  ): Try[ArrayBuffer[DesignDocument]] = {
     Try {
       val json = upickle.default.read[ujson.Obj](in)
       val rows = json("rows").arr

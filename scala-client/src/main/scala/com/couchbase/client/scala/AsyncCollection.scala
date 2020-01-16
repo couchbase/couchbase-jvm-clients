@@ -390,7 +390,6 @@ class AsyncCollection(
 
               FutureConversions
                 .javaMonoToScalaFuture(Observe.poll(observeCtx))
-
                 // After the observe return the original response
                 .map(_ => response)
             })
@@ -652,7 +651,6 @@ object AsyncCollection {
 
           FutureConversions
             .javaMonoToScalaFuture(Observe.poll(observeCtx))
-
             // After the observe return the original response
             .map(_ => response)
         })

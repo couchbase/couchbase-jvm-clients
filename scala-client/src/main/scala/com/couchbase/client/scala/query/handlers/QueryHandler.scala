@@ -161,7 +161,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
     val meta: SMono[QueryMetaData] = FutureConversions
       .javaMonoToScalaMono(response.trailer())
       .map(addl => {
-        val warnings: Seq[QueryWarning] = addl.warnings.asScala
+        val warnings: collection.Seq[QueryWarning] = addl.warnings.asScala
           .map(
             warnings =>
               ErrorCodeAndMessage
@@ -269,7 +269,6 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
           FutureConversions.wrap(req, req.response, propagateCancellation = true)
         })
         .flatMapMany(result => result.rows())
-
         // Only expect one row back, but no harm handling multiple
         .doOnNext(row => {
           val json: Try[JsonObjectSafe] =
@@ -335,7 +334,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
     new QueryRequest(
       original.timeout,
       original.context,
-      original.retryStrategy,
+      original.retryStrategy(),
       original.credentials,
       statement,
       query.toString.getBytes(StandardCharsets.UTF_8),
@@ -368,7 +367,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
     new QueryRequest(
       original.timeout,
       original.context,
-      original.retryStrategy,
+      original.retryStrategy(),
       original.credentials,
       original.statement,
       query.toString.getBytes(StandardCharsets.UTF_8),

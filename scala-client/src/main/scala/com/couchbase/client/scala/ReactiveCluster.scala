@@ -131,7 +131,7 @@ class ReactiveCluster(val async: AsyncCluster) {
               val meta: SMono[AnalyticsMetaData] = FutureConversions
                 .javaMonoToScalaMono(response.trailer())
                 .map(trailer => {
-                  val warnings: Seq[AnalyticsWarning] = trailer.warnings.asScala
+                  val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
                     .map(
                       warnings =>
                         ErrorCodeAndMessage

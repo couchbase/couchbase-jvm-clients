@@ -28,7 +28,9 @@ import scala.util.{Success, Try}
   * @since 1.0.0
   */
 case class SearchRowLocations(
-    private val locations: GenMap[String, GenMap[String, Seq[SearchRowLocation]]]
+    private val locations: collection.Map[String, collection.Map[String, collection.Seq[
+      SearchRowLocation
+    ]]]
 ) {
 
   /** Gets all locations, for any field and term. */
@@ -50,6 +52,7 @@ case class SearchRowLocations(
       .get(field)
       .flatMap(_.get(term))
       .getOrElse(Seq.empty)
+      .toSeq
   }
 
   /** Gets all fields in these locations. */
@@ -58,7 +61,7 @@ case class SearchRowLocations(
   }
 
   /** Gets all terms in these locations. */
-  def terms: GenSet[String] = {
+  def terms: collection.Set[String] = {
     locations.flatMap(_._2).keySet
   }
 

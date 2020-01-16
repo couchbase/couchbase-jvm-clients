@@ -50,7 +50,7 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Try[Seq[QueryIndex]] = {
+  ): Try[collection.Seq[QueryIndex]] = {
     Collection.block(async.getAllIndexes(bucketName, timeout, retryStrategy))
   }
 

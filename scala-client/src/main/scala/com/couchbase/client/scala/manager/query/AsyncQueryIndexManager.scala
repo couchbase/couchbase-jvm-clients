@@ -71,7 +71,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Future[Seq[QueryIndex]] = {
+  ): Future[collection.Seq[QueryIndex]] = {
     val statement =
       s"""SELECT idx.* FROM system:indexes AS idx WHERE keyspace_id = "$bucketName"
          | AND `using`="gsi" ORDER BY is_primary
@@ -277,6 +277,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
   ): Future[Unit] = {
 
     import reactor.core.scala.publisher.PimpMyPublisher._
+    import scala.compat.java8.FunctionConverters._
 
     FutureConversions
       .javaMonoToScalaMono(
@@ -284,9 +285,9 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
           .defer(() => {
             SMono
               .fromFuture(getAllIndexes(bucketName, timeout, retryStrategy))
-              .doOnNext((allIndexes: Seq[QueryIndex]) => {
+              .doOnNext((allIndexes: collection.Seq[QueryIndex]) => {
 
-                val matchingIndexes: Seq[QueryIndex] = allIndexes
+                val matchingIndexes: collection.Seq[QueryIndex] = allIndexes
                   .filter(v => indexNames.contains(v.name) || (watchPrimary && v.isPrimary))
 
                 val primaryIndexPresent: Boolean = matchingIndexes.exists(_.isPrimary)
@@ -313,8 +314,10 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
           .retryWhen(
             Retry
               .onlyIf(
-                (ctx: RetryContext[Unit]) =>
-                  hasCause(ctx.exception, classOf[IndexesNotReadyException])
+                asJavaPredicate(
+                  (ctx: RetryContext[Unit]) =>
+                    hasCause(ctx.exception, classOf[IndexesNotReadyException])
+                )
               )
               .exponentialBackoff(50.milliseconds, 1.seconds)
               .timeout(timeout)
@@ -325,7 +328,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
           })
       )
       .toFuture
-      .map(_ => Unit)
+      .map(_ => ())
   }
 
   private def toWatchTimeoutException(t: Throwable, timeout: Duration): TimeoutException = {
@@ -350,7 +353,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
           .filter(_.state == "deferred")
           .map(v => quote(v.name))
 
-        if (deferred.isEmpty) Future.successful(Unit)
+        if (deferred.isEmpty) Future.successful()
         else {
           val statement = for {
             quotedDefers     <- RowTraversalUtil.traverse(deferred.iterator)
@@ -421,18 +424,10 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       ignoreIfExists: Boolean,
       ignoreIfNotExists: Boolean
   ): Future[Unit] = {
-    val out = in transform {
-      case s @ Success(_) => s
-      case Failure(err: IndexNotFoundException) =>
-        if (ignoreIfNotExists) Success(Unit)
-        else Failure(err)
-      case Failure(err: IndexExistsException) =>
-        if (ignoreIfExists) Success(Unit)
-        else Failure(err)
-      case Failure(err) => Failure(err)
+    in.map(_ => ()) recover {
+      case _: IndexNotFoundException if ignoreIfNotExists => ()
+      case _: IndexExistsException if ignoreIfExists      => ()
     }
-
-    out.map(_ => Unit)
   }
 
 }

@@ -195,7 +195,7 @@ case class JsonArray(private[scala] val values: java.util.ArrayList[Any]) {
         case _                 => value
       })
     }
-    copy
+    copy.toSeq
   }
 
   /** Returns a [[GetSelecter]] providing `Dynamic` access to this. */

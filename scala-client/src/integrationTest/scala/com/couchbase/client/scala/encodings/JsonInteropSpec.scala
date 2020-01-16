@@ -362,7 +362,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
         val JString(name) = c \ "name"
         assert(name.toString == "John Smith")
         val JInt(age) = c \ "age"
-        assert(age.intValue() == 29)
+        assert(age.intValue == 29)
         val JString(address) = (c \ "addresses")(0) \ "address"
         assert(address.toString == "123 Fake Street")
       }

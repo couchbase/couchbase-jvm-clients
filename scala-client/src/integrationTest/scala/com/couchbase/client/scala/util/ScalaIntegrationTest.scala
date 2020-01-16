@@ -98,7 +98,7 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
 
   protected def connectToCluster(): Cluster = {
     val out = Cluster.connect(connectionString, clusterOptions).get
-    out.waitUntilReady(10 seconds)
+    out.waitUntilReady(10.seconds)
     out
   }
 }
