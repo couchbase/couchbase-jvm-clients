@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.io.netty;
 
-import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.OpenSsl;
@@ -40,8 +40,8 @@ public class SslHandlerFactory {
    */
   private static final boolean OPENSSL_AVAILABLE = OpenSsl.isAvailable();
 
-  public static SslHandler get(final ByteBufAllocator allocator, final SecurityConfig config, final Authenticator authenticator)
-    throws Exception {
+  public static SslHandler get(final ByteBufAllocator allocator, final SecurityConfig config,
+                               final EndpointContext endpointContext) throws Exception {
     SslProvider provider =  OPENSSL_AVAILABLE && config.nativeTlsEnabled() ? SslProvider.OPENSSL : SslProvider.JDK;
 
     SslContextBuilder context = SslContextBuilder.forClient().sslProvider(provider);
@@ -52,9 +52,13 @@ public class SslHandlerFactory {
       context.trustManager(config.trustCertificates().toArray(new X509Certificate[0]));
     }
 
-    authenticator.applyTlsProperties(context);
+    endpointContext.authenticator().applyTlsProperties(context);
 
-    SslHandler sslHandler = context.build().newHandler(allocator);
+    final SslHandler sslHandler = context.build().newHandler(
+      allocator,
+      endpointContext.remoteSocket().hostname(),
+      endpointContext.remoteSocket().port()
+    );
 
     SSLEngine sslEngine = sslHandler.engine();
     SSLParameters sslParameters = sslEngine.getSSLParameters();
