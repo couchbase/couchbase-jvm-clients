@@ -206,10 +206,10 @@ class GroupManagerSpec extends ScalaIntegrationTest {
       userMeta.effectiveRoles.toSet
     )
 
-    assert(userMeta.effectiveRolesAndOrigins.size == 3)
-    val r1 = userMeta.effectiveRolesAndOrigins.find(_.role.name == "security_admin").get
-    val r2 = userMeta.effectiveRolesAndOrigins.find(_.role.name == "ro_admin").get
-    val r3 = userMeta.effectiveRolesAndOrigins.find(_.role.name == "bucket_full_access").get
+    assert(userMeta.effectiveRoles.size == 3)
+    val r1 = userMeta.effectiveRoles.find(_.role.name == "security_admin").get
+    val r2 = userMeta.effectiveRoles.find(_.role.name == "ro_admin").get
+    val r3 = userMeta.effectiveRoles.find(_.role.name == "bucket_full_access").get
 
     assert(r1.origins.size == 1)
     assert(r1.origins.head.typ == "user")

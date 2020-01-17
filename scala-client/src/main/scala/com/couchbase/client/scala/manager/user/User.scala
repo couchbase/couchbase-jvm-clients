@@ -89,11 +89,7 @@ case class UserAndMetadata(
 
   /** Returns all of the user's roles, including roles inherited from groups.
     */
-  def effectiveRoles: Seq[Role] = {
-    _effectiveRoles.map(_.role)
-  }
-
-  def effectiveRolesAndOrigins: Seq[RoleAndOrigins] = {
+  def effectiveRoles: Seq[RoleAndOrigins] = {
     _effectiveRoles
   }
 

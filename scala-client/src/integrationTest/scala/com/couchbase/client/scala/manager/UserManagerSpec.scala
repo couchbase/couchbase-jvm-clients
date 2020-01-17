@@ -66,7 +66,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
 
   def checkRoleOrigins(userMeta: UserAndMetadata, expected: String*): Unit = {
     val expectedRolesAndOrigins            = expected.toSet
-    val actualRolesAndOrigins: Set[String] = userMeta.effectiveRolesAndOrigins.map(_.toString).toSet
+    val actualRolesAndOrigins: Set[String] = userMeta.effectiveRoles.map(_.toString).toSet
     assert(expectedRolesAndOrigins == actualRolesAndOrigins)
   }
 
