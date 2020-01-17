@@ -17,6 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.CasMismatchException;
 
 import java.util.Objects;
 
@@ -49,11 +50,17 @@ public class ExistsResult {
   }
 
   /**
-   * If the document is present, returns its current CAS value at the time of the exists operation.
-   *
-   * <p>Note that if the document does not exist, this will return 0!</p>
+   * Returns the CAS value of document at the time of loading.
+   * <p>
+   * Note that if the document does not exist, this will return 0!
+   * <p>
+   * The CAS value is an opaque identifier which is associated with a specific state of the document on the server. It
+   * can be used during a subsequent mutation to make sure that the document has not been modified in the meantime.
+   * <p>
+   * If document on the server has been modified in the meantime the SDK will raise a {@link CasMismatchException}. In
+   * this case the caller is expected to re-do the whole "fetch-modify-update" cycle again. Please refer to the
+   * SDK documentation for more information on CAS mismatches and subsequent retries.
    */
-  @Stability.Volatile
   public long cas() {
     return cas;
   }
