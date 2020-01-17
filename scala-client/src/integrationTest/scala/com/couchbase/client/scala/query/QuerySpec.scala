@@ -96,6 +96,7 @@ class QuerySpec extends ScalaIntegrationTest {
         assert(rows.head == """{"Greeting":"hello world"}""")
         // Should be an implicit client context id if none provided
         assert(result.metaData.clientContextId != "")
+        assert(result.metaData.requestId != "")
       case Failure(err) => throw err
     }
   }

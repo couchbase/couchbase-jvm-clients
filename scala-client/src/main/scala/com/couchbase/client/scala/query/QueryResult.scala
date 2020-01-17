@@ -168,13 +168,14 @@ private[scala] object QueryMetrics {
 
 /** Additional information returned by the query service aside from any rows and errors.
   *
+  * @param requestId       the request identifier string of the query request
   * @param clientContextId the client context id passed into [[QueryOptions]]
   * @param metrics         metrics related to the query request, if they were enabled in [[QueryOptions]]
   * @param warnings        any warnings returned from the query service
   * @param status          the status returned from the query service
   */
 case class QueryMetaData(
-    private[scala] val requestId: String,
+    requestId: String,
     clientContextId: String,
     private val _signatureContent: Option[Array[Byte]],
     metrics: Option[QueryMetrics],
