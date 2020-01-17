@@ -26,7 +26,7 @@ class AsyncCollectionManager(reactive: ReactiveCollectionManager) {
   private[scala] val defaultManagerTimeout = reactive.defaultManagerTimeout
   private[scala] val defaultRetryStrategy  = reactive.defaultRetryStrategy
 
-  def collectionExists(
+  private[scala] def collectionExists(
       collection: CollectionSpec,
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
@@ -34,7 +34,7 @@ class AsyncCollectionManager(reactive: ReactiveCollectionManager) {
     reactive.collectionExists(collection, timeout, retryStrategy).toFuture
   }
 
-  def scopeExists(
+  private[scala] def scopeExists(
       scopeName: String,
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy

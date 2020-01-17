@@ -49,7 +49,7 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
   )
   private[scala] val defaultRetryStrategy = core.context().environment().retryStrategy()
 
-  def collectionExists(
+  private[scala] def collectionExists(
       collection: CollectionSpec,
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
@@ -70,7 +70,7 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
       })
   }
 
-  def scopeExists(
+  private[scala] def scopeExists(
       scopeName: String,
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
