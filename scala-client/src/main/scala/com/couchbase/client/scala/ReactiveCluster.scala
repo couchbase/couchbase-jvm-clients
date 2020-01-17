@@ -25,15 +25,10 @@ import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.ServiceType
-import com.couchbase.client.scala.AsyncCluster.{
-  extractClusterEnvironment,
-  seedNodesFromConnectionString
-}
+import com.couchbase.client.scala.AsyncCluster.{extractClusterEnvironment, seedNodesFromConnectionString}
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.manager.analytics.{
-  AnalyticsIndexManager,
-  ReactiveAnalyticsIndexManager
-}
+import com.couchbase.client.scala.env.SeedNode
+import com.couchbase.client.scala.manager.analytics.{AnalyticsIndexManager, ReactiveAnalyticsIndexManager}
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
 import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
 import com.couchbase.client.scala.manager.search.ReactiveSearchIndexManager
@@ -392,7 +387,7 @@ object ReactiveCluster {
     * @param username         the name of a user with appropriate permissions on the cluster.
     * @param password         the password of a user with appropriate permissions on the cluster.
     *
-    * @return a Mono[ReactiveCluster] representing a connection to the cluster
+    * @return a Try[ReactiveCluster] representing a connection to the cluster
     */
   def connect(
       connectionString: String,
@@ -409,17 +404,32 @@ object ReactiveCluster {
     * @param connectionString connection string used to locate the Couchbase cluster.
     * @param options custom options used when connecting to the cluster.
     *
-    * @return a Mono[ReactiveCluster] representing a connection to the cluster
+    * @return a Try[ReactiveCluster] representing a connection to the cluster
     */
   def connect(connectionString: String, options: ClusterOptions): Try[ReactiveCluster] = {
     extractClusterEnvironment(connectionString, options)
       .map(ce => {
         implicit val ec: ExecutionContextExecutor = ce.ec
-        val seedNodes = if (options.seedNodes.isDefined) {
-          options.seedNodes.get
-        } else {
-          seedNodesFromConnectionString(connectionString, ce)
-        }
+        val seedNodes = seedNodesFromConnectionString(connectionString, ce)
+        val cluster = new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes))
+        cluster.async.performGlobalConnect()
+        cluster
+      })
+  }
+
+  /** Connect to a Couchbase cluster with a custom Set of [[SeedNode]].
+    *
+    * $DeferredErrors
+    *
+    * @param seedNodes known nodes from the Couchbase cluster to use for bootstrapping.
+    * @param options custom options used when connecting to the cluster.
+    *
+    * @return a Try[[ReactiveCluster]] representing a connection to the cluster
+    */
+  def connect(seedNodes: Set[SeedNode], options: ClusterOptions): Try[ReactiveCluster] = {
+    AsyncCluster
+      .extractClusterEnvironment(options)
+      .map(ce => {
         val cluster = new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes))
         cluster.async.performGlobalConnect()
         cluster

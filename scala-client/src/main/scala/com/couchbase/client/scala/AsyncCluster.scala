@@ -448,11 +448,26 @@ object AsyncCluster {
   def connect(connectionString: String, options: ClusterOptions): Try[AsyncCluster] = {
     extractClusterEnvironment(connectionString, options)
       .map(ce => {
-        val seedNodes = if (options.seedNodes.isDefined) {
-          options.seedNodes.get
-        } else {
-          seedNodesFromConnectionString(connectionString, ce)
-        }
+        val seedNodes = seedNodesFromConnectionString(connectionString, ce)
+        val cluster = new AsyncCluster(ce, options.authenticator, seedNodes)
+        cluster.performGlobalConnect()
+        cluster
+      })
+  }
+
+  /** Connect to a Couchbase cluster with a custom Set of [[SeedNode]].
+    *
+    * $DeferredErrors
+    *
+    * @param seedNodes known nodes from the Couchbase cluster to use for bootstrapping.
+    * @param options custom options used when connecting to the cluster.
+    *
+    * @return an [[AsyncCluster]] representing a connection to the cluster
+    */
+  def connect(seedNodes: Set[SeedNode], options: ClusterOptions): Try[AsyncCluster] = {
+    AsyncCluster
+      .extractClusterEnvironment(options)
+      .map(ce => {
         val cluster = new AsyncCluster(ce, options.authenticator, seedNodes)
         cluster.performGlobalConnect()
         cluster
@@ -501,6 +516,14 @@ object AsyncCluster {
     opts.environment match {
       case Some(env) => Success(env)
       case _         => ClusterEnvironment.Builder(owned = true).connectionString(connectionString).build
+    }
+  }
+
+  private[client] def extractClusterEnvironment(opts: ClusterOptions
+                                               ): Try[ClusterEnvironment] = {
+    opts.environment match {
+      case Some(env) => Success(env)
+      case _         => ClusterEnvironment.Builder(owned = true).build
     }
   }
 

@@ -21,14 +21,10 @@ import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator
 
 case class ClusterOptions(
     authenticator: Authenticator,
-    environment: Option[ClusterEnvironment] = None,
-    seedNodes: Option[Set[SeedNode]] = None
+    environment: Option[ClusterEnvironment] = None
 ) {
   def environment(environment: ClusterEnvironment): ClusterOptions = {
     copy(environment = Some(environment))
-  }
-  def seedNodes(seedNodes: Set[SeedNode]): ClusterOptions = {
-    copy(seedNodes = Some(seedNodes))
   }
 }
 
