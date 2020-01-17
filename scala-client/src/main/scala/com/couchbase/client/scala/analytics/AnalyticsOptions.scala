@@ -22,6 +22,7 @@ import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
+import com.couchbase.client.scala.query.{QueryOptions, QueryScanConsistency}
 
 import scala.collection.GenMap
 import scala.concurrent.duration.Duration
@@ -121,6 +122,15 @@ case class AnalyticsOptions(
   def raw(raw: Map[String, Any]): AnalyticsOptions = {
     copy(raw = Some(raw))
   }
+
+  /** Scan consistency for the query
+    *
+    * @param scanConsistency the index scan consistency to be used; see [[AnalyticsScanConsistency]] for details
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def scanConsistency(scanConsistency: AnalyticsScanConsistency): AnalyticsOptions =
+    copy(scanConsistency = Some(scanConsistency))
 
   private[scala] def durationToN1qlFormat(duration: Duration) = {
     if (duration.toSeconds > 0) duration.toSeconds + "s"
