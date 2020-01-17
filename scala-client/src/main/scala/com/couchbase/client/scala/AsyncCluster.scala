@@ -24,15 +24,12 @@ import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.msg.search.SearchRequest
-import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionStringUtil
 import com.couchbase.client.scala.analytics._
+import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
-import com.couchbase.client.scala.manager.analytics.{
-  AsyncAnalyticsIndexManager,
-  ReactiveAnalyticsIndexManager
-}
+import com.couchbase.client.scala.manager.analytics.{AsyncAnalyticsIndexManager, ReactiveAnalyticsIndexManager}
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, ReactiveBucketManager}
 import com.couchbase.client.scala.manager.query.AsyncQueryIndexManager
 import com.couchbase.client.scala.manager.search.AsyncSearchIndexManager
@@ -46,7 +43,6 @@ import com.couchbase.client.scala.util.DurationConversions.{javaDurationToScala,
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
 
-import scala.collection.GenMap
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
@@ -217,7 +213,7 @@ class AsyncCluster(
                           )
                         )
                       })
-                )
+              )
           )
           .toFuture
 
@@ -327,6 +323,17 @@ class AsyncCluster(
     * @return a { @link DiagnosticsResult}
     */
   def diagnostics(reportId: String = UUID.randomUUID.toString): Future[DiagnosticsResult] = {
+    diagnostics(DiagnosticsOptions(Some(reportId)))
+  }
+
+  /** Returns a [[DiagnosticsResult]], reflecting the SDK's current view of all its existing connections to the
+    * cluster.
+    *
+    * @param options options to customize the report generation
+    *
+    * @return a { @link DiagnosticsResult}
+    */
+  def diagnostics(options: DiagnosticsOptions): Future[DiagnosticsResult] = {
     Future(
       new DiagnosticsResult(
         core.diagnostics.collect(
@@ -334,42 +341,53 @@ class AsyncCluster(
             .groupingBy[EndpointDiagnostics, ServiceType]((v1: EndpointDiagnostics) => v1.`type`())
         ),
         core.context().environment().userAgent().formattedShort(),
-        reportId
+        options.reportId.getOrElse(UUID.randomUUID.toString)
       )
     )
   }
 
-  /**
-    * Performs application-level ping requests with custom options against services in the Couchbase cluster.
+  /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
     *
     * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
     * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
-    * the functionality of both APIs as needed, which is [[.waitUntilReady} is doing in its
+    * the functionality of both APIs as needed, which is [[.waitUntilReady]] is doing in its
     * implementation as well.
     *
-    * @param reportId a custom report ID to be returned in the `PingResult`.  If none is provided, a unique one is
-    *                 automatically generated.
-    * @param serviceTypes the set of services to ping.  If empty, all possible services will be pinged.
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[PingOptions]] instead, which supports all available options.
+    *
     * @param timeout the timeout to use for the operation
     *
     * @return the `PingResult` once complete.
     */
-  def ping(
-      serviceTypes: Set[ServiceType] = Set(),
-      reportId: Option[String] = None,
-      timeout: Option[Duration] = None,
-      retryStrategy: RetryStrategy = env.retryStrategy
-  ): Future[PingResult] = {
+  def ping(timeout: Option[Duration] = None): Future[PingResult] = {
+    var opts = PingOptions()
+    timeout.foreach(v => opts = opts.timeout(v))
+    ping(opts)
+  }
+
+  /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
+    *
+    * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
+    * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
+    * the functionality of both APIs as needed, which is [[.waitUntilReady]] is doing in its
+    * implementation as well.
+    *
+    * @param options options to customize the ping
+    *
+    * @return the `PingResult` once complete.
+    */
+  def ping(options: PingOptions): Future[PingResult] = {
 
     import scala.collection.JavaConverters._
 
     val future = HealthPinger
       .ping(
         core,
-        timeout.map(scalaDurationToJava).asJava,
-        retryStrategy,
-        if (serviceTypes.isEmpty) null else serviceTypes.asJava,
-        reportId.asJava,
+        options.timeout.map(scalaDurationToJava).asJava,
+        options.retryStrategy.getOrElse(env.retryStrategy),
+        if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
+        options.reportId.asJava,
         true
       )
       .toFuture
@@ -377,30 +395,38 @@ class AsyncCluster(
     FutureConversions.javaCFToScalaFuture(future)
   }
 
-  /**
-    * Waits until the desired `ClusterState` is reached.
+  /** Waits until the desired `ClusterState` is reached.
+    *
+    * This method will wait until either the cluster state is "online", or the timeout is reached. Since the SDK is
+    * bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
+    * and usable before moving on.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[WaitUntilReadyOptions]] instead, which supports all available options.
+    *
+    * @param timeout the maximum time to wait until readiness.
+    */
+  def waitUntilReady(timeout: Duration): Future[Unit] = {
+    waitUntilReady(timeout, WaitUntilReadyOptions())
+  }
+
+  /** Waits until the desired `ClusterState` is reached.
     *
     * This method will wait until either the cluster state is "online", or the timeout is reached. Since the SDK is
     * bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
     * and usable before moving on.
     *
     * @param timeout the maximum time to wait until readiness.
-    * @param desiredState the cluster state to wait for, usually ONLINE.
-    * @param serviceTypes the set of service types to check, if empty all services found in the cluster config will be
-    *                     checked.
+    * @param options options to customize the wait
     */
-  def waitUntilReady(
-      timeout: Duration,
-      desiredState: ClusterState = ClusterState.ONLINE,
-      serviceTypes: Set[ServiceType] = Set()
-  ): Future[Unit] = {
+  def waitUntilReady(timeout: Duration, options: WaitUntilReadyOptions): Future[Unit] = {
     FutureConversions
       .javaCFToScalaFuture(
         WaitUntilReadyHelper.waitUntilReady(
           core,
-          if (serviceTypes.isEmpty) null else serviceTypes.asJava,
+          if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
           timeout,
-          desiredState,
+          options.desiredState,
           true
         )
       )
@@ -500,9 +526,9 @@ object AsyncCluster {
                           rows,
                           SearchHandler.parseSearchFacets(trailer),
                           SearchHandler.parseSearchMeta(response, trailer)
-                        )
-                    )
-              )
+                      )
+                  )
+            )
         )
         .toFuture
     ret.onComplete(_ => request.context.logicallyComplete())
