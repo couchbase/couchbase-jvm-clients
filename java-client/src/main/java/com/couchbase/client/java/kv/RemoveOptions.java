@@ -17,6 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.CasMismatchException;
 
 public class RemoveOptions extends CommonDurabilityOptions<RemoveOptions> {
 
@@ -28,6 +29,20 @@ public class RemoveOptions extends CommonDurabilityOptions<RemoveOptions> {
     return new RemoveOptions();
   }
 
+  /**
+   * Specifies a CAS value that will be taken into account on the server side for optimistic concurrency.
+   * <p>
+   * The CAS value is an opaque identifier which is associated with a specific state of the document on the server. The
+   * CAS value is received on read operations (or after mutations) and can be used during a subsequent mutation to
+   * make sure that the document has not been modified in the meantime.
+   * <p>
+   * If document on the server has been modified in the meantime the SDK will raise a {@link CasMismatchException}. In
+   * this case the caller is expected to re-do the whole "fetch-modify-update" cycle again. Please refer to the
+   * SDK documentation for more information on CAS mismatches and subsequent retries.
+   *
+   * @param cas the opaque CAS identifier to use for this operation.
+   * @return the {@link RemoveOptions} for chaining purposes.
+   */
   public RemoveOptions cas(long cas) {
     this.cas = cas;
     return this;

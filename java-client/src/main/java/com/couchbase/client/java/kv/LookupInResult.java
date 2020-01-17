@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.PathInvalidException;
 import com.couchbase.client.core.error.context.SubDocumentErrorContext;
@@ -69,7 +70,14 @@ public class LookupInResult {
   }
 
   /**
-   * Returns the CAS value of the document.
+   * Returns the CAS value of document at the time of loading.
+   * <p>
+   * The CAS value is an opaque identifier which is associated with a specific state of the document on the server. It
+   * can be used during a subsequent mutation to make sure that the document has not been modified in the meantime.
+   * <p>
+   * If document on the server has been modified in the meantime the SDK will raise a {@link CasMismatchException}. In
+   * this case the caller is expected to re-do the whole "fetch-modify-update" cycle again. Please refer to the
+   * SDK documentation for more information on CAS mismatches and subsequent retries.
    */
   public long cas() {
     return cas;
