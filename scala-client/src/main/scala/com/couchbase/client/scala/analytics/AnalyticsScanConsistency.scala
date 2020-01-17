@@ -19,8 +19,11 @@ sealed trait AnalyticsScanConsistency
 
 object AnalyticsScanConsistency {
 
+  /** No scan consistency; results will be returned immediately */
   case object NotBounded extends AnalyticsScanConsistency
 
+  /** The query will block until the index is up-to-date with all mutations that existed at the point the query was
+    * raised.
+    */
   case object RequestPlus extends AnalyticsScanConsistency
-
 }
