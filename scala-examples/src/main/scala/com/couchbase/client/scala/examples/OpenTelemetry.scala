@@ -49,7 +49,7 @@ object OpenTelemetry {
         // Connect to a cluster - **CHANGE* these settings to your clusters'
         Cluster.connect(
           "10.112.178.101",
-          ClusterOptions(PasswordAuthenticator.create("username", "password"), Some(env), None)
+          ClusterOptions(PasswordAuthenticator.create("username", "password"), Some(env))
         ) match {
           case Success(cluster) =>
             // Open the default collection on bucket "default" (**CHANGE** this to the name of a test bucket that exists
