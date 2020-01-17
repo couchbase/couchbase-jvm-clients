@@ -17,14 +17,10 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diagnostics.{
-  ClusterState,
-  HealthPinger,
-  PingResult,
-  WaitUntilReadyHelper
-}
+import com.couchbase.client.core.diagnostics.{ClusterState, HealthPinger, PingResult, WaitUntilReadyHelper}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.scala.diagnostics.{PingOptions, WaitUntilReadyOptions}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.manager.collection.AsyncCollectionManager
 import com.couchbase.client.scala.manager.view.AsyncViewIndexManager
@@ -151,37 +147,48 @@ class AsyncBucket private[scala] (
     viewQuery(designDoc, viewName, ViewOptions(timeout = Some(timeout)))
   }
 
-  /**
-    * Performs application-level ping requests with custom options against services in the Couchbase cluster.
+  /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
     *
     * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
     * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
-    * the functionality of both APIs as needed, which is [[.waitUntilReady} is doing in its
+    * the functionality of both APIs as needed, which is [[.waitUntilReady]] is doing in its
     * implementation as well.
     *
-    * @param reportId a custom report ID to be returned in the `PingResult`.  If none is provided, a unique one is
-    *                 automatically generated.
-    * @param serviceTypes the set of services to ping.  If empty, all possible services will be pinged.
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[PingOptions]] instead, which supports all available options.
+    *
     * @param timeout the timeout to use for the operation
     *
     * @return the `PingResult` once complete.
     */
-  def ping(
-      serviceTypes: Set[ServiceType] = Set(),
-      reportId: Option[String] = None,
-      timeout: Option[Duration] = None,
-      retryStrategy: RetryStrategy = environment.retryStrategy
-  ): Future[PingResult] = {
+  def ping(timeout: Option[Duration] = None): Future[PingResult] = {
+    var opts = PingOptions()
+    timeout.foreach(v => opts = opts.timeout(v))
+    ping(opts)
+  }
+
+  /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
+    *
+    * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
+    * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
+    * the functionality of both APIs as needed, which is [[.waitUntilReady]] is doing in its
+    * implementation as well.
+    *
+    * @param options options to customize the ping
+    *
+    * @return the `PingResult` once complete.
+    */
+  def ping(options: PingOptions): Future[PingResult] = {
 
     import scala.collection.JavaConverters._
 
     val future = HealthPinger
       .ping(
         core,
-        timeout.map(scalaDurationToJava).asJava,
-        retryStrategy,
-        if (serviceTypes.isEmpty) null else serviceTypes.asJava,
-        reportId.asJava,
+        options.timeout.map(scalaDurationToJava).asJava,
+        options.retryStrategy.getOrElse(environment.retryStrategy),
+        if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
+        options.reportId.asJava,
         false
       )
       .toFuture
@@ -189,30 +196,38 @@ class AsyncBucket private[scala] (
     FutureConversions.javaCFToScalaFuture(future)
   }
 
-  /**
-    * Waits until the desired `ClusterState` is reached.
+  /** Waits until the desired `ClusterState` is reached.
+    *
+    * This method will wait until either the cluster state is "online", or the timeout is reached. Since the SDK is
+    * bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
+    * and usable before moving on.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[WaitUntilReadyOptions]] instead, which supports all available options.
+    *
+    * @param timeout the maximum time to wait until readiness.
+    */
+  def waitUntilReady(timeout: Duration): Future[Unit] = {
+    waitUntilReady(timeout, WaitUntilReadyOptions())
+  }
+
+  /** Waits until the desired `ClusterState` is reached.
     *
     * This method will wait until either the cluster state is "online", or the timeout is reached. Since the SDK is
     * bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
     * and usable before moving on.
     *
     * @param timeout the maximum time to wait until readiness.
-    * @param desiredState the cluster state to wait for, usually ONLINE.
-    * @param serviceTypes the set of service types to check, if empty all services found in the cluster config will be
-    *                     checked.
+    * @param options options to customize the wait
     */
-  def waitUntilReady(
-      timeout: Duration,
-      desiredState: ClusterState = ClusterState.ONLINE,
-      serviceTypes: Set[ServiceType] = Set()
-  ): Future[Unit] = {
+  def waitUntilReady(timeout: Duration, options: WaitUntilReadyOptions): Future[Unit] = {
     FutureConversions
       .javaCFToScalaFuture(
         WaitUntilReadyHelper.waitUntilReady(
           core,
-          if (serviceTypes.isEmpty) null else serviceTypes.asJava,
+          if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
           timeout,
-          desiredState,
+          options.desiredState,
           false
         )
       )

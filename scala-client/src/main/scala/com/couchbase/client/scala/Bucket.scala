@@ -19,22 +19,15 @@ package com.couchbase.client.scala
 import java.util.UUID
 
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diagnostics.{
-  ClusterState,
-  HealthPinger,
-  PingResult,
-  WaitUntilReadyHelper
-}
+import com.couchbase.client.core.diagnostics.{ClusterState, HealthPinger, PingResult, WaitUntilReadyHelper}
 import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.scala.diagnostics.{PingOptions, WaitUntilReadyOptions}
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.manager.collection.CollectionManager
 import com.couchbase.client.scala.manager.view.ViewIndexManager
 import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions, TimeoutUtil}
-import com.couchbase.client.scala.util.DurationConversions.{
-  javaDurationToScala,
-  scalaDurationToJava
-}
+import com.couchbase.client.scala.util.DurationConversions.{javaDurationToScala, scalaDurationToJava}
 import com.couchbase.client.scala.view.{ViewOptions, ViewResult}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -139,47 +132,64 @@ class Bucket private[scala] (val async: AsyncBucket) {
     AsyncUtils.block(async.viewQuery(designDoc, viewName, timeout))
   }
 
-  /**
-    * Performs application-level ping requests with custom options against services in the Couchbase cluster.
+  /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
     *
     * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
     * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
-    * the functionality of both APIs as needed, which is [[.waitUntilReady} is doing in its
+    * the functionality of both APIs as needed, which is what [[.waitUntilReady]] is doing in its
     * implementation as well.
     *
-    * @param reportId a custom report ID to be returned in the `PingResult`.  If none is provided, a unique one is
-    *                 automatically generated.
-    * @param serviceTypes the set of services to ping.  If empty, all possible services will be pinged.
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[PingOptions]] instead, which supports all available options.
+    *
     * @param timeout the timeout to use for the operation
     *
     * @return the `PingResult` once complete.
     */
-  def ping(
-      serviceTypes: Set[ServiceType] = Set(),
-      reportId: Option[String] = None,
-      timeout: Option[Duration] = None,
-      retryStrategy: RetryStrategy = async.environment.retryStrategy
-  ): Try[PingResult] = {
-    AsyncUtils.block(async.ping(serviceTypes, reportId, timeout, retryStrategy))
+  def ping(timeout: Option[Duration] = None): Try[PingResult] = {
+    AsyncUtils.block(async.ping(timeout))
   }
 
-  /**
-    * Waits until the desired `ClusterState` is reached.
+  /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
+    *
+    * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
+    * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
+    * the functionality of both APIs as needed, which is what [[.waitUntilReady]] is doing in its
+    * implementation as well.
+    *
+    * @param options options to customize the ping
+    *
+    * @return the `PingResult` once complete.
+    */
+  def ping(options: PingOptions): Try[PingResult] = {
+    AsyncUtils.block(async.ping(options))
+  }
+
+  /** Waits until the desired `ClusterState` is reached.
+    *
+    * This method will wait until either the cluster state is "online", or the timeout is reached. Since the SDK is
+    * bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
+    * and usable before moving on.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[WaitUntilReadyOptions]] instead, which supports all available options.
+    *
+    * @param timeout the maximum time to wait until readiness.
+    */
+  def waitUntilReady(timeout: Duration): Try[Unit] = {
+    AsyncUtils.block(async.waitUntilReady(timeout))
+  }
+
+  /** Waits until the desired `ClusterState` is reached.
     *
     * This method will wait until either the cluster state is "online", or the timeout is reached. Since the SDK is
     * bootstrapping lazily, this method allows to eagerly check during bootstrap if all of the services are online
     * and usable before moving on.
     *
     * @param timeout the maximum time to wait until readiness.
-    * @param desiredState the cluster state to wait for, usually ONLINE.
-    * @param serviceTypes the set of service types to check, if empty all services found in the cluster config will be
-    *                     checked.
+    * @param options options to customize the wait
     */
-  def waitUntilReady(
-      timeout: Duration,
-      desiredState: ClusterState = ClusterState.ONLINE,
-      serviceTypes: Set[ServiceType] = Set()
-  ): Try[Unit] = {
-    AsyncUtils.block(async.waitUntilReady(timeout, desiredState, serviceTypes))
+  def waitUntilReady(timeout: Duration, options: WaitUntilReadyOptions): Try[Unit] = {
+    AsyncUtils.block(async.waitUntilReady(timeout, options))
   }
 }
