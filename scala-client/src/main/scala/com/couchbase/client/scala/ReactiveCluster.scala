@@ -303,13 +303,15 @@ class ReactiveCluster(val async: AsyncCluster) {
   /** Shutdown all cluster resources.search
     *
     * This should be called before application exit.
+    *
+    * @param timeout how long the disconnect is allowed to take; defaults to `disconnectTimeout` on the environment
     */
-  def disconnect(): SMono[Unit] = {
+  def disconnect(timeout: Duration = env.timeoutConfig.disconnectTimeout()): SMono[Unit] = {
     FutureConversions
-      .javaMonoToScalaMono(async.core.shutdown())
+      .javaMonoToScalaMono(async.core.shutdown(timeout))
       .`then`(SMono.defer(() => {
         if (env.owned) {
-          env.shutdownReactive()
+          env.shutdownReactive(timeout)
         } else {
           SMono.empty[Unit]
         }

@@ -233,9 +233,11 @@ class Cluster private[scala] (
   /** Shutdown all cluster resources.
     *
     * This should be called before application exit.
+    *
+    * @param timeout how long the disconnect is allowed to take; defaults to `disconnectTimeout` on the environment
     */
-  def disconnect(): Unit = {
-    reactive.disconnect().block()
+  def disconnect(timeout: Duration = env.timeoutConfig.disconnectTimeout()): Unit = {
+    reactive.disconnect(timeout).block()
   }
 
   /** Returns a [[DiagnosticsResult]], reflecting the SDK's current view of all its existing connections to the
