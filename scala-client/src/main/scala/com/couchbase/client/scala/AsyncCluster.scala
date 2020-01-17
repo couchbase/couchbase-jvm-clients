@@ -303,18 +303,19 @@ class AsyncCluster(
   /** Shutdown all cluster resources.
     *
     * This should be called before application exit.
+    *
+    * @param timeout how long the disconnect is allowed to take; defaults to `disconnectTimeout` on the environment
     */
-  def disconnect(): Future[Unit] = {
+  def disconnect(timeout: Duration = env.timeoutConfig.disconnectTimeout()): Future[Unit] = {
     FutureConversions
-      .javaMonoToScalaMono(core.shutdown(env.timeoutConfig.disconnectTimeout()))
+      .javaMonoToScalaMono(core.shutdown(timeout))
       .`then`(SMono.defer(() => {
         if (env.owned) {
-          env.shutdownReactive(env.timeoutConfig.disconnectTimeout())
+          env.shutdownReactive(timeout)
         } else {
           SMono.empty[Unit]
         }
       }))
-      .timeout(env.timeoutConfig.disconnectTimeout())
       .toFuture
   }
 
