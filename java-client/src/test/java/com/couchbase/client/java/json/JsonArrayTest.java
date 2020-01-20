@@ -29,6 +29,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.couchbase.client.core.util.CbCollections.listOf;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -38,13 +40,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-/**
- * Verifies the functionality provided by a {@link JsonArray}.
- *
- * @author Michael Nitschinger
- * @author Simon Baslé
- * @since 2.0
- */
 class JsonArrayTest {
 
   @Test
@@ -182,49 +177,20 @@ class JsonArrayTest {
   }
 
   @Test
-  void shouldClassCastOnBadSubMap() {
-    Map<Integer, String> badMap1 = Collections.singletonMap(1, "test");
-    Map<String, Object> badMap2 = Collections.singletonMap("key1", new CloneNotSupportedException());
+  void shouldThrowOnBadSubMap() {
+    Map<Integer, String> badMap1 = mapOf(1, "test");
+    Map<String, Object> badMap2 = mapOf("key1", new CloneNotSupportedException());
 
-    List<?> source = Collections.singletonList(badMap1);
-    try {
-      JsonArray.from(source);
-      fail("ClassCastException expected");
-    } catch (ClassCastException e) {
-      if (e.getCause() != null) {
-        fail("No cause expected for sub map that are not Map<String, ?>");
-      }
-    } catch (Exception e) {
-      fail("ClassCastException expected, not " + e);
-    }
+    InvalidArgumentException e = assertThrows(InvalidArgumentException.class, () -> JsonArray.from(listOf(badMap1)));
+    assertTrue(e.getCause() instanceof ClassCastException);
 
-    source = Collections.singletonList(badMap2);
-    try {
-      JsonArray.from(source);
-      fail("ClassCastException expected");
-    } catch (ClassCastException e) {
-      if (!(e.getCause() instanceof InvalidArgumentException)) {
-        fail("ClassCastException with an InvalidArgumentException cause expected");
-      }
-    } catch (Exception e) {
-      fail("ClassCastException expected");
-    }
+    assertThrows(InvalidArgumentException.class, () -> JsonArray.from(listOf(badMap2)));
   }
 
   @Test
-  void shouldClassCastWithCauseOnBadSubList() {
-    List<?> badSubList = Collections.singletonList(new CloneNotSupportedException());
-    List<?> source = Collections.singletonList(badSubList);
-    try {
-      JsonArray.from(source);
-      fail("ClassCastException expected");
-    } catch (ClassCastException e) {
-      if (!(e.getCause() instanceof InvalidArgumentException)) {
-        fail("ClassCastException with an InvalidArgumentException cause expected");
-      }
-    } catch (Exception e) {
-      fail("ClassCastException expected");
-    }
+  void shouldThrowOnBadSubList() {
+    List<?> badSubList = listOf(new CloneNotSupportedException());
+    assertThrows(InvalidArgumentException.class, () -> JsonArray.from(listOf(badSubList)));
   }
 
 
@@ -398,5 +364,18 @@ class JsonArrayTest {
     );
     assertEquals(1234.567890123457, decoded.getDouble(0), 0.1);
     assertTrue(decoded.getNumber(0) instanceof Double);
+  }
+
+  @Test
+  void canPutWhenTypeIsUnknown() {
+    Object map = mapOf("one", 1);
+    Object list = listOf("red");
+    JsonArray json = JsonArray.create()
+        .add(map)
+        .add(list);
+
+    assertEquals(JsonArray.from(map, list), json);
+    assertEquals(JsonObject.from(mapOf("one", 1)), json.getObject(0));
+    assertEquals(JsonArray.from(listOf("red")), json.getArray(1));
   }
 }

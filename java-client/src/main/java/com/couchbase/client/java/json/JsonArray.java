@@ -38,8 +38,6 @@ import java.util.Objects;
  * The {@link JsonArray} is backed by a {@link List} and is intended to work similar to it API wise, but to only
  * allow to store such objects which can be represented by JSON.
  *
- * @author Michael Nitschinger
- * @author Simon Baslé
  * @since 2.0
  */
 public class JsonArray extends JsonValue implements Iterable<Object>, Serializable {
@@ -94,11 +92,7 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
   public static JsonArray from(Object... items) {
     JsonArray array = new JsonArray(items.length);
     for (Object item : items) {
-      if (checkType(item)) {
-        array.add(item);
-      } else {
-        throw InvalidArgumentException.fromMessage("Unsupported type for JsonArray: " + item.getClass());
-      }
+      array.add(JsonValue.coerce(item));
     }
     return array;
   }
@@ -119,51 +113,14 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
    * @return a populated {@link JsonArray}.
    * @throws InvalidArgumentException if at least one item is of unsupported type.
    */
-  @SuppressWarnings("unchecked")
   public static JsonArray from(List<?> items) {
     if (items == null) {
       throw InvalidArgumentException.fromMessage("Null list unsupported");
-    } else if (items.isEmpty()) {
-      return JsonArray.create();
     }
 
     JsonArray array = new JsonArray(items.size());
-    ListIterator<?> iter = items.listIterator();
-    while (iter.hasNext()) {
-      int i = iter.nextIndex();
-      Object item = iter.next();
-
-      if (item == JsonValue.NULL) {
-        item = null;
-      }
-
-      if (item instanceof Map) {
-        try {
-          JsonObject sub = JsonObject.from((Map<String, ?>) item);
-          array.add(sub);
-        } catch (ClassCastException e) {
-          throw e;
-        } catch (Exception e) {
-          ClassCastException c = new ClassCastException("Couldn't convert sub-Map at " + i + " to JsonObject");
-          c.initCause(e);
-          throw c;
-        }
-      } else if (item instanceof List) {
-        try {
-          JsonArray sub = JsonArray.from((List<?>) item);
-          array.add(sub);
-        } catch (Exception e) {
-          //no risk of a direct ClassCastException here
-          ClassCastException c = new ClassCastException(
-            "Couldn't convert sub-List at " + i + " to JsonArray");
-          c.initCause(e);
-          throw c;
-        }
-      } else if (checkType(item)) {
-        array.add(item);
-      } else {
-        throw InvalidArgumentException.fromMessage("Unsupported type for JsonArray: " + item.getClass());
-      }
+    for (Object item : items) {
+        array.add(JsonValue.coerce(item));
     }
     return array;
   }
@@ -217,13 +174,8 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
   public JsonArray add(Object value) {
     if (value == this) {
       throw InvalidArgumentException.fromMessage("Cannot add self");
-    } else if (value == JsonValue.NULL) {
-      addNull();
-    } else if (checkType(value)) {
-      content.add(value);
-    } else {
-      throw InvalidArgumentException.fromMessage("Unsupported type for JsonArray: " + value.getClass());
     }
+    content.add(coerce(value));
     return this;
   }
 

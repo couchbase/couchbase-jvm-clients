@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Represents a JSON object that can be stored and loaded from Couchbase Server.
  *
@@ -37,8 +39,6 @@ import java.util.Set;
  * The {@link JsonObject} is backed by a {@link Map} and is intended to work similar to it API wise, but to only
  * allow to store such objects which can be represented by JSON.
  *
- * @author Michael Nitschinger
- * @author Simon Baslé
  * @since 2.0
  */
 public class JsonObject extends JsonValue implements Serializable {
@@ -107,52 +107,21 @@ public class JsonObject extends JsonValue implements Serializable {
      * @throws NullPointerException in case a null map is provided or if it contains a null key
      * @throws ClassCastException if map contains a sub-Map or sub-List not supported (see above)
      */
-    @SuppressWarnings("unchecked")
     public static JsonObject from(final Map<String, ?> mapData) {
         if (mapData == null) {
             throw new NullPointerException("Null input Map unsupported");
-        } else if (mapData.isEmpty()) {
-            return JsonObject.create();
         }
 
         JsonObject result = new JsonObject(mapData.size());
-        for (Map.Entry<String, ?> entry : mapData.entrySet()) {
-            String key = entry.getKey();
-            Object value = entry.getValue();
-
-            if (value == JsonValue.NULL) {
-                value = null;
-            }
-
-            if (key == null) {
-                throw new NullPointerException("The key is not allowed to be null");
-            } else if (value instanceof Map) {
-                try {
-                    JsonObject sub = JsonObject.from((Map<String, ?>) value);
-                    result.put(key, sub);
-                } catch (ClassCastException e) {
-                    throw e;
-                } catch (Exception e) {
-                    ClassCastException c = new ClassCastException("Couldn't convert sub-Map " + key + " to JsonObject");
-                    c.initCause(e);
-                    throw c;
-                }
-            } else if (value instanceof List) {
-                try {
-                    JsonArray sub = JsonArray.from((List<?>) value);
-                    result.put(key, sub);
-                } catch (Exception e) {
-                    //no risk of a direct ClassCastException here
-                    ClassCastException c = new ClassCastException("Couldn't convert sub-List " + key + " to JsonArray");
-                    c.initCause(e);
-                    throw c;
-                }
-            } else if (!checkType(value)) {
-                throw InvalidArgumentException.fromMessage("Unsupported type for JsonObject: " + value.getClass());
-            } else {
-                result.put(key, value);
-            }
+        try {
+            mapData.forEach((key, value) -> {
+                requireNonNull(key, "The key is not allowed to be null");
+                result.put(key, coerce(value));
+            });
+        } catch (ClassCastException e) {
+            throw InvalidArgumentException.fromMessage("Map key must be String", e);
         }
+
         return result;
     }
 
@@ -193,13 +162,8 @@ public class JsonObject extends JsonValue implements Serializable {
     public JsonObject put(final String name, final Object value) {
         if (this == value) {
             throw InvalidArgumentException.fromMessage("Cannot put self");
-        } else if (value == JsonValue.NULL) {
-            putNull(name);
-        } else if (checkType(value)) {
-            content.put(name, value);
-        } else {
-            throw InvalidArgumentException.fromMessage("Unsupported type for JsonObject: " + value.getClass());
         }
+        content.put(name, coerce(value));
         return this;
     }
 
