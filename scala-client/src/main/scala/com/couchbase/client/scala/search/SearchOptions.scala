@@ -93,8 +93,7 @@ case class SearchOptions(
     *
     * Highlighting is disabled by default.
     *
-    * This drives the inclusion of the [[SearchRow.fragments]] fragments
-    * in each [[SearchRow]] row.
+    * This drives the inclusion of the fragments in each [[com.couchbase.client.scala.search.result.SearchRow]] row.
     *
     * Note that to be highlighted, the fields must be stored in the FTS index.
     *
@@ -113,7 +112,8 @@ case class SearchOptions(
   /** Configures the list of fields for which the whole value should be included in the response. If empty, no field
     * values are included.
     *
-    * This drives the inclusion of the [[SearchRow.fields]] fields in each [[SearchRow]] hit.
+    * This drives the inclusion of the [[com.couchbase.client.scala.search.result.SearchRow.fieldsAs]] fields in each
+    * `SearchRow` hit.
     *
     * Note that to be highlighted, the fields must be stored in the FTS index.
     *
@@ -149,7 +149,7 @@ case class SearchOptions(
   /** Configures the list of fields (including special fields) which are used for sorting purposes. If empty, the
     * default sorting (descending by score) is used by the server.
     *
-    * See [[SearchSort]] for the various sorting options.
+    * See [[com.couchbase.client.scala.search.sort.SearchSort]] for the various sorting options.
     *
     * If no sort is provided, it is equal to sort("-_score"), since the server will sort it by score in descending
     * order.
@@ -190,7 +190,7 @@ case class SearchOptions(
     * an older client and a new server-configuration property has been added to the cluster).
     *
     * Note that the values will be passed through a JSON encoder, so do not provide already encoded JSON as the value. If
-    * you want to pass objects or arrays, you can use [[JsonObject]] and [[JsonArray]] respectively.
+    * you want to pass objects or arrays, you can use `JsonObject` and `JsonArray` respectively.
     *
     * @return a copy of this with the change applied, for chaining.
     */
@@ -198,7 +198,7 @@ case class SearchOptions(
     copy(raw = Some(raw))
   }
 
-  /** Exports the whole query as a [[JsonObject]].
+  /** Exports the whole query as a `JsonObject`.
     */
   private[scala] def export(indexName: String, query: SearchQuery): JsonObject = {
     val result = JsonObject.create
@@ -210,10 +210,10 @@ case class SearchOptions(
     result
   }
 
-  /** Inject the top level parameters of a query into a prepared [[JsonObject]]
+  /** Inject the top level parameters of a query into a prepared `JsonObject`
     * that represents the root of the query.
     *
-    * @param queryJson the prepared { @link JsonObject} for the whole query.
+    * @param queryJson the prepared `JsonObject` for the whole query.
     */
   private[scala] def injectParams(indexName: String, queryJson: JsonObject): Unit = {
     limit.foreach(v => if (v > 0) queryJson.put("size", v))

@@ -84,7 +84,7 @@ case class AnalyticsOptions(
     copy(timeout = Option(timeout))
   }
 
-  /** Sets the [[RetryStrategy]] to use.
+  /** Sets the `RetryStrategy` to use.
     *
     * @return a copy of this with the change applied, for chaining.
     */
@@ -115,7 +115,7 @@ case class AnalyticsOptions(
     * an older client and a new server-configuration property has been added to the cluster).
     *
     * Note that the values will be passed through a JSON encoder, so do not provide already encoded JSON as the value. If
-    * you want to pass objects or arrays, you can use [[JsonObject]] and [[JsonArray]] respectively.
+    * you want to pass objects or arrays, you can use `JsonObject` and `JsonArray` respectively.
     *
     * @return a copy of this with the change applied, for chaining.
     */

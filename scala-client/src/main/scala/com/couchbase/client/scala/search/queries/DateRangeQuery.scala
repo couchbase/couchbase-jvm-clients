@@ -22,7 +22,7 @@ import com.couchbase.client.scala.json.JsonObject
 
 /** An FTS query that matches documents on a range of dates. At least one bound is required.
   *
-  * Datetimes can be provided as RFC3339 compliant strings in UTC timezone only, or more conveniently as an [[Instant]].
+  * Datetimes can be provided as RFC3339 compliant strings in UTC timezone only, or more conveniently as an `Instant`.
   *
   * @since 1.0.0
   */
@@ -89,7 +89,7 @@ case class DateRangeQuery(
   }
 
   /** The name of the Instant/time parser to use to interpret `start` and `end`. Should not
-    * be modified when passing in [[Instant]].
+    * be modified when passing in `Instant`.
     */
   def dateTimeParser(dateTimeParser: String): DateRangeQuery = {
     copy(dateTimeParser = Some(dateTimeParser))

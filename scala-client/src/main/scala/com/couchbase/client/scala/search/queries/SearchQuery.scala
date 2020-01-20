@@ -27,14 +27,14 @@ trait AbstractCompoundQuery extends SearchQuery
 
 /** A base class for all FTS query classes. Exposes the common FTS query parameters.
   * In order to instantiate various flavors of queries, look at concrete classes or
-  * static factory methods in [[SearchOptions]].
+  * static factory methods in [[com.couchbase.client.scala.search.SearchOptions]].
   *
   * @since 1.0.0
   */
 trait SearchQuery {
 
   /** Injects the query's parameters (including query-specific parameters)
-    * into a prepared [[JsonObject]].
+    * into a prepared `JsonObject`.
     *
     * @param input the prepared JsonObject to receive the parameters.
     */
@@ -42,9 +42,9 @@ trait SearchQuery {
     injectParams(input)
   }
 
-  /** Override to inject query-specific parameters when doing the [[SearchOptions#export()]].
+  /** Override to inject query-specific parameters when doing the `SearchOptions.export`.
     *
-    * @param input the prepared { @link JsonObject} that will represent the query.
+    * @param input the prepared `JsonObject` that will represent the query.
     */
   protected def injectParams(input: JsonObject): Unit
 
@@ -103,7 +103,7 @@ object SearchQuery {
   def numericRange = NumericRangeQuery()
 
   /** An FTS query that matches documents on a range of dates. At least one bound is required, and the parser
-    * to use for the date (in [[String]] form) can be customized.
+    * to use for the date (in `String` form) can be customized.
     */
   def dateRange = DateRangeQuery()
 

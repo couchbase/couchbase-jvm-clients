@@ -32,7 +32,8 @@ import scala.concurrent.duration.Duration
   *              opened in the normal way, starting from functions in [[Cluster]]
   *
   * @define Same             This reactive version performs the same functionality and takes the same parameters,
-  *                          but returns the same result object asynchronously in a `SMono`.
+  *                          but returns the same result object asynchronously in a `SMono`.  See the equivalent
+  *                          method in [[BinaryCollection]] for details.
   * @author Graham Pople
   * @since 1.0.0
   */
@@ -44,7 +45,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
 
   /** Add bytes to the end of a Couchbase binary document.
     *
-    * See [[BinaryCollection.append]] for details.  $Same
+    * $Same
     */
   def append(
       id: String,
@@ -58,7 +59,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
 
   /** Add bytes to the end of a Couchbase binary document.
     *
-    * See [[BinaryCollection.append]] for details.  $Same
+    * $Same
     */
   def append(
       id: String,
@@ -70,7 +71,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
 
   /** Add bytes to the beginning of a Couchbase binary document.
     *
-    * See [[BinaryCollection.prepend]] for details.  $Same
+    * $Same
     * */
   def prepend(
       id: String,
@@ -84,7 +85,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
 
   /** Add bytes to the beginning of a Couchbase binary document.
     *
-    * See [[BinaryCollection.prepend]] for details.  $Same
+    * $Same
     * */
   def prepend(
       id: String,
@@ -96,7 +97,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
 
   /** Increment a Couchbase 'counter' document.
     *
-    * See [[BinaryCollection.increment]] for details.  $Same
+    * $Same
     * */
   def increment(
       id: String,
@@ -113,7 +114,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
 
   /** Increment a Couchbase 'counter' document.
     *
-    * See [[BinaryCollection.increment]] for details.  $Same
+    * $Same
     * */
   def increment(
       id: String,
@@ -125,7 +126,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
 
   /** Decrement a Couchbase 'counter' document.
     *
-    * See [[BinaryCollection.increment]] for details.  $Same
+    * $Same
     * */
   def decrement(
       id: String,
@@ -142,7 +143,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
 
   /** Decrement a Couchbase 'counter' document.
     *
-    * See [[BinaryCollection.increment]] for details.  $Same
+    * $Same
     * */
   def decrement(
       id: String,

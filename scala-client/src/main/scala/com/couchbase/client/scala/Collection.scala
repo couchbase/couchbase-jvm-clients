@@ -43,19 +43,19 @@ object Collection {
   * Provides blocking, synchronous access to all collection APIs.  This is the main entry-point for key-value (KV)
   * operations.
   *
-  * <p>If asynchronous access is needed, we recommend looking at the [[AsyncCollection]] which is built around
+  * If asynchronous access is needed, we recommend looking at the [[AsyncCollection]] which is built around
   * returning `Future`s, or the [[ReactiveCollection]] which provides a reactive programming API.
   *
   * This blocking API itself is just a small layer on top of the [[AsyncCollection]] which blocks the current thread
-  * until the request completes with a response.</p>
+  * until the request completes with a response.
   *
   * @author Graham Pople
   * @since 1.0.0
   * @define Id             the unique identifier of the document
   * @define CAS            Couchbase documents all have a CAS (Compare-And-Set) field, a simple integer that allows
   *                        optimistic concurrency - e.g. it can detect if another agent has modified a document
-  *                        in-between this agent getting and modifying the document.  See **CHANGEME** for a full
-  *                        description.  The default is 0, which disables CAS checking.
+  *                        in-between this agent getting and modifying the document.  The default is 0, which disables
+  *                        CAS checking.
   * @define WithExpiry     Couchbase documents optionally can have an expiration field set, e.g. when they will
   *                        automatically expire.  For efficiency reasons, by default the value of this expiration
   *                        field is not fetched upon getting a document.  If expiry is being used, then set this
@@ -72,21 +72,13 @@ object Collection {
   * @define RetryStrategy  provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
   *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
   * @define ErrorHandling  any `scala.util.control.NonFatal` error returned will derive ultimately from
-  *                        `com.couchbase.client.core.error.CouchbaseException`.  If the exception also derives from
-  *                        `com.couchbase.client.core.error.RetryableOperationException`.
-  *                        then the failure was most likely temporary and may succeed if the application tries it
-  *                        again.  (Though note that, in some cases, the operation may have in fact succeeded, and
-  *                        the server was unable to report this to the SDK.  So the application should consider
-  *                        carefully the result of reapplying the operation, and perhaps consider some more complex
-  *                        error handling logic, possibly including the use of
-  *                        [[Collection.getAllReplicas]]).  If the exception
-  *                        does not derive from
-  *                        `com.couchbase.client.core.error.RetryableOperationException`
-  *                        then this is indicative of a more
-  *                        permanent error or an application bug, that probably needs human review.
+  *                        `com.couchbase.client.core.error.CouchbaseException`.  See
+  *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/error-handling.html the error handling docs]]
+  *                        for more detail.
   * @define SupportedTypes this can be of any type for which an implicit
   *                        `com.couchbase.client.scala.codec.Conversions.JsonSerializer` can be found: a list
-  *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
+  *                        of types that are supported 'out of the box' is available at
+  *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]]
   * @define Durability     writes in Couchbase are written to a single node, and from there the Couchbase Server will
   *                        take care of sending that mutation to any configured replicas.  This parameter provides
   *                        some control over ensuring the success of the mutation's replication.  See
@@ -94,6 +86,7 @@ object Collection {
   *                        for a detailed discussion.
   * @define ParentSpan     an optional parent 'span' for the request, allowing tracing requests through the full
   *                        distributed system
+  * @define Options        configure options that affect this operation
   **/
 class Collection(
     /** Provides access to an async version of this API. */
@@ -119,7 +112,7 @@ class Collection(
   /** Fetches a full document from this collection.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[GetOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.GetOptions]] instead, which supports all available options.
     *
     * @param id             $Id
     * @param timeout        $Timeout
@@ -155,7 +148,7 @@ class Collection(
   /** Inserts a full document into this collection, if it does not exist already.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[InsertOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.InsertOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param content       $SupportedTypes
@@ -209,7 +202,7 @@ class Collection(
   /** Replaces the contents of a full document in this collection, if it already exists.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[ReplaceOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.ReplaceOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param content       $SupportedTypes
@@ -268,7 +261,7 @@ class Collection(
     * Upsert here means to insert the document if it does not exist, or replace the content if it does.
     *
     * This overloads provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[UpsertOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.UpsertOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param content       $SupportedTypes
@@ -307,7 +300,7 @@ class Collection(
   /** Removes a document from this collection, if it exists.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[RemoveOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.RemoveOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param cas           $CAS
@@ -353,14 +346,14 @@ class Collection(
     * Mutations are all-or-nothing: if one fails, then no mutation will be performed.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[MutateInOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.MutateInOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param spec          a sequence of `MutateInSpec` specifying what mutations to apply to the document.  See
-    *                      [[kv.MutateInSpec]] for more details.
+    *                      [[com.couchbase.client.scala.kv.MutateInSpec]] for more details.
     * @param cas           $CAS
     * @param document      controls whether the document should be inserted, upserted, or not touched.  See
-    *                      [[kv.StoreSemantics]] for details.
+    *                      [[com.couchbase.client.scala.kv.StoreSemantics]] for details.
     * @param durability    $Durability
     * @param timeout       $Timeout
     *
@@ -395,7 +388,7 @@ class Collection(
     *
     * @param id            $Id
     * @param spec          a sequence of `MutateInSpec` specifying what mutations to apply to the document.  See
-    *                      [[kv.MutateInSpec]] for more details.
+    *                      [[com.couchbase.client.scala.kv.MutateInSpec]] for more details.
     * @param options       $Options
     *
     * @return on success, a `Success(MutateInResult)`, else a `Failure(CouchbaseException)`.  This could be `com
@@ -422,7 +415,7 @@ class Collection(
     * may only be modified by providing this CAS.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[GetAndLockOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.GetAndLockOptions]] instead, which supports all available options.
     *
     * @param id             $Id
     * @param lockTime        how long to lock the document for
@@ -468,10 +461,10 @@ class Collection(
   /** Unlock a locked document.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[UnlockOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.UnlockOptions]] instead, which supports all available options.
     *
     * @param id             $Id
-    * @param cas            must match the CAS value return from a previous [[Collection.getAndLock]] to successfully
+    * @param cas            must match the CAS value return from a previous `.getAndLock()` to successfully
     *                       unlock the document
     * @param timeout        $Timeout
     *
@@ -489,7 +482,7 @@ class Collection(
   /** Unlock a locked document.
     *
     * @param id             $Id
-    * @param cas            must match the CAS value return from a previous [[Collection.getAndLock]] to successfully
+    * @param cas            must match the CAS value return from a previous `.getAndLock()` to successfully
     *                       unlock the document
     * @param options        $Options
     *
@@ -530,7 +523,7 @@ class Collection(
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[GetAndTouchOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.GetAndTouchOptions]] instead, which supports all available options.
     *
     * @param id             $Id
     * @param expiry         $Expiry
@@ -560,7 +553,7 @@ class Collection(
     * how to process the results.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[LookupInOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param spec          a sequence of `LookupInSpec` specifying what fields to fetch.  See
@@ -602,15 +595,15 @@ class Collection(
 
   /** Retrieves any available version of the document.
     *
-    * The application should default to using [[Collection.get]] instead.  This method is intended for high-availability
-    * situations where, say, a [[Collection.get]] operation has failed, and the
+    * The application should default to using `.get()` instead.  This method is intended for high-availability
+    * situations where, say, a `.get()` operation has failed, and the
     * application wants to return any - even possibly stale - data as soon as possible.
     *
     * Under the hood this sends a request to all configured replicas for the document, including the active, and
     * whichever returns first is returned.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[GetAnyReplicaOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.GetAnyReplicaOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param timeout       $Timeout
@@ -631,8 +624,8 @@ class Collection(
 
   /** Retrieves any available version of the document.
     *
-    * The application should default to using [[Collection.get]] instead.  This method is intended for high-availability
-    * situations where, say, a [[Collection.get]] operation has failed, and the
+    * The application should default to using `.get()` instead.  This method is intended for high-availability
+    * situations where, say, a `.get()` operation has failed, and the
     * application wants to return any - even possibly stale - data as soon as possible.
     *
     * Under the hood this sends a request to all configured replicas for the document, including the active, and
@@ -659,14 +652,14 @@ class Collection(
 
   /** Retrieves all available versions of the document.
     *
-    * The application should default to using [[Collection.get]] instead.  This method is intended for advanced scenarios,
+    * The application should default to using `.get()` instead.  This method is intended for advanced scenarios,
     * including where a particular write has ambiguously failed (e.g. it may or may not have succeeded), and the
     * application wants to attempt manual verification and resolution.
     *
     * The returned `Iterable` will block on each call to `next` until the next replica has responded.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[GetAllReplicasOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.GetAllReplicasOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param timeout       $Timeout
@@ -683,11 +676,11 @@ class Collection(
 
   /** Retrieves all available versions of the document.
     *
-    * The application should default to using [[Collection.get]] instead.  This method is intended for advanced scenarios,
+    * The application should default to using `.get()` instead.  This method is intended for advanced scenarios,
     * including where a particular write has ambiguously failed (e.g. it may or may not have succeeded), and the
     * application wants to attempt manual verification and resolution.
     *
-    * The returned `Iterable` will block on each call to `next` until the next replica has responded.
+    * The returned Iterable` will block on each call to `next` until the next replica has responded.
     *
     * @param id            $Id
     * @param options       $Options
@@ -708,7 +701,7 @@ class Collection(
     * most efficient method.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[ExistsOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.ExistsOptions]] instead, which supports all available options.
     *
     * @param id             $Id
     * @param timeout        $Timeout
@@ -729,7 +722,7 @@ class Collection(
     * most efficient method.
     *
     * @param id             $Id
-    * @param options       $Options
+    * @param options        $Options
     *
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -744,7 +737,7 @@ class Collection(
   /** Updates the expiry of the document with the given id.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[TouchOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.TouchOptions]] instead, which supports all available options.
     *
     * @param id             $Id
     * @param timeout        $Timeout

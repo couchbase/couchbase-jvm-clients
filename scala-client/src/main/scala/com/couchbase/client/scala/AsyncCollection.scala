@@ -130,7 +130,7 @@ class AsyncCollection(
 
   /** Inserts a full document into this collection, if it does not exist already.
     *
-    * See [[com.couchbase.client.scala.Collection.insert]] for details.  $Same */
+    * $Same */
   def insert[T](
       id: String,
       content: T,
@@ -143,7 +143,7 @@ class AsyncCollection(
 
   /** Inserts a full document into this collection, if it does not exist already.
     *
-    * See [[com.couchbase.client.scala.Collection.insert]] for details.  $Same */
+    * $Same */
   def insert[T](
       id: String,
       content: T,
@@ -167,7 +167,7 @@ class AsyncCollection(
 
   /** Replaces the contents of a full document in this collection, if it already exists.
     *
-    * See [[com.couchbase.client.scala.Collection.replace]] for details.  $Same */
+    * $Same */
   def replace[T](
       id: String,
       content: T,
@@ -181,7 +181,7 @@ class AsyncCollection(
 
   /** Replaces the contents of a full document in this collection, if it already exists.
     *
-    * See [[com.couchbase.client.scala.Collection.replace]] for details.  $Same */
+    * $Same */
   def replace[T](
       id: String,
       content: T,
@@ -206,7 +206,7 @@ class AsyncCollection(
 
   /** Upserts the contents of a full document in this collection.
     *
-    * See [[com.couchbase.client.scala.Collection.upsert]] for details.  $Same */
+    * $Same */
   def upsert[T](
       id: String,
       content: T,
@@ -219,7 +219,7 @@ class AsyncCollection(
 
   /** Upserts the contents of a full document in this collection.
     *
-    * See [[com.couchbase.client.scala.Collection.upsert]] for details.  $Same */
+    * $Same */
   def upsert[T](
       id: String,
       content: T,
@@ -243,7 +243,7 @@ class AsyncCollection(
 
   /** Removes a document from this collection, if it exists.
     *
-    * See [[com.couchbase.client.scala.Collection.remove]] for details.  $Same */
+    * $Same */
   def remove(
       id: String,
       cas: Long = 0,
@@ -256,7 +256,7 @@ class AsyncCollection(
 
   /** Removes a document from this collection, if it exists.
     *
-    * See [[com.couchbase.client.scala.Collection.remove]] for details.  $Same */
+    * $Same */
   def remove(
       id: String,
       options: RemoveOptions
@@ -276,7 +276,7 @@ class AsyncCollection(
 
   /** Fetches a full document from this collection.
     *
-    * See [[com.couchbase.client.scala.Collection.get]] for details.  $Same */
+    * $Same */
   def get(
       id: String,
       timeout: Duration = kvReadTimeout
@@ -287,7 +287,7 @@ class AsyncCollection(
 
   /** Fetches a full document from this collection.
     *
-    * See [[com.couchbase.client.scala.Collection.get]] for details.  $Same */
+    * $Same */
   def get(
       id: String,
       options: GetOptions
@@ -387,7 +387,7 @@ class AsyncCollection(
   /** Sub-Document mutations allow modifying parts of a JSON document directly, which can be more efficiently than
     * fetching and modifying the full document.
     *
-    * See [[com.couchbase.client.scala.Collection.mutateIn]] for details.  $Same */
+    * $Same */
   def mutateIn(
       id: String,
       spec: Seq[MutateInSpec],
@@ -403,7 +403,7 @@ class AsyncCollection(
   /** Sub-Document mutations allow modifying parts of a JSON document directly, which can be more efficiently than
     * fetching and modifying the full document.
     *
-    * See [[com.couchbase.client.scala.Collection.mutateIn]] for details.  $Same */
+    * $Same */
   def mutateIn(
       id: String,
       spec: Seq[MutateInSpec],
@@ -472,7 +472,7 @@ class AsyncCollection(
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
     *
-    * See [[com.couchbase.client.scala.Collection.getAndLock]] for details.  $Same */
+    * $Same */
   def getAndLock(
       id: String,
       lockTime: Duration,
@@ -484,7 +484,7 @@ class AsyncCollection(
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
     *
-    * See [[com.couchbase.client.scala.Collection.getAndLock]] for details.  $Same */
+    * $Same */
   def getAndLock(
       id: String,
       lockTime: Duration,
@@ -509,7 +509,7 @@ class AsyncCollection(
 
   /** Unlock a locked document.
     *
-    * See [[com.couchbase.client.scala.Collection.unlock]] for details.  $Same */
+    * $Same */
   def unlock(
       id: String,
       cas: Long,
@@ -521,7 +521,7 @@ class AsyncCollection(
 
   /** Unlock a locked document.
     *
-    * See [[com.couchbase.client.scala.Collection.unlock]] for details.  $Same */
+    * $Same */
   def unlock(
       id: String,
       cas: Long,
@@ -540,7 +540,7 @@ class AsyncCollection(
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
     *
-    * See [[com.couchbase.client.scala.Collection.getAndTouch]] for details.  $Same */
+    * $Same */
   def getAndTouch(
       id: String,
       expiry: Duration,
@@ -552,7 +552,7 @@ class AsyncCollection(
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
     *
-    * See [[com.couchbase.client.scala.Collection.getAndTouch]] for details.  $Same */
+    * $Same */
   def getAndTouch(
       id: String,
       expiry: Duration,
@@ -578,7 +578,7 @@ class AsyncCollection(
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
     * retrieving the entire document.
     *
-    * See [[com.couchbase.client.scala.Collection.lookupIn]] for details.  $Same */
+    * $Same */
   def lookupIn(
       id: String,
       spec: Seq[LookupInSpec],
@@ -591,7 +591,7 @@ class AsyncCollection(
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
     * retrieving the entire document.
     *
-    * See [[com.couchbase.client.scala.Collection.lookupIn]] for details.  $Same */
+    * $Same */
   def lookupIn(
       id: String,
       spec: Seq[LookupInSpec],
@@ -611,7 +611,7 @@ class AsyncCollection(
 
   /** Retrieves any available version of the document.
     *
-    * See [[com.couchbase.client.scala.Collection.getAnyReplica]] for details.  $Same */
+    * $Same */
   def getAnyReplica(
       id: String,
       timeout: Duration = kvReadTimeout
@@ -622,7 +622,7 @@ class AsyncCollection(
 
   /** Retrieves any available version of the document.
     *
-    * See [[com.couchbase.client.scala.Collection.getAnyReplica]] for details.  $Same */
+    * $Same */
   def getAnyReplica(
       id: String,
       options: GetAnyReplicaOptions
@@ -632,7 +632,7 @@ class AsyncCollection(
 
   /** Retrieves all available versions of the document.
     *
-    * See [[com.couchbase.client.scala.Collection.getAllReplicas]] for details.  $Same */
+    * $Same */
   def getAllReplicas(
       id: String,
       timeout: Duration = kvReadTimeout
@@ -643,7 +643,7 @@ class AsyncCollection(
 
   /** Retrieves all available versions of the document.
     *
-    * See [[com.couchbase.client.scala.Collection.getAllReplicas]] for details.  $Same */
+    * $Same */
   def getAllReplicas(
       id: String,
       options: GetAllReplicasOptions
@@ -693,7 +693,7 @@ class AsyncCollection(
 
   /** Checks if a document exists.
     *
-    * See [[com.couchbase.client.scala.Collection.exists]] for details.  $Same */
+    * $Same */
   def exists(
       id: String,
       timeout: Duration = kvReadTimeout
@@ -704,7 +704,7 @@ class AsyncCollection(
 
   /** Checks if a document exists.
     *
-    * See [[com.couchbase.client.scala.Collection.exists]] for details.  $Same */
+    * $Same */
   def exists(
       id: String,
       options: ExistsOptions
@@ -721,7 +721,7 @@ class AsyncCollection(
 
   /** Updates the expiry of the document with the given id.
     *
-    * See [[com.couchbase.client.scala.Collection.touch]] for details.  $Same */
+    * $Same */
   def touch(
       id: String,
       expiry: Duration,
@@ -733,7 +733,7 @@ class AsyncCollection(
 
   /** Updates the expiry of the document with the given id.
     *
-    * See [[com.couchbase.client.scala.Collection.touch]] for details.  $Same */
+    * $Same */
   def touch(
       id: String,
       expiry: Duration,

@@ -32,8 +32,9 @@ import scala.util.{Failure, Success, Try}
   *                   document's expiration value.  Otherwise it will be None.
   *
   * @define SupportedTypes this can be of any type for which an implicit
-  *                        [[com.couchbase.client.scala.codec.JsonDeserializer]] can be found: a list
-  *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
+  *                        `com.couchbase.client.scala.codec.JsonDeserializer` can be found: a list
+  *                        of types that are supported 'out of the box' is available at
+  *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]]
   * @author Graham Pople
   * @since 1.0.0
   */
@@ -51,7 +52,7 @@ case class GetResult(
     *
     * <b>Projections</b>: if the advanced feature projections has been used (e.g. if a `project` array was provided
     * to the `get` call), then the results can only be converted into a
-    * [[JsonObject]] - though it would be possible to change this, please let us know if you'd like to see support for
+    * `JsonObject` - though it would be possible to change this, please let us know if you'd like to see support for
     * other types.
     *
     * @tparam T $SupportedTypes

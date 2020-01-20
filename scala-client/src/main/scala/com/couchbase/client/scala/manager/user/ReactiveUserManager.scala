@@ -159,7 +159,7 @@ class ReactiveUserManager(private val core: Core) {
 
         checkStatus(response, "create user [" + redactUser(user.username) + "]") match {
           case Failure(err) => SMono.raiseError(err)
-          case _            => SMono.just(0)
+          case _            => SMono.just(0).map(_ => Unit)
         }
       })
   }
@@ -179,7 +179,7 @@ class ReactiveUserManager(private val core: Core) {
         } else {
           checkStatus(response, "drop user [" + redactUser(username) + "]") match {
             case Failure(err) => SMono.raiseError(err)
-            case _            => SMono.just(0)
+            case _            => SMono.just(0).map(_ => Unit)
           }
         }
       })
@@ -256,7 +256,7 @@ class ReactiveUserManager(private val core: Core) {
 
         checkStatus(response, "create group [" + redactSystem(group.name) + "]") match {
           case Failure(err) => SMono.raiseError(err)
-          case _            => SMono.just(0)
+          case _            => SMono.just(0).map(_ => Unit)
         }
       })
   }
@@ -275,7 +275,7 @@ class ReactiveUserManager(private val core: Core) {
         } else {
           checkStatus(response, "drop group [" + redactUser(groupName) + "]") match {
             case Failure(err) => SMono.raiseError(err)
-            case _            => SMono.just(0)
+            case _            => SMono.just(0).map(_ => Unit)
           }
         }
       })

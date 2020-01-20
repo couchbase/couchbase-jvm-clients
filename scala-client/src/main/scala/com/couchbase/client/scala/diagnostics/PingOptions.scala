@@ -19,10 +19,12 @@ import com.couchbase.client.core.service.ServiceType
 
 import scala.concurrent.duration.Duration
 
-case class PingOptions(serviceTypes: Set[ServiceType] = PingOptions.AllServiceTypes,
-                       reportId: Option[String] = None,
-                       retryStrategy: Option[RetryStrategy] = None,
-                       timeout: Option[Duration] = None) {
+case class PingOptions(
+    serviceTypes: Set[ServiceType] = PingOptions.AllServiceTypes,
+    reportId: Option[String] = None,
+    retryStrategy: Option[RetryStrategy] = None,
+    timeout: Option[Duration] = None
+) {
 
   /** Changes the timeout setting used for this operation.
     *
@@ -43,7 +45,7 @@ case class PingOptions(serviceTypes: Set[ServiceType] = PingOptions.AllServiceTy
     copy(retryStrategy = Some(value))
   }
 
-  /** Sets a report ID that will be returned in the [[com.couchbase.client.core.diagnostics.PingResult]].
+  /** Sets a report ID that will be returned in the `com.couchbase.client.core.diagnostics.PingResult`.
     *
     * It defaults to a random string
     *

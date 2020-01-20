@@ -21,7 +21,7 @@ import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.duration.Duration
 
-/** Allows configuring a [[com.couchbase.client.core.endpoint.CircuitBreaker]].
+/** Allows configuring a `com.couchbase.client.core.endpoint.CircuitBreaker`.
   *
   * @since 1.0.0
   */

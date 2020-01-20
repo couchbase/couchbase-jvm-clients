@@ -20,17 +20,35 @@ import java.util.UUID
 import java.util.stream.Collectors
 
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diagnostics.{ClusterState, DiagnosticsResult, EndpointDiagnostics, PingResult}
+import com.couchbase.client.core.diagnostics.{
+  ClusterState,
+  DiagnosticsResult,
+  EndpointDiagnostics,
+  PingResult
+}
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.ServiceType
-import com.couchbase.client.scala.AsyncCluster.{extractClusterEnvironment, seedNodesFromConnectionString}
+import com.couchbase.client.scala.AsyncCluster.{
+  extractClusterEnvironment,
+  seedNodesFromConnectionString
+}
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
-import com.couchbase.client.scala.manager.analytics.{AnalyticsIndexManager, ReactiveAnalyticsIndexManager}
+import com.couchbase.client.scala.diagnostics.{
+  DiagnosticsOptions,
+  PingOptions,
+  WaitUntilReadyOptions
+}
+import com.couchbase.client.scala.manager.analytics.{
+  AnalyticsIndexManager,
+  ReactiveAnalyticsIndexManager
+}
 import com.couchbase.client.scala.env.SeedNode
-import com.couchbase.client.scala.manager.analytics.{AnalyticsIndexManager, ReactiveAnalyticsIndexManager}
+import com.couchbase.client.scala.manager.analytics.{
+  AnalyticsIndexManager,
+  ReactiveAnalyticsIndexManager
+}
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
 import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
 import com.couchbase.client.scala.manager.search.ReactiveSearchIndexManager
@@ -92,9 +110,9 @@ class ReactiveCluster(val async: AsyncCluster) {
     * [[Cluster]] for a blocking version.
     *
     * @param statement the N1QL statement to execute
-    * @param options   any query options - see [[QueryOptions]] for documentation
+    * @param options   any query options - see [[com.couchbase.client.scala.query.QueryOptions]] for documentation
     *
-    * @return a `Mono` containing a [[ReactiveQueryResult]] which includes a Flux giving streaming access to any
+    * @return a `Mono` containing a [[com.couchbase.client.scala.query.ReactiveQueryResult]] which includes a Flux giving streaming access to any
     *         returned rows
     **/
   def query(
@@ -110,7 +128,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     * [[Cluster.async]] for an asynchronous version.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes a [[QueryOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.query.QueryOptions]] instead, which supports all available options.
     *
     * @param statement the N1QL statement to execute
     * @param parameters provides named or positional parameters for queries parameterised that way.
@@ -119,7 +137,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     *              and transparent prepared statement mode is enabled: queries are first prepared so they can be executed
     *              more efficiently in the future.
     *
-    * @return a `Mono` containing a [[ReactiveQueryResult]] which includes a Flux giving streaming access to any
+    * @return a `Mono` containing a [[com.couchbase.client.scala.query.ReactiveQueryResult]] which includes a Flux giving streaming access to any
     *         returned rows
     */
   def query(
@@ -226,7 +244,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     * @param indexName         the name of the search index to use
     * @param query             the FTS query to execute.  See
     *                          [[com.couchbase.client.scala.search.queries.SearchQuery]] for more
-    * @param options           the FTS query to execute.  See [[SearchOptions]] for how to construct
+    * @param options           the FTS query to execute.  See [[com.couchbase.client.scala.search.SearchOptions]] for how to construct
     *
     * @return a `Mono` containing a [[search.result.ReactiveSearchResult]] which includes a Flux giving streaming access to any
     *         returned rows
@@ -276,7 +294,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     * [[Cluster]] for a blocking version.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes a [[SearchOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.search.SearchOptions]] instead, which supports all available options.
     *
     * @param indexName         the name of the search index to use
     * @param query             the FTS query to execute.  See
@@ -320,23 +338,23 @@ class ReactiveCluster(val async: AsyncCluster) {
       }))
   }
 
-  /** Returns a [[DiagnosticsResult]], reflecting the SDK's current view of all its existing connections to the
+  /** Returns a `DiagnosticsResult`, reflecting the SDK's current view of all its existing connections to the
     * cluster.
     *
-    * @param reportId        this will be returned in the [[DiagnosticsResult]].  If not specified it defaults to a UUID.
+    * @param reportId        this will be returned in the `DiagnosticsResult`.  If not specified it defaults to a UUID.
     *
-    * @return a { @link DiagnosticsResult}
+    * @return a `DiagnosticsResult`
     */
   def diagnostics(reportId: String = UUID.randomUUID.toString): SMono[DiagnosticsResult] = {
     SMono.defer(() => SMono.fromFuture(async.diagnostics(reportId)))
   }
 
-  /** Returns a [[DiagnosticsResult]], reflecting the SDK's current view of all its existing connections to the
+  /** Returns a `DiagnosticsResult`, reflecting the SDK's current view of all its existing connections to the
     * cluster.
     *
     * @param options options to customize the report generation
     *
-    * @return a { @link DiagnosticsResult}
+    * @return a `DiagnosticsResult`
     */
   def diagnostics(options: DiagnosticsOptions): SMono[DiagnosticsResult] = {
     SMono.defer(() => SMono.fromFuture(async.diagnostics(options)))
@@ -345,33 +363,29 @@ class ReactiveCluster(val async: AsyncCluster) {
   /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
     *
     * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
-    * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
-    * the functionality of both APIs as needed, which is [[.waitUntilReady]] is doing in its
-    * implementation as well.
+    * not wish to perform I/O, consider using `.diagnostics()` instead.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes a [[PingOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.diagnostics.PingOptions]] instead, which supports all available options.
     *
     * @param timeout the timeout to use for the operation
     *
-    * @return the `PingResult` once complete.
+    * @return the PingResult` once complete.
     */
   def ping(
-            timeout: Option[Duration] = None,
-          ): SMono[PingResult] = {
+      timeout: Option[Duration] = None
+  ): SMono[PingResult] = {
     SMono.defer(() => SMono.fromFuture(async.ping(timeout)))
   }
 
   /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
     *
     * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
-    * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
-    * the functionality of both APIs as needed, which is [[.waitUntilReady]] is doing in its
-    * implementation as well.
+    * not wish to perform I/O, consider using the `.diagnostics()` instead.
     *
     * @param options options to customize the ping
     *
-    * @return the `PingResult` once complete.
+    * @return the PingResult` once complete.
     */
   def ping(options: PingOptions): SMono[PingResult] = {
     SMono.defer(() => SMono.fromFuture(async.ping(options)))
@@ -384,7 +398,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     * and usable before moving on.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes a [[WaitUntilReadyOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.diagnostics.WaitUntilReadyOptions]] instead, which supports all available options.
     *
     * @param timeout the maximum time to wait until readiness.
     */
@@ -444,14 +458,14 @@ object ReactiveCluster {
     extractClusterEnvironment(connectionString, options)
       .map(ce => {
         implicit val ec: ExecutionContextExecutor = ce.ec
-        val seedNodes = seedNodesFromConnectionString(connectionString, ce)
-        val cluster = new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes))
+        val seedNodes                             = seedNodesFromConnectionString(connectionString, ce)
+        val cluster                               = new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes))
         cluster.async.performGlobalConnect()
         cluster
       })
   }
 
-  /** Connect to a Couchbase cluster with a custom Set of [[SeedNode]].
+  /** Connect to a Couchbase cluster with a custom Set of [[com.couchbase.client.scala.env.SeedNode]].
     *
     * $DeferredErrors
     *

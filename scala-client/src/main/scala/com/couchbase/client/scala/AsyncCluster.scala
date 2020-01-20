@@ -27,9 +27,16 @@ import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionStringUtil
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
+import com.couchbase.client.scala.diagnostics.{
+  DiagnosticsOptions,
+  PingOptions,
+  WaitUntilReadyOptions
+}
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
-import com.couchbase.client.scala.manager.analytics.{AsyncAnalyticsIndexManager, ReactiveAnalyticsIndexManager}
+import com.couchbase.client.scala.manager.analytics.{
+  AsyncAnalyticsIndexManager,
+  ReactiveAnalyticsIndexManager
+}
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, ReactiveBucketManager}
 import com.couchbase.client.scala.manager.query.AsyncQueryIndexManager
 import com.couchbase.client.scala.manager.search.AsyncSearchIndexManager
@@ -119,7 +126,7 @@ class AsyncCluster(
     * [[Cluster]] for a blocking version.
     *
     * @param statement the N1QL statement to execute
-    * @param options   any query options - see [[QueryOptions]] for documentation
+    * @param options   any query options - see [[com.couchbase.client.scala.query.QueryOptions]] for documentation
     *
     * @return a `Future` containing a `Success(QueryResult)` (which includes any returned rows) if successful, else a
     *         `Failure`
@@ -134,7 +141,7 @@ class AsyncCluster(
     * [[Cluster]] for a blocking version.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes a [[QueryOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.query.QueryOptions]] instead, which supports all available options.
     *
     * @param statement the N1QL statement to execute
     * @param parameters provides named or positional parameters for queries parameterised that way.
@@ -165,7 +172,7 @@ class AsyncCluster(
     * [[Cluster]] for a blocking version.
     *
     * @param statement the Analytics query to execute
-    * @param options   any query options - see [[AnalyticsOptions]] for documentation
+    * @param options   any query options - see [[com.couchbase.client.scala.analytics.AnalyticsOptions]] for documentation
     *
     * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
@@ -213,7 +220,7 @@ class AsyncCluster(
                           )
                         )
                       })
-              )
+                )
           )
           .toFuture
 
@@ -255,7 +262,7 @@ class AsyncCluster(
     * @param indexName         the name of the search index to use
     * @param query             the FTS query to execute.  See
     *                          [[com.couchbase.client.scala.search.queries.SearchQuery]] for more
-    * @param options           the FTS query to execute.  See [[SearchOptions]] for how to construct
+    * @param options           the FTS query to execute.  See [[com.couchbase.client.scala.search.SearchOptions]] for how to construct
     *
     * @return a `Future` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
@@ -278,7 +285,7 @@ class AsyncCluster(
     * [[Cluster]] for a blocking version.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes a [[SearchOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.search.SearchOptions]] instead, which supports all available options.
     *
     * @param indexName         the name of the search index to use
     * @param query             the FTS query to execute.  See
@@ -315,23 +322,23 @@ class AsyncCluster(
       .toFuture
   }
 
-  /** Returns a [[DiagnosticsResult]], reflecting the SDK's current view of all its existing connections to the
+  /** Returns a `DiagnosticsResult`, reflecting the SDK's current view of all its existing connections to the
     * cluster.
     *
-    * @param reportId        this will be returned in the [[DiagnosticsResult]].  If not specified it defaults to a UUID.
+    * @param reportId        this will be returned in the `DiagnosticsResult`.  If not specified it defaults to a UUID.
     *
-    * @return a { @link DiagnosticsResult}
+    * @return a `DiagnosticsResult`
     */
   def diagnostics(reportId: String = UUID.randomUUID.toString): Future[DiagnosticsResult] = {
     diagnostics(DiagnosticsOptions(Some(reportId)))
   }
 
-  /** Returns a [[DiagnosticsResult]], reflecting the SDK's current view of all its existing connections to the
+  /** Returns a `DiagnosticsResult`, reflecting the SDK's current view of all its existing connections to the
     * cluster.
     *
     * @param options options to customize the report generation
     *
-    * @return a { @link DiagnosticsResult}
+    * @return a `DiagnosticsResult`
     */
   def diagnostics(options: DiagnosticsOptions): Future[DiagnosticsResult] = {
     Future(
@@ -349,12 +356,10 @@ class AsyncCluster(
   /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
     *
     * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
-    * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
-    * the functionality of both APIs as needed, which is [[.waitUntilReady]] is doing in its
-    * implementation as well.
+    * not wish to perform I/O, consider using `.diagnostics()` instead.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes a [[PingOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.diagnostics.PingOptions]] instead, which supports all available options.
     *
     * @param timeout the timeout to use for the operation
     *
@@ -369,9 +374,7 @@ class AsyncCluster(
   /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
     *
     * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
-    * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
-    * the functionality of both APIs as needed, which is [[.waitUntilReady]] is doing in its
-    * implementation as well.
+    * not wish to perform I/O, consider using `.diagnostics()` instead.
     *
     * @param options options to customize the ping
     *
@@ -402,7 +405,7 @@ class AsyncCluster(
     * and usable before moving on.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes a [[WaitUntilReadyOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.diagnostics.WaitUntilReadyOptions]] instead, which supports all available options.
     *
     * @param timeout the maximum time to wait until readiness.
     */
@@ -463,7 +466,7 @@ object AsyncCluster {
     connect(connectionString, ClusterOptions(PasswordAuthenticator(username, password)))
   }
 
-  /** Connect to a Couchbase cluster with custom [[Authenticator]].
+  /** Connect to a Couchbase cluster with custom `Authenticator`.
     *
     * $DeferredErrors
     *
@@ -476,13 +479,13 @@ object AsyncCluster {
     extractClusterEnvironment(connectionString, options)
       .map(ce => {
         val seedNodes = seedNodesFromConnectionString(connectionString, ce)
-        val cluster = new AsyncCluster(ce, options.authenticator, seedNodes)
+        val cluster   = new AsyncCluster(ce, options.authenticator, seedNodes)
         cluster.performGlobalConnect()
         cluster
       })
   }
 
-  /** Connect to a Couchbase cluster with a custom Set of [[SeedNode]].
+  /** Connect to a Couchbase cluster with a custom Set of [[com.couchbase.client.scala.env.SeedNode]].
     *
     * $DeferredErrors
     *
@@ -526,9 +529,9 @@ object AsyncCluster {
                           rows,
                           SearchHandler.parseSearchFacets(trailer),
                           SearchHandler.parseSearchMeta(response, trailer)
-                      )
-                  )
-            )
+                        )
+                    )
+              )
         )
         .toFuture
     ret.onComplete(_ => request.context.logicallyComplete())
@@ -546,8 +549,7 @@ object AsyncCluster {
     }
   }
 
-  private[client] def extractClusterEnvironment(opts: ClusterOptions
-                                               ): Try[ClusterEnvironment] = {
+  private[client] def extractClusterEnvironment(opts: ClusterOptions): Try[ClusterEnvironment] = {
     opts.environment match {
       case Some(env) => Success(env)
       case _         => ClusterEnvironment.Builder(owned = true).build

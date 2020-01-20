@@ -77,7 +77,7 @@ private[scala] object FutureConversions {
   }
 
   /**
-    * Wraps a {@link Request} and returns it in a {@link Mono}.
+    * Wraps a `Request` and returns it in a `SMono`.
     *
     * @param request               the request to wrap.
     * @param response              the full response to wrap, might not be the same as in the request.

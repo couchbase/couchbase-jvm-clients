@@ -43,7 +43,7 @@ case class InsertOptions(
     * some control over ensuring the success of the mutation's replication.  See
     * [[com.couchbase.client.scala.durability.Durability]].
     *
-    * If not specified, it defaults to [[Durability.Disabled]].
+    * If not specified, it defaults to [[com.couchbase.client.scala.durability.Durability.Disabled]].
     *
     * @return a copy of this with the change applied, for chaining.
     */
@@ -122,7 +122,7 @@ case class InsertOptions(
   /** Changes the transcoder used for this operation.
     *
     * The transcoder provides control over how JSON is converted and stored on the Couchbase Server.
-    * See [[Transcoder]] for more detail.
+    *
     *
     * If not specified it will default to to `transcoder()` in the
     * [[com.couchbase.client.scala.env.ClusterEnvironment]].

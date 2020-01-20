@@ -46,8 +46,9 @@ case class ReactiveViewResult(metaData: SMono[ViewMetaData], rows: SFlux[ViewRow
 /** An individual view result row.
   *
   * @define SupportedTypes this can be of any type for which an implicit
-  *                        [[com.couchbase.client.scala.codec.JsonDeserializer]] can be found: a list
-  *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
+  *                        `com.couchbase.client.scala.codec.JsonDeserializer` can be found: a list
+  *                        of types that are supported 'out of the box' is available at
+  *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]]
   */
 case class ViewRow(private val _content: Array[Byte]) {
 
@@ -109,9 +110,12 @@ case class ViewMetaData(private val debug: Option[Array[Byte]], totalRows: Long)
   /** Return the content, converted into the application's preferred representation.
     *
     * The content is JSON array, so a suitable  representation would be
-    * [[com.couchbase.client.scala.json.JsonObject]].
+    * `com.couchbase.client.scala.json.JsonObject`
     *
-    * @tparam T $SupportedTypes
+    * @define SupportedTypes this can be of any type for which an implicit
+    *                        com.couchbase.client.scala.codec.Conversions.JsonSerializer` can be found: a list
+    *                        of types that are supported 'out of the box' is available at
+    *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]]
     */
   def debugAs[T](implicit deserializer: JsonDeserializer[T]): Option[T] = {
     debug match {

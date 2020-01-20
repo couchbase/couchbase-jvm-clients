@@ -45,30 +45,24 @@ import scala.util.Try
   * @define Id              the unique identifier of the document
   * @define CAS             Couchbase documents all have a CAS (Compare-And-Set) field, a simple integer that allows
   *                         optimistic concurrency - e.g. it can detect if another agent has modified a document
-  *                         in-between this agent getting and modifying the document.  See **CHANGEME** for a full
-  *                        description.  The default is 0, which disables CAS checking.
+  *                         in-between this agent getting and modifying the document.  See
+  *                         [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]] for a full
+  *                         description.  The default is 0, which disables CAS checking.
   * @define Timeout         when the operation will timeout.  This will default to `timeoutConfig().kvTimeout()` in the
   *                         provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
   * @define RetryStrategy   provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
   *                         in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
-  * @define ErrorHandling   any [[scala.util.control.NonFatal]] error returned will derive ultimately from
-  *                         [[com.couchbase.client.core.error.CouchbaseException]].  If the exception also derives from
-  *                         [[com.couchbase.client.core.error.RetryableOperationException]]
-  *                         then the failure was most likely temporary and may succeed if the application tries it
-  *                        again.  (Though note that, in some cases, the operation may have in fact succeeded, and
-  *                         the server was unable to report this to the SDK.  So the application should consider
-  *                         carefully the result of reapplying the operation, and perhaps consider some more complex
-  *                         error handling logic, possibly including the use of
-  *                         [[Collection.getAllReplicas]]).  If the exception
-  *                         does not derive from
-  *                         [[com.couchbase.client.core.error.RetryableOperationException]]
-  *                         then this is indicative of a more
-  *                         permanent error or an application bug, that probably needs human review.
+  * @define ErrorHandling   any `scala.util.control.NonFatal` error returned will derive ultimately from
+  *                         `com.couchbase.client.core.error.CouchbaseException`.  See
+  *                         [[https://docs.couchbase.com/scala-sdk/1.0/howtos/error-handling.html the error handling docs]]
+  *                         for more detail.
   * @define Durability      writes in Couchbase are written to a single node, and from there the Couchbase Server will
   *                         take care of sending that mutation to any configured replicas.  This parameter provides
   *                         some control over ensuring the success of the mutation's replication.  See
   *                         [[com.couchbase.client.scala.durability.Durability]]
   *                         for a detailed discussion.
+  * @define Options         configure options that affect this operation
+  *
   * @author Graham Pople
   * @since 1.0.0
   */
@@ -85,7 +79,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * $OnlyBinary
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[AppendOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.AppendOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param content       the bytes to append
@@ -93,8 +87,8 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @param durability    $Durability
     * @param timeout       $Timeout
     *
-    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     * */
   def append(
@@ -118,8 +112,8 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @param content         the bytes to append
     * @param options       $Options
     *
-    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     * */
   def append(
@@ -138,7 +132,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * $OnlyBinary
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[PrependOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.PrependOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param content       the bytes to append
@@ -146,8 +140,8 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @param durability    $Durability
     * @param timeout       $Timeout
     *
-    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     * */
   def prepend(
@@ -170,8 +164,8 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @param content       the bytes to append
     * @param options       $Options
     *
-    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     * */
   def prepend(
@@ -189,7 +183,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * $OnlyCounter
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[IncrementOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.IncrementOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param delta         the amount to increment by
@@ -200,8 +194,8 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @param durability    $Durability
     * @param timeout       $Timeout
     *
-    * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     * */
   def increment(
@@ -232,8 +226,8 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @param delta         the amount to increment by
     * @param options       $Options
     *
-    * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     * */
   def increment(
@@ -255,7 +249,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * $OnlyCounter
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes an [[DecrementOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.DecrementOptions]] instead, which supports all available options.
     *
     * @param id            $Id
     * @param delta         the amount to decrement by, which should be a positive amount
@@ -266,8 +260,8 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @param durability    $Durability
     * @param timeout       $Timeout
     *
-    * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     * */
   def decrement(
@@ -298,8 +292,8 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @param delta         the amount to decrement by, which should be a positive amount
     * @param options       $Options
     *
-    * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be [[com
-    *         .couchbase.client.core.error.DocumentDoesNotExistException]], indicating the document could not be
+    * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
     * */
   def decrement(

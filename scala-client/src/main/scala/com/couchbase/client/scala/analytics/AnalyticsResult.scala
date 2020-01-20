@@ -34,11 +34,6 @@ import scala.util.{Failure, Success, Try}
   * @param rows            all rows returned from the analytics service
   * @param metaData            any additional information related to the Analytics query
   *
-  * @define SupportedTypes The rows can be converted into the user's desired type.  This can be any type for which an
-  *                        implicit `JsonDeserializer[T]` can be found, and can include
-  *                        [[com.couchbase.client.scala.json.JsonObject]], a case class, String,
-  *                        or one of a number of supported third-party JSON libraries.
-  *
   * @author Graham Pople
   * @since 1.0.0
   */
@@ -49,7 +44,10 @@ case class AnalyticsResult(
 
   /** All returned rows.  All rows are buffered from the analytics service first.
     *
-    * $SupportedTypes
+    * @tparam T The rows can be converted into the user's desired type.  This can be any type for which an
+    *                        implicit `JsonDeserializer[T]` can be found, and can include
+    *                        `com.couchbase.client.scala.json.JsonObject`, a case class, String,
+    *                        or one of a number of supported third-party JSON libraries.
     *
     * @return either `Success` if all rows could be decoded successfully, or a Failure containing the first error
     */
@@ -73,7 +71,10 @@ case class ReactiveAnalyticsResult(
 
   /** Return all rows, converted into the application's preferred representation.
     *
-    * @tparam T $SupportedTypes
+    * @tparam T this can be of any type for which an implicit
+    *   *                        `com.couchbase.client.scala.codec.Conversions.JsonSerializer` can be found: a list
+    *   *                        of types that are supported 'out of the box' is available at
+    *   *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]]
     */
   def rowsAs[T](implicit deserializer: JsonDeserializer[T]): SFlux[T] = {
     rows.map(
@@ -163,7 +164,10 @@ case class AnalyticsMetaData(
 
   /** Return any signature content, converted into the application's preferred representation.
     *
-    * @tparam T $SupportedTypes
+    * @tparam T The rows can be converted into the user's desired type.  This can be any type for which an
+    *                        implicit `JsonDeserializer[T]` can be found, and can include
+    *                        `com.couchbase.client.scala.json.JsonObject`, a case class, String,
+    *                        or one of a number of supported third-party JSON libraries.
     */
   def signatureAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     signatureContent match {

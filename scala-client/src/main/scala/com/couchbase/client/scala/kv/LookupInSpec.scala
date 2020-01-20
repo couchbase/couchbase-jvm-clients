@@ -21,7 +21,8 @@ package com.couchbase.client.scala.kv
   * @define Path           a valid path in the document, such as "foo.bar"
   * @define Xattr          Sets that this is an extended attribute (xattr) field (default is false).  Extended
   *                        Attributes (xattrs) are an advanced feature in which additional fields can be stored
-  *                        alongside a document.  See **CHANGEME** for a more detailed description.
+  *                        alongside a document.
+  *                        for a more detailed description.
   * @author Graham Pople
   * @since 1.0.0
   */
@@ -60,7 +61,12 @@ sealed trait LookupInSpec
 case class Get(private[scala] val path: String, private[scala] val _xattr: Boolean = false)
     extends LookupInSpec {
 
-  /** $Xattr */
+  /** Sets that this is an extended attribute (xattr) field (default is false).  Extended
+    * Attributes (xattrs) are an advanced feature in which additional fields can be stored
+    * alongside a document.
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def xattr: Get = {
     copy(path, _xattr = true)
   }
@@ -69,7 +75,12 @@ case class Get(private[scala] val path: String, private[scala] val _xattr: Boole
 case class Exists(private[scala] val path: String, private[scala] val _xattr: Boolean = false)
     extends LookupInSpec {
 
-  /** $Xattr */
+  /** Sets that this is an extended attribute (xattr) field (default is false).  Extended
+    * Attributes (xattrs) are an advanced feature in which additional fields can be stored
+    * alongside a document.
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def xattr: Exists = {
     copy(path, _xattr = true)
   }
@@ -78,7 +89,12 @@ case class Exists(private[scala] val path: String, private[scala] val _xattr: Bo
 case class Count(private[scala] val path: String, private[scala] val _xattr: Boolean = false)
     extends LookupInSpec {
 
-  /** $Xattr */
+  /** Sets that this is an extended attribute (xattr) field (default is false).  Extended
+    * Attributes (xattrs) are an advanced feature in which additional fields can be stored
+    * alongside a document.
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def xattr: Count = {
     copy(path, _xattr = true)
   }

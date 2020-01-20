@@ -153,7 +153,7 @@ object ClusterEnvironment {
       copy(scheduler = Some(scheduler))
     }
 
-    /** Sets the default [[com.couchbase.client.core.retry.RetryStrategy]] to use for all operations.
+    /** Sets the default `com.couchbase.client.core.retry.RetryStrategy` to use for all operations.
       *
       * @return this, for chaining
       */

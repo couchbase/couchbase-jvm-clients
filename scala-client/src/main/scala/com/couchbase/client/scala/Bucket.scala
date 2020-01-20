@@ -19,7 +19,12 @@ package com.couchbase.client.scala
 import java.util.UUID
 
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diagnostics.{ClusterState, HealthPinger, PingResult, WaitUntilReadyHelper}
+import com.couchbase.client.core.diagnostics.{
+  ClusterState,
+  HealthPinger,
+  PingResult,
+  WaitUntilReadyHelper
+}
 import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.diagnostics.{PingOptions, WaitUntilReadyOptions}
@@ -27,7 +32,10 @@ import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.manager.collection.CollectionManager
 import com.couchbase.client.scala.manager.view.ViewIndexManager
 import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions, TimeoutUtil}
-import com.couchbase.client.scala.util.DurationConversions.{javaDurationToScala, scalaDurationToJava}
+import com.couchbase.client.scala.util.DurationConversions.{
+  javaDurationToScala,
+  scalaDurationToJava
+}
 import com.couchbase.client.scala.view.{ViewOptions, ViewResult}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -96,7 +104,7 @@ class Bucket private[scala] (val async: AsyncBucket) {
     *
     * @param designDoc the view design document to use
     * @param viewName  the view to use
-    * @param options   any view query options - see [[ViewOptions]] for documentation
+    * @param options   any view query options - see [[com.couchbase.client.scala.view.ViewOptions]] for documentation
     *
     * @return a `Try` containing a `Success(ViewResult)` (which includes any returned rows) if successful, else a
     *         `Failure`
@@ -115,7 +123,7 @@ class Bucket private[scala] (val async: AsyncBucket) {
     * [[Bucket.async]] for an async version.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes a [[ViewOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.view.ViewOptions]] instead, which supports all available options.
     *
     * @param designDoc the view design document to use
     * @param viewName  the view to use
@@ -135,12 +143,10 @@ class Bucket private[scala] (val async: AsyncBucket) {
   /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
     *
     * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
-    * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
-    * the functionality of both APIs as needed, which is what [[.waitUntilReady]] is doing in its
-    * implementation as well.
+    * not wish to perform I/O, consider using `.diagnostics()` instead.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes a [[PingOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.diagnostics.PingOptions]] instead, which supports all available options.
     *
     * @param timeout the timeout to use for the operation
     *
@@ -153,9 +159,7 @@ class Bucket private[scala] (val async: AsyncBucket) {
   /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
     *
     * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
-    * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
-    * the functionality of both APIs as needed, which is what [[.waitUntilReady]] is doing in its
-    * implementation as well.
+    * not wish to perform I/O, consider using `.diagnostics()` instead.
     *
     * @param options options to customize the ping
     *
@@ -172,7 +176,7 @@ class Bucket private[scala] (val async: AsyncBucket) {
     * and usable before moving on.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes a [[WaitUntilReadyOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.diagnostics.WaitUntilReadyOptions]] instead, which supports all available options.
     *
     * @param timeout the maximum time to wait until readiness.
     */
