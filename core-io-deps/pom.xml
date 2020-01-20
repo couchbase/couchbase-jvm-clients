@@ -17,6 +17,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
+        <netty.version>4.1.45.Final</netty.version>
+
         <native.folder>${project.build.directory}/native</native.folder>
         <native.epoll.original>libnetty_transport_native_epoll_x86_64.so</native.epoll.original>
         <native.epoll.renamed>libcom_couchbase_client_core_deps_netty_transport_native_epoll_x86_64.so</native.epoll.renamed>
@@ -34,8 +36,18 @@
         <!-- Internal Dependencies -->
         <dependency>
             <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-            <version>4.1.45.Final</version>
+            <artifactId>netty-codec-http</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport-native-kqueue</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport-native-epoll</artifactId>
+            <version>${netty.version}</version>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
@@ -86,7 +98,13 @@
                             <artifactItems>
                                 <artifactItem>
                                     <groupId>io.netty</groupId>
-                                    <artifactId>netty-all</artifactId>
+                                    <artifactId>netty-transport-native-kqueue</artifactId>
+                                    <outputDirectory>${native.folder}</outputDirectory>
+                                    <includes>META-INF/native/*</includes>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>io.netty</groupId>
+                                    <artifactId>netty-transport-native-epoll</artifactId>
                                     <outputDirectory>${native.folder}</outputDirectory>
                                     <includes>META-INF/native/*</includes>
                                 </artifactItem>
