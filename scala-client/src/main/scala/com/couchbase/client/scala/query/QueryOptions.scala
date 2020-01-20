@@ -207,7 +207,7 @@ case class QueryOptions(
     copy(timeout = Option(timeout))
   }
 
-  /** Sets what retry strategy to use if the operation fails.  See [[RetryStrategy]] for details.
+  /** Sets what retry strategy to use if the operation fails.
     *
     * @param strategy the retry strategy to use
     *
@@ -235,7 +235,7 @@ case class QueryOptions(
     * an older client and a new server-configuration property has been added to the cluster).
     *
     * Note that the values will be passed through a JSON encoder, so do not provide already encoded JSON as the value. If
-    * you want to pass objects or arrays, you can use [[JsonObject]] and [[JsonArray]] respectively.
+    * you want to pass objects or arrays, you can use `JsonObject` and `JsonArray` respectively.
     *
     * @return a copy of this with the change applied, for chaining.
     */

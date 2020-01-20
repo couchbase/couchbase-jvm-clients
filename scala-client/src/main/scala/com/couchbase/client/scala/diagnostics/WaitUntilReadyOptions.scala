@@ -18,8 +18,10 @@ package com.couchbase.client.scala.diagnostics
 import com.couchbase.client.core.diagnostics.ClusterState
 import com.couchbase.client.core.service.ServiceType
 
-case class WaitUntilReadyOptions(serviceTypes: Set[ServiceType] = WaitUntilReadyOptions.AllServiceTypes,
-                                 desiredState: ClusterState = ClusterState.ONLINE) {
+case class WaitUntilReadyOptions(
+    serviceTypes: Set[ServiceType] = WaitUntilReadyOptions.AllServiceTypes,
+    desiredState: ClusterState = ClusterState.ONLINE
+) {
 
   /** The cluster state to wait for, usually ONLINE.
     *

@@ -264,7 +264,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
     * @param bucketName        the bucket to remove the index from.
     * @param indexNames        the indexes to poll.
     * @param watchPrimary      include the bucket's primary index.  If the bucket has no primary index, the operation
-    *                          will fail with [[IndexNotFoundException]]
+    *                          will fail with `IndexNotFoundException`
     * @param timeout           when the operation will timeout.
     * @param retryStrategy     $RetryStrategy
     */

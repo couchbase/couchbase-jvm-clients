@@ -17,7 +17,7 @@ package com.couchbase.client.scala.diagnostics
 
 case class DiagnosticsOptions(reportId: Option[String] = None) {
 
-  /** Sets a report ID that will be returned in the [[com.couchbase.client.core.diagnostics.DiagnosticsResult]].
+  /** Sets a report ID that will be returned in the `com.couchbase.client.core.diagnostics.DiagnosticsResult`.
     *
     * It defaults to a random string
     *

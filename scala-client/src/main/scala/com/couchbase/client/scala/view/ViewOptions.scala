@@ -228,7 +228,7 @@ case class ViewOptions(
     copy(timeout = Option(timeout))
   }
 
-  /** Sets what retry strategy to use if the operation fails.  See [[RetryStrategy]] for details.
+  /** Sets what retry strategy to use if the operation fails.
     *
     * @param strategy the retry strategy to use
     *

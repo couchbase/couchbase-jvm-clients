@@ -13,9 +13,10 @@ import scala.util.{Failure, Try}
   * @define CreatePath     Sets that intermediate paths should be created (default is false)
   * @define Xattr          Sets that this is an extended attribute (xattr) field (default is false).  Extended
   *                        Attributes (xattrs) are an advanced feature in which additional fields can be stored
-  *                        alongside a document.  See **CHANGEME** for a more detailed description.
+  *                        alongside a document.
   * @define SupportedTypes this can be of any type for which an implicit JsonSerializer can be found: a list
-  *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
+  *                        of types that are supported 'out of the box' is available at
+  *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]]
   * @define JsonSerializer      an implicit JsonSerializer.  For any supported type T this will be found automatically.
   * @author Graham Pople
   * @since 1.0.0
@@ -265,12 +266,20 @@ case class Insert(
 ) extends MutateInSpecStandard {
   override val typ: SubdocCommandType = SubdocCommandType.DICT_ADD
 
-  /** $Xattr */
+  /** Sets that this is an extended attribute (xattr) field (default is false).  Extended
+    * Attributes (xattrs) are an advanced feature in which additional fields can be stored
+    * alongside a document.
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def xattr: Insert = {
     copy(path, fragment, _xattr = true, _createPath = _createPath, _expandMacro = _expandMacro)
   }
 
-  /** $CreatePath */
+  /**  Sets that intermediate paths should be created (default is false)
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def createPath: Insert = {
     copy(path, fragment, _xattr, _createPath = true, _expandMacro)
   }
@@ -287,7 +296,12 @@ case class Replace(
     case _  => SubdocCommandType.REPLACE
   }
 
-  /** $Xattr */
+  /** Sets that this is an extended attribute (xattr) field (default is false).  Extended
+    * Attributes (xattrs) are an advanced feature in which additional fields can be stored
+    * alongside a document.
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def xattr: Replace = {
     copy(path, fragment, _xattr = true, _expandMacro = _expandMacro)
   }
@@ -313,12 +327,20 @@ case class Upsert(
 ) extends MutateInSpecStandard {
   override val typ: SubdocCommandType = SubdocCommandType.DICT_UPSERT
 
-  /** $Xattr */
+  /** Sets that this is an extended attribute (xattr) field (default is false).  Extended
+    * Attributes (xattrs) are an advanced feature in which additional fields can be stored
+    * alongside a document.
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def xattr: Upsert = {
     copy(path, fragment, _xattr = true, _createPath = _createPath, _expandMacro = _expandMacro)
   }
 
-  /** $CreatePath */
+  /**  Sets that intermediate paths should be created (default is false)
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def createPath: Upsert = {
     copy(path, fragment, _xattr, _createPath = true, _expandMacro)
   }
@@ -327,7 +349,12 @@ case class Upsert(
 case class Remove(path: String, private[scala] val _xattr: Boolean = false) extends MutateInSpec {
   override val typ: SubdocCommandType = SubdocCommandType.DELETE
 
-  /** $Xattr */
+  /** Sets that this is an extended attribute (xattr) field (default is false).  Extended
+    * Attributes (xattrs) are an advanced feature in which additional fields can be stored
+    * alongside a document.
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def xattr: Remove = {
     copy(path, _xattr = true)
   }
@@ -345,12 +372,20 @@ case class ArrayAppend(
 ) extends MutateInSpecStandard {
   override val typ: SubdocCommandType = SubdocCommandType.ARRAY_PUSH_LAST
 
-  /** $Xattr */
+  /** Sets that this is an extended attribute (xattr) field (default is false).  Extended
+    * Attributes (xattrs) are an advanced feature in which additional fields can be stored
+    * alongside a document.
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def xattr: ArrayAppend = {
     copy(path, fragment, _xattr = true, _createPath = _createPath, _expandMacro = _expandMacro)
   }
 
-  /** $CreatePath */
+  /**  Sets that intermediate paths should be created (default is false)
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def createPath: ArrayAppend = {
     copy(path, fragment, _xattr, _createPath = true, _expandMacro)
   }
@@ -365,12 +400,20 @@ case class ArrayPrepend(
 ) extends MutateInSpecStandard {
   override val typ: SubdocCommandType = SubdocCommandType.ARRAY_PUSH_FIRST
 
-  /** $Xattr */
+  /** Sets that this is an extended attribute (xattr) field (default is false).  Extended
+    * Attributes (xattrs) are an advanced feature in which additional fields can be stored
+    * alongside a document.
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def xattr: ArrayPrepend = {
     copy(path, fragment, _xattr = true, _createPath = _createPath, _expandMacro = _expandMacro)
   }
 
-  /** $CreatePath */
+  /**  Sets that intermediate paths should be created (default is false)
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def createPath: ArrayPrepend = {
     copy(path, fragment, _xattr, _createPath = true, _expandMacro)
   }
@@ -385,12 +428,20 @@ case class ArrayInsert(
 ) extends MutateInSpecStandard {
   override val typ: SubdocCommandType = SubdocCommandType.ARRAY_INSERT
 
-  /** $Xattr */
+  /** Sets that this is an extended attribute (xattr) field (default is false).  Extended
+    * Attributes (xattrs) are an advanced feature in which additional fields can be stored
+    * alongside a document.
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def xattr: ArrayInsert = {
     copy(path, fragment, _xattr = true, _createPath = _createPath, _expandMacro = _expandMacro)
   }
 
-  /** $CreatePath */
+  /**  Sets that intermediate paths should be created (default is false)
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def createPath: ArrayInsert = {
     copy(path, fragment, _xattr, _createPath = true, _expandMacro)
   }
@@ -405,12 +456,20 @@ case class ArrayAddUnique(
 ) extends MutateInSpecStandard {
   override val typ: SubdocCommandType = SubdocCommandType.ARRAY_ADD_UNIQUE
 
-  /** $Xattr */
+  /** Sets that this is an extended attribute (xattr) field (default is false).  Extended
+    * Attributes (xattrs) are an advanced feature in which additional fields can be stored
+    * alongside a document.
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def xattr: ArrayAddUnique = {
     copy(path, fragment, _xattr = true, _createPath = _createPath, _expandMacro = _expandMacro)
   }
 
-  /** $CreatePath */
+  /**  Sets that intermediate paths should be created (default is false)
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def createPath: ArrayAddUnique = {
     copy(path, fragment, _xattr, _createPath = true, _expandMacro)
   }
@@ -424,12 +483,20 @@ case class Increment(
 ) extends MutateInSpec {
   override val typ: SubdocCommandType = SubdocCommandType.COUNTER
 
-  /** $Xattr */
+  /** Sets that this is an extended attribute (xattr) field (default is false).  Extended
+    * Attributes (xattrs) are an advanced feature in which additional fields can be stored
+    * alongside a document.
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def xattr: Increment = {
     copy(path, delta, _xattr = true, _createPath)
   }
 
-  /** $CreatePath */
+  /**  Sets that intermediate paths should be created (default is false)
+    *
+    * @return an immutable copy of this, for chaining
+    */
   def createPath: Increment = {
     copy(path, delta, _xattr, _createPath = true)
   }
@@ -438,4 +505,5 @@ case class Increment(
     val bytes = delta.toString.getBytes(CharsetUtil.UTF_8)
     new SubdocMutateRequest.Command(typ, path, bytes, _createPath, _xattr, false, originalIndex)
   }
+
 }

@@ -29,7 +29,7 @@ object SearchScanConsistency {
   case object NotBounded extends SearchScanConsistency
 
   /** The query will block execution until any indexes used are consistent with (e.g. contain) the mutations in the
-    * provided [[MutationState]].
+    * provided `MutationState`.
     */
   case class ConsistentWith(ms: MutationState) extends SearchScanConsistency
 }

@@ -65,7 +65,7 @@ case class IncrementOptions(
     * some control over ensuring the success of the mutation's replication.  See
     * [[com.couchbase.client.scala.durability.Durability]].
     *
-    * If not specified, it defaults to [[Durability.Disabled]].
+    * If not specified, it defaults to [[com.couchbase.client.scala.durability.Durability.Disabled]].
     *
     * @return a copy of this with the change applied, for chaining.
     */

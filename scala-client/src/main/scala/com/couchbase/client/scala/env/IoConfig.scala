@@ -138,7 +138,7 @@ case class IoConfig(
     copy(configPollInterval = Some(value))
   }
 
-  /** Configures a [[com.couchbase.client.core.endpoint.CircuitBreaker]] to use for key-value operations.
+  /** Configures a `com.couchbase.client.core.endpoint.CircuitBreaker` to use for key-value operations.
     *
     * @return this, for chaining
     */
@@ -146,7 +146,7 @@ case class IoConfig(
     copy(kvCircuitBreakerConfig = Some(value))
   }
 
-  /** Configures a [[com.couchbase.client.core.endpoint.CircuitBreaker]] to use for query operations.
+  /** Configures a `com.couchbase.client.core.endpoint.CircuitBreaker` to use for query operations.
     *
     * @return this, for chaining
     */
@@ -154,7 +154,7 @@ case class IoConfig(
     copy(queryCircuitBreakerConfig = Some(value))
   }
 
-  /** Configures a [[com.couchbase.client.core.endpoint.CircuitBreaker]] to use for view operations.
+  /** Configures a `com.couchbase.client.core.endpoint.CircuitBreaker` to use for view operations.
     *
     * @return this, for chaining
     */
@@ -162,7 +162,7 @@ case class IoConfig(
     copy(viewCircuitBreakerConfig = Some(value))
   }
 
-  /** Configures a [[com.couchbase.client.core.endpoint.CircuitBreaker]] to use for search operations.
+  /** Configures a `com.couchbase.client.core.endpoint.CircuitBreaker` to use for search operations.
     *
     * @return this, for chaining
     */
@@ -170,7 +170,7 @@ case class IoConfig(
     copy(searchCircuitBreakerConfig = Some(value))
   }
 
-  /** Configures a [[com.couchbase.client.core.endpoint.CircuitBreaker]] to use for analytics operations.
+  /** Configures a `com.couchbase.client.core.endpoint.CircuitBreaker` to use for analytics operations.
     *
     * @return this, for chaining
     */
@@ -178,7 +178,7 @@ case class IoConfig(
     copy(analyticsCircuitBreakerConfig = Some(value))
   }
 
-  /** Configures a [[com.couchbase.client.core.endpoint.CircuitBreaker]] to use for management operations.
+  /** Configures a `com.couchbase.client.core.endpoint.CircuitBreaker` to use for management operations.
     *
     * @return this, for chaining
     */

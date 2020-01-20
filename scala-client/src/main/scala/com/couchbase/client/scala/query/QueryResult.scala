@@ -35,14 +35,15 @@ import scala.util.{Failure, Success, Try}
   * @param metaData            any additional information related to the query
   *
   * @define SupportedTypes The rows can be converted into the user's desired type.  This can be any type for which an
-  *                        implicit `JsonDeserializer[T]` can be found, and can include [[JsonObject]], a case class, String,
-  *                        or one of a number of supported third-party JSON libraries.
+  *                        implicit `JsonDeserializer[T]` can be found, and can include `JsonObject`, a case class, String,
+  *                        or one of a number of supported third-party JSON libraries; see
+  *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]] for a full list
   * @author Graham Pople
   * @since 1.0.0
   */
 case class QueryResult(private[scala] val rows: Seq[QueryChunkRow], metaData: QueryMetaData) {
 
-  /** Returns an [[Iterator]] of any returned rows.  All rows are buffered from the query service first.
+  /** Returns an `Iterator` of any returned rows.  All rows are buffered from the query service first.
     *
     * $SupportedTypes
     *
@@ -68,7 +69,7 @@ case class ReactiveQueryResult(
   /** A Flux of any returned rows, streamed directly from the query service.  If the query service returns an error
     * while returning the rows, it will be raised on this.
     *
-    * $SupportedTypes
+    * @tparam T any supported type; see [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]] for a full list
     */
   def rowsAs[T](implicit deserializer: JsonDeserializer[T]): SFlux[T] = {
     rows.map(row => {
@@ -144,8 +145,8 @@ private[scala] object QueryMetrics {
 /** Additional information returned by the query service aside from any rows and errors.
   *
   * @param requestId       the request identifier string of the query request
-  * @param clientContextId the client context id passed into [[QueryOptions]]
-  * @param metrics         metrics related to the query request, if they were enabled in [[QueryOptions]]
+  * @param clientContextId the client context id passed into [[com.couchbase.client.scala.query.QueryOptions]]
+  * @param metrics         metrics related to the query request, if they were enabled in [[com.couchbase.client.scala.query.QueryOptions]]
   * @param warnings        any warnings returned from the query service
   * @param status          the status returned from the query service
   */
@@ -163,7 +164,7 @@ case class QueryMetaData(
     *
     * Note a profile must first be requested with [[QueryOptions.profile]].
     *
-    * @tparam T $SupportedTypes
+    * @tparam T any supported type; see [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]] for a full list
     */
   def profileAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     _profileContent match {
@@ -174,7 +175,7 @@ case class QueryMetaData(
 
   /** Return any signature content, converted into the application's preferred representation.
     *
-    * @tparam T $SupportedTypes
+    * @tparam T any supported type; see [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]] for a full list
     */
   def signatureAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     _signatureContent match {

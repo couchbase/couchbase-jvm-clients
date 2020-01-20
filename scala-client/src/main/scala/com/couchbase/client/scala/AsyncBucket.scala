@@ -17,7 +17,12 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diagnostics.{ClusterState, HealthPinger, PingResult, WaitUntilReadyHelper}
+import com.couchbase.client.core.diagnostics.{
+  ClusterState,
+  HealthPinger,
+  PingResult,
+  WaitUntilReadyHelper
+}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.diagnostics.{PingOptions, WaitUntilReadyOptions}
@@ -102,7 +107,7 @@ class AsyncBucket private[scala] (
     *
     * @param designDoc the view design document to use
     * @param viewName  the view to use
-    * @param options   any view query options - see [[ViewOptions]] for documentation
+    * @param options   any view query options - see [[com.couchbase.client.scala.view.ViewOptions]] for documentation
     *
     * @return a `Future` containing a `Success(ViewResult)` (which includes any returned rows) if successful, else a
     *         `Failure`
@@ -130,7 +135,7 @@ class AsyncBucket private[scala] (
     * [[Bucket]] for a blocking version.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes a [[ViewOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.view.ViewOptions]] instead, which supports all available options.
     *
     * @param designDoc the view design document to use
     * @param viewName  the view to use
@@ -150,16 +155,14 @@ class AsyncBucket private[scala] (
   /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
     *
     * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
-    * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
-    * the functionality of both APIs as needed, which is [[.waitUntilReady]] is doing in its
-    * implementation as well.
+    * not wish to perform I/O, consider using `.diagnostics()` instead.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes a [[PingOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.diagnostics.PingOptions]] instead, which supports all available options.
     *
     * @param timeout the timeout to use for the operation
     *
-    * @return the `PingResult` once complete.
+    * @return the PingResult` once complete.
     */
   def ping(timeout: Option[Duration] = None): Future[PingResult] = {
     var opts = PingOptions()
@@ -170,9 +173,7 @@ class AsyncBucket private[scala] (
   /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
     *
     * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
-    * not wish to perform I/O, consider using the [[.diagnostics]] instead. You can also combine
-    * the functionality of both APIs as needed, which is [[.waitUntilReady]] is doing in its
-    * implementation as well.
+    * not wish to perform I/O, consider using `.diagnostics()` instead.
     *
     * @param options options to customize the ping
     *
@@ -203,7 +204,7 @@ class AsyncBucket private[scala] (
     * and usable before moving on.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
-    * esoteric, use the overload that takes a [[WaitUntilReadyOptions]] instead, which supports all available options.
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.diagnostics.WaitUntilReadyOptions]] instead, which supports all available options.
     *
     * @param timeout the maximum time to wait until readiness.
     */

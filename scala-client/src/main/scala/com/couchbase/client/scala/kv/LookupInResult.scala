@@ -24,8 +24,9 @@ import scala.util.{Failure, Success, Try}
   *
   * @define Index          the index of the [[LookupInSpec]] provided to the `lookupIn`
   * @define SupportedTypes this can be of any type for which an implicit
-  *                        [[com.couchbase.client.scala.codec.JsonDeserializer]] can be found: a list
-  *                        of types that are supported 'out of the box' is available at ***CHANGEME:TYPES***
+  *                        `com.couchbase.client.scala.codec.JsonDeserializer` can be found: a list
+  *                        of types that are supported 'out of the box' is available at
+  *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]]
   * @author Graham Pople
   * @since 1.0.0
   **/
@@ -84,7 +85,7 @@ case class LookupInResult(
     *
     * Important note: be careful with the naming similarity to the `exists` `LookupInSpec`, which will return a field
     * with this `exists(idx) == true` and
-    * [[LookupInResult.contentAs`[Boolean`](idx) == true|false]]
+    * `.contentAs[Boolean](idx) == true|false`
     *
     * @param index $Index
     */

@@ -33,7 +33,7 @@ case class IoEnvironment(
     private[scala] val eventLoopThreadCount: Option[Int] = None
 ) {
 
-  /** Sets the [[EventLoopGroup]] to be used for config traffic.
+  /** Sets the `EventLookGroup` to be used for config traffic.
     *
     * @return this, for chaining
     */
@@ -41,7 +41,7 @@ case class IoEnvironment(
     copy(managerEventLoopGroup = Some(value))
   }
 
-  /** Sets the [[EventLoopGroup]] to be used for key/value traffic.
+  /** Sets the `EventLookGroup` to be used for key/value traffic.
     *
     * @return this, for chaining
     */
@@ -49,7 +49,7 @@ case class IoEnvironment(
     copy(kvEventLoopGroup = Some(value))
   }
 
-  /** Sets the [[EventLoopGroup]] to be used for query traffic.
+  /** Sets the `EventLookGroup` to be used for query traffic.
     *
     * @return this, for chaining
     */
@@ -57,7 +57,7 @@ case class IoEnvironment(
     copy(queryEventLoopGroup = Some(value))
   }
 
-  /** Sets the [[EventLoopGroup]] to be used for analytics traffic.
+  /** Sets the `EventLookGroup` to be used for analytics traffic.
     *
     * @return this, for chaining
     */
@@ -65,7 +65,7 @@ case class IoEnvironment(
     copy(analyticsEventLoopGroup = Some(value))
   }
 
-  /** Sets the [[EventLoopGroup]] to be used for search traffic.
+  /** Sets the `EventLookGroup` to be used for search traffic.
     *
     * @return this, for chaining
     */
@@ -73,7 +73,7 @@ case class IoEnvironment(
     copy(searchEventLoopGroup = Some(value))
   }
 
-  /** Sets the [[EventLoopGroup]] to be used for view traffic.
+  /** Sets the `EventLookGroup` to be used for view traffic.
     *
     * @return this, for chaining
     */

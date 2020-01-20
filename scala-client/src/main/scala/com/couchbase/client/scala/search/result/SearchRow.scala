@@ -53,7 +53,8 @@ case class SearchRow(
 
   /** If `explain` was set on the `SearchQuery` this will return an explanation of the match.
     *
-    * It can be returned in any support JSON type, e.g. [[com.couchbase.client.scala.json.JsonObject]].
+    * It can be returned in any supported JSON type, e.g. `com.couchbase.client.scala.json.JsonObject`.
+    * See a full list at [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]]
     */
   def explanationAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     _explanation.flatMap(v => deserializer.deserialize(v))

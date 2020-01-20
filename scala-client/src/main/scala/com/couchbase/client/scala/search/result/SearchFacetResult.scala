@@ -15,14 +15,13 @@
  */
 
 package com.couchbase.client.scala.search.result
-import com.couchbase.client.scala.manager.user.Group
 import com.couchbase.client.scala.util.CouchbasePickler
 
 /**
   * Base interface for all facet results.
   *
-  * @define name    the name of the { @link SearchFacet} this result corresponds to.
-  * @define field   the field the { @link SearchFacet} was targeting.
+  * @define name    the name of the [[com.couchbase.client.scala.search.facet.SearchFacet]] this result corresponds to.
+  * @define field   the field the [[com.couchbase.client.scala.search.facet.SearchFacet]] was targeting.
   * @define total   the total number of valued facet results (it doesn't include missing).
   * @define missing the number of results that couldn't be faceted, missing the
   *                 adequate value. No matter how many more
@@ -67,13 +66,19 @@ object SearchFacetResult {
   }
 
   /**
-    * Represents the result for a [[com.couchbase.client.scala.search.facet.DateRangeFacet]].
+    * Represents the result for a [[com.couchbase.client.scala.search.facet.SearchFacet.DateRangeFacet]].
     *
-    * @param name    $name
-    * @param field   $field
-    * @param total   $total
-    * @param missing $missing
-    * @param other   $other
+    * @param name    the name of the [[com.couchbase.client.scala.search.facet.SearchFacet]] this result corresponds to.
+    * @param field   the field the [[com.couchbase.client.scala.search.facet.SearchFacet]] was targeting.
+    * @param total   the total number of valued facet results (it doesn't include missing).
+    * @param missing the number of results that couldn't be faceted, missing the
+    *                 adequate value. No matter how many more
+    *                 buckets are added to the original facet, these
+    *                 result won't ever be included in one.
+    * @param other   the number of results that could have been faceted (because
+    *                 they have a value for the facet's field) but
+    *                 weren't, due to not having a bucket in which they belong.
+    *                 Adding a bucket can result in these results being faceted.
     *
     * @since 1.0.0
     */
@@ -92,13 +97,19 @@ object SearchFacetResult {
   }
 
   /**
-    * Represents the result for a [[com.couchbase.client.scala.search.facet.NumericRangeFacet]].
+    * Represents the result for a [[com.couchbase.client.scala.search.facet.SearchFacet.NumericRangeFacet]].
     *
-    * @param name    $name
-    * @param field   $field
-    * @param total   $total
-    * @param missing $missing
-    * @param other   $other
+    * @param name    the name of the [[com.couchbase.client.scala.search.facet.SearchFacet]] this result corresponds to.
+    * @param field   the field the [[com.couchbase.client.scala.search.facet.SearchFacet]] was targeting.
+    * @param total   the total number of valued facet results (it doesn't include missing).
+    * @param missing the number of results that couldn't be faceted, missing the
+    *                 adequate value. No matter how many more
+    *                 buckets are added to the original facet, these
+    *                 result won't ever be included in one.
+    * @param other   the number of results that could have been faceted (because
+    *                 they have a value for the facet's field) but
+    *                 weren't, due to not having a bucket in which they belong.
+    *                 Adding a bucket can result in these results being faceted.
     *
     * @since 1.0.0
     */
@@ -123,13 +134,19 @@ object SearchFacetResult {
   }
 
   /**
-    * Represents the result for a [[com.couchbase.client.scala.search.facet.TermFacet]].
+    * Represents the result for a [[com.couchbase.client.scala.search.facet.SearchFacet.TermFacet]].
     *
-    * @param name    $name
-    * @param field   $field
-    * @param total   $total
-    * @param missing $missing
-    * @param other   $other
+    * @param name    the name of the [[com.couchbase.client.scala.search.facet.SearchFacet]] this result corresponds to.
+    * @param field   the field the [[com.couchbase.client.scala.search.facet.SearchFacet]] was targeting.
+    * @param total   the total number of valued facet results (it doesn't include missing).
+    * @param missing the number of results that couldn't be faceted, missing the
+    *                 adequate value. No matter how many more
+    *                 buckets are added to the original facet, these
+    *                 result won't ever be included in one.
+    * @param other   the number of results that could have been faceted (because
+    *                 they have a value for the facet's field) but
+    *                 weren't, due to not having a bucket in which they belong.
+    *                 Adding a bucket can result in these results being faceted.
     *
     * @since 1.0.0
     */

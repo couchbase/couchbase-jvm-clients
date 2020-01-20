@@ -117,7 +117,7 @@ object SearchRowLocations {
 }
 
 /** An FTS result row location indicates at which position a given term occurs inside a given field.
-  * In case the field is an array, `arrayPositions`` will indicate which index/indices in the
+  * In case the field is an array, `arrayPositions` will indicate which index/indices in the
   * array contain the term.
   *
   * @since 1.0.0

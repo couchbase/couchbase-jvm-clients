@@ -48,7 +48,7 @@ case class GetOptions(
   }
 
   /** Projection is an advanced feature allowing one or more fields to be fetched from a JSON
-    * document, and the results combined into a [[json.JsonObject]] result.
+    * document, and the results combined into a `JsonObject` result.
     *
     * It combines the efficiency of a Sub-Document fetch, in that only specific fields need to be retrieved, with
     * the ease-of-handling of a regular fetch, in that the results can be handled as one JSON.
@@ -97,7 +97,7 @@ case class GetOptions(
   /** Changes the transcoder used for this operation.
     *
     * The transcoder provides control over how JSON is converted and stored on the Couchbase Server.
-    * See [[Transcoder]] for more detail.
+    *
     *
     * If not specified it will default to to `transcoder()` in the
     * [[com.couchbase.client.scala.env.ClusterEnvironment]].

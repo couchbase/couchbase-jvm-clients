@@ -128,7 +128,7 @@ object SearchSort {
 
 }
 
-/** The type of the field used for a [[FieldSort]]. */
+/** The type of the field used for a [[com.couchbase.client.scala.search.sort.SearchSort.FieldSort]]. */
 sealed trait FieldSortType
 
 object FieldSortType {
@@ -138,7 +138,7 @@ object FieldSortType {
   case object Date   extends FieldSortType
 }
 
-/** The mode of a [[FieldSort]]. */
+/** The mode of a [[com.couchbase.client.scala.search.sort.SearchSort.FieldSort]]. */
 sealed trait FieldSortMode
 
 object FieldSortMode {
@@ -147,7 +147,7 @@ object FieldSortMode {
   case object Max     extends FieldSortMode
 }
 
-/** The missing behaviour for a [[FieldSort]]. */
+/** The missing behaviour for a [[com.couchbase.client.scala.search.sort.SearchSort.FieldSort]]. */
 sealed trait FieldSortMissing
 
 object FieldSortMissing {
