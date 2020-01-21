@@ -74,7 +74,7 @@ public class BucketSettings {
     @JsonProperty("name") final String name,
     @JsonProperty("controllers") final Map<String, String> controllers,
     @JsonProperty("quota") final Map<String, Long> quota,
-    @JsonProperty("numReplicas") final int numReplicas,
+    @JsonProperty("replicaNumber") final int numReplicas,
     @JsonProperty("replicaIndex") final boolean replicaIndex,
     @JsonProperty("maxTTL") final int maxTTL,
     @JsonProperty("compressionMode") final CompressionMode compressionMode,

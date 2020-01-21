@@ -175,6 +175,21 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     assertThrows(BucketNotFoundException.class, () -> buckets.updateBucket(BucketSettings.create("foobar")));
   }
 
+  @Test
+  void createWithMoreThanOneReplica() {
+    String name = UUID.randomUUID().toString();
+
+    buckets.createBucket(BucketSettings.create(name).numReplicas(3));
+    waitUntilHealthy(name);
+
+    BucketSettings bucket = buckets.getBucket(name);
+    assertEquals(3, bucket.numReplicas());
+
+    buckets.dropBucket(name);
+    waitUntilDropped(name);
+    assertFalse(buckets.getAllBuckets().containsKey(name));
+  }
+
   /**
    * Helper method to assert simple invariants for the bucket which has been created by the {@link JavaIntegrationTest}.
    */
