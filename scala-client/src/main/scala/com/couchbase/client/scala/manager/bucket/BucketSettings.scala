@@ -202,6 +202,7 @@ case class BucketSettings(
     flushEnabled: Boolean,
     @upickle.implicits.key("quota")
     ramQuotaMB: Int,
+    @upickle.implicits.key("replicaNumber")
     numReplicas: Int,
     @upickle.implicits.key("replicaIndex")
     replicaIndexes: Boolean,
