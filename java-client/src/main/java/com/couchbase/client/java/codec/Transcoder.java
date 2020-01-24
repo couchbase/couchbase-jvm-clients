@@ -62,7 +62,7 @@ public interface Transcoder {
     private final byte[] encoded;
     private final int flags;
 
-    EncodedValue(final byte[] encoded, final int flags) {
+    public EncodedValue(final byte[] encoded, final int flags) {
       this.encoded = encoded;
       this.flags = flags;
     }
