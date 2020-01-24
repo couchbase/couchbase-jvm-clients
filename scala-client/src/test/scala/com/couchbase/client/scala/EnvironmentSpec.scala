@@ -4,7 +4,8 @@ import com.couchbase.client.scala.env._
 import org.junit.jupiter.api.Test
 
 import scala.concurrent.duration.Duration
-import scala.util.Success
+import scala.util.{Failure, Success, Try}
+import concurrent.duration._
 
 class EnvironmentSpec {
   @Test
@@ -94,4 +95,69 @@ class EnvironmentSpec {
       .get
     env.shutdown()
   }
+
+  @Test
+  def systemPropertiesShouldOverride(): Unit = {
+    System.setProperty("com.couchbase.env.timeout.kvTimeout", "10s")
+    System.setProperty("com.couchbase.env.timeout.queryTimeout", "15s")
+
+    val env = ClusterEnvironment.builder
+      .timeoutConfig(
+        TimeoutConfig()
+          .kvTimeout(5.seconds)
+      )
+      .build
+      .get
+
+    assert(env.timeoutConfig.kvTimeout().getSeconds == 10)
+    assert(env.timeoutConfig.queryTimeout().getSeconds == 15)
+  }
+
+  @Test
+  def closeUnownedEnvironment(): Unit = {
+    val clusterTry: Try[Cluster] = ClusterEnvironment.builder
+    // Customize settings here
+    .build
+      .flatMap(
+        env =>
+          Cluster.connect(
+            "1.2.3.4",
+            ClusterOptions
+              .create("username", "password")
+              .environment(env)
+          )
+      )
+
+    clusterTry match {
+      case Success(cluster) =>
+        assert(!cluster.env.owned)
+
+        // Shutdown gracefully
+        cluster.disconnect()
+        cluster.env.shutdown()
+
+        assert(cluster.env.threadPool.isShutdown)
+        assert(cluster.env.threadPool.isTerminated)
+    }
+  }
+
+  @Test
+  def closeOwnedEnvironment(): Unit = {
+    val clusterTry: Try[Cluster] = Cluster.connect("1.2.3.4", "username", "password")
+
+    clusterTry match {
+      case Success(cluster) =>
+        assert(cluster.env.owned)
+
+        // Shutdown gracefully
+        cluster.disconnect()
+
+        assert(cluster.env.threadPool.isShutdown)
+        assert(cluster.env.threadPool.isTerminated)
+
+        // App should not shutdown an owned env, but make sure it's harmless
+        cluster.env.shutdown()
+    }
+  }
+
 }

@@ -44,7 +44,7 @@ import com.couchbase.client.scala.manager.analytics.{
   AnalyticsIndexManager,
   ReactiveAnalyticsIndexManager
 }
-import com.couchbase.client.scala.env.SeedNode
+import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.manager.analytics.{
   AnalyticsIndexManager,
   ReactiveAnalyticsIndexManager
@@ -84,7 +84,9 @@ import com.couchbase.client.scala.util.DurationConversions._
   */
 class ReactiveCluster(val async: AsyncCluster) {
   private[scala] implicit val ec: ExecutionContext = async.env.ec
-  private val env                                  = async.env
+
+  /** The environment used to create this cluster */
+  val env: ClusterEnvironment = async.env
 
   /** The ReactiveUserManager provides programmatic access to and creation of users and groups. */
   @Stability.Volatile
@@ -331,7 +333,7 @@ class ReactiveCluster(val async: AsyncCluster) {
       .javaMonoToScalaMono(async.core.shutdown(timeout))
       .`then`(SMono.defer(() => {
         if (env.owned) {
-          env.shutdownReactive(timeout)
+          env.shutdownInternal(timeout)
         } else {
           SMono.empty[Unit]
         }

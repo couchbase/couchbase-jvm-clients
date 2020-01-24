@@ -76,9 +76,12 @@ class AsyncCluster(
     private[scala] val seedNodes: Set[SeedNode]
 ) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
+
+  /** The environment used to create this cluster */
+  val env: ClusterEnvironment = environment
+
   private[scala] val core =
     Core.create(environment.coreEnv, authenticator, seedNodes.map(_.toCore).asJava)
-  private[scala] val env                        = environment
   private[scala] val hp                         = HandlerBasicParams(core, env)
   private[scala] val searchTimeout              = javaDurationToScala(env.timeoutConfig.searchTimeout())
   private[scala] val analyticsTimeout           = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
@@ -314,7 +317,7 @@ class AsyncCluster(
       .javaMonoToScalaMono(core.shutdown(timeout))
       .`then`(SMono.defer(() => {
         if (env.owned) {
-          env.shutdownReactive(timeout)
+          env.shutdownInternal(timeout)
         } else {
           SMono.empty[Unit]
         }

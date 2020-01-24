@@ -53,7 +53,7 @@ import scala.util.Try
   *
   * These can be created through the functions in the companion object.
   *
-  * @param env the environment used to create this
+  * @param _env the environment used to create this
   * @param ec  an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
   *            opened in the normal way, starting from functions in [[Cluster]]
   *
@@ -61,14 +61,14 @@ import scala.util.Try
   * @since 1.0.0
   */
 class Cluster private[scala] (
-    env: => ClusterEnvironment,
+    _env: => ClusterEnvironment,
     authenticator: Authenticator,
     seedNodes: Set[SeedNode]
 ) {
-  private[scala] implicit val ec: ExecutionContext = env.ec
+  private[scala] implicit val ec: ExecutionContext = _env.ec
 
   /** Access an asynchronous version of this API. */
-  val async = new AsyncCluster(env, authenticator, seedNodes)
+  val async = new AsyncCluster(_env, authenticator, seedNodes)
 
   /** Access a reactive version of this API. */
   lazy val reactive = new ReactiveCluster(async)
@@ -89,6 +89,9 @@ class Cluster private[scala] (
 
   @Stability.Volatile
   lazy val analyticsIndexes = new AnalyticsIndexManager(reactive.analyticsIndexes)
+
+  /** The environment used to create this cluster */
+  def env: ClusterEnvironment = _env
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *
@@ -114,7 +117,7 @@ class Cluster private[scala] (
   def query(statement: String, options: QueryOptions): Try[QueryResult] = {
     val timeout: java.time.Duration = options.timeout match {
       case Some(v) => v
-      case _       => env.timeoutConfig.queryTimeout()
+      case _       => _env.timeoutConfig.queryTimeout()
     }
 
     AsyncUtils.block(async.query(statement, options))
@@ -141,7 +144,7 @@ class Cluster private[scala] (
   def query(
       statement: String,
       parameters: QueryParameters = QueryParameters.None,
-      timeout: Duration = env.timeoutConfig.queryTimeout(),
+      timeout: Duration = _env.timeoutConfig.queryTimeout(),
       adhoc: Boolean = true
   ): Try[QueryResult] = {
     AsyncUtils.block(async.query(statement, parameters, timeout, adhoc))
@@ -183,7 +186,7 @@ class Cluster private[scala] (
   def analyticsQuery(
       statement: String,
       parameters: AnalyticsParameters = AnalyticsParameters.None,
-      timeout: Duration = env.timeoutConfig.queryTimeout()
+      timeout: Duration = _env.timeoutConfig.queryTimeout()
   ): Try[AnalyticsResult] = {
     AsyncUtils.block(
       async.analyticsQuery(statement, parameters, timeout)
@@ -241,7 +244,7 @@ class Cluster private[scala] (
     *
     * @param timeout how long the disconnect is allowed to take; defaults to `disconnectTimeout` on the environment
     */
-  def disconnect(timeout: Duration = env.timeoutConfig.disconnectTimeout()): Unit = {
+  def disconnect(timeout: Duration = _env.timeoutConfig.disconnectTimeout()): Unit = {
     reactive.disconnect(timeout).block()
   }
 

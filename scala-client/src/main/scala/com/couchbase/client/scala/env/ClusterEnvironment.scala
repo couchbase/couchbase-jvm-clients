@@ -271,17 +271,32 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
     shutdownReactive(timeout).block()
 
   def shutdownReactive(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): SMono[Unit] = {
-    FutureConversions
-      .javaMonoToScalaMono(
-        coreEnv
-          .shutdownReactive(timeout)
-      )
-      .then(SMono.defer[Unit](() => {
-        threadPool.shutdownNow()
-        defaultScheduler.dispose()
+    SMono.defer(() => {
+      if (owned) {
         SMono.empty
-      }))
-      .timeout(timeout)
+      } else {
+        shutdownInternal(timeout)
+      }
+    })
   }
 
+  private[scala] def shutdownInternal(timeout: Duration): SMono[Unit] = {
+    SMono.defer(() => {
+      if (threadPool.isShutdown) {
+        SMono.empty
+      } else {
+        FutureConversions
+          .javaMonoToScalaMono(
+            coreEnv
+              .shutdownReactive(timeout)
+          )
+          .then(SMono.defer[Unit](() => {
+            threadPool.shutdownNow()
+            defaultScheduler.dispose()
+            SMono.empty
+          }))
+          .timeout(timeout)
+      }
+    })
+  }
 }
