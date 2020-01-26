@@ -9,6 +9,7 @@ import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.ClusterAwareIntegrationTest
 import io.circe.Decoder
 import com.github.plokhotnyuk.jsoniter_scala.macros.named
+import com.github.plokhotnyuk.jsoniter_scala.macros.named
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
@@ -64,6 +65,16 @@ class JsonInteropSpec extends ScalaIntegrationTest {
   }
 
   val ReferenceUser = User("John Smith", 29, List(Address("123 Fake Street")))
+
+  case class User2(
+      @named("name") n: String,
+      @named("age") a: Int,
+      @named("addresses") s: Seq[Address]
+  )
+  object User2 {
+    implicit val codec: Codec[User2] = Codec.codec
+  }
+  val ReferenceUser2 = User2("John Smith", 29, List(Address("123 Fake Street")))
 
   object Source {
 
@@ -135,6 +146,11 @@ class JsonInteropSpec extends ScalaIntegrationTest {
     case object CouchbaseEncodedCaseClass extends Source {
       def insert(id: String): Unit = {
         assert(coll.insert(id, ReferenceUser).isSuccess)
+      }
+    }
+    case object CouchbaseEncodedCaseClassWithFieldNameAlias extends Source {
+      def insert(id: String): Unit = {
+        assert(coll.insert(id, ReferenceUser2).isSuccess)
       }
     }
 
@@ -290,6 +306,13 @@ class JsonInteropSpec extends ScalaIntegrationTest {
         assert(c == ReferenceUser)
       }
     }
+    case object CouchbaseCaseClassWithFieldNameAlias extends Sink {
+      def decode(docId: String): Unit = {
+        val in = coll.get(docId).get
+        val c  = in.contentAs[User2].get
+        assert(c == ReferenceUser2)
+      }
+    }
 
     case object Jackson extends Sink {
       import com.fasterxml.jackson.databind.ObjectMapper
@@ -393,6 +416,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
       Source.JsonIterCaseClass,
       Source.UpickleCaseClassToAST,
       Source.CouchbaseEncodedCaseClass,
+      Source.CouchbaseEncodedCaseClassWithFieldNameAlias,
       //      Source.JacksonEncodedString,
       //      Source.JacksonEncodedCaseClass,
       Source.CirceAST,
@@ -407,6 +431,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
       Sink.Jsoniter,
       Sink.Upickle,
       Sink.CouchbaseCaseClass,
+      Sink.CouchbaseCaseClassWithFieldNameAlias,
       //      Sink.Jackson,
       Sink.CirceAST,
       Sink.String,
