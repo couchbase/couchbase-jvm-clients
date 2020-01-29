@@ -16,6 +16,8 @@
 
 package com.couchbase.client.test;
 
+// CHECKSTYLE:OFF IllegalImport - Allow unbundled Jackson
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;

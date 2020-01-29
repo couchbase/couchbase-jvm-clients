@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.json;
 
+// CHECKSTYLE:OFF IllegalImport - Allow unbundled Jackson
+
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
