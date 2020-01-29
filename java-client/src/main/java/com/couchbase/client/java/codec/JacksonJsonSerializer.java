@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.codec;
 
+// CHECKSTYLE:OFF IllegalImport - Allow unbundled Jackson
+
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.java.json.JsonObject;

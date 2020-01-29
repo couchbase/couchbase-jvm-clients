@@ -16,6 +16,8 @@
 
 package com.couchbase.client.test;
 
+// CHECKSTYLE:OFF IllegalImport - Allow unbundled Jackson
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -32,7 +34,6 @@ import java.io.IOException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
