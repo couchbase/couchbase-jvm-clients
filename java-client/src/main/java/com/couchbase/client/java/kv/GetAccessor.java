@@ -18,21 +18,23 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.*;
-import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.kv.*;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.msg.kv.CodecFlags;
+import com.couchbase.client.core.msg.kv.GetAndLockRequest;
+import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
+import com.couchbase.client.core.msg.kv.GetRequest;
+import com.couchbase.client.core.msg.kv.SubDocumentField;
+import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
+import com.couchbase.client.core.msg.kv.SubdocGetRequest;
+import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.projections.ProjectionsApplier;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
 import static java.nio.charset.StandardCharsets.UTF_8;

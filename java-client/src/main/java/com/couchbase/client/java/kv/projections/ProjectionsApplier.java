@@ -15,17 +15,14 @@
  */
 package com.couchbase.client.java.kv.projections;
 
-import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.projections.JsonPathParser;
 import com.couchbase.client.core.projections.PathArray;
 import com.couchbase.client.core.projections.PathElement;
 import com.couchbase.client.core.projections.PathObjectOrField;
-import com.couchbase.client.java.codec.JacksonJsonSerializer;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -37,10 +34,10 @@ import java.util.List;
  *
  * @since 3.0.0
  */
+@Stability.Internal
 public class ProjectionsApplier {
-  private ProjectionsApplier() { }
 
-  private static final ObjectMapper mapper = new ObjectMapper();
+  private ProjectionsApplier() { }
 
   static Object parseContent(byte[] content) {
     byte first = content[0];
