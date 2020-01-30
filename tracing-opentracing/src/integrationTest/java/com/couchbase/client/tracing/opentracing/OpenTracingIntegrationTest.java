@@ -65,7 +65,7 @@ class OpenTracingIntegrationTest extends ClusterAwareIntegrationTest {
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
-    bucket.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(Duration.ofSeconds(15));
   }
 
   @AfterAll
