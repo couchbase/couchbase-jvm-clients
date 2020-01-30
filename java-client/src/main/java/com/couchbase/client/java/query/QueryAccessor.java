@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
@@ -223,11 +224,16 @@ public class QueryAccessor {
         JsonObject query = JsonObject.create();
         query.put("statement", statement);
         query.put("timeout", encodeDurationToMs(original.timeout()));
+        query.put(
+          "client_context_id",
+          options.clientContextId() != null ? options.clientContextId() : UUID.randomUUID().toString()
+        );
 
         if (enhancedPreparedEnabled) {
             query.put("auto_execute", true);
             options.injectParams(query);
         }
+
 
         InternalSpan span = core.context().environment().requestTracer()
           .internalSpan("prepare", original.internalSpan().toRequestSpan());
