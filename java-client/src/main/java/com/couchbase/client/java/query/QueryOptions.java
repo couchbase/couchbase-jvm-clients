@@ -384,6 +384,10 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
       return serializer;
     }
 
+    public String clientContextId() {
+      return clientContextId;
+    }
+
     @Stability.Internal
     public void injectParams(final JsonObject queryJson) {
       queryJson.put("client_context_id", clientContextId == null ? UUID.randomUUID().toString() : clientContextId);
