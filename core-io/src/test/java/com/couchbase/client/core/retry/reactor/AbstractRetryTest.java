@@ -81,8 +81,10 @@ public class AbstractRetryTest {
         return null;
       }
     };
-
-    assertTrue(abstractRetry.calculateTimeout().toEpochMilli() >= (1000L + Instant.now().toEpochMilli()));
+    Instant oneSecondFromNow = Instant.now().plusSeconds(1);
+    Instant timeout = abstractRetry.calculateTimeout();
+    assertTrue(timeout.toEpochMilli() >= oneSecondFromNow.toEpochMilli(),
+        "timeout " + timeout  + " was not >= " + oneSecondFromNow);
   }
 
   @Test
