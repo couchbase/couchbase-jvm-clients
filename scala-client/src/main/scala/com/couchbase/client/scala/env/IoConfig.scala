@@ -75,6 +75,14 @@ case class IoConfig(
     copy(mutationTokensEnabled = value)
   }
 
+  /** Configures that DNS SRV should be used.
+    *
+    * @return this, for chaining
+    */
+  def enableDnsSrv(value: Boolean): IoConfig = {
+    copy(dnsSrvEnabled = Some(value))
+  }
+
   /** Configures whether network traffic should be captured on one or more services.
     *
     * @return this, for chaining
@@ -185,5 +193,6 @@ case class IoConfig(
   def managerCircuitBreakerConfig(value: CircuitBreakerConfig): IoConfig = {
     copy(managerCircuitBreakerConfig = Some(value))
   }
+
 
 }

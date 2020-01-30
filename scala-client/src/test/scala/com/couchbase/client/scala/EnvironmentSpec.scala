@@ -160,4 +160,17 @@ class EnvironmentSpec {
     }
   }
 
+  @Test
+  def dnsSrv() {
+    val env = ClusterEnvironment.builder
+      .ioConfig(
+        IoConfig()
+          .enableDnsSrv(true)
+      )
+      .build
+      .get
+    assert(env.coreEnv.ioConfig().dnsSrvEnabled())
+    env.shutdown()
+  }
+
 }
