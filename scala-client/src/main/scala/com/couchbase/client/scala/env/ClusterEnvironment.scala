@@ -256,6 +256,12 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
 
   private[scala] val coreEnv = new CoreEnvironment(coreBuilder)
 
+  /** Returns the underlying (Java) core-io `CoreEnvironment` that is built from this.
+    *
+    * Provides access to, amongst other things, the event bus.
+    */
+  def core: CoreEnvironment = coreEnv
+
   /**
     * Shuts this environment down.  If the application created this (i.e. rather than using one of the convenience
     * `Cluster.create` methods, then it is responsible for calling shutdown on it.
