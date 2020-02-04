@@ -55,6 +55,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   private static final byte SUBDOC_DOC_FLAG_MKDOC = (byte) 0x01;
   private static final byte SUBDOC_DOC_FLAG_ADD = (byte) 0x02;
   public static final byte SUBDOC_DOC_FLAG_ACCESS_DELETED = (byte) 0x04;
+  public static final byte SUBDOC_DOC_FLAG_CREATE_AS_DELETED = (byte) 0x08;
 
   public static final int SUBDOC_MAX_FIELDS = 16;
 
@@ -69,6 +70,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                              final RetryStrategy retryStrategy, final String key,
                              final boolean insertDocument, final boolean upsertDocument, final boolean accessDeleted,
+                             final boolean createAsDeleted,
                              final List<Command> commands, long expiration, long cas,
                              final Optional<DurabilityLevel> syncReplicationType, final InternalSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
@@ -88,6 +90,10 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
     if (accessDeleted) {
       flags |= SUBDOC_DOC_FLAG_ACCESS_DELETED;
+    }
+
+    if (createAsDeleted) {
+      flags |= SUBDOC_DOC_FLAG_CREATE_AS_DELETED;
     }
 
     this.flags = flags;
@@ -162,7 +168,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     ResponseStatus overallStatus = decodeStatus(response);
     Optional<CouchbaseException> error = Optional.empty();
 
-    SubDocumentField[] values;
+    SubDocumentField[] values = null;
 
     if (maybeBody.isPresent()) {
       ByteBuf body = maybeBody.get();
@@ -176,7 +182,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
         Command c = commands.get(index);
         error = Optional.of(mapSubDocumentError(this, opStatus, c.path, c.originalIndex));
         values = new SubDocumentField[0];
-      } else {
+      } else if (overallStatus.success()) {
         // "For successful multi mutations, there will be zero or more results; each of the results containing a value."
         values = new SubDocumentField[commands.size()];
 
@@ -205,7 +211,9 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
           }
         }
       }
-    } else {
+    }
+
+    if (values == null) {
       values = new SubDocumentField[0];
     }
 

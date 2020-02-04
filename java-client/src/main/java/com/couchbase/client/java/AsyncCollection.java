@@ -1137,7 +1137,7 @@ public class AsyncCollection {
 
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
         opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT,
-        opts.accessDeleted(), commands, opts.expiry().getSeconds(), opts.cas(),
+        opts.accessDeleted(), opts.createAsDeleted(), commands, opts.expiry().getSeconds(), opts.cas(),
         opts.durabilityLevel(), span
       );
       request.context()

@@ -17,15 +17,19 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.subdoc.PathExistsException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.LookupInOptions;
+import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInMacro;
 import com.couchbase.client.java.kv.MutateInOptions;
@@ -734,6 +738,72 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
             ),
             MutateInOptions.mutateInOptions().storeSemantics(StoreSemantics.UPSERT))
         );
+    }
+
+    @Test
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+    void createAsDeletedCanAccess() {
+      String docId = docId();
+
+      try {
+        coll.mutateIn(docId,
+                Collections.singletonList(MutateInSpec.insert("foo", "bar").xattr()),
+                MutateInOptions.mutateInOptions().createAsDeleted(true).storeSemantics(StoreSemantics.INSERT));
+
+        assertThrows(DocumentNotFoundException.class, () -> coll.get(docId));
+        assertThrows(DocumentNotFoundException.class, () ->
+                coll.lookupIn(docId, Collections.singletonList(LookupInSpec.get("foo").xattr())));
+
+        LookupInResult result = coll.lookupIn(docId,
+                Collections.singletonList(LookupInSpec.get("foo").xattr()),
+                LookupInOptions.lookupInOptions().accessDeleted(true));
+
+        assertEquals("bar", result.contentAs(0, String.class));
+      } catch (CouchbaseException err) {
+        // createAsDeleted flag only supported in 6.5.1+
+        assertEquals(ResponseStatus.INVALID_REQUEST, err.context().responseStatus());
+      }
+    }
+
+    @Test
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+    void createAsDeletedCanInsertOnTop() {
+      String docId = docId();
+
+      try {
+        coll.mutateIn(docId,
+                Collections.singletonList(MutateInSpec.insert("foo", "bar").xattr()),
+                MutateInOptions.mutateInOptions().createAsDeleted(true).storeSemantics(StoreSemantics.INSERT));
+
+        coll.mutateIn(docId,
+                Collections.singletonList(MutateInSpec.insert("foo", "bar").xattr()),
+                MutateInOptions.mutateInOptions().storeSemantics(StoreSemantics.INSERT));
+
+        LookupInResult result = coll.lookupIn(docId,
+                Collections.singletonList(LookupInSpec.get("foo").xattr()));
+
+        assertEquals("bar", result.contentAs(0, String.class));
+      } catch (CouchbaseException err) {
+        // createAsDeleted flag only supported in 6.5.1+
+        assertEquals(ResponseStatus.INVALID_REQUEST, err.context().responseStatus());
+      }
+    }
+
+    @Test
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+    void createAsDeletedMustCombineWithStoreSemantics() {
+      String docId = docId();
+
+      try {
+        coll.mutateIn(docId,
+                Collections.singletonList(MutateInSpec.insert("foo", "bar").xattr()),
+                MutateInOptions.mutateInOptions().createAsDeleted(true));
+      } catch (DocumentNotFoundException err) {
+        // Expected response on 6.5.1+
+      } catch (CouchbaseException err) {
+        // createAsDeleted flag only supported in 6.5.1+
+        assertEquals(ResponseStatus.INVALID_REQUEST, err.context().responseStatus());
+      }
     }
 
 }

@@ -53,6 +53,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
       timeout: java.time.Duration,
       retryStrategy: RetryStrategy,
       accessDeleted: Boolean,
+      createAsDeleted: Boolean,
       transcoder: Transcoder,
       parentSpan: Option[RequestSpan]
   ): Try[SubdocMutateRequest] = {
@@ -108,6 +109,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
                 document == StoreSemantics.Insert,
                 document == StoreSemantics.Upsert,
                 accessDeleted,
+                createAsDeleted,
                 commands,
                 expiration.getSeconds,
                 cas,

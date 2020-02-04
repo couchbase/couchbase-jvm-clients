@@ -37,7 +37,8 @@ case class MutateInOptions(
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
     private[scala] val transcoder: Option[Transcoder] = None,
     private[scala] val expiry: Duration = 0.seconds,
-    private[scala] val accessDeleted: Boolean = false
+    private[scala] val accessDeleted: Boolean = false,
+    private[scala] val createAsDeleted: Boolean = false
 ) {
 
   /** Controls whether the document should be inserted, upserted, or not touched.  See
@@ -49,10 +50,15 @@ case class MutateInOptions(
     copy(document = value)
   }
 
+  /** For internal use only: allows access to deleted documents that are in 'tombstone' form.
+    */
   @Stability.Internal
-  def accessDeleted(value: Boolean): MutateInOptions = {
-    copy(accessDeleted = value)
-  }
+  def accessDeleted(value: Boolean): MutateInOptions = copy(accessDeleted = value)
+
+  /** For internal use only: allows creating documents in 'tombstone' form.
+    */
+  @Stability.Internal
+  def createAsDeleted(value: Boolean): MutateInOptions = copy(createAsDeleted = value)
 
   /** Couchbase documents all have a CAS (Compare-And-Set) field, a simple integer that allows
     * optimistic concurrency - e.g. it can detect if another agent has modified a document
