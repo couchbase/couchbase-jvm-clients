@@ -126,7 +126,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     );
     SubdocMutateRequest subdocMutateRequest = new SubdocMutateRequest(Duration.ofSeconds(1),
       core.context(), collectionIdentifier, env.retryStrategy(), id,
-      false, false, false, commands, 0, 0, Optional.empty(), null);
+      false, false, false, false, commands, 0, 0, Optional.empty(), null);
     core.send(subdocMutateRequest);
 
     SubdocMutateResponse subdocMutateResponse = subdocMutateRequest.response().get();

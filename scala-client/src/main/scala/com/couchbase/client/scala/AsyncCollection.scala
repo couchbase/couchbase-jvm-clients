@@ -422,6 +422,7 @@ class AsyncCollection(
       timeoutActual,
       options.retryStrategy.getOrElse(environment.retryStrategy),
       options.accessDeleted,
+      options.createAsDeleted,
       options.transcoder.getOrElse(environment.transcoder),
       options.parentSpan
     )

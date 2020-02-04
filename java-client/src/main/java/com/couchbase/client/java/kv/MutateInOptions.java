@@ -31,6 +31,7 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
   private StoreSemantics storeSemantics = StoreSemantics.REPLACE;
   private JsonSerializer serializer = null;
   private boolean accessDeleted = false;
+  private boolean createAsDeleted = false;
 
   public static MutateInOptions mutateInOptions() {
     return new MutateInOptions();
@@ -85,6 +86,16 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
     return this;
   }
 
+  /**
+   * For internal use only: allows creating documents in 'tombstone' form.
+   */
+  @Stability.Internal
+  public MutateInOptions createAsDeleted(final boolean createAsDeleted) {
+    notNull(createAsDeleted, "CreateAsDeleted");
+    this.createAsDeleted = createAsDeleted;
+    return this;
+  }
+
   @Stability.Internal
   public Built build() {
     return new Built();
@@ -112,6 +123,10 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
 
     public boolean accessDeleted() {
       return accessDeleted;
+    }
+
+    public boolean createAsDeleted() {
+      return createAsDeleted;
     }
   }
 }
