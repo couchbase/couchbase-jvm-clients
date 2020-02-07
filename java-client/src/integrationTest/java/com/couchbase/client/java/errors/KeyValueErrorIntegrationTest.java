@@ -347,4 +347,15 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     assertThrows(InvalidArgumentException.class, () -> collection.queue("id", Integer.class, null));
   }
 
+  /**
+   * The default key length is 250, including the collection information.
+   */
+  @Test
+  void verifyTooLongId() {
+    String longId = "The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. " +
+      "The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. " +
+      "The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog.";
+    assertThrows(InvalidArgumentException.class, () -> collection.get(longId));
+  }
+
 }
