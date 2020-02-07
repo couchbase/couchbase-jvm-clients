@@ -428,7 +428,11 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       message,
       packetCopy
     ));
-    interceptedConnectPromise.tryFailure(new AuthenticationFailureException(message, new KeyValueIoErrorContext(MemcacheProtocol.decodeStatus(status), endpointContext), cause));
+    interceptedConnectPromise.tryFailure(new AuthenticationFailureException(
+      message,
+      new KeyValueIoErrorContext(MemcacheProtocol.decodeStatus(status), endpointContext),
+      cause
+    ));
   }
 
   /**
