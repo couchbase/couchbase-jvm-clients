@@ -19,8 +19,8 @@
         <junit.version>5.5.2</junit.version>
         <assertj.version>3.14.0</assertj.version>
         <log4j-slf4j-impl.version>2.13.0</log4j-slf4j-impl.version>
-        <jackson.version>2.10.1</jackson.version>
-        <reactor.version>3.3.1.RELEASE</reactor.version>
+        <jackson.version>2.10.2</jackson.version>
+        <reactor.version>3.3.2.RELEASE</reactor.version>
 
         <!--Can override this with mvn -Dscala.compat.version=2.11-->
         <scala.compat.version>2.12</scala.compat.version>
