@@ -972,6 +972,10 @@ public enum MemcacheProtocol {
      */
     LOCKED((short) 0x09),
     /**
+     * Authentication error.
+     */
+    AUTH_ERROR((short) 0x20),
+    /**
      * Access problem.
      */
     ACCESS_ERROR((short) 0x24),
