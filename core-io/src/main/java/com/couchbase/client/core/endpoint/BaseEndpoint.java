@@ -69,6 +69,10 @@ import reactor.core.publisher.SignalType;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -338,7 +342,7 @@ public abstract class BaseEndpoint implements Endpoint {
             duration,
             endpointContext,
             retryContext.iteration(),
-            retryContext.exception()
+            trimNettyFromStackTrace(retryContext.exception())
           ));
         })
       ).subscribe(
@@ -387,6 +391,23 @@ public abstract class BaseEndpoint implements Endpoint {
             error)
         )
       );
+  }
+
+  /**
+   * The exceptions originating from inside the event loop have a deep netty stack which is not useful
+   * in debugging and make the logs very verbose.
+   * <p>
+   * This method tries to be smart and only emits the stack that is needed to figure out where it came from,
+   * removing all the generic netty stack we do not need.
+   *
+   * @param input the input exception.
+   * @return the trimmed exception.
+   */
+  private Throwable trimNettyFromStackTrace(final Throwable input) {
+    final List<StackTraceElement> elements = new LinkedList<>(Arrays.asList(input.getStackTrace()));
+    elements.removeIf(next -> next.getClassName().startsWith("com.couchbase.client.core.deps.io.netty"));
+    input.setStackTrace(elements.toArray(new StackTraceElement[] {}));
+    return input;
   }
 
   @Override
