@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;
 import com.couchbase.client.core.cnc.events.io.SelectBucketFailedEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.AuthenticationFailureException;
+import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.context.KeyValueIoErrorContext;
 import com.couchbase.client.core.io.IoContext;
@@ -175,6 +176,11 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
             null
           )
         );
+      } else if (status == MemcacheProtocol.Status.NOT_FOUND.status()) {
+        endpointContext.environment().eventBus().publish(
+          new SelectBucketFailedEvent(ioContext, status)
+        );
+        interceptedConnectPromise.tryFailure(BucketNotFoundException.forBucket(bucketName));
       } else {
         endpointContext.environment().eventBus().publish(
           new SelectBucketFailedEvent(ioContext, status)
