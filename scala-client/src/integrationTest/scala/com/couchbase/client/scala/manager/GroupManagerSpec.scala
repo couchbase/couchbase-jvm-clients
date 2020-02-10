@@ -203,7 +203,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard), userMeta.user.roles.toSet)
     assertEquals(
       Set(SecurityAdmin, BucketFullAccessWildcard, ReadOnlyAdmin),
-      userMeta.effectiveRoles.toSet
+      userMeta.effectiveRoles.map(_.role).toSet
     )
 
     assert(userMeta.effectiveRoles.size == 3)
@@ -239,7 +239,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     })
 
     userMeta = users.getUser(Username, AuthDomain.Local).get
-    assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard), userMeta.effectiveRoles.toSet)
+    assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard), userMeta.effectiveRoles.map(_.role).toSet)
   }
 
   @Test
@@ -258,7 +258,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     waitUntilUserPresent(Username)
 
     var userMeta = users.getUser(Username, AuthDomain.Local).get
-    assertEquals(Seq(ReadOnlyAdmin), userMeta.effectiveRoles)
+    assertEquals(Vector(ReadOnlyAdmin), userMeta.effectiveRoles.map(_.role))
 
     users.upsertUser(userMeta.user.groups()).get
 
