@@ -27,10 +27,12 @@ import com.couchbase.client.core.msg.ResponseStatus;
 public class GetMetaResponse extends BaseResponse {
 
   private final long cas;
+  private final boolean deleted;
 
-  GetMetaResponse(final ResponseStatus status, final long cas) {
+  GetMetaResponse(final ResponseStatus status, final long cas, final boolean deleted) {
     super(status);
     this.cas = cas;
+    this.deleted = deleted;
   }
 
   /**
@@ -40,4 +42,19 @@ public class GetMetaResponse extends BaseResponse {
     return cas;
   }
 
+  /**
+   * Returns true if the deleted flag is set in the extras.
+   */
+  public boolean deleted() {
+    return deleted;
+  }
+
+  @Override
+  public String toString() {
+    return "GetMetaResponse{" +
+      "status=" + status() +
+      ", cas=" + cas +
+      ", deleted=" + deleted +
+      '}';
+  }
 }

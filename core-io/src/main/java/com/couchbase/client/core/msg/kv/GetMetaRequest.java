@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
@@ -27,6 +28,7 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
+import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
@@ -71,7 +73,17 @@ public class GetMetaRequest extends BaseKeyValueRequest<GetMetaResponse> {
 
   @Override
   public GetMetaResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    return new GetMetaResponse(decodeStatus(response), cas(response));
+    boolean deleted = false;
+    Optional<ByteBuf> extras = MemcacheProtocol.extras(response);
+    if (extras.isPresent()) {
+     ByteBuf e = extras.get();
+      if (e.readableBytes() >= 4) {
+        if (e.readInt() != 0) {
+          deleted = true;
+        }
+      }
+    }
+    return new GetMetaResponse(decodeStatus(response), cas(response), deleted);
   }
 
   @Override

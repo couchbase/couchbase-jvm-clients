@@ -34,9 +34,12 @@ public class ExistsAccessor {
     return request
       .response()
       .thenApply(response -> {
-        if (response.status().success()) {
+        boolean success = response.status().success();
+        boolean deleted = response.deleted();
+
+        if (success && !deleted) {
           return new ExistsResult(true, response.cas());
-        } else if (response.status() == ResponseStatus.NOT_FOUND) {
+        } else if (response.status() == ResponseStatus.NOT_FOUND || success) {
           return CACHED_NOT_FOUND;
         }
         throw keyValueStatusToException(request, response);
