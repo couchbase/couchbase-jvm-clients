@@ -76,6 +76,13 @@ class KeyValueSpec extends ScalaIntegrationTest {
       case Success(result) => assert(result.exists)
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
+
+    coll.remove(docId)
+
+    coll.exists(docId) match {
+      case Success(result) => assert(!result.exists)
+      case Failure(err)    => assert(false, s"unexpected error $err")
+    }
   }
 
   private def cleanupDoc(docIdx: Int = 0): String = {

@@ -314,6 +314,23 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertThrows(DocumentNotFoundException.class, () -> collection.remove(id));
   }
 
+  /**
+   * Regression test for JCBC-1587 (deleted flag is not honored after a previous remove).
+   */
+  @Test
+  @IgnoreWhen( clusterTypes = ClusterType.MOCKED )
+  void existsReturnsFalseAfterRemove() {
+    String id = UUID.randomUUID().toString();
+
+    assertFalse(collection.exists(id).exists());
+
+    collection.upsert(id, JsonObject.create());
+    assertTrue(collection.exists(id).exists());
+
+    collection.remove(id);
+    assertFalse(collection.exists(id).exists());
+  }
+
   @Test
   void insert() {
     String id = UUID.randomUUID().toString();
