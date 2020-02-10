@@ -22,24 +22,39 @@ import com.couchbase.client.java.codec.JsonSerializer;
 
 import java.util.List;
 
+/**
+ * Defines specs to mutate parts in a JSON document.
+ * <p>
+ * Note that each spec only specifies a portion of a document. Whether the whole document is to be upserted or
+ * inserted is controlled by {@link MutateInOptions#storeSemantics(StoreSemantics)} on the outer options block.
+ * <p>
+ * Some operations allow to specify an empty path ("") which means that the root document level is used (so it
+ * will be applied to the full document). By nature it makes sense to only use such a command in isolation, but
+ * it can be combined with xattr (extended attributes, a document metadata section) operations as well.
+ */
 public abstract class MutateInSpec {
 
+    /**
+     * Internal operation called from the encoding side that encodes the spec into its internal representation.
+     *
+     * @param serializer the serializer that should be used.
+     * @param originalIndex the original index of the command.
+     * @return the encoded command.
+     */
     @Stability.Internal
-    public abstract SubdocMutateRequest.Command encode(JsonSerializer defaultSerializer, int originalIndex);
+    public abstract SubdocMutateRequest.Command encode(JsonSerializer serializer, int originalIndex);
 
     /**
-     * Creates a command with the intention of replacing an existing value in a JSON object.
+     * Creates a spec with the intention of replacing an existing value in a JSON document.
      * <p>
-     * Will error if the last element of the path does not exist.
-     * <p>
-     * If the path is empty (""), then the value will be used for the document's full body.  Whether the document is
-     * to be upserted or inserted is controlled by {@link MutateInOptions#upsertDocument(boolean)} and
-     * {@link MutateInOptions#insertDocument(boolean)}.
+     * If the path is empty (""), then the value will be used for the document's full body. Will
+     * error if the last element of the path does not exist.
      *
-     * @param path     the path identifying where to replace the value.
-     * @param value the value to replace with
+     * @param path the path identifying where to replace the value.
+     * @param value the value to replace with.
+     * @return the created {@link MutateInSpec}.
      */
-    public static <T> Replace replace(final String path, final Object value) {
+    public static Replace replace(final String path, final Object value) {
         return new Replace(path, value);
     }
 
@@ -48,21 +63,23 @@ public abstract class MutateInSpec {
      * <p>
      * Will error if the last element of the path already exists.
      *
-     * @param path     the path identifying where to insert the value.
+     * @param path the path identifying where to insert the value.
      * @param value the value to insert
+     * @return the created {@link MutateInSpec}.
      */
-    public static <T> Insert insert(final String path, final Object value) {
+    public static Insert insert(final String path, final Object value) {
         return new Insert(path, value);
     }
-    
+
     /**
      * Creates a command with the intention of removing an existing value in a JSON object.
      * <p>
      * Will error if the path does not exist.
      *
-     * @param path the path identifying what to remove
+     * @param path the path identifying what to remove.
+     * @return the created {@link MutateInSpec}.
      */
-    public static <T> Remove remove(final String path) {
+    public static Remove remove(final String path) {
         return new Remove(path);
     }
 
@@ -71,10 +88,11 @@ public abstract class MutateInSpec {
      * <p>
      * That is, the value will be replaced if the path already exists, or inserted if not.
      *
-     * @param path     the path identifying where to upsert the value.
-     * @param value the value to upsert
+     * @param path the path identifying where to upsert the value.
+     * @param value the value to upsert.
+     * @return the created {@link MutateInSpec}.
      */
-    public static <T> Upsert upsert(final String path, final Object value) {
+    public static Upsert upsert(final String path, final Object value) {
         return new Upsert(path, value);
     }
 
@@ -83,10 +101,11 @@ public abstract class MutateInSpec {
      * <p>
      * Will error if the last element of the path does not exist or is not an array.
      *
-     * @param path     the path identifying an array to which to append the value.
-     * @param values the value(s) to append
+     * @param path the path identifying an array to which to append the value.
+     * @param values the value(s) to append.
+     * @return the created {@link MutateInSpec}.
      */
-    public static <T> ArrayAppend arrayAppend(final String path, final List<?> values) {
+    public static ArrayAppend arrayAppend(final String path, final List<?> values) {
         return new ArrayAppend(path, values);
     }
 
@@ -95,10 +114,11 @@ public abstract class MutateInSpec {
      * <p>
      * Will error if the last element of the path does not exist or is not an array.
      *
-     * @param path     the path identifying an array to which to append the value.
-     * @param values the value(s) to prepend
+     * @param path the path identifying an array to which to append the value.
+     * @param values the value(s) to prepend.
+     * @return the created {@link MutateInSpec}.
      */
-    public static <T> ArrayPrepend arrayPrepend(final String path, final List<?> values) {
+    public static ArrayPrepend arrayPrepend(final String path, final List<?> values) {
         return new ArrayPrepend(path, values);
     }
 
@@ -107,10 +127,11 @@ public abstract class MutateInSpec {
      * <p>
      * Will error if the last element of the path does not exist or is not an array.
      *
-     * @param path     the path identifying an array to which to append the value, and an index.  E.g. "foo.bar[3]"
-     * @param values the value(s) to insert
+     * @param path the path identifying an array to which to append the value, and an index.  E.g. "foo.bar[3]"
+     * @param values the value(s) to insert.
+     * @return the created {@link MutateInSpec}.
      */
-    public static <T> ArrayInsert arrayInsert(final String path, final List<?> values) {
+    public static ArrayInsert arrayInsert(final String path, final List<?> values) {
         return new ArrayInsert(path, values);
     }
 
@@ -120,10 +141,11 @@ public abstract class MutateInSpec {
      * <p>
      * Will error if the last element of the path does not exist or is not an array.
      *
-     * @param path     the path identifying an array to which to append the value, and an index.  E.g. "foo.bar[3]"
-     * @param value the value to insert
+     * @param path the path identifying an array to which to append the value, and an index.  E.g. "foo.bar[3]"
+     * @param value the value to insert.
+     * @return the created {@link MutateInSpec}.
      */
-    public static <T> ArrayAddUnique arrayAddUnique(final String path, final Object value) {
+    public static ArrayAddUnique arrayAddUnique(final String path, final Object value) {
         return new ArrayAddUnique(path, value);
     }
 
@@ -132,10 +154,11 @@ public abstract class MutateInSpec {
      *
      * If the field does not exist then it is created and takes the value of `delta`.
      *
-     * @param path       the path identifying a numerical field to adjust or create.
-     * @param delta      the value to increment the field by.
+     * @param path the path identifying a numerical field to adjust or create.
+     * @param delta the value to increment the field by.
+     * @return the created {@link MutateInSpec}.
      */
-    public static <T> Increment increment(final String path, final long delta) {
+    public static Increment increment(final String path, final long delta) {
         return new Increment(path, delta);
     }
 
@@ -144,10 +167,11 @@ public abstract class MutateInSpec {
      *
      * If the field does not exist then it is created and takes the value of `delta` * -1.
      *
-     * @param path       the path identifying a numerical field to adjust or create.
-     * @param delta      the value to increment the field by.
+     * @param path the path identifying a numerical field to adjust or create.
+     * @param delta the value to increment the field by.
+     * @return the created {@link MutateInSpec}.
      */
-    public static <T> Increment decrement(final String path, final long delta) {
+    public static Increment decrement(final String path, final long delta) {
         return new Increment(path,delta * -1);
     }
 }

@@ -20,19 +20,51 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 
+/**
+ * Defines specs to lookup parts in a JSON document.
+ * <p>
+ * Operations allow specifying an empty path ("") which means that the root document level is used (so it
+ * will be applied to the full document). By nature it makes sense to only use such a command in isolation, but
+ * it can be combined with xattr (extended attributes, a document metadata section) operations as well.
+ */
 public abstract class LookupInSpec {
-  @Stability.Internal
-  abstract public SubdocGetRequest.Command export(int originalIndex);
 
+  /**
+   * Internal operation called from the encoding side that encodes the spec into its internal representation.
+   *
+   * @param originalIndex the original index of the command.
+   * @return the encoded command.
+   */
+  @Stability.Internal
+  public abstract SubdocGetRequest.Command export(int originalIndex);
+
+  /**
+   * Fetches the content from a field (if present) at the given path.
+   *
+   * @param path the path identifying where to get the value.
+   * @return the created {@link LookupInSpec}.
+   */
   public static LookupInSpecStandard get(final String path) {
     SubdocCommandType command = path.equals("") ? SubdocCommandType.GET_DOC : SubdocCommandType.GET;
     return new LookupInSpecStandard(command, path);
   }
 
+  /**
+   * Checks if a value at the given path exists in the document.
+   *
+   * @param path the path to check if the field exists.
+   * @return the created {@link LookupInSpec}.
+   */
   public static LookupInSpecStandard exists(final String path) {
     return new LookupInSpecStandard(SubdocCommandType.EXISTS, path);
   }
 
+  /**
+   * Counts the number of values at a given path in the document.
+   *
+   * @param path the path identifying where to count the values.
+   * @return the created {@link LookupInSpec}.
+   */
   public static LookupInSpecStandard count(final String path) {
     return new LookupInSpecStandard(SubdocCommandType.COUNT, path);
   }
