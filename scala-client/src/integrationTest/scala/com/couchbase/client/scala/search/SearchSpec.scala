@@ -17,6 +17,7 @@
 package com.couchbase.client.scala.search
 
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.MutationState
@@ -89,10 +90,10 @@ class SearchSpec extends ScalaIntegrationTest {
       fetched.numPlanPIndexes > 0
     })
 
-    // Despite the above wait for numPlanPIndexes, still get "mismatched partition" errors intermittently without this sleep
+    // Despite the above wait for numPlanPIndexes, still get "mismatched partition" errors intermittently, which
+    // we try to workaround below by retrying tests
     // grahamp: at some point need to find a better solution, but spent enough time on it already. Advice from FTS team
     // is already implemented (poll until getIndex returns success).
-    Thread.sleep(15000)
   }
 
   private def indexName = "idx-" + config.bucketname
@@ -103,58 +104,120 @@ class SearchSpec extends ScalaIntegrationTest {
     cluster.disconnect()
   }
 
+  @Timeout(value = 2, unit = TimeUnit.MINUTES)
   @Test
   def simple() {
-    cluster.searchQuery(
-      indexName,
-      SearchQuery.matchPhrase("John Smith"),
-      SearchOptions().scanConsistency(SearchScanConsistency.ConsistentWith(ms))
-    ) match {
-      case Success(result) =>
-        println(result)
+    def runTest(): Unit = {
+      Thread.sleep(50)
 
-        result.metaData.errors.foreach(err => println(s"Err: ${err}"))
-        println(s"Rows: ${result.rows}")
-        assert(1 == result.rows.size)
-      case Failure(ex) =>
-        println(ex.getMessage)
-        assert(false)
+      cluster.searchQuery(
+        indexName,
+        SearchQuery.matchPhrase("John Smith")
+      ) match {
+        case Success(result) =>
+          println(result)
+
+          if (result.metaData.errors.nonEmpty) {
+            println("Running test again as errors")
+            runTest()
+          } else if (result.rows.size < 1) {
+            println("Running test again as non enough rows")
+            runTest()
+          } else {
+            result.metaData.errors.foreach(err => println(s"Err: ${err}"))
+            println(s"Rows: ${result.rows}")
+            assert(1 == result.rows.size)
+          }
+        case Failure(ex) =>
+          println(ex.getMessage)
+          println("Running test again as error")
+          runTest()
+      }
     }
+
+    runTest()
   }
 
+  @Timeout(value = 2, unit = TimeUnit.MINUTES)
+  @Test
+  def consistentWith() {
+    def runTest(): Unit = {
+      Thread.sleep(50)
+
+      cluster.searchQuery(
+        indexName,
+        SearchQuery.matchPhrase("John Smith"),
+        SearchOptions().scanConsistency(SearchScanConsistency.ConsistentWith(ms))
+      ) match {
+        case Success(result) =>
+          println(result)
+
+          if (result.metaData.errors.nonEmpty) {
+            println("Running test again as errors")
+            runTest()
+          } else {
+            result.metaData.errors.foreach(err => println(s"Err: ${err}"))
+            println(s"Rows: ${result.rows}")
+            assert(1 == result.rows.size)
+          }
+        case Failure(ex) =>
+          println(ex.getMessage)
+          println("Running test again as error")
+          runTest()
+      }
+    }
+
+    runTest()
+  }
+
+  @Timeout(value = 2, unit = TimeUnit.MINUTES)
   @Test
   def facets() {
-    cluster.searchQuery(
-      indexName,
-      SearchQuery.matchPhrase("Smith"),
-      SearchOptions()
-        .scanConsistency(SearchScanConsistency.ConsistentWith(ms))
-        .facets(
-          Map(
-            "type_facet" -> SearchFacet.TermFacet("type", Some(10))
+    def runTest(): Unit = {
+      Thread.sleep(50)
+
+      cluster.searchQuery(
+        indexName,
+        SearchQuery.matchPhrase("Smith"),
+        SearchOptions()
+          .scanConsistency(SearchScanConsistency.ConsistentWith(ms))
+          .facets(
+            Map(
+              "type_facet" -> SearchFacet.TermFacet("type", Some(10))
+            )
           )
-        )
-    ) match {
-      case Success(result) =>
-        println(result)
-        println(result.facets)
-        assert(result.facets.nonEmpty)
+      ) match {
+        case Success(result) =>
+          println(result)
+          println(result.facets)
 
-        result.facets("type_facet") match {
-          case TermSearchFacetResult(name, field, total, missing, other, terms) =>
-            assert(name == "type_facet")
-            assert(field == "type")
-            assert(total == 2)
-            assert(missing == 0)
-            assert(other == 0)
-            assert(terms.toSet == Set(TermRange("user", 1), TermRange("admin", 1)))
-          case _ => assert(false)
-        }
+          if (result.metaData.errors.nonEmpty) {
+            println("Running test again as errors")
+            runTest()
+          } else if (result.facets.nonEmpty) {
+            println("Running test again as not enough facets")
+            runTest()
+          } else {
+            result.facets("type_facet") match {
+              case TermSearchFacetResult(name, field, total, missing, other, terms) =>
+                assert(name == "type_facet")
+                assert(field == "type")
+                assert(total == 2)
+                assert(missing == 0)
+                assert(other == 0)
+                assert(terms.toSet == Set(TermRange("user", 1), TermRange("admin", 1)))
+              case _ => assert(false)
+            }
+          }
 
-      case Failure(exception) =>
-        println(exception)
-        assert(false)
+        case Failure(exception) =>
+          println(exception)
+          println("Running test again as error")
+          runTest()
+      }
     }
+
+    runTest()
   }
 
 }

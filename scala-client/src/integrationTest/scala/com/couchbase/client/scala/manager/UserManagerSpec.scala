@@ -222,7 +222,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
     val expectedRoles = Seq(Admin)
     assertEquals(expectedRoles, userMeta.innateRoles)
     assertEquals(expectedRoles, userMeta.user.roles)
-    assertEquals(expectedRoles, userMeta.effectiveRoles)
+    assertEquals(expectedRoles, userMeta.effectiveRoles.map(_.role))
 
     checkRoleOrigins(userMeta, "admin<-[user]")
 
