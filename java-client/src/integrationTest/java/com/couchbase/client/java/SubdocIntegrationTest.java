@@ -340,7 +340,6 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
         get(LookupInMacro.DOCUMENT).xattr(),
         get(LookupInMacro.CAS).xattr(),
         get(LookupInMacro.IS_DELETED).xattr(),
-        get(LookupInMacro.LAST_MODIFIED).xattr(),
         get(LookupInMacro.SEQ_NO).xattr(),
         get(LookupInMacro.VALUE_SIZE_BYTES).xattr(),
         get(LookupInMacro.EXPIRY_TIME).xattr()
@@ -351,9 +350,8 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     result.contentAs(1, String.class);
     assertFalse(result.contentAs(2, Boolean.class));
     result.contentAs(3, String.class);
-    result.contentAs(4, String.class);
+    result.contentAs(4, Integer.class);
     result.contentAs(5, Integer.class);
-    result.contentAs(6, Integer.class);
   }
 
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED }, missesCapabilities = { Capabilities.GLOBAL_CONFIG })

@@ -346,7 +346,6 @@ class SubdocGetSpec extends ScalaIntegrationTest {
           get(LookupInMacro.Document).xattr,
           get(LookupInMacro.CAS).xattr,
           get(LookupInMacro.IsDeleted).xattr,
-          get(LookupInMacro.LastModified).xattr,
           get(LookupInMacro.SeqNo).xattr,
           get(LookupInMacro.ValueSizeBytes).xattr,
           get(LookupInMacro.ExpiryTime).xattr
@@ -358,9 +357,8 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     result.contentAs[String](1).get
     assert(!result.contentAs[Boolean](2).get)
     result.contentAs[String](3).get
-    result.contentAs[String](4).get
+    result.contentAs[Int](4).get
     result.contentAs[Int](5).get
-    result.contentAs[Int](6).get
   }
 
   // The revid macro was introduced in a specific version of 6.5, so use sync-rep (a feature only released with 6.5)
