@@ -112,7 +112,7 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
   @Test
   def parseIndex(): Unit = {
     val raw =
-      """{"status":"ok","indexDef":{"type":" fulltext-index","name":"idx-18e0bf85","uuid":"6390517f1fa06371",
+      """{"status":"ok","indexDef":{"type":"fulltext-index","name":"idx-18e0bf85","uuid":"6390517f1fa06371",
              "sourceType":"couchbase","sourceName":"1ccd5c20-73fd-44f1-8111-46bcac9203a2",
              "planParams":{"maxPartitionsPerPIndex":171},"params":{"doc_config":{"docid_prefix_delim":"",
              "docid_regexp":"","mode":"type_field","type_field":"type"},"mapping":{"analysis":{},
