@@ -130,9 +130,9 @@ class ViewSpec extends ScalaIntegrationTest {
 
     println(viewResult)
 
-    val count = viewResult.rows.count(_.id.get.startsWith("viewdoc-"))
-    assert(count == docsToWrite)
-    viewResult.rows.foreach(row => {
+    val useful = viewResult.rows.filter(_.id.get.startsWith("viewdoc-"))
+    assert(useful.size == docsToWrite)
+    useful.foreach(row => {
       assert(row.valueAs[JsonObject].get == JsonObject.create)
     })
   }
