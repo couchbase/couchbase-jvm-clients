@@ -194,18 +194,24 @@ class SearchSpec extends ScalaIntegrationTest {
           if (result.metaData.errors.nonEmpty) {
             println("Running test again as errors")
             runTest()
-          } else if (result.facets.nonEmpty) {
+          } else if (result.facets.isEmpty) {
             println("Running test again as not enough facets")
             runTest()
           } else {
             result.facets("type_facet") match {
               case TermSearchFacetResult(name, field, total, missing, other, terms) =>
-                assert(name == "type_facet")
-                assert(field == "type")
-                assert(total == 2)
-                assert(missing == 0)
-                assert(other == 0)
-                assert(terms.toSet == Set(TermRange("user", 1), TermRange("admin", 1)))
+                if (total == 2) {
+                  assert(name == "type_facet")
+                  assert(field == "type")
+                  assert(total == 2)
+                  assert(missing == 0)
+                  assert(other == 0)
+                  assert(terms.toSet == Set(TermRange("user", 1), TermRange("admin", 1)))
+                }
+                else {
+                  println("Running test again as not enough facet total")
+                  runTest()
+                }
               case _ => assert(false)
             }
           }
