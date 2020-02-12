@@ -2,9 +2,6 @@
 
 This repository contains the third generation of the Couchbase SDKs on the JVM ("3.0").
 
-The SDKs are currently in a `beta` state, and should be stable to develop and experiment against. Please do not 
-use them in production until we release them as `GA` (planned for January 2020).
-
 ## Overview
 
 This repository contains the following projects:
@@ -29,7 +26,7 @@ For Java:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>java-client</artifactId>
-        <version>3.0.0</version>
+        <version>3.0.1</version>
     </dependency>
 </dependencies>
 ```
@@ -41,13 +38,13 @@ For Scala:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>scala-client_2.12</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1</version>
     </dependency>
 </dependencies>
 ```
 or if you use sbt:
 ```sbt
-libraryDependencies += "com.couchbase.client" %% "scala-client" % "1.0.0"
+libraryDependencies += "com.couchbase.client" %% "scala-client" % "1.0.1"
 ```
 
 ## Building
