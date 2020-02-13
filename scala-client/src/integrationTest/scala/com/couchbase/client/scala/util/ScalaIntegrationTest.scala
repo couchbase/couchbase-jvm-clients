@@ -39,7 +39,8 @@ import scala.concurrent.duration._
   */
 object ScalaIntegrationTest {}
 
-@Timeout(value = 1, unit = TimeUnit.MINUTES) // Safety timer so tests can't block CI executors
+// Temporarily increased timeout to (possibly) workaround MB-37011 when Developer Preview enabled
+@Timeout(value = 10, unit = TimeUnit.MINUTES) // Safety timer so tests can't block CI executors
 trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
 
   /**
@@ -48,9 +49,8 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
     *
     * @return the builder, ready to be further modified or used directly.
     */
-  protected def environment: ClusterEnvironment.Builder = {
+  protected def environment: ClusterEnvironment.Builder =
     ClusterEnvironment.builder
-  }
 
   /**
     * Creates the right connection string out of the seed nodes in the config.
@@ -68,7 +68,7 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
     strings.mkString(",")
   }
 
-  private def seedNodes: Set[SeedNode] = {
+  private def seedNodes =
     config.nodes.asScala
       .map((cfg: TestNodeConfig) => {
         val kvPort   = Some(cfg.ports.get(Services.KV).toInt)
@@ -77,24 +77,19 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
         SeedNode(cfg.hostname, kvPort, httpPort)
       })
       .toSet
-  }
 
-  protected def config: TestClusterConfig = {
-    ClusterAwareIntegrationTest.config()
-  }
+  protected def config: TestClusterConfig = ClusterAwareIntegrationTest.config()
 
   /**
     * Returns the pre-set cluster options with the environment and authenticator configured.
     *
     * @return the cluster options ready to be used.
     */
-  protected def clusterOptions: ClusterOptions = {
+  protected def clusterOptions =
     ClusterOptions(authenticator, environment.build.toOption)
-  }
 
-  protected def authenticator: Authenticator = {
+  protected def authenticator =
     PasswordAuthenticator(config.adminUsername, config.adminPassword)
-  }
 
   protected def connectToCluster(): Cluster = {
     val out = Cluster.connect(connectionString, clusterOptions).get

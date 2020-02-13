@@ -45,7 +45,7 @@ pipeline {
             steps {
                 cleanWs()
                 dir('couchbase-jvm-clients') {
-                    checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO', poll: false]]])
+                    checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
                 }
                 stash includes: 'couchbase-jvm-clients/', name: 'couchbase-jvm-clients', useDefaultExcludes: false
             }
@@ -184,6 +184,120 @@ pipeline {
 
         // Test against cbdyncluster - do for nightly tests
         // One day can get all these cbdyncluster tests running in parallel: https://jenkins.io/blog/2017/09/25/declarative-1/
+        stage('testing (Linux, cbdyncluster 6.5, colossus, Oracle JDK 8)') {
+            agent { label 'sdk-integration-test-linux' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                // Experimental, don't fail the build as a result
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    cleanWs()
+                    dir('colossus') {
+                        checkout([$class: 'GitSCM',
+                                  branches: [[name: 'colossus']],
+                                  userRemoteConfigs: [[url: '$REPO']]])
+                        installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('testing (Linux, cbdyncluster 6.5, Amazon Corretto 8)') {
+            agent { label 'sdk-integration-test-linux' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}"
+                PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                // Experimental, don't fail the build as a result
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, CORRETTO, CORRETTO_8)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('testing (Linux, cbdyncluster 6.5, Amazon Corretto 11)') {
+            agent { label 'sdk-integration-test-linux' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}"
+                PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                // Experimental, don't fail the build as a result
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, CORRETTO, CORRETTO_11)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('testing  (Linux, cbdyncluster 6.5, DP enabled, Oracle JDK 8)') {
+            agent { label 'sdk-integration-test-linux' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                // Experimental, don't fail the build as a result
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE, false, true) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
         stage('testing  (Linux, cbdyncluster 6.5, Oracle JDK 8)') {
             agent { label 'sdk-integration-test-linux' }
             environment {
@@ -211,7 +325,7 @@ pipeline {
             }
         }
 
-         stage('testing  (Linux, cbdyncluster 6.0.3, Oracle JDK 8)') {
+        stage('testing  (Linux, cbdyncluster 6.0.3, Oracle JDK 8)') {
              agent { label 'sdk-integration-test-linux' }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
@@ -333,7 +447,7 @@ pipeline {
                  catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                      cleanWs()
                      unstash 'couchbase-jvm-clients'
-                     installJDKIfNeeded(platform, OPENJDK, OPENJDK_8)
+                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
                      dir('couchbase-jvm-clients') {
                          script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
                      }
@@ -346,60 +460,6 @@ pipeline {
              }
          }
 
-        // Commented out until the failing tests are reduced
-//        stage('testing (Linux, cbdyncluster 6.5, Amazon Corretto 8)') {
-//            agent { label 'sdk-integration-test-linux' }
-//            environment {
-//                JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}"
-//                PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}/bin:$PATH"
-//            }
-//            when {
-//                expression
-//                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-//            }
-//            steps {
-//                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-//                    cleanWs()
-//                    unstash 'couchbase-jvm-clients'
-//                    installJDKIfNeeded(platform, CORRETTO, CORRETTO_8)
-//                    dir('couchbase-jvm-clients') {
-//                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
-//                    }
-//                }
-//            }
-//            post {
-//                always {
-//                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-//                }
-//            }
-//        }
-
-        //        stage('testing (Linux, cbdyncluster 6.5, Amazon Corretto 11)') {
-//            agent { label 'sdk-integration-test-linux' }
-//            environment {
-//                JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}"
-//                PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}/bin:$PATH"
-//            }
-//            when {
-//                expression
-//                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-//            }
-//            steps {
-//                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-//                    cleanWs()
-//                    unstash 'couchbase-jvm-clients'
-//                    installJDKIfNeeded(platform, CORRETTO, CORRETTO_11)
-//                    dir('couchbase-jvm-clients') {
-//                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
-//                    }
-//                }
-//            }
-//            post {
-//                always {
-//                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-//                }
-//            }
-//        }
 
         // Commented for now as sdk-integration-test-win temporarily down
 //         stage('testing (Windows, cbdyncluster 6.5, Oracle JDK 8)') {
@@ -531,7 +591,10 @@ void createIntegrationTestPropertiesFile(String filename, String ip) {
 
 // To be called inside a script {} block - required so can do try-finally logic to cleanup the cbdyncluster
 // (Inside a script {} block is 'scripted pipeline' syntax, different to the 'declarative pipeline' syntax elsewhere.)
-void testAgainstServer(String serverVersion, boolean QUICK_TEST_MODE, boolean includeAnalytics = true) {
+void testAgainstServer(String serverVersion,
+                       boolean QUICK_TEST_MODE,
+                       boolean includeAnalytics = true,
+                       boolean enableDevelopPreview = false) {
     def clusterId = null
     try {
         // For debugging
@@ -578,6 +641,10 @@ void testAgainstServer(String serverVersion, boolean QUICK_TEST_MODE, boolean in
 
         // Set the query indexer mode.  Without this query tests fail with "GSI CreatePrimaryIndex() - cause: Please Set Indexer Storage Mode Before Create Index"
         shWithEcho("curl -v -X POST -u Administrator:password -d 'storageMode=plasma' http://" + ip + ":8091/settings/indexes")
+
+        if (enableDevelopPreview) {
+            shWithEcho("curl -v -X POST -u Administrator:password -d 'enabled=true' http://" + ip + ":8091/settings/developerPreview")
+        }
 
         // Not sure why this is needed, it should be in stash from build....
         shWithEcho("make deps-only")
