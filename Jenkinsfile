@@ -45,7 +45,7 @@ pipeline {
             steps {
                 cleanWs()
                 dir('couchbase-jvm-clients') {
-                    checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO', poll: false]]])
+                    checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
                 }
                 stash includes: 'couchbase-jvm-clients/', name: 'couchbase-jvm-clients', useDefaultExcludes: false
             }
@@ -187,20 +187,21 @@ pipeline {
         stage('testing (Linux, cbdyncluster 6.5, colossus, Oracle JDK 8)') {
             agent { label 'sdk-integration-test-linux' }
             environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+                JAVA_HOME = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
             }
             when {
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                // Experimental, don't fail the build as a result
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                     cleanWs()
-                    dir('couchbase-jvm-clients-colossus') {
+                    dir('colossus') {
                         checkout([$class: 'GitSCM',
                                   branches: [[name: 'colossus']],
-                                  userRemoteConfigs: [[url: '$REPO', poll: false]]])
+                                  userRemoteConfigs: [[url: '$REPO']]])
                         installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
                         script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
                     }
@@ -224,7 +225,8 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                // Experimental, don't fail the build as a result
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                     cleanWs()
                     unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, CORRETTO, CORRETTO_8)
@@ -251,7 +253,8 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                // Experimental, don't fail the build as a result
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                     cleanWs()
                     unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, CORRETTO, CORRETTO_11)
@@ -278,7 +281,8 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                // Experimental, don't fail the build as a result
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                     cleanWs()
                     unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)

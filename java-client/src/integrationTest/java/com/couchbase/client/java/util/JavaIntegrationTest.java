@@ -40,7 +40,8 @@ import static com.couchbase.client.java.manager.query.CreatePrimaryQueryIndexOpt
  *
  * @since 3.0.0
  */
-@Timeout(value = 1, unit = TimeUnit.MINUTES) // Safety timer so tests can't block CI executors
+// Temporarily increased timeout to (possibly) workaround MB-37011 when Developer Preview enabled
+@Timeout(value = 10, unit = TimeUnit.MINUTES) // Safety timer so tests can't block CI executors
 public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
 
   /**
