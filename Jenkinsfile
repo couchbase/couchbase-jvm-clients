@@ -17,9 +17,9 @@ def ORACLE_JDK_8 = "8u192"
 def OPENJDK = "openjdk"
 def OPENJDK_8 = "8u202-b08"
 def OPENJDK_11 = "11.0.2+7"
-def CORRETTO = "corretto"
-def CORRETTO_8 = "8.232.09.1"
-def CORRETTO_11 = "11.0.4.11-1"
+def CORRETTO = "corretto"         // Amazon JDK
+def CORRETTO_8 = "8.232.09.1"     // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-8-ug/doc-history.html
+def CORRETTO_11 = "11.0.5.10.1"   // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-11-ug/doc-history.html
 
 // The lucky spammees
 EMAILS = ['graham.pople@couchbase.com', 'michael.nitschinger@couchbase.com', 'david.kelly@couchbase.com', 'david.nault@couchbase.com']
@@ -270,33 +270,35 @@ pipeline {
             }
         }
 
-        stage('testing  (Linux, cbdyncluster 6.5, DP enabled, Oracle JDK 8)') {
-            agent { label 'sdk-integration-test-linux' }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
-            when {
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                // Experimental, don't fail the build as a result
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE, false, true) }
-                    }
-                }
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-            }
-        }
+
+        // Disabling DP tests to avoid (possibly) MB-37518
+//        stage('testing  (Linux, cbdyncluster 6.5, DP enabled, Oracle JDK 8)') {
+//            agent { label 'sdk-integration-test-linux' }
+//            environment {
+//                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+//                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+//            }
+//            when {
+//                expression
+//                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+//            }
+//            steps {
+//                // Experimental, don't fail the build as a result
+//                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+//                    cleanWs()
+//                    unstash 'couchbase-jvm-clients'
+//                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+//                    dir('couchbase-jvm-clients') {
+//                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE, false, true) }
+//                    }
+//                }
+//            }
+//            post {
+//                always {
+//                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+//                }
+//            }
+//        }
 
         stage('testing  (Linux, cbdyncluster 6.5, Oracle JDK 8)') {
             agent { label 'sdk-integration-test-linux' }
@@ -447,7 +449,7 @@ pipeline {
                  catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                      cleanWs()
                      unstash 'couchbase-jvm-clients'
-                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                     installJDKIfNeeded(platform, OPENJDK, OPENJDK_8)
                      dir('couchbase-jvm-clients') {
                          script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
                      }
