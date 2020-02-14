@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.codec;
 
+import com.couchbase.client.core.error.DecodingFailureException;
+
 /**
  * The {@link JsonSerializer} handles the serialization and deserialization of raw json data into java objects.
  */
@@ -47,6 +49,7 @@ public interface JsonSerializer {
    * @param <T> the type to deserialize into.
    * @return the deserialized output.
    */
-  <T> T deserialize(TypeRef<T> target, byte[] input);
-
+  default <T> T deserialize(TypeRef<T> target, byte[] input) {
+    throw new DecodingFailureException(getClass().getSimpleName() + " does not support decoding via TypeRef.");
+  }
 }
