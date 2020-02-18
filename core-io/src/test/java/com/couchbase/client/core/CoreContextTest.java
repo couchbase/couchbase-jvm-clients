@@ -47,7 +47,7 @@ class CoreContextTest {
     assertEquals(authenticator, ctx.authenticator());
 
     String result = ctx.exportAsString(Context.ExportFormat.JSON);
-    assertEquals("{\"coreId\":12345}", result);
+    assertEquals("{\"coreId\":\"0x3039\"}", result);
   }
 
   @Test
