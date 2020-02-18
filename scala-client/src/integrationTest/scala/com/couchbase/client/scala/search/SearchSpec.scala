@@ -207,8 +207,7 @@ class SearchSpec extends ScalaIntegrationTest {
                   assert(missing == 0)
                   assert(other == 0)
                   assert(terms.toSet == Set(TermRange("user", 1), TermRange("admin", 1)))
-                }
-                else {
+                } else {
                   println("Running test again as not enough facet total")
                   runTest()
                 }
