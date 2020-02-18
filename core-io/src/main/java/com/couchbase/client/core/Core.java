@@ -57,15 +57,18 @@ import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
@@ -82,9 +85,14 @@ import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 public class Core {
 
   /**
+   * A reasonably unique instance ID.
+   */
+  private static final int GLOBAL_ID = new SecureRandom().nextInt();
+
+  /**
    * Counts up core ids for each new instance.
    */
-  private static final AtomicLong CORE_IDS = new AtomicLong();
+  private static final AtomicInteger CORE_IDS = new AtomicInteger();
 
   /**
    * Locates the right node for the KV service.
@@ -192,7 +200,7 @@ public class Core {
     }
 
     this.seedNodes = seedNodes;
-    this.coreContext = new CoreContext(this, CORE_IDS.incrementAndGet(), environment, authenticator);
+    this.coreContext = new CoreContext(this, createInstanceId(), environment, authenticator);
     this.configurationProvider = createConfigurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
     this.eventBus = environment.eventBus();
@@ -203,6 +211,21 @@ public class Core {
       reconfigure();
     });
     eventBus.publish(new CoreCreatedEvent(coreContext, environment));
+  }
+
+  /**
+   * Creates a (somewhat) globally unique ID for this instance.
+   * <p>
+   * The 64 bit long is split up into an upper and lower 32 bit halves. The upper half
+   * is reusing the same global ID for all instances while the lower half is always
+   * incrementing for each instance. So it has a global and a local component which can
+   * be used to correlate instances across logs but also help distinguish multiple
+   * instances in the same JVM.
+   *
+   * @return the created instance ID.
+   */
+  private long createInstanceId() {
+    return (((long) GLOBAL_ID) << 32) | (CORE_IDS.incrementAndGet() & 0xffffffffL);
   }
 
   /**
