@@ -17,8 +17,10 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.CasMismatchException;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
+import com.couchbase.client.core.error.subdoc.XattrUnknownVirtualAttributeException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 
 import com.couchbase.client.java.json.JsonArray;
@@ -362,5 +364,17 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     LookupInResult result = collection.lookupIn(id, Collections.singletonList(get(LookupInMacro.REV_ID).xattr()));
     result.contentAs(0, String.class);
+  }
+
+  // This test can be run on any cluster < 6.5.1, but there's not a clean way of identifying that.
+  // Instead use SYNC_REP as a proxy, so it will be run on any cluster < 6.5.0
+  @Test
+  @IgnoreWhen(hasCapabilities = Capabilities.SYNC_REPLICATION)
+  void vbucketVattrRaisesClientSideError() {
+    String id = UUID.randomUUID().toString();
+    collection.upsert(id, JsonObject.create());
+
+    assertThrows(XattrUnknownVirtualAttributeException.class, () ->
+            collection.lookupIn(id, Arrays.asList(LookupInSpec.get("$vbucket").xattr())));
   }
 }

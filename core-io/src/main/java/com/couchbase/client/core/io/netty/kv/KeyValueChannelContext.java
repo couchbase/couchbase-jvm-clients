@@ -34,19 +34,21 @@ public class KeyValueChannelContext {
   private final boolean collections;
   private final boolean mutationTokensEnabled;
   private final boolean syncReplication;
+  private final boolean vattrEnabled;
   private final boolean altRequest;
   private final CollectionMap collectionMap;
   private final ChannelId channelId;
 
   public KeyValueChannelContext(final CompressionConfig compression, final boolean collections,
                                 final boolean mutationTokens, final Optional<String> bucket,
-                                final boolean syncReplication, final boolean altRequest,
+                                final boolean syncReplication, final boolean vattrEnabled, final boolean altRequest,
                                 final CollectionMap collectionMap, final ChannelId channelId) {
     this.compression = compression;
     this.collections = collections;
     this.mutationTokensEnabled = mutationTokens;
     this.bucket = bucket;
     this.syncReplication = syncReplication;
+    this.vattrEnabled = vattrEnabled;
     this.altRequest = altRequest;
     this.collectionMap = collectionMap;
     this.channelId = channelId;
@@ -70,6 +72,10 @@ public class KeyValueChannelContext {
 
   public boolean syncReplicationEnabled() {
     return syncReplication;
+  }
+
+  public boolean vattrEnabled() {
+    return vattrEnabled;
   }
 
   public boolean alternateRequestEnabled() {

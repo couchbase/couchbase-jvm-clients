@@ -136,7 +136,25 @@ public enum ServerFeature {
    *
    * @since Couchbase Server Spock (5.0)
    */
-  COLLECTIONS((short) 0x12);
+  COLLECTIONS((short) 0x12),
+
+  /**
+   * Enables the "create as deleted" flag, allowing a document to be created in a tombstoned state.
+   *
+   * @since Couchbase Server 6.6
+   */
+  CREATE_AS_DELETED((short) 0x14),
+
+  /**
+   * Enables the vattr feature.
+   *
+   * Note that vattrs (such as $document) were available before this, but this flag signifies that if a vattr is
+   * requested that the server does not recognise, it will be rejected with the correct XATTR_UNKNOWN_VATTR error,
+   * rather than the connection being disconnected.
+   *
+   * @since Couchbase Server 6.5.1
+   */
+  VATTR((short) 0x15);
 
   /**
    * The actual byte representation on the wire.
@@ -203,6 +221,10 @@ public enum ServerFeature {
         return SYNC_REPLICATION;
       case 0x12:
         return COLLECTIONS;
+      case 0x14:
+        return CREATE_AS_DELETED;
+      case 0x15:
+        return VATTR;
       default:
         return null;
     }

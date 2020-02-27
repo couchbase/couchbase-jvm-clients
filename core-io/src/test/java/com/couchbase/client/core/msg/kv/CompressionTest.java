@@ -247,6 +247,7 @@ class CompressionTest {
       Optional.of(cid.bucket()),
       false,
       false,
+      false,
       new CollectionMap(),
       null
     );
