@@ -51,6 +51,7 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import static com.couchbase.client.java.kv.MutateInOptions.mutateInOptions;
+import static com.couchbase.client.java.kv.MutateInSpec.upsert;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -273,14 +274,14 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     @Test
     void upsertString() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", "bar"),
-                Arrays.asList(MutateInSpec.upsert("foo", "bar2")));
+                Arrays.asList(upsert("foo", "bar2")));
         assertEquals("bar2", updatedContent.getString("foo"));
     }
 
     @Test
     void upsertStringDoesNotExist() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
-                Arrays.asList(MutateInSpec.upsert("foo", "bar2")));
+                Arrays.asList(upsert("foo", "bar2")));
         assertEquals("bar2", updatedContent.getString("foo"));
     }
 
@@ -406,14 +407,14 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     @Test
     void upsertStringXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", "bar"),
-                Arrays.asList(MutateInSpec.upsert("x.foo", "bar2").xattr()));
+                Arrays.asList(upsert("x.foo", "bar2").xattr()));
         assertEquals("bar2", updatedContent.getString("foo"));
     }
 
     @Test
     void upsertStringDoesNotExistXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                Arrays.asList(MutateInSpec.upsert("x.foo", "bar2").xattr()));
+                Arrays.asList(upsert("x.foo", "bar2").xattr()));
         assertEquals("bar2", updatedContent.getString("foo"));
     }
 
@@ -520,14 +521,14 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     @Test
     void upsertStringXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", JsonObject.create().put("baz", "bar")),
-                Arrays.asList(MutateInSpec.upsert("x.foo", "bar2").xattr().createPath()));
+                Arrays.asList(upsert("x.foo", "bar2").xattr().createPath()));
         assertEquals("bar2", updatedContent.getString("foo"));
     }
 
     @Test
     void upsertStringDoesNotExistXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
-                Arrays.asList(MutateInSpec.upsert("x.foo.baz", "bar2").xattr().createPath()));
+                Arrays.asList(upsert("x.foo.baz", "bar2").xattr().createPath()));
         assertEquals("bar2", updatedContent.getObject("foo").getString("baz"));
     }
 
@@ -592,14 +593,14 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     @Test
     void upsertStringCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create().put("foo", JsonObject.create().put("baz", "bar")),
-                Arrays.asList(MutateInSpec.upsert("foo", "bar2").createPath()));
+                Arrays.asList(upsert("foo", "bar2").createPath()));
         assertEquals("bar2", updatedContent.getString("foo"));
     }
 
     @Test
     void upsertStringDoesNotExistCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
-                Arrays.asList(MutateInSpec.upsert("foo.baz", "bar2").createPath()));
+                Arrays.asList(upsert("foo.baz", "bar2").createPath()));
         assertEquals("bar2", updatedContent.getObject("foo").getString("baz"));
     }
 
@@ -734,7 +735,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
             Arrays.asList(
               MutateInSpec.increment("count", 1).xattr().createPath(),
               MutateInSpec.arrayAppend("logs", Collections.singletonList("someValue")),
-              MutateInSpec.upsert("logs[-1].c", MutateInMacro.CAS).xattr()
+              upsert("logs[-1].c", MutateInMacro.CAS).xattr()
             ),
             MutateInOptions.mutateInOptions().storeSemantics(StoreSemantics.UPSERT))
         );
@@ -806,4 +807,15 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
       }
     }
 
+    // JCBC-1600
+    @Test
+    void expiryWithDocumentFlagsShouldNotFail() {
+      String docId = docId();
+
+      coll.mutateIn(docId, Arrays.asList(
+              upsert("a", "b"),
+              upsert("c", "d")
+              ),
+              mutateInOptions().storeSemantics(StoreSemantics.UPSERT).expiry(Duration.ofSeconds(60 * 60 * 24)));
+    }
 }
