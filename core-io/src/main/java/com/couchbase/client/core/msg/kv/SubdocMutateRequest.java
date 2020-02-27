@@ -115,11 +115,11 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       key = encodedKeyWithCollection(alloc, ctx);
 
       extras = alloc.buffer();
-      if (flags != 0) {
-        extras.writeByte(flags);
-      }
       if (expiration != 0) {
         extras.writeInt((int) expiration);
+      }
+      if (flags != 0) {
+        extras.writeByte(flags);
       }
 
       if (commands.size() == 1) {
