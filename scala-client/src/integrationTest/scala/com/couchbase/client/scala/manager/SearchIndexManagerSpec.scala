@@ -105,8 +105,10 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
     val foundIndexAgain = indexes.getIndex(name).get
 
     // The UUID changes each time
-    val fixIndex = foundIndex.copy(uuid = foundIndexAgain.uuid,
-      numPlanPIndexes = foundIndexAgain.numPlanPIndexes)
+    val fixIndex = foundIndex.copy(
+      uuid = foundIndexAgain.uuid,
+      numPlanPIndexes = foundIndexAgain.numPlanPIndexes
+    )
     println(fixIndex)
     println(foundIndex)
     assert(fixIndex == foundIndexAgain)
