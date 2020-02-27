@@ -69,6 +69,18 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     ByteBuf body = null;
 
     try {
+      if (!ctx.vattrEnabled()) {
+        // Server will not handle all vattrs perfectly: it will reject those it doesn't know by breaking the connection.
+        // Do a check to see if all vattr commands meet a whitelist of vattrs.
+        for (Command c: commands) {
+          if (c.xattr()
+                  && (c.path.length() > 0 && c.path.charAt(0) == '$')
+                  && !(c.path.startsWith("$document") || c.path.startsWith("$XTOC"))) {
+            throw mapSubDocumentError(this, SubDocumentOpResponseStatus.XATTR_UNKNOWN_VATTR, c.path, c.originalIndex());
+          }
+        }
+      }
+
       key = encodedKeyWithCollection(alloc, ctx);
 
       if (flags != 0) {

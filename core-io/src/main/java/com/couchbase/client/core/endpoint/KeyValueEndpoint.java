@@ -120,6 +120,13 @@ public class KeyValueEndpoint extends BaseEndpoint {
         features.add(ServerFeature.UNORDERED_EXECUTION);
       }
 
+      boolean vattrEnabled = Boolean.parseBoolean(
+              System.getProperty("com.couchbase.vattrEnabled", "true")
+      );
+      if (vattrEnabled) {
+        features.add(ServerFeature.VATTR);
+      }
+
       return features;
     }
   }
