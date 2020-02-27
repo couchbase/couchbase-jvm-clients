@@ -43,11 +43,13 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-kqueue</artifactId>
             <version>${netty.version}</version>
+            <classifier>osx-x86_64</classifier>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-epoll</artifactId>
             <version>${netty.version}</version>
+            <classifier>linux-x86_64</classifier>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
@@ -100,12 +102,14 @@
                                     <groupId>io.netty</groupId>
                                     <artifactId>netty-transport-native-kqueue</artifactId>
                                     <outputDirectory>${native.folder}</outputDirectory>
+                                    <classifier>osx-x86_64</classifier>
                                     <includes>META-INF/native/*</includes>
                                 </artifactItem>
                                 <artifactItem>
                                     <groupId>io.netty</groupId>
                                     <artifactId>netty-transport-native-epoll</artifactId>
                                     <outputDirectory>${native.folder}</outputDirectory>
+                                    <classifier>linux-x86_64</classifier>
                                     <includes>META-INF/native/*</includes>
                                 </artifactItem>
                                 <artifactItem>
