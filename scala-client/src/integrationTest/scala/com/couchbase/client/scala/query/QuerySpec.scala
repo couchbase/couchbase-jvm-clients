@@ -32,6 +32,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 import reactor.core.scala.publisher.SMono
 
+import scala.collection.immutable.Range
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
@@ -372,17 +373,20 @@ class QuerySpec extends ScalaIntegrationTest {
     val options: QueryOptions = QueryOptions()
       .scanConsistency(QueryScanConsistency.RequestPlus())
       .adhoc(false)
-    val result = cluster
-      .query(
-        "select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
-          ".id=\"" + id + "\"",
-        options
-      )
-      .get
 
-    val rows = result.rowsAs[JsonObject].get
-    assert(1 == rows.size)
-    assert(FooContent == rows(0))
+    for (i <- Range(0, 2)) {
+      val result = cluster
+        .query(
+          "select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
+            ".id=\"" + id + "\"",
+          options
+        )
+        .get
+
+      val rows = result.rowsAs[JsonObject].get
+      assert(1 == rows.size)
+      assert(FooContent == rows(0))
+    }
   }
 
   @Test
@@ -391,15 +395,17 @@ class QuerySpec extends ScalaIntegrationTest {
     val options: QueryOptions = QueryOptions()
       .scanConsistency(QueryScanConsistency.RequestPlus())
       .adhoc(false)
-    val future = cluster.async.query(
-      "select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
-        ".id=\"" + id + "\"",
-      options
-    )
-    val result = Await.result(future, Duration.Inf)
-    val rows   = result.rowsAs[JsonObject].get
-    assert(1 == rows.size)
-    assert(FooContent == rows(0))
+    for (i <- Range(0, 2)) {
+      val future = cluster.async.query(
+        "select `" + bucketName + "`.* from `" + bucketName + "` where meta()" +
+          ".id=\"" + id + "\"",
+        options
+      )
+      val result = Await.result(future, Duration.Inf)
+      val rows   = result.rowsAs[JsonObject].get
+      assert(1 == rows.size)
+      assert(FooContent == rows(0))
+    }
   }
 
   @Test
@@ -419,6 +425,7 @@ class QuerySpec extends ScalaIntegrationTest {
     assert(FooContent == rows(0))
   }
 
+  @RepeatedTest(1)
   @Test
   def handlesPreparedStatementsWithNamedArgs(): Unit = {
     val id: String = insertDoc
@@ -438,6 +445,7 @@ class QuerySpec extends ScalaIntegrationTest {
     assert(FooContent == rows(0))
   }
 
+  @RepeatedTest(1)
   @Test
   def handlesPreparedStatementsWithPositionalArgs(): Unit = {
     val id: String = insertDoc
