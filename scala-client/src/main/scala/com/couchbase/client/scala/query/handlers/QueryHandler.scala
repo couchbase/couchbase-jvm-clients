@@ -19,10 +19,16 @@ package com.couchbase.client.scala.query.handlers
 import java.nio.charset.StandardCharsets
 import java.util.Collections
 
+import com.couchbase.client.core.cnc.events.request.PreparedStatementRetriedEvent
 import com.couchbase.client.core.config.{ClusterCapabilities, ClusterConfig}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.error.{CouchbaseException, ErrorCodeAndMessage}
+import com.couchbase.client.core.error.{
+  CouchbaseException,
+  ErrorCodeAndMessage,
+  PreparedStatementFailureException
+}
 import com.couchbase.client.core.msg.query.{QueryChunkRow, QueryRequest, QueryResponse}
+import com.couchbase.client.core.retry.{RetryOrchestrator, RetryReason}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.Golang.encodeDurationToMs
 import com.couchbase.client.core.util.LRUCache
@@ -33,6 +39,7 @@ import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.{DurationConversions, FutureConversions, Validate}
+import reactor.core.scala.publisher
 import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.compat.java8.OptionConverters._
@@ -40,6 +47,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
+import scala.compat.java8.FutureConverters._
 
 /**
   * Holds a cache entry, which might either be the full plan or just the name, depending on the
@@ -241,6 +249,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
 
     if (cacheEntry != null && cacheEntryStillValid(cacheEntry, enhancedEnabled)) {
       queryInternal(buildExecuteRequest(cacheEntry, request, options), options, true)
+        .onErrorResume(preparedRetry(request, options))
     } else if (enhancedEnabled) {
       queryInternal(buildPrepareRequest(request, options), options, true)
         .flatMap((qr: QueryResponse) => {
@@ -428,6 +437,43 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
           .toFuture
 
       case Failure(err) => Future.failed(err)
+    }
+  }
+
+  /** Handle certain prepared statement failures by clearing the cache and retrying with a fresh attempt.
+    */
+  private def preparedRetry(req: QueryRequest, opts: QueryOptions)(
+      err: Throwable
+  ): SMono[QueryResponse] = {
+    err match {
+      case t: PreparedStatementFailureException if t.retryable =>
+        queryCache.remove(req.statement)
+
+        val retryReason = RetryReason.QUERY_PREPARED_STATEMENT_FAILURE
+        val env         = req.context.environment
+        val cf          = req.retryStrategy.shouldRetry(req, retryReason)
+
+        SMono
+          .fromFuture(cf.toScala)
+          .flatMap(retryAction => {
+            retryAction.duration.asScala match {
+              case Some(duration) =>
+                val cappedDuration = RetryOrchestrator.capDuration(duration, req)
+                req.context.incrementRetryAttempts(cappedDuration, retryReason)
+
+                env.eventBus.publish(
+                  new PreparedStatementRetriedEvent(cappedDuration, req.context, retryReason, t)
+                )
+
+                SMono
+                  .delay(cappedDuration, env.scheduler)
+                  .flatMap(l => maybePrepareAndExecute(req, opts))
+
+              case _ => SMono.raiseError(t)
+            }
+          })
+
+      case _ => SMono.raiseError(err)
     }
   }
 }
