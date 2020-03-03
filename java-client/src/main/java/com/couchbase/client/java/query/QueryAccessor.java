@@ -20,27 +20,32 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.events.request.PreparedStatementRetriedEvent;
 import com.couchbase.client.core.config.ClusterCapabilities;
 import com.couchbase.client.core.config.ClusterConfig;
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.PreparedStatementFailureException;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.LRUCache;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonObject;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.SignalType;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
+import static com.couchbase.client.core.retry.RetryOrchestrator.capDuration;
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 
@@ -178,7 +183,8 @@ public class QueryAccessor {
         boolean enhancedEnabled = enhancedPreparedEnabled;
 
         if (cacheEntry != null && cacheEntryStillValid(cacheEntry, enhancedEnabled)) {
-            return queryInternal(buildExecuteRequest(cacheEntry, request, options), options, true, serializer);
+            return queryInternal(buildExecuteRequest(cacheEntry, request, options), options, true, serializer)
+                .onErrorResume(new PreparedRetryFunction(request, options, serializer));
         } else if (enhancedEnabled) {
             return queryInternal(buildPrepareRequest(request, options), options, true, serializer)
               .flatMap(qr -> {
@@ -315,6 +321,57 @@ public class QueryAccessor {
                 result.put("encoded_plan", value);
             }
             return result;
+        }
+    }
+
+    /**
+     * This helper function encapsulates the retry handling logic when a prepared statement needs to be retried.
+     * <p>
+     * Note that this code uses, but also duplicates some of the functionality of the retry orchestrator, because
+     * we need to handle retries but also need to execute different logic instead of "just" retrying a request.
+     */
+    private class PreparedRetryFunction implements Function<Throwable, Mono<? extends QueryResponse>> {
+
+        private final QueryRequest request;
+        private final QueryOptions.Built options;
+        private final JsonSerializer serializer;
+
+        public PreparedRetryFunction(final QueryRequest request, final QueryOptions.Built options,
+                                     final JsonSerializer serializer) {
+            this.request = request;
+            this.options = options;
+            this.serializer = serializer;
+        }
+
+        @Override
+        public Mono<? extends QueryResponse> apply(final Throwable t) {
+            if (t instanceof PreparedStatementFailureException) {
+                if (((PreparedStatementFailureException) t).retryable()) {
+                    queryCache.remove(request.statement());
+
+                    final RetryReason retryReason = RetryReason.QUERY_PREPARED_STATEMENT_FAILURE;
+                    final CoreEnvironment env = request.context().environment();
+
+                    return Mono
+                      .fromFuture(request.retryStrategy().shouldRetry(request, retryReason))
+                      .flatMap(retryAction -> {
+                          Optional<Duration> duration = retryAction.duration();
+                          if (duration.isPresent()) {
+                              final Duration cappedDuration = capDuration(duration.get(), request);
+                              request.context().incrementRetryAttempts(cappedDuration, retryReason);
+                              env.eventBus().publish(
+                                new PreparedStatementRetriedEvent(cappedDuration, request.context(), retryReason, t)
+                              );
+                              return Mono
+                                .delay(cappedDuration, env.scheduler())
+                                .flatMap(l -> maybePrepareAndExecute(request, options, serializer));
+                          } else {
+                              return Mono.error(t);
+                          }
+                      });
+                }
+            }
+            return Mono.error(t);
         }
     }
 

@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
@@ -24,8 +25,16 @@ import com.couchbase.client.core.error.context.ErrorContext;
  */
 public class PreparedStatementFailureException extends CouchbaseException {
 
-  public PreparedStatementFailureException(final ErrorContext ctx) {
+  private final boolean retryable;
+
+  public PreparedStatementFailureException(final ErrorContext ctx, final boolean retryable) {
     super("Prepared statement failure", ctx);
+    this.retryable = retryable;
+  }
+
+  @Stability.Internal
+  public boolean retryable() {
+    return retryable;
   }
 
 }

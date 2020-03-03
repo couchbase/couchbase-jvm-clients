@@ -51,14 +51,28 @@ public class QueryMessageHandler
     return Optional.empty();
   }
 
+  /**
+   * Check if the error code is eligible for transparent retry.
+   * <p>
+   * Note that while not explicitly necessary, the code calls out for prepared statement errors
+   * 4040, 4050 and 4070 to NOT be retried at this level. They need to be handled at the higher
+   * level since we need to clear the caches and re-prepare (which is a new op technically).
+   *
+   * @param error the error code to check.
+   * @return has some value if eligible for retry.
+   */
   private static Optional<RetryReason> mapError(final ErrorCodeAndMessage error) {
     int code = error.code();
+
     if (code == 4040 || code == 4050 || code == 4070) {
-      return Optional.of(RetryReason.QUERY_PREPARED_STATEMENT_FAILURE);
+      // prepared errors not retried on purpose here.
+      return Optional.empty();
     }
+
     if (code == 5000 && error.message().contains("queryport.indexNotFound")) {
       return Optional.of(RetryReason.QUERY_INDEX_NOT_FOUND);
     }
+
     return Optional.empty();
   }
 
