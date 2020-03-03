@@ -47,6 +47,13 @@ public class QueryChunkResponseParser
    */
   private static final List<Integer> PREPARED_ERROR_CODES = Arrays.asList(4040, 4050, 4060, 4070, 4080, 4090);
 
+  /**
+   * Contains all prepared error codes that can be retried by the upper layers.
+   * <p>
+   * Note that this list is a strict subset of the {@link #PREPARED_ERROR_CODES}.
+   */
+  private static final List<Integer> RETRYABLE_PREPARED_ERROR_CODES = Arrays.asList(4040, 4050, 4070);
+
   private String requestId;
   private Optional<byte[]> signature;
   private Optional<String> clientContextId;
@@ -122,7 +129,7 @@ public class QueryChunkResponseParser
       if (code == 3000) {
         return new ParsingFailureException(errorContext);
       } else if (PREPARED_ERROR_CODES.contains(code)) {
-        return new PreparedStatementFailureException(errorContext);
+        return new PreparedStatementFailureException(errorContext, RETRYABLE_PREPARED_ERROR_CODES.contains(code));
       } else if (code == 4300 && message.matches("^.*index .*already exist.*")) {
         return new IndexExistsException(errorContext);
       } else if (code >= 4000 && code < 5000) {

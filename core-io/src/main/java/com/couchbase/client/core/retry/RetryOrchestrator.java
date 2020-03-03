@@ -85,7 +85,8 @@ public class RetryOrchestrator {
    * @param request the request information.
    * @return the capped duration if needed, otherwise the uncapped duration.
    */
-  private static Duration capDuration(final Duration uncappedDuration, final Request<? extends Response> request) {
+  @Stability.Internal
+  public static Duration capDuration(final Duration uncappedDuration, final Request<? extends Response> request) {
     long theoreticalTimeout = System.nanoTime() + uncappedDuration.toNanos();
     long absoluteTimeout = request.absoluteTimeout();
     long timeoutDelta = theoreticalTimeout - absoluteTimeout;
