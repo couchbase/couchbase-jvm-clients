@@ -23,6 +23,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.TargetedRequest;
+import com.couchbase.client.core.msg.UnmonitoredRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.Bytes;
@@ -51,7 +52,7 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
  */
 public class CarrierGlobalConfigRequest
   extends BaseKeyValueRequest<CarrierGlobalConfigResponse>
-  implements TargetedRequest {
+  implements TargetedRequest, UnmonitoredRequest {
 
   private final NodeIdentifier target;
 

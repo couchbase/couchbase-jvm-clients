@@ -21,6 +21,7 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.TargetedRequest;
+import com.couchbase.client.core.msg.UnmonitoredRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -34,7 +35,7 @@ import java.util.Map;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
-public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucketConfigResponse> implements TargetedRequest {
+public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucketConfigResponse> implements TargetedRequest, UnmonitoredRequest {
 
   private final NodeIdentifier target;
 
