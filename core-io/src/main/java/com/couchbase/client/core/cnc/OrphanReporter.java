@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.events.tracing.OrphansRecordedEvent;
 import com.couchbase.client.core.deps.org.jctools.queues.MpscUnboundedArrayQueue;
 import com.couchbase.client.core.env.OrphanReporterConfig;
 import com.couchbase.client.core.msg.Request;
+import com.couchbase.client.core.msg.UnmonitoredRequest;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.service.ServiceType;
@@ -87,6 +88,10 @@ public class OrphanReporter {
   }
 
   public void report(final Request<?> request) {
+      if (request instanceof UnmonitoredRequest) {
+        return;
+      }
+
       if (!orphanQueue.offer(request)) {
         eventBus.publish(new OrphanRecordDroppedEvent(request.getClass()));
       }

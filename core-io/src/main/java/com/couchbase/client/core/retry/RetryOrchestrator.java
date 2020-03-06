@@ -18,11 +18,13 @@ package com.couchbase.client.core.retry;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.request.RequestNotRetriedEvent;
 import com.couchbase.client.core.cnc.events.request.RequestRetryScheduledEvent;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.UnmonitoredRequest;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -60,7 +62,7 @@ public class RetryOrchestrator {
     request.retryStrategy().shouldRetry(request, reason).whenComplete((retryAction, throwable) -> {
       if (throwable != null) {
         ctx.environment().eventBus().publish(
-          new RequestNotRetriedEvent(request.getClass(), request.context(), reason, throwable)
+          new RequestNotRetriedEvent(Event.Severity.INFO, request.getClass(), request.context(), reason, throwable)
         );
       }
 
@@ -69,8 +71,10 @@ public class RetryOrchestrator {
         final Duration cappedDuration = capDuration(duration.get(), request);
         retryWithDuration(ctx, request, cappedDuration, reason);
       } else {
+        // unmonitored request's severity is downgraded to debug to not spam the info-level logs
+        Event.Severity severity = request instanceof UnmonitoredRequest ? Event.Severity.DEBUG : Event.Severity.INFO;
         ctx.environment().eventBus().publish(
-          new RequestNotRetriedEvent(request.getClass(), request.context(), reason, null)
+          new RequestNotRetriedEvent(severity, request.getClass(), request.context(), reason, null)
         );
         request.cancel(CancellationReason.noMoreRetries(reason));
       }

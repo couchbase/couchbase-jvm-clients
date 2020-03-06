@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.cnc.events.request;
 
+import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.retry.RetryReason;
@@ -28,7 +29,8 @@ class RequestNotRetriedEventTest {
 
   @Test
   void verifyDescription() {
-    RequestNotRetriedEvent event = new RequestNotRetriedEvent(GetRequest.class, mock(RequestContext.class), RetryReason.UNKNOWN, null);
+    RequestNotRetriedEvent event = new RequestNotRetriedEvent(Event.Severity.INFO, GetRequest.class,
+      mock(RequestContext.class), RetryReason.UNKNOWN, null);
     assertEquals("Request GetRequest not retried per RetryStrategy (Reason: UNKNOWN)", event.description());
   }
 
