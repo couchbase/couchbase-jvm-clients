@@ -252,6 +252,14 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       .filter(m -> Arrays.asList(serverMechanisms).contains(m.mech()))
       .collect(Collectors.toSet());
 
+    if (usedMechs.isEmpty()) {
+      failConnect(ctx, "Could not negotiate SASL mechanism with server. If you are using LDAP you must either" +
+        "connect via TLS (recommended), or enable PLAIN to the allowed SASL mechanism list on the PasswordAuthenticator" +
+          "(this is insecure and will present the user credentials in plain-text over the wire).",
+        response, null, MemcacheProtocol.status(response));
+      return;
+    }
+
     try {
       saslClient = createSaslClient(usedMechs);
 
