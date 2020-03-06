@@ -59,7 +59,7 @@ public class SearchChunkResponseParser
       failRows(errorsToThrowable(error));
     })
     .doOnValue("/hits/-", v -> emitRow(new SearchChunkRow(v.readBytes())))
-    .doOnValue("/total_rows", v -> totalRows = v.readLong())
+    .doOnValue("/total_hits", v -> totalRows = v.readLong())
     .doOnValue("/max_score", v -> maxScore = v.readDouble())
     .doOnValue("/took", v -> took = v.readLong())
     .doOnValue("/facets", v -> facets = v.readBytes());

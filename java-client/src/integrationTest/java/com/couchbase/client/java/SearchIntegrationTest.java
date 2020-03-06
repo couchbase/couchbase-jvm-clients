@@ -85,6 +85,7 @@ class SearchIntegrationTest extends JavaIntegrationTest {
                     foundInserted = true;
                 }
             }
+            assertEquals(1, result.metaData().metrics().totalRows());
             assertTrue(foundInserted);
             break;
         } catch (CouchbaseException ex) {
