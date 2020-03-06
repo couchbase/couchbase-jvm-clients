@@ -31,6 +31,9 @@ import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+/**
+ * Performs authentication against a couchbase server cluster using username and password.
+ */
 public class PasswordAuthenticator implements Authenticator {
 
   private static final Set<SaslMechanism> DEFAULT_SASL_MECHANISMS =
@@ -41,19 +44,30 @@ public class PasswordAuthenticator implements Authenticator {
   private final Set<SaslMechanism> allowedSaslMechanisms;
   private final String cachedHttpAuthHeader;
 
+  /**
+   * Creates a new {@link Builder} which allows to customize this authenticator.
+   */
   public static PasswordAuthenticator.Builder builder() {
     return new Builder();
   }
 
+  /**
+   * Creates a new password authenticator with the default settings.
+   *
+   * @param username the username to use for all authentication.
+   * @param password the password to use alognside the username.
+   * @return the instantiated {@link PasswordAuthenticator}.
+   */
   public static PasswordAuthenticator create(final String username, final String password) {
     return builder().username(username).password(password).build();
   }
 
   private PasswordAuthenticator(final Builder builder) {
-    this.username = builder.username;
-    this.password = builder.password;
-    this.allowedSaslMechanisms = builder.allowedSaslMechanisms;
+    this.username = notNull(builder.username, "username");
+    this.password = notNull(builder.password, "password");
+    this.allowedSaslMechanisms = notNull(builder.allowedSaslMechanisms, "allowedSaslMechanisms");
 
+    // We only pre-compute the http header if we get static credentials
     if (username instanceof OwnedSupplier && password instanceof OwnedSupplier) {
       cachedHttpAuthHeader = encodeAuthHttpHeader();
     } else {
@@ -92,28 +106,69 @@ public class PasswordAuthenticator implements Authenticator {
     );
   }
 
+  /**
+   * Provides customization to the {@link PasswordAuthenticator}.
+   */
   public static class Builder {
 
     private Supplier<String> username;
     private Supplier<String> password;
     private Set<SaslMechanism> allowedSaslMechanisms = DEFAULT_SASL_MECHANISMS;
 
+    /**
+     * Specifies a static username that will be used for all authentication purposes.
+     *
+     * @param username the username to use.
+     * @return this builder for chaining purposes.
+     */
     public Builder username(final String username) {
       notNullOrEmpty(username, "Username");
       return username(new OwnedSupplier<>(username));
     }
 
+    /**
+     * Specifies a dynamic username that will be used for all authentication purposes.
+     * <p>
+     * Every time the SDK needs to authenticate against the server, it will re-evaluate the supplier. This means that
+     * you can pass in a supplier that dynamically loads a username from a (remote) source without taking the application
+     * down on a restart.
+     * <p>
+     * It is VERY IMPORTANT that this supplier must not block on IO. It is called in async contexts and blocking for
+     * a longer amount of time will stall SDK resources like async event loops.
+     *
+     * @param username the username to use.
+     * @return this builder for chaining purposes.
+     */
     public Builder username(final Supplier<String> username) {
       notNull(username, "Username");
       this.username = username;
       return this;
     }
 
+    /**
+     * Specifies a static password that will be used for all authentication purposes.
+     *
+     * @param password the password to alongside for the username provided.
+     * @return this builder for chaining purposes.
+     */
     public Builder password(final String password) {
       notNullOrEmpty(password, "Password");
       return password(new OwnedSupplier<>(password));
     }
 
+    /**
+     * Specifies a dynamic password that will be used for all authentication purposes.
+     * <p>
+     * Every time the SDK needs to authenticate against the server, it will re-evaluate the supplier. This means that
+     * you can pass in a supplier that dynamically loads a password from a (remote) source without taking the application
+     * down on a restart.
+     * <p>
+     * It is VERY IMPORTANT that this supplier must not block on IO. It is called in async contexts and blocking for
+     * a longer amount of time will stall SDK resources like async event loops.
+     *
+     * @param password the password to alongside for the username provided.
+     * @return this builder for chaining purposes.
+     */
     public Builder password(final Supplier<String> password) {
       notNull(password, "Password");
       this.password = password;
@@ -122,15 +177,38 @@ public class PasswordAuthenticator implements Authenticator {
 
     /**
      * Allows to set a list of allowed SASL mechanisms for the NON-TLS connections.
+     * <p>
+     * Note that if you add {@link SaslMechanism#PLAIN} to the list, this will cause credential leakage on the network
+     * since PLAIN sends the credentials in cleartext. It is disabled by default to prevent downgrade attacks. We
+     * recommend using a TLS connection instead.
      *
-     * @param allowedSaslMechanisms the list of allowed sasl mechs for non-tls connections
+     * @param allowedSaslMechanisms the list of allowed sasl mechs for non-tls connections.
+     * @return this builder for chaining purposes.
      */
-    public Builder allowedSaslMechanisms(Set<SaslMechanism> allowedSaslMechanisms) {
+    public Builder allowedSaslMechanisms(final Set<SaslMechanism> allowedSaslMechanisms) {
       notNullOrEmpty(allowedSaslMechanisms, "AllowedSaslMechanisms");
       this.allowedSaslMechanisms = allowedSaslMechanisms;
       return this;
     }
 
+    /**
+     * This method acts as a shortcut to {@link #allowedSaslMechanisms(Set)} which adds {@link SaslMechanism#PLAIN}
+     * to the allowed mechanism list for NON TLS connections.
+     * <p>
+     * Please note that this is INSECURE and will leak user credentials on the wire to eavesdroppers. This should
+     * only be enabled in trusted environments - we recommend connecting via TLS to the cluster instead.
+     *
+     * @return this builder for chaining purposes.
+     */
+    public Builder enablePlainSaslMechanism() {
+      return allowedSaslMechanisms(EnumSet.allOf(SaslMechanism.class));
+    }
+
+    /**
+     * Creates the {@link PasswordAuthenticator} based on the customization in this builder.
+     *
+     * @return the created password authenticator instance.
+     */
     public PasswordAuthenticator build() {
       return new PasswordAuthenticator(this);
     }
