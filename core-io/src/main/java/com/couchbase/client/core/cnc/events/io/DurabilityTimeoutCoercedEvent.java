@@ -20,12 +20,16 @@ import com.couchbase.client.core.cnc.Context;
 
 import java.time.Duration;
 
+/**
+ * This event is raised if a durability timeout has been provided out of the allowed range and is coerced into a
+ * sane and supported value.
+ */
 public class DurabilityTimeoutCoercedEvent extends AbstractEvent {
+
     final long requestedTimeout;
     final long actualTimeout;
 
-
-    public DurabilityTimeoutCoercedEvent(Context context, long requestedTimeout, long actualTimeout ) {
+    public DurabilityTimeoutCoercedEvent(final Context context, final long requestedTimeout, final long actualTimeout) {
         super(Severity.WARN, Category.IO,  Duration.ZERO, context);
         this.requestedTimeout = requestedTimeout;
         this.actualTimeout = actualTimeout;
@@ -33,7 +37,8 @@ public class DurabilityTimeoutCoercedEvent extends AbstractEvent {
 
     @Override
     public String description() {
-        return("Requested DurabilityTimeout outside range (1700-65535ms), using client side timeout of " + requestedTimeout + "ms and server-side timeout of " + actualTimeout + "ms.");
+        return("Requested DurabilityTimeout outside range (1700-65535ms), using client side timeout of "
+          + requestedTimeout + "ms and server-side timeout of " + actualTimeout + "ms.");
     }
 
 }

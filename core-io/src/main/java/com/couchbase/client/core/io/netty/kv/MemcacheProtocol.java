@@ -415,19 +415,18 @@ public enum MemcacheProtocol {
 
   /**
    * Helper method to create the flexible extras for sync replication.
-   *
-   * <p>Note that this method writes a short value from an integer deadline. The netty method will make sure to
-   * only look at the lower 16 bits - this allows us to write an unsigned short!</p>
+   * <p>
+   * Note that this method writes a short value from an integer deadline. The netty method will make sure to
+   * only look at the lower 16 bits - this allows us to write an unsigned short!
    *
    * @param alloc the allocator to use.
    * @param type the type of sync replication.
    * @param timeout the timeout to use.
+   * @param ctx the core context to use.
    * @return a buffer which contains the flexible extras.
    */
-  public static ByteBuf flexibleSyncReplication(final ByteBufAllocator alloc,
-                                                final DurabilityLevel type,
-                                                final Duration timeout,
-                                                final CoreContext ctx) {
+  public static ByteBuf flexibleSyncReplication(final ByteBufAllocator alloc, final DurabilityLevel type,
+                                                final Duration timeout, final CoreContext ctx) {
     long userTimeout = timeout.toMillis();
 
     int deadline;
@@ -445,11 +444,11 @@ public enum MemcacheProtocol {
       ctx.environment().eventBus().publish(new DurabilityTimeoutCoercedEvent(ctx, userTimeout, deadline));
     }
 
-    ByteBuf flexibleExtras = alloc.buffer(3);
-    flexibleExtras.writeByte(SYNC_REPLICATION_FLEXIBLE_IDENT | (byte) 0x03);
-    flexibleExtras.writeByte(type.code());
-    flexibleExtras.writeShort(deadline);
-    return flexibleExtras;
+    return alloc
+      .buffer(4)
+      .writeByte(SYNC_REPLICATION_FLEXIBLE_IDENT | (byte) 0x03)
+      .writeByte(type.code())
+      .writeShort(deadline);
   }
 
   /**
