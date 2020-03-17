@@ -38,6 +38,7 @@ import com.couchbase.client.core.cnc.SimpleEventBus;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.TrustManagerFactory;
+import java.security.KeyStore;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -100,24 +101,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     waitUntilCondition(() -> core.clusterConfig().hasClusterOrBucketConfig());
 
     try {
-      String id = UUID.randomUUID().toString();
-      byte[] content = "hello, world".getBytes(UTF_8);
-
-      InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
-        Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), Optional.empty(), null);
-      core.send(insertRequest);
-
-      InsertResponse insertResponse = insertRequest.response().get();
-      assertTrue(insertResponse.status().success());
-
-      GetRequest getRequest = new GetRequest(id, Duration.ofSeconds(1),
-        core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), null);
-      core.send(getRequest);
-
-      GetResponse getResponse = getRequest.response().get();
-      assertTrue(getResponse.status().success());
-      assertArrayEquals(content, getResponse.content());
-      assertTrue(getResponse.cas() != 0);
+      runKeyValueOperation(core, env);
     } finally {
       core.shutdown().block();
       env.shutdown();
@@ -136,29 +120,62 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     Core core = Core.create(env, authenticator(), secureSeeds());
     core.openBucket(config().bucketname());
 
+    waitUntilCondition(() -> core.clusterConfig().hasClusterOrBucketConfig());
+
     try {
-      String id = UUID.randomUUID().toString();
-      byte[] content = "hello, world".getBytes(UTF_8);
-
-      InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
-        Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), Optional.empty(), null);
-      core.send(insertRequest);
-
-      InsertResponse insertResponse = insertRequest.response().get();
-      assertTrue(insertResponse.status().success());
-
-      GetRequest getRequest = new GetRequest(id, Duration.ofSeconds(1),
-        core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), null);
-      core.send(getRequest);
-
-      GetResponse getResponse = getRequest.response().get();
-      assertTrue(getResponse.status().success());
-      assertArrayEquals(content, getResponse.content());
-      assertTrue(getResponse.cas() != 0);
+      runKeyValueOperation(core, env);
     } finally {
       core.shutdown().block();
       env.shutdown();
     }
+  }
+
+  @Test
+  void loadsSecurityConfigFromTrustStore() throws Exception {
+    if (!config().clusterCert().isPresent()) {
+      fail("Cluster Certificate must be present for this test!");
+    }
+
+    // Prepare a keystore and load it with the cert
+    KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+    trustStore.load(null, null);
+    trustStore.setCertificateEntry("server", config().clusterCert().get());
+
+    CoreEnvironment env = secureEnvironment(SecurityConfig
+      .enableTls(true)
+      .trustStore(trustStore), null);
+    Core core = Core.create(env, authenticator(), secureSeeds());
+    core.openBucket(config().bucketname());
+
+    waitUntilCondition(() -> core.clusterConfig().hasClusterOrBucketConfig());
+
+    try {
+      runKeyValueOperation(core, env);
+    } finally {
+      core.shutdown().block();
+      env.shutdown();
+    }
+  }
+
+  private void runKeyValueOperation(Core core, CoreEnvironment env) throws Exception {
+    String id = UUID.randomUUID().toString();
+    byte[] content = "hello, world".getBytes(UTF_8);
+
+    InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
+      Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), Optional.empty(), null);
+    core.send(insertRequest);
+
+    InsertResponse insertResponse = insertRequest.response().get();
+    assertTrue(insertResponse.status().success());
+
+    GetRequest getRequest = new GetRequest(id, Duration.ofSeconds(1),
+      core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), null);
+    core.send(getRequest);
+
+    GetResponse getResponse = getRequest.response().get();
+    assertTrue(getResponse.status().success());
+    assertArrayEquals(content, getResponse.content());
+    assertTrue(getResponse.cas() != 0);
   }
 
   @Test
