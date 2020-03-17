@@ -18,8 +18,10 @@ package com.couchbase.client.core.diagnostics;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -71,7 +73,11 @@ public class WaitUntilReadyHelper {
 
         return Flux.concat(ping(core, servicesToCheck, timeout), diagnostics);
       })
-      .timeout(timeout, core.context().environment().scheduler())
+      .timeout(
+        timeout,
+        Mono.defer(() -> Mono.error(new UnambiguousTimeoutException("WaitUntilReady timed out", null))),
+        core.context().environment().scheduler()
+      )
       .then()
       .toFuture();
   }
