@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.util;
+package com.couchbase.client.core.cnc;
 
-import com.couchbase.client.core.cnc.Event;
-import com.couchbase.client.core.cnc.EventBus;
-import com.couchbase.client.core.cnc.EventSubscription;
+import com.couchbase.client.core.annotation.Stability;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -31,6 +29,7 @@ import java.util.function.Consumer;
  * This super simple event bus should be used in testing only to assert certain
  * events got pushed through.
  */
+@Stability.Internal
 public class SimpleEventBus implements EventBus {
 
   /**
