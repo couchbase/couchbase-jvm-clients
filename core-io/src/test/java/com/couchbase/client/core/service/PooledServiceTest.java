@@ -30,7 +30,7 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
-import com.couchbase.client.util.SimpleEventBus;
+import com.couchbase.client.core.cnc.SimpleEventBus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +39,6 @@ import reactor.core.publisher.DirectProcessor;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;

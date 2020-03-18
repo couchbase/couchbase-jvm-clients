@@ -39,7 +39,7 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelInitializer;
 import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.socket.SocketChannel;
 import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChannel;
-import com.couchbase.client.util.SimpleEventBus;
+import com.couchbase.client.core.cnc.SimpleEventBus;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

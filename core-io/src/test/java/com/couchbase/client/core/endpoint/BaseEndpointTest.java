@@ -32,7 +32,7 @@ import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.util.SimpleEventBus;
+import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.deps.io.netty.channel.Channel;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelException;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;

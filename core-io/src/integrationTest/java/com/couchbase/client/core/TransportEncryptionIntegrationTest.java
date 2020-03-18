@@ -34,8 +34,7 @@ import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import com.couchbase.client.util.SimpleEventBus;
-import org.junit.jupiter.api.Disabled;
+import com.couchbase.client.core.cnc.SimpleEventBus;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.TrustManagerFactory;
