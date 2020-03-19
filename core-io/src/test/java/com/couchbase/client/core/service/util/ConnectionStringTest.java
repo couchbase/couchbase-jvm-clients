@@ -182,4 +182,49 @@ class ConnectionStringTest {
     assertTrue(parsed.params().isEmpty());
   }
 
+  @Test
+  void shouldAcceptIpv4WithLcbPortType() {
+    ConnectionString parsed = ConnectionString.create("couchbase://foo:1234=http,bar:5678=mcd");
+    assertEquals(2, parsed.hosts().size());
+
+    assertEquals("foo", parsed.hosts().get(0).hostname());
+    assertEquals(1234, parsed.hosts().get(0).port());
+    assertEquals(ConnectionString.PortType.MANAGER, parsed.hosts().get(0).portType().get());
+
+    assertEquals("bar", parsed.hosts().get(1).hostname());
+    assertEquals(5678, parsed.hosts().get(1).port());
+    assertEquals(ConnectionString.PortType.KV, parsed.hosts().get(1).portType().get());
+  }
+
+  @Test
+  void shouldAcceptIpv4WithNewPortType() {
+    ConnectionString parsed = ConnectionString.create("couchbase://foo:1234=manager,bar:5678=kv");
+    assertEquals(2, parsed.hosts().size());
+
+    assertEquals("foo", parsed.hosts().get(0).hostname());
+    assertEquals(1234, parsed.hosts().get(0).port());
+    assertEquals(ConnectionString.PortType.MANAGER, parsed.hosts().get(0).portType().get());
+
+    assertEquals("bar", parsed.hosts().get(1).hostname());
+    assertEquals(5678, parsed.hosts().get(1).port());
+    assertEquals(ConnectionString.PortType.KV, parsed.hosts().get(1).portType().get());
+  }
+
+  @Test
+  void shouldAcceptIPv6WithPortType() {
+    ConnectionString parsed = ConnectionString.create("couchbases://[::1]:8091=http,[::1]:11210=kv");
+    assertEquals(ConnectionString.Scheme.COUCHBASES, parsed.scheme());
+    assertEquals(2, parsed.hosts().size());
+
+    assertEquals("::1", parsed.hosts().get(0).hostname());
+    assertEquals(8091, parsed.hosts().get(0).port());
+    assertEquals(ConnectionString.PortType.MANAGER, parsed.hosts().get(0).portType().get());
+
+    assertEquals("::1", parsed.hosts().get(1).hostname());
+    assertEquals(11210, parsed.hosts().get(1).port());
+    assertEquals(ConnectionString.PortType.KV, parsed.hosts().get(1).portType().get());
+
+    assertTrue(parsed.params().isEmpty());
+  }
+
 }

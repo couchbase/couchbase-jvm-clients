@@ -3,9 +3,8 @@ package com.couchbase.client.scala
 import com.couchbase.client.scala.env._
 import org.junit.jupiter.api.Test
 
-import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
-import concurrent.duration._
+import scala.concurrent.duration.{Duration, _}
+import scala.util.{Success, Try}
 
 class EnvironmentSpec {
   @Test
@@ -36,8 +35,8 @@ class EnvironmentSpec {
     Cluster.connect("node1,node2", "user", "pass") match {
       case Success(cluster) =>
         assert(cluster.async.seedNodes.size == 2)
-        assert(cluster.async.seedNodes.contains(SeedNode("node1")))
-        assert(cluster.async.seedNodes.contains(SeedNode("node2")))
+        assert(cluster.async.seedNodes.contains(SeedNode("node1", None, None)))
+        assert(cluster.async.seedNodes.contains(SeedNode("node2", None, None)))
       case _ => assert(false)
     }
   }
