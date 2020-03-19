@@ -25,13 +25,16 @@ public class CollectionsManifestCollection {
 
   private final String name;
   private final String uid;
+  private final int maxExpiry;
 
   @JsonCreator
   public CollectionsManifestCollection(
     @JsonProperty("name") String name,
-    @JsonProperty("uid") String uid) {
+    @JsonProperty("uid") String uid,
+    @JsonProperty("maxTTL") int maxExpiry) {
     this.name = name;
     this.uid = uid;
+    this.maxExpiry = maxExpiry;
   }
 
   public String name() {
@@ -42,11 +45,16 @@ public class CollectionsManifestCollection {
     return uid;
   }
 
+  public int maxExpiry() {
+    return maxExpiry;
+  }
+
   @Override
   public String toString() {
     return "CollectionsManifestCollection{" +
       "name='" + name + '\'' +
       ", uid='" + uid + '\'' +
+      ", maxExpiry=" + maxExpiry +
       '}';
   }
 }
