@@ -26,7 +26,10 @@ import com.couchbase.client.core.env.SeedNode;
 
 import javax.naming.NameNotFoundException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -104,15 +107,31 @@ public class ConnectionStringUtil {
      * @return the set of seed nodes extracted.
      */
     private static Set<SeedNode> populateSeedsFromConnectionString(final ConnectionString connectionString) {
-        return connectionString
-            .hosts()
-            .stream()
-            .map(a -> SeedNode.create(
-                a.hostname(),
-                a.port() > 0 ? Optional.of(a.port()) : Optional.empty(),
-                Optional.empty()
-            ))
-            .collect(Collectors.toSet());
+        final Map<String, List<ConnectionString.UnresolvedSocket>> aggregated = new LinkedHashMap<>();
+        for (ConnectionString.UnresolvedSocket socket : connectionString.hosts()) {
+            if (!aggregated.containsKey(socket.hostname())) {
+                aggregated.put(socket.hostname(), new ArrayList<>());
+            }
+            aggregated.get(socket.hostname()).add(socket);
+        }
+
+        return aggregated.entrySet().stream().map(entry -> {
+            String hostname = entry.getKey();
+            Optional<Integer> kvPort = Optional.empty();
+            Optional<Integer> managerPort = Optional.empty();
+
+            for (ConnectionString.UnresolvedSocket socket : entry.getValue()) {
+                if (socket.portType().isPresent()) {
+                    if (socket.portType().get() == ConnectionString.PortType.KV) {
+                        kvPort = Optional.of(socket.port());
+                    } else if (socket.portType().get() == ConnectionString.PortType.MANAGER) {
+                        managerPort = Optional.of(socket.port());
+                    }
+                }
+            }
+
+            return SeedNode.create(hostname, kvPort, managerPort);
+        }).collect(Collectors.toSet());
     }
 
 }

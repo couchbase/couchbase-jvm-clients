@@ -16,12 +16,15 @@
 
 package com.couchbase.client.core.util;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -95,7 +98,7 @@ public class ConnectionString {
 
         List<UnresolvedSocket> hosts = new ArrayList<>();
 
-        Pattern ipv6pattern = Pattern.compile("^\\[(.+)]:(\\d+)$");
+        Pattern ipv6pattern = Pattern.compile("^\\[(.+)]:(\\d+(=\\w+)?)$");
         for (int i = 0; i < splitted.length; i++) {
             String singleHost = splitted[i];
             if (singleHost == null || singleHost.isEmpty()) {
@@ -107,20 +110,42 @@ public class ConnectionString {
             if (singleHost.startsWith("[") && singleHost.endsWith("]")) {
                 // this is an ipv6 addr!
                 singleHost = singleHost.substring(1, singleHost.length() - 1);
-                hosts.add(new UnresolvedSocket(singleHost, 0));
+                hosts.add(new UnresolvedSocket(singleHost, 0, Optional.empty()));
             } else if (matcher.matches()) {
                 // this is ipv6 with addr and port!
-                hosts.add(new UnresolvedSocket(
-                    matcher.group(1),
-                    Integer.parseInt(matcher.group(2)))
-                );
+                String rawPort = matcher.group(2);
+                if (rawPort.contains("=")) {
+                    String[] portParts = rawPort.split("=");
+                    hosts.add(new UnresolvedSocket(
+                      matcher.group(1),
+                      Integer.parseInt(portParts[0]),
+                      Optional.of(PortType.fromString(portParts[1])))
+                    );
+                } else {
+                    hosts.add(new UnresolvedSocket(
+                      matcher.group(1),
+                      Integer.parseInt(matcher.group(2)),
+                      Optional.empty()
+                    ));
+                }
             } else {
                 // either ipv4 or a hostname
                 String[] parts = singleHost.split(":");
                 if (parts.length == 1) {
-                    hosts.add(new UnresolvedSocket(parts[0], 0));
+                    hosts.add(new UnresolvedSocket(parts[0], 0, Optional.empty()));
                 } else {
-                    hosts.add(new UnresolvedSocket(parts[0], Integer.parseInt(parts[1])));
+                    if (parts[1].contains("=")) {
+                        // has custom port type
+                        String[] portParts = parts[1].split("=");
+                        hosts.add(new UnresolvedSocket(
+                          parts[0],
+                          Integer.parseInt(portParts[0]),
+                          Optional.of(PortType.fromString(portParts[1])))
+                        );
+                    } else {
+                        int port = Integer.parseInt(parts[1]);
+                        hosts.add(new UnresolvedSocket(parts[0], port, Optional.empty()));
+                    }
                 }
             }
         }
@@ -207,12 +232,15 @@ public class ConnectionString {
     }
 
     public static class UnresolvedSocket {
+
         private final String hostname;
         private final int port;
+        private final Optional<PortType> portType;
 
-        UnresolvedSocket(String hostname, int port) {
+        UnresolvedSocket(String hostname, int port, Optional<PortType> portType) {
             this.hostname = hostname;
             this.port = port;
+            this.portType = portType;
         }
 
         public String hostname() {
@@ -223,12 +251,43 @@ public class ConnectionString {
             return port;
         }
 
+        public Optional<PortType> portType() {
+            return portType;
+        }
+
         @Override
         public String toString() {
             return "UnresolvedSocket{" +
               "hostname='" + hostname + '\'' +
               ", port=" + port +
+              ", portType=" + portType +
               '}';
         }
     }
+
+    @Stability.Internal
+    public enum PortType {
+        MANAGER,
+        KV;
+
+        /**
+         * Turn the raw representation into an enum.
+         * <p>
+         * Note that we support both "http" and "mcd" from libcouchbase to be compatible, but also expose "manager"
+         * and "kv" so it more aligns with the current terminology of services.
+         *
+         * @param input the raw representation from the connstr.
+         * @return the enum if it could be determined.
+         */
+        static PortType fromString(final String input) {
+            if (input.equalsIgnoreCase("http") || input.equalsIgnoreCase("manager")) {
+                return PortType.MANAGER;
+            } else if (input.equalsIgnoreCase("mcd") || input.equalsIgnoreCase("kv")) {
+                return PortType.KV;
+            } else {
+                throw InvalidArgumentException.fromMessage("Unsupported port type \"" + input + "\"");
+            }
+        }
+    }
+
 }
