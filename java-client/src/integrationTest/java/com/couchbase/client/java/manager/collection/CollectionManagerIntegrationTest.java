@@ -138,6 +138,38 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     assertThrows(ScopeNotFoundException.class, () -> collections.dropCollection(collectionSpec2));
   }
 
+  @Test
+  void shouldCreateCollectionWithMaxExpiry() {
+    String scope = randomString();
+    String collection1 = randomString();
+    CollectionSpec collectionSpec1 = CollectionSpec.create(collection1, scope, Duration.ofSeconds(30));
+    String collection2 = randomString();
+    CollectionSpec collectionSpec2 = CollectionSpec.create(collection2, scope);
+
+    collections.createScope(scope);
+    waitUntilCondition(() -> scopeExists(scope));
+
+    collections.createCollection(collectionSpec1);
+    collections.createCollection(collectionSpec2);
+
+    waitUntilCondition(() -> collectionExists(collectionSpec1));
+    waitUntilCondition(() -> collectionExists(collectionSpec2));
+
+    for (ScopeSpec ss : collections.getAllScopes()) {
+      if (!ss.name().equals(scope)) {
+        continue;
+      }
+
+      for (CollectionSpec cs : ss.collections()) {
+        if (cs.name().equals(collection1)) {
+          assertEquals(cs.maxExpiry(), Duration.ofSeconds(30));
+        } else if (cs.name().equals(collection2)) {
+          assertEquals(cs.maxExpiry(), Duration.ZERO);
+        }
+      }
+    }
+  }
+
   /**
    * Creates a random string in the right size for collection and scope names, which only support
    * up to 30 chars it seems.

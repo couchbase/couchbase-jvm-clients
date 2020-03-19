@@ -33,6 +33,7 @@ import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.manager.ManagerSupport;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -96,6 +97,11 @@ public class AsyncCollectionManager extends ManagerSupport {
     final UrlQueryStringBuilder body = UrlQueryStringBuilder
       .create()
       .add("name", collectionSpec.name());
+
+    if (!collectionSpec.maxExpiry().isZero()) {
+      body.add("maxTTL", collectionSpec.maxExpiry().getSeconds());
+    }
+
     final String path = pathForScope(bucketName, collectionSpec.scopeName());
 
     return sendRequest(HttpMethod.POST, path, body, options.build()).thenApply(response -> {
@@ -242,7 +248,7 @@ public class AsyncCollectionManager extends ManagerSupport {
         .stream()
         .map(s -> ScopeSpec.create(
           s.name(),
-          s.collections().stream().map(c -> CollectionSpec.create(c.name(), s.name())).collect(Collectors.toSet()))
+          s.collections().stream().map(c -> CollectionSpec.create(c.name(), s.name(), Duration.ofSeconds(c.maxExpiry()))).collect(Collectors.toSet()))
         )
         .collect(Collectors.toList()));
   }
