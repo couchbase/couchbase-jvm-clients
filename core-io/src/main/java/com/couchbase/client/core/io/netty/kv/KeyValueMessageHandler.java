@@ -199,9 +199,12 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       } catch (Throwable err) {
         writtenRequests.remove(opaque);
         if (err instanceof CollectionNotFoundException) {
-          if (channelContext.collectionsEnabled()
-            && ioContext.core().configurationProvider().collectionMapRefreshInProgress()) {
-            RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.COLLECTION_MAP_REFRESH_IN_PROGRESS);
+          if (channelContext.collectionsEnabled()) {
+            if (ioContext.core().configurationProvider().collectionMapRefreshInProgress()) {
+              RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.COLLECTION_MAP_REFRESH_IN_PROGRESS);
+            } else {
+              handleOutdatedCollection(request);
+            }
             return;
           }
         }
