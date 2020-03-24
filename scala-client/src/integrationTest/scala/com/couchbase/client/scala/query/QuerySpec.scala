@@ -426,7 +426,6 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @RepeatedTest(1)
-  @Test
   def handlesPreparedStatementsWithNamedArgs(): Unit = {
     val id: String = insertDoc
     val options: QueryOptions = QueryOptions()
@@ -446,7 +445,6 @@ class QuerySpec extends ScalaIntegrationTest {
   }
 
   @RepeatedTest(1)
-  @Test
   def handlesPreparedStatementsWithPositionalArgs(): Unit = {
     val id: String = insertDoc
     val options: QueryOptions = QueryOptions()
