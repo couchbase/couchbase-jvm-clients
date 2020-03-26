@@ -40,4 +40,9 @@ public class FeatureNotAvailableException extends CouchbaseException {
       "(only Couchbase Server 6.5 and later) and no bucket is open. If an older Couchbase Server version " +
       "is used, at least one bucket needs to be opened to dispatch this " + serviceType.ident() + " request!");
   }
+
+  public static FeatureNotAvailableException collections() {
+    return new FeatureNotAvailableException("The cluster does not support collections and scopes.");
+  }
+
 }
