@@ -23,6 +23,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.error.CollectionExistsException;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.json.Mapper;
@@ -262,9 +263,15 @@ public class AsyncCollectionManager extends ManagerSupport {
     if (response.status().success()) {
       return;
     }
+
     final String error = new String(response.content(), StandardCharsets.UTF_8);
 
     if (response.status() == ResponseStatus.NOT_FOUND) {
+      if (error.contains("Not found.") || error.contains("Requested resource not found.")) {
+        // This happens on pre 6.5 clusters (i.e. 5.5)
+        throw FeatureNotAvailableException.collections();
+      }
+
       if (error.contains("Scope with this name is not found")) {
         throw ScopeNotFoundException.forScope(scopeName);
       }
@@ -281,9 +288,18 @@ public class AsyncCollectionManager extends ManagerSupport {
       if (error.contains("Collection with this name already exists")) {
         throw CollectionExistsException.forCollection(collectionName);
       }
+      if (error.contains("Not allowed on this version of cluster")) {
+        // This happens on 6.5 if collections dev preview is not enabled
+        throw FeatureNotAvailableException.collections();
+      }
     }
 
-    throw new CouchbaseException("Unknown error in CollectionManager: " + error);
+    if (error.contains("Method Not Allowed")) {
+      // Happens on pre 6.5 clusters on i.e. dropScope
+      throw FeatureNotAvailableException.collections();
+    }
+
+    throw new CouchbaseException("Unknown error in CollectionManager: " + error + ", response: " + response);
   }
 
   /**
@@ -294,7 +310,10 @@ public class AsyncCollectionManager extends ManagerSupport {
    */
   private CompletableFuture<CollectionsManifest> loadManifest(final CommonOptions<?>.BuiltCommonOptions opts) {
     return sendRequest(HttpMethod.GET, pathForManifest(bucketName), opts)
-      .thenApply(response -> Mapper.decodeInto(response.content(), CollectionsManifest.class));
+      .thenApply(response -> {
+        checkForErrors(response, null, null);
+        return Mapper.decodeInto(response.content(), CollectionsManifest.class);
+      });
   }
 
 }
