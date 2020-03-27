@@ -35,8 +35,8 @@ class EnvironmentSpec {
     Cluster.connect("node1,node2", "user", "pass") match {
       case Success(cluster) =>
         assert(cluster.async.seedNodes.size == 2)
-        assert(cluster.async.seedNodes.contains(SeedNode("node1", None, None)))
-        assert(cluster.async.seedNodes.contains(SeedNode("node2", None, None)))
+        assert(cluster.async.seedNodes.contains(SeedNode("node1", Some(0), None)))
+        assert(cluster.async.seedNodes.contains(SeedNode("node2", Some(0), None)))
       case _ => assert(false)
     }
   }

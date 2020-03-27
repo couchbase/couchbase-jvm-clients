@@ -42,8 +42,11 @@ public class ConnectionString {
     private final List<UnresolvedSocket> hosts;
     private final Map<String, String> params;
     private final String username;
+    private final String original;
 
     protected ConnectionString(final String input) {
+        this.original = input;
+
         if (input.contains("://")) {
             this.scheme = parseScheme(input);
         } else {
@@ -229,6 +232,13 @@ public class ConnectionString {
         sb.append(", params=").append(params);
         sb.append('}');
         return sb.toString();
+    }
+
+    /**
+     * Returns the unmodified, original connection string.
+     */
+    public String original() {
+        return original;
     }
 
     public static class UnresolvedSocket {
