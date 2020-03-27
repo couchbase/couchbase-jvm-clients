@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.events.core.DnsSrvLookupDisabledEvent;
 import com.couchbase.client.core.cnc.events.core.DnsSrvLookupFailedEvent;
 import com.couchbase.client.core.cnc.events.core.DnsSrvRecordsLoadedEvent;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.error.InvalidArgumentException;
 
 import javax.naming.NameNotFoundException;
 import java.time.Duration;
@@ -115,7 +116,7 @@ public class ConnectionStringUtil {
             aggregated.get(socket.hostname()).add(socket);
         }
 
-        return aggregated.entrySet().stream().map(entry -> {
+        Set<SeedNode> seedNodes = aggregated.entrySet().stream().map(entry -> {
             String hostname = entry.getKey();
             Optional<Integer> kvPort = Optional.empty();
             Optional<Integer> managerPort = Optional.empty();
@@ -127,11 +128,36 @@ public class ConnectionStringUtil {
                     } else if (socket.portType().get() == ConnectionString.PortType.MANAGER) {
                         managerPort = Optional.of(socket.port());
                     }
+                } else {
+                    kvPort = Optional.of(socket.port());
                 }
             }
 
             return SeedNode.create(hostname, kvPort, managerPort);
         }).collect(Collectors.toSet());
+
+        sanityCheckSeedNodes(connectionString.original(), seedNodes);
+        return seedNodes;
+    }
+
+    /**
+     * Sanity check the seed node list for common errors that can be caught early on.
+     *
+     * @param seedNodes the seed nodes to verify.
+     */
+    private static void sanityCheckSeedNodes(final String connectionString, final Set<SeedNode> seedNodes) {
+        for (SeedNode seedNode : seedNodes) {
+            if (seedNode.kvPort().isPresent()) {
+                if (seedNode.kvPort().get() == 8091 || seedNode.kvPort().get() == 18091) {
+                    String recommended = connectionString
+                      .replace(":8091", "")
+                      .replace(":18091", "");
+                    throw new InvalidArgumentException("Specifying 8091 or 18091 in the connection string \"" + connectionString + "\" is " +
+                      "likely not what you want (it would connect to key/value via the management port which does not work). Please omit " +
+                      "the port and use \"" + recommended + "\" instead.", null, null);
+                }
+            }
+        }
     }
 
 }
