@@ -199,7 +199,7 @@ public class SearchRow {
             byte[] fields = null;
             if (hit.containsKey("fields")) {
                 // daschl: this is a bit wasteful and should be streamlined
-                JacksonTransformers.MAPPER.writeValueAsBytes(hit.getObject("fields").toMap());
+                fields = JacksonTransformers.MAPPER.writeValueAsBytes(hit.getObject("fields").toMap());
             }
             return new SearchRow(index, id, score, explanationJson, locations, fragments, fields, serializer);
         } catch (IOException e) {
@@ -217,7 +217,7 @@ public class SearchRow {
             ", explanation=" + explanation +
             ", locations=" + redactUser(locations) +
             ", fragments=" + redactUser(fragments) +
-            ", fields=" + redactUser(fields) +
+            ", fields=" + redactUser(fieldsAs(new TypeRef<HashMap<String, Object>>() {})) +
             '}';
     }
 }
