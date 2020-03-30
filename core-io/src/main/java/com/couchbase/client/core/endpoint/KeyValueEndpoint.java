@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.cnc.events.config.UnorderedExecutionEnabledEvent;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.flush.FlushConsolidationHandler;
 import com.couchbase.client.core.env.Authenticator;
@@ -113,10 +112,9 @@ public class KeyValueEndpoint extends BaseEndpoint {
       }
 
       boolean unorderedExecutionEnabled = Boolean.parseBoolean(
-        System.getProperty("com.couchbase.unorderedExecutionEnabled", "false")
+        System.getProperty("com.couchbase.unorderedExecutionEnabled", "true")
       );
       if (unorderedExecutionEnabled) {
-        ctx.environment().eventBus().publish(new UnorderedExecutionEnabledEvent(ctx));
         features.add(ServerFeature.UNORDERED_EXECUTION);
       }
 
