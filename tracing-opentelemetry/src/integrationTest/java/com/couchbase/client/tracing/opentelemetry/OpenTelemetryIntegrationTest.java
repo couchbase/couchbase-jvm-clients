@@ -16,7 +16,6 @@
 
 package com.couchbase.client.tracing.opentelemetry;
 
-import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -26,17 +25,14 @@ import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
 import io.opentelemetry.exporters.inmemory.InMemorySpanExporter;
-import io.opentelemetry.sdk.trace.TracerSdkFactory;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.trace.TracerSdkProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpansProcessor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
 
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -46,12 +42,12 @@ class OpenTelemetryIntegrationTest extends ClusterAwareIntegrationTest {
   private static ClusterEnvironment environment;
   private static Cluster cluster;
   private static Collection collection;
-  private static TracerSdkFactory tracer;
+  private static TracerSdkProvider tracer;
   private static final InMemorySpanExporter exporter = InMemorySpanExporter.create();
 
   @BeforeAll
   static void beforeAll() {
-    tracer = TracerSdkFactory.create();
+    tracer = OpenTelemetrySdk.getTracerProvider();
     tracer.addSpanProcessor(SimpleSpansProcessor.newBuilder(exporter).build());
 
     TestNodeConfig config = config().firstNodeWith(Services.KV).get();
@@ -61,24 +57,22 @@ class OpenTelemetryIntegrationTest extends ClusterAwareIntegrationTest {
       .requestTracer(OpenTelemetryRequestTracer.wrap(tracer.get("integrationTest")))
       .build();
 
-    final Set<SeedNode> seedNodes = new HashSet<>(Collections.singletonList(
-      SeedNode.create(config.hostname(), Optional.of(config.ports().get(Services.KV)), Optional.empty()))
-    );
     cluster = Cluster.connect(
-      seedNodes,
+      String.format("couchbase://%s:%d", config.hostname(), config.ports().get(Services.KV)),
       clusterOptions(config().adminUsername(), config().adminPassword())
         .environment(environment)
     );
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
-    bucket.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(Duration.ofSeconds(10));
   }
 
   @AfterAll
   static void afterAll() {
     cluster.disconnect();
     environment.shutdown();
+    tracer.shutdown();
   }
 
   @Test
