@@ -128,7 +128,7 @@ public class ConnectionStringUtil {
                     } else if (socket.portType().get() == ConnectionString.PortType.MANAGER) {
                         managerPort = Optional.of(socket.port());
                     }
-                } else {
+                } else if (socket.port() != 0) {
                     kvPort = Optional.of(socket.port());
                 }
             }
