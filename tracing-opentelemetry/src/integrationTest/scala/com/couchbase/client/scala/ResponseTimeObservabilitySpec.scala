@@ -17,34 +17,43 @@ package com.couchbase.client.scala
 
 import java.util.UUID
 
+import io.opentelemetry.sdk.trace.export.SimpleSpansProcessor
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.test.{Capabilities, IgnoreWhen, Util}
+import com.couchbase.client.test._
 import com.couchbase.client.tracing.opentelemetry.OpenTelemetryRequestTracer
 import io.opentelemetry.exporters.inmemory.InMemorySpanExporter
-import io.opentelemetry.sdk.trace.TracerSdkFactory
-import io.opentelemetry.sdk.trace.export.SimpleSpansProcessor
+import io.opentelemetry.sdk.OpenTelemetrySdk
+import io.opentelemetry.sdk.trace.TracerSdkProvider
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
 @TestInstance(Lifecycle.PER_CLASS)
-class ResponseTimeObservabilitySpec extends ScalaIntegrationTest {
+class ResponseTimeObservabilitySpec extends ClusterAwareIntegrationTest {
+
+  private val exporter = InMemorySpanExporter.create()
 
   private var cluster: Cluster = _
   private var coll: Collection = _
-  private val exporter         = InMemorySpanExporter.create()
-
-  override protected def environment: ClusterEnvironment.Builder = {
-    val tracer = TracerSdkFactory.create
-    tracer.addSpanProcessor(SimpleSpansProcessor.newBuilder(exporter).build)
-
-    ClusterEnvironment.builder
-      .requestTracer(OpenTelemetryRequestTracer.wrap(tracer.get("integrationTest")))
-  }
+  private var env: ClusterEnvironment  = _
+  private var tracer: TracerSdkProvider = _
 
   @BeforeAll
   def beforeAll(): Unit = {
-    cluster = connectToCluster()
+    val config = ClusterAwareIntegrationTest.config()
+    val nodeConfig = config.firstNodeWith(Services.KV).get
+
+    env = {
+      tracer = OpenTelemetrySdk.getTracerProvider
+      tracer.addSpanProcessor(SimpleSpansProcessor.newBuilder(exporter).build)
+
+      ClusterEnvironment.builder
+        .requestTracer(OpenTelemetryRequestTracer.wrap(tracer.get("integrationTest"))).build.get
+    }
+
+    cluster = Cluster.connect(
+      "couchbase://" + nodeConfig.hostname() + ":" + nodeConfig.ports().get(Services.KV),
+      ClusterOptions.create(config.adminUsername(), config.adminPassword()).environment(env)
+    ).get
 
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
@@ -53,6 +62,8 @@ class ResponseTimeObservabilitySpec extends ScalaIntegrationTest {
   @AfterAll
   def afterAll(): Unit = {
     cluster.disconnect()
+    env.shutdown()
+    tracer.shutdown()
   }
 
   @BeforeEach

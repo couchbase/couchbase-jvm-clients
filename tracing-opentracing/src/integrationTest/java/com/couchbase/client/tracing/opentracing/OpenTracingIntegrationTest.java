@@ -52,26 +52,27 @@ class OpenTracingIntegrationTest extends ClusterAwareIntegrationTest {
 
     TestNodeConfig config = config().firstNodeWith(Services.KV).get();
 
-    environment = ClusterEnvironment.builder().requestTracer(OpenTracingRequestTracer.wrap(tracer)).build();
+    environment = ClusterEnvironment
+      .builder()
+      .requestTracer(OpenTracingRequestTracer.wrap(tracer))
+      .build();
 
-    Set<SeedNode> seedNodes = new HashSet<>(Collections.singletonList(
-      SeedNode.create(config.hostname(), Optional.of(config.ports().get(Services.KV)), Optional.empty()))
-    );
     cluster = Cluster.connect(
-      seedNodes,
+      String.format("couchbase://%s:%d", config.hostname(), config.ports().get(Services.KV)),
       clusterOptions(config().adminUsername(), config().adminPassword())
         .environment(environment)
     );
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
-    bucket.waitUntilReady(Duration.ofSeconds(15));
+    bucket.waitUntilReady(Duration.ofSeconds(10));
   }
 
   @AfterAll
   static void afterAll() {
     cluster.disconnect();
     environment.shutdown();
+    tracer.close();
   }
 
   @Test
