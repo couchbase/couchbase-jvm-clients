@@ -175,11 +175,17 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           .flatMap(seed -> {
             NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
 
+            final AtomicReference<Map<ServiceType, Integer>> alternatePorts = new AtomicReference<>();
+
             final Optional<String> alternateAddress = alternate.map(a -> {
               ClusterConfig c = currentConfig;
               if (c.globalConfig() != null) {
                 for (PortInfo pi : c.globalConfig().portInfos()) {
                   if (seed.address().equals(pi.hostname())) {
+                    alternatePorts.set(tls
+                      ? pi.alternateAddresses().get(a).sslServices()
+                      : pi.alternateAddresses().get(a).services()
+                    );
                     return pi.alternateAddresses().get(a).hostname();
                   }
                 }
@@ -192,6 +198,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
                 .flatMap(bc -> bc.nodes().stream()).collect(Collectors.toList());
               for (NodeInfo ni : nodeInfos) {
                 if (ni.hostname().equals(seed.address())) {
+                  alternatePorts.set(tls
+                    ? ni.alternateAddresses().get(a).sslServices()
+                    : ni.alternateAddresses().get(a).services()
+                  );
                   return ni.alternateAddresses().get(a).hostname();
                 }
               }
@@ -199,10 +209,22 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
               return null;
             });
 
+            final int mappedKvPort;
+            final int mappedManagerPort;
+
+            if (alternateAddress.isPresent()) {
+              Map<ServiceType, Integer> ports = alternatePorts.get();
+              mappedKvPort = ports.get(ServiceType.KV);
+              mappedManagerPort = ports.get(ServiceType.MANAGER);
+            } else {
+              mappedKvPort = seed.kvPort().orElse(kvPort);
+              mappedManagerPort = seed.clusterManagerPort().orElse(managerPort);
+            }
+
             return keyValueLoader
-              .load(identifier, seed.kvPort().orElse(kvPort), name, alternateAddress)
+              .load(identifier, mappedKvPort, name, alternateAddress)
               .onErrorResume(t -> clusterManagerLoader.load(
-                identifier, seed.clusterManagerPort().orElse(managerPort), name, alternateAddress
+                identifier, mappedManagerPort, name, alternateAddress
               ));
           })
           .take(1)
