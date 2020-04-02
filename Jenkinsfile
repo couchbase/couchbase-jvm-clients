@@ -185,7 +185,7 @@ pipeline {
         // Test against cbdyncluster - do for nightly tests
         // One day can get all these cbdyncluster tests running in parallel: https://jenkins.io/blog/2017/09/25/declarative-1/
         stage('testing (Linux, cbdyncluster 6.5, colossus, Oracle JDK 8)') {
-            agent { label 'sdk-integration-test-linux' }
+            agent { label 'sdkqe-centos7' }
             environment {
                 JAVA_HOME = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                 PATH = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
@@ -215,7 +215,7 @@ pipeline {
         }
 
         stage('testing (Linux, cbdyncluster 6.5, Amazon Corretto 8)') {
-            agent { label 'sdk-integration-test-linux' }
+            agent { label 'sdkqe-centos7' }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}"
                 PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}/bin:$PATH"
@@ -243,7 +243,7 @@ pipeline {
         }
 
         stage('testing (Linux, cbdyncluster 6.5, Amazon Corretto 11)') {
-            agent { label 'sdk-integration-test-linux' }
+            agent { label 'sdkqe-centos7' }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}"
                 PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}/bin:$PATH"
@@ -273,7 +273,7 @@ pipeline {
 
         // Disabling DP tests to avoid (possibly) MB-37518
 //        stage('testing  (Linux, cbdyncluster 6.5, DP enabled, Oracle JDK 8)') {
-//            agent { label 'sdk-integration-test-linux' }
+//            agent { label 'sdkqe-centos7' }
 //            environment {
 //                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
 //                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
@@ -301,7 +301,7 @@ pipeline {
 //        }
 
         stage('testing  (Linux, cbdyncluster 6.5, Oracle JDK 8)') {
-            agent { label 'sdk-integration-test-linux' }
+            agent { label 'sdkqe-centos7' }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
@@ -328,7 +328,7 @@ pipeline {
         }
 
         stage('testing  (Linux, cbdyncluster 6.0.3, Oracle JDK 8)') {
-             agent { label 'sdk-integration-test-linux' }
+             agent { label 'sdkqe-centos7' }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                  PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
@@ -355,7 +355,7 @@ pipeline {
          }
 
          stage('testing  (Linux, cbdyncluster 5.5.5, Oracle JDK 8)') {
-             agent { label 'sdk-integration-test-linux' }
+             agent { label 'sdkqe-centos7' }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                  PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
@@ -382,7 +382,7 @@ pipeline {
          }
 
 //        stage('testing  (Linux, cbdyncluster 5.1.3, Oracle JDK 8)') {
-//            agent { label 'sdk-integration-test-linux' }
+//            agent { label 'sdkqe-centos7' }
 //            environment {
 //                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
 //                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
@@ -409,7 +409,7 @@ pipeline {
 //        }
 
         stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 11)') {
-             agent { label 'sdk-integration-test-linux' }
+             agent { label 'sdkqe-centos7' }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
                  PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
@@ -436,7 +436,7 @@ pipeline {
          }
 
          stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 8)') {
-             agent { label 'sdk-integration-test-linux' }
+             agent { label 'sdkqe-centos7' }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
                  PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
