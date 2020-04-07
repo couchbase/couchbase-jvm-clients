@@ -206,8 +206,6 @@ public class ReactiveCollection {
   /**
    * Fetches a Document from a collection with default options.
    *
-   * <p>If the document has not been found, this {@link Mono} will be empty.</p>
-   *
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link Mono} indicating once loaded or failed.
    */
