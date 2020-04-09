@@ -157,6 +157,63 @@
                     </archive>
                 </configuration>
             </plugin>
+
+            <!-- Fetch core-io sources and javadoc for inclusion in the release-archive assembly -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.9</version>
+                <executions>
+                    <execution>
+                        <id>get-dependency-sources</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <includeArtifactIds>core-io</includeArtifactIds>
+                            <outputDirectory>${project.build.directory}/dependency-attachments</outputDirectory>
+                            <classifier>sources</classifier>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>get-dependency-javadoc</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <includeArtifactIds>core-io</includeArtifactIds>
+                            <outputDirectory>${project.build.directory}/dependency-attachments</outputDirectory>
+                            <classifier>javadoc</classifier>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Build the release-archive assembly. Must be defined *after* maven-dependency-plugin,
+                 since the assembly uses files fetched by that plugin. -->
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>src/assembly/release-archive.xml</descriptor>
+                    </descriptors>
+                    <finalName>Couchbase-Java-Client-${project.version}</finalName>
+                    <appendAssemblyId>false</appendAssemblyId>
+                    <attach>false</attach>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
