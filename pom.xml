@@ -16,11 +16,11 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <junit.version>5.6.0</junit.version>
+        <junit.version>5.6.1</junit.version>
         <assertj.version>3.14.0</assertj.version>
         <log4j-slf4j-impl.version>2.13.0</log4j-slf4j-impl.version>
         <jackson.version>2.10.3</jackson.version>
-        <reactor.version>3.3.3.RELEASE</reactor.version>
+        <reactor.version>3.3.4.RELEASE</reactor.version>
         <scala.couchbase.version>1.0.4-SNAPSHOT</scala.couchbase.version>
 
         <gpg.keyname></gpg.keyname>
