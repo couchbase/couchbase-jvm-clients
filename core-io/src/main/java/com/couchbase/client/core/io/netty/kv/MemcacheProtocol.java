@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.io.DurabilityTimeoutCoercedEvent;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.context.SubDocumentErrorContext;
@@ -272,6 +273,30 @@ public enum MemcacheProtocol {
     } else {
       return Optional.empty();
     }
+  }
+
+  public static byte[] bodyAsBytes(final ByteBuf message) {
+    if (message == null) {
+      return null;
+    }
+
+    boolean flexible = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic();
+
+    int totalBodyLength = message.getInt(TOTAL_LENGTH_OFFSET);
+    int keyLength = flexible ? message.getByte(3) : message.getShort(2);
+    int flexibleExtrasLength = flexible ? message.getByte(2) : 0;
+    byte extrasLength = message.getByte(4);
+    int bodyLength = totalBodyLength - keyLength - extrasLength - flexibleExtrasLength;
+
+    if (bodyLength > 0) {
+      return ByteBufUtil.getBytes(
+        message,
+        MemcacheProtocol.HEADER_SIZE + flexibleExtrasLength + extrasLength + keyLength,
+        bodyLength
+      );
+    }
+
+    return null;
   }
 
   public static Optional<ByteBuf> extras(final ByteBuf message) {
