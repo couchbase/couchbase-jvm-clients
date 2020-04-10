@@ -35,7 +35,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extrasAsInt;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
@@ -78,7 +78,7 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
         .map(ByteBufUtil::getBytes)
         .map(bytes -> tryDecompression(bytes, datatype(response)))
         .orElse(Bytes.EMPTY_BYTE_ARRAY);
-      int flags = extras(response).map(x -> x.getInt(0)).orElse(0);
+      int flags = extrasAsInt(response, 0, 0);
       return new GetResponse(status, content, cas, flags);
     } else {
       return new GetResponse(status, null, cas, 0);

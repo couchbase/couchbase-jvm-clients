@@ -289,6 +289,30 @@ public enum MemcacheProtocol {
     }
   }
 
+  /**
+   * Tries to extract the extras as an integer value and if not possible returns the default value.
+   * <p>
+   * Note that while this method looks a bit too specific, in profiling it has been shown that extras extraction
+   * on the get command otherwise needs a buffer slice and has to box the integer due to the optional. So this avoids
+   * two small performance hits and it can be used on the hot code path.
+   *
+   * @param message the message to extract from.
+   * @param offset the offset in the extras from where the int should be loaded.
+   * @param defaultValue the default value to use.
+   * @return th extracted integer or the default value.
+   */
+  public static int extrasAsInt(final ByteBuf message, int offset, int defaultValue) {
+    boolean flexible = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic();
+    byte extrasLength = message.getByte(4);
+    int flexibleExtrasLength = flexible ? message.getByte(2) : 0;
+
+    if (extrasLength >= Integer.BYTES) {
+      return message.getInt(MemcacheProtocol.HEADER_SIZE + flexibleExtrasLength + offset);
+    }
+
+    return defaultValue;
+  }
+
   public static Optional<ByteBuf> flexibleExtras(final ByteBuf message) {
     boolean flexible = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic();
     if (flexible) {

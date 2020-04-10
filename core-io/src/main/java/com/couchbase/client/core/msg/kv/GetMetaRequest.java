@@ -32,6 +32,7 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extrasAsInt;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
@@ -73,16 +74,7 @@ public class GetMetaRequest extends BaseKeyValueRequest<GetMetaResponse> {
 
   @Override
   public GetMetaResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    boolean deleted = false;
-    Optional<ByteBuf> extras = MemcacheProtocol.extras(response);
-    if (extras.isPresent()) {
-     ByteBuf e = extras.get();
-      if (e.readableBytes() >= 4) {
-        if (e.readInt() != 0) {
-          deleted = true;
-        }
-      }
-    }
+    boolean deleted = extrasAsInt(response, 0, 0) != 0;
     return new GetMetaResponse(decodeStatus(response), cas(response), deleted);
   }
 
