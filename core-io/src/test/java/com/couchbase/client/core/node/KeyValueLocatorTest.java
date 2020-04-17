@@ -127,10 +127,22 @@ class KeyValueLocatorTest {
     verify(node1Mock, times(1)).send(getRequest);
     verify(node2Mock, times(1)).send(getRequest);
 
-    // Dispatch with retry 5
-    when(requestCtx.retryAttempts()).thenReturn(5);
+    // Dispatch with retry 2
+    when(requestCtx.retryAttempts()).thenReturn(2);
     locator.dispatch(getRequest, nodes, configMock, null);
-    verify(node1Mock, times(1)).send(getRequest);
+    verify(node1Mock, times(2)).send(getRequest);
+    verify(node2Mock, times(1)).send(getRequest);
+
+    // Dispatch with retry 3
+    when(requestCtx.retryAttempts()).thenReturn(3);
+    locator.dispatch(getRequest, nodes, configMock, null);
+    verify(node1Mock, times(2)).send(getRequest);
+    verify(node2Mock, times(2)).send(getRequest);
+
+    // Dispatch with retry 4
+    when(requestCtx.retryAttempts()).thenReturn(4);
+    locator.dispatch(getRequest, nodes, configMock, null);
+    verify(node1Mock, times(3)).send(getRequest);
     verify(node2Mock, times(2)).send(getRequest);
   }
 

@@ -155,7 +155,13 @@ public class KeyValueLocator implements Locator {
    */
   private static int calculateNodeId(int partitionId, final KeyValueRequest<?> request,
                                      final CouchbaseBucketConfig config) {
-    boolean useFastForward = request.context().retryAttempts() > 0 && config.hasFastForwardMap();
+
+    // Note that number of retry attempts module 2 has been chosen so that the "fast path" if no retry
+    // attempts have been made always goes tot he active first. And then since it might or might not have
+    // been switched over yet on the server the modulo will make sure that it "alternates" between fast-forward
+    // and non-fast-forward maps to give it the greatest chance of eventually completing.
+    boolean useFastForward = config.hasFastForwardMap() && request.context().retryAttempts() % 2 == 1;
+
     if (request instanceof ReplicaGetRequest) {
       return config.nodeIndexForReplica(partitionId, ((ReplicaGetRequest) request).replica() - 1, useFastForward);
     } else if (request instanceof ObserveViaSeqnoRequest && ((ObserveViaSeqnoRequest) request).replica() > 0) {
