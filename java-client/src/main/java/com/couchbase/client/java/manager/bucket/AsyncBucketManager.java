@@ -117,7 +117,7 @@ public class AsyncBucketManager extends ManagerSupport {
     params.add("ramQuotaMB", settings.ramQuotaMB());
     params.add("replicaNumber", settings.numReplicas());
     params.add("flushEnabled", settings.flushEnabled() ? 1 : 0);
-    params.add("maxTTL", settings.maxTTL());
+    params.add("maxTTL", settings.maxExpiry().getSeconds());
     params.add("evictionPolicy", settings.ejectionPolicy().alias());
     params.add("compressionMode", settings.compressionMode().alias());
 

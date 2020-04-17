@@ -23,12 +23,13 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonPrope
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.json.Mapper;
 
+import java.time.Duration;
 import java.util.Map;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.util.Validators.notNull;
 import static java.util.Objects.requireNonNull;
 
-@Stability.Volatile
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class BucketSettings {
 
@@ -37,7 +38,7 @@ public class BucketSettings {
   private long ramQuotaMB = 100;
   private int numReplicas = 1;
   private boolean replicaIndexes = false;
-  private int maxTTL = 0;
+  private Duration maxExpiry = Duration.ZERO;
   private CompressionMode compressionMode = CompressionMode.PASSIVE;
   private BucketType bucketType = BucketType.COUCHBASE;
   private ConflictResolutionType conflictResolutionType = ConflictResolutionType.SEQUENCE_NUMBER;
@@ -87,7 +88,7 @@ public class BucketSettings {
     this.ramQuotaMB = ramQuotaToMB(quota.get("rawRAM"));
     this.numReplicas = numReplicas;
     this.replicaIndexes = replicaIndex;
-    this.maxTTL = maxTTL;
+    this.maxExpiry = Duration.ofSeconds(maxTTL);
     if (compressionMode != null) {
       this.compressionMode = compressionMode;
     }
@@ -131,8 +132,21 @@ public class BucketSettings {
     return replicaIndexes;
   }
 
+  /**
+   * Returns the maximum expiry (time-to-live) for all documents in the bucket in seconds.
+   *
+   * @deprecated please use {@link #maxExpiry()} instead.
+   */
+  @Deprecated
   public int maxTTL() {
-    return maxTTL;
+    return (int) maxExpiry().getSeconds();
+  }
+
+  /**
+   * Returns the maximum expiry (time-to-live) for all documents in the bucket.
+   */
+  public Duration maxExpiry() {
+    return maxExpiry;
   }
 
   public CompressionMode compressionMode() {
@@ -171,8 +185,26 @@ public class BucketSettings {
     return this;
   }
 
+  /**
+   * Specifies the maximum expiry (time-to-live) for all documents in the bucket in seconds.
+   *
+   * @param maxTTL the maximum expiry in seconds.
+   * @return this {@link BucketSettings} for chaining purposes.
+   * @deprecated please use {@link #maxExpiry(Duration)} instead.
+   */
+  @Deprecated
   public BucketSettings maxTTL(int maxTTL) {
-    this.maxTTL = maxTTL;
+    return maxExpiry(Duration.ofSeconds(maxTTL));
+  }
+
+  /**
+   * Specifies the maximum expiry (time-to-live) for all documents in the bucket.
+   *
+   * @param maxExpiry the maximum expiry.
+   * @return this {@link BucketSettings} for chaining purposes.
+   */
+  public BucketSettings maxExpiry(final Duration maxExpiry) {
+    this.maxExpiry = notNull(maxExpiry, "MaxExpiry");
     return this;
   }
 
@@ -209,7 +241,7 @@ public class BucketSettings {
       ", ramQuotaMB=" + ramQuotaMB +
       ", numReplicas=" + numReplicas +
       ", replicaIndexes=" + replicaIndexes +
-      ", maxTTL=" + maxTTL +
+      ", maxExpiry=" + maxExpiry.getSeconds() +
       ", compressionMode=" + compressionMode +
       ", bucketType=" + bucketType +
       ", conflictResolutionType=" + conflictResolutionType +
