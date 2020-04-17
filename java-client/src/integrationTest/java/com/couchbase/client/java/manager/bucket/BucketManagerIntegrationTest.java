@@ -18,6 +18,7 @@ package com.couchbase.client.java.manager.bucket;
 
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.BucketExistsException;
+import com.couchbase.client.core.error.BucketNotFlushableException;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
@@ -141,6 +142,13 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
 
     buckets.flushBucket(config().bucketname());
     waitUntilCondition(() -> !collection.exists(id).exists());
+  }
+
+  @Test
+  void failIfBucketFlushDisabled() {
+    String bucketName =  UUID.randomUUID().toString();
+    buckets.createBucket(BucketSettings.create(bucketName).flushEnabled(false));
+    assertThrows(BucketNotFlushableException.class, () -> buckets.flushBucket(bucketName));
   }
 
   @Test
