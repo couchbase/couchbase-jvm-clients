@@ -81,7 +81,7 @@ public class AsyncUserManager extends ManagerSupport {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw UserNotFoundException.forUser(domain.alias(), username);
       }
-      checkStatus(response, "get " + domain + " user [" + redactUser(username) + "]");
+      checkStatus(response, "get " + domain + " user [" + redactUser(username) + "]", username);
       return Mapper.decodeInto(response.content(), UserAndMetadata.class);
     });
   }
@@ -92,7 +92,7 @@ public class AsyncUserManager extends ManagerSupport {
 
   public CompletableFuture<List<UserAndMetadata>> getAllUsers(GetAllUsersOptions options) {
     return sendRequest(GET, pathForUsers(), options.build()).thenApply(response -> {
-      checkStatus(response, "get all users");
+      checkStatus(response, "get all users", null);
       return Mapper.decodeInto(response.content(), new TypeReference<List<UserAndMetadata>>() {
       });
     });
@@ -104,7 +104,7 @@ public class AsyncUserManager extends ManagerSupport {
 
   public CompletableFuture<List<RoleAndDescription>> getRoles(GetRolesOptions options) {
     return sendRequest(GET, pathForRoles(), options.build()).thenApply(response -> {
-      checkStatus(response, "get all roles");
+      checkStatus(response, "get all roles", null);
       return Mapper.decodeInto(response.content(), new TypeReference<List<RoleAndDescription>>() {
       });
     });
@@ -133,7 +133,7 @@ public class AsyncUserManager extends ManagerSupport {
     user.password().ifPresent(pwd -> params.add("password", pwd));
 
     return sendRequest(PUT, pathForUser(AuthDomain.LOCAL, username), params, options.build()).thenApply(response -> {
-      checkStatus(response, "create user [" + redactUser(username) + "]");
+      checkStatus(response, "create user [" + redactUser(username) + "]", username);
       return null;
     });
   }
@@ -149,7 +149,7 @@ public class AsyncUserManager extends ManagerSupport {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw UserNotFoundException.forUser(domain.alias(), username);
       }
-      checkStatus(response, "drop user [" + redactUser(username) + "]");
+      checkStatus(response, "drop user [" + redactUser(username) + "]", username);
       return null;
     });
   }
@@ -163,7 +163,7 @@ public class AsyncUserManager extends ManagerSupport {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw GroupNotFoundException.forGroup(groupName);
       }
-      checkStatus(response, "get group [" + redactMeta(groupName) + "]");
+      checkStatus(response, "get group [" + redactMeta(groupName) + "]", groupName);
       return Mapper.decodeInto(response.content(), Group.class);
     });
   }
@@ -174,7 +174,7 @@ public class AsyncUserManager extends ManagerSupport {
 
   public CompletableFuture<List<Group>> getAllGroups(GetAllGroupsOptions options) {
     return sendRequest(GET, pathForGroups(), options.build()).thenApply(response -> {
-      checkStatus(response, "get all groups");
+      checkStatus(response, "get all groups", null);
       return Mapper.decodeInto(response.content(), new TypeReference<List<Group>>() {
       });
     });
@@ -193,7 +193,7 @@ public class AsyncUserManager extends ManagerSupport {
             .collect(Collectors.joining(",")));
 
     return sendRequest(PUT, pathForGroup(group.name()), params, options.build()).thenApply(response -> {
-      checkStatus(response, "create group [" + redactMeta(group.name()) + "]");
+      checkStatus(response, "create group [" + redactMeta(group.name()) + "]", group.name());
       return null;
     });
   }
@@ -207,7 +207,7 @@ public class AsyncUserManager extends ManagerSupport {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw GroupNotFoundException.forGroup(groupName);
       }
-      checkStatus(response, "drop group [" + redactMeta(groupName) + "]");
+      checkStatus(response, "drop group [" + redactMeta(groupName) + "]", groupName);
       return null;
     });
   }

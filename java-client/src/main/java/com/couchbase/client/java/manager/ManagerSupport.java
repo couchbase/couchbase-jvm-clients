@@ -24,6 +24,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHtt
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValues;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.core.error.BucketNotFlushableException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.GenericManagerRequest;
@@ -32,6 +33,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
 import com.couchbase.client.java.CommonOptions;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
@@ -96,9 +98,14 @@ public abstract class ManagerSupport {
     }, method == HttpMethod.GET));
   }
 
-  protected static void checkStatus(GenericManagerResponse response, String action) {
+  protected static void checkStatus(GenericManagerResponse response, String action, String scope) {
+    final String content = response.content() != null ? new String(response.content(), UTF_8) : "";
+
+    if (response.status() == ResponseStatus.INVALID_ARGS && content.contains("Flush is disabled")) {
+      throw BucketNotFlushableException.forBucket(scope);
+    }
     if (response.status() != ResponseStatus.SUCCESS) {
-      throw new CouchbaseException("Failed to " + action + "; response status=" + response.status() + "; response body=" + new String(response.content(), UTF_8));
+      throw new CouchbaseException("Failed to " + action + "; response status=" + response.status() + "; response body=" + content);
     }
   }
 

@@ -79,7 +79,7 @@ public class AsyncBucketManager extends ManagerSupport {
           throw new CouchbaseException(content);
         }
       }
-      checkStatus(response, "create bucket [" + redactMeta(settings) + "]");
+      checkStatus(response, "create bucket [" + redactMeta(settings) + "]", settings.name());
       return null;
     });
   }
@@ -103,7 +103,7 @@ public class AsyncBucketManager extends ManagerSupport {
           return Mono.error(BucketNotFoundException.forBucket(settings.name()));
         }
         return Mono.fromFuture(sendRequest(POST, pathForBucket(settings.name()), convertSettingsToParams(settings, true), builtOpts).thenApply(response -> {
-          checkStatus(response, "update bucket [" + redactMeta(settings) + "]");
+          checkStatus(response, "update bucket [" + redactMeta(settings) + "]", settings.name());
           return null;
         }));
       })
@@ -141,7 +141,7 @@ public class AsyncBucketManager extends ManagerSupport {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw BucketNotFoundException.forBucket(bucketName);
       }
-      checkStatus(response, "drop bucket [" + redactMeta(bucketName) + "]");
+      checkStatus(response, "drop bucket [" + redactMeta(bucketName) + "]", bucketName);
       return null;
     });
   }
@@ -155,7 +155,7 @@ public class AsyncBucketManager extends ManagerSupport {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw BucketNotFoundException.forBucket(bucketName);
       }
-      checkStatus(response, "get bucket [" + redactMeta(bucketName) + "]");
+      checkStatus(response, "get bucket [" + redactMeta(bucketName) + "]", bucketName);
       JsonNode tree = Mapper.decodeIntoTree(response.content());
       return BucketSettings.create(tree);
     });
@@ -167,7 +167,7 @@ public class AsyncBucketManager extends ManagerSupport {
 
   public CompletableFuture<Map<String, BucketSettings>> getAllBuckets(final GetAllBucketOptions options) {
     return sendRequest(GET, pathForBuckets(), options.build()).thenApply(response -> {
-      checkStatus(response, "get all buckets");
+      checkStatus(response, "get all buckets", null);
       JsonNode tree = Mapper.decodeIntoTree(response.content());
       Map<String, BucketSettings> out = new HashMap<>();
       for (final JsonNode bucket : tree) {
@@ -187,7 +187,7 @@ public class AsyncBucketManager extends ManagerSupport {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw BucketNotFoundException.forBucket(bucketName);
       }
-      checkStatus(response, "flush bucket [" + redactMeta(bucketName) + "]");
+      checkStatus(response, "flush bucket [" + redactMeta(bucketName) + "]", bucketName);
       return null;
     });
   }
