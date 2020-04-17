@@ -22,7 +22,11 @@ import com.couchbase.client.core.error.context.SubDocumentErrorContext;
 
 /**
  * Subdocument exception thrown when the ordering of extended attributes is invalid.
+ * <p>
+ * This exception is deprecated because this case, while technically possible, should never be thrown in the first
+ * place to the user level because the SDK must catch this exception. It is never being thrown at this point.
  */
+@Deprecated
 public class XattrInvalidOrderException extends CouchbaseException {
 
     public XattrInvalidOrderException(final SubDocumentErrorContext ctx) {

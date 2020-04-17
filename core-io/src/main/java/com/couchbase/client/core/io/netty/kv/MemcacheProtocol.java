@@ -690,20 +690,16 @@ public enum MemcacheProtocol {
         return new PathExistsException(ctx);
       case VALUE_TOO_DEEP:
         return new ValueTooDeepException(ctx);
-      case XATTR_INVALID_FLAG_COMBO:
-        return new XattrInvalidFlagComboException(ctx);
       case XATTR_UNKNOWN_MACRO:
         return new XattrUnknownMacroException(ctx);
       case XATTR_INVALID_KEY_COMBO:
         return new XattrInvalidKeyComboException(ctx);
       case XATTR_UNKNOWN_VATTR:
         return new XattrUnknownVirtualAttributeException(ctx);
-      case XATTR_INVALID_ORDER:
-        return new XattrInvalidOrderException(ctx);
       case XATTR_CANNOT_MODIFY_VATTR:
         return new XattrCannotModifyVirtualAttributeException(ctx);
       default:
-        return new CouchbaseException("Unknown SubDocument response code", ctx);
+        return new CouchbaseException("Unexpected SubDocument response code", ctx);
     }
   }
 

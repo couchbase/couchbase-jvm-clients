@@ -22,7 +22,11 @@ import com.couchbase.client.core.error.context.SubDocumentErrorContext;
 
 /**
  * Subdocument exception thrown when a macro has been requested when not using extended attributes.
+ * <p>
+ * This exception is deprecated because this case, while technically possible, should never be thrown in the first
+ * place to the user level because the SDK must catch this exception. It is never being thrown at this point.
  */
+@Deprecated
 public class XattrInvalidFlagComboException extends CouchbaseException {
 
     public XattrInvalidFlagComboException(final SubDocumentErrorContext ctx) {
