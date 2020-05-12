@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.java.json;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
 import java.math.BigDecimal;
@@ -76,7 +77,8 @@ public abstract class JsonValue {
      * @throws InvalidArgumentException if conversion is not possible.
      */
     @SuppressWarnings("unchecked")
-    static Object coerce(Object value) {
+    @Stability.Internal
+    public static Object coerce(Object value) {
         if (checkType(value)) {
             return value;
         }

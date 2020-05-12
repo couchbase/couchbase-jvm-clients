@@ -20,6 +20,8 @@ import com.couchbase.client.core.annotation.Stability;
 
 import java.util.Optional;
 
+import static java.util.Objects.requireNonNull;
+
 @Stability.Internal
 public class CbThrowables {
   private CbThrowables() {
@@ -47,12 +49,27 @@ public class CbThrowables {
   }
 
   /**
-   * If the given Throwable is an instance of RuntimeException, throw it.
+   * If the given Throwable is an instance of RuntimeException or Error, throw it.
    * Otherwise do nothing.
    */
   public static void throwIfUnchecked(Throwable t) {
+    requireNonNull(t);
     if (t instanceof RuntimeException) {
       throw (RuntimeException) t;
+    }
+    if (t instanceof Error) {
+      throw (Error) t;
+    }
+  }
+
+  /**
+   * If the given Throwable is an instance of the given class, throw it.
+   * Otherwise do nothing.
+   */
+  public static <T extends Throwable> void throwIfInstanceOf(Throwable t, Class<T> clazz) throws T {
+    requireNonNull(t);
+    if (clazz.isInstance(t)) {
+      throw clazz.cast(t);
     }
   }
 }

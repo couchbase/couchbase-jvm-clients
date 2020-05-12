@@ -21,6 +21,8 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMappe
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.java.json.RepackagedJsonValueModule;
+import com.couchbase.client.core.encryption.CryptoManager;
+import com.couchbase.client.java.encryption.databind.jackson.repackaged.RepackagedEncryptionModule;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -38,12 +40,28 @@ public class DefaultJsonSerializer implements JsonSerializer {
 
   private final ObjectMapper mapper = new ObjectMapper();
 
+  /**
+   * Creates an instance without encryption support.
+   */
   public static DefaultJsonSerializer create() {
-    return new DefaultJsonSerializer();
+    return create(null);
   }
 
-  private DefaultJsonSerializer() {
+  /**
+   * Creates an instance with optional encryption support.
+   *
+   * @param cryptoManager (nullable) The manager to use for activating the
+   * {@code EncryptedField} annotation, or null to disable encryption support.
+   */
+  public static DefaultJsonSerializer create(CryptoManager cryptoManager) {
+    return new DefaultJsonSerializer(cryptoManager);
+  }
+
+  private DefaultJsonSerializer(CryptoManager cryptoManager) {
     mapper.registerModule(new RepackagedJsonValueModule());
+    if (cryptoManager != null) {
+      mapper.registerModule(new RepackagedEncryptionModule(cryptoManager));
+    }
   }
 
   @Override
