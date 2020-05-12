@@ -16,8 +16,12 @@
 
 package com.couchbase.client.java.json;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
+import com.couchbase.client.core.encryption.CryptoManager;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.java.Collection;
+import com.couchbase.client.java.env.ClusterEnvironment;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -148,6 +152,58 @@ public class JsonObject extends JsonValue implements Serializable {
         } catch (Exception e) {
             throw InvalidArgumentException.fromMessage("Cannot convert byte array to JsonObject", e);
         }
+    }
+
+    /**
+     * Returns a view of the object for reading and writing encrypted fields.
+     * <p>
+     * The returned {@link JsonObjectCrypto} uses the default encrypter.
+     * To use a different encrypter, chain this call with {@link JsonObjectCrypto#withEncrypter(String)}.
+     * <p>
+     * Note: Use of the Field-Level Encryption functionality is
+     * subject to the <a href="https://www.couchbase.com/ESLA01162020">
+     * Couchbase Inc. Enterprise Subscription License Agreement v7</a>
+     *
+     * @param cryptoManager the manager to use for encryption and decryption
+     */
+    @Stability.Volatile
+    public JsonObjectCrypto crypto(CryptoManager cryptoManager) {
+        return new JsonObjectCrypto(this, cryptoManager, null);
+    }
+
+    /**
+     * Returns a view of the object for reading and writing encrypted fields.
+     * <p>
+     * The returned {@link JsonObjectCrypto} uses the default encrypter.
+     * To use a different encrypter, chain this call with {@link JsonObjectCrypto#withEncrypter(String)}.
+     * <p>
+     * Note: Use of the Field-Level Encryption functionality is
+     * subject to the <a href="https://www.couchbase.com/ESLA01162020">
+     * Couchbase Inc. Enterprise Subscription License Agreement v7</a>
+     *
+     * @throws IllegalStateException if no CryptoManager was configured for the collection's cluster environment
+     */
+    @Stability.Volatile
+    public JsonObjectCrypto crypto(Collection collection) {
+        return crypto(collection.environment());
+    }
+
+    /**
+     * Returns a view of the object for reading and writing encrypted fields.
+     * <p>
+     * The returned {@link JsonObjectCrypto} uses the default encrypter.
+     * To use a different encrypter, chain this call with {@link JsonObjectCrypto#withEncrypter(String)}.
+     * <p>
+     * Note: Use of the Field-Level Encryption functionality is
+     * subject to the <a href="https://www.couchbase.com/ESLA01162020">
+     * Couchbase Inc. Enterprise Subscription License Agreement v7</a>
+     *
+     * @throws IllegalStateException if no CryptoManager was configured for this cluster environment
+     */
+    @Stability.Volatile
+    public JsonObjectCrypto crypto(ClusterEnvironment env) {
+        return crypto(env.cryptoManager().orElseThrow(() ->
+            new IllegalStateException("No CryptoManager configured for cluster environment.")));
     }
 
     /**

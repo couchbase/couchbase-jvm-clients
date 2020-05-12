@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.env;
 
+import com.couchbase.client.core.encryption.CryptoManager;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.codec.DefaultJsonSerializer;
@@ -23,6 +24,9 @@ import com.couchbase.client.java.codec.JacksonJsonSerializer;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.JsonTranscoder;
 import com.couchbase.client.java.codec.Transcoder;
+import com.couchbase.client.java.json.JsonObjectCrypto;
+
+import java.util.Optional;
 
 import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -42,11 +46,13 @@ public class ClusterEnvironment extends CoreEnvironment {
 
   private final JsonSerializer jsonSerializer;
   private final Transcoder transcoder;
+  private final Optional<CryptoManager> cryptoManager;
 
-  private ClusterEnvironment(final Builder builder) {
+  private ClusterEnvironment(Builder builder) {
     super(builder);
-    this.jsonSerializer = defaultIfNull(builder.jsonSerializer, this::newDefaultSerializer);
+    this.jsonSerializer = defaultIfNull(builder.jsonSerializer, () -> newDefaultSerializer(builder.cryptoManager));
     this.transcoder = defaultIfNull(builder.transcoder, () -> JsonTranscoder.create(jsonSerializer));
+    this.cryptoManager = Optional.ofNullable(builder.cryptoManager);
   }
 
   /**
@@ -55,8 +61,10 @@ public class ClusterEnvironment extends CoreEnvironment {
    * Be very careful not to reference any classes from the optional Jackson library otherwise users will get
    * NoClassDefFoundError when Jackson is absent.
    */
-  private JsonSerializer newDefaultSerializer() {
-    return nonShadowedJacksonPresent() ? JacksonJsonSerializer.create() : DefaultJsonSerializer.create();
+  private JsonSerializer newDefaultSerializer(CryptoManager cryptoManager) {
+    return nonShadowedJacksonPresent()
+        ? JacksonJsonSerializer.create(cryptoManager)
+        : DefaultJsonSerializer.create(cryptoManager);
   }
 
   /**
@@ -110,10 +118,29 @@ public class ClusterEnvironment extends CoreEnvironment {
     return jsonSerializer;
   }
 
+  /**
+   * Returns the low-level cryptography manager for Field-Level Encryption if one has been configured.
+   * <p>
+   * Useful for implementing encryption with external JSON libraries.
+   * <p>
+   * See {@link JsonObjectCrypto} for a high level alternative that's compatible
+   * with Couchbase {@code JsonObject}s.
+   * <p>
+   * Note: Use of the Field-Level Encryption functionality is
+   * subject to the <a href="https://www.couchbase.com/ESLA01162020">
+   * Couchbase Inc. Enterprise Subscription License Agreement v7</a>
+   *
+   * @see Builder#cryptoManager(CryptoManager)
+   */
+  public Optional<CryptoManager> cryptoManager() {
+    return cryptoManager;
+  }
+
   public static class Builder extends CoreEnvironment.Builder<Builder> {
 
     private JsonSerializer jsonSerializer;
     private Transcoder transcoder;
+    private CryptoManager cryptoManager;
 
     Builder() {
       super();
@@ -157,6 +184,22 @@ public class ClusterEnvironment extends CoreEnvironment {
      */
     public Builder transcoder(final Transcoder transcoder) {
       this.transcoder = notNull(transcoder, "Transcoder");
+      return this;
+    }
+
+    /**
+     * Sets the cryptography manager for Field-Level Encryption
+     * (reading and writing encrypted document fields).
+     * <p>
+     * Note: Use of the Field-Level Encryption functionality is
+     * subject to the <a href="https://www.couchbase.com/ESLA01162020">
+     * Couchbase Inc. Enterprise Subscription License Agreement v7</a>
+     *
+     * @param cryptoManager (nullable) the manager to use, or null to disable encryption support.
+     * @return this builder for chaining purposes.
+     */
+    public Builder cryptoManager(CryptoManager cryptoManager) {
+      this.cryptoManager = cryptoManager;
       return this;
     }
 

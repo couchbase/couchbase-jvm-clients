@@ -22,6 +22,9 @@ import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.json.JsonValueModule;
+import com.couchbase.client.core.encryption.CryptoManager;
+import com.couchbase.client.java.encryption.annotation.EncryptedField;
+import com.couchbase.client.java.encryption.databind.jackson.EncryptionModule;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -35,9 +38,13 @@ import static java.util.Objects.requireNonNull;
  * In order to use this class you must add Jackson to your class path.
  * <p>
  * Make sure to register {@link JsonValueModule} with your {@code ObjectMapper}
- * so it can handle Couchbase {@link JsonObject} instances if desired.
+ * so it can handle Couchbase {@link JsonObject} instances.
  * <p>
- * Example usage:
+ * Likewise, if you're using the {@link EncryptedField} annotation for
+ * Couchbase Field-Level Encryption, make sure to register
+ * {@link EncryptionModule}.
+ * <p>
+ * Example usage without Couchbase Field-Level Encryption:
  * <pre>
  * ObjectMapper mapper = new ObjectMapper();
  * mapper.registerModule(new JsonValueModule());
@@ -47,8 +54,22 @@ import static java.util.Objects.requireNonNull;
  *     .build();
  * </pre>
  * <p>
+ * Example usage with Couchbase Field-Level Encryption:
+ * <pre>
+ * CryptoManager cryptoManager = ...
+ *
+ * ObjectMapper mapper = new ObjectMapper();
+ * mapper.registerModule(new JsonValueModule());
+ * mapper.registerModule(new EncryptionModule(cryptoManager));
+ *
+ * ClusterEnvironment env = ClusterEnvironment.builder()
+ *     .cryptoManager(cryptoManager)
+ *     .jsonSerializer(new JacksonJsonSerializer(mapper))
+ *     .build();
+ * </pre>
  *
  * @see JsonValueModule
+ * @see EncryptionModule
  */
 public class JacksonJsonSerializer implements JsonSerializer {
   private final ObjectMapper mapper;
@@ -61,12 +82,27 @@ public class JacksonJsonSerializer implements JsonSerializer {
   }
 
   /**
-   * Returns a new instance backed by a default ObjectMapper.
+   * Returns a new instance backed by a default ObjectMapper
+   * without encryption support.
    */
   public static JacksonJsonSerializer create() {
-    final ObjectMapper mapper = new ObjectMapper();
+    return create((CryptoManager) null);
+  }
+
+  /**
+   * Returns a new instance backed by a default ObjectMapper
+   * with optional encryption support.
+   *
+   * @param cryptoManager (nullable) The manager to use for activating the
+   * {@link EncryptedField} annotation, or null to disable encryption support.
+   */
+  public static JacksonJsonSerializer create(CryptoManager cryptoManager) {
+    ObjectMapper mapper = new ObjectMapper();
     mapper.registerModule(new JsonValueModule());
-    return create(mapper);
+    if (cryptoManager != null) {
+      mapper.registerModule(new EncryptionModule(cryptoManager));
+    }
+    return new JacksonJsonSerializer(mapper);
   }
 
   private JacksonJsonSerializer(ObjectMapper mapper) {
