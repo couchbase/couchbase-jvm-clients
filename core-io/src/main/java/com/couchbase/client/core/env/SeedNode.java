@@ -112,7 +112,7 @@ public class SeedNode {
     return "SeedNode{" +
       "address='" + address + '\'' +
       ", kvPort=" + kvPort +
-      ", clusterManagerPort=" + clusterManagerPort +
+      ", mgmtPort=" + clusterManagerPort +
       '}';
   }
 
