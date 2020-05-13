@@ -16,7 +16,6 @@
 
 package com.couchbase.client.tracing.opentracing;
 
-import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -31,10 +30,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
 
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -65,7 +60,7 @@ class OpenTracingIntegrationTest extends ClusterAwareIntegrationTest {
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
-    bucket.waitUntilReady(Duration.ofSeconds(10));
+    bucket.waitUntilReady(Duration.ofSeconds(30));
   }
 
   @AfterAll
