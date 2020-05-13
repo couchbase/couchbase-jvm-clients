@@ -210,7 +210,7 @@ public class Core {
       currentConfig = c;
       reconfigure();
     });
-    eventBus.publish(new CoreCreatedEvent(coreContext, environment));
+    eventBus.publish(new CoreCreatedEvent(coreContext, environment, seedNodes));
   }
 
   /**

@@ -24,6 +24,7 @@ import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.BucketConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.GlobalConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.IndividualGlobalConfigLoadFailedEvent;
+import com.couchbase.client.core.cnc.events.config.SeedNodesUpdatedEvent;
 import com.couchbase.client.core.config.loader.ClusterManagerBucketLoader;
 import com.couchbase.client.core.config.loader.GlobalLoader;
 import com.couchbase.client.core.config.loader.KeyValueBucketLoader;
@@ -565,6 +566,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
       }).filter(Objects::nonNull).collect(Collectors.toSet());
 
       if (!seedNodes.isEmpty()) {
+        eventBus.publish(new SeedNodesUpdatedEvent(core.context(), this.seedNodes.get(), seedNodes));
         this.seedNodes.set(seedNodes);
       }
 
@@ -592,6 +594,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
       }).filter(Objects::nonNull).collect(Collectors.toSet());
 
     if (!seedNodes.isEmpty()) {
+      eventBus.publish(new SeedNodesUpdatedEvent(core.context(), this.seedNodes.get(), seedNodes));
       this.seedNodes.set(seedNodes);
     }
   }
