@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEve
 import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.BucketConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.GlobalConfigUpdatedEvent;
+import com.couchbase.client.core.cnc.events.config.IndividualGlobalConfigLoadFailedEvent;
 import com.couchbase.client.core.config.loader.ClusterManagerBucketLoader;
 import com.couchbase.client.core.config.loader.GlobalLoader;
 import com.couchbase.client.core.config.loader.KeyValueBucketLoader;
@@ -252,12 +253,27 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         boolean tls = core.context().environment().securityConfig().tlsEnabled();
         int kvPort = tls ? DEFAULT_KV_TLS_PORT : DEFAULT_KV_PORT;
 
+        final AtomicBoolean hasErrored = new AtomicBoolean();
         return Flux
           .fromIterable(seedNodes.get())
           .take(MAX_PARALLEL_LOADERS)
           .flatMap(seed -> {
             NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
-            return globalLoader.load(identifier, seed.kvPort().orElse(kvPort));
+            long start = System.nanoTime();
+            return globalLoader
+              .load(identifier, seed.kvPort().orElse(kvPort))
+              .onErrorResume(throwable -> {
+                if (hasErrored.compareAndSet(false, true)) {
+                  return Mono.error(throwable);
+                }
+                core.context().environment().eventBus().publish(new IndividualGlobalConfigLoadFailedEvent(
+                  Duration.ofNanos(System.nanoTime() - start),
+                  core.context(),
+                  throwable,
+                  seed.address()
+                ));
+                return Mono.empty();
+              });
           })
           .take(1)
           .switchIfEmpty(Mono.error(
