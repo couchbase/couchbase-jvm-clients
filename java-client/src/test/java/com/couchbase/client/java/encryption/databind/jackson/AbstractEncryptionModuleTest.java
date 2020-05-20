@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public abstract class AbstractEncryptionModuleTest {
 
   protected static final String json = "{\n" +
-      "  \"__crypt_maxim\": {\n" +
+      "  \"encrypted$maxim\": {\n" +
       "    \"alg\": \"FAKE\",\n" +
       "    \"ciphertext\": \"IlRoZSBlbmVteSBrbm93cyB0aGUgc3lzdGVtLiI=\"\n" +
       "  }\n" +
@@ -24,7 +24,7 @@ public abstract class AbstractEncryptionModuleTest {
 
   protected static final String jsonWithUnencrypted = "{\n" +
       "  \"greeting\":\"hello\",\n" +
-      "  \"__crypt_maxim\": {\n" +
+      "  \"encrypted$maxim\": {\n" +
       "    \"alg\": \"FAKE\",\n" +
       "    \"ciphertext\": \"IlRoZSBlbmVteSBrbm93cyB0aGUgc3lzdGVtLiI=\"\n" +
       "  }\n" +
