@@ -11,10 +11,10 @@ This repository contains the following projects:
  - `scala-client`: the Scala language binding
 
 You'll also find utility libraries and integration components at the toplevel (i.e for tracing).
- 
-Documentation is now available for [Java](https://docs.couchbase.com/java-sdk/3.0/hello-world/start-using-sdk.html) 
+
+Documentation is now available for [Java](https://docs.couchbase.com/java-sdk/3.0/hello-world/start-using-sdk.html)
 and [Scala](https://docs.couchbase.com/scala-sdk/1.0/start-using-sdk.html)
- 
+
 ## Usage
 
 Stable releases are pushed to maven central.
@@ -26,7 +26,7 @@ For Java:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>java-client</artifactId>
-        <version>3.0.1</version>
+        <version>3.0.4</version>
     </dependency>
 </dependencies>
 ```
@@ -38,13 +38,13 @@ For Scala:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>scala-client_2.12</artifactId>
-        <version>1.0.1</version>
+        <version>1.0.4</version>
     </dependency>
 </dependencies>
 ```
 or if you use sbt:
 ```sbt
-libraryDependencies += "com.couchbase.client" %% "scala-client" % "1.0.1"
+libraryDependencies += "com.couchbase.client" %% "scala-client" % "1.0.4"
 ```
 
 ## Building
@@ -66,11 +66,11 @@ $ ./mvnw -Dscala.compat.version=2.11 -Dscala.compat.library.version=2.11.12 clea
 
 Notes:
 + The two `mvn` runs are to cross-compile the Scala SDK for Scala 2.11, and 2.13
-+ Couchbase only officially provides, tests and supports a Scala 2.12 build.  
++ Couchbase only officially provides, tests and supports a Scala 2.12 build.
 Our community kindly added the capability to create builds for Scala 2.11 and 2.13, and users are of course welcome to create such builds; but Couchbase cannot provide support for them.
 + When building for Scala 2.11, JDK 8 should be used. If JDK 11 is used then goal scala:doc-jar will fail
 + Default `scala.compat.`X properties are defined in file [.mvn/maven.config]
-+ You can always go into one of the sub-directories like `core-io` to only build or test an 
++ You can always go into one of the sub-directories like `core-io` to only build or test an
 individual project:
     ```shell script
     cd scala-client
@@ -78,7 +78,7 @@ individual project:
     ```
 + Use `-DskipTests` to skip testing.
 
-### Testing 
+### Testing
 
 You can test like this:
 
@@ -102,7 +102,7 @@ each service release. See the tag information for specifics of what's in there.
 | ------------- | ----------- | ------------ | ------- | --------------------- | ------------------- |
 | colossus      | 3.0.x       | 1.0.x        | 2.0.x   | 0.2.x                 | 0.2.x               |
 
-### Testing Infos
+### Testing Info
 
 To cover all tests, the suite needs to be run against the following topologies, but by default it
 runs against the mock. Recommended topologies:
@@ -110,7 +110,29 @@ runs against the mock. Recommended topologies:
  - 1 node, no replica
  - 2 nodes, 1 replica
  - 2 nodes, 2 replicas
- 
+
+### Building Documentation
+Documentation will be built automatically by the `mvn install` command above.
+
+According to the Maven standard, the file is named artifact-version-javadoc.jar (i.e. java-client-3.0.4-javadoc.jar).
+
+This file can be extracted (jars are like zip files) with the following command:
+
+```
+jar xvf java-client-3.0.4-javadoc.jar
+```
+
+This will extract the contents of the javadoc file into the current directory. After the original jar is removed it can be uploaded to s3.
+
+The location of the javadoc files depends on where you get it from. The easiest is, once published, from Maven central.
+For example, look it up on Maven central: https://search.maven.org/artifact/com.couchbase.client/java-client/3.0.4/jar and download the javadoc jar: https://search.maven.org/remotecontent?filepath=com/couchbase/client/java-client/3.0.4/java-client-3.0.4-javadoc.jar
+
+The exact same approach can be used for any artifact, including Scala.
+The Scala documentation can also be built with this command
+```
+cd scala-client && mvn scala:doc
+```
+
 ## IDE Configuration
 
 ### IntelliJ
