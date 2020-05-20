@@ -50,7 +50,7 @@ public interface CryptoManager {
    * The prefix to use when mangling the names of encrypted fields
    * according to the default name mangling strategy.
    */
-  String DEFAULT_ENCRYPTED_FIELD_NAME_PREFIX = "__crypt_";
+  String DEFAULT_ENCRYPTED_FIELD_NAME_PREFIX = "encrypted$";
 
   /**
    * Encrypts the given data using the named encrypter.

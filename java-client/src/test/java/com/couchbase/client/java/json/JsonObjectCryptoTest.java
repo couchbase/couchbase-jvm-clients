@@ -24,7 +24,7 @@ class JsonObjectCryptoTest {
         JsonObject.create()
             .put("alg", "FAKE")
             .put("ciphertext", "Inh5enp5Ig=="),
-        doc.getObject("__crypt_magicWord"));
+        doc.getObject("encrypted$magicWord"));
 
     assertEquals("xyzzy", crypto.getString("magicWord"));
 
