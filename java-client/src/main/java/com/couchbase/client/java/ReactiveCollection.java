@@ -326,13 +326,14 @@ public class ReactiveCollection {
       "get_all_replicas",
       opts.parentSpan().orElse(null)
     );
+    final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
 
     return Reactor
       .toMono(() -> asyncCollection.getAllReplicasRequests(id, opts, timeout, parent))
       .flux()
       .flatMap(Flux::fromStream)
       .flatMap(request -> Reactor
-        .wrap(request, GetAccessor.get(core, request, environment().transcoder()), true)
+        .wrap(request, GetAccessor.get(core, request, transcoder), true)
         .onErrorResume(t -> {
           coreContext.environment().eventBus().publish(new IndividualReplicaGetFailedEvent(request.context()));
           return Mono.empty(); // Swallow any errors from individual replicas
