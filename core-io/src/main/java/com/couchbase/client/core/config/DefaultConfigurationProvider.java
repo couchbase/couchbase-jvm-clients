@@ -18,10 +18,10 @@ package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.events.config.BucketConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.CollectionMapDecodingFailedEvent;
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
-import com.couchbase.client.core.cnc.events.config.BucketConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.GlobalConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.IndividualGlobalConfigLoadFailedEvent;
 import com.couchbase.client.core.cnc.events.config.SeedNodesUpdatedEvent;
@@ -35,7 +35,6 @@ import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.ConfigException;
-
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
@@ -46,10 +45,10 @@ import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.UnsignedLEB128;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.ReplayProcessor;
 
 import java.time.Duration;
 import java.util.List;
@@ -107,7 +106,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private final GlobalLoader globalLoader;
   private final GlobalRefresher globalRefresher;
 
-  private final DirectProcessor<ClusterConfig> configs = DirectProcessor.create();
+  private final ReplayProcessor<ClusterConfig> configs = ReplayProcessor.cacheLast();
   private final FluxSink<ClusterConfig> configsSink = configs.sink();
   private final ClusterConfig currentConfig = new ClusterConfig();
 
