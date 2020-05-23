@@ -78,8 +78,6 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
     Collections.synchronizedMap(new LRUCache[String, QueryCacheEntry](QueryCacheSize))
   @volatile private var enhancedPreparedEnabled = false
 
-  updateEnhancedPreparedEnabled(core.clusterConfig())
-
   // Subscribe to cluster config changes
   core
     .configurationProvider()
