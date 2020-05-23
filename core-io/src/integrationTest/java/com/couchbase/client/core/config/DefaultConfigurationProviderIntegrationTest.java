@@ -17,6 +17,7 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.env.TimeoutConfig;
@@ -25,7 +26,6 @@ import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
-import com.couchbase.client.core.cnc.SimpleEventBus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -225,7 +225,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     AtomicInteger configEvents = new AtomicInteger(0);
     CountDownLatch configsComplete = new CountDownLatch(1);
-    provider.configs().subscribe(
+    provider.configs().skip(1).subscribe( // ignore initial empty config
       (c) -> configEvents.incrementAndGet(),
       (e) -> {},
       configsComplete::countDown
@@ -256,7 +256,9 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
    */
   private void openAndClose(final String bucketName, final ConfigurationProvider provider) {
     List<ClusterConfig> configs = Collections.synchronizedList(new ArrayList<>());
-    provider.configs().subscribe(configs::add);
+    provider.configs()
+        .skip(1) // ignore initial empty config
+        .subscribe(configs::add);
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
 

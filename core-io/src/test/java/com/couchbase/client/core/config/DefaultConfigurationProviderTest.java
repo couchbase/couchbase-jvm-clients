@@ -28,6 +28,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
@@ -48,7 +49,7 @@ class DefaultConfigurationProviderTest {
 
   private static CoreEnvironment ENVIRONMENT;
 
-  private static String ORIGIN = "127.0.0.1";
+  private static final String ORIGIN = "127.0.0.1";
 
   @BeforeAll
   static void setup() {
@@ -61,6 +62,16 @@ class DefaultConfigurationProviderTest {
   }
 
   @Test
+  void currentConfigIsReplayedToLateSubscriber() {
+    Core core = mock(Core.class);
+    CoreContext ctx = new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class));
+    when(core.context()).thenReturn(ctx);
+
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
+    provider.configs().blockFirst(Duration.ofSeconds(10));
+  }
+
+  @Test
   void canProposeNewBucketConfig() {
     Core core = mock(Core.class);
     CoreContext ctx = new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class));
@@ -69,7 +80,9 @@ class DefaultConfigurationProviderTest {
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
-    provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
+    provider.configs()
+        .skip(1) // ignore initial empty config
+        .subscribe((c) -> configsPushed.incrementAndGet());
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
     assertEquals(1, provider.seedNodes().size());
@@ -101,7 +114,9 @@ class DefaultConfigurationProviderTest {
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
-    provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
+    provider.configs()
+        .skip(1) // ignore initial empty config
+        .subscribe((c) -> configsPushed.incrementAndGet());
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
 
@@ -129,7 +144,9 @@ class DefaultConfigurationProviderTest {
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
-    provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
+    provider.configs()
+        .skip(1) // ignore initial empty config
+        .subscribe((c) -> configsPushed.incrementAndGet());
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
 
@@ -162,7 +179,9 @@ class DefaultConfigurationProviderTest {
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
-    provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
+    provider.configs()
+        .skip(1) // ignore initial empty config
+        .subscribe((c) -> configsPushed.incrementAndGet());
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
 
@@ -225,9 +244,6 @@ class DefaultConfigurationProviderTest {
     Set<SeedNode> seedNodes = new HashSet<>(Collections.singletonList(SeedNode.create("192.168.132.234")));
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, seedNodes);
 
-    final AtomicInteger configsPushed = new AtomicInteger(0);
-    provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
-
     assertTrue(provider.config().bucketConfigs().isEmpty());
     assertEquals(1, provider.seedNodes().size());
 
@@ -255,9 +271,6 @@ class DefaultConfigurationProviderTest {
 
     Set<SeedNode> seedNodes = new HashSet<>(Collections.singletonList(SeedNode.create("192.168.132.234")));
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, seedNodes);
-
-    final AtomicInteger configsPushed = new AtomicInteger(0);
-    provider.configs().subscribe((c) -> configsPushed.incrementAndGet());
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
     assertEquals(1, provider.seedNodes().size());
