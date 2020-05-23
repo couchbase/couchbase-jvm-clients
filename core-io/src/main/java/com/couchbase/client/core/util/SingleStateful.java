@@ -30,7 +30,7 @@ import static com.couchbase.client.core.util.Validators.notNull;
  */
 public class SingleStateful<S> implements Stateful<S> {
 
-  private final ReplayProcessor<S> states = ReplayProcessor.create(1);
+  private final ReplayProcessor<S> states = ReplayProcessor.cacheLast();
   private final FluxSink<S> statesSink = states.sink();
   private final AtomicReference<S> currentState;
   private final BiConsumer<S, S> beforeTransitionCallback;

@@ -82,7 +82,6 @@ public class QueryAccessor {
     public QueryAccessor(final Core core) {
         this.core = core;
 
-        updateEnhancedPreparedEnabled(core.clusterConfig());
         core
           .configurationProvider()
           .configs()

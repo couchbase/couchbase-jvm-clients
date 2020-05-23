@@ -28,7 +28,7 @@ import java.util.concurrent.ExecutorService;
 
 public class BucketConfigStreamingResponse extends BaseResponse {
 
-  private final ReplayProcessor<String> configs = ReplayProcessor.create(1);
+  private final ReplayProcessor<String> configs = ReplayProcessor.cacheLast();
   private final FluxSink<String> configsSink = configs.sink();
   private final String address;
 
