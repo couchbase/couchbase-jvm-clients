@@ -61,6 +61,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.couchbase.client.core.util.CbCollections.copyToUnmodifiableSet;
+import static java.util.Collections.unmodifiableSet;
+
 /**
  * The standard {@link ConfigurationProvider} that is used by default.
  *
@@ -122,7 +125,9 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   /**
    * Stores the current seed nodes used to bootstrap buckets and global configs.
    */
-  private final AtomicReference<Set<SeedNode>> seedNodes;
+  private final AtomicReference<Set<SeedNode>> currentSeedNodes;
+  private final ReplayProcessor<Set<SeedNode>> seedNodes = ReplayProcessor.cacheLast();
+  private final FluxSink<Set<SeedNode>> seedNodesSink = seedNodes.sink();
 
   /**
    * Creates a new configuration provider.
@@ -132,7 +137,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   public DefaultConfigurationProvider(final Core core, final Set<SeedNode> seedNodes) {
     this.core = core;
     eventBus = core.context().environment().eventBus();
-    this.seedNodes = new AtomicReference<>(seedNodes);
+
+    // Don't publish the initial seed nodes, since they probably came from the user
+    // and might not be KV nodes, or might have incomplete port information.
+    this.currentSeedNodes = new AtomicReference<>(copyToUnmodifiableSet(seedNodes));
 
     keyValueLoader = new KeyValueBucketLoader(core);
     clusterManagerLoader = new ClusterManagerBucketLoader(core);
@@ -161,6 +169,11 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   }
 
   @Override
+  public Flux<Set<SeedNode>> seedNodes() {
+    return seedNodes;
+  }
+
+  @Override
   public Mono<Void> openBucket(final String name) {
     return Mono.defer(() -> {
       if (!shutdown.get()) {
@@ -171,7 +184,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         final Optional<String> alternate = core.context().alternateAddress();
 
         return Flux
-          .fromIterable(seedNodes.get())
+          .fromIterable(currentSeedNodes())
           .take(MAX_PARALLEL_LOADERS)
           .flatMap(seed -> {
             NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
@@ -255,7 +268,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
         final AtomicBoolean hasErrored = new AtomicBoolean();
         return Flux
-          .fromIterable(seedNodes.get())
+          .fromIterable(currentSeedNodes())
           .take(MAX_PARALLEL_LOADERS)
           .flatMap(seed -> {
             NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
@@ -541,7 +554,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   /**
    * Helper method to take the current config and update the seed node list with the latest topology.
    *
-   * <p>If we have a global config it is used for simplicity reasons. Otherwise we iterate the configs ad collect
+   * <p>If we have a global config it is used for simplicity reasons. Otherwise we iterate the configs and collect
    * all the nodes to build the list.</p>
    */
   private void updateSeedNodeList() {
@@ -549,7 +562,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     boolean tlsEnabled = core.context().environment().securityConfig().tlsEnabled();
 
     if (config.globalConfig() != null) {
-      Set<SeedNode> seedNodes = config.globalConfig().portInfos().stream().map(ni -> {
+      Set<SeedNode> seedNodes = unmodifiableSet(config.globalConfig().portInfos().stream().map(ni -> {
         Map<ServiceType, Integer> ports = tlsEnabled ? ni.sslPorts() : ni.ports();
 
         if (!ports.containsKey(ServiceType.KV)) {
@@ -562,17 +575,17 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           Optional.ofNullable(ports.get(ServiceType.KV)),
           Optional.ofNullable(ports.get(ServiceType.MANAGER))
         );
-      }).filter(Objects::nonNull).collect(Collectors.toSet());
+      }).filter(Objects::nonNull).collect(Collectors.toSet()));
 
       if (!seedNodes.isEmpty()) {
-        eventBus.publish(new SeedNodesUpdatedEvent(core.context(), this.seedNodes.get(), seedNodes));
-        this.seedNodes.set(seedNodes);
+        eventBus.publish(new SeedNodesUpdatedEvent(core.context(), currentSeedNodes(), seedNodes));
+        setSeedNodes(seedNodes);
       }
 
       return;
     }
 
-    Set<SeedNode> seedNodes = config
+    Set<SeedNode> seedNodes = unmodifiableSet(config
       .bucketConfigs()
       .values()
       .stream()
@@ -590,11 +603,11 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           Optional.ofNullable(ports.get(ServiceType.KV)),
           Optional.ofNullable(ports.get(ServiceType.MANAGER))
         );
-      }).filter(Objects::nonNull).collect(Collectors.toSet());
+      }).filter(Objects::nonNull).collect(Collectors.toSet()));
 
     if (!seedNodes.isEmpty()) {
-      eventBus.publish(new SeedNodesUpdatedEvent(core.context(), this.seedNodes.get(), seedNodes));
-      this.seedNodes.set(seedNodes);
+      eventBus.publish(new SeedNodesUpdatedEvent(core.context(), currentSeedNodes(), seedNodes));
+      setSeedNodes(seedNodes);
     }
   }
 
@@ -606,7 +619,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
       String resolved = determineNetworkResolution(
         extractAlternateAddressInfos(currentConfig),
         core.context().environment().ioConfig().networkResolution(),
-        seedNodes().stream().map(SeedNode::address).collect(Collectors.toSet())
+        currentSeedNodes().stream().map(SeedNode::address).collect(Collectors.toSet())
       );
       core.context().alternateAddress(Optional.ofNullable(resolved));
     }
@@ -726,10 +739,15 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   }
 
   /**
-   * Method for tests to get the current seed nodes.
+   * Visible for testing.
    */
-  Set<SeedNode> seedNodes() {
-    return seedNodes.get();
+  Set<SeedNode> currentSeedNodes() {
+    return currentSeedNodes.get();
+  }
+
+  private void setSeedNodes(Set<SeedNode> seedNodes) {
+    currentSeedNodes.set(seedNodes);
+    seedNodesSink.next(seedNodes);
   }
 
   /**

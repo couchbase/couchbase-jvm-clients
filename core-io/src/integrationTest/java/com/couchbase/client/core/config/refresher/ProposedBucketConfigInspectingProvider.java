@@ -4,6 +4,7 @@ import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.io.CollectionMap;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -11,6 +12,7 @@ import reactor.core.publisher.Mono;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Helper class for integration tests to measure the proposed bucket configurations.
@@ -48,6 +50,11 @@ public class ProposedBucketConfigInspectingProvider implements ConfigurationProv
   @Override
   public ClusterConfig config() {
     return delegate.config();
+  }
+
+  @Override
+  public Flux<Set<SeedNode>> seedNodes() {
+    return delegate.seedNodes();
   }
 
   @Override

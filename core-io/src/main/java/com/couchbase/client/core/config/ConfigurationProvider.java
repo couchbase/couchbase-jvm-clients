@@ -17,11 +17,12 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.io.CollectionMap;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
+import java.util.Set;
 
 /**
  * The {@link ConfigurationProvider} is responsible for grabbing, converting and managing
@@ -49,6 +50,19 @@ public interface ConfigurationProvider  {
    * @return the current cluster configuration.
    */
   ClusterConfig config();
+
+  /**
+   * Returns a stream of seed node sets sourced from the server's global config or bucket config.
+   * <p>
+   * Only nodes running the KV service are present in the set.
+   * <p>
+   * This is a hot stream which when attached will return the current set of seed nodes
+   * as well as all subsequent sets. The returned Flux does not emit any items until
+   * the client has received at least one config from the server.
+   *
+   * @return a flux of new sets of seed nodes as they arrive.
+   */
+  Flux<Set<SeedNode>> seedNodes();
 
   /**
    * Initiates the bucket opening process.
