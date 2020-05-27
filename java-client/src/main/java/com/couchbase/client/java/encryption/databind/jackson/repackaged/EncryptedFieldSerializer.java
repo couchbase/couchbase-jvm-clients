@@ -22,7 +22,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonSeriali
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.SerializerProvider;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.couchbase.client.core.encryption.CryptoManager;
-import com.couchbase.client.java.encryption.annotation.EncryptedField;
+import com.couchbase.client.java.encryption.annotation.Encrypted;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -33,10 +33,10 @@ import static java.util.Objects.requireNonNull;
 @Stability.Internal
 public class EncryptedFieldSerializer extends StdSerializer<Object> {
   private final CryptoManager cryptoManager;
-  private final EncryptedField annotation;
+  private final Encrypted annotation;
   private final JsonSerializer<Object> originalCustomSerializer; // nullable
 
-  public EncryptedFieldSerializer(CryptoManager cryptoManager, EncryptedField annotation, JsonSerializer<Object> originalCustomSerializer) {
+  public EncryptedFieldSerializer(CryptoManager cryptoManager, Encrypted annotation, JsonSerializer<Object> originalCustomSerializer) {
     super(Object.class);
     this.cryptoManager = requireNonNull(cryptoManager);
     this.annotation = requireNonNull(annotation);

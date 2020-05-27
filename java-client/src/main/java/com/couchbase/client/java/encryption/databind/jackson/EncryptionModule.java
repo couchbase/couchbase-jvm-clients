@@ -21,7 +21,7 @@ package com.couchbase.client.java.encryption.databind.jackson;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.util.CbAnnotations;
 import com.couchbase.client.core.encryption.CryptoManager;
-import com.couchbase.client.java.encryption.annotation.EncryptedField;
+import com.couchbase.client.java.encryption.annotation.Encrypted;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.Module;
@@ -32,7 +32,7 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Can be registered with a Jackson {@code ObjectMapper} to activate
- * the {@link EncryptedField} annotation.
+ * the {@link Encrypted} annotation.
  */
 @Stability.Volatile
 public class EncryptionModule extends Module {

@@ -2,7 +2,7 @@ package com.couchbase.client.java.encryption.databind.jackson;
 
 import com.couchbase.client.core.encryption.CryptoManager;
 import com.couchbase.client.java.encryption.FakeCryptoManager;
-import com.couchbase.client.java.encryption.annotation.EncryptedField;
+import com.couchbase.client.java.encryption.annotation.Encrypted;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -65,7 +65,7 @@ public abstract class AbstractEncryptionModuleTest {
   }
 
   protected static class AnnotatedField implements MaximHolder {
-    @EncryptedField
+    @Encrypted
     private String maxim;
 
     public String getMaxim() {
@@ -81,7 +81,7 @@ public abstract class AbstractEncryptionModuleTest {
   protected static class AnnotatedGetter implements MaximHolder {
     private String maxim;
 
-    @EncryptedField
+    @Encrypted
     public String getMaxim() {
       return maxim;
     }
@@ -99,7 +99,7 @@ public abstract class AbstractEncryptionModuleTest {
       return maxim;
     }
 
-    @EncryptedField
+    @Encrypted
     @SuppressWarnings("unused")
     public void setMaxim(String maxim) {
       this.maxim = maxim;
@@ -116,7 +116,7 @@ public abstract class AbstractEncryptionModuleTest {
       this.maxim = maxim;
     }
 
-    @EncryptedField
+    @Encrypted
     public String getMaxim() {
       return maxim;
     }
@@ -124,9 +124,9 @@ public abstract class AbstractEncryptionModuleTest {
 
   /**
    * Applying this annotation to a property should have the same effect
-   * as applying the {@link EncryptedField} annotation.
+   * as applying the {@link Encrypted} annotation.
    */
-  @EncryptedField
+  @Encrypted
   @Retention(RetentionPolicy.RUNTIME)
   @interface Meta {
   }
@@ -192,7 +192,7 @@ public abstract class AbstractEncryptionModuleTest {
   protected static class AlsoHasNonSensitiveFields implements MaximHolder {
     private String greeting;
 
-    @EncryptedField
+    @Encrypted
     private String maxim;
 
     public String getMaxim() {

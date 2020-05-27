@@ -23,7 +23,7 @@ import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.json.JsonValueModule;
 import com.couchbase.client.core.encryption.CryptoManager;
-import com.couchbase.client.java.encryption.annotation.EncryptedField;
+import com.couchbase.client.java.encryption.annotation.Encrypted;
 import com.couchbase.client.java.encryption.databind.jackson.EncryptionModule;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,7 +40,7 @@ import static java.util.Objects.requireNonNull;
  * Make sure to register {@link JsonValueModule} with your {@code ObjectMapper}
  * so it can handle Couchbase {@link JsonObject} instances.
  * <p>
- * Likewise, if you're using the {@link EncryptedField} annotation for
+ * Likewise, if you're using the {@link Encrypted} annotation for
  * Couchbase Field-Level Encryption, make sure to register
  * {@link EncryptionModule}.
  * <p>
@@ -94,7 +94,7 @@ public class JacksonJsonSerializer implements JsonSerializer {
    * with optional encryption support.
    *
    * @param cryptoManager (nullable) The manager to use for activating the
-   * {@link EncryptedField} annotation, or null to disable encryption support.
+   * {@link Encrypted} annotation, or null to disable encryption support.
    */
   public static JacksonJsonSerializer create(CryptoManager cryptoManager) {
     ObjectMapper mapper = new ObjectMapper();
