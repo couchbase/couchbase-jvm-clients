@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapUndecodableEvent;
+import com.couchbase.client.core.deps.io.netty.channel.SimpleChannelInboundHandler;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -36,8 +37,6 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
-import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -46,10 +45,12 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDump;
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.verifyRequest;
 import static com.couchbase.client.test.Util.readResource;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -61,33 +62,23 @@ import static org.mockito.Mockito.when;
 /**
  * Verifies the functionality of the {@link ErrorMapLoadingHandler}.
  */
-class ErrorMapLoadingHandlerTest {
-
-  static {
-    ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
-  }
+class ErrorMapLoadingHandlerTest extends AbstractKeyValueEmbeddedChannelTest {
 
   private EndpointContext endpointContext;
-  private EmbeddedChannel channel;
-  private SimpleEventBus simpleEventBus;
 
   @BeforeEach
-  void setup() {
-    channel = new EmbeddedChannel();
-    simpleEventBus = new SimpleEventBus(true);
+  @Override
+  protected void beforeEach() {
+    super.beforeEach();
+
     CoreEnvironment env = mock(CoreEnvironment.class);
     TimeoutConfig timeoutConfig = mock(TimeoutConfig.class);
-    when(env.eventBus()).thenReturn(simpleEventBus);
+    when(env.eventBus()).thenReturn(eventBus);
     when(env.timeoutConfig()).thenReturn(timeoutConfig);
     when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(1000));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
     endpointContext = new EndpointContext(coreContext, new HostAndPort("127.0.0.1", 1234),
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
-  }
-
-  @AfterEach
-  void teardown() {
-    channel.finishAndReleaseAll();
   }
 
   /**
@@ -119,10 +110,10 @@ class ErrorMapLoadingHandlerTest {
   @Test
   void failConnectIfPromiseTimesOut() throws Exception {
     channel = new EmbeddedChannel();
-    simpleEventBus = new SimpleEventBus(true);
+    eventBus = new SimpleEventBus(true);
     CoreEnvironment env = mock(CoreEnvironment.class);
     TimeoutConfig timeoutConfig = mock(TimeoutConfig.class);
-    when(env.eventBus()).thenReturn(simpleEventBus);
+    when(env.eventBus()).thenReturn(eventBus);
     when(env.timeoutConfig()).thenReturn(timeoutConfig);
     when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(100));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
@@ -201,9 +192,9 @@ class ErrorMapLoadingHandlerTest {
 
     assertTrue(connectFuture.isSuccess());
 
-    assertEquals(1, simpleEventBus.publishedEvents().size());
+    assertEquals(1, eventBus.publishedEvents().size());
     ErrorMapLoadedEvent event =
-      (ErrorMapLoadedEvent) simpleEventBus.publishedEvents().get(0);
+      (ErrorMapLoadedEvent) eventBus.publishedEvents().get(0);
 
     assertEquals(Event.Severity.DEBUG, event.severity());
     Optional<ErrorMap> maybeMap = event.errorMap();
@@ -243,9 +234,9 @@ class ErrorMapLoadingHandlerTest {
 
     assertTrue(connectFuture.isSuccess());
 
-    assertEquals(1, simpleEventBus.publishedEvents().size());
+    assertEquals(1, eventBus.publishedEvents().size());
     ErrorMapLoadingFailedEvent event =
-      (ErrorMapLoadingFailedEvent) simpleEventBus.publishedEvents().get(0);
+      (ErrorMapLoadingFailedEvent) eventBus.publishedEvents().get(0);
 
     assertEquals(Event.Severity.WARN, event.severity());
     assertEquals("KV Error Map Negotiation failed (Status 0x1)", event.description());
@@ -281,10 +272,10 @@ class ErrorMapLoadingHandlerTest {
 
     assertTrue(connectFuture.isSuccess());
 
-    assertEquals(2, simpleEventBus.publishedEvents().size());
+    assertEquals(2, eventBus.publishedEvents().size());
 
     ErrorMapUndecodableEvent undecodableEvent =
-      (ErrorMapUndecodableEvent) simpleEventBus.publishedEvents().get(0);
+      (ErrorMapUndecodableEvent) eventBus.publishedEvents().get(0);
     assertEquals(
       "KV Error Map loaded but undecodable. "
         + "Message: \"No content in response\", Content: \"\"",
@@ -292,11 +283,38 @@ class ErrorMapLoadingHandlerTest {
     );
 
     ErrorMapLoadedEvent event =
-      (ErrorMapLoadedEvent) simpleEventBus.publishedEvents().get(1);
+      (ErrorMapLoadedEvent) eventBus.publishedEvents().get(1);
 
     assertEquals(Event.Severity.DEBUG, event.severity());
     Optional<ErrorMap> maybeMap = event.errorMap();
     assertFalse(maybeMap.isPresent());
+  }
+
+  /**
+   * This test makes sure that after the initial request is sent, the channel active signal is
+   * propagated so that we do not regress bootstrap pipelining functionality.
+   */
+  @Test
+  void propagatesChannelActiveAfterSendingInitialRequest() {
+    final ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(endpointContext);
+    final AtomicBoolean channelActiveFired = new AtomicBoolean();
+
+    channel.pipeline().addLast(handler).addLast(new SimpleChannelInboundHandler<ByteBuf>() {
+      @Override
+      protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) { }
+
+      @Override
+      public void channelActive(ChannelHandlerContext ctx) {
+        channelActiveFired.set(true);
+      }
+    });
+
+    assertEquals(handler, channel.pipeline().get(ErrorMapLoadingHandler.class));
+    channel.connect(new InetSocketAddress("1.2.3.4", 1234));
+
+    channel.pipeline().fireChannelActive();
+    channel.runPendingTasks();
+    waitUntilCondition(channelActiveFired::get);
   }
 
 }

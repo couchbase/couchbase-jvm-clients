@@ -142,10 +142,15 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
     }, timeout.toNanos(), TimeUnit.NANOSECONDS);
     ConnectTimings.start(ctx.channel(), this.getClass());
     ctx.writeAndFlush(buildErrorMapRequest(ctx));
+
+    // Fire the channel active immediately so the upper handler in the pipeline gets a chance to
+    // pipeline its request before the response of this one arrives. This helps speeding up the
+    // bootstrap sequence.
+    ctx.fireChannelActive();
   }
 
   @Override
-  public void channelRead(ChannelHandlerContext ctx, Object msg) {
+  public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
     Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
 
     if (msg instanceof ByteBuf) {
@@ -165,7 +170,6 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
       }
       interceptedConnectPromise.trySuccess();
       ctx.pipeline().remove(this);
-      ctx.fireChannelActive();
     } else {
       interceptedConnectPromise.tryFailure(new CouchbaseException("Unexpected response "
         + "type on channel read, this is a bug - please report. " + msg));
@@ -208,7 +212,7 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
    * @return the created request as a {@link ByteBuf}.
    */
   private ByteBuf buildErrorMapRequest(final ChannelHandlerContext ctx) {
-    ByteBuf body = ctx.alloc().buffer(2).writeShort(MAP_VERSION);
+    ByteBuf body = ctx.alloc().buffer(Short.BYTES).writeShort(MAP_VERSION);
     ByteBuf request = MemcacheProtocol.request(
       ctx.alloc(),
       MemcacheProtocol.Opcode.ERROR_MAP,
