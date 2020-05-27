@@ -65,7 +65,7 @@ class OpenTelemetryIntegrationTest extends ClusterAwareIntegrationTest {
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
-    bucket.waitUntilReady(Duration.ofSeconds(10));
+    bucket.waitUntilReady(Duration.ofSeconds(30));
   }
 
   @AfterAll
