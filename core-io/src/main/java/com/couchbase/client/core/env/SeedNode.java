@@ -17,7 +17,6 @@
 package com.couchbase.client.core.env;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -34,11 +33,9 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 public class SeedNode {
 
   /**
-   * Seed node pointing to localhost with default ports.
+   * Seed node set pointing to localhost with default ports.
    */
-  public static final Set<SeedNode> LOCALHOST = new HashSet<>(Collections.singletonList(
-    SeedNode.create("127.0.0.1")
-  ));
+  public static final Set<SeedNode> LOCALHOST = Collections.singleton(SeedNode.create("127.0.0.1"));
 
   /**
    * The hostname or IP used.
@@ -77,13 +74,9 @@ public class SeedNode {
   }
 
   private SeedNode(final String address, final Optional<Integer> kvPort, final Optional<Integer> clusterManagerPort) {
-    notNullOrEmpty(address, "Address");
-    notNull(kvPort, "KvPort");
-    notNull(clusterManagerPort, "ClusterManagerPort");
-
-    this.address = address;
-    this.kvPort = kvPort;
-    this.clusterManagerPort = clusterManagerPort;
+    this.address = notNullOrEmpty(address, "Address");
+    this.kvPort = notNull(kvPort, "KvPort");
+    this.clusterManagerPort = notNull(clusterManagerPort, "ClusterManagerPort");
   }
 
   /**

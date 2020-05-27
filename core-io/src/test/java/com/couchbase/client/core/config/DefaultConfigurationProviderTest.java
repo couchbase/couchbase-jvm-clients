@@ -85,7 +85,7 @@ class DefaultConfigurationProviderTest {
         .subscribe((c) -> configsPushed.incrementAndGet());
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
-    assertEquals(1, provider.seedNodes().size());
+    assertEquals(1, provider.currentSeedNodes().size());
 
     String bucket = "default";
     String config = readResource(
@@ -97,8 +97,8 @@ class DefaultConfigurationProviderTest {
     assertFalse(provider.config().bucketConfigs().isEmpty());
     assertEquals(1073, provider.config().bucketConfig("default").rev());
 
-    assertEquals(3, provider.seedNodes().size());
-    for (SeedNode node : provider.seedNodes()) {
+    assertEquals(3, getSeedNodesFromConfig(provider).size());
+    for (SeedNode node : getSeedNodesFromConfig(provider)) {
       assertEquals(11210, node.kvPort().get());
       assertEquals(8091, node.clusterManagerPort().get());
     }
@@ -225,8 +225,8 @@ class DefaultConfigurationProviderTest {
 
     provider.proposeGlobalConfig(new ProposedGlobalConfigContext(newConfig, "127.0.0.1"));
 
-    assertEquals(2, provider.seedNodes().size());
-    for (SeedNode sn : provider.seedNodes()) {
+    assertEquals(2, getSeedNodesFromConfig(provider).size());
+    for (SeedNode sn : getSeedNodesFromConfig(provider)) {
       assertEquals(11210, sn.kvPort().get());
       assertEquals(8091, sn.clusterManagerPort().get());
       assertTrue(sn.address().equals("10.143.193.101") || sn.address().equals("10.143.193.102"));
@@ -245,7 +245,7 @@ class DefaultConfigurationProviderTest {
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, seedNodes);
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
-    assertEquals(1, provider.seedNodes().size());
+    assertEquals(1, provider.currentSeedNodes().size());
 
     String bucket = "default";
     String config = readResource(
@@ -273,7 +273,7 @@ class DefaultConfigurationProviderTest {
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, seedNodes);
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
-    assertEquals(1, provider.seedNodes().size());
+    assertEquals(1, provider.currentSeedNodes().size());
 
     String bucket = "default";
     String config = readResource(
@@ -286,4 +286,7 @@ class DefaultConfigurationProviderTest {
     environment.shutdown();
   }
 
+  private static Set<SeedNode> getSeedNodesFromConfig(ConfigurationProvider provider) {
+    return provider.seedNodes().blockFirst(Duration.ZERO);
+  }
 }
