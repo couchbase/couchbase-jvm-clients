@@ -24,7 +24,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.Serializati
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ser.BeanPropertyWriter;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
 import com.couchbase.client.core.encryption.CryptoManager;
-import com.couchbase.client.java.encryption.annotation.EncryptedField;
+import com.couchbase.client.java.encryption.annotation.Encrypted;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,14 +46,14 @@ public class EncryptedFieldSerializationModifier extends BeanSerializerModifier 
                                                    List<BeanPropertyWriter> beanProperties) {
     final List<BeanPropertyWriter> result = new ArrayList<>();
     for (BeanPropertyWriter writer : beanProperties) {
-      final EncryptedField annotation = findAnnotation(writer, EncryptedField.class);
+      final Encrypted annotation = findAnnotation(writer, Encrypted.class);
       result.add(annotation == null ? writer : new EncryptedBeanPropertyWriter(writer, annotation));
     }
     return result;
   }
 
   private class EncryptedBeanPropertyWriter extends BeanPropertyWriter {
-    EncryptedBeanPropertyWriter(BeanPropertyWriter original, EncryptedField annotation) {
+    EncryptedBeanPropertyWriter(BeanPropertyWriter original, Encrypted annotation) {
       // init to with same values as original, and mangled name
       super(original, new SerializedString(cryptoManager.mangle(original.getName())));
 

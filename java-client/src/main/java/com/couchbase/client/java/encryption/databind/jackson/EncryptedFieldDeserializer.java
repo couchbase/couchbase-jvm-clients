@@ -20,7 +20,7 @@ package com.couchbase.client.java.encryption.databind.jackson;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.encryption.CryptoManager;
-import com.couchbase.client.java.encryption.annotation.EncryptedField;
+import com.couchbase.client.java.encryption.annotation.Encrypted;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.BeanProperty;
@@ -42,14 +42,14 @@ public class EncryptedFieldDeserializer extends JsonDeserializer<Object> impleme
   };
 
   private final CryptoManager cryptoManager;
-  private final EncryptedField annotation;
+  private final Encrypted annotation;
   private final TypeReference<?> beanPropertyTypeRef;
 
-  public EncryptedFieldDeserializer(CryptoManager cryptoManager, EncryptedField annotation) {
+  public EncryptedFieldDeserializer(CryptoManager cryptoManager, Encrypted annotation) {
     this(cryptoManager, annotation, new BeanProperty.Bogus());
   }
 
-  public EncryptedFieldDeserializer(CryptoManager cryptoManager, EncryptedField annotation, BeanProperty beanProperty) {
+  public EncryptedFieldDeserializer(CryptoManager cryptoManager, Encrypted annotation, BeanProperty beanProperty) {
     this.cryptoManager = requireNonNull(cryptoManager);
     this.annotation = requireNonNull(annotation);
     this.beanPropertyTypeRef = getTypeRef(beanProperty);

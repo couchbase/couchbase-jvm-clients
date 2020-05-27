@@ -20,7 +20,7 @@ package com.couchbase.client.java.encryption.databind.jackson;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.encryption.CryptoManager;
-import com.couchbase.client.java.encryption.annotation.EncryptedField;
+import com.couchbase.client.java.encryption.annotation.Encrypted;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
@@ -35,10 +35,10 @@ import static java.util.Objects.requireNonNull;
 @Stability.Internal
 public class EncryptedFieldSerializer extends StdSerializer<Object> {
   private final CryptoManager cryptoManager;
-  private final EncryptedField annotation;
+  private final Encrypted annotation;
   private final JsonSerializer<Object> originalCustomSerializer; // nullable
 
-  public EncryptedFieldSerializer(CryptoManager cryptoManager, EncryptedField annotation, JsonSerializer<Object> originalCustomSerializer) {
+  public EncryptedFieldSerializer(CryptoManager cryptoManager, Encrypted annotation, JsonSerializer<Object> originalCustomSerializer) {
     super(Object.class);
     this.cryptoManager = requireNonNull(cryptoManager);
     this.annotation = requireNonNull(annotation);

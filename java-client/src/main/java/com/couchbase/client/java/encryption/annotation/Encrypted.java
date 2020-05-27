@@ -37,7 +37,7 @@ import java.lang.annotation.Target;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.ANNOTATION_TYPE, ElementType.METHOD, ElementType.FIELD})
-public @interface EncryptedField {
+public @interface Encrypted {
   /**
    * Alias of encrypter to use.
    * <p>

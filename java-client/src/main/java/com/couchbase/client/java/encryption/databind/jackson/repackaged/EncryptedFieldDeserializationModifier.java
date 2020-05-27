@@ -24,7 +24,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.deser.BeanD
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.deser.SettableBeanProperty;
 import com.couchbase.client.core.encryption.CryptoManager;
-import com.couchbase.client.java.encryption.annotation.EncryptedField;
+import com.couchbase.client.java.encryption.annotation.Encrypted;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +49,7 @@ public class EncryptedFieldDeserializationModifier extends BeanDeserializerModif
     final List<PropertyName> unmangledNames = new ArrayList<>();
 
     builder.getProperties().forEachRemaining(prop -> {
-      final EncryptedField annotation = findAnnotation(prop, EncryptedField.class);
+      final Encrypted annotation = findAnnotation(prop, Encrypted.class);
       if (annotation != null) {
         final SettableBeanProperty newProp = prop
             .withName(new PropertyName(cryptoManager.mangle(prop.getName())))

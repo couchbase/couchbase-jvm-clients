@@ -22,7 +22,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.BeanPropert
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.Module;
 import com.couchbase.client.core.util.CbAnnotations;
 import com.couchbase.client.core.encryption.CryptoManager;
-import com.couchbase.client.java.encryption.annotation.EncryptedField;
+import com.couchbase.client.java.encryption.annotation.Encrypted;
 
 import java.lang.annotation.Annotation;
 
@@ -30,7 +30,7 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Can be registered with a repackaged Jackson {@code ObjectMapper} to activate
- * the {@link EncryptedField} annotation.
+ * the {@link Encrypted} annotation.
  */
 @Stability.Internal
 public class RepackagedEncryptionModule extends Module {
