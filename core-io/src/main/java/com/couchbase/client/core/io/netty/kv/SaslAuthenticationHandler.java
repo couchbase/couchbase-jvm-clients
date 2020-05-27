@@ -19,6 +19,8 @@ package com.couchbase.client.core.io.netty.kv;
 import com.couchbase.client.core.cnc.events.io.SaslAuthenticationCompletedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslAuthenticationFailedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslMechanismsSelectedEvent;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.SaslMechanism;
 import com.couchbase.client.core.error.AuthenticationFailureException;
@@ -31,6 +33,7 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 import com.couchbase.client.core.util.Bytes;
 
@@ -44,6 +47,8 @@ import javax.security.sasl.SaslException;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -209,7 +214,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
           failConnect(ctx, "Unexpected error during SASL auth", response, ex, status(response));
         }
       } else if (STATUS_AUTH_ERROR == status(response)) {
-        failConnect(ctx, "Authentication Failure", null, null, status(response));
+        failConnect(ctx, "Authentication Failure", response, null, status(response));
       } else {
         failConnect(
           ctx,
@@ -422,23 +427,45 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
     Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
 
     byte[] packetCopy = Bytes.EMPTY_BYTE_ARRAY;
+    Map<String, Object> serverContext = null;
+
     if (lastPacket != null) {
-      int ridx = lastPacket.readerIndex();
-      lastPacket.readerIndex(lastPacket.writerIndex());
-      packetCopy = new byte[lastPacket.readableBytes()];
-      lastPacket.readBytes(packetCopy);
-      lastPacket.readerIndex(ridx);
+      if (MemcacheProtocol.verifyResponse(lastPacket)) {
+        // This is a proper response, try to extract server context
+        Optional<ByteBuf> body = MemcacheProtocol.body(lastPacket);
+        if (body.isPresent()) {
+          byte[] content = new byte[body.get().readableBytes()];
+          body.get().readBytes(content);
+
+          try {
+            serverContext = Mapper.decodeInto(content, new TypeReference<Map<String, Object>>() {});
+          } catch (Exception ex) {
+            // Ignore, no displayable content
+          }
+        }
+      } else {
+        // This is not a proper memcache response, store the raw packet for debugging purposes
+        int ridx = lastPacket.readerIndex();
+        lastPacket.readerIndex(lastPacket.writerIndex());
+        packetCopy = new byte[lastPacket.readableBytes()];
+        lastPacket.readBytes(packetCopy);
+        lastPacket.readerIndex(ridx);
+      }
     }
+
+    KeyValueIoErrorContext errorContext = new KeyValueIoErrorContext(
+      MemcacheProtocol.decodeStatus(status), endpointContext, serverContext
+    );
 
     endpointContext.environment().eventBus().publish(new SaslAuthenticationFailedEvent(
       latency.orElse(Duration.ZERO),
-      ioContext,
+      errorContext,
       message,
       packetCopy
     ));
     interceptedConnectPromise.tryFailure(new AuthenticationFailureException(
       message,
-      new KeyValueIoErrorContext(MemcacheProtocol.decodeStatus(status), endpointContext),
+      errorContext,
       cause
     ));
   }
