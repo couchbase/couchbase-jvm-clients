@@ -160,6 +160,11 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
     }, timeout.toNanos(), TimeUnit.NANOSECONDS);
     ConnectTimings.start(ctx.channel(), this.getClass());
     ctx.writeAndFlush(buildHelloRequest(ctx));
+
+    // Fire the channel active immediately so the upper handler in the pipeline gets a chance to
+    // pipeline its request before the response of this one arrives. This helps speeding up the
+    // bootstrap sequence.
+    ctx.fireChannelActive();
   }
 
   /**
@@ -189,7 +194,6 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
       );
       interceptedConnectPromise.trySuccess();
       ctx.pipeline().remove(this);
-      ctx.fireChannelActive();
     } else {
       interceptedConnectPromise.tryFailure(new CouchbaseException("Unexpected response "
         + "type on channel read, this is a bug - please report. " + msg));

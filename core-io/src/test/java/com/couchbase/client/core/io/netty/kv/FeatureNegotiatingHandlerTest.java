@@ -19,6 +19,7 @@ package com.couchbase.client.core.io.netty.kv;
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDump;
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.verifyRequest;
 import static com.couchbase.client.test.Util.readResource;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -34,20 +35,17 @@ import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiationFailedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
+import com.couchbase.client.core.deps.io.netty.channel.SimpleChannelInboundHandler;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.*;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
-import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
-import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
-import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -63,6 +61,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 /**
@@ -71,35 +70,25 @@ import java.util.stream.Stream;
  * @author Michael Nitschinger
  * @since 2.0.0
  */
-class FeatureNegotiatingHandlerTest {
-
-  static {
-    ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
-  }
+class FeatureNegotiatingHandlerTest extends AbstractKeyValueEmbeddedChannelTest {
 
   private EndpointContext endpointContext;
-  private EmbeddedChannel channel;
-  private SimpleEventBus simpleEventBus;
   private TimeoutConfig timeoutConfig;
 
   @BeforeEach
-  void setup() {
-    channel = new EmbeddedChannel();
-    simpleEventBus = new SimpleEventBus(true);
+  @Override
+  protected void beforeEach() {
+    super.beforeEach();
+
     CoreEnvironment env = mock(CoreEnvironment.class);
     timeoutConfig = mock(TimeoutConfig.class);
-    when(env.eventBus()).thenReturn(simpleEventBus);
+    when(env.eventBus()).thenReturn(eventBus);
     when(env.timeoutConfig()).thenReturn(timeoutConfig);
     when(env.userAgent()).thenReturn(new UserAgent("some", Optional.empty(), Optional.empty(), Optional.empty()));
     when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(1000));
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
     endpointContext = new EndpointContext(coreContext, new HostAndPort("127.0.0.1", 1234),
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
-  }
-
-  @AfterEach
-  void teardown() {
-    channel.finishAndReleaseAll();
   }
 
   /**
@@ -260,9 +249,9 @@ class FeatureNegotiatingHandlerTest {
 
     assertTrue(connectFuture.isSuccess());
 
-    assertEquals(1, simpleEventBus.publishedEvents().size());
+    assertEquals(1, eventBus.publishedEvents().size());
     FeaturesNegotiatedEvent event =
-      (FeaturesNegotiatedEvent) simpleEventBus.publishedEvents().get(0);
+      (FeaturesNegotiatedEvent) eventBus.publishedEvents().get(0);
     assertEquals(
       "Negotiated [TCPNODELAY, XATTR, XERROR, SELECT_BUCKET, SNAPPY, TRACING]",
       event.description()
@@ -309,14 +298,14 @@ class FeatureNegotiatingHandlerTest {
 
     assertTrue(connectFuture.isSuccess());
 
-    assertEquals(2, simpleEventBus.publishedEvents().size());
+    assertEquals(2, eventBus.publishedEvents().size());
     FeaturesNegotiationFailedEvent failureEvent =
-      (FeaturesNegotiationFailedEvent) simpleEventBus.publishedEvents().get(0);
+      (FeaturesNegotiationFailedEvent) eventBus.publishedEvents().get(0);
     assertEquals(Event.Severity.WARN, failureEvent.severity());
     assertEquals("HELLO Negotiation failed (Status 0x1)", failureEvent.description());
 
     FeaturesNegotiatedEvent event =
-      (FeaturesNegotiatedEvent) simpleEventBus.publishedEvents().get(1);
+      (FeaturesNegotiatedEvent) eventBus.publishedEvents().get(1);
     assertEquals(
       "Negotiated []",
       event.description()
@@ -361,10 +350,10 @@ class FeatureNegotiatingHandlerTest {
 
     assertTrue(connectFuture.isSuccess());
 
-    assertEquals(2, simpleEventBus.publishedEvents().size());
+    assertEquals(2, eventBus.publishedEvents().size());
 
     UnsolicitedFeaturesReturnedEvent unsolicitedEvent =
-      (UnsolicitedFeaturesReturnedEvent) simpleEventBus.publishedEvents().get(0);
+      (UnsolicitedFeaturesReturnedEvent) eventBus.publishedEvents().get(0);
     assertEquals(
       "Received unsolicited features during HELLO [TCPNODELAY, XATTR, XERROR, SELECT_BUCKET]",
       unsolicitedEvent.description()
@@ -372,7 +361,7 @@ class FeatureNegotiatingHandlerTest {
     assertEquals(Event.Severity.WARN, unsolicitedEvent.severity());
 
     FeaturesNegotiatedEvent event =
-      (FeaturesNegotiatedEvent) simpleEventBus.publishedEvents().get(1);
+      (FeaturesNegotiatedEvent) eventBus.publishedEvents().get(1);
     assertEquals(
       "Negotiated [SNAPPY, TRACING]",
       event.description()
@@ -383,6 +372,37 @@ class FeatureNegotiatingHandlerTest {
     assertNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
 
     ReferenceCountUtil.release(writtenRequest);
+  }
+
+  /**
+   * This test makes sure that after the initial request is sent, the channel active signal is
+   * propagated so that we do not regress bootstrap pipelining functionality.
+   */
+  @Test
+  void propagatesChannelActiveAfterSendingInitialRequest() {
+    final FeatureNegotiatingHandler handler = new FeatureNegotiatingHandler(
+      endpointContext,
+      Collections.singleton(ServerFeature.SELECT_BUCKET)
+    );
+
+    final AtomicBoolean channelActiveFired = new AtomicBoolean();
+
+    channel.pipeline().addLast(handler).addLast(new SimpleChannelInboundHandler<ByteBuf>() {
+      @Override
+      protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) { }
+
+      @Override
+      public void channelActive(ChannelHandlerContext ctx) {
+        channelActiveFired.set(true);
+      }
+    });
+
+    assertEquals(handler, channel.pipeline().get(FeatureNegotiatingHandler.class));
+    channel.connect(new InetSocketAddress("1.2.3.4", 1234));
+
+    channel.pipeline().fireChannelActive();
+    channel.runPendingTasks();
+    waitUntilCondition(channelActiveFired::get);
   }
 
 }
