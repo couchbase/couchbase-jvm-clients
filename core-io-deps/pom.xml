@@ -17,8 +17,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <netty.version>4.1.48.Final</netty.version>
-        <jackson.version>2.10.3</jackson.version>
+        <netty.version>4.1.50.Final</netty.version>
+        <jackson.version>2.11.0</jackson.version>
 
         <native.folder>${project.build.directory}/native</native.folder>
         <native.epoll.original>libnetty_transport_native_epoll_x86_64.so</native.epoll.original>
