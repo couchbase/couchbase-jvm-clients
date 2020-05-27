@@ -19,14 +19,31 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 
+import java.util.Map;
+
 @Stability.Uncommitted
 public class KeyValueIoErrorContext extends ErrorContext {
 
   private final EndpointContext endpointContext;
+  private final Map<String, Object> serverContext;
 
-  public KeyValueIoErrorContext(ResponseStatus responseStatus, EndpointContext endpointContext) {
+  public KeyValueIoErrorContext(final ResponseStatus responseStatus, final EndpointContext endpointContext,
+                                final Map<String, Object> serverContext) {
     super(responseStatus);
     this.endpointContext = endpointContext;
+    this.serverContext = serverContext;
+  }
+
+  @Override
+  public void injectExportableParams(final Map<String, Object> input) {
+    super.injectExportableParams(input);
+
+    if (endpointContext != null) {
+      endpointContext.injectExportableParams(input);
+    }
+    if (serverContext != null && serverContext.get("error") != null) {
+      input.put("xerror", serverContext.get("error"));
+    }
   }
 
 }

@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.SelectBucketCompletedEvent;
 import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;
 import com.couchbase.client.core.cnc.events.io.SelectBucketFailedEvent;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.BucketNotFoundException;
@@ -172,7 +173,7 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
           new AuthenticationFailureException(
             "Either the bucket with name \"" + redactMeta(bucketName) + "\" is not present or the user does not have " +
               "the right privileges to access it",
-            new KeyValueIoErrorContext(MemcacheProtocol.decodeStatus(status), endpointContext),
+            new KeyValueIoErrorContext(MemcacheProtocol.decodeStatus(status), endpointContext, null),
             null
           )
         );

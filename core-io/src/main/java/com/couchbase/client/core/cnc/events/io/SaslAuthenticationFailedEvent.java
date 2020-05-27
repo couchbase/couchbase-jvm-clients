@@ -17,6 +17,7 @@
 package com.couchbase.client.core.cnc.events.io;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
+import com.couchbase.client.core.error.context.KeyValueIoErrorContext;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
@@ -39,7 +40,7 @@ public class SaslAuthenticationFailedEvent extends AbstractEvent {
   private final String description;
   private final byte[] lastPacket;
 
-  public SaslAuthenticationFailedEvent(final Duration duration, final IoContext context,
+  public SaslAuthenticationFailedEvent(final Duration duration, final KeyValueIoErrorContext context,
                                        final String description, final byte[] lastPacket) {
     super(Severity.ERROR, Category.IO, duration, context);
     this.description = description;
