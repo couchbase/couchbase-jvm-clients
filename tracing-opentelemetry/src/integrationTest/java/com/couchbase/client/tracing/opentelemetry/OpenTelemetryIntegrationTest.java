@@ -48,7 +48,7 @@ class OpenTelemetryIntegrationTest extends ClusterAwareIntegrationTest {
   @BeforeAll
   static void beforeAll() {
     tracer = OpenTelemetrySdk.getTracerProvider();
-    tracer.addSpanProcessor(SimpleSpansProcessor.newBuilder(exporter).build());
+    tracer.addSpanProcessor(SimpleSpansProcessor.create(exporter));
 
     TestNodeConfig config = config().firstNodeWith(Services.KV).get();
 

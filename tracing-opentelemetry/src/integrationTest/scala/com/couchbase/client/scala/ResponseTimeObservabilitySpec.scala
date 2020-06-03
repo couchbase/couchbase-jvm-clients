@@ -44,7 +44,7 @@ class ResponseTimeObservabilitySpec extends ClusterAwareIntegrationTest {
 
     env = {
       tracer = OpenTelemetrySdk.getTracerProvider
-      tracer.addSpanProcessor(SimpleSpansProcessor.newBuilder(exporter).build)
+      tracer.addSpanProcessor(SimpleSpansProcessor.create(exporter))
 
       ClusterEnvironment.builder
         .requestTracer(OpenTelemetryRequestTracer.wrap(tracer.get("integrationTest"))).build.get
