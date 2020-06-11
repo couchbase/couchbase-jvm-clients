@@ -60,19 +60,30 @@ public class SearchRowLocation {
         return term;
     }
 
+    /**
+     * @return the position of the term within the field, starting at 1
+     */
     public long pos() {
         return pos;
     }
 
+    /**
+     * @return the start offset (in bytes) of the term in the the field
+     */
     public long start() {
         return start;
     }
 
+    /**
+     * @return the end offset (in bytes) of the term in the the field
+     */
     public long end() {
         return end;
     }
 
     /**
+     * Contains the positions of the term within any elements.
+     *
      * @return the array positions, or null if not applicable.
      */
     public long[] arrayPositions() {
