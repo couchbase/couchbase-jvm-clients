@@ -59,7 +59,7 @@ class PooledServiceTest {
   private CoreEnvironment environment;
   private SimpleEventBus eventBus;
   private ServiceContext serviceContext;
-  private Authenticator authenticator = mock(Authenticator.class);
+  private final Authenticator authenticator = mock(Authenticator.class);
 
   @BeforeEach
   void beforeEach() {
@@ -492,6 +492,84 @@ class PooledServiceTest {
     waitUntilCondition(() -> service.state() == ServiceState.IDLE);
   }
 
+  /**
+   * This test makes sure that when a socket has just been opened and no operation has gone through yet,
+   * it is not cleaned up by the idle cleaner.
+   * <p>
+   * This is a regression test for JVMCBC-856.
+   */
+  @Test
+  void doesNotCleanJustOpenedConnections() throws Exception {
+    long now = System.nanoTime();
+
+    Endpoint mock1 = mock(Endpoint.class);
+    when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock1.states()).thenReturn(DirectProcessor.create());
+    when(mock1.outstandingRequests()).thenReturn(0L);
+    when(mock1.lastResponseReceived()).thenReturn(0L);
+    when(mock1.lastConnectedAt()).thenReturn(now);
+
+    final List<Endpoint> mocks = Collections.singletonList(mock1);
+    final AtomicInteger invocation = new AtomicInteger();
+    MockedService service = new MockedService(
+      new MockedServiceConfig(0, 2, Duration.ofMillis(5000), false),
+      () -> mocks.get(invocation.getAndIncrement()),
+      new FirstEndpointSelectionStrategy()
+    );
+    service.connect();
+
+    assertTrue(service.trackedEndpoints().isEmpty());
+
+    NoopRequest request1 = new NoopRequest(
+      Duration.ofSeconds(1),
+      serviceContext,
+      BestEffortRetryStrategy.INSTANCE,
+      CollectionIdentifier.fromDefault("bucket")
+    );
+    service.send(request1);
+
+    waitUntilCondition(() -> service.trackedEndpoints.size() == 1);
+
+    Thread.sleep(300);
+
+    verify(mock1, never()).disconnect();
+  }
+
+  @Test
+  void cleansUpNeverUsedIdleConnections() {
+    Endpoint mock1 = mock(Endpoint.class);
+    when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+    when(mock1.states()).thenReturn(DirectProcessor.create());
+    when(mock1.outstandingRequests()).thenReturn(0L);
+    when(mock1.lastResponseReceived()).thenReturn(0L);
+    when(mock1.lastConnectedAt()).thenReturn(0L);
+
+    final List<Endpoint> mocks = Collections.singletonList(mock1);
+    final AtomicInteger invocation = new AtomicInteger();
+    MockedService service = new MockedService(
+      new MockedServiceConfig(0, 2, Duration.ofMillis(1000), false),
+      () -> mocks.get(invocation.getAndIncrement()),
+      new FirstEndpointSelectionStrategy()
+    );
+    service.connect();
+
+    assertTrue(service.trackedEndpoints().isEmpty());
+
+    NoopRequest request1 = new NoopRequest(
+      Duration.ofSeconds(1),
+      serviceContext,
+      BestEffortRetryStrategy.INSTANCE,
+      CollectionIdentifier.fromDefault("bucket")
+    );
+    service.send(request1);
+
+    when(mock1.lastConnectedAt()).thenReturn(System.nanoTime());
+    waitUntilCondition(() -> service.trackedEndpoints.size() == 1);
+
+    when(mock1.receivedDisconnectSignal()).thenReturn(true);
+    waitUntilCondition(() -> service.state() == ServiceState.IDLE);
+  }
+
   class MockedService extends PooledService {
 
     List<Endpoint> trackedEndpoints = new ArrayList<>();
@@ -537,7 +615,7 @@ class PooledServiceTest {
     }
   }
 
-  class MockedServiceConfig implements ServiceConfig {
+  static class MockedServiceConfig implements ServiceConfig {
 
     private final int min;
     private final int max;
@@ -577,7 +655,7 @@ class PooledServiceTest {
 
   }
 
-  class FirstEndpointSelectionStrategy implements EndpointSelectionStrategy {
+  static class FirstEndpointSelectionStrategy implements EndpointSelectionStrategy {
     @Override
     public <R extends Request<? extends Response>> Endpoint select(R r, List<Endpoint> endpoints) {
       for (Endpoint ep : endpoints) {
@@ -589,7 +667,7 @@ class PooledServiceTest {
     }
   }
 
-  class NoneEndpointSelectionStrategy implements EndpointSelectionStrategy {
+  static class NoneEndpointSelectionStrategy implements EndpointSelectionStrategy {
     @Override
     public <R extends Request<? extends Response>> Endpoint select(R r, List<Endpoint> endpoints) {
       return null;

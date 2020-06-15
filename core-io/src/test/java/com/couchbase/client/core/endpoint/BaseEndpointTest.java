@@ -57,7 +57,6 @@ import java.util.function.Supplier;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -81,7 +80,7 @@ class BaseEndpointTest {
   private SimpleEventBus eventBus;
   private CoreEnvironment environment;
   private ServiceContext ctx;
-  private Authenticator authenticator = mock(Authenticator.class);
+  private final Authenticator authenticator = mock(Authenticator.class);
 
   @BeforeEach
   void beforeEach() {
@@ -388,12 +387,13 @@ class BaseEndpointTest {
     cf.complete(channel);
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
     assertTrue(eventBus.publishedEvents().get(0) instanceof EndpointConnectedEvent);
+    assertTrue(endpoint.lastConnectedAt() > 0);
     return endpoint;
   }
 
   static class InstrumentedEndpoint extends BaseEndpoint {
 
-    private Supplier<Mono<Channel>> channelSupplier;
+    private final Supplier<Mono<Channel>> channelSupplier;
 
     static InstrumentedEndpoint create(EventLoopGroup eventLoopGroup, ServiceContext ctx,
                                        Supplier<Mono<Channel>> channelSupplier) {

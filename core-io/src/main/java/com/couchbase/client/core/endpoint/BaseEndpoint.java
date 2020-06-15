@@ -70,7 +70,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -154,6 +153,11 @@ public abstract class BaseEndpoint implements Endpoint {
    * Holds the unix nanotime when the last response completed.
    */
   private volatile long lastResponseTimestamp;
+
+  /**
+   * Holds the timestamp this endpoint was last successfully connected.
+   */
+  private volatile long lastConnectedAt;
 
   /**
    * Constructor to create a new endpoint, usually called by subclasses.
@@ -347,10 +351,11 @@ public abstract class BaseEndpoint implements Endpoint {
         })
       ).subscribe(
         channel -> {
+          long now = System.nanoTime();
           if (disconnect.get()) {
             this.channel = null;
             endpointContext.environment().eventBus().publish(new EndpointConnectionIgnoredEvent(
-              Duration.ofNanos(System.nanoTime() - attemptStart.get()),
+              Duration.ofNanos(now - attemptStart.get()),
               endpointContext,
               ConnectTimings.toMap(channel)
             ));
@@ -375,12 +380,13 @@ public abstract class BaseEndpoint implements Endpoint {
               Optional.ofNullable(channel.attr(ChannelAttributes.CHANNEL_ID_KEY).get())
             );
             this.endpointContext.get().environment().eventBus().publish(new EndpointConnectedEvent(
-              Duration.ofNanos(System.nanoTime() - attemptStart.get()),
+              Duration.ofNanos(now - attemptStart.get()),
               newContext,
               ConnectTimings.toMap(channel)
             ));
             this.endpointContext.set(newContext);
             this.circuitBreaker.reset();
+            lastConnectedAt = now;
             state.transition(EndpointState.CONNECTED);
           }
         },
@@ -554,6 +560,12 @@ public abstract class BaseEndpoint implements Endpoint {
     if (!pipelined) {
       outstandingRequests.decrementAndGet();
     }
+  }
+
+  @Override
+  @Stability.Internal
+  public long lastConnectedAt() {
+    return lastConnectedAt;
   }
 
   /**
