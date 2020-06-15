@@ -18,11 +18,14 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.config.BucketCapabilities;
+import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
-import com.couchbase.client.core.error.context.ErrorContext;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
@@ -65,16 +68,22 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   private final List<Command> commands;
   private final String origKey;
   private final Optional<DurabilityLevel> syncReplicationType;
-
+  private final boolean createAsDeleted;
 
   public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
-                             final RetryStrategy retryStrategy, final String key,
+                             final BucketConfig bucketConfig, final RetryStrategy retryStrategy, final String key,
                              final boolean insertDocument, final boolean upsertDocument, final boolean accessDeleted,
                              final boolean createAsDeleted,
                              final List<Command> commands, long expiration, long cas,
                              final Optional<DurabilityLevel> syncReplicationType, final InternalSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     byte flags = 0;
+
+    if (createAsDeleted) {
+      if (!bucketConfig.bucketCapabilities().contains(BucketCapabilities.CREATE_AS_DELETED)) {
+        throw new FeatureNotAvailableException("Cannot use createAsDeleted Sub-Document flag, as it is not supported by this version of the cluster");
+      }
+    }
 
     if (insertDocument && upsertDocument) {
       throw InvalidArgumentException.fromMessage("Cannot both insert and upsert full document");
@@ -102,6 +111,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     this.cas = cas;
     this.origKey = key;
     this.syncReplicationType = syncReplicationType;
+    this.createAsDeleted = createAsDeleted;
   }
 
   @Override
@@ -110,6 +120,13 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     ByteBuf extras = null;
     ByteBuf content = null;
     ByteBuf flexibleExtras = null;
+
+    if (createAsDeleted && !ctx.createAsDeleted()) {
+      // Memcached 6.5.0 and below will reset the connection if this flag is sent, hence checking the createAsDeleted HELO
+      // This should never trigger, it should be preempted by the BucketCapabilities.CREATE_AS_DELETED check above.
+      // It is left purely as an additional safety measure.
+      throw new FeatureNotAvailableException("Cannot use createAsDeleted Sub-Document flag, as it is not supported by this version of the cluster");
+    }
 
     try {
       key = encodedKeyWithCollection(alloc, ctx);

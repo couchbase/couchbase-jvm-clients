@@ -24,12 +24,10 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.env.TimeoutConfig;
+import com.couchbase.client.core.error.*;
 import com.couchbase.client.core.error.context.AggregateErrorContext;
-import com.couchbase.client.core.error.CommonExceptions;
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.DocumentUnretrievableException;
+import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.error.context.ErrorContext;
-import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -47,7 +45,9 @@ import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.msg.kv.TouchRequest;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
+import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.util.BucketConfigUtil;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -1083,15 +1083,17 @@ public class AsyncCollection {
                                                     final MutateInOptions options) {
     notNull(options, "MutateInOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     MutateInOptions.Built opts = options.build();
-    return MutateInAccessor.mutateIn(
-      core,
-      mutateInRequest(id, specs, opts),
-      id,
-      opts.persistTo(),
-      opts.replicateTo(),
-      opts.storeSemantics() == StoreSemantics.INSERT,
-      environment.jsonSerializer()
-    );
+    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
+    return mutateInRequest(id, specs, opts, timeout)
+            .thenCompose(request -> MutateInAccessor.mutateIn(
+                      core,
+                      request,
+                      id,
+                      opts.persistTo(),
+                      opts.replicateTo(),
+                      opts.storeSemantics() == StoreSemantics.INSERT,
+                      environment.jsonSerializer()
+              ));
   }
 
   /**
@@ -1102,49 +1104,65 @@ public class AsyncCollection {
    * @param opts custom options to modify the mutation options.
    * @return the subdoc mutate request.
    */
-  SubdocMutateRequest mutateInRequest(final String id, final List<MutateInSpec> specs, final MutateInOptions.Built opts) {
+  CompletableFuture<SubdocMutateRequest> mutateInRequest(final String id, final List<MutateInSpec> specs,
+                                                         final MutateInOptions.Built opts, final Duration timeout) {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNullOrEmpty(specs, "MutateInSpecs", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+
     if (specs.isEmpty()) {
       throw SubdocMutateRequest.errIfNoCommands(ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     } else if (specs.size() > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
       throw SubdocMutateRequest.errIfTooManyCommands(ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    } else {
-      Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
-      RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-      JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
-
-      final InternalSpan span = environment
-        .requestTracer()
-        .internalSpan(SubdocMutateRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
-
-      ArrayList<SubdocMutateRequest.Command> commands = new ArrayList<>(specs.size());
-
-      long start = System.nanoTime();
-      try {
-        span.startPayloadEncoding();
-        for (int i = 0; i < specs.size(); i++) {
-          MutateInSpec spec = specs.get(i);
-          commands.add(spec.encode(serializer, i));
-        }
-      } finally {
-        span.stopPayloadEncoding();
-      }
-      long end = System.nanoTime();
-
-      // xattrs come first
-      commands.sort(Comparator.comparing(v -> !v.xattr()));
-
-      SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
-        opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT,
-        opts.accessDeleted(), opts.createAsDeleted(), commands, opts.expiry().getSeconds(), opts.cas(),
-        opts.durabilityLevel(), span
-      );
-      request.context()
-        .clientContext(opts.clientContext())
-        .encodeLatency(end - start);
-      return request;
     }
+
+    final boolean requiresBucketConfig = opts.createAsDeleted();
+    CompletableFuture<BucketConfig> bucketConfigFuture;
+
+    if (requiresBucketConfig) {
+      bucketConfigFuture = BucketConfigUtil.waitForBucketConfig(core, bucketName(), timeout).toFuture();
+    }
+    else {
+      // Nothing will be using the bucket config so just provide null
+      bucketConfigFuture = CompletableFuture.completedFuture(null);
+    }
+
+    return bucketConfigFuture.thenCompose(bucketConfig -> {
+        RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+        JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
+
+        final InternalSpan span = environment
+          .requestTracer()
+          .internalSpan(SubdocMutateRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+
+        ArrayList<SubdocMutateRequest.Command> commands = new ArrayList<>(specs.size());
+
+        long start = System.nanoTime();
+        try {
+          span.startPayloadEncoding();
+          for (int i = 0; i < specs.size(); i++) {
+            MutateInSpec spec = specs.get(i);
+            commands.add(spec.encode(serializer, i));
+          }
+        } finally {
+          span.stopPayloadEncoding();
+        }
+        long end = System.nanoTime();
+
+        // xattrs come first
+        commands.sort(Comparator.comparing(v -> !v.xattr()));
+
+        SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, bucketConfig, retryStrategy, id,
+          opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT,
+          opts.accessDeleted(), opts.createAsDeleted(), commands, opts.expiry().getSeconds(), opts.cas(),
+          opts.durabilityLevel(), span
+        );
+        request.context()
+          .clientContext(opts.clientContext())
+          .encodeLatency(end - start);
+        final CompletableFuture<SubdocMutateRequest> future = new CompletableFuture<>();
+        future.complete(request);
+        return future;
+    });
   }
 
   /**

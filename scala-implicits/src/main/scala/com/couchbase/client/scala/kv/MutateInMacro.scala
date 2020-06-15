@@ -33,4 +33,3 @@ object MutateInMacro {
     private[scala] val value = """"${Mutation.value_crc32c}""""
   }
 }
-

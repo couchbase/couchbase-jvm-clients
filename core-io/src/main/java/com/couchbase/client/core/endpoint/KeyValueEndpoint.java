@@ -125,6 +125,13 @@ public class KeyValueEndpoint extends BaseEndpoint {
         features.add(ServerFeature.VATTR);
       }
 
+      boolean createAsDeletedEnabled = Boolean.parseBoolean(
+              System.getProperty("com.couchbase.createAsDeletedEnabled", "true")
+      );
+      if (createAsDeletedEnabled) {
+        features.add(ServerFeature.CREATE_AS_DELETED);
+      }
+
       return features;
     }
   }

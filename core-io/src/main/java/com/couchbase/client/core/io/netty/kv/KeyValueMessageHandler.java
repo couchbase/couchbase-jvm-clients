@@ -161,6 +161,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     boolean syncReplication = features != null && features.contains(ServerFeature.SYNC_REPLICATION);
     boolean altRequest = features != null && features.contains(ServerFeature.ALT_REQUEST);
     boolean vattrEnabled = features != null && features.contains(ServerFeature.VATTR);
+    boolean createAsDeleted = features != null && features.contains(ServerFeature.CREATE_AS_DELETED);
 
     if (syncReplication && !altRequest) {
       throw new IllegalStateException("If Synchronous Replication is enabled, the server also " +
@@ -176,7 +177,8 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       vattrEnabled,
       altRequest,
       ioContext.core().configurationProvider().collectionMap(),
-      ctx.channel().id()
+      ctx.channel().id(),
+      createAsDeleted
     );
 
     ctx.fireChannelActive();

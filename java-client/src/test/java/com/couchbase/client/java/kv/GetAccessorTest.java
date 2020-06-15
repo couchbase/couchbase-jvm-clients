@@ -118,6 +118,6 @@ class GetAccessorTest {
                     )
             )
       .collect(Collectors.toList());
-    return new SubdocGetResponse(ResponseStatus.SUCCESS, Optional.empty(), values.toArray(new SubDocumentField[values.size()]), 0);
+    return new SubdocGetResponse(ResponseStatus.SUCCESS, Optional.empty(), values.toArray(new SubDocumentField[values.size()]), 0, false);
   }
 }

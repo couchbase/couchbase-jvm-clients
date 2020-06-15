@@ -640,12 +640,12 @@ public class ReactiveCollection {
     return Mono.defer(() -> {
       notNull(options, "MutateInOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
       MutateInOptions.Built opts = options.build();
-      SubdocMutateRequest request = asyncCollection.mutateInRequest(id, specs, opts);
-      return Reactor.wrap(
-        request,
-        MutateInAccessor.mutateIn(core, request, id, opts.persistTo(), opts.replicateTo(), opts.storeSemantics() == StoreSemantics.INSERT, environment().jsonSerializer()),
-        true
-      );
+      Duration timeout = AsyncCollection.decideKvTimeout(opts, environment().timeoutConfig());
+
+      return Mono.fromFuture(asyncCollection.mutateInRequest(id, specs, opts, timeout))
+              .flatMap(request -> Reactor.wrap(request,
+                          MutateInAccessor.mutateIn(core, request, id, opts.persistTo(), opts.replicateTo(), opts.storeSemantics() == StoreSemantics.INSERT, environment().jsonSerializer()),
+                          true));
     });
   }
 
