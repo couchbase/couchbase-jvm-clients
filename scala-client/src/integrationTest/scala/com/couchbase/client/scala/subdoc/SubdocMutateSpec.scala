@@ -1,10 +1,14 @@
 package com.couchbase.client.scala.subdoc
 
+import java.time.Duration
+import java.util.Arrays
+
 import com.couchbase.client.core.error.subdoc.{PathExistsException, PathNotFoundException}
 import com.couchbase.client.core.error.{
   CouchbaseException,
   DocumentExistsException,
-  InvalidArgumentException
+  InvalidArgumentException,
+  UnambiguousTimeoutException
 }
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.LookupInSpec._
@@ -18,7 +22,7 @@ import org.junit.jupiter.api._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 import concurrent.duration._
 
 @TestInstance(Lifecycle.PER_CLASS)
@@ -166,6 +170,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
 
     assert(getContent(docId)("foo2").str == "bar2")
   }
+
   @Test
   def remove(): Unit = {
     val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
@@ -442,6 +447,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     val updatedContent = checkSingleOpSuccess(ujson.Obj("foo" -> 10), Array(decrement("foo", 3)))
     assert(updatedContent("foo").num == 7)
   }
+
   @Test
   def insert_xattr(): Unit = {
     val updatedContent =
@@ -577,6 +583,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
       checkSingleOpSuccessXattr(ujson.Obj("foo" -> 10), Array(decrement("x.foo", 3).xattr))
     assert(updatedContent("foo").num == 7)
   }
+
   @Test
   def insert_expand_macro_xattr_do_not(): Unit = {
     val updatedContent =
@@ -593,6 +600,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     )
     assert(updatedContent("foo").str != "${Mutation.CAS}")
   }
+
   @Test
   def insert_xattr_createPath(): Unit = {
     val updatedContent =
@@ -671,6 +679,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     )
     assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
   }
+
   @Test
   def counter_5_xattr_createPath(): Unit = {
     val updatedContent =
@@ -684,6 +693,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
       checkSingleOpSuccessXattr(ujson.Obj(), Array(decrement("x.foo", 3).xattr.createPath))
     assert(updatedContent("foo").num == -3)
   }
+
   @Test
   def insert_createPath(): Unit = {
     val updatedContent =
@@ -731,19 +741,19 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   }
 
   // Will look at under SCBC-30
-//  @Test
-//  def array_insert_createPath() {
-//        val updatedContent = checkSingleOpSuccess(ujson.Obj(),
-//          Array(arrayInsert("foo[0]", "cruel").createPath))
-//        assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
-//  }
+  //  @Test
+  //  def array_insert_createPath() {
+  //        val updatedContent = checkSingleOpSuccess(ujson.Obj(),
+  //          Array(arrayInsert("foo[0]", "cruel").createPath))
+  //        assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer("cruel"))
+  //  }
 
-//  @Test
-//  def array_insert_unique_does_not_exist_createPath() {
-//        val updatedContent = checkSingleOpSuccess(ujson.Obj(),
-//          Array(arrayAddUnique("foo", "cruel").createPath))
-//        assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer(test"cruel"))
-//  }
+  //  @Test
+  //  def array_insert_unique_does_not_exist_createPath() {
+  //        val updatedContent = checkSingleOpSuccess(ujson.Obj(),
+  //          Array(arrayAddUnique("foo", "cruel").createPath))
+  //        assert(updatedContent("foo").arr.map(_.str) == ArrayBuffer(test"cruel"))
+  //  }
 
   @Test
   def counter_5_createPath(): Unit = {
@@ -775,6 +785,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
       case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
+
   @Test
   def moreThan16(): Unit = {
     val content      = ujson.Obj("hello" -> "world")
@@ -825,6 +836,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     assert(updated("foo1").str == "bar1")
     assert(updated("foo2").str == "bar2")
   }
+
   @Test
   def two_commands_one_fails(): Unit = {
     val content      = ujson.Obj("foo1" -> "bar_orig_1", "foo2" -> "bar_orig_2")
@@ -925,6 +937,47 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     } yield content) match {
       case Success(content) => assert(content == Short.MaxValue)
       case Failure(err)     => assert(false, s"unexpected error $err")
+    }
+  }
+  @Test
+  def create_as_deleted_on_non_existent_bucket(): Unit = {
+    val docId        = TestUtils.docId()
+    val doesNotExist = cluster.bucket("hokey_kokey")
+
+    doesNotExist.defaultCollection.mutateIn(
+      docId,
+      Seq(MutateInSpec.insert("txn", JsonObject.create).xattr),
+      MutateInOptions()
+        .timeout(1 second)
+        .document(StoreSemantics.Upsert)
+        .accessDeleted(true)
+        .createAsDeleted(true)
+    ) match {
+      case Failure(_: UnambiguousTimeoutException) =>
+      case _                                       => assert(false)
+    }
+  }
+
+  @Test
+  def create_as_deleted_on_non_existent_bucket_reactive(): Unit = {
+    val docId        = TestUtils.docId()
+    val doesNotExist = cluster.bucket("hokey_kokey")
+
+    Try(
+      doesNotExist.defaultCollection.reactive
+        .mutateIn(
+          docId,
+          Seq(MutateInSpec.insert("txn", JsonObject.create).xattr),
+          MutateInOptions()
+            .timeout(1 second)
+            .document(StoreSemantics.Upsert)
+            .accessDeleted(true)
+            .createAsDeleted(true)
+        )
+        .block()
+    ) match {
+      case Failure(_: UnambiguousTimeoutException) =>
+      case _                                       => assert(false)
     }
   }
 }

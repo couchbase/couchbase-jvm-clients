@@ -155,6 +155,8 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
     short rawStatus = status(response);
     ResponseStatus status = decodeStatus(response);
+    boolean isDeleted = rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE_DELETED.status()
+            || rawStatus == Status.SUBDOC_SUCCESS_DELETED_DOCUMENT.status();
 
     Optional<CouchbaseException> error = Optional.empty();
 
@@ -165,7 +167,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       if (commands.size() == 1 && commands.get(0).type == SubdocCommandType.EXISTS) {
         status = ResponseStatus.SUCCESS;
       }
-      // If a single subdoc op was tried and failed, retursn that directly
+      // If a single subdoc op was tried and failed, return that directly
       else if (commands.size() == 1 && errors != null && errors.size() == 1) {
         error = Optional.of(errors.get(0));
       }
@@ -188,7 +190,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     }
 
     // Do not handle SUBDOC_INVALID_COMBO here, it indicates a client-side bug
-    return new SubdocGetResponse(status, error, values, cas(response));
+    return new SubdocGetResponse(status, error, values, cas(response), isDeleted);
   }
 
   private SubDocumentErrorContext createSubDocumentExceptionContext(SubDocumentOpResponseStatus status) {

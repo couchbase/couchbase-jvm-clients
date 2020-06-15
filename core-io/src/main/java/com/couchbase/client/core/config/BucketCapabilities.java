@@ -39,7 +39,8 @@ public enum BucketCapabilities {
     XATTR("xattr"),
     SNAPPY("snappy"),
     COLLECTIONS("collections"),
-    DURABLE_WRITE("durableWrite");
+    DURABLE_WRITE("durableWrite"),
+    CREATE_AS_DELETED("tombstonedUserXAttrs");
 
     private final String raw;
 

@@ -16,7 +16,10 @@
 
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.cnc.RequestSpan
+import java.{time, util}
+
+import com.couchbase.client.core.cnc.{InternalSpan, RequestSpan}
+import com.couchbase.client.core.config.BucketConfig
 import com.couchbase.client.core.error.context.{KeyValueErrorContext, ReducedKeyValueErrorContext}
 import com.couchbase.client.core.error.{
   CasMismatchException,
@@ -26,13 +29,17 @@ import com.couchbase.client.core.error.{
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.core.util.BucketConfigUtil
 import com.couchbase.client.scala.HandlerParams
 import com.couchbase.client.scala.codec.Transcoder
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.util.Validate
+import reactor.core.scala.publisher.SMono
 
 import scala.compat.java8.OptionConverters._
+import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Try}
 
 /**
@@ -56,7 +63,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
       createAsDeleted: Boolean,
       transcoder: Transcoder,
       parentSpan: Option[RequestSpan]
-  ): Try[SubdocMutateRequest] = {
+  )(implicit ec: ExecutionContext): SMono[SubdocMutateRequest] = {
     val validations: Try[SubdocMutateRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(cas, "cas")
@@ -68,7 +75,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
     } yield null
 
     if (validations.isFailure) {
-      validations
+      SMono.fromTry(validations)
     } else {
       // Find any decode failure
       val failed = spec.collectFirst {
@@ -78,7 +85,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
       failed match {
         case Some(failed) =>
           // If any of the decodes failed, abort
-          Failure(failed.fragment.failed.get)
+          SMono.fromTry(Failure(failed.fragment.failed.get))
 
         case _ =>
           val commands = new java.util.ArrayList[SubdocMutateRequest.Command]()
@@ -90,33 +97,63 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
             .foreach(v => commands.add(v))
 
           if (commands.isEmpty) {
-            Failure(SubdocMutateRequest.errIfNoCommands(ReducedKeyValueErrorContext.create(id)))
-          } else if (commands.size > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
-            Failure(
-              SubdocMutateRequest.errIfTooManyCommands(ReducedKeyValueErrorContext.create(id))
+            SMono.fromTry(
+              Failure(SubdocMutateRequest.errIfNoCommands(ReducedKeyValueErrorContext.create(id)))
             )
-          } else {
-            // The encoding has already been done by this point
-            val span = hp.tracer.internalSpan(SubdocMutateRequest.OPERATION_NAME, parentSpan.orNull)
-
-            Try(
-              new SubdocMutateRequest(
-                timeout,
-                hp.core.context(),
-                hp.collectionIdentifier,
-                retryStrategy,
-                id,
-                document == StoreSemantics.Insert,
-                document == StoreSemantics.Upsert,
-                accessDeleted,
-                createAsDeleted,
-                commands,
-                expiration.getSeconds,
-                cas,
-                durability.toDurabilityLevel,
-                span
+          } else if (commands.size > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
+            SMono.fromTry(
+              Failure(
+                SubdocMutateRequest.errIfTooManyCommands(ReducedKeyValueErrorContext.create(id))
               )
             )
+          } else {
+            val requiresBucketConfig = createAsDeleted
+            val span                 = hp.tracer.internalSpan(SubdocMutateRequest.OPERATION_NAME, parentSpan.orNull)
+
+            if (requiresBucketConfig) {
+              SMono(BucketConfigUtil.waitForBucketConfig(hp.core, hp.bucketName, timeout))
+                .flatMap(bucketConfig => {
+                  SMono.just(
+                    new SubdocMutateRequest(
+                      timeout,
+                      hp.core.context(),
+                      hp.collectionIdentifier,
+                      bucketConfig,
+                      retryStrategy,
+                      id,
+                      document == StoreSemantics.Insert,
+                      document == StoreSemantics.Upsert,
+                      accessDeleted,
+                      createAsDeleted,
+                      commands,
+                      expiration.getSeconds,
+                      cas,
+                      durability.toDurabilityLevel,
+                      span
+                    )
+                  )
+                })
+            } else {
+              SMono.just(
+                new SubdocMutateRequest(
+                  timeout,
+                  hp.core.context(),
+                  hp.collectionIdentifier,
+                  null,
+                  retryStrategy,
+                  id,
+                  document == StoreSemantics.Insert,
+                  document == StoreSemantics.Upsert,
+                  accessDeleted,
+                  createAsDeleted,
+                  commands,
+                  expiration.getSeconds,
+                  cas,
+                  durability.toDurabilityLevel,
+                  span
+                )
+              )
+            }
           }
       }
     }

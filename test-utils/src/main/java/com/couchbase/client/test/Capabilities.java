@@ -51,5 +51,9 @@ public enum Capabilities {
   /**
    * The cluster has views enabled.
    */
-  VIEWS
+  VIEWS,
+  /**
+   * The cluster can create documents in a deleted state.
+   */
+  CREATE_AS_DELETED
 }

@@ -28,12 +28,18 @@ public class SubdocGetResponse extends BaseResponse {
   private final SubDocumentField[] values;
   private final long cas;
   private final Optional<CouchbaseException> error;
+  private final boolean isDeleted;
 
-  public SubdocGetResponse(ResponseStatus status, Optional<CouchbaseException> error, SubDocumentField[] values, long cas) {
+  public SubdocGetResponse(ResponseStatus status,
+                           Optional<CouchbaseException> error,
+                           SubDocumentField[] values,
+                           long cas,
+                           final boolean isDeleted) {
     super(status);
     this.error = error;
     this.values = values;
     this.cas = cas;
+    this.isDeleted = isDeleted;
   }
 
   public SubDocumentField[] values() {
@@ -49,12 +55,17 @@ public class SubdocGetResponse extends BaseResponse {
    */
   public Optional<CouchbaseException> error() { return error; }
 
+  public boolean isDeleted() {
+    return isDeleted;
+  }
+
   @Override
   public String toString() {
     return "SubdocGetResponse{" +
       "error=" + error +
       "values=" + Arrays.asList(values) +
       ", cas=" + cas +
+      ", isDeleted=" + isDeleted +
       '}';
   }
 }

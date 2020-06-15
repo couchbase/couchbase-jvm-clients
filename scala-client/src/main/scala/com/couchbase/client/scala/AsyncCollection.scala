@@ -33,6 +33,7 @@ import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.kv.handlers._
 import com.couchbase.client.scala.util.{FutureConversions, TimeoutUtil}
+import reactor.core.scala.publisher.SMono
 
 import scala.compat.java8.FutureConverters
 import scala.compat.java8.OptionConverters._
@@ -410,7 +411,8 @@ class AsyncCollection(
 
     val timeoutActual =
       if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
-    val req = mutateInHandler.request(
+
+    val req: SMono[SubdocMutateRequest] = mutateInHandler.request(
       id,
       spec,
       options.cas,
@@ -425,47 +427,41 @@ class AsyncCollection(
       options.parentSpan
     )
 
-    req match {
-      case Success(request) =>
-        core.send(request)
+    req.toFuture.flatMap(request => {
+      core.send(request)
 
-        val out = FutureConverters
-          .toScala(request.response())
-          .map(response => mutateInHandler.response(request, id, options.document, response))
+      val out = FutureConverters
+        .toScala(request.response())
+        .map(response => mutateInHandler.response(request, id, options.document, response))
 
-        out.onComplete(_ => request.context.logicallyComplete())
+      out.onComplete(_ => request.context.logicallyComplete())
 
-        options.durability match {
-          case ClientVerified(replicateTo, persistTo) =>
-            out.flatMap(response => {
+      options.durability match {
+        case ClientVerified(replicateTo, persistTo) =>
+          out.flatMap(response => {
 
-              val observeCtx = new ObserveContext(
-                core.context(),
-                PersistTo.asCore(persistTo),
-                ReplicateTo.asCore(replicateTo),
-                response.mutationToken.asJava,
-                response.cas,
-                collectionIdentifier,
-                id,
-                false,
-                timeoutActual,
-                request.internalSpan().toRequestSpan()
-              )
+            val observeCtx = new ObserveContext(
+              core.context(),
+              PersistTo.asCore(persistTo),
+              ReplicateTo.asCore(replicateTo),
+              response.mutationToken.asJava,
+              response.cas,
+              collectionIdentifier,
+              id,
+              false,
+              timeoutActual,
+              request.internalSpan().toRequestSpan()
+            )
 
-              FutureConversions
-                .javaMonoToScalaFuture(Observe.poll(observeCtx))
-                // After the observe return the original response
-                .map(_ => response)
-            })
+            FutureConversions
+              .javaMonoToScalaFuture(Observe.poll(observeCtx))
+              // After the observe return the original response
+              .map(_ => response)
+          })
 
-          case _ => out
-        }
-
-        out
-
-      case Failure(err) => Future.failed(err)
-    }
-
+        case _ => out
+      }
+    })
   }
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.

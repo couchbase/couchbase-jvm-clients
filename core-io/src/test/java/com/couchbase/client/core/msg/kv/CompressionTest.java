@@ -249,7 +249,8 @@ class CompressionTest {
       false,
       false,
       new CollectionMap(),
-      null
+      null,
+      false
     );
   }
 

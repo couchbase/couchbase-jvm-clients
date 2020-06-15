@@ -36,13 +36,15 @@ public class KeyValueChannelContext {
   private final boolean syncReplication;
   private final boolean vattrEnabled;
   private final boolean altRequest;
+  private final boolean createAsDeleted;
   private final CollectionMap collectionMap;
   private final ChannelId channelId;
 
   public KeyValueChannelContext(final CompressionConfig compression, final boolean collections,
                                 final boolean mutationTokens, final Optional<String> bucket,
                                 final boolean syncReplication, final boolean vattrEnabled, final boolean altRequest,
-                                final CollectionMap collectionMap, final ChannelId channelId) {
+                                final CollectionMap collectionMap, final ChannelId channelId,
+                                final boolean createAsDeleted) {
     this.compression = compression;
     this.collections = collections;
     this.mutationTokensEnabled = mutationTokens;
@@ -52,6 +54,7 @@ public class KeyValueChannelContext {
     this.altRequest = altRequest;
     this.collectionMap = collectionMap;
     this.channelId = channelId;
+    this.createAsDeleted = createAsDeleted;
   }
 
   public boolean collectionsEnabled() {
@@ -89,6 +92,8 @@ public class KeyValueChannelContext {
   public ChannelId channelId() {
     return channelId;
   }
+
+  public boolean createAsDeleted()  { return createAsDeleted; }
 
   /**
    * The name of the bucket.

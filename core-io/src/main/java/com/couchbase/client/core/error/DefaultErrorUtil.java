@@ -53,7 +53,7 @@ public class DefaultErrorUtil {
             case TOO_BIG: return new ValueTooLargeException(ctx);
             case INTERNAL_SERVER_ERROR: return new InternalServerFailureException(ctx);
             default: return new CouchbaseException(
-              request.getClass().getSimpleName() + " failed with unexpected status code",
+              request.getClass().getSimpleName() + " failed with unexpected status code " + response.status(),
               ctx
             );
         }

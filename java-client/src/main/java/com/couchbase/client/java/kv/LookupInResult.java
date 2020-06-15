@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2020 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.PathInvalidException;
@@ -57,16 +58,26 @@ public class LookupInResult {
   private final KeyValueErrorContext ctx;
 
   /**
+   * Whether this is a deleted document (tombstone).
+   */
+  private final boolean isDeleted;
+
+  /**
    * Creates a new {@link LookupInResult}.
    *
    * @param encoded the encoded subdoc fields.
    * @param cas the cas of the outer doc.
    */
-  LookupInResult(final SubDocumentField[] encoded, final long cas, JsonSerializer serializer, final KeyValueErrorContext ctx) {
+  LookupInResult(final SubDocumentField[] encoded,
+                 final long cas,
+                 JsonSerializer serializer,
+                 final KeyValueErrorContext ctx,
+                 final boolean isDeleted) {
     this.cas = cas;
     this.encoded = encoded;
     this.serializer = serializer;
     this.ctx = ctx;
+    this.isDeleted = isDeleted;
   }
 
   /**
@@ -159,11 +170,26 @@ public class LookupInResult {
     }
   }
 
+  /**
+   * Returns whether this document was deleted (a tombstone).
+   * <p>
+   * Will always be false unless {@link LookupInOptions#accessDeleted(boolean)} has been set.
+   * <p>
+   * For internal use only: applications should not require it.
+   *
+   * @return whether this document was a tombstone
+   */
+  @Stability.Internal
+  public boolean isDeleted() {
+    return isDeleted;
+  }
+
   @Override
   public String toString() {
     return "LookupInResult{" +
       "encoded=" + Arrays.asList(encoded) +
       ", cas=0x" + Long.toHexString(cas) +
+      ", isDeleted=" + isDeleted +
       '}';
   }
 
@@ -172,12 +198,12 @@ public class LookupInResult {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     LookupInResult that = (LookupInResult) o;
-    return cas == that.cas && Arrays.equals(encoded, that.encoded) && Objects.equals(serializer, that.serializer);
+    return cas == that.cas && Arrays.equals(encoded, that.encoded) && Objects.equals(serializer, that.serializer) && isDeleted == that.isDeleted;
   }
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(cas, serializer);
+    int result = Objects.hash(cas, serializer, isDeleted);
     result = 31 * result + Arrays.hashCode(encoded);
     return result;
   }

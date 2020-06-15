@@ -35,10 +35,10 @@ public class LookupInAccessor {
       .response()
       .thenApply(response -> {
         if (response.status().success()) {
-          return new LookupInResult(response.values(), response.cas(), serializer, null);
+          return new LookupInResult(response.values(), response.cas(), serializer, null, response.isDeleted());
         } else if (response.status() == ResponseStatus.SUBDOC_FAILURE) {
           final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
-          return new LookupInResult(response.values(), response.cas(), serializer, ctx);
+          return new LookupInResult(response.values(), response.cas(), serializer, ctx, response.isDeleted());
         }
         throw keyValueStatusToException(request, response);
       }).whenComplete((t, e) -> request.context().logicallyComplete());
