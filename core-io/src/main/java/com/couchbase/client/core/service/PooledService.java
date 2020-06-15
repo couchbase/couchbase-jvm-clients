@@ -179,7 +179,7 @@ abstract class PooledService implements Service {
       return;
     }
 
-    List<Endpoint> endpoints = new ArrayList<>(this.endpoints);
+    final List<Endpoint> endpoints = new ArrayList<>(this.endpoints);
     Collections.shuffle(endpoints);
 
     for (Endpoint endpoint : endpoints) {
@@ -187,7 +187,23 @@ abstract class PooledService implements Service {
         break;
       }
 
-      long actualIdleTime = System.nanoTime() - endpoint.lastResponseReceived();
+      long lastResponseReceived = endpoint.lastResponseReceived();
+      long actualIdleTime;
+      if (lastResponseReceived != 0) {
+        actualIdleTime = System.nanoTime() - endpoint.lastResponseReceived();
+      } else {
+        // If we did not receive a last response timestamp, it could be the case that a socket is
+        // connected but no request has been sent into it yet. If this is the case, take the timestamp
+        // when the socket got last connected as a reference point to determine if it is idle.
+        long lastConnected = endpoint.lastConnectedAt();
+        if (lastConnected != 0) {
+          actualIdleTime = System.nanoTime() - lastConnected;
+        } else {
+          // No last connected timestamp, so the endpoint isn't even fully connected yet
+          continue;
+        }
+      }
+
       // we also check if an endpoint received a hard disconnect signal and is still lingering around
       boolean receivedDisconnect = endpoint.receivedDisconnectSignal();
       boolean idleTooLong = endpoint.outstandingRequests() == 0 && actualIdleTime >= serviceConfig.idleTime().toNanos();
@@ -296,9 +312,7 @@ abstract class PooledService implements Service {
 
   @Override
   public Stream<EndpointDiagnostics> diagnostics() {
-    return endpoints
-            .stream()
-            .map(v -> v.diagnostics());
+    return endpoints.stream().map(Endpoint::diagnostics);
   }
 
 }
