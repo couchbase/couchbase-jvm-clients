@@ -17,7 +17,6 @@ package com.couchbase.client.scala
 
 import java.util.UUID
 
-import io.opentelemetry.sdk.trace.export.SimpleSpansProcessor
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.test._
 import com.couchbase.client.tracing.opentelemetry.OpenTelemetryRequestTracer
@@ -26,6 +25,7 @@ import io.opentelemetry.sdk.OpenTelemetrySdk
 import io.opentelemetry.sdk.trace.TracerSdkProvider
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
+import _root_.io.opentelemetry.sdk.trace.`export`.SimpleSpanProcessor
 
 @TestInstance(Lifecycle.PER_CLASS)
 class ResponseTimeObservabilitySpec extends ClusterAwareIntegrationTest {
@@ -44,7 +44,7 @@ class ResponseTimeObservabilitySpec extends ClusterAwareIntegrationTest {
 
     env = {
       tracer = OpenTelemetrySdk.getTracerProvider
-      tracer.addSpanProcessor(SimpleSpansProcessor.create(exporter))
+      tracer.addSpanProcessor(SimpleSpanProcessor.newBuilder(exporter).build())
 
       ClusterEnvironment.builder
         .requestTracer(OpenTelemetryRequestTracer.wrap(tracer.get("integrationTest"))).build.get
