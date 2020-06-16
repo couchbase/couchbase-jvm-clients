@@ -77,14 +77,14 @@ public interface Endpoint extends Stateful<EndpointState> {
   /**
    * Holds the timestamp of the last response received (or 0 if no request ever sent).
    *
-   * @return the timestamp of the last response received, in absolute nanoseconds.
+   * @return the timestamp of the last response received, in nanoseconds.
    */
   long lastResponseReceived();
 
   /**
-   * Returns the timestamp when the endpoint was last connected successfully (absolute nanoseconds).
+   * Returns the timestamp when the endpoint was last connected successfully (nanoseconds).
    *
-   * @return the timestamp when the endpoint was last connected, in absolute nanoseconds.
+   * @return the timestamp when the endpoint was last connected, in nanoseconds.
    */
   long lastConnectedAt();
 
