@@ -17,6 +17,7 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionAbortedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
@@ -24,6 +25,7 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionIgnoredEv
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointStateChangedEvent;
+import com.couchbase.client.core.cnc.events.endpoint.EndpointWriteFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnectedEvent;
 import com.couchbase.client.core.deps.io.netty.channel.DefaultEventLoopGroup;
@@ -516,7 +518,17 @@ public abstract class BaseEndpoint implements Endpoint {
           }
         });
       }
-      channel.writeAndFlush(request);
+
+      channel
+        .writeAndFlush(request)
+        .addListener(f -> {
+          if (!f.isSuccess()) {
+            EndpointContext context = endpointContext.get();
+            Event.Severity severity = disconnect.get() ? Event.Severity.DEBUG : Event.Severity.WARN;
+            context.environment().eventBus().publish(new EndpointWriteFailedEvent(severity, context, f.cause()));
+            RetryOrchestrator.maybeRetry(context, request, RetryReason.ENDPOINT_NOT_WRITABLE);
+          }
+        });
     } else {
       RetryReason retryReason = circuitBreaker.allowsRequest()
         ? RetryReason.ENDPOINT_NOT_WRITABLE
