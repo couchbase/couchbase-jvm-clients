@@ -27,7 +27,7 @@ import com.couchbase.client.test.TestNodeConfig;
 import io.opentelemetry.exporters.inmemory.InMemorySpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.trace.TracerSdkProvider;
-import io.opentelemetry.sdk.trace.export.SimpleSpansProcessor;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -48,7 +48,7 @@ class OpenTelemetryIntegrationTest extends ClusterAwareIntegrationTest {
   @BeforeAll
   static void beforeAll() {
     tracer = OpenTelemetrySdk.getTracerProvider();
-    tracer.addSpanProcessor(SimpleSpansProcessor.newBuilder(exporter).build());
+    tracer.addSpanProcessor(SimpleSpanProcessor.newBuilder(exporter).build());
 
     TestNodeConfig config = config().firstNodeWith(Services.KV).get();
 
