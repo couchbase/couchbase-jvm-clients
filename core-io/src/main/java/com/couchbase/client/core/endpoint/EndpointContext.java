@@ -50,6 +50,15 @@ public class EndpointContext extends CoreContext {
   private final Optional<String> channelId;
 
   /**
+   * Helper method to duplicate the endpoint context (useful for extension).
+   *
+   * @param ctx the context to copy from.
+   */
+  public EndpointContext(final EndpointContext ctx) {
+    this(ctx, ctx.remoteSocket, ctx.circuitBreaker, ctx.serviceType, ctx.localSocket, ctx.bucket, ctx.channelId);
+  }
+
+  /**
    * Creates a new {@link EndpointContext}.
    */
   public EndpointContext(CoreContext ctx, HostAndPort remoteSocket,

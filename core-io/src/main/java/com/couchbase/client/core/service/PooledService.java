@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiatedEv
 import com.couchbase.client.core.cnc.events.service.ServiceStateChangedEvent;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.endpoint.Endpoint;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -33,8 +34,11 @@ import reactor.core.publisher.Flux;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
@@ -208,16 +212,40 @@ abstract class PooledService implements Service {
       boolean receivedDisconnect = endpoint.receivedDisconnectSignal();
       boolean idleTooLong = endpoint.outstandingRequests() == 0 && actualIdleTime >= serviceConfig.idleTime().toNanos();
       if (receivedDisconnect || idleTooLong) {
-        serviceContext.environment().eventBus().publish(new IdleEndpointRemovedEvent(endpoint.context()));
         this.endpoints.remove(endpoint);
         endpointStates.deregister(endpoint);
         if (!receivedDisconnect) {
           endpoint.disconnect();
         }
+        publishIdleEndpointRemovedEvent(endpoint, actualIdleTime);
       }
     }
 
     scheduleCleanIdleConnections();
+  }
+
+  /**
+   * Helper method to publish an event with enriched context when an idle endpoint has been removed.
+   *
+   * @param endpoint the endpoint that got removed.
+   * @param actualIdleTime the actual idle time of that endpoint.
+   */
+  private void publishIdleEndpointRemovedEvent(final Endpoint endpoint, final long actualIdleTime) {
+    if (endpoint.context() != null) {
+      final EndpointContext enrichedContext = new EndpointContext(endpoint.context()) {
+        @Override
+        public void injectExportableParams(final Map<String, Object> input) {
+          super.injectExportableParams(input);
+
+          Map<String, Object> serviceInfo = new HashMap<>();
+          input.put("actualIdleTimeMillis", TimeUnit.NANOSECONDS.toMillis(actualIdleTime));
+          serviceInfo.put("remainingEndpoints", endpoints.size());
+          serviceInfo.put("state", state());
+          input.put("service", serviceInfo);
+        }
+      };
+      serviceContext.environment().eventBus().publish(new IdleEndpointRemovedEvent(enrichedContext));
+    }
   }
 
   /**
