@@ -103,6 +103,7 @@ public class CoreEnvironment {
   private final SecurityConfig securityConfig;
   private final TimeoutConfig timeoutConfig;
   private final OrphanReporterConfig orphanReporterConfig;
+  private final ThresholdRequestTracerConfig thresholdRequestTracerConfig;
   private final Supplier<RequestTracer> requestTracer;
   private final LoggerConfig loggerConfig;
   private final RetryStrategy retryStrategy;
@@ -144,6 +145,7 @@ public class CoreEnvironment {
     this.retryStrategy = Optional.ofNullable(builder.retryStrategy).orElse(DEFAULT_RETRY_STRATEGY);
     this.loggerConfig = builder.loggerConfig.build();
     this.orphanReporterConfig = builder.orphanReporterConfig.build();
+    this.thresholdRequestTracerConfig = builder.thresholdRequestTracerConfig.build();
 
     if (eventBus instanceof OwnedSupplier) {
       eventBus.get().start().block();
@@ -151,7 +153,7 @@ public class CoreEnvironment {
     eventBus.get().subscribe(LoggingEventConsumer.create(loggerConfig()));
 
     this.requestTracer = Optional.ofNullable(builder.requestTracer).orElse(new OwnedSupplier<RequestTracer>(
-      ThresholdRequestTracer.create(eventBus.get())
+      ThresholdRequestTracer.create(eventBus.get(), thresholdRequestTracerConfig)
     ));
 
     if (requestTracer instanceof OwnedSupplier) {
@@ -445,9 +447,10 @@ public class CoreEnvironment {
     input.put("timeoutConfig", timeoutConfig.exportAsMap());
     input.put("loggerConfig", loggerConfig.exportAsMap());
     input.put("orphanReporterConfig", orphanReporterConfig.exportAsMap());
+    input.put("thresholdRequestTracerConfig", thresholdRequestTracerConfig.exportAsMap());
 
     input.put("retryStrategy", retryStrategy.getClass().getSimpleName());
-    input.put("requestTracer", requestTracer.getClass().getSimpleName());
+    input.put("requestTracer", requestTracer.get().getClass().getSimpleName());
 
     return format.apply(input);
   }
@@ -466,6 +469,7 @@ public class CoreEnvironment {
     private TimeoutConfig.Builder timeoutConfig = TimeoutConfig.builder();
     private LoggerConfig.Builder loggerConfig = LoggerConfig.builder();
     private OrphanReporterConfig.Builder orphanReporterConfig = OrphanReporterConfig.builder();
+    private ThresholdRequestTracerConfig.Builder thresholdRequestTracerConfig = ThresholdRequestTracerConfig.builder();
     private Supplier<EventBus> eventBus = null;
     private Supplier<Scheduler> scheduler = null;
     private Supplier<RequestTracer> requestTracer = null;
@@ -570,6 +574,20 @@ public class CoreEnvironment {
       return orphanReporterConfig;
     }
 
+    /**
+     * Allows to customize the threshold request tracer configuration.
+     *
+     * @param thresholdRequestTracerConfig the configuration which should be used.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public SELF thresholdRequestTracerConfig(final ThresholdRequestTracerConfig.Builder thresholdRequestTracerConfig) {
+      this.thresholdRequestTracerConfig = notNull(thresholdRequestTracerConfig, "ThresholdRequestTracerConfig");
+      return self();
+    }
+
+    public ThresholdRequestTracerConfig.Builder thresholdRequestTracerConfig() {
+      return thresholdRequestTracerConfig;
+    }
 
     /**
      * Allows to customize document value compression settings.

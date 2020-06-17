@@ -22,7 +22,7 @@ import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.events.tracing.OverThresholdRequestsRecordedEvent;
 import com.couchbase.client.core.deps.org.jctools.queues.MpscUnboundedArrayQueue;
-import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.env.ThresholdRequestTracerConfig;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
@@ -72,6 +72,7 @@ public class ThresholdRequestTracer implements RequestTracer {
    *
    * @param eventBus the event bus where the final events will be emitted into.
    * @return the builder to customize.
+   * @deprecated please use {@link #create(EventBus, ThresholdRequestTracerConfig)} instead.
    */
   public static Builder builder(final EventBus eventBus) {
     return new Builder(eventBus);
@@ -84,24 +85,36 @@ public class ThresholdRequestTracer implements RequestTracer {
    * @return the created tracer ready to be used.
    */
   public static ThresholdRequestTracer create(final EventBus eventBus) {
-    return builder(eventBus).build();
+    return create(eventBus, ThresholdRequestTracerConfig.create());
+  }
+
+  /**
+   * Creates a tracer with config and a reference to the event bus.
+   *
+   * @param eventBus the event bus where the final events will be emitted into.
+   * @param config the config that should be used.
+   * @return the created tracer ready to be used.
+   */
+  public static ThresholdRequestTracer create(final EventBus eventBus, ThresholdRequestTracerConfig config) {
+    return new ThresholdRequestTracer(eventBus, config);
   }
 
   /**
    * Internal constructor to build the tracer based on the config provided.
    *
-   * @param builder the builder which contains the config for the tracer.
+   * @param eventBus the event bus that should be used.
+   * @param config the tracer config from where to extract the values.
    */
-  private ThresholdRequestTracer(final Builder builder) {
-    this.eventBus = builder.eventBus;
-    this.overThresholdQueue = new MpscUnboundedArrayQueue<>(builder.queueLength);
-    kvThreshold = builder.kvThreshold.toNanos();
-    analyticsThreshold = builder.analyticsThreshold.toNanos();
-    searchThreshold = builder.searchThreshold.toNanos();
-    viewThreshold = builder.viewThreshold.toNanos();
-    queryThreshold = builder.queryThreshold.toNanos();
-    sampleSize = builder.sampleSize;
-    emitIntervalNanos = builder.emitInterval.toNanos();
+  private ThresholdRequestTracer(final EventBus eventBus, ThresholdRequestTracerConfig config) {
+    this.eventBus = eventBus;
+    this.overThresholdQueue = new MpscUnboundedArrayQueue<>(config.queueLength());
+    kvThreshold = config.kvThreshold().toNanos();
+    analyticsThreshold = config.analyticsThreshold().toNanos();
+    searchThreshold = config.searchThreshold().toNanos();
+    viewThreshold = config.viewThreshold().toNanos();
+    queryThreshold = config.queryThreshold().toNanos();
+    sampleSize = config.sampleSize();
+    emitIntervalNanos = config.emitInterval().toNanos();
 
     worker = new Thread(new Worker());
     worker.setDaemon(true);
@@ -202,7 +215,7 @@ public class ThresholdRequestTracer implements RequestTracer {
 
     private long kvThresholdCount = 0;
     private long n1qlThresholdCount = 0;
-    private long viewThresoldCount = 0;
+    private long viewThresholdCount = 0;
     private long ftsThresholdCount = 0;
     private long analyticsThresholdCount = 0;
 
@@ -254,7 +267,7 @@ public class ThresholdRequestTracer implements RequestTracer {
           n1qlThresholdCount += 1;
         } else if (serviceType == ServiceType.VIEWS) {
           updateThreshold(viewThresholds, request);
-          viewThresoldCount += 1;
+          viewThresholdCount += 1;
         } else if (serviceType == ServiceType.SEARCH) {
           updateThreshold(ftsThresholds, request);
           ftsThresholdCount += 1;
@@ -289,9 +302,9 @@ public class ThresholdRequestTracer implements RequestTracer {
         n1qlThresholdCount = 0;
       }
       if (!viewThresholds.isEmpty()) {
-        output.add(convertThresholdMetadata(viewThresholds, viewThresoldCount, SERVICE_IDENTIFIER_VIEW));
+        output.add(convertThresholdMetadata(viewThresholds, viewThresholdCount, SERVICE_IDENTIFIER_VIEW));
         viewThresholds.clear();
-        viewThresoldCount = 0;
+        viewThresholdCount = 0;
       }
       if (!ftsThresholds.isEmpty()) {
         output.add(convertThresholdMetadata(ftsThresholds, ftsThresholdCount, SERVICE_IDENTIFIER_SEARCH));
@@ -402,31 +415,14 @@ public class ThresholdRequestTracer implements RequestTracer {
 
     private final EventBus eventBus;
 
-    private static final Duration DEFAULT_EMIT_INTERVAL = Duration.ofSeconds(10);
-    private static final int DEFAULT_QUEUE_LENGTH = 1024;
-    private static final Duration DEFAULT_KV_THRESHOLD = Duration.ofMillis(500);
-    private static final Duration DEFAULT_QUERY_THRESHOLD = Duration.ofSeconds(1);
-    private static final Duration DEFAULT_VIEW_THRESHOLD = Duration.ofSeconds(1);
-    private static final Duration DEFAULT_SEARCH_THRESHOLD = Duration.ofSeconds(1);
-    private static final Duration DEFAULT_ANALYTICS_THRESHOLD = Duration.ofSeconds(1);
-    private static final int DEFAULT_SAMPLE_SIZE = 10;
-
-    private Duration emitInterval = DEFAULT_EMIT_INTERVAL;
-    private int queueLength = DEFAULT_QUEUE_LENGTH;
-    private int sampleSize = DEFAULT_SAMPLE_SIZE;
-
-    private Duration kvThreshold = DEFAULT_KV_THRESHOLD;
-    private Duration queryThreshold = DEFAULT_QUERY_THRESHOLD;
-    private Duration viewThreshold = DEFAULT_VIEW_THRESHOLD;
-    private Duration searchThreshold = DEFAULT_SEARCH_THRESHOLD;
-    private Duration analyticsThreshold = DEFAULT_ANALYTICS_THRESHOLD;
+    private ThresholdRequestTracerConfig.Builder config = ThresholdRequestTracerConfig.builder();
 
     Builder(final EventBus eventBus) {
       this.eventBus = eventBus;
     }
 
     public ThresholdRequestTracer build() {
-      return new ThresholdRequestTracer(this);
+      return new ThresholdRequestTracer(eventBus, config.build());
     }
 
     /**
@@ -436,11 +432,7 @@ public class ThresholdRequestTracer implements RequestTracer {
      * @return this builder for chaining.
      */
     public Builder emitInterval(final Duration emitInterval) {
-      if (emitInterval.isZero()) {
-        throw InvalidArgumentException.fromMessage("Emit interval needs to be greater than 0");
-      }
-
-      this.emitInterval = emitInterval;
+      config.emitInterval(emitInterval);
       return this;
     }
 
@@ -452,7 +444,7 @@ public class ThresholdRequestTracer implements RequestTracer {
      * @return this builder for chaining.
      */
     public Builder queueLength(final int queueLength) {
-      this.queueLength = queueLength;
+      config.queueLength(queueLength);
       return this;
     }
 
@@ -463,7 +455,7 @@ public class ThresholdRequestTracer implements RequestTracer {
      * @return this builder for chaining.
      */
     public Builder kvThreshold(final Duration kvThreshold) {
-      this.kvThreshold = kvThreshold;
+      config.kvThreshold(kvThreshold);
       return this;
     }
 
@@ -474,7 +466,7 @@ public class ThresholdRequestTracer implements RequestTracer {
      * @return this builder for chaining.
      */
     public Builder queryThreshold(final Duration queryThreshold) {
-      this.queryThreshold = queryThreshold;
+      config.queryThreshold(queryThreshold);
       return this;
     }
 
@@ -485,7 +477,7 @@ public class ThresholdRequestTracer implements RequestTracer {
      * @return this builder for chaining.
      */
     public Builder viewThreshold(final Duration viewThreshold) {
-      this.viewThreshold = viewThreshold;
+      config.viewThreshold(viewThreshold);
       return this;
     }
 
@@ -496,7 +488,7 @@ public class ThresholdRequestTracer implements RequestTracer {
      * @return this builder for chaining.
      */
     public Builder searchThreshold(final Duration searchThreshold) {
-      this.searchThreshold = searchThreshold;
+      config.searchThreshold(searchThreshold);
       return this;
     }
 
@@ -507,7 +499,7 @@ public class ThresholdRequestTracer implements RequestTracer {
      * @return this builder for chaining.
      */
     public Builder analyticsThreshold(final Duration analyticsThreshold) {
-      this.analyticsThreshold = analyticsThreshold;
+      config.analyticsThreshold(analyticsThreshold);
       return this;
     }
 
@@ -518,7 +510,7 @@ public class ThresholdRequestTracer implements RequestTracer {
      * @return this builder for chaining.
      */
     public Builder sampleSize(final int sampleSize) {
-      this.sampleSize = sampleSize;
+      config.sampleSize(sampleSize);
       return this;
     }
 
