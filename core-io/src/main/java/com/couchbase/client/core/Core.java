@@ -19,6 +19,7 @@ package com.couchbase.client.core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.core.BucketClosedEvent;
+import com.couchbase.client.core.cnc.events.core.BucketOpenInitiatedEvent;
 import com.couchbase.client.core.cnc.events.core.BucketOpenedEvent;
 import com.couchbase.client.core.cnc.events.core.CoreCreatedEvent;
 import com.couchbase.client.core.cnc.events.core.InitGlobalConfigFailedEvent;
@@ -27,6 +28,7 @@ import com.couchbase.client.core.cnc.events.core.ReconfigurationErrorDetectedEve
 import com.couchbase.client.core.cnc.events.core.ReconfigurationIgnoredEvent;
 import com.couchbase.client.core.cnc.events.core.ServiceReconfigurationFailedEvent;
 import com.couchbase.client.core.cnc.events.core.ShutdownCompletedEvent;
+import com.couchbase.client.core.cnc.events.core.ShutdownInitiatedEvent;
 import com.couchbase.client.core.config.AlternateAddress;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
@@ -338,6 +340,8 @@ public class Core {
    */
   @Stability.Internal
   public void openBucket(final String name) {
+    eventBus.publish(new BucketOpenInitiatedEvent(coreContext, name));
+
     long start = System.nanoTime();
     configurationProvider
       .openBucket(name)
@@ -489,6 +493,8 @@ public class Core {
     return Mono.defer(() -> {
       long start = System.nanoTime();
       if (shutdown.compareAndSet(false, true)) {
+        eventBus.publish(new ShutdownInitiatedEvent(coreContext));
+
         return Flux
           .fromIterable(currentConfig.bucketConfigs().keySet())
           .flatMap(this::closeBucket)
