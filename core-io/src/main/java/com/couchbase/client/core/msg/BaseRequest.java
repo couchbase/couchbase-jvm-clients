@@ -157,12 +157,12 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
       cancellationReason = reason;
       final Exception exception;
 
-      final String msg = this.getClass().getSimpleName();
+      final String msg = this.getClass().getSimpleName() + ", Reason: " + reason;
       final CancellationErrorContext ctx = new CancellationErrorContext(context());
       if (reason == CancellationReason.TIMEOUT) {
         exception = idempotent() ? new UnambiguousTimeoutException(msg, ctx) : new AmbiguousTimeoutException(msg, ctx);
       } else {
-        exception = new RequestCanceledException(msg, ctx);
+        exception = new RequestCanceledException(msg, reason, ctx);
       }
 
       response.completeExceptionally(exception);

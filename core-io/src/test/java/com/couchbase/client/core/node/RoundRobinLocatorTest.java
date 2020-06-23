@@ -17,12 +17,17 @@
 package com.couchbase.client.core.node;
 
 import com.couchbase.client.core.config.ClusterConfig;
+import com.couchbase.client.core.msg.CancellationReason;
+import com.couchbase.client.core.msg.Request;
+import com.couchbase.client.core.msg.TargetedRequest;
+import com.couchbase.client.core.msg.manager.BucketConfigRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.Mockito.mock;
@@ -150,6 +155,23 @@ class RoundRobinLocatorTest {
     verify(node2Mock, never()).send(request);
     verify(node3Mock, times(2)).send(request);
     verify(node4Mock, times(2)).send(request);
+  }
+
+  @Test
+  void cancelsTargetedRequestIfNodeNotInList() {
+    Locator locator = new RoundRobinLocator(ServiceType.QUERY);
+
+    Request<?> request = mock(BucketConfigRequest.class);
+    when(((TargetedRequest) request).target()).thenReturn(new NodeIdentifier("hostb", 8091));
+
+    Node node = mock(Node.class);
+    when(node.state()).thenReturn(NodeState.CONNECTED);
+    when(node.identifier()).thenReturn(new NodeIdentifier("hosta", 8091));
+    when(node.serviceEnabled(ServiceType.QUERY)).thenReturn(true);
+
+    locator.dispatch(request, Collections.singletonList(node), null, null);
+
+    verify(request, times(1)).cancel(CancellationReason.TARGET_NODE_REMOVED);
   }
 
 }

@@ -18,11 +18,15 @@ package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
+import com.couchbase.client.core.msg.CancellationReason;
 
 public class RequestCanceledException extends CouchbaseException {
 
-  public RequestCanceledException(String message, CancellationErrorContext ctx) {
+  private final CancellationReason reason;
+
+  public RequestCanceledException(String message, CancellationReason reason, CancellationErrorContext ctx) {
     super(message, ctx);
+    this.reason = reason;
   }
 
   @Override
@@ -31,4 +35,8 @@ public class RequestCanceledException extends CouchbaseException {
     return (CancellationErrorContext) super.context();
   }
 
+  @Stability.Uncommitted
+  public CancellationReason reason() {
+    return reason;
+  }
 }

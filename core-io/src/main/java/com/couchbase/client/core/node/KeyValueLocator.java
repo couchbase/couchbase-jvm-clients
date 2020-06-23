@@ -25,6 +25,7 @@ import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.MemcachedBucketConfig;
 import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.TargetedRequest;
@@ -89,12 +90,36 @@ public class KeyValueLocator implements Locator {
         if (!request.target().equals(node.identifier())) {
           continue;
         }
-        node.send((Request) request);
+        node.send((Request<?>) request);
         return;
       }
     }
 
-    RetryOrchestrator.maybeRetry(ctx, (Request) request, RetryReason.NODE_NOT_AVAILABLE);
+    handleTargetNotAvailable(request, nodes, ctx);
+  }
+
+  /**
+   * When a targeted request cannot be dispatched, apply some more logic to figure out what to do with it.
+   * <p>
+   * In the specific case there are two situations that can happen: either the target is there, it's just not ready
+   * to serve requests (yet) or it is not even part of the node list anymore. In the latter case there is no way
+   * the request is going to make progress, so cancel it and give the caller a chance to fetch a new target and
+   * send a new request.
+   *
+   * @param request the request to check.
+   * @param nodes the nodes list to check against.
+   * @param ctx the core context.
+   */
+  private static void handleTargetNotAvailable(final TargetedRequest request, final List<Node> nodes,
+                                               final CoreContext ctx) {
+    for (Node node : nodes) {
+      if (request.target().equals(node.identifier())) {
+        RetryOrchestrator.maybeRetry(ctx, (Request<?>) request, RetryReason.NODE_NOT_AVAILABLE);
+        return;
+      }
+    }
+
+    ((Request<?>) request).cancel(CancellationReason.TARGET_NODE_REMOVED);
   }
 
   private static void couchbaseBucket(final KeyValueRequest<?> request, final List<Node> nodes,

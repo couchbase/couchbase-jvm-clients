@@ -23,8 +23,13 @@ import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.msg.CancellationReason;
+import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.msg.TargetedRequest;
+import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
+import com.couchbase.client.core.msg.manager.BucketConfigRequest;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -200,6 +205,32 @@ class KeyValueLocatorTest {
     locator.dispatch(getRequest, nodes, configMock, null);
     verify(node1Mock, times(3)).send(getRequest);
     verify(node2Mock, never()).send(getRequest);
+  }
+
+  @Test
+  void cancelsTargetedRequestIfNodeListEmpty() {
+    Locator locator = new KeyValueLocator();
+
+    Request<?> request = mock(CarrierBucketConfigRequest.class);
+    locator.dispatch(request, Collections.emptyList(), null, null);
+
+    verify(request, times(1)).cancel(CancellationReason.TARGET_NODE_REMOVED);
+  }
+
+  @Test
+  void cancelsTargetedRequestIfNodeNotInList() {
+    Locator locator = new KeyValueLocator();
+
+    Request<?> request = mock(CarrierBucketConfigRequest.class);
+    when(((TargetedRequest) request).target()).thenReturn(new NodeIdentifier("hostb", 8091));
+
+    Node node = mock(Node.class);
+    when(node.state()).thenReturn(NodeState.CONNECTED);
+    when(node.identifier()).thenReturn(new NodeIdentifier("hosta", 8091));
+
+    locator.dispatch(request, Collections.singletonList(node), null, null);
+
+    verify(request, times(1)).cancel(CancellationReason.TARGET_NODE_REMOVED);
   }
 
 }
