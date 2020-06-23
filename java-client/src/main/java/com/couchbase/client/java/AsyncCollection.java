@@ -31,6 +31,7 @@ import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
+import com.couchbase.client.core.msg.kv.ExpiryUtils;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
 import com.couchbase.client.core.msg.kv.GetMetaRequest;
@@ -767,7 +768,8 @@ public class AsyncCollection {
     }
     long end = System.nanoTime();
 
-    InsertRequest request = new InsertRequest(id, encoded.encoded(), opts.expiry().getSeconds(), encoded.flags(),
+    int expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
+    InsertRequest request = new InsertRequest(id, encoded.encoded(), expiry, encoded.flags(),
       timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context()
       .clientContext(opts.clientContext())
@@ -830,7 +832,8 @@ public class AsyncCollection {
     }
     long end = System.nanoTime();
 
-    final UpsertRequest request = new UpsertRequest(id, encoded.encoded(), opts.expiry().getSeconds(), encoded.flags(),
+    int expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
+    final UpsertRequest request = new UpsertRequest(id, encoded.encoded(), expiry, encoded.flags(),
       timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context()
       .clientContext(opts.clientContext())
@@ -893,7 +896,8 @@ public class AsyncCollection {
     }
     long end = System.nanoTime();
 
-    ReplaceRequest request = new ReplaceRequest(id, encoded.encoded(), opts.expiry().getSeconds(), encoded.flags(),
+    int expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
+    ReplaceRequest request = new ReplaceRequest(id, encoded.encoded(), expiry, encoded.flags(),
       timeout, opts.cas(), coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context()
       .clientContext(opts.clientContext())
@@ -1151,9 +1155,10 @@ public class AsyncCollection {
         // xattrs come first
         commands.sort(Comparator.comparing(v -> !v.xattr()));
 
-        SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, bucketConfig, retryStrategy, id,
+      int expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
+      SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, bucketConfig, retryStrategy, id,
           opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT,
-          opts.accessDeleted(), opts.createAsDeleted(), commands, opts.expiry().getSeconds(), opts.cas(),
+          opts.accessDeleted(), opts.createAsDeleted(), commands, expiry, opts.cas(),
           opts.durabilityLevel(), span
         );
         request.context()
