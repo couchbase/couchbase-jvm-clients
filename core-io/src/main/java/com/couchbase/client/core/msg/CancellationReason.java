@@ -68,6 +68,16 @@ public class CancellationReason {
   public static final CancellationReason TOO_MANY_REQUESTS_IN_RETRY =
     new CancellationReason("TOO_MANY_REQUESTS_IN_RETRY", null);
 
+  /**
+   * When a {@link TargetedRequest} is dispatched but the list of nodes does not contain the target at all,
+   * there is good chance that this request will not be able to make progress anymore so it will be cancelled.
+   * <p>
+   * Request creators are advised to grab a fresh config, a new target, and re-dispatch the operation to give
+   * it a chance to make progress eventually.
+   */
+  public static final CancellationReason TARGET_NODE_REMOVED =
+    new CancellationReason("TARGET_NODE_REMOVED", null);
+
   private final String identifier;
   private final Object innerReason;
 

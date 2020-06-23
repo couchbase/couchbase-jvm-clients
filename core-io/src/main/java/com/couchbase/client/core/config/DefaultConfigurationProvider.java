@@ -36,19 +36,23 @@ import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetCollectionManifestRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.UnsignedLEB128;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
+import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.util.List;
@@ -184,63 +188,51 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         final Optional<String> alternate = core.context().alternateAddress();
 
         return Flux
-          .fromIterable(currentSeedNodes())
-          .take(MAX_PARALLEL_LOADERS)
-          .flatMap(seed -> {
-            NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
+          .range(1, Math.min(MAX_PARALLEL_LOADERS, currentSeedNodes().size()))
+          .flatMap(index -> Flux
+            .fromIterable(currentSeedNodes())
+            .take(Math.min(index, currentSeedNodes().size()))
+            .last()
+            .flatMap(seed -> {
+              NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
 
-            final AtomicReference<Map<ServiceType, Integer>> alternatePorts = new AtomicReference<>();
+              final AtomicReference<Map<ServiceType, Integer>> alternatePorts = new AtomicReference<>();
+              final Optional<String> alternateAddress = alternate.map(a -> mapAlternateAddress(a, seed, tls, alternatePorts));
 
-            final Optional<String> alternateAddress = alternate.map(a -> {
-              ClusterConfig c = currentConfig;
-              if (c.globalConfig() != null) {
-                for (PortInfo pi : c.globalConfig().portInfos()) {
-                  if (seed.address().equals(pi.hostname())) {
-                    alternatePorts.set(tls
-                      ? pi.alternateAddresses().get(a).sslServices()
-                      : pi.alternateAddresses().get(a).services()
-                    );
-                    return pi.alternateAddresses().get(a).hostname();
+              final int mappedKvPort;
+              final int mappedManagerPort;
+
+              if (alternateAddress.isPresent()) {
+                Map<ServiceType, Integer> ports = alternatePorts.get();
+                mappedKvPort = ports.get(ServiceType.KV);
+                mappedManagerPort = ports.get(ServiceType.MANAGER);
+              } else {
+                mappedKvPort = seed.kvPort().orElse(kvPort);
+                mappedManagerPort = seed.clusterManagerPort().orElse(managerPort);
+              }
+
+              return keyValueLoader
+                .load(identifier, mappedKvPort, name, alternateAddress)
+                .onErrorResume(t -> {
+                  if (t instanceof ConfigException
+                    && t.getCause() instanceof RequestCanceledException
+                    && ((RequestCanceledException) t.getCause()).reason() == CancellationReason.TARGET_NODE_REMOVED) {
+                    return Mono.error(t);
                   }
-                }
-              }
-
-              List<NodeInfo> nodeInfos = c
-                .bucketConfigs()
-                .values()
-                .stream()
-                .flatMap(bc -> bc.nodes().stream()).collect(Collectors.toList());
-              for (NodeInfo ni : nodeInfos) {
-                if (ni.hostname().equals(seed.address())) {
-                  alternatePorts.set(tls
-                    ? ni.alternateAddresses().get(a).sslServices()
-                    : ni.alternateAddresses().get(a).services()
+                  return clusterManagerLoader.load(
+                    identifier, mappedManagerPort, name, alternateAddress
                   );
-                  return ni.alternateAddresses().get(a).hostname();
-                }
+                });
+            })
+            .retryWhen(Retry.from(companion -> companion.map(rs -> {
+              if (rs.failure() instanceof ConfigException
+                && rs.failure().getCause() instanceof RequestCanceledException
+                && ((RequestCanceledException) rs.failure().getCause()).reason() == CancellationReason.TARGET_NODE_REMOVED) {
+                return rs.totalRetries();
               }
-
-              return null;
-            });
-
-            final int mappedKvPort;
-            final int mappedManagerPort;
-
-            if (alternateAddress.isPresent()) {
-              Map<ServiceType, Integer> ports = alternatePorts.get();
-              mappedKvPort = ports.get(ServiceType.KV);
-              mappedManagerPort = ports.get(ServiceType.MANAGER);
-            } else {
-              mappedKvPort = seed.kvPort().orElse(kvPort);
-              mappedManagerPort = seed.clusterManagerPort().orElse(managerPort);
-            }
-
-            return keyValueLoader
-              .load(identifier, mappedKvPort, name, alternateAddress)
-              .onErrorResume(t -> clusterManagerLoader.load(
-                identifier, mappedManagerPort, name, alternateAddress
-              ));
-          })
+              throw Exceptions.propagate(rs.failure());
+            })))
+          )
           .take(1)
           .switchIfEmpty(Mono.error(
             new ConfigException("Could not locate a single bucket configuration for bucket: " + name)
@@ -258,6 +250,48 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     });
   }
 
+  /**
+   * Maps a logical address to its alternate address, if present.
+   *
+   * @param a the input address.
+   * @param seed the seed node to check against.
+   * @param tls if TLS is enabled or not.
+   * @param alternatePorts where to store the alternate ports as a side effect.
+   * @return the mapped hostname.
+   */
+  private String mapAlternateAddress(final String a, final SeedNode seed, final boolean tls,
+                                     final AtomicReference<Map<ServiceType, Integer>> alternatePorts) {
+    ClusterConfig c = currentConfig;
+    if (c.globalConfig() != null) {
+      for (PortInfo pi : c.globalConfig().portInfos()) {
+        if (seed.address().equals(pi.hostname())) {
+          alternatePorts.set(tls
+            ? pi.alternateAddresses().get(a).sslServices()
+            : pi.alternateAddresses().get(a).services()
+          );
+          return pi.alternateAddresses().get(a).hostname();
+        }
+      }
+    }
+
+    List<NodeInfo> nodeInfos = c
+      .bucketConfigs()
+      .values()
+      .stream()
+      .flatMap(bc -> bc.nodes().stream()).collect(Collectors.toList());
+    for (NodeInfo ni : nodeInfos) {
+      if (ni.hostname().equals(seed.address())) {
+        alternatePorts.set(tls
+          ? ni.alternateAddresses().get(a).sslServices()
+          : ni.alternateAddresses().get(a).services()
+        );
+        return ni.alternateAddresses().get(a).hostname();
+      }
+    }
+
+    return null;
+  }
+
   @Override
   public Mono<Void> loadAndRefreshGlobalConfig() {
     return Mono.defer(() -> {
@@ -268,26 +302,38 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
         final AtomicBoolean hasErrored = new AtomicBoolean();
         return Flux
-          .fromIterable(currentSeedNodes())
-          .take(MAX_PARALLEL_LOADERS)
-          .flatMap(seed -> {
-            NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
-            long start = System.nanoTime();
-            return globalLoader
-              .load(identifier, seed.kvPort().orElse(kvPort))
+          .range(1, Math.min(MAX_PARALLEL_LOADERS, currentSeedNodes().size()))
+          .flatMap(index -> Flux
+              .fromIterable(currentSeedNodes())
+              .take(Math.min(index, currentSeedNodes().size()))
+              .last()
+              .flatMap(seed -> {
+                long start = System.nanoTime();
+
+                NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
+                return globalLoader
+                  .load(identifier, seed.kvPort().orElse(kvPort))
+                  .doOnError(throwable -> core.context().environment().eventBus().publish(new IndividualGlobalConfigLoadFailedEvent(
+                    Duration.ofNanos(System.nanoTime() - start),
+                    core.context(),
+                    throwable,
+                    seed.address()
+                  )));
+              })
+              .retryWhen(Retry.from(companion -> companion.map(rs -> {
+                if (rs.failure() instanceof ConfigException
+                  && rs.failure().getCause() instanceof RequestCanceledException
+                  && ((RequestCanceledException) rs.failure().getCause()).reason() == CancellationReason.TARGET_NODE_REMOVED) {
+                  return rs.totalRetries();
+                }
+                throw Exceptions.propagate(rs.failure());
+              })))
               .onErrorResume(throwable -> {
                 if (hasErrored.compareAndSet(false, true)) {
                   return Mono.error(throwable);
                 }
-                core.context().environment().eventBus().publish(new IndividualGlobalConfigLoadFailedEvent(
-                  Duration.ofNanos(System.nanoTime() - start),
-                  core.context(),
-                  throwable,
-                  seed.address()
-                ));
                 return Mono.empty();
-              });
-          })
+              }))
           .take(1)
           .switchIfEmpty(Mono.error(
             new ConfigException("Could not locate a single global configuration")
