@@ -64,6 +64,7 @@ import reactor.core.publisher.Mono;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -81,7 +82,6 @@ import static com.couchbase.client.java.ReactiveCluster.DEFAULT_PING_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_WAIT_UNTIL_READY_OPTIONS;
-import static reactor.core.publisher.Mono.fromFuture;
 
 /**
  * The {@link AsyncCluster} is the main entry point when connecting to a Couchbase cluster using the async API.
@@ -578,7 +578,7 @@ public class AsyncCluster {
       opts.retryStrategy().orElse(environment.get().retryStrategy()),
       opts.serviceTypes(),
       opts.reportId(),
-      true
+      Optional.empty()
     ).toFuture();
   }
 
@@ -610,7 +610,7 @@ public class AsyncCluster {
   public CompletableFuture<Void> waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
     notNull(options, "WaitUntilReadyOptions");
     final WaitUntilReadyOptions.Built opts = options.build();
-    return WaitUntilReadyHelper.waitUntilReady(core, opts.serviceTypes(), timeout, opts.desiredState(), true);
+    return WaitUntilReadyHelper.waitUntilReady(core, opts.serviceTypes(), timeout, opts.desiredState(), Optional.empty());
   }
 
 }

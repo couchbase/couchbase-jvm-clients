@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala
 
-import java.util.UUID
+import java.util.{Optional, UUID}
 import java.util.stream.Collectors
 
 import com.couchbase.client.core.Core
@@ -392,7 +392,7 @@ class AsyncCluster(
         options.retryStrategy.getOrElse(env.retryStrategy),
         if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
         options.reportId.asJava,
-        true
+        Optional.empty()
       )
       .toFuture
 
@@ -431,7 +431,7 @@ class AsyncCluster(
           if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
           timeout,
           options.desiredState,
-          true
+          Optional.empty()
         )
       )
       .map(_ => ())

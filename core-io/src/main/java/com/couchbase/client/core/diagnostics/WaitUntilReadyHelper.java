@@ -38,7 +38,7 @@ public class WaitUntilReadyHelper {
   @Stability.Internal
   public static CompletableFuture<Void> waitUntilReady(final Core core, final Set<ServiceType> serviceTypes,
                                                        final Duration timeout, final ClusterState desiredState,
-                                                       final boolean clusterLevel) {
+                                                       final Optional<String> bucketName) {
     boolean hasChance = core.clusterConfig().hasClusterOrBucketConfig()
       || core.configurationProvider().globalConfigLoadInProgress()
       || core.configurationProvider().bucketConfigLoadInProgress();
@@ -54,14 +54,14 @@ public class WaitUntilReadyHelper {
       .interval(Duration.ofMillis(10), core.context().environment().scheduler())
       .filter(i -> !(core.configurationProvider().bucketConfigLoadInProgress()
         || core.configurationProvider().globalConfigLoadInProgress()
-        || (!clusterLevel && core.configurationProvider().collectionMapRefreshInProgress()))
+        || (bucketName.isPresent() && core.configurationProvider().collectionMapRefreshInProgress()))
       )
       .take(1)
       .flatMap(aLong -> {
         final Set<ServiceType> servicesToCheck = serviceTypes != null && !serviceTypes.isEmpty()
           ? serviceTypes
           : HealthPinger
-          .extractPingTargets(core.clusterConfig(), clusterLevel)
+          .extractPingTargets(core.clusterConfig(), bucketName)
           .stream()
           .map(HealthPinger.PingTarget::serviceType)
           .collect(Collectors.toSet());
@@ -97,7 +97,7 @@ public class WaitUntilReadyHelper {
    */
   private static Flux<PingResult> ping(final Core core, final Set<ServiceType> serviceTypes, final Duration timeout) {
     return HealthPinger
-      .ping(core, Optional.of(timeout), core.context().environment().retryStrategy(), serviceTypes, Optional.empty(), true)
+      .ping(core, Optional.of(timeout), core.context().environment().retryStrategy(), serviceTypes, Optional.empty(), Optional.empty())
       .flux();
   }
 

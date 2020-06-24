@@ -15,6 +15,8 @@
  */
 package com.couchbase.client.scala
 
+import java.util.Optional
+
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics.{HealthPinger, PingResult, WaitUntilReadyHelper}
@@ -175,7 +177,7 @@ class AsyncBucket private[scala] (
         options.retryStrategy.getOrElse(environment.retryStrategy),
         if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
         options.reportId.asJava,
-        false
+        Optional.of(name)
       )
       .toFuture
 
@@ -214,7 +216,7 @@ class AsyncBucket private[scala] (
           if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
           timeout,
           options.desiredState,
-          false
+          Optional.of(name)
         )
       )
       .map(_ => ())
