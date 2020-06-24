@@ -235,7 +235,7 @@ public class AsyncBucket {
       opts.retryStrategy().orElse(environment.retryStrategy()),
       opts.serviceTypes(),
       opts.reportId(),
-      false
+      Optional.of(name)
     ).toFuture();
   }
 
@@ -267,7 +267,7 @@ public class AsyncBucket {
   public CompletableFuture<Void> waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
     notNull(options, "WaitUntilReadyOptions");
     final WaitUntilReadyOptions.Built opts = options.build();
-    return WaitUntilReadyHelper.waitUntilReady(core, opts.serviceTypes(), timeout, opts.desiredState(), false);
+    return WaitUntilReadyHelper.waitUntilReady(core, opts.serviceTypes(), timeout, opts.desiredState(), Optional.of(name));
   }
 
 }

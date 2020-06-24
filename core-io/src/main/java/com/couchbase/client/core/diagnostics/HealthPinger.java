@@ -66,9 +66,9 @@ public class HealthPinger {
    */
   @Stability.Internal
   public static Mono<PingResult> ping(final Core core, final Optional<Duration> timeout, final RetryStrategy retryStrategy,
-                                final Set<ServiceType> serviceTypes, final Optional<String> reportId, final boolean clusterLevel) {
+                                final Set<ServiceType> serviceTypes, final Optional<String> reportId, final Optional<String> bucketName) {
     return Mono.defer(() -> {
-      Set<PingTarget> targets = extractPingTargets(core.clusterConfig(), clusterLevel);
+      Set<PingTarget> targets = extractPingTargets(core.clusterConfig(), bucketName);
       if (serviceTypes != null && !serviceTypes.isEmpty()) {
         targets = targets.stream().filter(t -> serviceTypes.contains(t.serviceType)).collect(Collectors.toSet());
       }
@@ -82,10 +82,10 @@ public class HealthPinger {
   }
 
   @Stability.Internal
-  static Set<PingTarget> extractPingTargets(final ClusterConfig clusterConfig, final boolean clusterLevel) {
+  static Set<PingTarget> extractPingTargets(final ClusterConfig clusterConfig, final Optional<String> bucketName) {
     final Set<PingTarget> targets = new HashSet<>();
 
-    if (clusterLevel) {
+    if (!bucketName.isPresent()) {
       if (clusterConfig.globalConfig() != null) {
         for (PortInfo portInfo : clusterConfig.globalConfig().portInfos()) {
           for (ServiceType serviceType : portInfo.ports().keySet()) {
@@ -109,13 +109,14 @@ public class HealthPinger {
         }
       }
     } else {
-      for (Map.Entry<String, BucketConfig> bucketConfig : clusterConfig.bucketConfigs().entrySet()) {
-        for (NodeInfo nodeInfo : bucketConfig.getValue().nodes()) {
-          for (ServiceType serviceType: nodeInfo.services().keySet()) {
+      BucketConfig bucketConfig = clusterConfig.bucketConfig(bucketName.get());
+      if (bucketConfig !=  null) {
+        for (NodeInfo nodeInfo : bucketConfig.nodes()) {
+          for (ServiceType serviceType : nodeInfo.services().keySet()) {
             if (serviceType != ServiceType.VIEWS && serviceType != ServiceType.KV) {
               targets.add(new PingTarget(serviceType, nodeInfo.identifier(), null));
             } else {
-              targets.add(new PingTarget(serviceType, nodeInfo.identifier(), bucketConfig.getKey()));
+              targets.add(new PingTarget(serviceType, nodeInfo.identifier(), bucketName.get()));
             }
           }
         }
