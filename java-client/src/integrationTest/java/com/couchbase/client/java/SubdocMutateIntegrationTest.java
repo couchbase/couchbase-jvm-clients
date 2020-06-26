@@ -37,6 +37,7 @@ import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
@@ -742,7 +743,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+    @IgnoreWhen(missesCapabilities = Capabilities.CREATE_AS_DELETED)
     void createAsDeletedCanAccess() {
       String docId = docId();
 
@@ -767,7 +768,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+    @IgnoreWhen(missesCapabilities = Capabilities.CREATE_AS_DELETED)
     void createAsDeletedCanInsertOnTop() {
       String docId = docId();
 
@@ -791,7 +792,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+    @IgnoreWhen(missesCapabilities = Capabilities.CREATE_AS_DELETED)
     void createAsDeletedMustCombineWithStoreSemantics() {
       String docId = docId();
 
