@@ -50,6 +50,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
    */
   static TestCluster create() {
     Properties properties = loadProperties();
+    loadFromEnv(properties);
     String clusterType = properties.getProperty("cluster.type");
 
     if (clusterType.equals("containerized")) {
@@ -238,6 +239,21 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       }
     }
     return all;
+  }
+
+  /**
+   * Adds system properties as well.
+   *
+   * @param toOverride original properties coming from the config files.
+   */
+  static void loadFromEnv(final Properties toOverride) {
+    for (Map.Entry<String, String> envProperty : System.getenv().entrySet()) {
+      String key = envProperty.getKey().toLowerCase().replace("_", ".");
+
+      if (key.startsWith("cluster")) {
+        toOverride.setProperty(key, envProperty.getValue());
+      }
+    }
   }
 
 }
