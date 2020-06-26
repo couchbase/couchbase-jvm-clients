@@ -51,7 +51,7 @@ public class BucketConfigRefreshFailedEvent extends AbstractEvent {
     /**
      * An individual request for a poll/stream failed.
      */
-    INDIVIDUAL_REQUEST_FAILED(Severity.INFO),
+    INDIVIDUAL_REQUEST_FAILED(Severity.DEBUG),
     /**
      * A http config stream closed without error.
      */
