@@ -78,7 +78,9 @@ public class EndpointContext extends CoreContext {
     super.injectExportableParams(input);
     input.put("remote", redactSystem(remoteSocket()));
     localSocket.ifPresent(s -> input.put("local", redactSystem(s)));
-    input.put("circuitBreaker", circuitBreaker.state().toString());
+    if (circuitBreaker != null) {
+      input.put("circuitBreaker", circuitBreaker.state().toString());
+    }
     input.put("type", serviceType);
     bucket.ifPresent(b -> input.put("bucket", redactMeta(b)));
     channelId.ifPresent(i -> input.put("channelId", i));
