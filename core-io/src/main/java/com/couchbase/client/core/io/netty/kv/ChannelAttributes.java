@@ -17,8 +17,10 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.deps.io.netty.util.AttributeKey;
+import com.couchbase.client.core.env.SaslMechanism;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * This class holds all kinds of channel attributes that are in used across
@@ -53,5 +55,11 @@ public class ChannelAttributes {
    */
   public static final AttributeKey<String> CHANNEL_ID_KEY =
     AttributeKey.newInstance("ChannelId");
+
+  /**
+   * Holds the SASL mechanisms the server supports.
+   */
+  public static final AttributeKey<Set<SaslMechanism>> SASL_MECHS_KEY =
+    AttributeKey.newInstance("SaslMechs");
 
 }
