@@ -18,9 +18,7 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.SelectBucketCompletedEvent;
-import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;
 import com.couchbase.client.core.cnc.events.io.SelectBucketFailedEvent;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.BucketNotFoundException;
@@ -37,7 +35,6 @@ import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -129,25 +126,17 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
       endpointContext.bucket()
     );
 
-    if (selectBucketEnabled(ctx)) {
-      ctx.executor().schedule(() -> {
-        if (!interceptedConnectPromise.isDone()) {
-          ConnectTimings.stop(ctx.channel(), this.getClass(), true);
-          interceptedConnectPromise.tryFailure(
-            new TimeoutException("KV Select Bucket loading timed out after "
-              + timeout.toMillis() + "ms")
-          );
-        }
-      }, timeout.toNanos(), TimeUnit.NANOSECONDS);
-      ConnectTimings.start(ctx.channel(), this.getClass());
-      ctx.writeAndFlush(buildSelectBucketRequest(ctx));
-    } else {
-      endpointContext.environment().eventBus().publish(new SelectBucketDisabledEvent(ioContext, bucketName));
-      ConnectTimings.record(ctx.channel(), this.getClass());
-      interceptedConnectPromise.trySuccess();
-      ctx.pipeline().remove(this);
-      ctx.fireChannelActive();
-    }
+    ctx.executor().schedule(() -> {
+      if (!interceptedConnectPromise.isDone()) {
+        ConnectTimings.stop(ctx.channel(), this.getClass(), true);
+        interceptedConnectPromise.tryFailure(
+          new TimeoutException("KV Select Bucket loading timed out after "
+            + timeout.toMillis() + "ms")
+        );
+      }
+    }, timeout.toNanos(), TimeUnit.NANOSECONDS);
+    ConnectTimings.start(ctx.channel(), this.getClass());
+    ctx.writeAndFlush(buildSelectBucketRequest(ctx));
   }
 
   @Override
@@ -221,16 +210,6 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
     );
     key.release();
     return request;
-  }
-
-  /**
-   * Checks if select bucket is enabled on this channel.
-   *
-   * @return true if it is, false otherwise.
-   */
-  private boolean selectBucketEnabled(final ChannelHandlerContext ctx) {
-    List<ServerFeature> features = ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
-    return features != null && features.contains(ServerFeature.SELECT_BUCKET);
   }
 
 }

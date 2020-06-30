@@ -18,8 +18,6 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.Event;
-import com.couchbase.client.core.cnc.events.io.SelectBucketDisabledEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -45,9 +43,6 @@ import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -65,12 +60,11 @@ class SelectBucketHandlerTest {
 
   private EndpointContext endpointContext;
   private EmbeddedChannel channel;
-  private SimpleEventBus simpleEventBus;
 
   @BeforeEach
   void setup() {
     channel = new EmbeddedChannel();
-    simpleEventBus = new SimpleEventBus(true);
+    SimpleEventBus simpleEventBus = new SimpleEventBus(true);
     CoreEnvironment env = mock(CoreEnvironment.class);
     TimeoutConfig timeoutConfig = mock(TimeoutConfig.class);
     when(env.eventBus()).thenReturn(simpleEventBus);
@@ -135,37 +129,6 @@ class SelectBucketHandlerTest {
       "KV Select Bucket loading timed out after 10ms",
       connect.cause().getMessage()
     );
-  }
-
-  /**
-   * If the SELECT_BUCKET has not been negotiated, the handler should remove itself
-   * immediately.
-   */
-  @Test
-  void completeImmediatelyIfNotNegotiated() {
-    SelectBucketHandler handler = new SelectBucketHandler(endpointContext, "bucket");
-    channel.pipeline().addLast(handler);
-
-    final ChannelFuture connect = channel.connect(
-      new InetSocketAddress("1.2.3.4", 1234)
-    );
-    assertFalse(connect.isDone());
-    assertNotNull(channel.pipeline().get(SelectBucketHandler.class));
-
-    channel.pipeline().fireChannelActive();
-    assertTrue(connect.isSuccess());
-    assertNull(channel.pipeline().get(SelectBucketHandler.class));
-
-    assertEquals(1, simpleEventBus.publishedEvents().size());
-    SelectBucketDisabledEvent event =
-      (SelectBucketDisabledEvent) simpleEventBus.publishedEvents().get(0);
-
-    assertEquals(Event.Severity.DEBUG, event.severity());
-    assertEquals(
-      "Select Bucket disabled/not negotiated during HELLO for bucket \"bucket\"",
-      event.description()
-    );
-    assertEquals("bucket", event.bucket());
   }
 
   /**

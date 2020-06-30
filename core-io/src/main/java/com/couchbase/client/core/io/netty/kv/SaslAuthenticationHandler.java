@@ -117,6 +117,11 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
    */
   private ChannelPromise interceptedConnectPromise;
 
+  /**
+   * Stores the number of roundtrips the chosen algorithm still has to go through.
+   */
+  private int roundtripsToGo;
+
   public SaslAuthenticationHandler(final EndpointContext endpointContext, final String username,
                                    final String password, final Set<SaslMechanism> allowedSaslMechanisms) {
     this.endpointContext = endpointContext;
@@ -181,13 +186,17 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
     try {
       saslClient = createSaslClient(usedMechanisms);
 
+      SaslMechanism selectedMechanism = SaslMechanism.from(saslClient.getMechanismName());
+      roundtripsToGo = selectedMechanism.roundtrips();
+
       endpointContext.environment().eventBus().publish(new SaslMechanismsSelectedEvent(
         ioContext,
         usedMechanisms,
-        SaslMechanism.from(saslClient.getMechanismName())
+        selectedMechanism
       ));
 
       ctx.writeAndFlush(buildAuthRequest(ctx));
+      maybePropagateChannelActive(ctx);
     } catch (SaslException e) {
       failConnect(ctx,
         "SASL Client could not be constructed",
@@ -198,10 +207,23 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
     }
   }
 
+  /**
+   * Check if the number of roundtrips allow propagating the channel active, enabling pipelining from higher
+   * levels.
+   *
+   * @param ctx the channel handler context.
+   */
+  private void maybePropagateChannelActive(final ChannelHandlerContext ctx) {
+    if (roundtripsToGo == 1) {
+      ctx.fireChannelActive();
+    }
+  }
+
   @Override
   public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
     if (msg instanceof ByteBuf) {
       ByteBuf response = (ByteBuf) msg;
+      roundtripsToGo--;
       if (successful(response) || status(response) == STATUS_AUTH_CONTINUE) {
         byte opcode = opcode(response);
         try {
@@ -343,6 +365,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       byte[] evaluatedBytes = saslClient.evaluateChallenge(payload);
       if (evaluatedBytes != null && evaluatedBytes.length > 0) {
         ctx.writeAndFlush(buildStepRequest(ctx, evaluatedBytes));
+        maybePropagateChannelActive(ctx);
       } else {
         throw new SaslException("Evaluation returned empty payload, this is unexpected!");
       }
@@ -396,7 +419,6 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
     );
     interceptedConnectPromise.trySuccess();
     ctx.pipeline().remove(this);
-    ctx.fireChannelActive();
   }
 
   /**
