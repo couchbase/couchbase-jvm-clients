@@ -18,21 +18,21 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.cnc.events.io.SaslAuthenticationCompletedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslAuthenticationFailedEvent;
+import com.couchbase.client.core.cnc.events.io.SaslAuthenticationRestartedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslMechanismsSelectedEvent;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.endpoint.EndpointContext;
-import com.couchbase.client.core.env.SaslMechanism;
-import com.couchbase.client.core.error.AuthenticationFailureException;
-import com.couchbase.client.core.error.context.KeyValueIoErrorContext;
-import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.io.netty.kv.sasl.CouchbaseSaslClientFactory;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.env.SaslMechanism;
+import com.couchbase.client.core.error.AuthenticationFailureException;
+import com.couchbase.client.core.error.context.KeyValueIoErrorContext;
+import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.netty.kv.sasl.CouchbaseSaslClientFactory;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 import com.couchbase.client.core.util.Bytes;
@@ -46,22 +46,17 @@ import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.opcode;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
@@ -173,27 +168,34 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       }
     }, timeout.toNanos(), TimeUnit.NANOSECONDS);
     ConnectTimings.start(ctx.channel(), this.getClass());
-    ctx.writeAndFlush(buildListMechanismsRequest(ctx));
+    startAuthSequence(ctx, allowedMechanisms);
   }
 
   /**
-   * Helper method to build the initial SASL list mechanisms request.
+   * Starts the SASL auth sequence with the set of mechanisms that are valid for this specific run.
    *
-   * @param ctx the channel handler context to use.
-   * @return the encoded representation of the request.
+   * @param ctx the channel handler context
+   * @param usedMechanisms the mechanisms that can be used during this run
    */
-  private ByteBuf buildListMechanismsRequest(final ChannelHandlerContext ctx) {
-    return MemcacheProtocol.request(
-      ctx.alloc(),
-      MemcacheProtocol.Opcode.SASL_LIST_MECHS,
-      noDatatype(),
-      noPartition(),
-      BaseKeyValueRequest.nextOpaque(),
-      noCas(),
-      noExtras(),
-      noKey(),
-      noBody()
-    );
+  private void startAuthSequence(final ChannelHandlerContext ctx, final Set<SaslMechanism> usedMechanisms) {
+    try {
+      saslClient = createSaslClient(usedMechanisms);
+
+      endpointContext.environment().eventBus().publish(new SaslMechanismsSelectedEvent(
+        ioContext,
+        usedMechanisms,
+        SaslMechanism.from(saslClient.getMechanismName())
+      ));
+
+      ctx.writeAndFlush(buildAuthRequest(ctx));
+    } catch (SaslException e) {
+      failConnect(ctx,
+        "SASL Client could not be constructed",
+        null,
+        e,
+        (short) 0
+      );
+    }
   }
 
   @Override
@@ -203,9 +205,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       if (successful(response) || status(response) == STATUS_AUTH_CONTINUE) {
         byte opcode = opcode(response);
         try {
-          if (MemcacheProtocol.Opcode.SASL_LIST_MECHS.opcode() == opcode) {
-            handleListMechsResponse(ctx, (ByteBuf) msg);
-          } else if (MemcacheProtocol.Opcode.SASL_AUTH.opcode() == opcode) {
+          if (MemcacheProtocol.Opcode.SASL_AUTH.opcode() == opcode) {
             handleAuthResponse(ctx, (ByteBuf) msg);
           } else if (MemcacheProtocol.Opcode.SASL_STEP.opcode() == opcode) {
             completeAuth(ctx);
@@ -214,7 +214,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
           failConnect(ctx, "Unexpected error during SASL auth", response, ex, status(response));
         }
       } else if (STATUS_AUTH_ERROR == status(response)) {
-        failConnect(ctx, "Authentication Failure", response, null, status(response));
+        maybeFailConnect(ctx, "Authentication Failure", response, null, status(response));
       } else {
         failConnect(
           ctx,
@@ -238,52 +238,39 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
   }
 
   /**
-   * Handles a SASL list mechanisms responds and selects the proper algorithm.
-   *
-   * <p>Once selected the sasl client is constructed and then the first SASL AUTH message
-   * is created and sent over the wire.</p>
-   *
-   * @param ctx the channel context.
-   * @param response the response from the list mechs request.
+   * Check if we need to do an auth retry with different mechs instead of giving up immediately.
+   * <p>
+   * The method performs the logic roughly as follows: we know that the current authentication attempt failed, but
+   * because we are pipelining the original auth request with our allowed list it could be that they do not overlap
+   * (i.e. only PLAIN is allowed because the server has LDAP enabled but we do not negotiate it by default), so give
+   * it another chance to run with the updated and merged mechs list. If it still fails the next time it will terminate
+   * eventually.
+   * <p>
+   * Most of the time though it will fail immediately since the mechs are aligned and the user just entered the
+   * wrong credentials.
    */
-  private void handleListMechsResponse(final ChannelHandlerContext ctx, final ByteBuf response) {
-    String[] serverMechanisms = body(response)
-      .orElse(Unpooled.EMPTY_BUFFER)
-      .toString(UTF_8)
-      .split(" ");
+  private void maybeFailConnect(final ChannelHandlerContext ctx, final String message, final ByteBuf lastPacket,
+                                final Throwable cause, final short status) {
+    final SaslMechanism currentlyUsedMech = SaslMechanism.from(saslClient.getMechanismName());
+    final Set<SaslMechanism> negotiatedMechs = ctx.channel().attr(ChannelAttributes.SASL_MECHS_KEY).get();
 
-    Set<SaslMechanism> usedMechs = allowedMechanisms
-      .stream()
-      .filter(m -> Arrays.asList(serverMechanisms).contains(m.mech()))
-      .collect(Collectors.toSet());
+    if (negotiatedMechs.contains(currentlyUsedMech)) {
+      failConnect(ctx, message, lastPacket, cause, status);
+    } else {
+      Set<SaslMechanism> mergedMechs = allowedMechanisms
+        .stream()
+        .filter(negotiatedMechs::contains)
+        .collect(Collectors.toSet());
 
-    if (usedMechs.isEmpty()) {
-      failConnect(ctx, "Could not negotiate SASL mechanism with server. If you are using LDAP you must either" +
-        "connect via TLS (recommended), or enable PLAIN to the allowed SASL mechanism list on the PasswordAuthenticator" +
-          "(this is insecure and will present the user credentials in plain-text over the wire).",
-        response, null, MemcacheProtocol.status(response));
-      return;
-    }
-
-    try {
-      saslClient = createSaslClient(usedMechs);
-
-      endpointContext.environment().eventBus().publish(new SaslMechanismsSelectedEvent(
-        ioContext,
-        Stream.of(serverMechanisms).map(SaslMechanism::from).collect(Collectors.toSet()),
-        allowedMechanisms,
-        SaslMechanism.from(saslClient.getMechanismName())
-      ));
-
-      ctx.writeAndFlush(buildAuthRequest(ctx));
-    } catch (SaslException e) {
-      failConnect(ctx,
-        "SASL Client could not be constructed. Server Mechanisms: "
-          + Arrays.toString(serverMechanisms),
-        response,
-        e,
-        MemcacheProtocol.status(response)
-      );
+      if (mergedMechs.isEmpty()) {
+        failConnect(ctx, "Could not negotiate SASL mechanism with server. If you are using LDAP you must either" +
+           "connect via TLS (recommended), or enable PLAIN to the allowed SASL mechanism list on the PasswordAuthenticator" +
+           "(this is insecure and will present the user credentials in plain-text over the wire).",
+           lastPacket, cause, status);
+      } else {
+        ioContext.environment().eventBus().publish(new SaslAuthenticationRestartedEvent(ioContext));
+        startAuthSequence(ctx, mergedMechs);
+      }
     }
   }
 

@@ -20,6 +20,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderName
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
+import com.couchbase.client.core.io.netty.kv.SaslListMechanismsHandler;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.util.Base64;
@@ -90,6 +91,7 @@ public class PasswordAuthenticator implements Authenticator {
   @Override
   public void authKeyValueConnection(final EndpointContext ctx, final ChannelPipeline pipeline) {
     boolean tls = ctx.environment().securityConfig().tlsEnabled();
+    pipeline.addLast(new SaslListMechanismsHandler(ctx));
     pipeline.addLast(new SaslAuthenticationHandler(
       ctx,
       username.get(),
