@@ -16,20 +16,36 @@
 
 package com.couchbase.client.core.env;
 
+/**
+ * Describes the support SASL authentication mechanisms.
+ */
 public enum SaslMechanism {
-  PLAIN("PLAIN"),
-  SCRAM_SHA1("SCRAM-SHA1"),
-  SCRAM_SHA256("SCRAM-SHA256"),
-  SCRAM_SHA512("SCRAM-SHA512");
+
+  PLAIN("PLAIN", 1),
+  SCRAM_SHA1("SCRAM-SHA1", 2),
+  SCRAM_SHA256("SCRAM-SHA256", 2),
+  SCRAM_SHA512("SCRAM-SHA512", 2);
 
   private final String mech;
+  private final int roundtrips;
 
-  SaslMechanism(String mech) {
+  SaslMechanism(String mech, int roundtrips) {
     this.mech = mech;
+    this.roundtrips = roundtrips;
   }
 
+  /**
+   * Returns the "raw" string representation of the mechanism on the wire.
+   */
   public String mech() {
     return mech;
+  }
+
+  /**
+   * Returns the number of roundtrips this algorithm has with the server.
+   */
+  public int roundtrips() {
+    return roundtrips;
   }
 
   /**
