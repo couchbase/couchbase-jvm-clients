@@ -92,7 +92,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     GetResult getResult = collection.get(id);
     assertEquals("Hello, World", getResult.contentAs(String.class));
     assertTrue(getResult.cas() != 0);
-    assertFalse(getResult.expiry().isPresent());
+    assertFalse(getResult.expiryTime().isPresent());
   }
 
   /**
@@ -134,7 +134,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     GetResult getResult = collection.get(id, getOptions().project("foo", "created", "notfound"));
     assertTrue(getResult.cas() != 0);
-    assertFalse(getResult.expiry().isPresent());
+    assertFalse(getResult.expiryTime().isPresent());
 
     JsonObject decoded = getResult.contentAsObject();
     assertEquals("bar", decoded.getString("foo"));
@@ -167,8 +167,8 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(mutationResult.cas() != 0);
 
     GetResult getResult = collection.get(id, getOptions().withExpiry(true));
-    assertTrue(getResult.expiry().isPresent());
-    assertTrue(getResult.expiry().get().toMillis() > 0);
+    assertTrue(getResult.expiryTime().isPresent());
+    assertTrue(getResult.expiryTime().get().toEpochMilli() > 0);
     assertEquals(content, getResult.contentAsObject());
   }
 
@@ -201,8 +201,8 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       getOptions().project("foo", "created").withExpiry(true)
     );
     assertTrue(getResult.cas() != 0);
-    assertTrue(getResult.expiry().isPresent());
-    assertTrue(getResult.expiry().get().toMillis() > 0);
+    assertTrue(getResult.expiryTime().isPresent());
+    assertTrue(getResult.expiryTime().get().toEpochMilli() > 0);
 
     JsonObject decoded = getResult.contentAsObject();
     assertEquals("bar", decoded.getString("foo"));
@@ -427,9 +427,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     GetResult result = collection.get(id, GetOptions.getOptions().withExpiry(true));
 
-    Instant actualExpiry = Instant.ofEpochSecond(result
-        .expiry().orElseThrow(() -> new AssertionError("expected expiry"))
-        .getSeconds()); // See JCBC-1661
+    Instant actualExpiry = result.expiryTime().orElseThrow(() -> new AssertionError("expected expiry"));
     Instant expectedExpiry = Instant.ofEpochMilli(System.currentTimeMillis()).plus(expiryDuration);
 
     long secondsDifference = actualExpiry.getEpochSecond() - expectedExpiry.getEpochSecond();
