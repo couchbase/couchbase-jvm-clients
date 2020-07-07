@@ -768,7 +768,7 @@ public class AsyncCollection {
     }
     long end = System.nanoTime();
 
-    int expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
+    long expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
     InsertRequest request = new InsertRequest(id, encoded.encoded(), expiry, encoded.flags(),
       timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context()
@@ -832,7 +832,7 @@ public class AsyncCollection {
     }
     long end = System.nanoTime();
 
-    int expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
+    long expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
     final UpsertRequest request = new UpsertRequest(id, encoded.encoded(), expiry, encoded.flags(),
       timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context()
@@ -896,7 +896,7 @@ public class AsyncCollection {
     }
     long end = System.nanoTime();
 
-    int expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
+    long expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
     ReplaceRequest request = new ReplaceRequest(id, encoded.encoded(), expiry, encoded.flags(),
       timeout, opts.cas(), coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context()
@@ -1155,7 +1155,7 @@ public class AsyncCollection {
         // xattrs come first
         commands.sort(Comparator.comparing(v -> !v.xattr()));
 
-      int expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
+      long expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, bucketConfig, retryStrategy, id,
           opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT,
           opts.accessDeleted(), opts.createAsDeleted(), commands, expiry, opts.cas(),
