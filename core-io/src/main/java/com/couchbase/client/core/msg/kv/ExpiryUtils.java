@@ -38,10 +38,10 @@ public class ExpiryUtils {
    * in the duration, otherwise returns the current time in Unix epoch seconds
    * plus the number of seconds in the duration.
    */
-  public static int getAdjustedExpirySeconds(Duration duration, EventBus eventBus) {
+  public static long getAdjustedExpirySeconds(Duration duration, EventBus eventBus) {
     long seconds = duration.getSeconds();
     if (seconds < RELATIVE_EXPIRY_CUTOFF_SECONDS) {
-      return (int) seconds;
+      return seconds;
     }
 
     // Some users may have worked around JCBC-1645 by stuffing the absolute timestamp
@@ -49,13 +49,9 @@ public class ExpiryUtils {
     // unmodified.
     if (seconds > WORKAROUND_EXPIRY_CUTOFF_SECONDS) {
       eventBus.publish(new SuspiciousExpiryDurationEvent(duration));
-      return (int) Math.min(Integer.MAX_VALUE, seconds);
+      return seconds;
     }
 
-    long absolute = (System.currentTimeMillis() / 1000) + seconds;
-
-    // Prevent overflow due to Year 2038 problem.
-    // Not ideal, but at least the documents won't expire immediately.
-    return (int) Math.min(Integer.MAX_VALUE, absolute);
+    return (System.currentTimeMillis() / 1000) + seconds;
   }
 }
