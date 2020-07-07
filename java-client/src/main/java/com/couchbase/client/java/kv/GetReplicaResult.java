@@ -19,7 +19,7 @@ package com.couchbase.client.java.kv;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.codec.Transcoder;
 
-import java.time.Duration;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -44,7 +44,7 @@ public class GetReplicaResult extends GetResult {
    * @param expiry the expiration if fetched from the doc.
    * @param isReplica whether the active or replica returned this result
    */
-  private GetReplicaResult(final byte[] content, final int flags, final long cas, final Optional<Duration> expiry,
+  private GetReplicaResult(final byte[] content, final int flags, final long cas, final Optional<Instant> expiry,
                    final Transcoder transcoder, boolean isReplica) {
     super(content, flags, cas, expiry, transcoder);
     this.isReplica = isReplica;
@@ -56,7 +56,7 @@ public class GetReplicaResult extends GetResult {
       response.content,
       response.flags,
       response.cas(),
-      response.expiry(),
+      response.expiryTime(),
       response.transcoder,
       isReplica
     );
@@ -75,7 +75,7 @@ public class GetReplicaResult extends GetResult {
       "content=" + redactUser(convertContentToString()) +
       ", flags=0x" + Integer.toHexString(flags) +
       ", cas=0x" + Long.toHexString(cas()) +
-      ", expiry=" + expiry() +
+      ", expiry=" + expiryTime() +
       ", isReplica=" + isReplica +
       '}';
   }

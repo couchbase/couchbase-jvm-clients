@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
@@ -28,6 +29,7 @@ import com.couchbase.client.java.json.JsonObject;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
@@ -59,7 +61,7 @@ public class GetResult {
   /**
    * The expiry if fetched and present.
    */
-  private final Optional<Duration> expiry;
+  private final Optional<Instant> expiry;
 
   /**
    * The default transcoder which should be used.
@@ -72,7 +74,7 @@ public class GetResult {
    * @param cas the cas from the doc.
    * @param expiry the expiry if fetched from the doc.
    */
-  GetResult(final byte[] content, final int flags, final long cas, final Optional<Duration> expiry, Transcoder transcoder) {
+  GetResult(final byte[] content, final int flags, final long cas, final Optional<Instant> expiry, Transcoder transcoder) {
     this.cas = cas;
     this.content = content;
     this.flags = flags;
@@ -95,12 +97,34 @@ public class GetResult {
   }
 
   /**
-   * If present, returns the expiry of the loaded document.
-   *
-   * <p>Note that the duration represents the time when the document has been loaded and can only
-   * ever be an approximation.</p>
+   * If the document has an expiry, returns length of time between
+   * the start of the epoch and the point in time when the loaded
+   * document expires.
+   * <p>
+   * In other words, the number of seconds in the returned duration
+   * is equal to the epoch second when the document expires.
+   * <p>
+   * NOTE: This method always returns an empty Optional unless
+   * the Get request was made using {@link GetOptions#withExpiry(boolean)}
+   * set to true.
+   * <p>
+   * NOTE: In the future, this method is likely to be deprecated
+   * in favor of {@link #expiryTime()}.
    */
   public Optional<Duration> expiry() {
+    return expiry.map(instant -> Duration.ofSeconds(instant.getEpochSecond()));
+  }
+
+  /**
+   * If the document has an expiry, returns the point in time when the loaded
+   * document expires.
+   * <p>
+   * NOTE: This method always returns an empty Optional unless
+   * the Get request was made using {@link GetOptions#withExpiry(boolean)}
+   * set to true.
+   */
+  @Stability.Uncommitted
+  public Optional<Instant> expiryTime() {
     return expiry;
   }
 

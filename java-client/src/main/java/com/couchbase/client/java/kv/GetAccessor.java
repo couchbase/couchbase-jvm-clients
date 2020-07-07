@@ -32,7 +32,7 @@ import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.projections.ProjectionsApplier;
 
-import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -146,9 +146,9 @@ public enum GetAccessor {
       }
     }
 
-    Optional<Duration> expiration = exptime == null
+    Optional<Instant> expiration = exptime == null
       ? Optional.empty()
-      : Optional.of(Duration.ofSeconds(Long.parseLong(new String(exptime, UTF_8))));
+      : Optional.of(Instant.ofEpochSecond(Long.parseLong(new String(exptime, UTF_8))));
 
     return new GetResult(content, CodecFlags.JSON_COMPAT_FLAGS, cas, expiration, transcoder);
   }
