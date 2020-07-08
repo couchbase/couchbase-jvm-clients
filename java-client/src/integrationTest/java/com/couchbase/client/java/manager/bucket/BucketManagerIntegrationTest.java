@@ -148,6 +148,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   void failIfBucketFlushDisabled() {
     String bucketName =  UUID.randomUUID().toString();
     buckets.createBucket(BucketSettings.create(bucketName).flushEnabled(false));
+    waitUntilCondition(() -> buckets.getAllBuckets().containsKey(bucketName));
     assertThrows(BucketNotFlushableException.class, () -> buckets.flushBucket(bucketName));
   }
 
