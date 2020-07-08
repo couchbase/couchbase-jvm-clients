@@ -16,21 +16,14 @@
 
 package com.couchbase.client.scala.search
 
-import java.time.Duration
 import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.MutationState
 import com.couchbase.client.scala.manager.search.SearchIndex
 import com.couchbase.client.scala.search.facet.SearchFacet
-import com.couchbase.client.scala.search.facet.SearchFacet.{DateRange, NumericRange}
 import com.couchbase.client.scala.search.queries.SearchQuery
-import com.couchbase.client.scala.search.result.SearchFacetResult.{
-  DateRangeSearchFacetResult,
-  NumericRangeSearchFacetResult,
-  TermRange,
-  TermSearchFacetResult
-}
+import com.couchbase.client.scala.search.result.SearchFacetResult.{TermRange, TermSearchFacetResult}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection}
 import com.couchbase.client.test.{Capabilities, IgnoreWhen, Util}
@@ -41,6 +34,7 @@ import scala.util.{Failure, Success}
 
 @IgnoreWhen(missesCapabilities = Array(Capabilities.SEARCH))
 @TestInstance(Lifecycle.PER_CLASS)
+@Disabled // Michael N - disabled due to flakyness in the CI env
 class SearchSpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster  = _
