@@ -24,15 +24,27 @@ import static java.util.Objects.requireNonNull;
 
 public abstract class AbstractPooledEndpointServiceConfig implements ServiceConfig {
 
+  /**
+   * By default, the maximum number of pooled endpoints is 12 per node.
+   */
   public static final int DEFAULT_MAX_ENDPOINTS = 12;
+
+  /**
+   * By default, pooled endpoints start with 0 so they do not occupy any resources if not needed.
+   */
   public static final int DEFAULT_MIN_ENDPOINTS = 0;
-  public static final Duration DEFAULT_IDLE_TIME = Duration.ofSeconds(30);
+
+  /**
+   * By default, idle pooled endpoints are cleaned up every 4.5 seconds so that
+   * they do not clash with idle socket close attempts by the server.
+   */
+  public static final Duration DEFAULT_IDLE_TIME = Duration.ofMillis(4500);
 
   private final int minEndpoints;
   private final int maxEndpoints;
   private final Duration idleTime;
 
-  AbstractPooledEndpointServiceConfig(Builder builder) {
+  AbstractPooledEndpointServiceConfig(Builder<?> builder) {
     this.minEndpoints = builder.minEndpoints;
     this.maxEndpoints = builder.maxEndpoints;
     this.idleTime = requireNonNull(builder.idleTime);
@@ -59,7 +71,8 @@ public abstract class AbstractPooledEndpointServiceConfig implements ServiceConf
   }
 
   // public so methods can be invoked via reflection without requiring Method.setAccessible(true)
-  public abstract static class Builder<SELF extends Builder> {
+  public abstract static class Builder<SELF extends Builder<?>> {
+
     private int minEndpoints;
     private int maxEndpoints;
     private Duration idleTime;
