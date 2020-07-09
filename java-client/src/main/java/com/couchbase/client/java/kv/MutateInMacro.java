@@ -24,7 +24,7 @@ public enum MutateInMacro {
 
   SEQ_NO("${Mutation.seqno}"),
 
-  VALUE_CRC_32C("${Mutation.value_crc32c");
+  VALUE_CRC_32C("${Mutation.value_crc32c}");
 
   private final String value;
 
@@ -32,7 +32,8 @@ public enum MutateInMacro {
     this.value = value;
   }
 
-  String value() {
+  @Stability.Internal
+  public String value() {
     return value;
   }
 }
