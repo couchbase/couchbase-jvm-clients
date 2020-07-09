@@ -500,6 +500,22 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
     @Test
     @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+    void insertExpandMacroCRC32Xattr() {
+        JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
+                Arrays.asList(MutateInSpec.insert("x.foo", MutateInMacro.VALUE_CRC_32C).xattr()));
+        assertNotEquals(MutateInMacro.VALUE_CRC_32C.value(), updatedContent.getString("foo"));
+    }
+
+    @Test
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+    void insertExpandMacroSEQ_NOXattr() {
+        JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
+                Arrays.asList(MutateInSpec.insert("x.foo", MutateInMacro.SEQ_NO).xattr()));
+        assertNotEquals(MutateInMacro.SEQ_NO.value(), updatedContent.getString("foo"));
+    }
+
+    @Test
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
     void upsertExpandMacroXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
                 Arrays.asList(MutateInSpec.insert("x.foo", MutateInMacro.CAS).xattr()));
