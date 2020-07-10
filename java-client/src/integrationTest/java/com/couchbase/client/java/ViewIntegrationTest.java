@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.manager.view.DesignDocument;
 import com.couchbase.client.java.manager.view.View;
@@ -44,8 +45,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
 class ViewIntegrationTest extends JavaIntegrationTest {
 
-  private static String DDOC_NAME = "everything";
-  private static String VIEW_NAME = "all";
+  private static final String DDOC_NAME = "everything";
+  private static final String VIEW_NAME = "all";
 
   private static Cluster cluster;
   private static Bucket bucket;
@@ -112,6 +113,27 @@ class ViewIntegrationTest extends JavaIntegrationTest {
       }
     }
     assertTrue(found >= docsToWrite);
+  }
+
+  /**
+   * Regression test for JCBC-1664
+   */
+  @Test
+  void canQueryWithKeysPresent() {
+    int docsToWrite = 2;
+    for (int i = 0; i < docsToWrite; i++) {
+      collection.upsert("keydoc-"+i, JsonObject.create());
+    }
+
+    ViewResult viewResult = bucket.viewQuery(
+      DDOC_NAME,
+      VIEW_NAME,
+      viewOptions()
+        .scanConsistency(ViewScanConsistency.REQUEST_PLUS)
+        .keys(JsonArray.from("keydoc-0", "keydoc-1"))
+    );
+
+    assertEquals(2, viewResult.rows().size());
   }
 
 }

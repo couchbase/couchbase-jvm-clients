@@ -151,7 +151,7 @@ class ViewOptionsTest {
     JsonArray keysArray = JsonArray.from("foo", 3, true);
     ViewOptions options = viewOptions().keys(keysArray);
     assertEquals("", options.export());
-    assertEquals(keysArray.toString(), options.build().keys());
+    assertEquals(JsonObject.create().put("keys", keysArray).toString(), options.build().keys());
   }
 
   @Test
@@ -159,7 +159,7 @@ class ViewOptionsTest {
     JsonArray keysArray = JsonArray.from("foo", 3, true);
     ViewOptions options = viewOptions().keys(keysArray);
     assertEquals("", options.export());
-    assertEquals("ViewQuery{params=\"\", keys=\"[\"foo\",3,true]\"}", options.toString());
+    assertEquals("ViewQuery{params=\"\", keys=\"{\"keys\":[\"foo\",3,true]}\"}", options.toString());
   }
 
   @Test
@@ -172,9 +172,9 @@ class ViewOptionsTest {
     JsonArray keysArray = JsonArray.from(largeString.toString());
     ViewOptions options = viewOptions().keys(keysArray);
     assertEquals("", options.export());
-    assertEquals("ViewQuery{params=\"\", keys=\"[\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-      "aaaaaaaaaaaaaaaaaaaaaaaaaaa...\"(146 chars total)}", options.toString());
+    assertEquals("ViewQuery{params=\"\", keys=\"{\"keys\":[\"aaaaaaaaaaaaaaaaaaaaaaaaa" +
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
+      "aaaaaaaaaaaaaaaa...\"(155 chars total)}", options.toString());
   }
 
   @Test
@@ -275,12 +275,11 @@ class ViewOptionsTest {
   @Test
   void shouldStoreKeysAsJsonOutsideParams() {
     JsonArray keys = JsonArray.create().add("1").add("2").add("3");
-    String keysJson = keys.toString();
     ViewOptions options = viewOptions();
     assertNull(options.build().keys());
 
     options.keys(keys);
-    assertEquals(keysJson, options.build().keys());
+    assertEquals(JsonObject.create().put("keys", keys).toString(), options.build().keys());
     assertFalse(options.export().contains("keys="));
     assertFalse(options.export().contains("3"));
   }
