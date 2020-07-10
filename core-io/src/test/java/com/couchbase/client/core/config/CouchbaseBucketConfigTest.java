@@ -128,6 +128,15 @@ class CouchbaseBucketConfigTest {
         assertEquals(1024, config.numberOfPartitions());
     }
 
+    @Test
+    void shouldLoadConfigWithIPv6FromHost() {
+        CouchbaseBucketConfig config = readConfig("single_node_wildcard.json", "[fd63:6f75:6368:20d4:423d:37c3:e6f7:3fac]");
+        assertEquals("fd63:6f75:6368:20d4:423d:37c3:e6f7:3fac", config.nodeAtIndex(0).hostname());
+
+        config = readConfig("single_node_wildcard.json", "fd63:6f75:6368:20d4:423d:37c3:e6f7:3fac");
+        assertEquals("fd63:6f75:6368:20d4:423d:37c3:e6f7:3fac", config.nodeAtIndex(0).hostname());
+    }
+
     /**
      * This is a regression test. It has been added to make sure a config with a bucket
      * capability that is not known to the client still makes it parse properly.
@@ -195,14 +204,18 @@ class CouchbaseBucketConfigTest {
         }
     }
 
+    private static CouchbaseBucketConfig readConfig(final String path) {
+        return readConfig(path, null);
+    }
+
     /**
      * Helper method to load the config.
      */
-    private static CouchbaseBucketConfig readConfig(final String path) {
-        return (CouchbaseBucketConfig) BucketConfigParser.parse(
-          readResource(path, CouchbaseBucketConfigTest.class),
-          null,
-          null
-        );
+    private static CouchbaseBucketConfig readConfig(final String path, final String origin) {
+        String raw = readResource(path, CouchbaseBucketConfigTest.class);
+        if (origin != null) {
+            raw = raw.replace("$HOST", origin);
+        }
+        return (CouchbaseBucketConfig) BucketConfigParser.parse(raw, null, origin);
     }
 }
