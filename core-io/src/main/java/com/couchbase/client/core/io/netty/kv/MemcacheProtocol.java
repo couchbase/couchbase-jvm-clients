@@ -515,22 +515,24 @@ public enum MemcacheProtocol {
    * @return the extracted duration, 0 if not found.
    */
   public static long parseServerDurationFromResponse(final ByteBuf response) {
-    Optional<ByteBuf> frames = flexibleExtras(response);
-    if (frames.isPresent()) {
-      ByteBuf frame = frames.get();
-      while (frame.readableBytes() > 0) {
-        byte control = frame.readByte();
+    int flexibleExtrasLength = response.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic()
+      ? response.getByte(2)
+      : 0;
+
+    if (flexibleExtrasLength > 0) {
+      for (int offset = 0; offset < flexibleExtrasLength; offset++) {
+        byte control = response.getByte(MemcacheProtocol.HEADER_SIZE + offset);
         byte id = (byte) (control & 0xF0);
         byte len = (byte) (control & 0x0F);
         if (id == FRAMING_EXTRAS_TRACING) {
-          return Math.round(Math.pow(frame.readUnsignedShort(), 1.74) / 2);
-        } else {
-          frame.skipBytes(len);
+          return Math.round(
+            Math.pow(response.getUnsignedShort(MemcacheProtocol.HEADER_SIZE + offset + 1), 1.74) / 2
+          );
         }
+        offset += len;
       }
-    } else {
-      return 0;
     }
+
     return 0;
   }
 
