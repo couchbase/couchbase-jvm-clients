@@ -131,6 +131,9 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
                     if (host.startsWith("[") && host.endsWith("]")) {
                         host = host.substring(1, host.length() - 1);
                     }
+                    if (host.endsWith(":")) {
+                        host = host.substring(0, host.length() - 1);
+                    }
                 } else {
                     // Simple IPv4 Handling
                     host = parts[0];

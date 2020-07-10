@@ -149,6 +149,9 @@ public class NodeInfo {
             if (assembledHost.startsWith("[") && assembledHost.endsWith("]")) {
                 return assembledHost.substring(1, assembledHost.length() - 1);
             }
+            if (assembledHost.endsWith(":")) {
+                assembledHost = assembledHost.substring(0, assembledHost.length() - 1);
+            }
             return assembledHost;
         } else {
             // Simple IPv4 Handling
