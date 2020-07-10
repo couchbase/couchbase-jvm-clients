@@ -31,13 +31,21 @@ import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
+import static com.couchbase.client.java.manager.bucket.BucketType.MEMCACHED;
+import static com.couchbase.client.java.manager.bucket.EvictionPolicyType.FULL;
+import static com.couchbase.client.java.manager.bucket.EvictionPolicyType.NO_EVICTION;
+import static com.couchbase.client.java.manager.bucket.EvictionPolicyType.NOT_RECENTLY_USED;
+import static com.couchbase.client.java.manager.bucket.EvictionPolicyType.VALUE_ONLY;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -53,6 +61,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   private static Cluster cluster;
   private static ClusterEnvironment environment;
   private static BucketManager buckets;
+  private final Set<String> bucketsToDrop = new HashSet<>();
 
   @BeforeAll
   static void setup() {
@@ -61,6 +70,21 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     Bucket bucket = cluster.bucket(config().bucketname());
     buckets = cluster.buckets();
     bucket.waitUntilReady(Duration.ofSeconds(5));
+  }
+
+  @AfterEach
+  void dropBuckets() {
+    try {
+      for (String bucketName : bucketsToDrop) {
+        try {
+          buckets.dropBucket(bucketName);
+        } catch (BucketNotFoundException e) {
+          // that's fine, the test probably dropped the bucket already
+        }
+      }
+    } finally {
+      bucketsToDrop.clear();
+    }
   }
 
   @AfterAll
@@ -74,8 +98,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
       try {
         BucketSettings bkt = buckets.getBucket(bucket);
         return bkt.healthy();
-      }
-      catch (BucketNotFoundException err) {
+      } catch (BucketNotFoundException err) {
         return false;
       }
     });
@@ -86,8 +109,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
       try {
         buckets.getBucket(bucket);
         return false;
-      }
-      catch (BucketNotFoundException err) {
+      } catch (BucketNotFoundException err) {
         return true;
       }
     });
@@ -119,10 +141,56 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  void createEphemeralBucketWithDefaultEvictionPolicy() {
+    String name = UUID.randomUUID().toString();
+    createBucket(BucketSettings.create(name).bucketType(BucketType.EPHEMERAL));
+    BucketSettings settings = buckets.getBucket(name);
+    assertEquals(NO_EVICTION, settings.evictionPolicy());
+  }
+
+  @Test
+  void createEphemeralBucketWithNruEvictionPolicy() {
+    String name = UUID.randomUUID().toString();
+    createBucket(BucketSettings.create(name)
+        .bucketType(BucketType.EPHEMERAL)
+        .evictionPolicy(NOT_RECENTLY_USED));
+
+    BucketSettings settings = buckets.getBucket(name);
+    assertEquals(NOT_RECENTLY_USED, settings.evictionPolicy());
+  }
+
+  @Test
+  void createCouchbaseBucketWithDefaultEvictionPolicy() {
+    String name = UUID.randomUUID().toString();
+    createBucket(BucketSettings.create(name)
+        .bucketType(BucketType.COUCHBASE));
+    BucketSettings settings = buckets.getBucket(name);
+    assertEquals(VALUE_ONLY, settings.evictionPolicy());
+  }
+
+  @Test
+  void createCouchbaseBucketWithFullEvictionPolicy() {
+    String name = UUID.randomUUID().toString();
+    createBucket(BucketSettings.create(name)
+        .bucketType(BucketType.COUCHBASE)
+        .evictionPolicy(FULL));
+    BucketSettings settings = buckets.getBucket(name);
+    assertEquals(FULL, settings.evictionPolicy());
+  }
+
+  @Test
+  void createMemcachedBucket() {
+    String name = UUID.randomUUID().toString();
+    createBucket(BucketSettings.create(name).bucketType(MEMCACHED));
+    BucketSettings settings = buckets.getBucket(name);
+    assertEquals(MEMCACHED, settings.bucketType());
+  }
+
+  @Test
   void createAndDropBucket() {
     String name = UUID.randomUUID().toString();
 
-    buckets.createBucket(BucketSettings.create(name));
+    createBucket(BucketSettings.create(name));
     waitUntilHealthy(name);
     assertTrue(buckets.getAllBuckets().containsKey(name));
 
@@ -136,7 +204,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     Bucket bucket = cluster.bucket(config().bucketname());
     Collection collection = bucket.defaultCollection();
 
-    String id =  UUID.randomUUID().toString();
+    String id = UUID.randomUUID().toString();
     collection.upsert(id, "value");
     assertTrue(collection.exists(id).exists());
 
@@ -146,21 +214,15 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void failIfBucketFlushDisabled() {
-    String bucketName =  UUID.randomUUID().toString();
-    buckets.createBucket(BucketSettings.create(bucketName).flushEnabled(false));
-    waitUntilCondition(() -> buckets.getAllBuckets().containsKey(bucketName));
+    String bucketName = UUID.randomUUID().toString();
+    createBucket(BucketSettings.create(bucketName).flushEnabled(false));
     assertThrows(BucketNotFlushableException.class, () -> buckets.flushBucket(bucketName));
   }
 
   @Test
   void createShouldFailWhenPresent() {
-    assertThrows(
-      BucketExistsException.class,
-      () -> {
-        buckets.createBucket(BucketSettings.create(config().bucketname()));
-        waitUntilHealthy(config().bucketname());
-      }
-    );
+    assertThrows(BucketExistsException.class, () ->
+        buckets.createBucket(BucketSettings.create(config().bucketname())));
   }
 
   @Test
@@ -188,15 +250,11 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   void createWithMoreThanOneReplica() {
     String name = UUID.randomUUID().toString();
 
-    buckets.createBucket(BucketSettings.create(name).numReplicas(3));
+    createBucket(BucketSettings.create(name).numReplicas(3));
     waitUntilHealthy(name);
 
     BucketSettings bucket = buckets.getBucket(name);
     assertEquals(3, bucket.numReplicas());
-
-    buckets.dropBucket(name);
-    waitUntilDropped(name);
-    assertFalse(buckets.getAllBuckets().containsKey(name));
   }
 
   /**
@@ -207,4 +265,9 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     assertTrue(settings.ramQuotaMB() > 0);
   }
 
+  private void createBucket(BucketSettings settings) {
+    buckets.createBucket(settings);
+    bucketsToDrop.add(settings.name());
+    waitUntilHealthy(settings.name());
+  }
 }

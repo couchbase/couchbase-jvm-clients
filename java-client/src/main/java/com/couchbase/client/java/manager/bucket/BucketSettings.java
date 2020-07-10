@@ -42,7 +42,7 @@ public class BucketSettings {
   private CompressionMode compressionMode = CompressionMode.PASSIVE;
   private BucketType bucketType = BucketType.COUCHBASE;
   private ConflictResolutionType conflictResolutionType = ConflictResolutionType.SEQUENCE_NUMBER;
-  private EjectionPolicy evictionPolicy = EjectionPolicy.VALUE_ONLY;
+  private EvictionPolicyType evictionPolicy = null; // null means default for the bucket type
   private boolean healthy = true;
 
   public static BucketSettings create(final String name) {
@@ -81,7 +81,7 @@ public class BucketSettings {
     @JsonProperty("compressionMode") final CompressionMode compressionMode,
     @JsonProperty("bucketType") final BucketType bucketType,
     @JsonProperty("conflictResolutionType") final ConflictResolutionType conflictResolutionType,
-    @JsonProperty("evictionPolicy") final EjectionPolicy evictionPolicy
+    @JsonProperty("evictionPolicy") final EvictionPolicyType evictionPolicy
   ) {
     this.name = name;
     this.flushEnabled = controllers.containsKey("flush");
@@ -161,7 +161,15 @@ public class BucketSettings {
     return conflictResolutionType;
   }
 
+  /**
+   * @deprecated Please use {@link #evictionPolicy} instead.
+   */
+  @Deprecated
   public EjectionPolicy ejectionPolicy() {
+    return EjectionPolicy.of(evictionPolicy);
+  }
+
+  public EvictionPolicyType evictionPolicy() {
     return evictionPolicy;
   }
 
@@ -223,8 +231,21 @@ public class BucketSettings {
     return this;
   }
 
+  /**
+   * @param ejectionPolicy (nullable) policy to use, or null for default policy for the bucket type.
+   * @deprecated Please use {@link #evictionPolicy} instead.
+   */
+  @Deprecated
   public BucketSettings ejectionPolicy(EjectionPolicy ejectionPolicy) {
-    this.evictionPolicy = requireNonNull(ejectionPolicy);
+    this.evictionPolicy = ejectionPolicy == null ? null : ejectionPolicy.toEvictionPolicy();
+    return this;
+  }
+
+  /**
+   * @param evictionPolicy (nullable) policy to use, or null for default policy for the bucket type.
+   */
+  public BucketSettings evictionPolicy(EvictionPolicyType evictionPolicy) {
+    this.evictionPolicy = evictionPolicy;
     return this;
   }
 

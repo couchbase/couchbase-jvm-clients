@@ -38,6 +38,7 @@ import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMet
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.POST;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
+import static com.couchbase.client.java.manager.bucket.BucketType.MEMCACHED;
 import static com.couchbase.client.java.manager.bucket.CreateBucketOptions.createBucketOptions;
 import static com.couchbase.client.java.manager.bucket.DropBucketOptions.dropBucketOptions;
 import static com.couchbase.client.java.manager.bucket.FlushBucketOptions.flushBucketOptions;
@@ -115,10 +116,15 @@ public class AsyncBucketManager extends ManagerSupport {
     UrlQueryStringBuilder params = UrlQueryStringBuilder.createForUrlSafeNames();
 
     params.add("ramQuotaMB", settings.ramQuotaMB());
-    params.add("replicaNumber", settings.numReplicas());
+    if (settings.bucketType() != MEMCACHED) {
+      params.add("replicaNumber", settings.numReplicas());
+    }
     params.add("flushEnabled", settings.flushEnabled() ? 1 : 0);
     params.add("maxTTL", settings.maxExpiry().getSeconds());
-    params.add("evictionPolicy", settings.ejectionPolicy().alias());
+    if (settings.evictionPolicy() != null) {
+      // let server assign the default policy for this bucket type
+      params.add("evictionPolicy", settings.evictionPolicy().alias());
+    }
     params.add("compressionMode", settings.compressionMode().alias());
 
     // The following values must not be changed on update
@@ -126,7 +132,9 @@ public class AsyncBucketManager extends ManagerSupport {
       params.add("name", settings.name());
       params.add("bucketType", settings.bucketType().alias());
       params.add("conflictResolutionType", settings.conflictResolutionType().alias());
-      params.add("replicaIndex", settings.replicaIndexes() ? 1 : 0);
+      if (settings.bucketType() != BucketType.EPHEMERAL) {
+        params.add("replicaIndex", settings.replicaIndexes() ? 1 : 0);
+      }
     }
 
     return params;
