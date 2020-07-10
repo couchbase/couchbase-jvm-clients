@@ -16,7 +16,7 @@
 package com.couchbase.client.scala.view
 import com.couchbase.client.core.error.ViewNotFoundException
 import com.couchbase.client.scala.codec.JsonDeserializer.JsonObjectConvert
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.manager.view.{DesignDocument, View}
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.{Bucket, Cluster, Collection, TestUtils}
@@ -128,13 +128,32 @@ class ViewSpec extends ScalaIntegrationTest {
       )
       .get
 
-    println(viewResult)
-
     val useful = viewResult.rows.filter(_.id.get.startsWith("viewdoc-"))
     assert(useful.size == docsToWrite)
     useful.foreach(row => {
       assert(row.valueAs[JsonObject].get == JsonObject.create)
     })
+  }
+
+  @Test
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  def canQueryWithKeysPresent(): Unit = {
+    val docsToWrite = 2
+    for (x <- Range(0, docsToWrite)) {
+      coll.upsert("keydoc-" + x, JsonObject.create).get
+    }
+
+    val viewResult = bucket
+      .viewQuery(
+        DesignDocName,
+        ViewName,
+        ViewOptions()
+          .scanConsistency(ViewScanConsistency.RequestPlus)
+          .keys(Seq("keydoc-0", "keydoc-1"))
+      )
+      .get
+
+    assert(viewResult.rows.size == 2)
   }
 
   @Test

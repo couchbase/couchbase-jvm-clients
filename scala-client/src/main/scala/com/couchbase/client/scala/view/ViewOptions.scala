@@ -19,7 +19,7 @@ package com.couchbase.client.scala.view
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.json.JsonArray
+import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.transformers.JacksonTransformers
 
 import scala.concurrent.duration.Duration
@@ -212,12 +212,9 @@ case class ViewOptions(
   def keys(values: Iterable[Any]): ViewOptions = {
     val arr = JsonArray.create
     values.foreach(v => {
-      arr.add(v match {
-        case x: String => "\"" + x + "\""
-        case _         => v.toString
-      })
+      arr.add(v.toString)
     })
-    copy(keys = Some(arr.toString))
+    copy(keys = Some(JsonObject.create.put("keys", arr).toString))
   }
 
   /** When to timeout the operation.

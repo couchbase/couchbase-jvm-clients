@@ -217,7 +217,7 @@ public class ViewOptions extends CommonOptions<ViewOptions> {
   }
 
   public ViewOptions keys(JsonArray keys) {
-    this.keysJson = keys.toString();
+    this.keysJson = JsonObject.create().put("keys", keys).toString();
     return this;
   }
 
