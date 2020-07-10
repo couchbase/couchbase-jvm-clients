@@ -17,12 +17,47 @@
 package com.couchbase.client.java.manager.bucket;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonValue;
 
+/**
+ * @deprecated Please use {@link EvictionPolicyType} instead.
+ */
 @Stability.Volatile
+@Deprecated
 public enum EjectionPolicy {
-  @JsonProperty("valueOnly") VALUE_ONLY("valueOnly"),
-  @JsonProperty("fullEviction") FULL("fullEviction");
+  /**
+   * During ejection, only the value will be ejected (key and metadata will remain in memory).
+   * <p>
+   * Value Ejection needs more system memory, but provides better performance than Full Ejection.
+   * <p>
+   * This value is only valid for buckets of type {@link BucketType#COUCHBASE}.
+   */
+  VALUE_ONLY("valueOnly"),
+
+  /**
+   * During ejection, everything (including key, metadata, and value) will be ejected.
+   * <p>
+   * Full Ejection reduces the memory overhead requirement, at the cost of performance.
+   * <p>
+   * This value is only valid for buckets of type {@link BucketType#COUCHBASE}.
+   */
+  FULL("fullEviction"),
+
+  /**
+   * Couchbase Server keeps all data until explicitly deleted, but will reject
+   * any new data if you reach the quota (dedicated memory) you set for your bucket.
+   * <p>
+   * This value is only valid for buckets of type {@link BucketType#EPHEMERAL}.
+   */
+  NO_EVICTION("noEviction"),
+
+  /**
+   * When the memory quota is reached, Couchbase Server ejects data that has
+   * not been used recently.
+   * <p>
+   * This value is only valid for buckets of type {@link BucketType#EPHEMERAL}.
+   */
+  NOT_RECENTLY_USED("nruEviction");
 
   private final String alias;
 
@@ -30,8 +65,40 @@ public enum EjectionPolicy {
     this.alias = alias;
   }
 
+  @JsonValue
   public String alias() {
     return alias;
   }
 
+  @Stability.Internal
+  static EjectionPolicy of(EvictionPolicyType evictionPolicy) {
+    switch (evictionPolicy) {
+      case FULL:
+        return FULL;
+      case VALUE_ONLY:
+        return VALUE_ONLY;
+      case NO_EVICTION:
+        return NO_EVICTION;
+      case NOT_RECENTLY_USED:
+        return NOT_RECENTLY_USED;
+      default:
+        throw new RuntimeException("Unrecognized EvictionPolicyType alias: " + evictionPolicy.alias());
+    }
+  }
+
+  @Stability.Internal
+  EvictionPolicyType toEvictionPolicy() {
+    switch (this) {
+      case FULL:
+        return EvictionPolicyType.FULL;
+      case VALUE_ONLY:
+        return EvictionPolicyType.VALUE_ONLY;
+      case NO_EVICTION:
+        return EvictionPolicyType.NO_EVICTION;
+      case NOT_RECENTLY_USED:
+        return EvictionPolicyType.NOT_RECENTLY_USED;
+      default:
+        throw new RuntimeException("Don't know how to convert " + this + " to " + EvictionPolicyType.class.getSimpleName());
+    }
+  }
 }
