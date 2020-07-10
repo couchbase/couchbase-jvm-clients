@@ -30,9 +30,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.UUID;
@@ -389,28 +388,54 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   @Test
   @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
   void checkExpiryBeyond2038() {
+    // The server interprets the 32-bit expiry field as an unsigned
+    // integer. This means the maximum value is 4294967295 seconds,
+    // which corresponds to 2106-02-07T06:28:15Z.
+    //
+    // This test will start to fail when the current time is less than
+    // 30 years from that maximum expiration instant.
+
+    int expiryYears = 30;
+
+    // make sure we are not time travelers.
+    LocalDate expirationDate = LocalDate.now().plusYears(expiryYears);
+    assertTrue(expirationDate.getYear() > 2038);
+
+    checkExpiry(Duration.ofDays(365 * expiryYears));
+  }
+
+  @Test
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+  void checkExpiryExactly30Days() {
+    checkExpiry(Duration.ofDays(30));
+  }
+
+  /**
+   * 30 days is the cutoff where the server starts interpreting
+   * the expiry value as an epoch second instead of a duration. This test
+   * ensures we're shielding the user from that surprising behavior.
+   */
+  @Test
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+  void checkExpiryBeyond30Days() {
+    checkExpiry(Duration.ofDays(31));
+  }
+
+  void checkExpiry(Duration expiryDuration) {
     String id = UUID.randomUUID().toString();
-    JsonObject obj = JsonObject.create().put("foo", true);
-    // well...  to get past 2038, it is now 2019.  So there are about
-    // 60 * 60 * 24 * 360 seconds in a year, and so if we move 30 years
-    // into the future that seems reasonable.  The server claims to use
-    // and unsigned int, which should give 40 years of seconds.
-
-
-    // 30 years in the future...
-    LocalDate future = LocalDate.now().plusYears(30);
-    Duration futureDuration = Duration.ofSeconds(future.atStartOfDay().toEpochSecond(ZoneOffset.UTC));
-
-    // make sure we are not insane.
-    assertTrue(future.getYear() > 2038);
-
-    collection.upsert(id, obj, UpsertOptions.upsertOptions().expiry(futureDuration));
+    collection.upsert(id, JsonObject.create(), UpsertOptions.upsertOptions().expiry(expiryDuration));
 
     GetResult result = collection.get(id, GetOptions.getOptions().withExpiry(true));
-    // so lets not calculate it exactly, but 30 years from now should be more
-    // than 360 * 30...
-    LocalDateTime expiry = LocalDateTime.ofEpochSecond(result.expiry().get().getSeconds(), 0, ZoneOffset.UTC);
-    assertEquals(future.getYear(), expiry.getYear());
+
+    Instant actualExpiry = Instant.ofEpochSecond(result
+        .expiry().orElseThrow(() -> new AssertionError("expected expiry"))
+        .getSeconds()); // See JCBC-1661
+    Instant expectedExpiry = Instant.ofEpochMilli(System.currentTimeMillis()).plus(expiryDuration);
+
+    long secondsDifference = actualExpiry.getEpochSecond() - expectedExpiry.getEpochSecond();
+    long acceptanceThresholdSeconds = Duration.ofMinutes(5).getSeconds();
+
+    assertTrue(Math.abs(secondsDifference) < acceptanceThresholdSeconds);
   }
 
   /**
