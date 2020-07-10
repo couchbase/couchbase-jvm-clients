@@ -10,3 +10,4 @@ dependency-reduced-pom.xml
 *.local.properties
 node_modules
 package-lock.json
+.DS_Store
