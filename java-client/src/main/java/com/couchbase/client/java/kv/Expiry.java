@@ -14,31 +14,50 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.msg.kv;
+package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.request.SuspiciousExpiryDurationEvent;
 
 import java.time.Duration;
+import java.time.Instant;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.DAYS;
 
 @Stability.Internal
-public class ExpiryUtils {
-  private ExpiryUtils() {
-    throw new AssertionError("not instantiable");
-  }
-
+public class Expiry {
   private static final int RELATIVE_EXPIRY_CUTOFF_SECONDS = (int) DAYS.toSeconds(30);
   private static final int WORKAROUND_EXPIRY_CUTOFF_SECONDS = (int) DAYS.toSeconds(365) * 50;
 
-  /**
-   * If the duration is less than 30 days, returns the number of seconds
-   * in the duration, otherwise returns the current time in Unix epoch seconds
-   * plus the number of seconds in the duration.
-   */
-  public static long getAdjustedExpirySeconds(Duration duration, EventBus eventBus) {
+  private static final Expiry NONE = absolute(Instant.ofEpochSecond(0));
+
+  private final Duration duration;
+  private final Instant instant;
+
+  private Expiry(Duration duration, Instant instant) {
+    this.duration = duration;
+    this.instant = instant;
+  }
+
+  public static Expiry none() {
+    return NONE;
+  }
+
+  public static Expiry relative(Duration expiry) {
+    return new Expiry(requireNonNull(expiry), null);
+  }
+
+  public static Expiry absolute(Instant expiry) {
+    return new Expiry(null, requireNonNull(expiry));
+  }
+
+  public long encode(EventBus eventBus) {
+    if (instant != null) {
+      return instant.getEpochSecond();
+    }
+
     long seconds = duration.getSeconds();
     if (seconds < RELATIVE_EXPIRY_CUTOFF_SECONDS) {
       return seconds;
@@ -53,5 +72,16 @@ public class ExpiryUtils {
     }
 
     return (System.currentTimeMillis() / 1000) + seconds;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder("Expiry{");
+    if (duration != null) {
+      sb.append(duration.isZero() ? "none" : duration);
+    } else {
+      sb.append(instant.getEpochSecond() == 0 ? "none" : instant);
+    }
+    return sb.append("}").toString();
   }
 }

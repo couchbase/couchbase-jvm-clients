@@ -21,12 +21,13 @@ import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.java.codec.JsonSerializer;
 
 import java.time.Duration;
+import java.time.Instant;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
 public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
 
-  private Duration expiry = Duration.ZERO;
+  private Expiry expiry = Expiry.none();
   private long cas = 0;
   private StoreSemantics storeSemantics = StoreSemantics.REPLACE;
   private JsonSerializer serializer = null;
@@ -41,7 +42,13 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
   }
 
   public MutateInOptions expiry(final Duration expiry) {
-    this.expiry = expiry;
+    this.expiry = Expiry.relative(expiry);
+    return this;
+  }
+
+  @Stability.Uncommitted
+  public MutateInOptions expiry(final Instant expiry) {
+    this.expiry = Expiry.absolute(expiry);
     return this;
   }
 
@@ -105,7 +112,7 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
 
     Built() { }
 
-    public Duration expiry() {
+    public Expiry expiry() {
       return expiry;
     }
 

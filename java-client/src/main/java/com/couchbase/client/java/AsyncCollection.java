@@ -31,7 +31,6 @@ import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.core.msg.kv.ExpiryUtils;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
 import com.couchbase.client.core.msg.kv.GetMetaRequest;
@@ -768,7 +767,7 @@ public class AsyncCollection {
     }
     long end = System.nanoTime();
 
-    long expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
+    long expiry = opts.expiry().encode(environment.eventBus());
     InsertRequest request = new InsertRequest(id, encoded.encoded(), expiry, encoded.flags(),
       timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context()
@@ -832,7 +831,7 @@ public class AsyncCollection {
     }
     long end = System.nanoTime();
 
-    long expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
+    long expiry = opts.expiry().encode(environment.eventBus());
     final UpsertRequest request = new UpsertRequest(id, encoded.encoded(), expiry, encoded.flags(),
       timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context()
@@ -896,7 +895,7 @@ public class AsyncCollection {
     }
     long end = System.nanoTime();
 
-    long expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
+    long expiry = opts.expiry().encode(environment.eventBus());
     ReplaceRequest request = new ReplaceRequest(id, encoded.encoded(), expiry, encoded.flags(),
       timeout, opts.cas(), coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context()
@@ -1155,7 +1154,7 @@ public class AsyncCollection {
         // xattrs come first
         commands.sort(Comparator.comparing(v -> !v.xattr()));
 
-      long expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
+      long expiry = opts.expiry().encode(environment.eventBus());
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, bucketConfig, retryStrategy, id,
           opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT,
           opts.accessDeleted(), opts.createAsDeleted(), commands, expiry, opts.cas(),

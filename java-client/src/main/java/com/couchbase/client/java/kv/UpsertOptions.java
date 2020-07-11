@@ -20,12 +20,13 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.codec.Transcoder;
 
 import java.time.Duration;
+import java.time.Instant;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
 public class UpsertOptions extends CommonDurabilityOptions<UpsertOptions> {
 
-  private Duration expiry = Duration.ZERO;
+  private Expiry expiry = Expiry.none();
   private Transcoder transcoder;
 
   private UpsertOptions() { }
@@ -35,7 +36,13 @@ public class UpsertOptions extends CommonDurabilityOptions<UpsertOptions> {
   }
 
   public UpsertOptions expiry(final Duration expiry) {
-    this.expiry = expiry;
+    this.expiry = Expiry.relative(expiry);
+    return this;
+  }
+
+  @Stability.Uncommitted
+  public UpsertOptions expiry(final Instant expiry) {
+    this.expiry = Expiry.absolute(expiry);
     return this;
   }
 
@@ -54,7 +61,7 @@ public class UpsertOptions extends CommonDurabilityOptions<UpsertOptions> {
 
     Built() { }
 
-    public Duration expiry() {
+    public Expiry expiry() {
       return expiry;
     }
 
