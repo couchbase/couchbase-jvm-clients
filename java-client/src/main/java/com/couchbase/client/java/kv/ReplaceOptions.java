@@ -21,12 +21,13 @@ import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.java.codec.Transcoder;
 
 import java.time.Duration;
+import java.time.Instant;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
 public class ReplaceOptions extends CommonDurabilityOptions<ReplaceOptions> {
 
-  private Duration expiry = Duration.ZERO;
+  private Expiry expiry = Expiry.none();
   private Transcoder transcoder;
   private long cas;
 
@@ -37,7 +38,13 @@ public class ReplaceOptions extends CommonDurabilityOptions<ReplaceOptions> {
   }
 
   public ReplaceOptions expiry(final Duration expiry) {
-    this.expiry = expiry;
+    this.expiry = Expiry.relative(expiry);
+    return this;
+  }
+
+  @Stability.Uncommitted
+  public ReplaceOptions expiry(final Instant expiry) {
+    this.expiry = Expiry.absolute(expiry);
     return this;
   }
 
@@ -75,7 +82,7 @@ public class ReplaceOptions extends CommonDurabilityOptions<ReplaceOptions> {
 
     Built() { }
 
-    public Duration expiry() {
+    public Expiry expiry() {
       return expiry;
     }
 

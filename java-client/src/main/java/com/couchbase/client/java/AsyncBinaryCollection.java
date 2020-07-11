@@ -28,7 +28,6 @@ import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.AppendRequest;
 import com.couchbase.client.core.msg.kv.DecrementRequest;
-import com.couchbase.client.core.msg.kv.ExpiryUtils;
 import com.couchbase.client.core.msg.kv.IncrementRequest;
 import com.couchbase.client.core.msg.kv.PrependRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -205,7 +204,7 @@ public class AsyncBinaryCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     InternalSpan span = environment.requestTracer().internalSpan(IncrementRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
 
-    long expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
+    long expiry = opts.expiry().encode(environment.eventBus());
     IncrementRequest request = new IncrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, opts.cas(),
       opts.delta(), opts.initial(), expiry, opts.durabilityLevel(), span);
     request.context().clientContext(opts.clientContext());
@@ -249,7 +248,7 @@ public class AsyncBinaryCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     InternalSpan span = environment.requestTracer().internalSpan(DecrementRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
 
-    long expiry = ExpiryUtils.getAdjustedExpirySeconds(opts.expiry(), environment.eventBus());
+    long expiry = opts.expiry().encode(environment.eventBus());
     DecrementRequest request = new DecrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, opts.cas(),
       opts.delta(), opts.initial(), expiry, opts.durabilityLevel(), span);
     request.context().clientContext(opts.clientContext());

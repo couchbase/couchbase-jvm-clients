@@ -21,6 +21,7 @@ import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 
 /**
@@ -41,7 +42,7 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
   /**
    * If set, holds the expiration for this operation.
    */
-  private Duration expiry = Duration.ZERO;
+  private Expiry expiry = Expiry.none();
 
   /**
    * If set, holds the CAS value for this operation.
@@ -85,13 +86,25 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
   }
 
   /**
-   * Set a custom expiration time for the document (by default no expiry is set).
+   * Set a relative expiration time for the document (by default no expiry is set).
    *
    * @param expiry the custom expiry value of the document.
    * @return this options class for chaining purposes.
    */
   public IncrementOptions expiry(final Duration expiry) {
-    this.expiry = expiry;
+    this.expiry = Expiry.relative(expiry);
+    return this;
+  }
+
+  /**
+   * Set an absolute expiration time for the document (by default no expiry is set).
+   *
+   * @param expiry the custom expiry value of the document.
+   * @return this options class for chaining purposes.
+   */
+  @Stability.Uncommitted
+  public IncrementOptions expiry(final Instant expiry) {
+    this.expiry = Expiry.absolute(expiry);
     return this;
   }
 
@@ -123,7 +136,7 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
 
     Built() { }
 
-    public Duration expiry() {
+    public Expiry expiry() {
       return expiry;
     }
 
