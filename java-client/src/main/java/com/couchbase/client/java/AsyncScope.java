@@ -128,7 +128,9 @@ public class AsyncScope {
    */
   @Stability.Volatile
   public AsyncCollection collection(final String collectionName) {
-    return maybeCreateAsyncCollection(collectionName, true);
+    boolean defaultScopeAndCollection = collectionName.equals(CollectionIdentifier.DEFAULT_COLLECTION)
+        && scopeName.equals(CollectionIdentifier.DEFAULT_SCOPE);
+    return maybeCreateAsyncCollection(collectionName, !defaultScopeAndCollection);
   }
 
   /**
