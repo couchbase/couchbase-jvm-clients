@@ -638,6 +638,9 @@ void testAgainstServer(String serverVersion,
             shWithEcho("cbdyncluster --node kv --node kv --node kv --bucket default setup $clusterId")
         }
 
+        // Make sure the cluster stays up during all tests (the finally block below ensures that it's always pulled down)
+        shWithEcho("cbdyncluster refresh $clusterId 2h")
+
         // Make the bucket flushable
         shWithEcho("curl -v -X POST -u Administrator:password -d flushEnabled=1 http://" + ip + ":8091/pools/default/buckets/default")
 

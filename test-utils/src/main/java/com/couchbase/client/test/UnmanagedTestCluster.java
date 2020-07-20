@@ -33,12 +33,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class UnmanagedTestCluster extends TestCluster {
 
-  private final OkHttpClient httpClient = new OkHttpClient.Builder().build();
+  private final OkHttpClient httpClient = new OkHttpClient.Builder()
+          .connectTimeout(30, TimeUnit.SECONDS)
+          .readTimeout(30, TimeUnit.SECONDS)
+          .writeTimeout(30, TimeUnit.SECONDS)
+          .build();
   private final String seedHost;
   private final int seedPort;
   private final String adminUsername;
