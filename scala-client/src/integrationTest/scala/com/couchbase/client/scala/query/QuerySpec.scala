@@ -49,6 +49,7 @@ class QuerySpec extends ScalaIntegrationTest {
   def beforeAll(): Unit = {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
+    bucket.waitUntilReady(30 seconds)
     coll = bucket.defaultCollection
 
     cluster.queryIndexes.createPrimaryIndex(config.bucketname).get
