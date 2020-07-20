@@ -31,7 +31,7 @@
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-scala-extensions_${scala.compat.version}</artifactId>
-            <version>0.5.1</version>
+            <version>0.7.1</version>
         </dependency>
 
         <dependency>
