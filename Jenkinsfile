@@ -703,7 +703,7 @@ void testAgainstServer(String serverVersion,
         // shWithEcho("cbdyncluster rm -f 3d023261")
 
         // Allocate the cluster
-        clusterId = sh(script: "cbdyncluster allocate --num-nodes=3 --server-version=" + serverVersion, returnStdout: true)
+        clusterId = sh(script: "cbdyncluster allocate --num-nodes=3 --server-version=" + serverVersion, returnStdout: true).trim()
         echo "Got cluster ID $clusterId"
 
         // Find the cluster IP
