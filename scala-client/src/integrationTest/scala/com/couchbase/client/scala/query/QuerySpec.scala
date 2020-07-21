@@ -52,13 +52,15 @@ class QuerySpec extends ScalaIntegrationTest {
     bucket.waitUntilReady(30 seconds)
     coll = bucket.defaultCollection
 
+    TestUtils.waitForService(bucket, ServiceType.QUERY)
+    TestUtils.waitForIndexerToHaveBucket(cluster, config.bucketname())
+
     cluster.queryIndexes.createPrimaryIndex(config.bucketname).get
     cluster.queryIndexes
       .watchIndexes(config.bucketname, Seq(), Duration(1, TimeUnit.MINUTES), watchPrimary = true)
       .get
 
     bucketName = config.bucketname()
-    TestUtils.waitForService(bucket, ServiceType.QUERY)
   }
 
   @AfterAll

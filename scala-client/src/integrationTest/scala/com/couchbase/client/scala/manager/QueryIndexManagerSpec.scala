@@ -50,7 +50,9 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     coll = bucket.defaultCollection
     bucketName = config.bucketname
     indexes = cluster.queryIndexes
+
     TestUtils.waitForService(bucket, ServiceType.QUERY)
+    TestUtils.waitForIndexerToHaveBucket(cluster, config.bucketname())
   }
 
   @AfterAll
