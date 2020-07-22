@@ -133,12 +133,11 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   private static void upsertEmptyTombstone(Collection coll, String id) {
-    coll.mutateIn(id, Collections.singletonList(
-            // Can't send an empty spec list so provide some random data
-            MutateInSpec.upsert(UUID.randomUUID().toString(), JsonObject.create())
+    coll.mutateIn(id, Arrays.asList(
+            MutateInSpec.upsert("dummy", JsonObject.create()).xattr()
             ),
             MutateInOptions.mutateInOptions()
-                    .storeSemantics(StoreSemantics.UPSERT)
+                    .storeSemantics(StoreSemantics.INSERT)
                     .createAsDeleted(true));
   }
 
