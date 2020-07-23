@@ -28,10 +28,12 @@ import com.couchbase.client.java.search.SearchQuery;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
@@ -70,35 +72,35 @@ public class SearchRow {
      * The name of the FTS index that gave this result.
      */
     public String index() {
-        return this.index;
+        return index;
     }
 
     /**
      * The id of the matching document.
      */
     public String id() {
-        return this.id;
+        return id;
     }
 
     /**
      * The score of this hit.
      */
     public double score() {
-        return this.score;
+        return score;
     }
 
     /**
      * If {@link SearchOptions#explain(boolean)} () requested in the query}, an explanation of the match, in JSON form.
      */
     public JsonObject explanation() {
-        return this.explanation;
+        return explanation;
     }
 
     /**
      * This rows's location, as an {@link SearchRowLocations} map-like object.
      */
     public Optional<SearchRowLocations> locations() {
-        return this.locations;
+        return locations;
     }
 
     /**
@@ -111,7 +113,7 @@ public class SearchRow {
      * @return the fragments as a {@link Map}. Keys are the fields.
      */
     public Map<String, List<String>> fragments() {
-        return this.fragments;
+        return fragments;
     }
 
     /**
@@ -120,6 +122,9 @@ public class SearchRow {
      * @return the fields mapped to the given target type
      */
     public <T> T fieldsAs(final Class<T> target) {
+        if (fields == null) {
+            return null;
+        }
         return serializer.deserialize(target, fields);
     }
 
@@ -129,37 +134,31 @@ public class SearchRow {
      * @return the fields mapped to the given target type
      */
     public <T> T fieldsAs(final TypeRef<T> target) {
+        if (fields == null) {
+            return null;
+        }
         return serializer.deserialize(target, fields);
     }
 
+    @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        SearchRow that = (SearchRow) o;
-
-        if (Double.compare(that.score, score) != 0) {
-            return false;
-        }
-        if (!index.equals(that.index)) {
-            return false;
-        }
-        return id.equals(that.id);
-
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        SearchRow searchRow = (SearchRow) o;
+        return Double.compare(searchRow.score, score) == 0 &&
+          Objects.equals(index, searchRow.index) &&
+          Objects.equals(id, searchRow.id) &&
+          Objects.equals(explanation, searchRow.explanation) &&
+          Objects.equals(locations, searchRow.locations) &&
+          Objects.equals(fragments, searchRow.fragments) &&
+          Arrays.equals(fields, searchRow.fields) &&
+          Objects.equals(serializer, searchRow.serializer);
     }
 
     @Override
     public int hashCode() {
-        int result;
-        long temp;
-        result = index.hashCode();
-        result = 31 * result + id.hashCode();
-        temp = Double.doubleToLongBits(score);
-        result = 31 * result + (int) (temp ^ (temp >>> 32));
+        int result = Objects.hash(index, id, score, explanation, locations, fragments, serializer);
+        result = 31 * result + Arrays.hashCode(fields);
         return result;
     }
 
