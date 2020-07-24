@@ -23,8 +23,8 @@ import com.couchbase.client.core.service.ServiceType;
 
 import java.util.Set;
 
+import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.core.util.Validators.notNull;
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 /**
  * Allows to customize the diagnostics report.
@@ -57,13 +57,25 @@ public class WaitUntilReadyOptions {
    * <p>
    * If no set is provided, all possible services are waited for.
    *
-   * @param serviceTypes the service types that should be waited for.
+   * @param serviceTypes the service types that should be waited for. If none are specified, wait for all.
    * @return the {@link WaitUntilReadyOptions} to allow method chaining.
    */
   public WaitUntilReadyOptions serviceTypes(final Set<ServiceType> serviceTypes) {
-    notNullOrEmpty(serviceTypes, "Service Types");
-    this.serviceTypes = serviceTypes;
+    notNull(serviceTypes, "Service Types");
+    this.serviceTypes = serviceTypes.isEmpty() ? null : serviceTypes;
     return this;
+  }
+
+  /**
+   * Allows to customize the set of services to wait for.
+   * <p>
+   * If no service types are provided, all possible services are waited for.
+   *
+   * @param serviceTypes the service types that should be waited for. If none are specified, wait for all.
+   * @return the {@link WaitUntilReadyOptions} to allow method chaining.
+   */
+  public WaitUntilReadyOptions serviceTypes(final ServiceType... serviceTypes) {
+    return serviceTypes(setOf(serviceTypes));
   }
 
   /**
