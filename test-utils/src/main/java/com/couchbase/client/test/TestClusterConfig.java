@@ -36,10 +36,11 @@ public class TestClusterConfig {
   private final int numReplicas;
   private final Optional<X509Certificate> clusterCert;
   private final Set<Capabilities> capabilities;
+  private final ClusterVersion clusterVersion;
 
   TestClusterConfig(String bucketname, String adminUsername, String adminPassword,
                     List<TestNodeConfig> nodes, int numReplicas,
-                    Optional<X509Certificate> clusterCert, Set<Capabilities> capabilities) {
+                    Optional<X509Certificate> clusterCert, Set<Capabilities> capabilities, ClusterVersion clusterVersion) {
     this.bucketname = bucketname;
     this.adminUsername = adminUsername;
     this.adminPassword = adminPassword;
@@ -47,6 +48,7 @@ public class TestClusterConfig {
     this.numReplicas = numReplicas;
     this.clusterCert = clusterCert;
     this.capabilities = capabilities;
+    this.clusterVersion = clusterVersion;
   }
 
   public String bucketname() {
@@ -77,6 +79,10 @@ public class TestClusterConfig {
     return clusterCert;
   }
 
+  public ClusterVersion clusterVersion() {
+    return clusterVersion;
+  }
+
   /**
    * Finds the first node with a given service enabled in the config.
    *
@@ -99,6 +105,7 @@ public class TestClusterConfig {
       ", numReplicas=" + numReplicas +
       ", clusterCert=" + clusterCert +
       ", capabilities=" + capabilities +
+      ", version=" + clusterVersion +
       '}';
   }
 }

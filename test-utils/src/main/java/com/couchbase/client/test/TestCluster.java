@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.shaded.okhttp3.Response;
 
 import java.io.IOException;
 import java.net.URL;
@@ -148,6 +149,20 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       result.add(new TestNodeConfig(hostname, ports));
     }
     return result;
+  }
+
+  protected static ClusterVersion parseClusterVersion(Response response) {
+    java.util.Map<String, Object> decoded;
+    try {
+      decoded = (java.util.Map<String, Object>)
+              MAPPER.readValue(response.body().bytes(), java.util.Map.class);
+
+    } catch (IOException e) {
+      throw new RuntimeException("Error decoding", e);
+    }
+
+    String version = (String) decoded.get("implementationVersion");
+    return ClusterVersion.parseString(version);
   }
 
   protected int replicasFromRaw(final String config) {

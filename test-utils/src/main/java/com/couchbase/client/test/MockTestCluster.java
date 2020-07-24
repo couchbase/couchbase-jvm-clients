@@ -109,7 +109,10 @@ public class MockTestCluster extends TestCluster {
       nodeConfigs,
       bucketConfig.numReplicas,
       Optional.empty(), // mock does not support certs
-      EnumSet.of(Capabilities.VIEWS) // mock only has a limited set of capabilities we can utilize
+      EnumSet.of(Capabilities.VIEWS), // mock only has a limited set of capabilities we can utilize,
+      // No way to get this from mock, and version checking is (currently) only used in a handful of scenarios that the
+      // mock will not run anyway.  May need to revisit if that changes.
+      new ClusterVersion(0, 0, 0)
     );
   }
 

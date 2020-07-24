@@ -60,8 +60,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-@IgnoreWhen(clusterTypes = MOCKED, missesCapabilities = ANALYTICS)
+@IgnoreWhen(clusterTypes = MOCKED,
+        missesCapabilities = ANALYTICS,
+        clusterVersionEquals = "6.6.0") // Due to MB-40576
 class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   private static final String dataset = "myDataset";
@@ -201,11 +204,20 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
   void dropDatasetFailsIfAbsent() {
     assertThrows(DatasetNotFoundException.class, () -> analytics.dropDataset("foo"));
 
-    assertThrows(DatasetNotFoundException.class, () -> analytics.dropDataset("foo",
-        dropDatasetAnalyticsOptions()
-            .dataverseName("absentDataverse")));
+    try {
+      analytics.dropDataset("foo",
+              dropDatasetAnalyticsOptions()
+                      .dataverseName("absentDataverse"));
+      fail();
+    }
+    catch (DatasetNotFoundException | DataverseNotFoundException e) {
+      // MB-40577:
+      // DatasetNotFound returned on 6.5 and below
+      // DataverseNotFound on 6.6 and above
+    }
   }
 
+  // Will fail on 6.6 build that does not include fix for MB-40577
   @Test
   void dropDatasetCanIgnoreAbsent() {
     analytics.dropDataset("foo",

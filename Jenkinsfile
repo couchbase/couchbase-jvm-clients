@@ -195,8 +195,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                // Experimental, don't fail the build as a result
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     cleanWs()
                     unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, CORRETTO, CORRETTO_8)
@@ -223,8 +222,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                // Experimental, don't fail the build as a result
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     cleanWs()
                     unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, CORRETTO, CORRETTO_11)
@@ -309,8 +307,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                // Experimental, don't fail the build as a result
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     cleanWs()
                     dir('colossus') {
                         checkout([$class: 'GitSCM',
@@ -506,8 +503,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                // Experimental, don't fail the build as a result
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     cleanWs()
                     dir('colossus') {
                         checkout([$class: 'GitSCM',
@@ -536,7 +532,8 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                // Temporary: there are known cbas crashes preventing this from passing currently, do not fail build
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                     cleanWs()
                     unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
