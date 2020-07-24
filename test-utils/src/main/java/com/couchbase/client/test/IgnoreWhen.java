@@ -23,7 +23,6 @@ import java.lang.annotation.Target;
 @Target({ ElementType.ANNOTATION_TYPE, ElementType.METHOD, ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface IgnoreWhen {
-
   ClusterType[] clusterTypes() default {};
 
   Capabilities[] missesCapabilities() default {};
@@ -38,4 +37,15 @@ public @interface IgnoreWhen {
 
   int replicasGreaterThan() default Integer.MAX_VALUE;
 
+  /**
+   * Do not run a test when the cluster version is equal to this field.
+   * <p>
+   * The field should be given as a raw String e.g. "6.5.1" (due to Java limitations it's not possible to specify
+   * a {@link ClusterVersion} directly.
+   * <p>
+   * It is strongly recommended that one of the alternatives above is used.  All cluster features _should_ be exposed
+   * properly through, for instance, {@link #hasCapabilities()}.  This field should only be used when those avenues
+   * have failed - an example would be a cluster bug that only happens in a specific version.
+   */
+  String clusterVersionEquals() default "";
 }

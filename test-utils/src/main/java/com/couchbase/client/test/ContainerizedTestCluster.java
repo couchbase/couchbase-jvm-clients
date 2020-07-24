@@ -120,6 +120,14 @@ public class ContainerizedTestCluster extends TestCluster {
 
     String raw = getResponse.body().string();
 
+    Response getClusterVersionResponse = httpClient.newCall(new Request.Builder()
+            .header("Authorization", Credentials.basic(adminUsername, adminPassword))
+            .url("http://" + seedHost + ":" + seedPort + "/pools")
+            .build())
+            .execute();
+
+    ClusterVersion clusterVersion = parseClusterVersion(getClusterVersionResponse);
+
     return new TestClusterConfig(
       bucketname,
       adminUsername,
@@ -127,7 +135,8 @@ public class ContainerizedTestCluster extends TestCluster {
       nodesFromRaw(seedHost, raw),
       replicasFromRaw(raw),
       loadClusterCertificate(seedHost, seedPort),
-      capabilitiesFromRaw(raw)
+      capabilitiesFromRaw(raw),
+      clusterVersion
     );
   }
 

@@ -92,6 +92,14 @@ public class UnmanagedTestCluster extends TestCluster {
 
     waitUntilAllNodesHealthy();
 
+    Response getClusterVersionResponse = httpClient.newCall(new Request.Builder()
+            .header("Authorization", Credentials.basic(adminUsername, adminPassword))
+            .url("http://" + seedHost + ":" + seedPort + "/pools")
+            .build())
+            .execute();
+
+    ClusterVersion clusterVersion = parseClusterVersion(getClusterVersionResponse);
+
     Optional<X509Certificate> cert = loadClusterCertificate();
 
     return new TestClusterConfig(
@@ -101,7 +109,8 @@ public class UnmanagedTestCluster extends TestCluster {
       nodesFromRaw(seedHost, raw),
       replicasFromRaw(raw),
       cert,
-      capabilitiesFromRaw(raw)
+      capabilitiesFromRaw(raw),
+      clusterVersion
     );
   }
 

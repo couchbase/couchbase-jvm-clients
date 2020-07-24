@@ -17,9 +17,9 @@ def ORACLE_JDK_8 = "8u192"
 def OPENJDK = "openjdk"
 def OPENJDK_8 = "8u202-b08"
 def OPENJDK_11 = "11.0.2+7"
-def CORRETTO = "corretto"
-def CORRETTO_8 = "8.232.09.1"
-def CORRETTO_11 = "11.0.4.11-1"
+def CORRETTO = "corretto"         // Amazon JDK
+def CORRETTO_8 = "8.232.09.1"     // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-8-ug/doc-history.html
+def CORRETTO_11 = "11.0.5.10.1"   // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-11-ug/doc-history.html
 
 // The lucky spammees
 EMAILS = ['graham.pople@couchbase.com', 'michael.nitschinger@couchbase.com', 'david.kelly@couchbase.com', 'david.nault@couchbase.com']
@@ -182,40 +182,10 @@ pipeline {
             }
         }
 
-        // Test against cbdyncluster - do for nightly tests
-        // One day can get all these cbdyncluster tests running in parallel: https://jenkins.io/blog/2017/09/25/declarative-1/
-        stage('testing (Linux, cbdyncluster 6.5, colossus, Oracle JDK 8)') {
-            agent { label 'sdk-integration-test-linux' }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
-            when {
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                // Experimental, don't fail the build as a result
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    cleanWs()
-                    dir('colossus') {
-                        checkout([$class: 'GitSCM',
-                                  branches: [[name: 'colossus']],
-                                  userRemoteConfigs: [[url: '$REPO']]])
-                        installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
-                    }
-                }
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-            }
-        }
+        // JDK combination tests
 
         stage('testing (Linux, cbdyncluster 6.5, Amazon Corretto 8)') {
-            agent { label 'sdk-integration-test-linux' }
+            agent { label 'sdkqe-centos7' }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}"
                 PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}/bin:$PATH"
@@ -225,8 +195,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                // Experimental, don't fail the build as a result
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     cleanWs()
                     unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, CORRETTO, CORRETTO_8)
@@ -243,7 +212,7 @@ pipeline {
         }
 
         stage('testing (Linux, cbdyncluster 6.5, Amazon Corretto 11)') {
-            agent { label 'sdk-integration-test-linux' }
+            agent { label 'sdkqe-centos7' }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}"
                 PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}/bin:$PATH"
@@ -253,8 +222,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                // Experimental, don't fail the build as a result
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     cleanWs()
                     unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, CORRETTO, CORRETTO_11)
@@ -270,144 +238,8 @@ pipeline {
             }
         }
 
-        stage('testing  (Linux, cbdyncluster 6.5, DP enabled, Oracle JDK 8)') {
-            agent { label 'sdk-integration-test-linux' }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
-            when {
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                // Experimental, don't fail the build as a result
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE, false, true) }
-                    }
-                }
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-            }
-        }
-
-        stage('testing  (Linux, cbdyncluster 6.5, Oracle JDK 8)') {
-            agent { label 'sdk-integration-test-linux' }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
-            when {
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
-                    }
-                }
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-            }
-        }
-
-        stage('testing  (Linux, cbdyncluster 6.0.3, Oracle JDK 8)') {
-             agent { label 'sdk-integration-test-linux' }
-             environment {
-                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-             }
-             when {
-                 expression
-                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
-             }
-             steps {
-                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                     cleanWs()
-                     unstash 'couchbase-jvm-clients'
-                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                     dir('couchbase-jvm-clients') {
-                         script { testAgainstServer("6.0.3", QUICK_TEST_MODE) }
-                     }
-                 }
-             }
-             post {
-                 always {
-                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                 }
-             }
-         }
-
-         stage('testing  (Linux, cbdyncluster 5.5.5, Oracle JDK 8)') {
-             agent { label 'sdk-integration-test-linux' }
-             environment {
-                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-             }
-             when {
-                 expression
-                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
-             }
-             steps {
-                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                     cleanWs()
-                     unstash 'couchbase-jvm-clients'
-                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                     dir('couchbase-jvm-clients') {
-                         script { testAgainstServer("5.5.5", QUICK_TEST_MODE, false) }
-                     }
-                 }
-             }
-             post {
-                 always {
-                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                 }
-             }
-         }
-
-//        stage('testing  (Linux, cbdyncluster 5.1.3, Oracle JDK 8)') {
-//            agent { label 'sdk-integration-test-linux' }
-//            environment {
-//                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-//                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-//            }
-//            when {
-//                expression
-//                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-//            }
-//            steps {
-//                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-//                    cleanWs()
-//                    unstash 'couchbase-jvm-clients'
-//                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-//                    dir('couchbase-jvm-clients') {
-//                        script { testAgainstServer("5.1.3", QUICK_TEST_MODE, false) }
-//                    }
-//                }
-//            }
-//            post {
-//                always {
-//                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-//                }
-//            }
-//        }
-
         stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 11)') {
-             agent { label 'sdk-integration-test-linux' }
+             agent { label 'sdkqe-centos7' }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
                  PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
@@ -434,7 +266,7 @@ pipeline {
          }
 
          stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 8)') {
-             agent { label 'sdk-integration-test-linux' }
+             agent { label 'sdkqe-centos7' }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
                  PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
@@ -447,7 +279,7 @@ pipeline {
                  catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                      cleanWs()
                      unstash 'couchbase-jvm-clients'
-                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                     installJDKIfNeeded(platform, OPENJDK, OPENJDK_8)
                      dir('couchbase-jvm-clients') {
                          script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
                      }
@@ -459,6 +291,264 @@ pipeline {
                  }
              }
          }
+
+        //Server combination tests
+
+        // Test against cbdyncluster - do for nightly tests
+        // One day can get all these cbdyncluster tests running in parallel: https://jenkins.io/blog/2017/09/25/declarative-1/
+        stage('testing (Linux, cbdyncluster 6.5-release, colossus, Oracle JDK 8)') {
+            agent { label 'sdkqe-centos7' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    dir('colossus') {
+                        checkout([$class: 'GitSCM',
+                                  branches: [[name: 'colossus']],
+                                  userRemoteConfigs: [[url: '$REPO']]])
+                        installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                        script { testAgainstServer("6.5-release", QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        // Disabling DP tests to avoid (possibly) MB-37518
+//        stage('testing  (Linux, cbdyncluster 6.5, DP enabled, Oracle JDK 8)') {
+//            agent { label 'sdkqe-centos7' }
+//            environment {
+//                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+//                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+//            }
+//            when {
+//                expression
+//                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+//            }
+//            steps {
+//                // Experimental, don't fail the build as a result
+//                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+//                    cleanWs()
+//                    unstash 'couchbase-jvm-clients'
+//                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+//                    dir('couchbase-jvm-clients') {
+//                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE, false, true) }
+//                    }
+//                }
+//            }
+//            post {
+//                always {
+//                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+//                }
+//            }
+//        }
+
+
+        stage('testing  (Linux, cbdyncluster 6.5-release, Oracle JDK 8)') {
+            agent { label 'sdkqe-centos7' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer("6.5-release", QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('testing  (Linux, cbdyncluster 6.0-release, Oracle JDK 8)') {
+             agent { label 'sdkqe-centos7' }
+             environment {
+                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+             }
+             when {
+                 expression
+                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+             }
+             steps {
+                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                     cleanWs()
+                     unstash 'couchbase-jvm-clients'
+                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                     dir('couchbase-jvm-clients') {
+                         script { testAgainstServer("6.0-release", QUICK_TEST_MODE) }
+                     }
+                 }
+             }
+             post {
+                 always {
+                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                 }
+             }
+         }
+
+        stage('testing  (Linux, cbdyncluster 5.5-release, Oracle JDK 8)') {
+             agent { label 'sdkqe-centos7' }
+             environment {
+                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+             }
+             when {
+                 expression
+                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+             }
+             steps {
+                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                     cleanWs()
+                     unstash 'couchbase-jvm-clients'
+                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                     dir('couchbase-jvm-clients') {
+                         script { testAgainstServer("5.5-release", QUICK_TEST_MODE, false) }
+                     }
+                 }
+             }
+             post {
+                 always {
+                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                 }
+             }
+         }
+
+//        stage('testing  (Linux, cbdyncluster 5.1.3, Oracle JDK 8)') {
+//            agent { label 'sdkqe-centos7' }
+//            environment {
+//                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+//                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+//            }
+//            when {
+//                expression
+//                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+//            }
+//            steps {
+//                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+//                    cleanWs()
+//                    unstash 'couchbase-jvm-clients'
+//                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+//                    dir('couchbase-jvm-clients') {
+//                        script { testAgainstServer("5.1.3", QUICK_TEST_MODE, false) }
+//                    }
+//                }
+//            }
+//            post {
+//                always {
+//                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+//                }
+//            }
+//        }
+
+        //Pre-release server tests
+
+        stage('testing  (Linux, cbdyncluster 6.6-stable, Oracle JDK 8)') {
+            agent { label 'sdkqe-centos7' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer("6.6-stable", QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('testing (Linux, cbdyncluster 6.6-stable, colossus, Oracle JDK 8)') {
+            agent { label 'sdkqe-centos7' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    dir('colossus') {
+                        checkout([$class: 'GitSCM',
+                                  branches: [[name: 'colossus']],
+                                  userRemoteConfigs: [[url: '$REPO']]])
+                        installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                        script { testAgainstServer("6.6-stable", QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('testing  (Linux, cbdyncluster 7.0-stable, Oracle JDK 8)') {
+            agent { label 'sdkqe-centos7' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                // Temporary: there are known cbas crashes preventing this from passing currently, do not fail build
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer("7.0-stable", QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
 
 
         // Commented for now as sdk-integration-test-win temporarily down
@@ -610,7 +700,7 @@ void testAgainstServer(String serverVersion,
         // shWithEcho("cbdyncluster rm -f 3d023261")
 
         // Allocate the cluster
-        clusterId = sh(script: "cbdyncluster allocate --num-nodes=3 --server-version=" + serverVersion, returnStdout: true)
+        clusterId = sh(script: "cbdyncluster allocate --num-nodes=3 --server-version=" + serverVersion, returnStdout: true).trim()
         echo "Got cluster ID $clusterId"
 
         // Find the cluster IP
@@ -635,6 +725,9 @@ void testAgainstServer(String serverVersion,
             // During development, this is faster (less tests)
             shWithEcho("cbdyncluster --node kv --node kv --node kv --bucket default setup $clusterId")
         }
+
+        // Make sure the cluster stays up during all tests (the finally block below ensures that it's always pulled down)
+        shWithEcho("cbdyncluster refresh $clusterId 2h")
 
         // Make the bucket flushable
         shWithEcho("curl -v -X POST -u Administrator:password -d flushEnabled=1 http://" + ip + ":8091/pools/default/buckets/default")

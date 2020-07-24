@@ -114,6 +114,13 @@ public class ClusterInvocationProvider
             unwantedCapability + " is present on cluster based on @IgnoreWhen");
         }
       }
+      if (!found.clusterVersionEquals().isEmpty()) {
+        ClusterVersion lookingFor = ClusterVersion.parseString(found.clusterVersionEquals());
+        if (lookingFor.equals(testCluster.config().clusterVersion())) {
+          return ConditionEvaluationResult.disabled("Test disabled because cluster version is " +
+                  lookingFor + " on @IgnoreWhen");
+        }
+      }
     }
     return ConditionEvaluationResult.enabled("Test is allowed to run based on @IgnoreWhen");
   }
