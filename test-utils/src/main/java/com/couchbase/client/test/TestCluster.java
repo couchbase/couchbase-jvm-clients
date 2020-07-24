@@ -26,6 +26,7 @@ import org.testcontainers.shaded.okhttp3.Response;
 
 import java.io.IOException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,6 +39,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   private static final Logger LOGGER = LoggerFactory.getLogger(TestCluster.class);
+  private static final Duration START_TIMEOUT = Duration.ofMinutes(2);
 
   protected static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -75,10 +77,19 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   TestCluster() { }
 
   void start() {
-    try {
-      config = _start();
-    } catch (Exception ex) {
-      throw new RuntimeException(ex);
+    long startTime = System.nanoTime();
+    // JCBC-1672: Seeing intermittent flakiness connecting to ns_server, try to resolve by looping
+    while (System.nanoTime() - startTime < START_TIMEOUT.toNanos()) {
+      try {
+        config = _start();
+        break;
+      } catch (Exception ex) {
+        LOGGER.warn("Starting failed with error", ex);
+        try {
+          Thread.sleep(250);
+        } catch (InterruptedException e) {
+        }
+      }
     }
   }
 
