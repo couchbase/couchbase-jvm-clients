@@ -24,10 +24,13 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
 import org.junit.jupiter.api.Timeout;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -101,4 +104,31 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
             .ignoreIfExists(true));
   }
 
+  protected static void waitForQueryIndexerToHaveBucket(final Cluster cluster, final String bucketName) {
+    boolean ready = false;
+    int guard = 100;
+
+    while (!ready && guard != 0) {
+      guard -= 1;
+      String statement =
+              "SELECT COUNT(*) > 0 as present FROM system:keyspaces where name = '" + bucketName + "';";
+
+      QueryResult queryResult = cluster.query(statement);
+      List<JsonObject> rows = queryResult.rowsAsObject();
+      if (rows.size() == 1 && rows.get(0).getBoolean("present")) {
+        ready = true;
+      }
+
+      if (!ready) {
+        try {
+          Thread.sleep(50);
+        } catch (InterruptedException e) {
+        }
+      }
+    }
+
+    if (guard == 0) {
+      throw new IllegalStateException("Query indexer is still not aware of bucket " + bucketName);
+    }
+  }
 }
