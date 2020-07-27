@@ -62,9 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@IgnoreWhen(clusterTypes = MOCKED,
-        missesCapabilities = ANALYTICS,
-        clusterVersionEquals = "6.6.0") // Due to MB-40576
+@IgnoreWhen(clusterTypes = MOCKED, missesCapabilities = ANALYTICS)
 class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   private static final String dataset = "myDataset";
@@ -123,7 +121,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
             .dataverseName(idx.dataverseName())));
   }
 
-  private static final String name = "integration-test dataverse";
+  private static final String name = "integration-test-dataverse";
 
   @Test
   void createDataverse() {
@@ -368,13 +366,14 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void connectLinkFailsIfAbsent() {
-    assertThrows(LinkNotFoundException.class, () -> analytics.connectLink(
-        connectLinkAnalyticsOptions()
-            .dataverseName(dataverse)));
-
-    assertThrows(LinkNotFoundException.class, () -> analytics.connectLink(
-        connectLinkAnalyticsOptions()
-            .linkName("bogusLink")));
+    try {
+      analytics.connectLink(connectLinkAnalyticsOptions().dataverseName(dataverse));
+      analytics.connectLink(connectLinkAnalyticsOptions().linkName("bogusLink"));
+    } catch (LinkNotFoundException | DataverseNotFoundException e) {
+      // MB-40577:
+      // LinkNotFoundException returned on 6.5 and below
+      // DataverseNotFound on 6.6 and above
+    }
   }
 
   @Test

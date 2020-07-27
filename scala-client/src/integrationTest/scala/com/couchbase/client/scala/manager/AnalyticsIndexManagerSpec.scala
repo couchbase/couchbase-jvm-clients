@@ -32,7 +32,7 @@ class AnalyticsIndexManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster                 = _
   private var bucketName: String               = _
   private var analytics: AnalyticsIndexManager = _
-  private val DataverseName                    = "integration-test dataverse"
+  private val DataverseName                    = "integration-test-dataverse"
   private val DatasetName                      = "foo"
   private val IndexName                        = "bar"
 
@@ -87,7 +87,7 @@ class AnalyticsIndexManagerSpec extends ScalaIntegrationTest {
 
     analytics.createDataverse(DataverseName) match {
       case Failure(err: DataverseExistsException) =>
-      case _                                      =>
+      case _                                      => assert(false)
     }
   }
 
@@ -103,7 +103,7 @@ class AnalyticsIndexManagerSpec extends ScalaIntegrationTest {
     analytics.dropDataverse(DataverseName).get
     analytics.dropDataverse(DataverseName) match {
       case Failure(err: DataverseNotFoundException) =>
-      case _                                        =>
+      case _                                        => assert(false)
     }
     analytics.dropDataverse(DataverseName, ignoreIfNotExists = true).get
   }
@@ -118,7 +118,7 @@ class AnalyticsIndexManagerSpec extends ScalaIntegrationTest {
     analytics.createDataset(DatasetName, bucketName).get
     analytics.createDataset(DatasetName, bucketName) match {
       case Failure(err: DatasetExistsException) =>
-      case _                                    =>
+      case _                                    => assert(false)
     }
     analytics.createDataset(DatasetName, bucketName, ignoreIfExists = true).get
   }
