@@ -78,6 +78,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         collection = bucket.defaultCollection();
 
         bucket.waitUntilReady(Duration.ofSeconds(5));
+        waitForQueryIndexerToHaveBucket(cluster, config().bucketname());
 
         bucketName = "`" + config().bucketname() + "`";
         createPrimaryIndex(cluster, config().bucketname());
