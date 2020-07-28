@@ -265,7 +265,7 @@ public class KeyValueLocator implements Locator {
    * @param numPartitions the number of partitions in the bucket.
    * @return the calculated partition.
    */
-  private static int partitionForKey(final byte[] id, final int numPartitions) {
+  public static int partitionForKey(final byte[] id, final int numPartitions) {
     CRC32 crc32 = new CRC32();
     crc32.update(id, 0, id.length);
     long rv = (crc32.getValue() >> 16) & 0x7fff;
