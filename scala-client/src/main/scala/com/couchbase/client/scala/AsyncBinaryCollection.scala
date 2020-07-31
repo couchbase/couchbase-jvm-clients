@@ -158,12 +158,10 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       id: String,
       delta: Long,
       initial: Option[Long] = None,
-      cas: Long = 0,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): Future[CounterResult] = {
     var opts = IncrementOptions()
-      .cas(cas)
       .durability(durability)
       .timeout(timeout)
     initial.foreach(v => opts = opts.initial(v))
@@ -185,7 +183,6 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       id,
       delta,
       options.initial,
-      options.cas,
       options.durability,
       options.expiry,
       timeoutActual,
@@ -210,12 +207,10 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       id: String,
       delta: Long,
       initial: Option[Long] = None,
-      cas: Long = 0,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): Future[CounterResult] = {
     var opts = DecrementOptions()
-      .cas(cas)
       .durability(durability)
       .timeout(timeout)
     initial.foreach(v => opts = opts.initial(v))
@@ -237,7 +232,6 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       id,
       delta,
       options.initial,
-      options.cas,
       options.durability,
       options.expiry,
       timeoutActual,

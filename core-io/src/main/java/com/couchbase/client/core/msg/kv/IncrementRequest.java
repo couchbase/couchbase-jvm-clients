@@ -45,10 +45,9 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> imp
   private final Optional<Long> initial;
   private final long expiry;
   private final Optional<DurabilityLevel> syncReplicationType;
-  private final long cas;
 
   public IncrementRequest(Duration timeout, CoreContext ctx, CollectionIdentifier collectionIdentifier,
-                          RetryStrategy retryStrategy, String key, long cas,
+                          RetryStrategy retryStrategy, String key,
                           long delta, Optional<Long> initial, final long expiration,
                           final Optional<DurabilityLevel> syncReplicationType, InternalSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
@@ -59,7 +58,6 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> imp
     this.initial = initial;
     this.expiry = expiration;
     this.syncReplicationType = syncReplicationType;
-    this.cas = cas;
   }
 
   @Override
@@ -85,14 +83,14 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> imp
         if (ctx.syncReplicationEnabled()) {
           flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout(), context());
           request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.INCREMENT, noDatatype(),
-            partition(), opaque, cas, flexibleExtras, extras, key, noBody());
+            partition(), opaque, noCas(), flexibleExtras, extras, key, noBody());
         }
         else {
           throw new DurabilityLevelNotAvailableException(KeyValueErrorContext.incompleteRequest(this));
         }
       } else {
         request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.INCREMENT, noDatatype(),
-          partition(), opaque, cas, extras, key, noBody());
+          partition(), opaque, noCas(), extras, key, noBody());
       }
       return request;
     } finally {

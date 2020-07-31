@@ -45,11 +45,6 @@ public class DecrementOptions extends CommonDurabilityOptions<DecrementOptions> 
   private Expiry expiry = Expiry.none();
 
   /**
-   * If set, holds the CAS value for this operation.
-   */
-  private long cas = 0;
-
-  /**
    * Creates a new {@link DecrementOptions}.
    *
    * @return the created options.
@@ -108,25 +103,6 @@ public class DecrementOptions extends CommonDurabilityOptions<DecrementOptions> 
     return this;
   }
 
-  /**
-   * Specifies a CAS value that will be taken into account on the server side for optimistic concurrency.
-   * <p>
-   * The CAS value is an opaque identifier which is associated with a specific state of the document on the server. The
-   * CAS value is received on read operations (or after mutations) and can be used during a subsequent mutation to
-   * make sure that the document has not been modified in the meantime.
-   * <p>
-   * If document on the server has been modified in the meantime the SDK will raise a {@link CasMismatchException}. In
-   * this case the caller is expected to re-do the whole "fetch-modify-update" cycle again. Please refer to the
-   * SDK documentation for more information on CAS mismatches and subsequent retries.
-   *
-   * @param cas the opaque CAS identifier to use for this operation.
-   * @return the {@link DecrementOptions} for chaining purposes.
-   */
-  public DecrementOptions cas(long cas) {
-    this.cas = cas;
-    return this;
-  }
-
   @Stability.Internal
   public Built build() {
     return new Built();
@@ -148,7 +124,6 @@ public class DecrementOptions extends CommonDurabilityOptions<DecrementOptions> 
       return delta;
     }
 
-    public long cas() { return cas; }
   }
 
 }

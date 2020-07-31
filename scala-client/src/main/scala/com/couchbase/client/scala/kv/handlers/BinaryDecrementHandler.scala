@@ -43,7 +43,6 @@ private[scala] class BinaryDecrementHandler(hp: HandlerParams)
       id: String,
       delta: Long,
       initial: Option[Long] = None,
-      cas: Long = 0,
       durability: Durability,
       expiration: java.time.Duration,
       timeout: java.time.Duration,
@@ -55,7 +54,6 @@ private[scala] class BinaryDecrementHandler(hp: HandlerParams)
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(delta, "delta")
       _ <- Validate.optNotNull(initial, "initial")
-      _ <- Validate.notNull(cas, "cas")
       _ <- Validate.notNull(durability, "durability")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
@@ -77,7 +75,6 @@ private[scala] class BinaryDecrementHandler(hp: HandlerParams)
           hp.collectionIdentifier,
           retryStrategy,
           id,
-          cas,
           delta,
           i,
           expiration.getSeconds.toInt,
