@@ -106,7 +106,7 @@ public class QueryChunkResponseParser
   }
 
   @Override
-  public Optional<QueryChunkHeader> header() {
+  public Optional<QueryChunkHeader> header(boolean lastChunk) {
     return isHeaderComplete()
       ? Optional.of(new QueryChunkHeader(requestId, clientContextId, signature, prepared))
       : Optional.empty();
