@@ -233,8 +233,9 @@ public abstract class ChunkedMessageHandler
   private void handleHttpContent(final HttpContent msg) {
     chunkResponseParser.feed(msg.content());
 
-    if (currentResponse == null && isSuccess() && chunkResponseParser.header().isPresent()) {
-      completeInitialResponse(chunkResponseParser.header().get());
+    boolean isLastChunk = msg instanceof LastHttpContent;
+    if (currentResponse == null && isSuccess() && chunkResponseParser.header(isLastChunk).isPresent()) {
+      completeInitialResponse(chunkResponseParser.header(isLastChunk).get());
     }
   }
 

@@ -91,7 +91,7 @@ public class AnalyticsChunkResponseParser
   }
 
   @Override
-  public Optional<AnalyticsChunkHeader> header() {
+  public Optional<AnalyticsChunkHeader> header(boolean lastChunk) {
     return isHeaderComplete()
       ? Optional.of(new AnalyticsChunkHeader(requestId, clientContextId, signature))
       : Optional.empty();

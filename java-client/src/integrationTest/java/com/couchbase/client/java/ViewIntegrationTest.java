@@ -47,6 +47,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
 
   private static final String DDOC_NAME = "everything";
   private static final String VIEW_NAME = "all";
+  private static final String VIEW_WITH_REDUCE_NAME = "all_red";
 
   private static Cluster cluster;
   private static Bucket bucket;
@@ -81,6 +82,8 @@ class ViewIntegrationTest extends JavaIntegrationTest {
   private static void createDesignDocument() {
     Map<String, View> views = new HashMap<>();
     views.put(VIEW_NAME, new View("function(doc,meta) { emit(meta.id, doc) }"));
+    views.put(VIEW_WITH_REDUCE_NAME, new View("function(doc,meta) { emit(meta.id, doc) }", "_count"));
+
     DesignDocument designDocument = new DesignDocument(DDOC_NAME, views);
     bucket.viewIndexes().upsertDesignDocument(designDocument, DesignDocumentNamespace.PRODUCTION);
   }
@@ -134,6 +137,37 @@ class ViewIntegrationTest extends JavaIntegrationTest {
     );
 
     assertEquals(2, viewResult.rows().size());
+  }
+
+  /**
+   * Regression test for JVMCBC-870
+   */
+  @Test
+  void canQueryWithReduceEnabled() {
+    int docsToWrite = 2;
+    for (int i = 0; i < docsToWrite; i++) {
+      collection.upsert("reddoc-"+i, JsonObject.create());
+    }
+
+    ViewResult viewResult = bucket.viewQuery(
+      DDOC_NAME,
+      VIEW_WITH_REDUCE_NAME,
+      viewOptions().scanConsistency(ViewScanConsistency.REQUEST_PLUS)
+    );
+
+    // total rows is always 0 on a reduce response
+    assertEquals(0, viewResult.metaData().totalRows());
+    // since we just wrote docs, the _count value should be > 0
+    assertTrue(viewResult.rows().get(0).valueAs(Integer.class).get() > 0);
+
+    viewResult = bucket.viewQuery(
+      DDOC_NAME,
+      VIEW_WITH_REDUCE_NAME,
+      viewOptions().scanConsistency(ViewScanConsistency.REQUEST_PLUS).limit(0)
+    );
+
+    assertEquals(0, viewResult.metaData().totalRows());
+    assertTrue(viewResult.rows().isEmpty());
   }
 
 }

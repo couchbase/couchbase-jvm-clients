@@ -40,8 +40,10 @@ public interface ChunkResponseParser<H extends ChunkHeader, ROW extends ChunkRow
    *
    * <p>It is important to provide a non-absent value even if some parts are optional because
    * the related IO components will only proceed if a header is available eventually.</p>
+   *
+   * @param lastChunk if we are currently parsing the last chunk.
    */
-  Optional<H> header();
+  Optional<H> header(boolean lastChunk);
 
   /**
    * If the parser sees an error, it should fill this optional so that if the IO

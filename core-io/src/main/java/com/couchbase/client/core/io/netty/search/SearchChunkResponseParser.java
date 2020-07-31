@@ -70,7 +70,7 @@ public class SearchChunkResponseParser
   }
 
   @Override
-  public Optional<SearchChunkHeader> header() {
+  public Optional<SearchChunkHeader> header(boolean lastChunk) {
     return Optional.ofNullable(status).map(SearchChunkHeader::new);
   }
 

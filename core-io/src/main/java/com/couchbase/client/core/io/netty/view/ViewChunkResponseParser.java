@@ -30,21 +30,39 @@ import com.couchbase.client.core.msg.view.ViewError;
 
 import java.util.Optional;
 
+/**
+ * Parses the individual response http chunks for a view request.
+ */
 public class ViewChunkResponseParser
   extends BaseChunkResponseParser<ViewChunkHeader, ViewChunkRow, ViewChunkTrailer> {
 
-  private Long totalRows;
+  /**
+   * If present in non-reduce results, holds the total rows.
+   */
+  private long totalRows;
 
+  /**
+   * If enabled at request time, holds detailed debug information.
+   */
   private Optional<byte[]> debug;
+
+  /**
+   * If an error happened during server request handling, will hold this error.
+   */
   private Optional<ViewError> error;
 
   private final JsonStreamParser.Builder parserBuilder = JsonStreamParser.builder()
-    .doOnValue("/total_rows", v -> totalRows = v.readLong())
+    .doOnValue("/debug_info", v -> debug = Optional.of(v.readBytes()))
+    .doOnValue("/total_rows", v -> {
+      markHeaderComplete();
+      totalRows = v.readLong();
+    })
     .doOnValue("/rows/-", v -> {
+      markHeaderComplete();
       emitRow(new ViewChunkRow(v.readBytes()));
     })
-    .doOnValue("/debug_info", v -> debug = Optional.of(v.readBytes()))
     .doOnValue("/error", v -> {
+      markHeaderComplete();
       String data = v.readString();
 
       ViewError current = error.orElse(new ViewError(null, null));
@@ -64,14 +82,14 @@ public class ViewChunkResponseParser
 
   @Override
   protected void doCleanup() {
-    totalRows = null;
+    totalRows = 0;
     debug = Optional.empty();
     error = Optional.empty();
   }
 
   @Override
-  public Optional<ViewChunkHeader> header() {
-    return (totalRows != null)
+  public Optional<ViewChunkHeader> header(boolean lastChunk) {
+    return isHeaderComplete() || lastChunk
       ? Optional.of(new ViewChunkHeader(totalRows, debug))
       : Optional.empty();
   }
