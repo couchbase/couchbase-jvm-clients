@@ -18,7 +18,6 @@ package com.couchbase.client.core.retry.reactor;
 
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 
 import java.time.Duration;
@@ -27,8 +26,9 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * Retry function that may be used with {@link Flux#retryWhen(Function)} and {@link
- * Mono#retryWhen(Function)}.
+ * Retry function that may be used with retryWhen in Flux and Mono.
+ * <p>
+ * This class is deprecated since reactor now ships with its own retry logic.
  * <p>
  * Each change in configuration returns a new instance (copy configuration), which
  * makes {@link Retry} suitable for creating configuration templates that can be fine
@@ -55,7 +55,7 @@ public interface Retry<T> extends Function<Flux<Throwable>, Publisher<Long>> {
 	 * @return retry function that retries on any exception
 	 */
 	static <T> Retry<T> any() {
-		return DefaultRetry.<T>create(context -> true);
+		return DefaultRetry.create(context -> true);
 	}
 
 	/**
@@ -79,7 +79,7 @@ public interface Retry<T> extends Function<Flux<Throwable>, Publisher<Long>> {
 			}
 			return false;
 		};
-		return DefaultRetry.<T>create(predicate);
+		return DefaultRetry.create(predicate);
 	}
 
 	/**
@@ -103,7 +103,7 @@ public interface Retry<T> extends Function<Flux<Throwable>, Publisher<Long>> {
 			}
 			return true;
 		};
-		return DefaultRetry.<T>create(predicate);
+		return DefaultRetry.create(predicate);
 	}
 
 	/**
@@ -288,6 +288,18 @@ public interface Retry<T> extends Function<Flux<Throwable>, Publisher<Long>> {
 	 * @return {@link Flux} with the retry properties of this retry function
 	 */
 	default <S> Flux<S> apply(Publisher<S> source) {
-		return Flux.from(source).retryWhen(this);
+		return Flux
+			.from(source)
+			.retryWhen(reactor.util.retry.Retry.from(rs -> this.apply(rs.map(reactor.util.retry.Retry.RetrySignal::failure))));
 	}
+
+	/**
+	 * Converts this retry function to a reactor retry function for compatibility.
+	 *
+	 * @return a converted retry function.
+	 */
+	default reactor.util.retry.Retry toReactorRetry() {
+		return reactor.util.retry.Retry.from(rs -> this.apply(rs.map(reactor.util.retry.Retry.RetrySignal::failure)));
+	}
+
 }

@@ -314,6 +314,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
               )
               .exponentialBackoff(50.milliseconds, 1.seconds)
               .timeout(timeout)
+              .toReactorRetry
           )
           .onErrorMap(err => {
             if (err.isInstanceOf[RetryExhaustedException]) toWatchTimeoutException(err, timeout)

@@ -351,6 +351,7 @@ public abstract class BaseEndpoint implements Endpoint {
             trimNettyFromStackTrace(retryContext.exception())
           ));
         })
+        .toReactorRetry()
       ).subscribe(
         channel -> {
           long now = System.nanoTime();

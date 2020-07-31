@@ -238,7 +238,8 @@ public class AsyncQueryIndexManager {
     return Mono.fromFuture(() -> failIfIndexesOffline(bucketName, indexNameSet, builtOpts.watchPrimary()))
         .retryWhen(Retry.onlyIf(ctx -> hasCause(ctx.exception(), IndexesNotReadyException.class))
             .exponentialBackoff(Duration.ofMillis(50), Duration.ofSeconds(1))
-            .timeout(timeout))
+            .timeout(timeout)
+            .toReactorRetry())
         .onErrorMap(t -> t instanceof RetryExhaustedException ? toWatchTimeoutException(t, timeout) : t)
         .toFuture();
   }

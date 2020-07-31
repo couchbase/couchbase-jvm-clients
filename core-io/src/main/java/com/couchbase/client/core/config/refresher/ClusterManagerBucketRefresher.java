@@ -141,7 +141,8 @@ public class ClusterManagerBucketRefresher implements BucketRefresher {
       })
       .retryWhen(Retry
         .any()
-        .exponentialBackoff(Duration.ofMillis(32), Duration.ofMillis(4096)))
+        .exponentialBackoff(Duration.ofMillis(32), Duration.ofMillis(4096))
+        .toReactorRetry())
       .subscribe(provider::proposeBucketConfig);
   }
 

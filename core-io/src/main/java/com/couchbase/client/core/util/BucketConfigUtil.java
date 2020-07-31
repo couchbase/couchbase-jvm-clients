@@ -17,8 +17,6 @@ package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.InternalSpan;
-import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.retry.reactor.Backoff;
@@ -52,7 +50,8 @@ public class BucketConfigUtil {
             return bucketConfig;
         }).retryWhen(Retry.anyOf(NullPointerException.class)
                 .timeout(timeout)
-                .backoff(Backoff.fixed(retryDelay)))
+                .backoff(Backoff.fixed(retryDelay))
+                .toReactorRetry())
                 .onErrorResume(err -> {
                     if (err instanceof RetryExhaustedException) {
                         return Mono.error(new UnambiguousTimeoutException("Timed out while waiting for bucket config", null));
