@@ -103,12 +103,11 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
       id: String,
       delta: Long,
       initial: Option[Long] = None,
-      cas: Long = 0,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): SMono[CounterResult] = {
     SMono.defer(
-      () => SMono.fromFuture(async.increment(id, delta, initial, cas, durability, timeout))
+      () => SMono.fromFuture(async.increment(id, delta, initial, durability, timeout))
     )
   }
 
@@ -132,12 +131,11 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
       id: String,
       delta: Long,
       initial: Option[Long] = None,
-      cas: Long = 0,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): SMono[CounterResult] = {
     SMono.defer(
-      () => SMono.fromFuture(async.decrement(id, delta, initial, cas, durability, timeout))
+      () => SMono.fromFuture(async.decrement(id, delta, initial, durability, timeout))
     )
   }
 

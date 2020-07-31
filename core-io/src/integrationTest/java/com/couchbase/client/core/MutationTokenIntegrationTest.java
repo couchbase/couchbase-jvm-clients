@@ -222,7 +222,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     assertMutationToken(insertResponse.mutationToken());
 
     IncrementRequest incrementRequest = new IncrementRequest(Duration.ofSeconds(1), core.context(), collectionIdentifier,
-      env.retryStrategy(), id, 0, 1, Optional.empty(), 0, Optional.empty(), null);
+      env.retryStrategy(), id, 1, Optional.empty(), 0, Optional.empty(), null);
     core.send(incrementRequest);
 
     IncrementResponse incrementResponse = incrementRequest.response().get();
@@ -244,7 +244,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     assertMutationToken(insertResponse.mutationToken());
 
     DecrementRequest decrementRequest = new DecrementRequest(Duration.ofSeconds(1), core.context(), collectionIdentifier,
-      env.retryStrategy(), id, 0, 1, Optional.empty(), 0, Optional.empty(), null);
+      env.retryStrategy(), id, 1, Optional.empty(), 0, Optional.empty(), null);
     core.send(decrementRequest);
 
     DecrementResponse decrementResponse = decrementRequest.response().get();

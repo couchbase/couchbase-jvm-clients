@@ -28,7 +28,6 @@ import scala.concurrent.duration.{Duration, _}
   */
 case class DecrementOptions(
     private[scala] val initial: Option[Long] = None,
-    private[scala] val cas: Long = 0,
     private[scala] val durability: Durability = Disabled,
     private[scala] val timeout: Duration = Duration.MinusInf,
     private[scala] val parentSpan: Option[RequestSpan] = None,
@@ -44,18 +43,6 @@ case class DecrementOptions(
     */
   def initial(value: Long): DecrementOptions = {
     copy(initial = Some(value))
-  }
-
-  /** Couchbase documents all have a CAS (Compare-And-Set) field, a simple integer that allows
-    * optimistic concurrency - e.g. it can detect if another agent has modified a document
-    * in-between this agent getting and modifying the document.
-    *
-    * The default is 0, which disables CAS checking.    *
-    *
-    * @return a copy of this with the change applied, for chaining.
-    */
-  def cas(value: Long): DecrementOptions = {
-    copy(cas = value)
   }
 
   /** Changes the durability setting used for this operation.

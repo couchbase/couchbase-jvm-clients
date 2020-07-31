@@ -190,7 +190,6 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @param initial       if not-None, the amount to initialise the document too, if it does not exist.  If this is
     *                      not set, and the document does not exist, Failure(DocumentDoesNotExistException) will be
     *                      returned
-    * @param cas           $CAS
     * @param durability    $Durability
     * @param timeout       $Timeout
     *
@@ -202,7 +201,6 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
       id: String,
       delta: Long,
       initial: Option[Long] = None,
-      cas: Long = 0,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): Try[CounterResult] = {
@@ -211,7 +209,6 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
         id,
         delta,
         initial,
-        cas,
         durability,
         timeout
       )
@@ -256,7 +253,6 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @param initial       if not-None, the amount to initialise the document too, if it does not exist.  If this is
     *                      not set, and the document does not exist, Failure(DocumentDoesNotExistException) will be
     *                      returned
-    * @param cas           $CAS
     * @param durability    $Durability
     * @param timeout       $Timeout
     *
@@ -268,7 +264,6 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
       id: String,
       delta: Long,
       initial: Option[Long] = None,
-      cas: Long = 0,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): Try[CounterResult] = {
@@ -277,7 +272,6 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
         id,
         delta,
         initial,
-        cas,
         durability,
         timeout
       )

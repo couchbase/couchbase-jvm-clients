@@ -111,7 +111,6 @@ public class BinaryCollection {
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link CounterResult} once completed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
-   * @throws CasMismatchException if the document has been concurrently modified on the server.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
@@ -126,7 +125,6 @@ public class BinaryCollection {
    * @param options custom options to customize the increment behavior.
    * @return a {@link CounterResult} once completed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
-   * @throws CasMismatchException if the document has been concurrently modified on the server.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
@@ -140,7 +138,6 @@ public class BinaryCollection {
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link CounterResult} once completed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
-   * @throws CasMismatchException if the document has been concurrently modified on the server.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
@@ -155,7 +152,6 @@ public class BinaryCollection {
    * @param options custom options to customize the decrement behavior.
    * @return a {@link CounterResult} once completed.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
-   * @throws CasMismatchException if the document has been concurrently modified on the server.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
