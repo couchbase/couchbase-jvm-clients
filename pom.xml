@@ -20,7 +20,7 @@
         <assertj.version>3.14.0</assertj.version>
         <log4j-slf4j-impl.version>2.13.0</log4j-slf4j-impl.version>
         <jackson.version>2.11.1</jackson.version>
-        <reactor.version>3.3.7.RELEASE</reactor.version>
+        <reactor.version>3.3.8.RELEASE</reactor.version>
         <scala.couchbase.version>1.1.0-SNAPSHOT</scala.couchbase.version>
 
         <gpg.keyname></gpg.keyname>
