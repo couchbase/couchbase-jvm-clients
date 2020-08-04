@@ -302,7 +302,7 @@ public abstract class BaseEndpoint implements Endpoint {
                   throw new SecurityException("Could not instantiate SSL Handler", e);
                 }
               }
-              if (env.ioConfig().captureTraffic().contains(serviceType)) {
+              if (env.ioConfig().servicesToCapture().contains(serviceType)) {
                 pipeline.addLast(new TrafficCaptureHandler(endpointContext));
               }
               pipelineInitializer().init(BaseEndpoint.this, pipeline);
