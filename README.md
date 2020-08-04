@@ -26,7 +26,7 @@ For Java:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>java-client</artifactId>
-        <version>3.0.5</version>
+        <version>3.0.7</version>
     </dependency>
 </dependencies>
 ```
@@ -38,13 +38,13 @@ For Scala:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>scala-client_2.12</artifactId>
-        <version>1.0.5</version>
+        <version>1.0.7</version>
     </dependency>
 </dependencies>
 ```
 or if you use sbt:
 ```sbt
-libraryDependencies += "com.couchbase.client" %% "scala-client" % "1.0.5"
+libraryDependencies += "com.couchbase.client" %% "scala-client" % "1.0.7"
 ```
 
 ## Building
