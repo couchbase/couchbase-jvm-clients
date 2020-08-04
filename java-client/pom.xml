@@ -6,11 +6,11 @@
     <parent>
         <groupId>com.couchbase.client</groupId>
         <artifactId>couchbase-jvm-clients</artifactId>
-        <version>1.9.8</version>
+        <version>1.9.9-SNAPSHOT</version>
     </parent>
 
     <artifactId>java-client</artifactId>
-    <version>3.0.7</version>
+    <version>3.0.8-SNAPSHOT</version>
 
     <name>Couchbase Java SDK</name>
     <description>The official Couchbase Java SDK</description>
