@@ -105,10 +105,10 @@ class BuilderPropertySetterTest {
 
     IoConfig io = builder.ioConfig().build();
     Set<ServiceType> expected = EnumSet.of(ServiceType.KV, ServiceType.ANALYTICS);
-    assertEquals(expected, io.captureTraffic());
+    assertEquals(expected, io.servicesToCapture());
 
     setter.set(builder, "io.captureTraffic", "");
-    assertEquals(EnumSet.allOf(ServiceType.class), builder.ioConfig().build().captureTraffic());
+    assertEquals(EnumSet.allOf(ServiceType.class), builder.ioConfig().build().servicesToCapture());
 
 
     InvalidArgumentException e = assertThrows(InvalidArgumentException.class,

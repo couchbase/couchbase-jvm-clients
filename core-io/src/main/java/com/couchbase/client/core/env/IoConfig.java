@@ -130,6 +130,17 @@ public class IoConfig {
     return builder().managerCircuitBreakerConfig(managerCircuitBreakerConfig);
   }
 
+  /**
+   * Captures the traffic for all services provided as an argument (all if empty).
+   * <p>
+   * IMPORTANT: It is not enough to just enable traffic capturing, also TRACE level logging needs to be enabled
+   * for the couchbase namespace in your logger implementation.
+   * <p>
+   * Note that this flag should only be enabled during development and for debugging purposes. When enabled
+   * it will add more overhead due to traffic parsing, logging and analysis.
+   *
+   * @return this {@link Builder} for chaining purposes.
+   */
   public static Builder captureTraffic(final ServiceType... serviceTypes) {
     return builder().captureTraffic(serviceTypes);
   }
@@ -198,7 +209,12 @@ public class IoConfig {
     return configPollInterval;
   }
 
-  public Set<ServiceType> captureTraffic() {
+  /**
+   * Lists the services on which traffic should be captured.
+   *
+   * @return the services to capture traffic from, if present.
+   */
+  public Set<ServiceType> servicesToCapture() {
     return captureTraffic;
   }
 
@@ -404,8 +420,19 @@ public class IoConfig {
       return managerCircuitBreakerConfig;
     }
 
+    /**
+     * Captures the traffic for all services provided as an argument (all if empty).
+     * <p>
+     * IMPORTANT: It is not enough to just enable traffic capturing, also TRACE level logging needs to be enabled
+     * for the couchbase namespace in your logger implementation.
+     * <p>
+     * Note that this flag should only be enabled during development and for debugging purposes. When enabled
+     * it will add more overhead due to traffic parsing, logging and analysis.
+     *
+     * @return this {@link Builder} for chaining purposes.
+     */
     public Builder captureTraffic(final ServiceType... serviceTypes) {
-      this.captureTraffic = serviceTypes.length == 0
+      this.captureTraffic = serviceTypes == null || serviceTypes.length == 0
         ? EnumSet.allOf(ServiceType.class)
         : EnumSet.copyOf(Arrays.asList(serviceTypes));
       return this;
