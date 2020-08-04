@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.QueryResult;
@@ -62,6 +63,8 @@ class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
     Collection collection = bucket.defaultCollection();
 
     bucket.waitUntilReady(Duration.ofSeconds(5));
+    waitForService(bucket, ServiceType.QUERY);
+    waitForQueryIndexerToHaveBucket(cluster, config().bucketname());
 
     bucketName = "`" + config().bucketname() + "`";
     createPrimaryIndex(cluster, config().bucketname());

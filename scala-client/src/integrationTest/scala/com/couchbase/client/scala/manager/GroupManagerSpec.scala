@@ -7,7 +7,7 @@ import com.couchbase.client.core.error.{
 }
 import com.couchbase.client.scala.manager.user._
 import com.couchbase.client.scala.util.{CouchbasePickler, ScalaIntegrationTest}
-import com.couchbase.client.scala.{Cluster, Collection}
+import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.test._
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -38,16 +38,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
     users = cluster.users
-
-    // Wait until nsserver is ready to serve
-    Util.waitUntilCondition(() => {
-      users.getAllGroups() match {
-        case Success(_) => true
-        case Failure(err) =>
-          println(err)
-          false
-      }
-    })
+    TestUtils.waitForNsServerToBeReady(cluster)
   }
 
   @AfterAll

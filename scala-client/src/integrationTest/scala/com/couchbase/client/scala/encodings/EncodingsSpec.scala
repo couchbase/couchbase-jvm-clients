@@ -1,5 +1,7 @@
 package com.couchbase.client.scala.encodings
 
+import java.util.concurrent.TimeUnit
+
 import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.scala.codec.JsonSerializer
 import com.couchbase.client.scala.codec.{
@@ -14,6 +16,7 @@ import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
@@ -27,6 +30,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
   }
 
   @AfterAll

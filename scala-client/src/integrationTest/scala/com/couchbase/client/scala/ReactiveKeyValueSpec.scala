@@ -16,6 +16,8 @@
 
 package com.couchbase.client.scala
 
+import java.util.concurrent.TimeUnit
+
 import com.couchbase.client.core.error.{DocumentNotFoundException, TimeoutException}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.{GetOptions, InsertOptions}
@@ -42,6 +44,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     val bucket = cluster.bucket(config.bucketname)
     blocking = bucket.defaultCollection
     coll = blocking.reactive
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
   }
 
   @AfterAll

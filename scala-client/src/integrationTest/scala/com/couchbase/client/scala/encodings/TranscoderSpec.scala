@@ -15,6 +15,8 @@
  */
 package com.couchbase.client.scala.encodings
 
+import java.util.concurrent.TimeUnit
+
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv.InsertOptions
@@ -55,6 +57,7 @@ class TranscoderSpec extends ScalaIntegrationTest {
 
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
   }
 
   @AfterAll

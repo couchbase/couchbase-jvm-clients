@@ -18,6 +18,7 @@ package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -74,6 +75,7 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
     // required for pre-GCCCP servers (< 6.5)
     Bucket bucket = cluster.bucket(bucketName);
     bucket.waitUntilReady(Duration.ofSeconds(5));
+    waitForService(bucket, ServiceType.QUERY);
     waitForQueryIndexerToHaveBucket(cluster, bucketName);
   }
 

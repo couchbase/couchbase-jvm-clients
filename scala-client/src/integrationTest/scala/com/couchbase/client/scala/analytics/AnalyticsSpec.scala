@@ -15,14 +15,18 @@
  */
 package com.couchbase.client.scala.analytics
 
+import java.util.concurrent.TimeUnit
+
 import com.couchbase.client.core.error.{AnalyticsException, ParsingFailureException}
+import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
-import com.couchbase.client.scala.{Cluster, Collection}
+import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{Capabilities, IgnoreWhen}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
@@ -38,6 +42,8 @@ class AnalyticsSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
+    TestUtils.waitForService(bucket, ServiceType.ANALYTICS)
   }
 
   @AfterAll

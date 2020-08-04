@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala.manager
 
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.SECONDS
 
 import com.couchbase.client.core.error.{
@@ -51,6 +52,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     bucketName = config.bucketname
     indexes = cluster.queryIndexes
 
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
     TestUtils.waitForService(bucket, ServiceType.QUERY)
     TestUtils.waitForIndexerToHaveBucket(cluster, config.bucketname())
   }

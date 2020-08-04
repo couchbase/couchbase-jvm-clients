@@ -17,6 +17,7 @@
 package com.couchbase.client.java.manager.search;
 
 import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.json.JsonObject;
@@ -49,6 +50,7 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
     Bucket bucket = cluster.bucket(config().bucketname());
     indexes = cluster.searchIndexes();
     bucket.waitUntilReady(Duration.ofSeconds(5));
+    waitForService(bucket, ServiceType.SEARCH);
   }
 
   @AfterAll

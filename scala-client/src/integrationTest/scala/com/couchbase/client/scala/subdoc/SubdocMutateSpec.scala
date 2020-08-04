@@ -1,7 +1,6 @@
 package com.couchbase.client.scala.subdoc
 
-import java.time.Duration
-import java.util.Arrays
+import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.error.subdoc.{PathExistsException, PathNotFoundException}
 import com.couchbase.client.core.error.{
@@ -21,9 +20,8 @@ import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.duration._
+import scala.concurrent.duration.{Duration, _}
 import scala.util.{Failure, Success, Try}
-import concurrent.duration._
 
 @TestInstance(Lifecycle.PER_CLASS)
 class SubdocMutateSpec extends ScalaIntegrationTest {
@@ -36,6 +34,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
   }
 
   @AfterAll

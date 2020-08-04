@@ -15,6 +15,8 @@
  */
 package com.couchbase.client.scala.datastructures
 
+import java.util.concurrent.TimeUnit
+
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.util.ScalaIntegrationTest
@@ -24,6 +26,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 
 @TestInstance(Lifecycle.PER_CLASS)
@@ -39,7 +42,7 @@ class CouchbaseSetSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
   }
 
   @AfterAll

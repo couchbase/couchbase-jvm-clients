@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.manager.search.SearchIndex;
@@ -55,6 +56,7 @@ class SearchIntegrationTest extends JavaIntegrationTest {
         collection = bucket.defaultCollection();
 
         bucket.waitUntilReady(Duration.ofSeconds(5));
+        waitForService(bucket, ServiceType.SEARCH);
         cluster.searchIndexes().upsertIndex(new SearchIndex("idx-" + config().bucketname(), config().bucketname()));
     }
 

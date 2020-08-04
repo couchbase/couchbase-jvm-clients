@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 package com.couchbase.client.scala.view
+import java.util.concurrent.TimeUnit
+
 import com.couchbase.client.core.error.ViewNotFoundException
+import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.codec.JsonDeserializer.JsonObjectConvert
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.manager.view.{DesignDocument, View}
@@ -44,6 +47,7 @@ class ViewSpec extends ScalaIntegrationTest {
 
     bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
 
     val designDoc = DesignDocument(
       DesignDocName,
