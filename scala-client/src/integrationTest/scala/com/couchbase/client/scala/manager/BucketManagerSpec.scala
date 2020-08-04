@@ -16,21 +16,24 @@
 package com.couchbase.client.scala.manager
 
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.error.{
   BucketExistsException,
   BucketNotFoundException,
   DocumentNotFoundException
 }
+import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.manager.bucket._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.scala.{Cluster, Collection}
+import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.test.Util.waitUntilThrows
 import com.couchbase.client.test._
 import org.junit.jupiter.api.Assertions.{assertEquals, assertFalse, assertThrows, assertTrue}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
@@ -46,6 +49,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     buckets = cluster.buckets
     bucketName = ClusterAwareIntegrationTest.config().bucketname()
     val bucket = cluster.bucket(bucketName)
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
   }
 
   @AfterAll

@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.ParsingFailureException;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.analytics.AnalyticsMetaData;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.analytics.AnalyticsStatus;
@@ -45,9 +46,10 @@ class AnalyticsIntegrationTest extends JavaIntegrationTest {
     @BeforeAll
     static void setup() {
         cluster = Cluster.connect(seedNodes(), clusterOptions());
-        cluster.bucket(config().bucketname());
+        Bucket bucket = cluster.bucket(config().bucketname());
 
         cluster.waitUntilReady(Duration.ofSeconds(5));
+        waitForService(bucket, ServiceType.ANALYTICS);
     }
 
     @AfterAll

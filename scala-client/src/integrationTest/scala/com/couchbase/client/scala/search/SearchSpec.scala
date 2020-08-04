@@ -18,6 +18,7 @@ package com.couchbase.client.scala.search
 
 import java.util.concurrent.TimeUnit
 
+import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.MutationState
 import com.couchbase.client.scala.manager.search.SearchIndex
@@ -25,11 +26,12 @@ import com.couchbase.client.scala.search.facet.SearchFacet
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.SearchFacetResult.{TermRange, TermSearchFacetResult}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.scala.{Cluster, Collection}
+import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.test.{Capabilities, IgnoreWhen, Util}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
 @IgnoreWhen(missesCapabilities = Array(Capabilities.SEARCH))
@@ -46,6 +48,8 @@ class SearchSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
+    TestUtils.waitForService(bucket, ServiceType.SEARCH)
 
     val result1 =
       coll

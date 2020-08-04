@@ -1,8 +1,9 @@
 package com.couchbase.client.scala
 
 import java.util.NoSuchElementException
-import java.util.concurrent.{CountDownLatch, Executors, ThreadFactory}
+import java.util.concurrent.{CountDownLatch, Executors, ThreadFactory, TimeUnit}
 
+import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
@@ -38,6 +39,7 @@ class AsyncKeyValueSpec extends ScalaIntegrationTest {
     val bucket = cluster.bucket(config.bucketname)
     blocking = bucket.defaultCollection
     coll = blocking.async
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
   }
 
   @Test

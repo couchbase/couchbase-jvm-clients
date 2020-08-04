@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.manager.view.DesignDocument;
@@ -60,6 +61,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
     collection = bucket.defaultCollection();
 
     bucket.waitUntilReady(Duration.ofSeconds(5));
+    waitForService(bucket, ServiceType.VIEWS);
 
     createDesignDocument();
 

@@ -6,6 +6,7 @@ import com.couchbase.client.core.diagnostics.PingState
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.diagnostics.PingOptions
 import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.test.Util
 
 import scala.util.{Failure, Success}
 
@@ -67,5 +68,16 @@ object TestUtils {
         Thread.sleep(50)
       }
     }
+  }
+
+  def waitForNsServerToBeReady(cluster: Cluster): Unit = {
+    Util.waitUntilCondition(() => {
+      cluster.users.getAllUsers() match {
+        case Success(_) => true
+        case Failure(err) =>
+          println(err)
+          false
+      }
+    })
   }
 }

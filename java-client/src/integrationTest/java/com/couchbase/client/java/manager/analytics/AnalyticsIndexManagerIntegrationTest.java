@@ -25,6 +25,7 @@ import com.couchbase.client.core.error.DatasetNotFoundException;
 import com.couchbase.client.core.error.DataverseExistsException;
 import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -79,6 +80,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
     bucket = cluster.bucket(config().bucketname());
     analytics = cluster.analyticsIndexes();
     bucket.waitUntilReady(Duration.ofSeconds(5));
+    waitForService(bucket, ServiceType.ANALYTICS);
   }
 
   @AfterAll

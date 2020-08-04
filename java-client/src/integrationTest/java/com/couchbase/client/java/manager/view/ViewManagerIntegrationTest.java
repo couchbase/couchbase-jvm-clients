@@ -18,6 +18,7 @@ package com.couchbase.client.java.manager.view;
 
 import com.couchbase.client.core.error.DesignDocumentNotFoundException;
 import com.couchbase.client.core.error.ViewServiceException;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -60,6 +61,7 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
     Bucket bucket = cluster.bucket(config().bucketname());
     views = bucket.viewIndexes();
     bucket.waitUntilReady(Duration.ofSeconds(5));
+    waitForService(bucket, ServiceType.VIEWS);
   }
 
   @AfterAll

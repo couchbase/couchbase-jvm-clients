@@ -20,6 +20,7 @@ import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.context.QueryErrorContext;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -78,6 +79,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         collection = bucket.defaultCollection();
 
         bucket.waitUntilReady(Duration.ofSeconds(5));
+        waitForService(bucket, ServiceType.QUERY);
         waitForQueryIndexerToHaveBucket(cluster, config().bucketname());
 
         bucketName = "`" + config().bucketname() + "`";

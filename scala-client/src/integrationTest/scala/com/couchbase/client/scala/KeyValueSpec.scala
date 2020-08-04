@@ -1,16 +1,32 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.{DocumentNotFoundException, TimeoutException}
+import java.util.concurrent.TimeUnit
+
+import com.couchbase.client.core.error.{
+  CasMismatchException,
+  DocumentNotFoundException,
+  TimeoutException
+}
 import com.couchbase.client.core.retry.RetryReason
+import com.couchbase.client.core.retry.reactor.Retry
+import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.implicits.Codec
-import com.couchbase.client.scala.json.JsonObjectSafe
-import com.couchbase.client.scala.kv.{GetOptions, InsertOptions}
+import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
+import com.couchbase.client.scala.kv.{
+  GetOptions,
+  GetResult,
+  InsertOptions,
+  MutationResult,
+  UpsertOptions
+}
 import com.couchbase.client.scala.util.{ScalaIntegrationTest, Validate}
 import com.couchbase.client.test.{ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 @TestInstance(Lifecycle.PER_CLASS)
@@ -25,7 +41,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
 
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
   }
 
   @AfterAll
@@ -428,3 +444,4 @@ class KeyValueSpec extends ScalaIntegrationTest {
     assert(as.values.size == count)
   }
 }
+

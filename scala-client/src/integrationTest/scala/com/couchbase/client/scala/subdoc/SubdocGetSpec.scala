@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.{DecodingFailureException, InvalidArgumentException}
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
+import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.codec.JsonDeserializer.Passthrough
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.env.ClusterEnvironment
@@ -37,6 +38,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
   }
 
   @AfterAll

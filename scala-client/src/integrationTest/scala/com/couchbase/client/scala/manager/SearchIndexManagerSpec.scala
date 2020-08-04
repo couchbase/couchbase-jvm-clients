@@ -17,16 +17,19 @@ package com.couchbase.client.scala.manager
 
 import java.nio.charset.StandardCharsets
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.error.IndexNotFoundException
+import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.manager.search._
 import com.couchbase.client.scala.util.{CouchbasePickler, ScalaIntegrationTest}
-import com.couchbase.client.scala.Cluster
+import com.couchbase.client.scala.{Cluster, TestUtils}
 import com.couchbase.client.test._
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
+import scala.concurrent.duration._
 import scala.util.Failure
 
 @TestInstance(Lifecycle.PER_CLASS)
@@ -42,6 +45,8 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
     // Need to open a bucket until we have GCCCP support
     bucketName = ClusterAwareIntegrationTest.config().bucketname()
     val bucket = cluster.bucket(bucketName)
+    bucket.waitUntilReady(30 seconds)
+    TestUtils.waitForService(bucket, ServiceType.SEARCH)
     indexes = cluster.searchIndexes
     indexes
       .getAllIndexes()

@@ -1,5 +1,7 @@
 package com.couchbase.client.scala
 
+import java.util.concurrent.TimeUnit
+
 import com.couchbase.client.core.error.{DurabilityLevelNotAvailableException, TimeoutException}
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability._
@@ -24,7 +26,7 @@ class DurabilitySpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
   }
 
   @AfterAll

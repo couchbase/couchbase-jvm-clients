@@ -1,5 +1,7 @@
 package com.couchbase.client.scala
 
+import java.util.concurrent.TimeUnit
+
 import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
@@ -25,6 +27,7 @@ class GetFromReplicaSpec extends ScalaIntegrationTest {
     coll = bucket.defaultCollection
     reactive = coll.reactive
     async = coll.async
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
   }
 
   @AfterAll

@@ -1,5 +1,7 @@
 package com.couchbase.client.scala
 
+import java.util.concurrent.TimeUnit
+
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv.{DecrementOptions, IncrementOptions}
@@ -8,6 +10,7 @@ import com.couchbase.client.test.{ClusterAwareIntegrationTest, ClusterType, Igno
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
@@ -21,6 +24,7 @@ class BinarySpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection.binary
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
   }
 
   @AfterAll

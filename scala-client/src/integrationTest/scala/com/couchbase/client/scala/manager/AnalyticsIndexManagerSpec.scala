@@ -17,12 +17,14 @@ package com.couchbase.client.scala.manager
 import java.nio.charset.StandardCharsets
 
 import com.couchbase.client.core.error._
-import com.couchbase.client.scala.Cluster
+import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.scala.{Cluster, TestUtils}
 import com.couchbase.client.scala.manager.analytics._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
+import scala.concurrent.duration._
 
 import scala.util.{Failure, Success}
 
@@ -42,6 +44,8 @@ class AnalyticsIndexManagerSpec extends ScalaIntegrationTest {
     // Need to open a bucket until we have GCCCP support
     bucketName = ClusterAwareIntegrationTest.config().bucketname()
     val bucket = cluster.bucket(bucketName)
+    bucket.waitUntilReady(30 seconds)
+    TestUtils.waitForService(bucket, ServiceType.ANALYTICS)
     analytics = cluster.analyticsIndexes
   }
 

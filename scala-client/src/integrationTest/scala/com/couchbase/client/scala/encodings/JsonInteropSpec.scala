@@ -1,5 +1,7 @@
 package com.couchbase.client.scala.encodings
 
+import java.util.concurrent.TimeUnit
+
 import com.couchbase.client.scala._
 import com.couchbase.client.scala.codec.RawJsonTranscoder
 import com.couchbase.client.scala.implicits.Codec
@@ -10,6 +12,8 @@ import io.circe.Decoder
 import com.github.plokhotnyuk.jsoniter_scala.macros.named
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
+
+import scala.concurrent.duration.Duration
 
 /**
   * The client supports multiple Json libraries.  These tests are to ensure that whatever we write with one lib,
@@ -27,6 +31,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
+    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
   }
 
   @AfterAll
