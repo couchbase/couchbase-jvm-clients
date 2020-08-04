@@ -21,9 +21,12 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 /**
@@ -76,17 +79,30 @@ public class PingOptions {
   }
 
   /**
-   * Allows to customize the set of services to ping
+   * Allows to customize the set of services to ping.
    * <p>
-   * If no set is provided, all possible services are pinged
+   * If this method is not called, all available services are included in the ping.
    *
    * @param serviceTypes the service types that should be pinged.
    * @return the {@link PingOptions} to allow method chaining.
    */
   public PingOptions serviceTypes(final Set<ServiceType> serviceTypes) {
-    notNullOrEmpty(serviceTypes, "Service Types");
-    this.serviceTypes = serviceTypes;
+    this.serviceTypes = notNullOrEmpty(serviceTypes, "ServiceTypes");
     return this;
+  }
+
+  /**
+   * Allows to customize the set of services to ping.
+   * <p>
+   * If this method is not called, all available services are included in the ping.
+   *
+   * @param serviceTypes the service types that should be pinged.
+   * @return the {@link PingOptions} to allow method chaining.
+   */
+  public PingOptions serviceTypes(final ServiceType... serviceTypes) {
+    EnumSet<ServiceType> set = EnumSet.noneOf(ServiceType.class);
+    set.addAll(Arrays.asList(notNull(serviceTypes, "ServiceTypes")));
+    return serviceTypes(set);
   }
 
   /**
