@@ -16,12 +16,11 @@
 
 package com.couchbase.client.java.manager.search;
 
+import com.couchbase.client.core.Reactor;
 import com.couchbase.client.java.json.JsonObject;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import static com.couchbase.client.core.Reactor.toFlux;
-import static com.couchbase.client.core.Reactor.toMono;
 import static com.couchbase.client.java.manager.search.AllowQueryingSearchIndexOptions.allowQueryingSearchIndexOptions;
 import static com.couchbase.client.java.manager.search.AnalyzeDocumentOptions.analyzeDocumentOptions;
 import static com.couchbase.client.java.manager.search.DisallowQueryingSearchIndexOptions.disallowQueryingSearchIndexOptions;
@@ -55,7 +54,7 @@ public class ReactiveSearchIndexManager {
    * @return the index definition if it exists.
    */
   public Mono<SearchIndex> getIndex(final String name, final GetSearchIndexOptions options) {
-    return Mono.defer(() -> toMono(() -> asyncIndexManager.getIndex(name, options)));
+    return Reactor.toMono(() -> asyncIndexManager.getIndex(name, options));
   }
 
   /**
@@ -64,7 +63,7 @@ public class ReactiveSearchIndexManager {
    * @return all currently present indexes.
    */
   public Flux<SearchIndex> getAllIndexes(final GetAllSearchIndexesOptions options) {
-    return Flux.defer(() -> toFlux(() -> asyncIndexManager.getAllIndexes(options)));
+    return Reactor.toFlux(() -> asyncIndexManager.getAllIndexes(options));
   }
 
   /**
@@ -74,7 +73,7 @@ public class ReactiveSearchIndexManager {
    * @return the number of indexed documents.
    */
   public Mono<Long> getIndexedDocumentsCount(final String name, final GetIndexedSearchIndexOptions options) {
-    return Mono.defer(() -> toMono(() -> asyncIndexManager.getIndexedDocumentsCount(name, options)));
+    return Reactor.toMono(() -> asyncIndexManager.getIndexedDocumentsCount(name, options));
   }
 
   /**
@@ -85,7 +84,7 @@ public class ReactiveSearchIndexManager {
    * @return the analyzed sections for the document.
    */
   public Flux<JsonObject> analyzeDocument(final String name, final JsonObject document, final AnalyzeDocumentOptions options) {
-    return Flux.defer(() -> toFlux(() -> asyncIndexManager.analyzeDocument(name, document, options)));
+    return Reactor.toFlux(() -> asyncIndexManager.analyzeDocument(name, document, options));
   }
 
   /**
@@ -94,7 +93,7 @@ public class ReactiveSearchIndexManager {
    * @param index the index definition including name and settings.
    */
   public Mono<Void> upsertIndex(final SearchIndex index, final UpsertSearchIndexOptions options) {
-    return Mono.defer(() -> toMono(() -> asyncIndexManager.upsertIndex(index, options)));
+    return Reactor.toMono(() -> asyncIndexManager.upsertIndex(index, options));
   }
 
   /**
@@ -103,7 +102,7 @@ public class ReactiveSearchIndexManager {
    * @param name the name of the search index.
    */
   public Mono<Void> dropIndex(final String name, final DropSearchIndexOptions options) {
-    return Mono.defer(() -> toMono(() -> asyncIndexManager.dropIndex(name, options)));
+    return Reactor.toMono(() -> asyncIndexManager.dropIndex(name, options));
   }
 
   /**
@@ -112,7 +111,7 @@ public class ReactiveSearchIndexManager {
    * @param name the name of the search index.
    */
   public Mono<Void> pauseIngest(final String name, final PauseIngestSearchIndexOptions options) {
-    return Mono.defer(() -> toMono(() -> asyncIndexManager.pauseIngest(name, options)));
+    return Reactor.toMono(() -> asyncIndexManager.pauseIngest(name, options));
   }
 
   /**
@@ -121,7 +120,7 @@ public class ReactiveSearchIndexManager {
    * @param name the name of the search index.
    */
   public Mono<Void> resumeIngest(final String name, ResumeIngestSearchIndexOptions options) {
-    return Mono.defer(() -> toMono(() -> asyncIndexManager.resumeIngest(name, options)));
+    return Reactor.toMono(() -> asyncIndexManager.resumeIngest(name, options));
   }
 
   /**
@@ -130,7 +129,7 @@ public class ReactiveSearchIndexManager {
    * @param name the name of the search index.
    */
   public Mono<Void> allowQuerying(final String name, AllowQueryingSearchIndexOptions options) {
-    return Mono.defer(() -> toMono(() -> asyncIndexManager.allowQuerying(name, options)));
+    return Reactor.toMono(() -> asyncIndexManager.allowQuerying(name, options));
   }
 
   /**
@@ -139,7 +138,7 @@ public class ReactiveSearchIndexManager {
    * @param name the name of the search index.
    */
   public Mono<Void> disallowQuerying(final String name, final DisallowQueryingSearchIndexOptions options) {
-    return Mono.defer(() -> toMono(() -> asyncIndexManager.disallowQuerying(name, options)));
+    return Reactor.toMono(() -> asyncIndexManager.disallowQuerying(name, options));
   }
 
   /**
@@ -148,7 +147,7 @@ public class ReactiveSearchIndexManager {
    * @param name the name of the search index.
    */
   public Mono<Void> freezePlan(final String name, final FreezePlanSearchIndexOptions options) {
-    return Mono.defer(() -> toMono(() -> asyncIndexManager.freezePlan(name, options)));
+    return Reactor.toMono(() -> asyncIndexManager.freezePlan(name, options));
   }
 
   /**
@@ -157,7 +156,7 @@ public class ReactiveSearchIndexManager {
    * @param name the name of the search index.
    */
   public Mono<Void> unfreezePlan(final String name, final UnfreezePlanSearchIndexOptions options) {
-    return Mono.defer(() -> toMono(() -> asyncIndexManager.unfreezePlan(name, options)));
+    return Reactor.toMono(() -> asyncIndexManager.unfreezePlan(name, options));
   }
 
   /**

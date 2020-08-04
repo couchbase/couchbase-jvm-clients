@@ -36,50 +36,50 @@ public class ReactiveBucketManager {
   }
 
   public Mono<Void> createBucket(final BucketSettings settings) {
-    return Mono.defer(() -> toMono(() -> async.createBucket(settings)));
+    return toMono(() -> async.createBucket(settings));
   }
 
   public Mono<Void> createBucket(final BucketSettings settings, final CreateBucketOptions options) {
-    return Mono.defer(() -> toMono(() -> async.createBucket(settings, options)));
+    return toMono(() -> async.createBucket(settings, options));
   }
 
   public Mono<Void> updateBucket(final BucketSettings settings) {
-    return Mono.defer(() -> toMono(() -> async.updateBucket(settings)));
+    return toMono(() -> async.updateBucket(settings));
   }
 
   public Mono<Void> updateBucket(final BucketSettings settings, final UpdateBucketOptions options) {
-    return Mono.defer(() -> toMono(() -> async.updateBucket(settings, options)));
+    return toMono(() -> async.updateBucket(settings, options));
   }
 
   public Mono<Void> dropBucket(final String bucketName) {
-    return Mono.defer(() -> toMono(() -> async.dropBucket(bucketName)));
+    return toMono(() -> async.dropBucket(bucketName));
   }
 
   public Mono<Void> dropBucket(final String bucketName, final DropBucketOptions options) {
-    return Mono.defer(() -> toMono(() -> async.dropBucket(bucketName, options)));
+    return toMono(() -> async.dropBucket(bucketName, options));
   }
 
   public Mono<BucketSettings> getBucket(final String bucketName) {
-    return Mono.defer(() -> toMono(() -> async.getBucket(bucketName)));
+    return toMono(() -> async.getBucket(bucketName));
   }
 
   public Mono<BucketSettings> getBucket(final String bucketName, final GetBucketOptions options) {
-    return Mono.defer(() -> toMono(() -> async.getBucket(bucketName, options)));
+    return toMono(() -> async.getBucket(bucketName, options));
   }
 
   public Mono<Map<String, BucketSettings>> getAllBuckets() {
-    return Mono.defer(() -> toMono(async::getAllBuckets));
+    return toMono(() -> async.getAllBuckets());
   }
 
   public Mono<Map<String, BucketSettings>> getAllBuckets(final GetAllBucketOptions options) {
-    return Mono.defer(() -> toMono(() -> async.getAllBuckets(options)));
+    return toMono(() -> async.getAllBuckets(options));
   }
 
   public Mono<Void> flushBucket(final String bucketName) {
-    return Mono.defer(() -> toMono(() -> async.flushBucket(bucketName)));
+    return toMono(() -> async.flushBucket(bucketName));
   }
 
   public Mono<Void> flushBucket(final String bucketName, final FlushBucketOptions options) {
-    return Mono.defer(() -> toMono(() -> async.flushBucket(bucketName, options)));
+    return toMono(() -> async.flushBucket(bucketName, options));
   }
 }
