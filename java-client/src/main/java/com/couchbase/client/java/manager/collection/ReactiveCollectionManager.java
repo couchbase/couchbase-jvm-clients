@@ -52,7 +52,7 @@ public class ReactiveCollectionManager {
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    */
   public Mono<Void> createCollection(final CollectionSpec collectionSpec, final CreateCollectionOptions options) {
-    return Mono.defer(() -> toMono(() -> async.createCollection(collectionSpec, options)));
+    return toMono(() -> async.createCollection(collectionSpec, options));
   }
 
   /**
@@ -63,7 +63,7 @@ public class ReactiveCollectionManager {
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    */
   public Mono<Void> dropCollection(final CollectionSpec collectionSpec, final DropCollectionOptions options) {
-    return Mono.defer(() -> toMono(() -> async.dropCollection(collectionSpec, options)));
+    return toMono(() -> async.dropCollection(collectionSpec, options));
   }
 
   /**
@@ -73,7 +73,7 @@ public class ReactiveCollectionManager {
    * @throws ScopeExistsException (async) if the scope already exists.
    */
   public Mono<Void> createScope(final String scopeName, final CreateScopeOptions options) {
-    return Mono.defer(() -> toMono(() -> async.createScope(scopeName, options)));
+    return toMono(() -> async.createScope(scopeName, options));
   }
 
   /**
@@ -83,7 +83,7 @@ public class ReactiveCollectionManager {
    * @throws ScopeNotFoundException (async) if the scope did not exist.
    */
   public Mono<Void> dropScope(final String scopeName, final DropScopeOptions options) {
-    return Mono.defer(() -> toMono(() -> async.dropScope(scopeName, options)));
+    return toMono(() -> async.dropScope(scopeName, options));
   }
 
   /**
@@ -94,7 +94,7 @@ public class ReactiveCollectionManager {
    * @throws ScopeNotFoundException (async) if scope does not exist.
    */
   public Mono<ScopeSpec> getScope(final String scopeName, final GetScopeOptions options) {
-    return Mono.defer(() -> toMono(() -> async.getScope(scopeName, options)));
+    return toMono(() -> async.getScope(scopeName, options));
   }
 
   /**
@@ -103,7 +103,7 @@ public class ReactiveCollectionManager {
    * @return a flux of all scopes in this bucket.
    */
   public Flux<ScopeSpec> getAllScopes(final GetAllScopesOptions options) {
-    return Flux.defer(() -> toMono(() -> async.getAllScopes(options)).flatMapMany(Flux::fromIterable));
+    return toMono(() -> async.getAllScopes(options)).flatMapMany(Flux::fromIterable);
   }
 
   /**
