@@ -108,6 +108,10 @@ public enum SubDocumentOpResponseStatus {
    */
   XATTR_INVALID_ORDER,
   /**
+   * User does not have permission to access this attribute.
+   */
+  XATTR_NO_ACCESS,
+  /**
    * Unknown error.
    */
   UNKNOWN;

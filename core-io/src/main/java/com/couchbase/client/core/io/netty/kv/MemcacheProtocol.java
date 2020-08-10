@@ -653,6 +653,8 @@ public enum MemcacheProtocol {
       return SubDocumentOpResponseStatus.XATTR_CANNOT_MODIFY_VATTR;
     } else if (status == Status.SUBDOC_INVALID_XATTR_ORDER.status) {
       return SubDocumentOpResponseStatus.XATTR_INVALID_ORDER;
+    } else if (status == Status.ACCESS_ERROR.status) {
+      return SubDocumentOpResponseStatus.XATTR_NO_ACCESS;
     } else {
       return SubDocumentOpResponseStatus.UNKNOWN;
     }
@@ -700,6 +702,8 @@ public enum MemcacheProtocol {
         return new XattrUnknownVirtualAttributeException(ctx);
       case XATTR_CANNOT_MODIFY_VATTR:
         return new XattrCannotModifyVirtualAttributeException(ctx);
+      case XATTR_NO_ACCESS:
+        return new XattrNoAccessException(ctx);
       default:
         return new CouchbaseException("Unexpected SubDocument response code", ctx);
     }
