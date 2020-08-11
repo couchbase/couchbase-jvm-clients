@@ -46,7 +46,7 @@ public class GenericManagerRequest extends BaseManagerRequest<GenericManagerResp
 
   @Override
   public GenericManagerResponse decode(HttpResponse response, byte[] content) {
-    return new GenericManagerResponse(decodeStatus(response.status()), content);
+    return new GenericManagerResponse(decodeStatus(response.status()), content, response.status().code());
   }
 
   @Override

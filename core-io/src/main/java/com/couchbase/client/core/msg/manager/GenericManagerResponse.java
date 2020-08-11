@@ -20,16 +20,23 @@ import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 public class GenericManagerResponse extends BaseResponse {
+
+  private final int httpStatus;
   private final byte[] content;
 
-  public GenericManagerResponse(ResponseStatus status, byte[] content) {
+  public GenericManagerResponse(ResponseStatus status, byte[] content, int httpStatus) {
     super(status);
+    this.httpStatus = httpStatus;
     this.content = requireNonNull(content);
+  }
+
+  public int httpStatus() {
+    return httpStatus;
   }
 
   public byte[] content() {
@@ -40,7 +47,8 @@ public class GenericManagerResponse extends BaseResponse {
   public String toString() {
     return "GenericManagerResponse{" +
       "status=" + status() +
-      ", content=" + new String(content, StandardCharsets.UTF_8) +
+      ", httpStatus=" + httpStatus +
+      ", content=" + redactMeta(new String(content, StandardCharsets.UTF_8)) +
       '}';
   }
 }
