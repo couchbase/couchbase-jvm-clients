@@ -192,7 +192,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
     }
 
     if (this instanceof SyncDurabilityRequest) {
-      ctx.put("syncDurability", ((SyncDurabilityRequest) this).durabilityLevel());
+      ((SyncDurabilityRequest) this).durabilityLevel().ifPresent(d -> ctx.put("syncDurability", d));
     }
 
     return ctx;
