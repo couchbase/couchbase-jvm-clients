@@ -32,6 +32,7 @@ import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -49,12 +50,14 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   private static Cluster cluster;
   private static ClusterEnvironment environment;
   private static CollectionManager collections;
+  private static ReactiveCollectionManager rcm;
 
   @BeforeAll
   static void setup() {
     environment = environment().ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)).build();
     cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     Bucket bucket = cluster.bucket(config().bucketname());
+    rcm = bucket.reactive().collections();
     collections = bucket.collections();
     bucket.waitUntilReady(Duration.ofSeconds(5));
   }
@@ -167,6 +170,23 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
           assertEquals(cs.maxExpiry(), Duration.ZERO);
         }
       }
+    }
+  }
+
+  @Test
+  void createMaxNumOfCollections() {
+    String scopeName = randomString();
+    int collectionsPerScope = 10;
+    ScopeSpec scopeSpec = ScopeSpec.create(scopeName);
+    collections.createScope(scopeName);
+    waitUntilCondition(() -> scopeExists(scopeName));
+    ScopeSpec found = collections.getScope(scopeName);
+    assertEquals(scopeSpec, found);
+    for (int i = 0; i < collectionsPerScope; i++) {
+      CollectionSpec collectionSpec = CollectionSpec.create(String.valueOf(collectionsPerScope + i), scopeName);
+      collections.createCollection(collectionSpec);
+      waitUntilCondition(() -> collectionExists(collectionSpec));
+      assertTrue(collections.getScope(scopeName).collections().contains(collectionSpec));
     }
   }
 
