@@ -18,11 +18,19 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.query.QueryOptions;
+import com.couchbase.client.java.query.ReactiveQueryResult;
+import reactor.core.publisher.Mono;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 
 /**
  * The scope identifies a group of collections and allows high application
@@ -114,6 +122,35 @@ public class ReactiveScope {
   @Stability.Volatile
   public ReactiveCollection collection(final String collectionName) {
     return collectionCache.computeIfAbsent(collectionName, n -> new ReactiveCollection(asyncScope.collection(n)));
+  }
+
+  /**
+   * Performs a N1QL query with default {@link QueryOptions} in a Scope
+   *
+   * @param statement the N1QL query statement as a raw string.
+   * @return the {@link ReactiveQueryResult} once the response arrives successfully.
+   */
+  @Stability.Volatile
+  public Mono<ReactiveQueryResult> query(final String statement) {
+    return this.query(statement, DEFAULT_QUERY_OPTIONS);
+  }
+
+  /**
+   * Performs a N1QL query with custom {@link QueryOptions} in a Scope
+   *
+   * @param statement the N1QL query statement as a raw string.
+   * @param options the custom options for this query.
+   * @return the {@link ReactiveQueryResult} once the response arrives successfully.
+   */
+  @Stability.Volatile
+  public Mono<ReactiveQueryResult> query(final String statement, final QueryOptions options) {
+    return Mono.defer(() -> {
+      notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
+      final QueryOptions.Built opts = options.build();
+      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+      return async().queryAccessor().queryReactive(
+          async().queryRequest(bucketName(), name(), statement, opts, core(), environment()), opts, serializer);
+    });
   }
 
 }

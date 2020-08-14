@@ -142,7 +142,8 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
               queryBytes,
               options.readonly.getOrElse(false),
               params.str("client_context_id"),
-              hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, options.parentSpan.orNull)
+              hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, options.parentSpan.orNull),
+              null
             )
 
             request
@@ -343,7 +344,8 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       query.toString.getBytes(StandardCharsets.UTF_8),
       true,
       query.str("client_context_id"),
-      hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, options.parentSpan.orNull)
+      hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, options.parentSpan.orNull),
+      null
     )
   }
 
@@ -376,7 +378,8 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       query.toString.getBytes(StandardCharsets.UTF_8),
       originalOptions.readonly.getOrElse(false),
       query.str("client_context_id"),
-      hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, originalOptions.parentSpan.orNull)
+      hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, originalOptions.parentSpan.orNull),
+      null
     )
   }
 

@@ -17,9 +17,12 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.ReplayProcessor;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -30,7 +33,10 @@ class AsyncScopeTest {
   @Test
   void shouldReuseAsyncCollection() {
     Core core = mock(Core.class);
-    when(core.configurationProvider()).thenReturn(mock(ConfigurationProvider.class));
+    ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
+    Flux<ClusterConfig> configs = (Flux<ClusterConfig>) mock(Flux.class);
+    when(configProvider.configs()).thenReturn(configs);
+    when(core.configurationProvider()).thenReturn(configProvider);
 
     AsyncScope scope = new AsyncScope("scope", "bucket", core, mock(ClusterEnvironment.class));
 

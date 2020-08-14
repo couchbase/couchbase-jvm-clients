@@ -54,16 +54,18 @@ public class QueryRequest
   private final boolean idempotent;
   private final Authenticator authenticator;
   private final String contextId;
+  private final String queryContext;
 
   public QueryRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
                       final Authenticator authenticator, final String statement, final byte[] query, boolean idempotent,
-                      final String contextId, final InternalSpan span) {
+                      final String contextId, final InternalSpan span, final String queryContext) {
     super(timeout, ctx, retryStrategy, span);
     this.query = query;
     this.statement = statement;
     this.authenticator = authenticator;
     this.idempotent = idempotent;
     this.contextId = contextId;
+    this.queryContext = queryContext;
   }
 
   @Override
@@ -111,12 +113,19 @@ public class QueryRequest
     return idempotent;
   }
 
+  public String queryContext() {
+    return queryContext;
+  }
+
   @Override
   public Map<String, Object> serviceContext() {
     Map<String, Object> ctx = new TreeMap<>();
     ctx.put("type", serviceType().ident());
     ctx.put("operationId", redactMeta(operationId()));
     ctx.put("statement", redactUser(statement()));
+    if (queryContext != null) {
+      ctx.put("queryContext", redactMeta(queryContext()));
+    }
     return ctx;
   }
 }

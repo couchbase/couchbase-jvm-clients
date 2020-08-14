@@ -18,11 +18,18 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.query.QueryOptions;
+import com.couchbase.client.java.query.QueryResult;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static com.couchbase.client.java.AsyncUtils.block;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 
 /**
  * The scope identifies a group of collections and allows high application
@@ -116,6 +123,33 @@ public class Scope {
   @Stability.Volatile
   public Collection collection(final String collectionName) {
     return collectionCache.computeIfAbsent(collectionName, n -> new Collection(asyncScope.collection(n)));
+  }
+
+  /**
+   * Performs a N1QL query with default {@link QueryOptions} in a Scope
+   *
+   * @param statement the N1QL query statement.
+   * @return the {@link QueryResult} once the response arrives successfully.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public QueryResult query(final String statement) {
+    return query(statement, DEFAULT_QUERY_OPTIONS);
+  }
+
+  /**
+   * Performs a N1QL query with custom {@link QueryOptions} in a Scope
+   *
+   * @param statement the N1QL query statement as a raw string.
+   * @param options the custom options for this query.
+   * @return the {@link QueryResult} once the response arrives successfully.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public QueryResult query(final String statement, final QueryOptions options) {
+    return block(async().query(statement, options));
   }
 
 }
