@@ -348,7 +348,7 @@ public class AsyncCluster {
       .internalSpan(QueryRequest.OPERATION_NAME, options.parentSpan().orElse(null));
 
     QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, authenticator, statement,
-     queryBytes, options.readonly(), clientContextId, span);
+     queryBytes, options.readonly(), clientContextId, span, null);
     request.context().clientContext(options.clientContext());
     return request;
   }

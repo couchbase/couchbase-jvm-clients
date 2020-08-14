@@ -18,11 +18,30 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.msg.query.QueryRequest;
+import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.query.QueryAccessor;
+import com.couchbase.client.java.query.QueryOptions;
+import com.couchbase.client.java.query.QueryResult;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 
 /**
  * The scope identifies a group of collections and allows high application
@@ -55,6 +74,10 @@ public class AsyncScope {
   private final ClusterEnvironment environment;
 
   /**
+   * for executing queries
+   */
+  private final QueryAccessor queryAccessor;
+  /**
    * Stores already opened collections for reuse.
    */
   private final Map<String, AsyncCollection> collectionCache = new ConcurrentHashMap<>();
@@ -73,6 +96,7 @@ public class AsyncScope {
     this.bucketName = bucketName;
     this.core = core;
     this.environment = environment;
+    this.queryAccessor = new QueryAccessor(core);
   }
 
   /**
@@ -104,6 +128,16 @@ public class AsyncScope {
    */
   public ClusterEnvironment environment() {
     return environment;
+
+  }
+  /**
+   * Provides access to the underlying {@link QueryAccessor}.
+   *
+   * <p>This is advanced API, use with care!</p>
+   */
+  @Stability.Volatile
+  QueryAccessor queryAccessor() {
+    return queryAccessor;
   }
 
   /**
@@ -147,6 +181,65 @@ public class AsyncScope {
       }
       return new AsyncCollection(name, scopeName, bucketName, core, environment);
     });
+  }
+
+  /**
+   * Performs a N1QL query with default {@link QueryOptions} in a Scope
+   *
+   * @param statement the N1QL query statement.
+   * @return the {@link QueryResult} once the response arrives successfully.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public CompletableFuture<QueryResult> query(final String statement) {
+    return query(statement, DEFAULT_QUERY_OPTIONS);
+  }
+
+  /**
+   * Performs a N1QL query with custom {@link QueryOptions} in a Scope.
+   *
+   * @param statement the N1QL query statement as a raw string.
+   * @param options the custom options for this query.
+   * @return the {@link QueryResult} once the response arrives successfully.
+   */
+  @Stability.Volatile
+  public CompletableFuture<QueryResult> query(final String statement, final QueryOptions options) {
+    notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
+    final QueryOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
+    return queryAccessor.queryAsync(queryRequest(bucketName(), scopeName, statement, opts, core, environment()), opts,
+        serializer);
+  }
+
+  /**
+   * Helper method to construct the query request. ( copied from Cluster )
+   *
+   * @param statement the statement of the query.
+   * @param options the options.
+   * @return the constructed query request.
+   */
+   static QueryRequest queryRequest(final String bucketName, final String scopeName, final String statement,
+      final QueryOptions.Built options, final Core core, final ClusterEnvironment environment) {
+    notNullOrEmpty(statement, "Statement", () -> new ReducedQueryErrorContext(statement));
+    Duration timeout = options.timeout().orElse(environment.timeoutConfig().queryTimeout());
+    RetryStrategy retryStrategy = options.retryStrategy().orElse(environment.retryStrategy());
+
+    final JsonObject query = JsonObject.create();
+    query.put("statement", statement);
+    query.put("timeout", encodeDurationToMs(timeout));
+    String queryContext = "`default`:`" + bucketName + "`." + scopeName; // MB-40997 - cannot have tics around scope.
+    query.put("query_context", queryContext);
+    options.injectParams(query);
+    final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
+    final String clientContextId = query.getString("client_context_id");
+    final InternalSpan span = environment.requestTracer().internalSpan(QueryRequest.OPERATION_NAME,
+        options.parentSpan().orElse(null));
+
+    QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(),
+        statement, queryBytes, options.readonly(), clientContextId, span, queryContext);
+    request.context().clientContext(options.clientContext());
+    return request;
   }
 
 }
