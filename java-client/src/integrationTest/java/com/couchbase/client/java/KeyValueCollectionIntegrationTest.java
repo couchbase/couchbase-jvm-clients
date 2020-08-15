@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.UUID;
 
+import static com.couchbase.client.java.kv.GetOptions.getOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -78,10 +79,10 @@ public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
     Collection notFoundCollection = bucket.collection("doesNotExist");
 
     try {
-      notFoundCollection.get("someDocumentId");
+      notFoundCollection.get("someDocumentId", getOptions().timeout(Duration.ofMillis(500)));
       fail("Expected timeout!");
     } catch (UnambiguousTimeoutException ex) {
-      assertTrue(ex.context().requestContext().retryReasons().contains(RetryReason.COLLECTION_NOT_FOUND));
+      assertTrue(ex.retryReasons().contains(RetryReason.COLLECTION_NOT_FOUND));
     }
   }
 
