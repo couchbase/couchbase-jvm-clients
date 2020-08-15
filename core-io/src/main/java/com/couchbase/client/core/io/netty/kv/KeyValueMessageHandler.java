@@ -205,7 +205,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
             if (ioContext.core().configurationProvider().collectionMapRefreshInProgress()) {
               RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.COLLECTION_MAP_REFRESH_IN_PROGRESS);
             } else {
-              handleOutdatedCollection(request);
+              handleOutdatedCollection(request, RetryReason.COLLECTION_NOT_FOUND);
             }
             return;
           }
@@ -289,7 +289,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     if (status == ResponseStatus.NOT_MY_VBUCKET) {
       handleNotMyVbucket(request, response);
     } else if (status == ResponseStatus.UNKNOWN_COLLECTION) {
-      handleOutdatedCollection(request);
+      handleOutdatedCollection(request, RetryReason.KV_COLLECTION_OUTDATED);
     } else if (errorMapIndicatesRetry(errorCode)) {
       RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_ERROR_MAP_INDICATED);
     } else if (statusIndicatesInvalidChannel(status)) {
@@ -452,9 +452,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    *
    * @param request the request to retry.
    */
-  private void handleOutdatedCollection(final KeyValueRequest<Response> request) {
+  private void handleOutdatedCollection(final KeyValueRequest<Response> request, final RetryReason retryReason) {
     ioContext.core().configurationProvider().refreshCollectionMap(request.bucket(), true);
-    RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_COLLECTION_OUTDATED);
+    RetryOrchestrator.maybeRetry(ioContext, request, retryReason);
   }
 
 }
