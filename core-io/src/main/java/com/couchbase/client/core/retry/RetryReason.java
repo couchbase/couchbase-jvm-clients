@@ -128,7 +128,11 @@ public enum RetryReason {
   /**
    * The analytics service reports temporary failure.
    */
-  ANALYTICS_TEMPORARY_FAILURE(true, false);
+  ANALYTICS_TEMPORARY_FAILURE(true, false),
+  /**
+   * If a collection is requested but not found in the collection map.
+   */
+  COLLECTION_NOT_FOUND(true, false);
 
   private final boolean allowsNonIdempotentRetry;
   private final boolean alwaysRetry;

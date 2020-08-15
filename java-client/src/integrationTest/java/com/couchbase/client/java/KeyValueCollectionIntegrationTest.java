@@ -15,7 +15,9 @@
  */
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.manager.collection.CollectionSpec;
@@ -30,6 +32,8 @@ import java.time.Duration;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @IgnoreWhen(missesCapabilities = Capabilities.COLLECTIONS)
 public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
@@ -64,6 +68,21 @@ public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
 
     assertEquals(upsertResult.cas(), getResult.cas());
     assertEquals(content, getResult.contentAs(String.class));
+  }
+
+  /**
+   * Regression test for JVMCBC-874
+   */
+  @Test
+  void usesCollectionNotFoundRetryReason() {
+    Collection notFoundCollection = bucket.collection("doesNotExist");
+
+    try {
+      notFoundCollection.get("someDocumentId");
+      fail("Expected timeout!");
+    } catch (UnambiguousTimeoutException ex) {
+      assertTrue(ex.context().requestContext().retryReasons().contains(RetryReason.COLLECTION_NOT_FOUND));
+    }
   }
 
 }
