@@ -37,20 +37,48 @@ public class ReplaceOptions extends CommonDurabilityOptions<ReplaceOptions> {
     return new ReplaceOptions();
   }
 
+  /**
+   * Sets the expiry time for the document as a relative duration.
+   * <p>
+   * IMPORTANT: we recommend using a relative duration only if the provided value is less than 30 days. The reason
+   * is that the server will assume any value larger than that to be an absolute unix timestamp. The SDK tries its
+   * best to coerce it into sane values, but to avoid any unexpected behavior please stick to the less than 30 days
+   * as a relative duration. For every expiry > 30 days, please provide it as an absolute instant through the
+   * {@link #expiry(Instant)} overload.
+   *
+   * @param expiry the expiry time as a relative duration.
+   * @return this {@link ReplaceOptions} for chaining purposes.
+   */
   public ReplaceOptions expiry(final Duration expiry) {
     this.expiry = Expiry.relative(expiry);
     return this;
   }
 
+  /**
+   * Sets the expiry time for the document as a absolute duration.
+   * <p>
+   * Note that the absolute instant will be converted into a unix timestamp in seconds before sending it over the
+   * wire to the server. If you need to provide a relative duration you can use {@link #expiry(Duration)} but please
+   * see its javadoc for common pitfalls and edge cases. If in doubt, please provide it as an absolute instant on this
+   * overload.
+   *
+   * @param expiry the expiry time as an absolute instant.
+   * @return this {@link ReplaceOptions} for chaining purposes.
+   */
   @Stability.Uncommitted
   public ReplaceOptions expiry(final Instant expiry) {
     this.expiry = Expiry.absolute(expiry);
     return this;
   }
 
+  /**
+   * Allows to specify a custom transcoder that is used to encode the content of the request.
+   *
+   * @param transcoder the custom transcoder that should be used for encoding.
+   * @return the {@link ReplaceOptions} to allow method chaining.
+   */
   public ReplaceOptions transcoder(final Transcoder transcoder) {
-    notNull(transcoder, "Transcoder");
-    this.transcoder = transcoder;
+    this.transcoder = notNull(transcoder, "Transcoder");
     return this;
   }
 
