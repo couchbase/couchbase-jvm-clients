@@ -36,6 +36,12 @@ public class GetAndLockOptions extends CommonOptions<GetAndLockOptions> {
   private GetAndLockOptions() {
   }
 
+  /**
+   * Allows to specify a custom transcoder that is used to decode the content of the result.
+   *
+   * @param transcoder the custom transcoder that should be used for decoding.
+   * @return the {@link GetOptions} to allow method chaining.
+   */
   public GetAndLockOptions transcoder(final Transcoder transcoder) {
     notNull(transcoder, "Transcoder");
     this.transcoder = transcoder;

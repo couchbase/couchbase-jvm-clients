@@ -32,9 +32,14 @@ public class LookupInOptions extends CommonOptions<LookupInOptions> {
     return new LookupInOptions();
   }
 
+  /**
+   * Customizes the serializer that is used to decode the contents of the {@link LookupInResult}.
+   *
+   * @param serializer the serializer used for decoding.
+   * @return this {@link LookupInOptions} for chaining purposes.
+   */
   public LookupInOptions serializer(final JsonSerializer serializer) {
-    notNull(serializer, "Serializer");
-    this.serializer = serializer;
+    this.serializer = notNull(serializer, "Serializer");
     return this;
   }
 
