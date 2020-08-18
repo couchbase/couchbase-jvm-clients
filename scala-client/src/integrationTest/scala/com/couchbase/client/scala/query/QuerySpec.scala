@@ -27,7 +27,7 @@ import com.couchbase.client.scala.kv.MutationState
 import com.couchbase.client.scala.query.QueryScanConsistency.ConsistentWith
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
-import com.couchbase.client.test.{Capabilities, IgnoreWhen}
+import com.couchbase.client.test.{Capabilities, IgnoreWhen, Util}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 import reactor.core.scala.publisher.SMono
@@ -55,7 +55,20 @@ class QuerySpec extends ScalaIntegrationTest {
     TestUtils.waitForService(bucket, ServiceType.QUERY)
     TestUtils.waitForIndexerToHaveBucket(cluster, config.bucketname())
 
-    cluster.queryIndexes.createPrimaryIndex(config.bucketname).get
+    println("Waiting for primary index to be created successfully")
+
+    Util.waitUntilCondition(
+      () => {
+        val result =
+          cluster.queryIndexes.createPrimaryIndex(config.bucketname, timeout = 20 seconds)
+        println(result)
+        result.isSuccess
+      },
+      java.time.Duration.ofMinutes(3)
+    )
+
+    println("Waiting for primary index to really be created")
+
     cluster.queryIndexes
       .watchIndexes(config.bucketname, Seq(), Duration(1, TimeUnit.MINUTES), watchPrimary = true)
       .get

@@ -157,6 +157,7 @@ class ViewSpec extends ScalaIntegrationTest {
       )
       .get
 
+    println(viewResult)
     assert(viewResult.rows.size == 2)
   }
 
