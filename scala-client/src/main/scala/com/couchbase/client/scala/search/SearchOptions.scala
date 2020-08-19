@@ -223,13 +223,13 @@ case class SearchOptions(
       }
 
       highlightFields.foreach(hf => {
-        if (hf.nonEmpty) highlight.put("fields", JsonArray(hf : _*))
+        if (hf.nonEmpty) highlight.put("fields", JsonArray(hf: _*))
       })
 
       queryJson.put("highlight", highlight)
     })
     fields.foreach(f => {
-      if (f.nonEmpty) queryJson.put("fields", JsonArray(f : _*))
+      if (f.nonEmpty) queryJson.put("fields", JsonArray(f: _*))
     })
 
     sort.foreach(sortParams => {
