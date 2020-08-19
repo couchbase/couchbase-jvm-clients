@@ -51,7 +51,7 @@ case class PhraseQuery(
   }
 
   override protected def injectParams(input: JsonObject): Unit = {
-    input.put("terms", JsonArray(terms))
+    input.put("terms", JsonArray(terms: _*))
     boost.foreach(v => input.put("boost", v))
     field.foreach(v => input.put("field", v))
   }

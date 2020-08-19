@@ -42,7 +42,7 @@ case class DocIdQuery(
   }
 
   override protected def injectParams(input: JsonObject): Unit = {
-    input.put("ids", JsonArray(docIds))
+    input.put("ids", JsonArray(docIds: _*))
     boost.foreach(v => input.put("boost", v))
   }
 }
