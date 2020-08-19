@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.java.manager.user.AuthDomain.LOCAL;
 import static com.couchbase.client.java.manager.user.UserManagerIntegrationTest.checkRoleOrigins;
+import static com.couchbase.client.test.Capabilities.COLLECTIONS;
 import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -82,7 +83,6 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
     waitUntilGroupDropped(GROUP_A);
     waitUntilGroupDropped(GROUP_B);
   }
-
 
   private void waitUntilUserPresent(String name) {
     Util.waitUntilCondition(() -> {
@@ -158,11 +158,8 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
   @Test
   void create() {
     final String fakeLdapRef = "ou=Users";
-    users.upsertGroup(new Group(GROUP_A).description("a").roles(READ_ONLY_ADMIN).ldapGroupReference(fakeLdapRef));
-    users.upsertGroup(new Group(GROUP_B).description("b").roles(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD));
-
-    waitUntilGroupPresent(GROUP_A);
-    waitUntilGroupPresent(GROUP_B);
+    upsert(new Group(GROUP_A).description("a").roles(READ_ONLY_ADMIN).ldapGroupReference(fakeLdapRef));
+    upsert(new Group(GROUP_B).description("b").roles(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD));
 
     assertEquals("a", users.getGroup(GROUP_A).description());
     assertEquals("b", users.getGroup(GROUP_B).description());
@@ -173,12 +170,10 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
     assertEquals(setOf(READ_ONLY_ADMIN), users.getGroup(GROUP_A).roles());
     assertEquals(setOf(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD), users.getGroup(GROUP_B).roles());
 
-    users.upsertUser(new User(USERNAME)
+    upsert(new User(USERNAME)
         .password("password")
         .roles(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD)
         .groups(GROUP_A, GROUP_B));
-
-    waitUntilUserPresent(USERNAME);
 
     UserAndMetadata userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
 
@@ -209,13 +204,28 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(missesCapabilities = COLLECTIONS)
+  void userInheritsCollectionAwareRoles() {
+    String bucket = config().bucketname();
+    assertUserInheritsRole(new Role("data_reader", bucket));
+    assertUserInheritsRole(new Role("data_reader", bucket, "_default", null));
+    assertUserInheritsRole(new Role("data_reader", bucket, "_default", "_default"));
+  }
+
+  private void assertUserInheritsRole(Role role) {
+    upsert(new Group(GROUP_A).roles(role));
+    assertEquals(setOf(role), users.getGroup(GROUP_A).roles());
+
+    upsert(new User(USERNAME).password("password").groups(GROUP_A));
+    assertEquals(setOf(role), users.getUser(LOCAL, USERNAME).effectiveRoles());
+  }
+
+  @Test
   void removeUserFromAllGroups() {
     // exercise the special-case code for upserting an empty group list.
 
-    users.upsertGroup(new Group(GROUP_A).roles(READ_ONLY_ADMIN));
-    waitUntilGroupPresent(GROUP_A);
-    users.upsertUser(new User(USERNAME).password("password").groups(GROUP_A));
-    waitUntilUserPresent(USERNAME);
+    upsert(new Group(GROUP_A).roles(READ_ONLY_ADMIN));
+    upsert(new User(USERNAME).password("password").groups(GROUP_A));
 
     UserAndMetadata userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
     assertEquals(setOf(READ_ONLY_ADMIN), userMeta.effectiveRoles());
@@ -226,6 +236,16 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
 
     userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
     assertEquals(emptySet(), userMeta.effectiveRoles());
+  }
+
+  private void upsert(Group group) {
+    users.upsertGroup(group);
+    waitUntilGroupPresent(group.name());
+  }
+
+  private void upsert(User user) {
+    users.upsertUser(user);
+    waitUntilUserPresent(user.username());
   }
 
   private static void dropUserQuietly(String name) {
