@@ -22,7 +22,6 @@ import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.json.{JsonArray, JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.search.facet.SearchFacet
 import com.couchbase.client.scala.search.queries._
-import com.couchbase.client.scala.search.result.SearchRow
 import com.couchbase.client.scala.search.sort.SearchSort
 
 import scala.concurrent.duration.Duration
@@ -37,7 +36,7 @@ case class SearchOptions(
     private[scala] val highlightStyle: Option[HighlightStyle] = None,
     private[scala] val highlightFields: Option[Seq[String]] = None,
     private[scala] val fields: Option[Seq[String]] = None,
-    private[scala] val sort: Option[JsonArray] = None,
+    private[scala] val sort: Option[Seq[SearchSort]] = None,
     private[scala] val facets: Option[Map[String, SearchFacet]] = None,
     private[scala] val serverSideTimeout: Option[Duration] = None,
     private[scala] val deferredError: Option[RuntimeException] = None,
@@ -140,10 +139,8 @@ case class SearchOptions(
     * @return this SearchOptions for chaining.
     */
   def sortByFields(fields: Seq[String]): SearchOptions = {
-    val elems = sort.getOrElse(JsonArray.create)
-    fields.foreach(s => elems.add(s))
-
-    copy(sort = Some(elems))
+    val fieldSorts = for (field <- fields) yield SearchSort.FieldSort(field)
+    copy(sort = Some(fieldSorts))
   }
 
   /** Configures the list of fields (including special fields) which are used for sorting purposes. If empty, the
@@ -159,10 +156,7 @@ case class SearchOptions(
     * @return this SearchOptions for chaining.
     */
   def sort(fields: Seq[SearchSort]): SearchOptions = {
-    val params = JsonObject.create
-    fields.foreach(field => field.injectParams(params))
-
-    copy(sort = Some(sort.getOrElse(JsonArray.create).add(params)))
+    copy(sort = Some(fields))
   }
 
   /** Sets the consistency to consider for this FTS query.  See [[SearchScanConsistency]] for documentation.
@@ -238,7 +232,15 @@ case class SearchOptions(
       if (f.nonEmpty) queryJson.put("fields", JsonArray(f : _*))
     })
 
-    sort.foreach(v => queryJson.put("sort", v))
+    sort.foreach(sortParams => {
+      val sortJson = sortParams.foldLeft(JsonArray.create)((params, sort) => {
+        val paramObj = JsonObject.create
+        sort.injectParams(paramObj)
+        params.add(paramObj)
+      })
+
+      queryJson.put("sort", sortJson)
+    })
     facets.foreach(f => {
       val facets = JsonObject.create
       for (entry <- f) {
