@@ -104,7 +104,7 @@ object SearchHandler {
       totalPartitionCount   <- status.numLong("total")
       successPartitionCount <- status.numLong("successful")
       errorPartitionCount   <- status.numLong("failed")
-      errors                <- status.obj("errors")
+      errors                = status.obj("errors").getOrElse(JsonObjectSafe.create)
 
       metrics <- Try(
         SearchMetrics(
