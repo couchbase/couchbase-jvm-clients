@@ -43,9 +43,11 @@ public class RoleAndDescription {
   @JsonCreator
   private RoleAndDescription(@JsonProperty("role") String name,
                              @JsonProperty("bucket_name") String bucket,
+                             @JsonProperty("scope_name") String scope,
+                             @JsonProperty("collection_name") String collection,
                              @JsonProperty("name") String displayName,
                              @JsonProperty("desc") String description) {
-    this(new Role(name, bucket), displayName, description);
+    this(new Role(name, bucket, scope, collection), displayName, description);
   }
 
   public Role role() {

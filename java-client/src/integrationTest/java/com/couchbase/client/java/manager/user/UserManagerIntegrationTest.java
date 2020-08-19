@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.java.manager.user.AuthDomain.LOCAL;
+import static com.couchbase.client.test.Capabilities.COLLECTIONS;
 import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -89,6 +90,11 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
     assertUserAbsent(USERNAME);
   }
 
+  private void upsert(User user) {
+    users.upsertUser(user);
+    waitUntilUserPresent(USERNAME);
+  }
+
   private void waitUntilUserPresent(String name) {
     Util.waitUntilCondition(() -> {
       try {
@@ -125,11 +131,10 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void getAll() {
-    users.upsertUser(new User(USERNAME)
+    upsert(new User(USERNAME)
         .password("password")
         .displayName("Integration Test User")
         .roles(ADMIN));
-    waitUntilUserPresent(USERNAME);
 
     assertTrue(users.getAllUsers().stream()
         .anyMatch(meta -> meta.user().username().equals(USERNAME)));
@@ -145,15 +150,32 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(missesCapabilities = COLLECTIONS)
+  void canAssignCollectionsAwareRoles() {
+    String bucket = config().bucketname();
+    assertCanCreateWithRole(new Role("data_reader", bucket));
+    assertCanCreateWithRole(new Role("data_reader", bucket, "_default", null));
+    assertCanCreateWithRole(new Role("data_reader", bucket, "_default", "_default"));
+  }
+
+  private void assertCanCreateWithRole(Role role) {
+    upsert(new User(USERNAME)
+        .password("password")
+        .displayName("Integration Test User")
+        .roles(role));
+
+    assertEquals(setOf(role), users.getUser(LOCAL, USERNAME).effectiveRoles());
+  }
+
+  @Test
   void create() {
     final String origPassword = "password";
     final String newPassword = "newpassword";
 
-    users.upsertUser(new User(USERNAME)
+    upsert(new User(USERNAME)
         .password(origPassword)
         .displayName("Integration Test User")
         .roles(ADMIN));
-    waitUntilUserPresent(USERNAME);
 
     // must be a specific kind of admin for this to succeed (not exactly sure which)
     assertCanAuthenticate(USERNAME, origPassword);
