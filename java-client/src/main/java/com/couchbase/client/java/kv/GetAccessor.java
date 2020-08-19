@@ -32,6 +32,7 @@ import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.projections.ProjectionsApplier;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -42,11 +43,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @Stability.Internal
 public enum GetAccessor {
   ;
-
-  /**
-   * Constant for the subdocument expiration macro.
-   */
-  public static final String EXPIRATION_MACRO = "$document.exptime";
 
   /**
    * Takes a {@link GetRequest} and dispatches, converts and returns the result.
@@ -127,16 +123,21 @@ public enum GetAccessor {
 
     byte[] exptime = null;
     byte[] content = null;
+    byte[] flags = null;
 
     for (SubDocumentField value : response.values()) {
       if (value != null) {
-        if (EXPIRATION_MACRO.equals(value.path())) {
+        if (LookupInMacro.EXPIRY_TIME.equals(value.path())) {
           exptime = value.value();
+        } else if (LookupInMacro.FLAGS.equals(value.path())) {
+          flags = value.value();
         } else if (value.path().isEmpty()) {
           content = value.value();
         }
       }
     }
+
+    int convertedFlags = flags == null ? CodecFlags.JSON_COMPAT_FLAGS : Integer.parseInt(new String(flags, UTF_8));
 
     if (content == null) {
       try {
@@ -150,7 +151,7 @@ public enum GetAccessor {
       ? Optional.empty()
       : Optional.of(Instant.ofEpochSecond(Long.parseLong(new String(exptime, UTF_8))));
 
-    return new GetResult(content, CodecFlags.JSON_COMPAT_FLAGS, cas, expiration, transcoder);
+    return new GetResult(content, convertedFlags, cas, expiration, transcoder);
   }
 
   /**
@@ -166,7 +167,8 @@ public enum GetAccessor {
       if (value == null
               || value.status() != SubDocumentOpResponseStatus.SUCCESS
               || value.path().isEmpty()
-              || EXPIRATION_MACRO.equals(value.path())) {
+              || LookupInMacro.EXPIRY_TIME.equals(value.path())
+              || LookupInMacro.FLAGS.equals(value.path())) {
         continue;
       }
 
