@@ -66,6 +66,7 @@ import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.LookupInAccessor;
+import com.couchbase.client.java.kv.LookupInMacro;
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
@@ -116,7 +117,6 @@ import static com.couchbase.client.java.ReactiveCollection.DEFAULT_REPLACE_OPTIO
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_TOUCH_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_UNLOCK_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_UPSERT_OPTIONS;
-import static com.couchbase.client.java.kv.GetAccessor.EXPIRATION_MACRO;
 
 /**
  * The {@link AsyncCollection} provides basic asynchronous access to all collection APIs.
@@ -347,10 +347,16 @@ public class AsyncCollection {
     if (opts.withExpiry()) {
       // xattrs must go first
       commands.add(0, new SubdocGetRequest.Command(
-              SubdocCommandType.GET,
-              EXPIRATION_MACRO,
-              true,
-              commands.size()
+        SubdocCommandType.GET,
+        LookupInMacro.EXPIRY_TIME,
+        true,
+        commands.size()
+      ));
+      commands.add(1, new SubdocGetRequest.Command(
+        SubdocCommandType.GET,
+        LookupInMacro.FLAGS,
+        true,
+        commands.size()
       ));
     }
 

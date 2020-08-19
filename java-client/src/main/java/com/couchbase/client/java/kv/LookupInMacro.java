@@ -36,4 +36,7 @@ public class LookupInMacro {
   public static final String VALUE_SIZE_BYTES = "$document.value_bytes";
 
   public static final String REV_ID = "$document.revid";
+
+  public static final String FLAGS = "$document.flags";
+
 }

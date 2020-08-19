@@ -66,7 +66,7 @@ class GetAccessorTest {
   @Test
   void ignoresExpirationMacro() {
     Map<String, String> paths = new HashMap<>();
-    paths.put(GetAccessor.EXPIRATION_MACRO, "\"bar\"");
+    paths.put(LookupInMacro.EXPIRY_TIME, "\"bar\"");
     paths.put("created", "true");
 
     byte[] result = GetAccessor.projectRecursive(response(paths));

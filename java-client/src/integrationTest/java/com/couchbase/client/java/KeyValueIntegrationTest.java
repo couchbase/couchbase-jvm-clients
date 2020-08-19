@@ -29,6 +29,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -170,6 +171,30 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(getResult.expiryTime().isPresent());
     assertTrue(getResult.expiryTime().get().toEpochMilli() > 0);
     assertEquals(content, getResult.contentAsObject());
+  }
+
+  @Test
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  void fullDocWithExpirationAndCustomTranscoder() {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create()
+      .put("foo", "bar")
+      .put("created", true)
+      .put("age", 12);
+
+    MutationResult mutationResult = collection.upsert(
+      id,
+      content.toBytes(),
+      upsertOptions().expiry(Duration.ofSeconds(5)).transcoder(RawBinaryTranscoder.INSTANCE)
+    );
+    assertTrue(mutationResult.cas() != 0);
+
+
+    GetResult getResult = collection.get(id, getOptions().withExpiry(true).transcoder(RawBinaryTranscoder.INSTANCE));
+    assertTrue(getResult.expiryTime().isPresent());
+    assertTrue(getResult.expiryTime().get().toEpochMilli() > 0);
+    assertEquals(content, JsonObject.fromJson(getResult.contentAs(byte[].class)));
   }
 
   /**
