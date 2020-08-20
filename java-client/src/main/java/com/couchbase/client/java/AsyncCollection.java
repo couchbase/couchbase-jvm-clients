@@ -352,12 +352,20 @@ public class AsyncCollection {
         true,
         commands.size()
       ));
-      commands.add(1, new SubdocGetRequest.Command(
-        SubdocCommandType.GET,
-        LookupInMacro.FLAGS,
-        true,
-        commands.size()
-      ));
+
+      // If we have projections, there is no need to fetch the flags
+      // since only JSON is supported that implies the flags.
+      // This will also "force" the transcoder on the read side to be
+      // JSON aware since the flags are going to be hard-set to the
+      // JSON compat flags.
+      if (opts.projections().isEmpty()) {
+        commands.add(1, new SubdocGetRequest.Command(
+          SubdocCommandType.GET,
+          LookupInMacro.FLAGS,
+          true,
+          commands.size()
+        ));
+      }
     }
 
     InternalSpan span = environment.requestTracer().internalSpan(SubdocGetRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
