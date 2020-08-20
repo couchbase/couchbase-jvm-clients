@@ -77,6 +77,7 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void setup() {
+    environment = environment().build();
     cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     bucket = cluster.bucket(config().bucketname());
     bucket.waitUntilReady(Duration.ofSeconds(5));
