@@ -149,11 +149,13 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
   void propagateErrorFromInvalidSeedHostname() {
     Set<SeedNode> seeds = new HashSet<>(Collections.singletonList(SeedNode.create("1.2.3.4")));
 
+    Duration connectTimeout = Duration.ofMillis(100);
+
     SimpleEventBus eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder()
       .eventBus(eventBus)
       .timeoutConfig(TimeoutConfig
-        .connectTimeout(Duration.ofMillis(100))
+        .connectTimeout(connectTimeout)
       )
       .build();
     core = Core.create(environment, authenticator(), seeds);
@@ -165,7 +167,11 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     assertThrows(ConfigException.class, () -> provider.openBucket(bucketName).block());
     long end = System.nanoTime();
 
-    assertTrue(TimeUnit.NANOSECONDS.toMillis(end - start) >= 200);
+    long actual = TimeUnit.NANOSECONDS.toMillis(end - start);
+    assertTrue(
+      "Expected >= " + connectTimeout.toMillis() + "ms, Actual: " + actual + "ms",
+      actual >= connectTimeout.toMillis()
+    );
     provider.shutdown().block();
   }
 

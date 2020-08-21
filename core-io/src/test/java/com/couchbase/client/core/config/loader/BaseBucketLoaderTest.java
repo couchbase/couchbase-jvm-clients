@@ -29,6 +29,7 @@ import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Optional;
@@ -77,6 +78,8 @@ class BaseBucketLoaderTest {
 
     when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET)), eq(Optional.empty())))
       .thenReturn(Mono.empty());
+
+    when(core.serviceState(eq(SEED), eq(SERVICE), eq(Optional.of(BUCKET)))).thenReturn(Optional.of(Flux.empty()));
 
     ProposedBucketConfigContext ctx = loader.load(SEED, PORT, BUCKET, Optional.empty()).block();
     BucketConfig config = BucketConfigParser.parse(ctx.config(), core.context().environment(), ctx.origin());

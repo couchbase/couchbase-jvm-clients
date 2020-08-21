@@ -34,8 +34,8 @@ public class SelectBucketFailedEvent extends AbstractEvent {
    */
   private final short status;
 
-  public SelectBucketFailedEvent(final IoContext context, final short status) {
-    super(Severity.ERROR, Category.IO, Duration.ZERO, context);
+  public SelectBucketFailedEvent(final Severity severity, final IoContext context, final short status) {
+    super(severity, Category.IO, Duration.ZERO, context);
     this.status = status;
   }
 

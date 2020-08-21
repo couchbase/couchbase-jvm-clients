@@ -19,11 +19,17 @@ package com.couchbase.client.core.config.loader;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.error.ConfigException;
+import com.couchbase.client.core.error.SeedNodeOutdatedException;
 import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -93,6 +99,7 @@ public abstract class BaseBucketLoader implements BucketLoader {
                                                 final Optional<String> alternateAddress) {
     return core
       .ensureServiceAt(seed, serviceType, port, Optional.of(bucket), alternateAddress)
+      .then(ensureServiceConnected(seed, serviceType, Optional.of(bucket)))
       .then(discoverConfig(seed, bucket))
       .map(config -> new String(config, UTF_8))
       .map(config -> config.replace("$HOST", seed.address()))
@@ -102,6 +109,38 @@ public abstract class BaseBucketLoader implements BucketLoader {
         : new ConfigException("Caught exception while loading config.", ex)
       ));
   }
+
+  /**
+   * Makes sure the services is connected (or failed to connect) before sending the op on its way.
+   * <p>
+   * It is important that we monitor the service (with its endpoints) if it eventually reaches a CONNECTED state
+   * so we quickly realize if it goes into a DISCONNECT/CONNECTING reconnect loop. If we detect it, we can bail
+   * out quickly and give the fallback a chance to succeed.
+   *
+   * @param seed the seed node to check.
+   * @param serviceType the service type to verify.
+   * @param bucket the bucket name, if present.
+   * @return a Mono that completes if the service is ready OR will fail if it detected it is not.
+   */
+  private Mono<Void> ensureServiceConnected(final NodeIdentifier seed, final ServiceType serviceType,
+                                            final Optional<String> bucket) {
+    return Flux.defer(() -> {
+      Optional<Flux<ServiceState>> states = core.serviceState(seed, serviceType, bucket);
+      return states.orElseGet(() ->
+        Flux.error(new SeedNodeOutdatedException("Seed Node " + seed + " for service " + serviceType
+          + " not present anymore, bailing out.")
+      ));
+    })
+    .map(ss -> {
+      if (ss == ServiceState.DISCONNECTED) {
+        throw new ConfigException("Seed Node " + seed + " is disconnected, bailing out.");
+      }
+      return ss;
+    })
+    .takeUntil(state -> state == ServiceState.CONNECTED || state == ServiceState.IDLE)
+    .then();
+  }
+
 
   /**
    * Returns the attached {@link Core} to be used by implementations.
