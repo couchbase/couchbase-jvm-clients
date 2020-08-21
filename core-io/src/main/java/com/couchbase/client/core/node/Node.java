@@ -315,6 +315,22 @@ public class Node implements Stateful<NodeState> {
   }
 
   /**
+   * If present, returns a flux that allows to monitor the state changes of a specific service.
+   *
+   * @param type the type of service.
+   * @param bucket the bucket, if present.
+   * @return if found, a flux with the service states.
+   */
+  public Optional<Flux<ServiceState>> serviceState(final ServiceType type, final Optional<String> bucket) {
+    String name = type.scope() == ServiceScope.CLUSTER ? GLOBAL_SCOPE : bucket.orElse(BUCKET_GLOBAL_SCOPE);
+    Map<ServiceType, Service> s = services.get(name);
+    if (s == null) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(s.get(type)).map(Stateful::states);
+  }
+
+  /**
    * Sends the request into this {@link Node}.
    *
    * <p>Note that there is no guarantee that the request will actually dispatched, based on the

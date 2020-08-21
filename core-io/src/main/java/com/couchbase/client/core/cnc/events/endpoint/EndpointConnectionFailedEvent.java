@@ -31,9 +31,9 @@ public class EndpointConnectionFailedEvent extends AbstractEvent {
   private final long attempt;
   private final Throwable cause;
 
-  public EndpointConnectionFailedEvent(Duration duration, EndpointContext context,
+  public EndpointConnectionFailedEvent(Severity severity, Duration duration, EndpointContext context,
                                        long attempt, Throwable cause) {
-    super(Severity.WARN, Category.ENDPOINT, duration, context);
+    super(severity, Category.ENDPOINT, duration, context);
     this.attempt = attempt;
     this.cause = cause;
   }

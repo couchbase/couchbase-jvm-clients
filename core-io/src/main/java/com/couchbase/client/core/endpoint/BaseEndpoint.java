@@ -33,6 +33,7 @@ import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollChannelOption;
 import com.couchbase.client.core.deps.io.netty.channel.local.LocalChannel;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SecurityConfig;
+import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.netty.PipelineErrorHandler;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
@@ -319,11 +320,13 @@ public abstract class BaseEndpoint implements Endpoint {
           }
         }
 
+        state.transition(EndpointState.CONNECTING);
         attemptStart.set(System.nanoTime());
         return channelFutureIntoMono(channelBootstrap.connect());
       })
       .timeout(endpointContext.environment().timeoutConfig().connectTimeout())
       .onErrorResume(throwable -> {
+        state.transition(EndpointState.DISCONNECTED);
         if (disconnect.get()) {
           endpointContext.environment().eventBus().publish(
             new EndpointConnectionAbortedEvent(
@@ -341,14 +344,25 @@ public abstract class BaseEndpoint implements Endpoint {
         .exponentialBackoff(Duration.ofMillis(32), Duration.ofMillis(4096))
         .retryMax(Long.MAX_VALUE)
         .doOnRetry(retryContext -> {
-          Duration duration = retryContext.exception() instanceof TimeoutException
+          Throwable ex = retryContext.exception();
+
+          // We drop the severity for the BucketNotFoundException because it shows up when
+          // bootstrapping against MDS clusters and nodes with no kv service enabled on it
+          // that is bucket aware. If a bucket really does not exist we'll get an auth
+          // exception instead.
+          Event.Severity severity = ex instanceof BucketNotFoundException
+            ? Event.Severity.DEBUG
+            : Event.Severity.WARN;
+
+          Duration duration = ex instanceof TimeoutException
             ? endpointContext.environment().timeoutConfig().connectTimeout()
             : Duration.ofNanos(System.nanoTime() - attemptStart.get());
           endpointContext.environment().eventBus().publish(new EndpointConnectionFailedEvent(
+            severity,
             duration,
             endpointContext,
             retryContext.iteration(),
-            trimNettyFromStackTrace(retryContext.exception())
+            trimNettyFromStackTrace(ex)
           ));
         })
         .toReactorRetry()

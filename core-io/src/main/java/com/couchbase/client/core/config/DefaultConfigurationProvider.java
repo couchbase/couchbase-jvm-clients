@@ -37,6 +37,7 @@ import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.RequestCanceledException;
+import com.couchbase.client.core.error.SeedNodeOutdatedException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.json.Mapper;
@@ -214,9 +215,12 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
               return keyValueLoader
                 .load(identifier, mappedKvPort, name, alternateAddress)
                 .onErrorResume(t -> {
-                  if (t instanceof ConfigException
+                  boolean removedWhileOpInFlight = t instanceof ConfigException
                     && t.getCause() instanceof RequestCanceledException
-                    && ((RequestCanceledException) t.getCause()).reason() == CancellationReason.TARGET_NODE_REMOVED) {
+                    && ((RequestCanceledException) t.getCause()).reason() == CancellationReason.TARGET_NODE_REMOVED;
+                  boolean seedNodeOutdated = t instanceof SeedNodeOutdatedException;
+
+                  if (removedWhileOpInFlight || seedNodeOutdated) {
                     return Mono.error(t);
                   }
                   return clusterManagerLoader.load(

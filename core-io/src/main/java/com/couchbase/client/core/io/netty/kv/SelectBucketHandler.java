@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.SelectBucketCompletedEvent;
 import com.couchbase.client.core.cnc.events.io.SelectBucketFailedEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
@@ -156,7 +157,7 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
         ctx.fireChannelActive();
       } else if (status == MemcacheProtocol.Status.ACCESS_ERROR.status()) {
         endpointContext.environment().eventBus().publish(
-          new SelectBucketFailedEvent(ioContext, status)
+          new SelectBucketFailedEvent(Event.Severity.ERROR, ioContext, status)
         );
         interceptedConnectPromise.tryFailure(
           new AuthenticationFailureException(
@@ -167,13 +168,16 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
           )
         );
       } else if (status == MemcacheProtocol.Status.NOT_FOUND.status()) {
+        // NOT_FOUND severity is lowered to debug because it shows up when bootstrapping against
+        // a node in a MDS setup without the kv service / bucket enabled. If the bucket is legit not
+        // present, we'd get the access error from above (which is an error).
         endpointContext.environment().eventBus().publish(
-          new SelectBucketFailedEvent(ioContext, status)
+          new SelectBucketFailedEvent(Event.Severity.DEBUG, ioContext, status)
         );
         interceptedConnectPromise.tryFailure(BucketNotFoundException.forBucket(bucketName));
       } else {
         endpointContext.environment().eventBus().publish(
-          new SelectBucketFailedEvent(ioContext, status)
+          new SelectBucketFailedEvent(Event.Severity.ERROR, ioContext, status)
         );
         interceptedConnectPromise.tryFailure(
           new CouchbaseException("Select bucket failed with unexpected status code 0x"

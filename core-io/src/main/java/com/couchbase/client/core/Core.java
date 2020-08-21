@@ -55,6 +55,7 @@ import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.service.ServiceScope;
+import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -293,6 +294,24 @@ public class Core {
   @Stability.Internal
   public Stream<EndpointDiagnostics> diagnostics() {
     return nodes.stream().flatMap(Node::diagnostics);
+  }
+
+  /**
+   * If present, returns a flux that allows to monitor the state changes of a specific service.
+   *
+   * @param nodeIdentifier the node identifier for the node.
+   * @param type the type of service.
+   * @param bucket the bucket, if present.
+   * @return if found, a flux with the service states.
+   */
+  @Stability.Internal
+  public Optional<Flux<ServiceState>> serviceState(NodeIdentifier nodeIdentifier, ServiceType type, Optional<String> bucket) {
+    for (Node node : nodes) {
+      if (node.identifier().equals(nodeIdentifier)) {
+        return node.serviceState(type, bucket);
+      }
+    }
+    return Optional.empty();
   }
 
   /**
