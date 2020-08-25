@@ -664,7 +664,7 @@ public abstract class BaseEndpoint implements Endpoint {
 
 
     final Optional<String> id = Optional.ofNullable(channel).map(c -> "0x" + c.id().asShortText());
-    return new EndpointDiagnostics(context().serviceType(), state(), remote, local, context().bucket(),
+    return new EndpointDiagnostics(context().serviceType(), state(), local, remote, context().bucket(),
       lastActivity, id);
   }
 
