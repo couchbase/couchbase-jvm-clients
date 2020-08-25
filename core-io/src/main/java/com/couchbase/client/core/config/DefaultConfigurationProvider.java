@@ -62,6 +62,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -124,7 +125,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private final AtomicBoolean alternateAddrChecked = new AtomicBoolean(false);
 
   private volatile boolean globalConfigLoadInProgress = false;
-  private volatile boolean bucketConfigLoadInProgress = false;
+  private final AtomicInteger bucketConfigLoadInProgress = new AtomicInteger();
   private volatile boolean collectionMapRefreshInProgress = false;
 
   /**
@@ -182,7 +183,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   public Mono<Void> openBucket(final String name) {
     return Mono.defer(() -> {
       if (!shutdown.get()) {
-        bucketConfigLoadInProgress = true;
+        bucketConfigLoadInProgress.incrementAndGet();
         boolean tls = core.context().environment().securityConfig().tlsEnabled();
         int kvPort = tls ? DEFAULT_KV_TLS_PORT : DEFAULT_KV_PORT;
         int managerPort = tls ? DEFAULT_MANAGER_TLS_PORT : DEFAULT_MANAGER_PORT;
@@ -212,21 +213,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
                 mappedManagerPort = seed.clusterManagerPort().orElse(managerPort);
               }
 
-              return keyValueLoader
-                .load(identifier, mappedKvPort, name, alternateAddress)
-                .onErrorResume(t -> {
-                  boolean removedWhileOpInFlight = t instanceof ConfigException
-                    && t.getCause() instanceof RequestCanceledException
-                    && ((RequestCanceledException) t.getCause()).reason() == CancellationReason.TARGET_NODE_REMOVED;
-                  boolean seedNodeOutdated = t instanceof SeedNodeOutdatedException;
-
-                  if (removedWhileOpInFlight || seedNodeOutdated) {
-                    return Mono.error(t);
-                  }
-                  return clusterManagerLoader.load(
-                    identifier, mappedManagerPort, name, alternateAddress
-                  );
-                });
+              return loadBucketConfigForSeed(identifier, mappedKvPort, mappedManagerPort, name, alternateAddress);
             })
             .retryWhen(Retry.from(companion -> companion.map(rs -> {
               if (rs.failure() instanceof ConfigException
@@ -246,12 +233,44 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             return ctx;
           })
           .then(registerRefresher(name))
-          .doOnTerminate(() -> bucketConfigLoadInProgress = false)
+          .doOnTerminate(bucketConfigLoadInProgress::decrementAndGet)
           .onErrorResume(t -> closeBucketIgnoreShutdown(name).then(Mono.error(t)));
       } else {
         return Mono.error(new AlreadyShutdownException());
       }
     });
+  }
+
+  /**
+   * Encapsulates the logic to load the bucket config from kv and then fall back to manager.
+   * <p>
+   * This method can be overridden in tests to simulate various states/errors from the loaders.
+   *
+   * @param identifier the identifier to load it from.
+   * @param mappedKvPort the port of the kv loader.
+   * @param mappedManagerPort the port for the manager.
+   * @param name the name of the bucket.
+   * @param alternateAddress the alternate address, if present.
+   * @return returns the bucket config context if present, or an error.
+   */
+  protected Mono<ProposedBucketConfigContext> loadBucketConfigForSeed(NodeIdentifier identifier, int mappedKvPort,
+                                                                      int mappedManagerPort, String name,
+                                                                      Optional<String> alternateAddress) {
+    return keyValueLoader
+      .load(identifier, mappedKvPort, name, alternateAddress)
+      .onErrorResume(t -> {
+        boolean removedWhileOpInFlight = t instanceof ConfigException
+          && t.getCause() instanceof RequestCanceledException
+          && ((RequestCanceledException) t.getCause()).reason() == CancellationReason.TARGET_NODE_REMOVED;
+        boolean seedNodeOutdated = t instanceof SeedNodeOutdatedException;
+
+        if (removedWhileOpInFlight || seedNodeOutdated) {
+          return Mono.error(t);
+        }
+        return clusterManagerLoader.load(
+          identifier, mappedManagerPort, name, alternateAddress
+        );
+      });
   }
 
   /**
@@ -762,7 +781,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    * @param bucket the name of the bucket.
    * @return a {@link Mono} once registered.
    */
-  private Mono<Void> registerRefresher(final String bucket) {
+  protected Mono<Void> registerRefresher(final String bucket) {
     return Mono.defer(() -> {
       BucketConfig config = currentConfig.bucketConfig(bucket);
       if (config == null) {
@@ -785,7 +804,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   @Override
   public boolean bucketConfigLoadInProgress() {
-    return bucketConfigLoadInProgress;
+    return bucketConfigLoadInProgress.get() > 0;
   }
 
   /**

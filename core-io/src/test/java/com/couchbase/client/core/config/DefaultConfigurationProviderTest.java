@@ -24,21 +24,30 @@ import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.node.NodeIdentifier;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import static com.couchbase.client.test.Util.readResource;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -284,6 +293,66 @@ class DefaultConfigurationProviderTest {
 
     assertEquals(Optional.empty(), ctx.alternateAddress());
     environment.shutdown();
+  }
+
+  /**
+   * Regression test for JVMCBC-880.
+   * <p>
+   * Verifies that when multiple bucket open attempts happen in parallel, the bucketConfigLoadInProgress method
+   * is not returning false prematurely (namely when only one is finished but one is still oustanding).
+   */
+  @Test
+  void handlesMultipleBucketOpenInProgress() throws Exception {
+    Core core = mock(Core.class);
+    CoreContext ctx = new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class));
+    when(core.context()).thenReturn(ctx);
+    Set<SeedNode> seedNodes = new HashSet<>(Collections.singletonList(SeedNode.create("127.0.0.1")));
+
+
+    MonoProcessor<ProposedBucketConfigContext> bucket1Barrier = MonoProcessor.create();
+    MonoProcessor<ProposedBucketConfigContext> bucket2Barrier = MonoProcessor.create();
+
+    ConfigurationProvider cp = new DefaultConfigurationProvider(core, seedNodes) {
+      @Override
+      protected Mono<ProposedBucketConfigContext> loadBucketConfigForSeed(NodeIdentifier identifier, int mappedKvPort,
+                                                                          int mappedManagerPort, String name,
+                                                                          Optional<String> alternateAddress) {
+        if (name.equals("bucket1")) {
+          return bucket1Barrier;
+        } else {
+          return bucket2Barrier;
+        }
+      }
+
+      @Override
+      public void proposeBucketConfig(ProposedBucketConfigContext ctx) { }
+
+      @Override
+      protected Mono<Void> registerRefresher(String bucket) {
+        return Mono.empty();
+      }
+    };
+    assertFalse(cp.bucketConfigLoadInProgress());
+
+    CountDownLatch latch = new CountDownLatch(2);
+    cp.openBucket("bucket1").subscribe(unused -> {}, Assertions::fail, () -> {
+      assertTrue(cp.bucketConfigLoadInProgress());
+      latch.countDown();
+    });
+    cp.openBucket("bucket2").subscribe(unused -> {}, Assertions::fail, () -> {
+      assertFalse(cp.bucketConfigLoadInProgress());
+      latch.countDown();
+    });
+
+    // we pretend bucket 1 takes 1ms, while bucket2 takes 200ms
+    Mono
+      .delay(Duration.ofMillis(1))
+      .subscribe(i -> bucket1Barrier.onNext(new ProposedBucketConfigContext("bucket1", "{}", "127.0.0.1")));
+    Mono
+      .delay(Duration.ofMillis(200))
+      .subscribe(i -> bucket2Barrier.onNext(new ProposedBucketConfigContext("bucket2", "{}", "127.0.0.1")));
+
+    latch.await(5, TimeUnit.SECONDS);
   }
 
   private static Set<SeedNode> getSeedNodesFromConfig(ConfigurationProvider provider) {
