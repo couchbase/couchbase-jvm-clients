@@ -18,8 +18,12 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.java.analytics.AnalyticsAccessor;
+import com.couchbase.client.java.analytics.AnalyticsOptions;
+import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryOptions;
@@ -30,6 +34,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 
 /**
@@ -150,6 +155,39 @@ public class ReactiveScope {
       JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
       return async().queryAccessor().queryReactive(
           async().queryRequest(bucketName(), name(), statement, opts, core(), environment()), opts, serializer);
+    });
+  }
+
+  /**
+   * Performs an Analytics query with default {@link AnalyticsOptions} on a scope
+   *
+   * @param statement the Analytics query statement as a raw string.
+   * @return the {@link ReactiveAnalyticsResult} once the response arrives successfully.
+   */
+  @Stability.Volatile
+  public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement) {
+    return analyticsQuery(statement, DEFAULT_ANALYTICS_OPTIONS);
+  }
+
+
+  /**
+   * Performs an Analytics query with custom {@link AnalyticsOptions} on a scope
+   *
+   * @param statement the Analytics query statement as a raw string.
+   * @param options the custom options for this analytics query.
+   * @return the {@link ReactiveAnalyticsResult} once the response arrives successfully.
+   */
+  @Stability.Volatile
+  public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement, final AnalyticsOptions options) {
+    return Mono.defer(() -> {
+      notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
+      AnalyticsOptions.Built opts = options.build();
+      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+      return AnalyticsAccessor.analyticsQueryReactive(
+          asyncScope.core(),
+          asyncScope.analyticsRequest(statement, opts),
+          serializer
+      );
     });
   }
 
