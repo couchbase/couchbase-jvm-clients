@@ -21,6 +21,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.java.analytics.AnalyticsOptions;
+import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
@@ -29,6 +31,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.client.java.AsyncUtils.block;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 
 /**
@@ -152,4 +155,30 @@ public class Scope {
     return block(async().query(statement, options));
   }
 
+  /**
+   * Performs an Analytics query with default {@link AnalyticsOptions} on a scope
+   *
+   * @param statement the Analytics query statement as a raw string.
+   * @return the {@link AnalyticsResult} once the response arrives successfully.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public AnalyticsResult analyticsQuery(final String statement) {
+    return analyticsQuery(statement, DEFAULT_ANALYTICS_OPTIONS);
+  }
+
+  /**
+   * Performs an Analytics query with custom {@link AnalyticsOptions} on a scope
+   *
+   * @param statement the Analytics query statement as a raw string.
+   * @param options the custom options for this query.
+   * @return the {@link AnalyticsResult} once the response arrives successfully.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public AnalyticsResult analyticsQuery(final String statement, final AnalyticsOptions options) {
+    return block(async().analyticsQuery(statement, options));
+  }
 }

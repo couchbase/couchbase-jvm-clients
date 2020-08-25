@@ -21,10 +21,15 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.java.analytics.AnalyticsAccessor;
+import com.couchbase.client.java.analytics.AnalyticsOptions;
+import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
@@ -41,6 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 
 /**
@@ -241,5 +247,65 @@ public class AsyncScope {
     request.context().clientContext(options.clientContext());
     return request;
   }
+
+  /**
+   * Performs an Analytics query with default {@link AnalyticsOptions}.
+   *
+   * @param statement the Analytics query statement as a raw string.
+   * @return the {@link AnalyticsResult} once the response arrives successfully.
+   */
+  @Stability.Volatile
+  public CompletableFuture<AnalyticsResult> analyticsQuery(final String statement) {
+    return analyticsQuery(statement, DEFAULT_ANALYTICS_OPTIONS);
+  }
+
+  /**
+   * Performs an Analytics query with custom {@link AnalyticsOptions}.
+   *
+   * @param statement the Analytics query statement as a raw string.
+   * @param options the custom options for this analytics query.
+   * @return the {@link AnalyticsResult} once the response arrives successfully.
+   */
+  @Stability.Volatile
+  public CompletableFuture<AnalyticsResult> analyticsQuery(final String statement, final AnalyticsOptions options) {
+    notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
+    AnalyticsOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
+    return AnalyticsAccessor.analyticsQueryAsync(core, analyticsRequest(statement, opts), serializer);
+  }
+
+  /**
+   * Helper method to craft an analytics request.
+   *
+   * @param statement the statement to use.
+   * @param opts the built analytics options.
+   * @return the created analytics request.
+   */
+  AnalyticsRequest analyticsRequest(final String statement, final AnalyticsOptions.Built opts) {
+    notNullOrEmpty(statement, "Statement", () -> new ReducedAnalyticsErrorContext(statement));
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().analyticsTimeout());
+    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+
+    JsonObject query = JsonObject.create();
+    query.put("statement", statement);
+    query.put("timeout", encodeDurationToMs(timeout));
+    // The bucketName.scopeName are quoted and treated as a single unit.
+    String queryContext = "default:`"  + bucketName + "." + scopeName+"`" ;
+
+    query.put("query_context", queryContext);
+    opts.injectParams(query);
+
+    final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
+    final String clientContextId = query.getString("client_context_id");
+    final InternalSpan span = environment()
+        .requestTracer()
+        .internalSpan(AnalyticsRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, core.context().authenticator(),
+        queryBytes, opts.priority(), opts.readonly(), clientContextId, statement, span
+    );
+    request.context().clientContext(opts.clientContext());
+    return request;
+  }
+
 
 }
