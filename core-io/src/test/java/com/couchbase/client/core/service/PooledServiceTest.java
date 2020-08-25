@@ -43,6 +43,7 @@ import java.util.function.Supplier;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -450,13 +451,13 @@ class PooledServiceTest {
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
     when(mock1.states()).thenReturn(DirectProcessor.create());
     when(mock1.outstandingRequests()).thenReturn(1L);
-    when(mock1.lastResponseReceived()).thenReturn(now);
+    doReturn(now).when(mock1).lastResponseReceived(); // trying different format due to a CI error with mockito
 
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
     when(mock2.states()).thenReturn(DirectProcessor.create());
     when(mock2.outstandingRequests()).thenReturn(1L);
-    when(mock2.lastResponseReceived()).thenReturn(now);
+    doReturn(now).when(mock2).lastResponseReceived(); // trying different format due to a CI error with mockito
 
     final List<Endpoint> mocks = Arrays.asList(mock1, mock2);
     final AtomicInteger invocation = new AtomicInteger();
