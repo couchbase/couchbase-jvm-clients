@@ -94,7 +94,7 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
 
   @Test
   @IgnoreWhen(missesCapabilities = { Capabilities.COLLECTIONS })
-  void exerciseCollection() throws NoSuchMethodException {
+  void exerciseCollection() {
 
     // Create the scope.collection (borrowed from CollectionManagerIntegrationTest )
     CollectionSpec collSpec = CollectionSpec.create(collectionName, scopeName);

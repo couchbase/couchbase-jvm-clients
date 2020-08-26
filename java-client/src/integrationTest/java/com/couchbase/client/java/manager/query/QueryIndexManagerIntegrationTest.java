@@ -184,7 +184,7 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
   @Test
   void dropNamedPrimaryIndex() {
     indexes.createPrimaryIndex(bucketName, createPrimaryQueryIndexOptions()
-        .indexName("namedPrimary"));
+        .indexName("namedPrimary").timeout(Duration.ofSeconds(120)));
     assertTrue(getIndex("namedPrimary").primary());
     indexes.dropIndex(bucketName, "namedPrimary");
     assertNoIndexesPresent();
@@ -305,7 +305,7 @@ class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
   void reactiveSmokeTest() {
     ReactiveQueryIndexManager reactive = indexes.reactive();
 
-    reactive.createPrimaryIndex(bucketName, createPrimaryQueryIndexOptions().deferred(true))
+    reactive.createPrimaryIndex(bucketName, createPrimaryQueryIndexOptions().deferred(true).timeout(Duration.ofSeconds(120)))
         .then(reactive.buildDeferredIndexes(bucketName))
         .then(reactive.watchIndexes(bucketName, setOf("#primary"), watchTimeout))
         .block();

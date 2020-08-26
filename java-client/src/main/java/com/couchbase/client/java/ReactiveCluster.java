@@ -132,7 +132,6 @@ public class ReactiveCluster {
   public static ReactiveCluster connect(final String connectionString, final ClusterOptions options) {
     notNullOrEmpty(connectionString, "ConnectionString");
     notNull(options, "ClusterOptions");
-
     final ClusterOptions.Built opts = options.build();
     final Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
     return new ReactiveCluster(
@@ -259,10 +258,10 @@ public class ReactiveCluster {
    * @return the {@link ReactiveQueryResult} once the response arrives successfully.
    */
   public Mono<ReactiveQueryResult> query(final String statement, final QueryOptions options) {
+    notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
+    final QueryOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
     return Mono.defer(() -> {
-      notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
-      final QueryOptions.Built opts = options.build();
-      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
       return asyncCluster.queryAccessor().queryReactive(
         asyncCluster.queryRequest(statement, opts),
         opts,
@@ -290,10 +289,10 @@ public class ReactiveCluster {
    * @return the {@link ReactiveAnalyticsResult} once the response arrives successfully.
    */
   public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement, final AnalyticsOptions options) {
+    notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
+    AnalyticsOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
     return Mono.defer(() -> {
-      notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
-      AnalyticsOptions.Built opts = options.build();
-      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
       return AnalyticsAccessor.analyticsQueryReactive(
         asyncCluster.core(),
         asyncCluster.analyticsRequest(statement, opts),
@@ -320,11 +319,11 @@ public class ReactiveCluster {
    * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link Mono}
    */
   public Mono<ReactiveSearchResult> searchQuery(final String indexName, final SearchQuery query, final SearchOptions options) {
+    notNull(query, "SearchQuery", () -> new ReducedSearchErrorContext(indexName, null));
+    notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, query.export().toMap()));
+    SearchOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
     return Mono.defer(() -> {
-      notNull(query, "SearchQuery", () -> new ReducedSearchErrorContext(indexName, null));
-      notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, query.export().toMap()));
-      SearchOptions.Built opts = options.build();
-      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
       return SearchAccessor.searchQueryReactive(asyncCluster.core(), asyncCluster.searchRequest(indexName, query, opts), serializer);
     });
   }

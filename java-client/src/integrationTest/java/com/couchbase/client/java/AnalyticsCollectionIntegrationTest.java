@@ -95,20 +95,12 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
 
 		// this inserts two documents in bucket.scope.collection and creates a primary index.
 		// then inserts one document in bucket._default._default and creates a primary index.
-		sleep(10);
+
 		cluster.query("insert into `" + config().bucketname() + "`.`" + scopeName + "`.`" + collectionName + "` (key, value ) values ( '123',  { \"test\" : \"hello\" })");
 		insertDoc(bucket.scope(scopeName).collection(collectionName), FOO_CONTENT);
 		cluster.query("create primary index on `" + config().bucketname() + "`.`" + scopeName + "`.`" + collectionName + "`");
 		insertDoc(bucket.defaultCollection(), DEFAULT_CONTENT);
 		cluster.query("create primary index on `" + config().bucketname() + "`.`" + "_default" + "`." + "_default");
-	}
-
-	private static void sleep(int i) {
-		try {
-			Thread.sleep(i * 1000);
-		} catch (InterruptedException e) {
-			System.out.println(e);
-		}
 	}
 
 	@BeforeEach
@@ -136,15 +128,10 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
 	}
 
 	private void disconnectLocalLink(String dvName) {
-		try {
-			// analytics dataverse/scopes containing a period have an "@" escaping(?) the period. But APIs don't take the @
-			DisconnectLinkAnalyticsOptions opts = DisconnectLinkAnalyticsOptions.disconnectLinkAnalyticsOptions()
-					.dataverseName(dvName.replaceAll("@", ""))
-					.linkName("Local");
-			analytics.disconnectLink(opts);
-		} catch (DataverseNotFoundException | ParsingFailureException e) {
-			System.out.println("disconnectLocalLink: " + e);
-		}
+		DisconnectLinkAnalyticsOptions opts = DisconnectLinkAnalyticsOptions.disconnectLinkAnalyticsOptions()
+				.dataverseName(dvName)
+				.linkName("Local");
+		analytics.disconnectLink(opts);
 	}
 
 	private void dropAllDatasets() {
@@ -154,20 +141,11 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
 	}
 
 	private void dropDataset(String name, DropDatasetAnalyticsOptions dataversOpts) {
-		try {
 			analytics.dropDataset(name, dataversOpts);
-		} catch (Exception e) {
-			System.out.println("dropDataset: " + name);
-		}
 	}
 
 	private void dropDataverse(String name) {
-		try {
-			// analytics dataverse/scopes containing a period have an "@" escaping(?) the period. But APIs don't take the @
-			analytics.dropDataverse(name.replaceAll("@", ""));
-		} catch (Exception e) {
-			System.out.println("dropDataverse:      " + e);
-		}
+			analytics.dropDataverse(name);
 	}
 
 	private void dropAllIndexes() {
@@ -187,7 +165,6 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
 
 	private static boolean dataverseExists(Cluster cluster, String dataverse) {
 		try {
-			// analytics scopes containing a period have an "@" escaping(?) the period. But APIs don't take the @
 			dataverse = dataverse.replace(".", "@.");
 			AnalyticsResult result = cluster.analyticsQuery("SELECT DataverseName FROM Metadata.`Dataverse` where DataverseName=\"" + dataverse + "\"");
 			return result.rowsAsObject().size() != 0;
@@ -226,9 +203,8 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
 
 		// REQUEST_PLUS makes query hang
 		// AnalyticsOptions opts = AnalyticsOptions.analyticsOptions().scanConsistency(AnalyticsScanConsistency.REQUEST_PLUS).timeout(Duration.ofSeconds(300));
-		sleep(10);
-		AnalyticsOptions opts = AnalyticsOptions.analyticsOptions();
-		AnalyticsResult result = cluster.analyticsQuery("SELECT * FROM " + dataverse + "." + dataset + " where " + dataset + ".test= \"hello\"", opts);
+
+		AnalyticsResult result = cluster.analyticsQuery("SELECT * FROM " + dataverse + "." + dataset + " where " + dataset + ".test= \"hello\"");
 
 		List<JsonObject> rows = result.rowsAs(JsonObject.class);
 		assertFalse(!rows.isEmpty());
@@ -250,20 +226,21 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
 
 	@Test
 	void performsDataverseCollectionQuery() {
-		// this *must* be the dataverse name for query_context in AsyncScope
+		// the dataverse name for query_context must be bucketname.scopename
 		String dataverseName = config().bucketname() + "." + scopeName;
 		analytics.createDataverse(dataverseName);
-		waitUntilCondition(() -> dataverseExists(cluster, dataverseName));
+		waitUntilCondition(() -> dataverseExists(cluster, dataverseName), Duration.ofSeconds(60), Duration.ofSeconds(1));
 
 		cluster.analyticsQuery("CREATE ANALYTICS COLLECTION `" + dataverseName + "`.`" + collectionName + "` ON `" + config().bucketname() + "`.`" + scopeName + "`.`" + collectionName + "`");
+		CollectionSpec collSpec = CollectionSpec.create(collectionName, scopeName);
+		waitUntilCondition(() -> collectionExists(collectionManager, collSpec), Duration.ofSeconds(60), Duration.ofSeconds(1));
 
 		// REQUEST_PLUS makes query hang
 		// AnalyticsOptions opts = AnalyticsOptions.analyticsOptions().scanConsistency(AnalyticsScanConsistency.REQUEST_PLUS);
-		sleep(10);
-		AnalyticsOptions opts = AnalyticsOptions.analyticsOptions();
 
+		//AnalyticsOptions opts = AnalyticsOptions.analyticsOptions();
 		Scope scope = cluster.bucket(config().bucketname()).scope(scopeName);
-		AnalyticsResult result = scope.analyticsQuery("SELECT * FROM `" + dataverseName + "`.`" + collectionName + "` where `" + collectionName + "`.foo= \"bar\"", opts);
+		AnalyticsResult result = scope.analyticsQuery("SELECT * FROM `" + dataverseName + "`.`" + collectionName + "` where `" + collectionName + "`.foo= \"bar\"");
 
 		List<JsonObject> rows = result.rowsAs(JsonObject.class);
 		assertFalse(rows.isEmpty());
@@ -271,19 +248,18 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
 
 	@Test
 	void performsDataverseCollectionQueryWithQueryContext() {
-		// this *must* be the dataverse name for query_context in AsyncScope
+		// the dataverse name for query_context must be bucketname.scopename
 		String dataverseName = config().bucketname() + "." + scopeName;
 		analytics.createDataverse(dataverseName);
 		waitUntilCondition(() -> dataverseExists(cluster, dataverseName));
 
 		cluster.analyticsQuery("CREATE ANALYTICS COLLECTION `" + dataverseName + "`.`" + collectionName + "` ON `" + config().bucketname() + "`.`" + scopeName + "`.`" + collectionName + "`");
-		// REQUEST_PLUS makes query hang
-		// AnalyticsOptions opts = AnalyticsOptions.analyticsOptions().scanConsistency(AnalyticsScanConsistency.REQUEST_PLUS);
-		sleep(10);
-		AnalyticsOptions opts = AnalyticsOptions.analyticsOptions();
+		CollectionSpec collSpec = CollectionSpec.create(collectionName, scopeName);
+		waitUntilCondition(() -> collectionExists(collectionManager, collSpec), Duration.ofSeconds(60), Duration.ofSeconds(1));
 
+		//AnalyticsOptions opts = AnalyticsOptions.analyticsOptions();
 		Scope scope = cluster.bucket(config().bucketname()).scope(scopeName);
-		AnalyticsResult result = scope.analyticsQuery("SELECT * FROM `" + collectionName + "` where `" + collectionName + "`.foo= \"bar\"", opts);
+		AnalyticsResult result = scope.analyticsQuery("SELECT * FROM `" + collectionName + "` where `" + collectionName + "`.foo= \"bar\"");
 
 		List<JsonObject> rows = result.rowsAs(JsonObject.class);
 		assertFalse(rows.isEmpty());

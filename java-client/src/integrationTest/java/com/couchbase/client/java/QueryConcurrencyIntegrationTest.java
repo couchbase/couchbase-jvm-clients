@@ -25,6 +25,7 @@ import com.couchbase.client.java.query.QueryScanConsistency;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -72,6 +73,13 @@ class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
     for (int i = 0; i < numDocsInserted; i++) {
       collection.insert("doc-"+i, FOO_CONTENT);
     }
+
+    Util.waitUntilCondition(() -> { QueryResult countResult = cluster.query(
+        "select count(*) as count from " + bucketName,
+        queryOptions().scanConsistency(QueryScanConsistency.REQUEST_PLUS));
+        return countResult.rowsAsObject().get(0).getInt("count") >= numDocsInserted;},
+        Duration.ofSeconds(10),
+        Duration.ofSeconds(1));
 
     QueryResult countResult = cluster.query(
       "select count(*) as count from " + bucketName,
