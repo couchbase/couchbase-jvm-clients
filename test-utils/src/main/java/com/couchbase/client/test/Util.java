@@ -45,6 +45,10 @@ public class Util {
     with().pollInterval(Duration.ofMillis(1)).await().atMost(atMost).until(supplier::getAsBoolean);
   }
 
+  public static void waitUntilCondition(final BooleanSupplier supplier, Duration atMost, Duration delay) {
+    with().pollInterval(delay).await().atMost(atMost).until(supplier::getAsBoolean);
+  }
+
   public static void waitUntilThrows(final Class<? extends Exception> clazz, final Supplier<Object> supplier) {
     with()
       .pollInterval(Duration.ofMillis(1))

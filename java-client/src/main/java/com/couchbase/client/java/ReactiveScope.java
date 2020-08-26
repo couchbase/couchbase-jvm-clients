@@ -149,10 +149,10 @@ public class ReactiveScope {
    */
   @Stability.Volatile
   public Mono<ReactiveQueryResult> query(final String statement, final QueryOptions options) {
+    notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
+    final QueryOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
     return Mono.defer(() -> {
-      notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
-      final QueryOptions.Built opts = options.build();
-      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
       return async().queryAccessor().queryReactive(
           async().queryRequest(bucketName(), name(), statement, opts, core(), environment()), opts, serializer);
     });
@@ -179,10 +179,10 @@ public class ReactiveScope {
    */
   @Stability.Volatile
   public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement, final AnalyticsOptions options) {
+    notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
+    AnalyticsOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
     return Mono.defer(() -> {
-      notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
-      AnalyticsOptions.Built opts = options.build();
-      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
       return AnalyticsAccessor.analyticsQueryReactive(
           asyncScope.core(),
           asyncScope.analyticsRequest(statement, opts),

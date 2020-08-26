@@ -110,6 +110,7 @@ public class AsyncAnalyticsIndexManager {
   public CompletableFuture<List<AnalyticsDataverse>> getAllDataverses() {
     return cluster.analyticsQuery("SELECT DataverseName from Metadata.`Dataverse`")
         .thenApply(result -> result.rowsAsObject().stream()
+            .map((dv) -> dv.put("DataverseName",((String)dv.get("DataverseName")).replace("@.",".")))
             .map(AnalyticsDataverse::new)
             .collect(toList()));
   }
