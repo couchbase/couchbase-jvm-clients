@@ -90,13 +90,16 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @BeforeEach
   void reset() {
-    final Set<String> builtIns = setOf("Default", "Metadata");
-    DisconnectLinkAnalyticsOptions opts = DisconnectLinkAnalyticsOptions.disconnectLinkAnalyticsOptions()
+
+    try {
+      DisconnectLinkAnalyticsOptions opts = DisconnectLinkAnalyticsOptions.disconnectLinkAnalyticsOptions()
         .dataverseName(dataverse)
         .linkName("Local");
+      analytics.disconnectLink(opts);
+    } catch (LinkNotFoundException | DataverseNotFoundException e) {
+    }
 
-    analytics.disconnectLink(opts);
-
+    final Set<String> builtIns = setOf("Default", "Metadata");
     getAllDataverseNames().stream()
         .filter(name -> !builtIns.contains(name))
         .forEach(name -> analytics.dropDataverse(name));
