@@ -145,6 +145,34 @@ class NodeTest {
     assertEquals(NodeState.DISCONNECTED, node.state());
   }
 
+  /**
+   * Regression test for JVMCBC-882.
+   */
+  @Test
+  void doesNotPrematurelyDisableService() {
+    Node node = new Node(CTX, mock(NodeIdentifier.class), NO_ALTERNATE) {
+      @Override
+      protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
+        Service s = mock(Service.class);
+        when(s.state()).thenReturn(ServiceState.CONNECTED);
+        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.type()).thenReturn(serviceType);
+        return s;
+      }
+    };
+
+    assertFalse(node.serviceEnabled(ServiceType.KV));
+    node.addService(ServiceType.KV, 11210, Optional.empty()).block();
+    assertTrue(node.serviceEnabled(ServiceType.KV));
+    node.addService(ServiceType.KV, 11210, Optional.of("bucket")).block();
+    assertTrue(node.serviceEnabled(ServiceType.KV));
+
+    node.removeService(ServiceType.KV, Optional.empty()).block();
+    assertTrue(node.serviceEnabled(ServiceType.KV));
+    node.removeService(ServiceType.KV, Optional.of("bucket")).block();
+    assertFalse(node.serviceEnabled(ServiceType.KV));
+  }
+
   @Test
   void connectedIfOneConnected() {
     Node node = new Node(CTX, mock(NodeIdentifier.class), NO_ALTERNATE) {

@@ -293,7 +293,9 @@ public class Node implements Stateful<NodeState> {
       Service service = localMap.remove(type);
       serviceStates.deregister(service);
       long start = System.nanoTime();
-      enabledServices.set(enabledServices.get() & ~(1 << service.type().ordinal()));
+      if (serviceCanBeDisabled(service.type())) {
+        enabledServices.set(enabledServices.get() & ~(1 << service.type().ordinal()));
+      }
       // todo: only return once the service is disconnected?
       service.disconnect();
       long end = System.nanoTime();
@@ -302,6 +304,20 @@ public class Node implements Stateful<NodeState> {
       );
       return Mono.empty();
     });
+  }
+
+  /**
+   * Checks if a service can be removed from the {@link #enabledServices} cache.
+   * <p>
+   * Note that th check is considerably simple: we iterate through all th services and if the same
+   * service is present somewhere else (the precondition of this method is that the service in question
+   * has already been removed), it cannot be disabled.
+   *
+   * @param serviceType the service to verify.
+   * @return true if it can be removed, false otherwise.
+   */
+  private boolean serviceCanBeDisabled(final ServiceType serviceType) {
+    return services.values().stream().noneMatch(m -> m.containsKey(serviceType));
   }
 
   @Override
