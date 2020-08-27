@@ -56,6 +56,7 @@ public class DnsSrvLookupFailedEvent extends AbstractEvent {
 
   public enum Reason {
     NAME_NOT_FOUND("name not found"),
+    TIMED_OUT("timed out"),
     OTHER("other");
 
     private final String identifier;
