@@ -26,6 +26,7 @@ import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
 import javax.naming.NameNotFoundException;
+import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -84,6 +85,13 @@ public class ConnectionStringUtil {
                       took,
                       null,
                       DnsSrvLookupFailedEvent.Reason.NAME_NOT_FOUND)
+                    );
+                } else if (t.getCause() instanceof SocketTimeoutException) {
+                    eventBus.publish(new DnsSrvLookupFailedEvent(
+                      Event.Severity.INFO,
+                      took,
+                      null,
+                      DnsSrvLookupFailedEvent.Reason.TIMED_OUT)
                     );
                 } else {
                     eventBus.publish(new DnsSrvLookupFailedEvent(
