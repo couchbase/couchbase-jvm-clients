@@ -63,6 +63,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   private Integer scanCap;
   private QueryScanConsistency scanConsistency;
   private JsonSerializer serializer;
+  private boolean flexIndex = false;
 
   /**
    * The options should only be instantiated through the {@link #queryOptions()} static method.
@@ -362,6 +363,18 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
     return this;
   }
 
+  /**
+   * Tells the query engine to use a flex index (utilizing the search service).
+   *
+   * @param flexIndex if a flex index should be used, false is the default.
+   * @return the same {@link QueryOptions} for chaining purposes.
+   */
+  @Stability.Uncommitted
+  public QueryOptions flexIndex(final boolean flexIndex) {
+    this.flexIndex = flexIndex;
+    return this;
+  }
+
   @Stability.Internal
   public Built build() {
     return new Built();
@@ -466,6 +479,10 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
 
       if (readonly) {
         queryJson.put("readonly", true);
+      }
+
+      if (flexIndex) {
+        queryJson.put("use_fts", true);
       }
 
       if (raw != null) {
