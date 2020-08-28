@@ -25,6 +25,7 @@ import com.couchbase.client.java.search.queries.DisjunctionQuery;
 import com.couchbase.client.java.search.queries.DocIdQuery;
 import com.couchbase.client.java.search.queries.GeoBoundingBoxQuery;
 import com.couchbase.client.java.search.queries.GeoDistanceQuery;
+import com.couchbase.client.java.search.queries.GeoPolygonQuery;
 import com.couchbase.client.java.search.queries.MatchAllQuery;
 import com.couchbase.client.java.search.queries.MatchNoneQuery;
 import com.couchbase.client.java.search.queries.MatchPhraseQuery;
@@ -37,6 +38,8 @@ import com.couchbase.client.java.search.queries.RegexpQuery;
 import com.couchbase.client.java.search.queries.TermQuery;
 import com.couchbase.client.java.search.queries.TermRangeQuery;
 import com.couchbase.client.java.search.queries.WildcardQuery;
+
+import java.util.List;
 
 /**
  * A base class for all FTS query classes. Exposes the common FTS query parameters.
@@ -193,6 +196,12 @@ public abstract class SearchQuery {
     /** Prepare a {@link GeoDistanceQuery} body. */
     public static GeoDistanceQuery geoDistance(double locationLon, double locationLat, String distance) {
         return new GeoDistanceQuery(locationLon, locationLat, distance);
+    }
+
+    /** Prepare a {@link GeoPolygonQuery} body. */
+    @Stability.Uncommitted
+    public static GeoPolygonQuery geoPolygon(final List<Coordinate> coordinates) {
+        return new GeoPolygonQuery(coordinates);
     }
 
 }
