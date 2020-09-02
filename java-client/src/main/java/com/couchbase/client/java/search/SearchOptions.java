@@ -40,6 +40,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   private Integer skip;
   private Boolean explain;
   private SearchScanConsistency consistency;
+  private boolean disableScoring = false;
   private MutationState consistentWith;
   private HighlightStyle highlightStyle;
   private String[] highlightFields;
@@ -263,6 +264,18 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
     return this;
   }
 
+  /**
+   * If set to true, thee server will not perform any scoring on the hits.
+   *
+   * @param disableScoring if scoring should be disabled.
+   * @return these {@link SearchOptions} for chaining purposes.
+   */
+  @Stability.Uncommitted
+  public SearchOptions disableScoring(final boolean disableScoring) {
+    this.disableScoring = disableScoring;
+    return this;
+  }
+
   @Stability.Internal
   public Built build() {
     return new Built();
@@ -308,6 +321,9 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
       }
       if (sort != null && !sort.isEmpty()) {
         queryJson.put("sort", sort);
+      }
+      if (disableScoring) {
+        queryJson.put("score", "none");
       }
 
       if (facets != null && !facets.isEmpty()) {
