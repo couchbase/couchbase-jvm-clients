@@ -193,9 +193,23 @@ public abstract class SearchQuery {
         return new GeoBoundingBoxQuery(topLeftLon, topLeftLat, bottomRightLon, bottomRightLat);
     }
 
+    /** Prepare a {@link GeoBoundingBoxQuery} body. */
+    @Stability.Uncommitted
+    public static GeoBoundingBoxQuery geoBoundingBox(final Coordinate topLeftCoordinate,
+                                                     final Coordinate bottomRightCoordinate) {
+        return geoBoundingBox(topLeftCoordinate.lon(), topLeftCoordinate.lat(), bottomRightCoordinate.lon(),
+          bottomRightCoordinate.lat());
+    }
+
     /** Prepare a {@link GeoDistanceQuery} body. */
     public static GeoDistanceQuery geoDistance(double locationLon, double locationLat, String distance) {
         return new GeoDistanceQuery(locationLon, locationLat, distance);
+    }
+
+    /** Prepare a {@link GeoDistanceQuery} body. */
+    @Stability.Uncommitted
+    public static GeoDistanceQuery geoDistance(final Coordinate locationCoordinate, final String distance) {
+        return geoDistance(locationCoordinate.lon(), locationCoordinate.lat(), distance);
     }
 
     /** Prepare a {@link GeoPolygonQuery} body. */
