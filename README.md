@@ -1,23 +1,25 @@
 # Couchbase JVM Clients
 
-This repository contains the third generation of the Couchbase SDKs on the JVM ("3.0").
+This repository contains the third generation of the Couchbase SDKs on the JVM ("SDK 3").
 
 ## Overview
 
 This repository contains the following projects:
 
- - `core-io`: the core library for all language bindings
+ - `core-io`: the foundational library for all language bindings
  - `java-client`: the Java language binding
  - `scala-client`: the Scala language binding
-
-You'll also find utility libraries and integration components at the toplevel (i.e for tracing).
+ - `tracing-opentracing`: experimental module to integrate with [OpenTracing](https://opentracing.io/)
+ - `tracing-opentelemetry`: experimental module to integrate with [OpenTelemetry](https://opentelemetry.io/)
+ 
+Other toplevel modules might be present which contain examples, experimental code or internal tooling and test infrastructure.
 
 Documentation is now available for [Java](https://docs.couchbase.com/java-sdk/3.0/hello-world/start-using-sdk.html)
 and [Scala](https://docs.couchbase.com/scala-sdk/1.0/start-using-sdk.html)
 
 ## Usage
 
-Stable releases are pushed to maven central.
+Stable releases are published on [maven central](https://search.maven.org/search?q=com.couchbase.client).
 
 For Java:
 
@@ -26,7 +28,7 @@ For Java:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>java-client</artifactId>
-        <version>3.0.4</version>
+        <version>3.0.8</version>
     </dependency>
 </dependencies>
 ```
@@ -38,13 +40,13 @@ For Scala:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>scala-client_2.12</artifactId>
-        <version>1.0.4</version>
+        <version>1.0.8</version>
     </dependency>
 </dependencies>
 ```
 or if you use sbt:
 ```sbt
-libraryDependencies += "com.couchbase.client" %% "scala-client" % "1.0.4"
+libraryDependencies += "com.couchbase.client" %% "scala-client" % "1.0.8"
 ```
 
 ## Building
@@ -59,7 +61,7 @@ $ make
 Yes, we need `make` because maven doesn't support the setup we need and neither does gradle. If you
 want to build for different Scala versions, after the first `make` you can do this through:
 
-```shell script
+```sh
 $ ./mvnw -Dscala.compat.version=2.13 -Dscala.compat.library.version=2.13.1 clean install
 $ ./mvnw -Dscala.compat.version=2.11 -Dscala.compat.library.version=2.11.12 clean install
 ```
@@ -98,7 +100,7 @@ each service release. See the tag information for specifics of what's in there.
 
  - [Colossus](https://en.wikipedia.org/wiki/Colossus_computer) (Initial Release 2020-01-10)
 
-| Release Train | Java-Client | Scala-Client | Core-Io | Tracing-Opentelemetry | Tracing-Opentracing |
+| Release Train | Java-Client | Scala-Client | Core-Io | Tracing-OpenTelemetry | Tracing-OpenTracing |
 | ------------- | ----------- | ------------ | ------- | --------------------- | ------------------- |
 | colossus      | 3.0.x       | 1.0.x        | 2.0.x   | 0.2.x                 | 0.2.x               |
 
@@ -110,6 +112,8 @@ runs against the mock. Recommended topologies:
  - 1 node, no replica
  - 2 nodes, 1 replica
  - 2 nodes, 2 replicas
+ 
+Also to have maximum service coverage use a cluster which has all services enabled (can be MDS setup).
 
 ### Building Documentation
 Documentation will be built automatically by the `mvn install` command above.
@@ -128,7 +132,7 @@ The location of the javadoc files depends on where you get it from. The easiest 
 For example, look it up on Maven central: https://search.maven.org/artifact/com.couchbase.client/java-client/3.0.4/jar and download the javadoc jar: https://search.maven.org/remotecontent?filepath=com/couchbase/client/java-client/3.0.4/java-client-3.0.4-javadoc.jar
 
 The exact same approach can be used for any artifact, including Scala.
-The Scala documentation can also be built with this command
+The Scala documentation can also be built with this command:
 ```
 cd scala-client && mvn scala:doc
 ```
