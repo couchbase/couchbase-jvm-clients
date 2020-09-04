@@ -38,6 +38,7 @@ import com.couchbase.client.java.search.queries.RegexpQuery;
 import com.couchbase.client.java.search.queries.TermQuery;
 import com.couchbase.client.java.search.queries.TermRangeQuery;
 import com.couchbase.client.java.search.queries.WildcardQuery;
+import com.couchbase.client.java.util.Coordinate;
 
 import java.util.List;
 

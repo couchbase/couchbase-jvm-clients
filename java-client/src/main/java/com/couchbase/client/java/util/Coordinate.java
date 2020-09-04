@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.search;
+package com.couchbase.client.java.util;
 
 /**
  * A coordinate is a tuple of a latitude and a longitude.
