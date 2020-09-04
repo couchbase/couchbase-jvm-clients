@@ -19,7 +19,7 @@ package com.couchbase.client.java.search.queries;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.search.Coordinate;
+import com.couchbase.client.java.util.Coordinate;
 import com.couchbase.client.java.search.SearchQuery;
 
 import java.util.List;
