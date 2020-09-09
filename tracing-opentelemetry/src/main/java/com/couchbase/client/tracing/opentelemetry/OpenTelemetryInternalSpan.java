@@ -19,7 +19,9 @@ package com.couchbase.client.tracing.opentelemetry;
 import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 import com.couchbase.client.core.service.ServiceType;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.trace.Span;
@@ -62,6 +64,14 @@ public class OpenTelemetryInternalSpan implements InternalSpan {
       String operationId = ctx.request().operationId();
       if (operationId != null) {
         span.setAttribute("couchbase.operation_id", operationId);
+      }
+      if (ctx.request() instanceof BaseKeyValueRequest) {
+        span.setAttribute("couchbase.document_id",
+                new String(((BaseKeyValueRequest) ctx.request()).key(), CharsetUtil.UTF_8));
+      }
+      if (ctx.clientContext() != null) {
+        ctx.clientContext().forEach((key, value) ->
+                span.setAttribute("couchbase.client_context." + key, value.toString()));
       }
       span.end();
     }
