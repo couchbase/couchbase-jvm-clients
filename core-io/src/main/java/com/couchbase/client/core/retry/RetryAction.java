@@ -19,24 +19,54 @@ package com.couchbase.client.core.retry;
 import java.time.Duration;
 import java.util.Optional;
 
+/**
+ * The {@link RetryAction} describes how and when a request should be retried.
+ */
 public class RetryAction {
 
-  private static final RetryAction NO_DURATION = new RetryAction(Optional.empty());
+  /**
+   * Default retry action if the request should not be retried.
+   */
+  private static final RetryAction NO_RETRY = new RetryAction(Optional.empty());
 
+  /**
+   * Stores the duration (if present) of the next retry delay.
+   */
   private final Optional<Duration> duration;
 
+  /**
+   * Creates a new {@link RetryAction} with the required duration.
+   *
+   * @param duration the duration when (and if) the opreation should be retried again.
+   */
   private RetryAction(final Optional<Duration> duration) {
     this.duration = duration;
   }
 
+  /**
+   * Constructs a new {@link RetryAction} indicating that the request should be retried after the given duration.
+   *
+   * @param duration the duration after which the request should be retried.
+   * @return a new {@link RetryAction} indicating retry.
+   */
   public static RetryAction withDuration(final Duration duration) {
     return new RetryAction(Optional.of(duration));
   }
 
+  /**
+   * Constructs a new {@link RetryAction} indicating that the request should not be retried.
+   *
+   * @return a new {@link RetryAction} indicating no retry.
+   */
   public static RetryAction noRetry() {
-    return NO_DURATION;
+    return NO_RETRY;
   }
 
+  /**
+   * If present, the operation should be retried after the given duration.
+   *
+   * @return the duration indicating if (and when) the request should be retried.
+   */
   public Optional<Duration> duration() {
     return duration;
   }
