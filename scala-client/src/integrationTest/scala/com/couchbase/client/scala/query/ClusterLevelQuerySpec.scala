@@ -15,7 +15,8 @@
  */
 package com.couchbase.client.scala.query
 
-import com.couchbase.client.scala.Cluster
+import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.scala.{Cluster, TestUtils}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.util.ScalaIntegrationTest

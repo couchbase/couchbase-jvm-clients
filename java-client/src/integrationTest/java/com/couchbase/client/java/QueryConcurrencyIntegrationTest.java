@@ -36,11 +36,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen( missesCapabilities = { Capabilities.QUERY })
+// Disabling against 5.5.  See comment on QueryIndexManagerIntegrationTest for details.
+@IgnoreWhen( missesCapabilities = { Capabilities.QUERY }, clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER)
 class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
