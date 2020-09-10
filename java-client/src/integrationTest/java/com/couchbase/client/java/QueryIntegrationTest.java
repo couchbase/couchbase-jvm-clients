@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -55,8 +56,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the end-to-end functionality of the Query service.
+ * <p>
+ * Disabling against 5.5.  See comment on QueryIndexManagerIntegrationTest for details.
  */
-@IgnoreWhen( missesCapabilities = { Capabilities.QUERY })
+@IgnoreWhen( missesCapabilities = { Capabilities.QUERY }, clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER)
 class QueryIntegrationTest extends JavaIntegrationTest {
 
     private static Cluster cluster;

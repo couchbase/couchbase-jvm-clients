@@ -36,8 +36,9 @@ import scala.concurrent.duration._
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
+// Disabling against 5.5.  See comment on QueryIndexManagerIntegrationTest for details.
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), clusterVersionEquals = "5.5.6")
 class QueryIndexManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster           = _
   private var coll: Collection           = _

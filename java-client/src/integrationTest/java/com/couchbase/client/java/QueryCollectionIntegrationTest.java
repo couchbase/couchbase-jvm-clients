@@ -45,6 +45,7 @@ import java.util.function.Predicate;
 import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static com.couchbase.client.core.util.CbThrowables.throwIfUnchecked;
 import static com.couchbase.client.java.AsyncUtils.block;
+import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,11 +54,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the end-to-end functionality of Collection queries
- *
+ * <p>
+ * Disabling against 5.5.  See comment on QueryIndexManagerIntegrationTest for details.
+ * <p>
  * @author Michael Reiche
  */
 @IgnoreWhen(missesCapabilities = { Capabilities.QUERY, Capabilities.COLLECTIONS },
-    clusterTypes = { ClusterType.MOCKED })
+    clusterTypes = { ClusterType.MOCKED }, clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER)
 class QueryCollectionIntegrationTest extends JavaIntegrationTest {
 
   private static Bucket bucket;

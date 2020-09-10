@@ -37,8 +37,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
+// Disabling against 5.5.  See comment on QueryIndexManagerIntegrationTest for details.
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(missesCapabilities = Array(Capabilities.QUERY))
+@IgnoreWhen(missesCapabilities = Array(Capabilities.QUERY), clusterVersionEquals = "5.5.6")
 class QuerySpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster   = _
