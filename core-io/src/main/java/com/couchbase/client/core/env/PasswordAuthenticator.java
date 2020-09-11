@@ -56,11 +56,25 @@ public class PasswordAuthenticator implements Authenticator {
    * Creates a new password authenticator with the default settings.
    *
    * @param username the username to use for all authentication.
-   * @param password the password to use alognside the username.
+   * @param password the password to use alongside the username.
    * @return the instantiated {@link PasswordAuthenticator}.
    */
   public static PasswordAuthenticator create(final String username, final String password) {
     return builder().username(username).password(password).build();
+  }
+
+  /**
+   * Creates a LDAP compatible password authenticator which is INSECURE if not used with TLS.
+   * <p>
+   * Please note that this is INSECURE and will leak user credentials on the wire to eavesdroppers. This should
+   * only be enabled in trusted environments.
+   *
+   * @param username the username to use for all authentication.
+   * @param password the password to use alongside the username.
+   * @return the instantiated {@link PasswordAuthenticator}.
+   */
+  public static PasswordAuthenticator ldapCompatible(final String username, final String password) {
+    return builder().username(username).password(password).onlyEnablePlainSaslMechanism().build();
   }
 
   private PasswordAuthenticator(final Builder builder) {
@@ -199,11 +213,28 @@ public class PasswordAuthenticator implements Authenticator {
      * <p>
      * Please note that this is INSECURE and will leak user credentials on the wire to eavesdroppers. This should
      * only be enabled in trusted environments - we recommend connecting via TLS to the cluster instead.
+     * <p>
+     * If you are running an LDAP enabled environment, please use {@link #onlyEnablePlainSaslMechanism()} instead!
      *
      * @return this builder for chaining purposes.
      */
     public Builder enablePlainSaslMechanism() {
       return allowedSaslMechanisms(EnumSet.allOf(SaslMechanism.class));
+    }
+
+    /**
+     * This method will ONLY enable the PLAIN SASL mechanism (useful for LDAP enabled environments).
+     * <p>
+     * Please note that this is INSECURE and will leak user credentials on the wire to eavesdroppers. This should
+     * only be enabled in trusted environments - we recommend connecting via TLS to the cluster instead.
+     * <p>
+     * You might also want to consider using the static constructor method {@link #ldapCompatible(String, String)} as a
+     * shortcut.
+     *
+     * @return this builder for chaining purposes.
+     */
+    public Builder onlyEnablePlainSaslMechanism() {
+      return allowedSaslMechanisms(EnumSet.of(SaslMechanism.PLAIN));
     }
 
     /**

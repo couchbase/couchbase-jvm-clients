@@ -156,8 +156,14 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
         ctx.pipeline().remove(this);
         ctx.fireChannelActive();
       } else if (status == MemcacheProtocol.Status.ACCESS_ERROR.status()) {
+        // If the promise has been already completed with an error from a downstream handler, there is no
+        // need to WARN because it will just spam and reduce the visibility of the actual source error.
+        Event.Severity severity = interceptedConnectPromise.isDone() && !interceptedConnectPromise.isSuccess()
+          ? Event.Severity.DEBUG
+          : Event.Severity.WARN;
+
         endpointContext.environment().eventBus().publish(
-          new SelectBucketFailedEvent(Event.Severity.ERROR, ioContext, status)
+          new SelectBucketFailedEvent(severity, ioContext, status)
         );
         interceptedConnectPromise.tryFailure(
           new AuthenticationFailureException(
