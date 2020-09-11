@@ -1,5 +1,8 @@
 package com.couchbase.client.scala.kv
 
+import java.time.Instant
+import java.util.concurrent.TimeUnit
+
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext
 import com.couchbase.client.core.msg.kv.{
@@ -21,6 +24,8 @@ import scala.util.{Failure, Success, Try}
   *
   * @param id  the unique identifier of the document
   * @param cas the document's CAS value at the time of the lookup
+  * @param expiryTime the document's expiration time, if it was fetched with the `withExpiry` flag set.  If that flag
+  *                   was not set, this will be None.  The time is the point in time when the document expires.
   *
   * @define Index          the index of the [[LookupInSpec]] provided to the `lookupIn`
   * @define SupportedTypes this can be of any type for which an implicit
@@ -35,9 +40,19 @@ case class LookupInResult(
     private val content: collection.Seq[SubDocumentField],
     private[scala] val flags: Int,
     cas: Long,
-    expiry: Option[Duration],
+    expiryTime: Option[Instant],
     transcoder: Transcoder
 ) {
+
+  /** If the document was fetched with the `withExpiry` flag set then this will contain the
+    * document's expiration value.  Otherwise it will be None.
+    *
+    * The time is expressed as a duration from the start of 'epoch time' until when the document expires.
+    *
+    * Also see [[expiryTime]] which also provides the expiration time, but in the form of the point of time at which
+    * the document expires.
+    */
+  def expiry: Option[Duration] = expiryTime.map(i => Duration(i.getEpochSecond, TimeUnit.SECONDS))
 
   /** Retrieve the content returned for a particular `LookupInSpec`, converted into the application's preferred
     * representation.
