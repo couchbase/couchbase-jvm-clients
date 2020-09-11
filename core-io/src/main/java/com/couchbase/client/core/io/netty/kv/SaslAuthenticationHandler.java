@@ -236,7 +236,9 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
           failConnect(ctx, "Unexpected error during SASL auth", response, ex, status(response));
         }
       } else if (STATUS_AUTH_ERROR == status(response)) {
-        maybeFailConnect(ctx, "Authentication Failure", response, null, status(response));
+        maybeFailConnect(ctx, "Authentication Failure - Potential causes: invalid credentials or if " +
+          "LDAP is enabled ensure PLAIN SASL mechanism is exclusively used on the PasswordAuthenticator (insecure) or " +
+          "TLS is used (recommended)", response, null, status(response));
       } else {
         failConnect(
           ctx,
@@ -286,7 +288,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
 
       if (mergedMechs.isEmpty()) {
         failConnect(ctx, "Could not negotiate SASL mechanism with server. If you are using LDAP you must either" +
-           "connect via TLS (recommended), or enable PLAIN to the allowed SASL mechanism list on the PasswordAuthenticator" +
+           "connect via TLS (recommended), or ONLY enable PLAIN in the allowed SASL mechanisms list on the PasswordAuthenticator" +
            "(this is insecure and will present the user credentials in plain-text over the wire).",
            lastPacket, cause, status);
       } else {
@@ -477,6 +479,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       errorContext,
       cause
     ));
+    ctx.pipeline().remove(this);
   }
 
   /**
