@@ -51,6 +51,11 @@ public class Scope {
   private final AsyncScope asyncScope;
 
   /**
+   * Holds the adjacent reactive scope.
+   */
+  private final ReactiveScope reactiveScope;
+
+  /**
    * Stores already opened collections for reuse.
    */
   private final Map<String, Collection> collectionCache = new ConcurrentHashMap<>();
@@ -62,6 +67,7 @@ public class Scope {
    */
   Scope(final AsyncScope asyncScope) {
     this.asyncScope = asyncScope;
+    this.reactiveScope = new ReactiveScope(asyncScope);
   }
 
   /**
@@ -86,6 +92,13 @@ public class Scope {
    */
   public AsyncScope async() {
     return asyncScope;
+  }
+
+  /**
+   * Provides access to the related {@link ReactiveScope}.
+   */
+  public ReactiveScope reactive() {
+    return reactiveScope;
   }
 
   /**
