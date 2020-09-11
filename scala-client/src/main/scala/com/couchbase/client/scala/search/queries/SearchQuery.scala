@@ -18,6 +18,7 @@ package com.couchbase.client.scala.search.queries
 
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.search.SearchOptions
+import com.couchbase.client.scala.util.Coordinate
 
 /** Base class for FTS queries that are composite, compounding several other [[SearchQuery]].
   *
@@ -152,6 +153,8 @@ object SearchQuery {
   /** An FTS query that matches 0 document (usually for debugging purposes).
     */
   def matchNone = MatchNoneQuery()
+
+  def geoPolygon(coordinates: Seq[Coordinate]) = GeoPolygonQuery(coordinates)
 
   /** An FTS query which finds all matches within a given box (identified by the upper left and lower right corner
     * coordinates).
