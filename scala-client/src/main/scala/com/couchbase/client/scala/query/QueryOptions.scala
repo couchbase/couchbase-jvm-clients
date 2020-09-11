@@ -52,7 +52,8 @@ case class QueryOptions(
     private[scala] val adhoc: Boolean = true,
     private[scala] val deferredException: Option[RuntimeException] = None,
     private[scala] val parentSpan: Option[RequestSpan] = None,
-    private[scala] val raw: Option[Map[String, Any]] = None
+    private[scala] val raw: Option[Map[String, Any]] = None,
+    private[scala] val flexIndex: Boolean = false
 ) {
 
   /** Sets the parent `RequestSpan`.
@@ -242,6 +243,16 @@ case class QueryOptions(
     copy(raw = Some(raw))
   }
 
+  /** Tells the query engine to use a flex index (utilizing the search service).
+    *
+    * The default is false.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def flexIndex(flexIndex: Boolean): QueryOptions = {
+    copy(flexIndex = flexIndex)
+  }
+
   private[scala] def encode(): JsonObject = {
     encode(JsonObject.create)
   }
@@ -305,6 +316,9 @@ case class QueryOptions(
     out.put("metrics", metrics)
     readonly.foreach(v => out.put("readonly", v))
     raw.foreach(_.foreach(x => out.put(x._1, x._2)))
+    if (flexIndex) {
+      out.put("use_fts", true)
+    }
 
     out
   }
