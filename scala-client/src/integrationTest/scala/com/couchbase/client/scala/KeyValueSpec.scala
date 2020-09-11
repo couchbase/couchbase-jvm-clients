@@ -14,6 +14,7 @@ import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.kv.{
   GetOptions,
+  GetReplicaResult,
   GetResult,
   InsertOptions,
   MutationResult,
@@ -444,4 +445,3 @@ class KeyValueSpec extends ScalaIntegrationTest {
     assert(as.values.size == count)
   }
 }
-

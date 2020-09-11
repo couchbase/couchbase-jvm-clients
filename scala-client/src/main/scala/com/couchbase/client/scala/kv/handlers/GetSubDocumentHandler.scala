@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala.kv.handlers
 
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.cnc.RequestSpan
@@ -139,12 +140,12 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
         val values: collection.Seq[SubDocumentField] = response.values()
 
         if (withExpiration) {
-          var exptime: Option[Duration] = None
+          var exptime: Option[Instant] = None
 
           val removingExpTime = values.filter(value => {
             if (value.path() == ExpTime) {
               val str = new java.lang.String(value.value(), CharsetUtil.UTF_8)
-              exptime = Some(Duration(str.toLong, TimeUnit.SECONDS))
+              exptime = Some(Instant.ofEpochSecond(str.toLong))
               false
             } else true
           })

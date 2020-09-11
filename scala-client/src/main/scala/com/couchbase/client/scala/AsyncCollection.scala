@@ -335,7 +335,7 @@ class AsyncCollection(
             Left(lookupInResult.contentAs[Array[Byte]](0).get),
             lookupInResult.flags,
             lookupInResult.cas,
-            lookupInResult.expiry,
+            lookupInResult.expiryTime,
             transcoder
           )
       )
