@@ -17,10 +17,10 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability.Volatile
-import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.query.handlers.QueryHandler
+import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
 
-import scala.compat.java8.FutureConverters
 import scala.concurrent.{ExecutionContext, Future}
 
 /** Represents a Couchbase scope resource.
@@ -44,6 +44,8 @@ class AsyncScope private[scala] (
     private[scala] val environment: ClusterEnvironment
 ) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
+  private[scala] val hp                            = HandlerBasicParams(core, environment)
+  private[scala] val queryHandler                  = new QueryHandler(hp)
 
   /** The name of this scope. */
   def name = scopeName
@@ -56,5 +58,27 @@ class AsyncScope private[scala] (
   def collection(collectionName: String): AsyncCollection = {
     core.configurationProvider.refreshCollectionMap(bucketName, false)
     new AsyncCollection(collectionName, bucketName, scopeName, core, environment)
+  }
+
+  /** Performs a N1QL query against the cluster.
+    *
+    * This is asynchronous.  See [[Scope.reactive]] for a reactive streaming version of this API, and
+    * [[Scope]] for a blocking version.
+    *
+    * The reason to use this Scope-based variant over [[AsyncCluster.query]] is that it will automatically provide
+    * the "query_context" parameter to the query service, allowing queries to be specified on scopes and collections
+    * without having to fully reference them in the query statement.
+    *
+    * @param statement the N1QL statement to execute
+    * @param options   any query options - see [[com.couchbase.client.scala.query.QueryOptions]] for documentation
+    *
+    * @return a `Future` containing a `Success(QueryResult)` (which includes any returned rows) if successful, else a
+    *         `Failure`
+    */
+  @Volatile
+  def query(statement: String, options: QueryOptions = QueryOptions()): Future[QueryResult] = {
+    // MB-40997 - cannot have backticks around scope.
+    val queryContext = s"""`default`:`${bucketName}`.${scopeName}"""
+    queryHandler.queryAsync(statement, options, environment, Some(queryContext))
   }
 }

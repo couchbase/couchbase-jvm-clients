@@ -17,9 +17,12 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.scala.query.{QueryOptions, QueryResult, ReactiveQueryResult}
 import com.couchbase.client.scala.util.AsyncUtils
+import reactor.core.scala.publisher.SMono
 
 import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 /** Represents a Couchbase scope resource.
   *
@@ -28,8 +31,6 @@ import scala.concurrent.ExecutionContext
   *
   * @param async an asynchronous version of this API
   * @param bucketName the name of the bucket this scope is on
-  * @param ec an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
-  *           opened in the normal way, starting from functions in [[Cluster]]
   * @author Graham Pople
   * @since 1.0.0
   */
@@ -51,5 +52,24 @@ class Scope private[scala] (val async: AsyncScope, bucketName: String) {
   /** Opens and returns the default collection on this scope. */
   private[scala] def defaultCollection = {
     collection(DefaultResources.DefaultCollection)
+  }
+
+  /** Performs a N1QL query against the cluster.
+    *
+    * This is a blocking API.  See [[Scope.async]] for an Future-based async version of this API, and
+    * [[Scope.reactive]] for a reactive version.
+    *
+    * The reason to use this Scope-based variant over [[Cluster.query]] is that it will automatically provide
+    * the "query_context" parameter to the query service, allowing queries to be specified on scopes and collections
+    * without having to fully reference them in the query statement.
+    *
+    * @param statement the N1QL statement to execute
+    * @param options   any query options - see [[com.couchbase.client.scala.query.QueryOptions]] for documentation
+    *
+    * @return a `QueryResult`
+    */
+  @Volatile
+  def query(statement: String, options: QueryOptions = QueryOptions()): Try[QueryResult] = {
+    AsyncUtils.block(async.query(statement, options))
   }
 }

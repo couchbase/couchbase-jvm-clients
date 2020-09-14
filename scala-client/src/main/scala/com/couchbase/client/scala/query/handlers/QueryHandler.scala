@@ -96,7 +96,8 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
   private def request[T](
       statement: String,
       options: QueryOptions,
-      environment: ClusterEnvironment
+      environment: ClusterEnvironment,
+      queryContext: Option[String]
   ): Try[QueryRequest] = {
 
     val validations = for {
@@ -125,6 +126,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
         case _ =>
           val params = options.encode()
           params.put("statement", statement)
+          queryContext.foreach(v => params.put("query_context", v))
 
           Try(JacksonTransformers.MAPPER.writeValueAsString(params)).map(queryStr => {
             val queryBytes = queryStr.getBytes(CharsetUtil.UTF_8)
@@ -143,7 +145,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
               options.readonly.getOrElse(false),
               params.str("client_context_id"),
               hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, options.parentSpan.orNull),
-              null
+              queryContext.orNull
             )
 
             request
@@ -345,7 +347,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       true,
       query.str("client_context_id"),
       hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, options.parentSpan.orNull),
-      null
+      original.queryContext()
     )
   }
 
@@ -379,7 +381,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       originalOptions.readonly.getOrElse(false),
       query.str("client_context_id"),
       hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, originalOptions.parentSpan.orNull),
-      null
+      original.queryContext()
     )
   }
 
@@ -402,9 +404,10 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
   def queryReactive(
       statement: String,
       options: QueryOptions,
-      environment: ClusterEnvironment
+      environment: ClusterEnvironment,
+      queryContext: Option[String]
   ): SMono[ReactiveQueryResult] = {
-    request(statement, options, environment) match {
+    request(statement, options, environment, queryContext) match {
       case Success(req) => queryReactive(req, options)
       case Failure(err) => SMono.raiseError(err)
     }
@@ -417,10 +420,11 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
   def queryAsync(
       statement: String,
       options: QueryOptions,
-      environment: ClusterEnvironment
+      environment: ClusterEnvironment,
+      queryContext: Option[String]
   ): Future[QueryResult] = {
 
-    request(statement, options, environment) match {
+    request(statement, options, environment, queryContext) match {
       case Success(req) =>
         queryReactive(req, options)
         // Buffer the responses

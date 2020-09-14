@@ -110,11 +110,6 @@ class Cluster private[scala] (
     *         `Failure`
     */
   def query(statement: String, options: QueryOptions): Try[QueryResult] = {
-    val timeout: java.time.Duration = options.timeout match {
-      case Some(v) => v
-      case _       => _env.timeoutConfig.queryTimeout()
-    }
-
     AsyncUtils.block(async.query(statement, options))
   }
 
