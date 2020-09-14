@@ -23,20 +23,29 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.{DE
 import com.couchbase.client.core.error.{
   BucketExistsException,
   BucketNotFoundException,
-  CouchbaseException
+  CouchbaseException,
+  InvalidArgumentException
 }
 import com.couchbase.client.core.logging.RedactableArgument.redactMeta
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.UrlQueryStringBuilder
 import com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode
+import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.manager.ManagerUtil
+import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral, Memcached}
+import com.couchbase.client.scala.manager.bucket.EjectionMethod.{
+  FullEviction,
+  NoEviction,
+  NotRecentlyUsed,
+  ValueOnly
+}
 import com.couchbase.client.scala.util.CouchbasePickler
 import com.couchbase.client.scala.util.DurationConversions._
 import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.concurrent.duration.Duration
-import scala.util.Failure
+import scala.util.{Failure, Success, Try}
 
 @Volatile
 class ReactiveBucketManager(core: Core) {
@@ -67,25 +76,59 @@ class ReactiveBucketManager(core: Core) {
       retryStrategy: RetryStrategy,
       update: Boolean
   ): SMono[Unit] = {
-    val params = convertSettingsToParams(settings, update)
+    checkValidEjectionMethod(settings) match {
+      case Success(_) =>
+        val params = convertSettingsToParams(settings, update)
 
-    ManagerUtil
-      .sendRequest(core, POST, path, params, timeout, retryStrategy)
-      .flatMap(response => {
-        if ((response.status == ResponseStatus.INVALID_ARGS) && response.content != null) {
-          val content = new String(response.content, StandardCharsets.UTF_8)
-          if (content.contains("Bucket with given name already exists")) {
-            SMono.raiseError(BucketExistsException.forBucket(settings.name))
-          } else {
-            SMono.raiseError(new CouchbaseException(content))
-          }
-        } else {
-          ManagerUtil.checkStatus(response, "create bucket [" + redactMeta(settings) + "]") match {
-            case Failure(err) => SMono.raiseError(err)
-            case _            => SMono.just(())
-          }
+        ManagerUtil
+          .sendRequest(core, POST, path, params, timeout, retryStrategy)
+          .flatMap(response => {
+            if ((response.status == ResponseStatus.INVALID_ARGS) && response.content != null) {
+              val content = new String(response.content, StandardCharsets.UTF_8)
+              if (content.contains("Bucket with given name already exists")) {
+                SMono.raiseError(BucketExistsException.forBucket(settings.name))
+              } else {
+                SMono.raiseError(new CouchbaseException(content))
+              }
+            } else {
+              ManagerUtil
+                .checkStatus(response, "create bucket [" + redactMeta(settings) + "]") match {
+                case Failure(err) => SMono.raiseError(err)
+                case _            => SMono.just(())
+              }
+            }
+          })
+      case Failure(err) => SMono.raiseError(err)
+    }
+  }
+
+  private def checkValidEjectionMethod(settings: CreateBucketSettings): Try[Unit] = {
+    val validEjectionType = settings.ejectionMethod match {
+      case Some(FullEviction) | Some(ValueOnly) =>
+        settings.bucketType match {
+          case Some(Couchbase) | None => true
+          case _                      => false
         }
-      })
+      case Some(NoEviction) | Some(NotRecentlyUsed) =>
+        settings.bucketType match {
+          case Some(Ephemeral) => true
+          case _               => false
+        }
+      case None => true
+    }
+
+    if (!validEjectionType) {
+      Failure(
+        new InvalidArgumentException(
+          s"Cannot use ejection policy ${settings.ejectionMethod} together with bucket type ${settings.bucketType
+            .getOrElse(Couchbase)}",
+          null,
+          null
+        )
+      );
+    } else {
+      Success()
+    }
   }
 
   def updateBucket(
@@ -93,25 +136,33 @@ class ReactiveBucketManager(core: Core) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): SMono[Unit] = {
+    checkValidEjectionMethod(settings) match {
+      case Success(_) =>
+        getAllBuckets(timeout, retryStrategy)
+          .collectSeq()
+          .map(buckets => buckets.exists(_.name == settings.name))
+          .flatMap(bucketExists => {
+            createUpdateBucketShared(
+              settings,
+              pathForBucket(settings.name),
+              timeout,
+              retryStrategy,
+              bucketExists
+            )
+          })
 
-    getAllBuckets(timeout, retryStrategy)
-      .collectSeq()
-      .map(buckets => buckets.exists(_.name == settings.name))
-      .flatMap(bucketExists => {
-        createUpdateBucketShared(
-          settings,
-          pathForBucket(settings.name),
-          timeout,
-          retryStrategy,
-          bucketExists
-        )
-      })
+      case Failure(err) => SMono.raiseError(err)
+    }
   }
 
   private def convertSettingsToParams(settings: CreateBucketSettings, update: Boolean) = {
     val params = UrlQueryStringBuilder.createForUrlSafeNames
     params.add("ramQuotaMB", settings.ramQuotaMB)
-    settings.numReplicas.foreach(v => params.add("replicaNumber", v))
+    settings.bucketType match {
+      case Some(Memcached) =>
+      case _ =>
+        settings.numReplicas.foreach(v => params.add("replicaNumber", v))
+    }
     settings.flushEnabled.foreach(v => params.add("flushEnabled", if (v) 1 else 0))
     settings.maxTTL.foreach(v => params.add("maxTTL", v))
     settings.ejectionMethod.foreach(v => params.add("evictionPolicy", v.alias))
@@ -121,7 +172,11 @@ class ReactiveBucketManager(core: Core) {
       params.add("name", settings.name)
       settings.bucketType.foreach(v => params.add("bucketType", v.alias))
       settings.conflictResolutionType.foreach(v => params.add("conflictResolutionType", v.alias))
-      settings.replicaIndexes.foreach(v => params.add("replicaIndex", if (v) 1 else 0))
+      settings.bucketType match {
+        case Some(Ephemeral) =>
+        case _ =>
+          settings.replicaIndexes.foreach(v => params.add("replicaIndex", if (v) 1 else 0))
+      }
     }
     params
   }
@@ -159,8 +214,8 @@ class ReactiveBucketManager(core: Core) {
           ManagerUtil.checkStatus(response, "get bucket [" + redactMeta(bucketName) + "]") match {
             case Failure(err) => SMono.raiseError(err)
             case _ =>
-              val value = CouchbasePickler.read[BucketSettings](response.content)
-              SMono.just(value)
+              val bs = BucketSettings.parseFrom(response.content)
+              SMono.just(bs)
           }
         }
       })
@@ -176,8 +231,8 @@ class ReactiveBucketManager(core: Core) {
         ManagerUtil.checkStatus(response, "get all buckets") match {
           case Failure(err) => SFlux.raiseError(err)
           case _ =>
-            val value = CouchbasePickler.read[Seq[BucketSettings]](response.content)
-            SFlux.fromIterable(value)
+            val bs = BucketSettings.parseSeqFrom(response.content)
+            SFlux.fromIterable(bs)
         }
       })
   }
