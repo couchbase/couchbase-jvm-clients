@@ -21,11 +21,14 @@ import java.util.concurrent.TimeUnit
 import com.couchbase.client.core.error.{
   BucketExistsException,
   BucketNotFoundException,
-  DocumentNotFoundException
+  DocumentNotFoundException,
+  InvalidArgumentException
 }
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral}
+import com.couchbase.client.scala.manager.bucket.EjectionMethod.{FullEviction, NotRecentlyUsed}
 import com.couchbase.client.scala.manager.bucket._
-import com.couchbase.client.scala.util.ScalaIntegrationTest
+import com.couchbase.client.scala.util.{CouchbasePickler, ScalaIntegrationTest}
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.test.Util.waitUntilThrows
 import com.couchbase.client.test._
@@ -105,6 +108,13 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   }
 
   @Test
+  def parsing(): Unit = {
+    assert(CompressionMode.Passive == CouchbasePickler.read[CompressionMode]("\"passive\""))
+    assert(BucketType.Memcached == CouchbasePickler.read[BucketType]("\"memcached\""))
+    assert(BucketType.Ephemeral == CouchbasePickler.read[BucketType]("\"ephemeral\""))
+  }
+
+  @Test
   def createAndDropBucketWithDefaults(): Unit = {
     val name: String = UUID.randomUUID.toString
     val bucket       = CreateBucketSettings(name, 100)
@@ -121,8 +131,72 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     assert(found.ejectionMethod == EjectionMethod.ValueOnly)
     assert(found.maxTTL == 0)
     assert(found.compressionMode == CompressionMode.Passive)
-    buckets.dropBucket(name)
+    buckets.dropBucket(name).get
     assertFalse(buckets.getAllBuckets().get.exists(_.name == name))
+  }
+
+  @Test
+  def createEphemeral(): Unit = {
+    val name: String = UUID.randomUUID.toString
+    val bucket = CreateBucketSettings(
+      name,
+      100,
+      bucketType = Some(Ephemeral),
+      ejectionMethod = Some(NotRecentlyUsed)
+    )
+    buckets.create(bucket).get
+    waitUntilHealthy(name)
+
+    val found = buckets.getAllBuckets().get.find(_.name == name).get
+
+    assert(found.bucketType == BucketType.Ephemeral)
+    assert(found.ejectionMethod == EjectionMethod.NotRecentlyUsed)
+    buckets.dropBucket(name).get
+  }
+
+  @Test
+  def createEphemeralWithUnsupportedEjectionMode(): Unit = {
+    val name: String = UUID.randomUUID.toString
+    val bucket = CreateBucketSettings(
+      name,
+      100,
+      bucketType = Some(Ephemeral),
+      ejectionMethod = Some(FullEviction)
+    )
+    buckets.create(bucket) match {
+      case Failure(_: InvalidArgumentException) =>
+      case _                                    => assert(false)
+    }
+  }
+
+  @Test
+  def createCouchbaseWithUnsupportedEjectionMode(): Unit = {
+    val name: String = UUID.randomUUID.toString
+    val bucket = CreateBucketSettings(
+      name,
+      100,
+      bucketType = Some(Couchbase),
+      ejectionMethod = Some(NotRecentlyUsed)
+    )
+    buckets.create(bucket) match {
+      case Failure(_: InvalidArgumentException) =>
+      case _                                    => assert(false)
+    }
+  }
+
+  @Test
+  def createDefaultWithUnsupportedEjectionMode(): Unit = {
+    val name: String = UUID.randomUUID.toString
+    val bucket = CreateBucketSettings(
+      name,
+      100,
+      bucketType = Some(Couchbase),
+      ejectionMethod = Some(NotRecentlyUsed)
+    )
+    buckets.create(bucket) match {
+      case Failure(_: InvalidArgumentException) =>
+      case _                                    => assert(false)
+    }
   }
 
   @Test

@@ -15,7 +15,10 @@
  */
 package com.couchbase.client.scala.manager.bucket
 
+import java.nio.charset.StandardCharsets
+
 import com.couchbase.client.core.annotation.Stability.{Internal, Volatile}
+import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral, Memcached}
 import com.couchbase.client.scala.manager.bucket.EjectionMethod.{FullEviction, ValueOnly}
 import com.couchbase.client.scala.manager.user.AuthDomain.{External, Local}
@@ -62,12 +65,38 @@ sealed trait EjectionMethod {
 
 object EjectionMethod {
 
+  /** When ejecting an item, eject all data related to it including the id.
+    *
+    * Only supported for buckets of type [[Couchbase]].
+    */
   case object FullEviction extends EjectionMethod {
     override def alias: String = "fullEviction"
   }
 
+  /** When ejecting an item, only eject the value (body), leaving the id and other metadata.
+    *
+    * Only supported for buckets of type [[Couchbase]].
+    */
   case object ValueOnly extends EjectionMethod {
     override def alias: String = "valueOnly"
+  }
+
+  /** Couchbase Server keeps all data until explicitly deleted, but will reject
+    * any new data if you reach the quota (dedicated memory) you set for your bucket.
+    *
+    * Only supported for buckets of type [[Ephemeral]].
+    */
+  case object NoEviction extends EjectionMethod {
+    override def alias: String = "noEviction"
+  }
+
+  /** When the memory quota is reached, Couchbase Server ejects data that has
+    * not been used recently.
+    *
+    * Only supported for buckets of type [[Ephemeral]].
+    */
+  case object NotRecentlyUsed extends EjectionMethod {
+    override def alias: String = "nruEviction"
   }
 
   implicit val rw: CouchbasePickler.ReadWriter[EjectionMethod] = CouchbasePickler
@@ -78,6 +107,8 @@ object EjectionMethod {
         str match {
           case "fullEviction" => FullEviction
           case "valueOnly"    => ValueOnly
+          case "noEviction"   => NoEviction
+          case "nruEviction"  => NotRecentlyUsed
         }
     )
 }
@@ -229,39 +260,51 @@ case class BucketSettings(
 }
 
 object BucketSettings {
-  implicit val rw: CouchbasePickler.ReadWriter[BucketSettings] = CouchbasePickler
-    .readwriter[ujson.Obj]
-    .bimap[BucketSettings](
-      (x: BucketSettings) => {
-        // Serialization not used
-        ujson.Obj()
-      },
-      (json: ujson.Obj) => {
-        val flushEnabled = Try(json("flush").bool).toOption.getOrElse(false)
-        val rawRAM       = json("quota")("rawRAM").num.toInt
-        val ramMB        = rawRAM / (1024 * 1024)
-        val numReplicas  = json("replicaNumber").num.toInt
-        val nodes        = json("nodes").arr
-        val isHealthy    = nodes.nonEmpty && !nodes.exists(_.obj("status").str != "healthy")
-        // Next two parameters only available post 5.X
-        val maxTTL = json.value.get("maxTTL").map(_.num.toInt).getOrElse(0)
-        val compressionMode = json.value
-          .get("compressionMode")
-          .map(v => CouchbasePickler.read[CompressionMode](v))
-          .getOrElse(CompressionMode.Off)
+  def parseFrom(raw: Array[Byte]): BucketSettings = {
+    val json = JsonObject.fromJson(new String(raw, StandardCharsets.UTF_8))
+    parseFrom(json)
+  }
 
-        BucketSettings(
-          json("name").str,
-          flushEnabled,
-          ramMB,
-          numReplicas,
-          Try(json("replicaIndex").bool).toOption.getOrElse(false),
-          CouchbasePickler.read[BucketType](json("bucketType")),
-          CouchbasePickler.read[EjectionMethod](json("evictionPolicy")),
-          maxTTL,
-          compressionMode,
-          isHealthy
-        )
+  def parseFrom(json: JsonObject): BucketSettings = {
+    val flushEnabled = Try(json.bool("flush")).toOption.getOrElse(false)
+    val rawRAM       = json.obj("quota").num("rawRAM")
+    val ramMB        = rawRAM / (1024 * 1024)
+    val numReplicas  = json.num("replicaNumber")
+    val nodes        = json.arr("nodes")
+    var isHealthy    = nodes.nonEmpty
+    import scala.collection.JavaConverters._
+    for (v <- nodes.values.asScala) {
+      val j = v.asInstanceOf[JsonObject]
+      if (j.str("status") != "healthy") {
+        isHealthy = false
       }
+    }
+    // Next two parameters only available post 5.X
+    val maxTTL = Try(json.num("maxTTL")).toOption.getOrElse(0)
+    val compressionMode = Try('"' + json.str("compressionMode") + '"')
+      .map(v => CouchbasePickler.read[CompressionMode](v))
+      .getOrElse(CompressionMode.Off)
+
+    BucketSettings(
+      json.str("name"),
+      flushEnabled,
+      ramMB,
+      numReplicas,
+      Try(json.bool("replicaIndex")).toOption.getOrElse(false),
+      CouchbasePickler.read[BucketType]('"' + json.str("bucketType") + '"'),
+      CouchbasePickler.read[EjectionMethod]('"' + json.str("evictionPolicy") + '"'),
+      maxTTL,
+      compressionMode,
+      isHealthy
     )
+  }
+
+  def parseSeqFrom(raw: Array[Byte]): Seq[BucketSettings] = {
+    val jsonArr = JsonArray.fromJson(new String(raw, StandardCharsets.UTF_8)).get
+    import scala.collection.JavaConverters._
+    jsonArr.values.asScala.map(v => {
+      val j = v.asInstanceOf[JsonObject]
+      parseFrom(j)
+    })
+  }
 }
