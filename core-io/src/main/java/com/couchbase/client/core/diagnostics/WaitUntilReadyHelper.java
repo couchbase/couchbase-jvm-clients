@@ -73,12 +73,12 @@ public class WaitUntilReadyHelper {
 
         return Flux.concat(ping(core, servicesToCheck, timeout), diagnostics);
       })
+      .then()
       .timeout(
         timeout,
         Mono.defer(() -> Mono.error(new UnambiguousTimeoutException("WaitUntilReady timed out", null))),
         core.context().environment().scheduler()
       )
-      .then()
       .toFuture();
   }
 
