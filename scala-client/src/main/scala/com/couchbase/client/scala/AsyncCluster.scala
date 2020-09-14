@@ -135,7 +135,7 @@ class AsyncCluster(
     *         `Failure`
     */
   def query(statement: String, options: QueryOptions): Future[QueryResult] = {
-    queryHandler.queryAsync(statement, options, env)
+    queryHandler.queryAsync(statement, options, env, None)
   }
 
   /** Performs a N1QL query against the cluster.

@@ -16,9 +16,10 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.scala.query.{QueryOptions, QueryResult, ReactiveQueryResult}
 import reactor.core.scala.publisher.SMono
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 /** Represents a Couchbase scope resource.
   *
@@ -27,10 +28,7 @@ import scala.concurrent.ExecutionContext
   * Applications should not create these manually, but instead first open a [[Cluster]] and through that a
   * [[Bucket]].
   *
-  * @param scopeName the name of the scope
   * @param bucketName the name of the bucket this scope is on
-  * @param ec an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
-  *           opened in the normal way, starting from functions in [[Cluster]]
   * @author Graham Pople
   * @since 1.0.0
   */
@@ -49,5 +47,34 @@ class ReactiveScope(async: AsyncScope, bucketName: String) {
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(collectionName: String): ReactiveCollection = {
     new ReactiveCollection(async.collection(collectionName))
+  }
+
+  /** Performs a N1QL query against the cluster.
+    *
+    * This is a reactive API.  See [[Scope.async]] for an Future-based async version of this API, and
+    * [[Scope]] for a blocking version.
+    *
+    * The reason to use this Scope-based variant over [[ReactiveCluster.query]] is that it will automatically provide
+    * the "query_context" parameter to the query service, allowing queries to be specified on scopes and collections
+    * without having to fully reference them in the query statement.
+    *
+    * @param statement the N1QL statement to execute
+    * @param options   any query options - see [[com.couchbase.client.scala.query.QueryOptions]] for documentation
+    *
+    * @return a `ReactiveQueryResult`
+    */
+  @Volatile
+  def query(
+      statement: String,
+      options: QueryOptions = QueryOptions()
+  ): SMono[ReactiveQueryResult] = {
+    // MB-40997 - cannot have backticks around scope.
+    val queryContext = s"""`default`:`${bucketName}`.${name}"""
+    async.queryHandler.queryReactive(
+      statement,
+      options,
+      async.environment,
+      Some(queryContext)
+    )
   }
 }
