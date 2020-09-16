@@ -110,7 +110,7 @@ public class PasswordAuthenticator implements Authenticator {
       ctx,
       username.get(),
       password.get(),
-      tls ? EnumSet.allOf(SaslMechanism.class) : allowedSaslMechanisms
+      tls ? EnumSet.of(SaslMechanism.PLAIN) : allowedSaslMechanisms
     ));
   }
 

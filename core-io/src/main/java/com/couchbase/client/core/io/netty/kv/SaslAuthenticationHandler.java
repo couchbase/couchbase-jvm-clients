@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.SaslAuthenticationCompletedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslAuthenticationFailedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslAuthenticationRestartedEvent;
@@ -129,6 +130,16 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
     this.password = password;
     this.allowedMechanisms = allowedSaslMechanisms;
     this.timeout = endpointContext.environment().timeoutConfig().connectTimeout();
+  }
+
+  /**
+   * Returns the allowed mechanisms for this handler, useful for testing assertions.
+   *
+   * @return the set of allowed sasl mechanisms.
+   */
+  @Stability.Internal
+  public Set<SaslMechanism> allowedMechanisms() {
+    return allowedMechanisms;
   }
 
   /**
