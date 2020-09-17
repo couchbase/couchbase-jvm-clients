@@ -200,9 +200,13 @@ public class Collection {
 
   /**
    * Fetches a full document and write-locks it for the given duration.
+   * <p>
+   * Note that the client does not enforce an upper limit on the {@link Duration} lockTime. The maximum lock time
+   * by default on the server is 30 seconds. Any value larger than 30 seconds will be capped down by the server to
+   * the default lock time, which is 15 seconds unless modified on the server side.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param lockTime how long to lock the document for (values over 30 seconds will be capped).
+   * @param lockTime how long to write-lock the document for (any duration > 30s will be capped to server default of 15s).
    * @return a {@link GetResult} once the document has been locked and loaded.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
    * @throws TimeoutException if the operation times out before getting a result.
@@ -214,9 +218,13 @@ public class Collection {
 
   /**
    * Fetches a full document and write-locks it for the given duration with custom options.
+   * <p>
+   * Note that the client does not enforce an upper limit on the {@link Duration} lockTime. The maximum lock time
+   * by default on the server is 30 seconds. Any value larger than 30 seconds will be capped down by the server to
+   * the default lock time, which is 15 seconds unless modified on the server side.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param lockTime how long to lock the document for (values over 30 seconds will be capped).
+   * @param lockTime how long to write-lock the document for (any duration > 30s will be capped to server default of 15s).
    * @param options options to customize the get and lock request.
    * @return a {@link GetResult} once the document has been loaded.
    * @throws DocumentNotFoundException the given document id is not found in the collection.
