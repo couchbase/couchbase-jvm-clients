@@ -237,10 +237,13 @@ public class ReactiveCollection {
 
   /**
    * Fetches a full document and write-locks it for the given duration with default options.
+   * <p>
+   * Note that the client does not enforce an upper limit on the {@link Duration} lockTime. The maximum lock time
+   * by default on the server is 30 seconds. Any value larger than 30 seconds will be capped down by the server to
+   * the default lock time, which is 15 seconds unless modified on the server side.
    *
    * @param id the document id which is used to uniquely identify it.
-   * @param lockTime how long to lock the document for.  Any values above 30 seconds will be
-   *                 treated as 30 seconds.
+   * @param lockTime how long to write-lock the document for (any duration > 30s will be capped to server default of 15s).
    * @return a {@link Mono} completing once loaded or failed.
    */
   public Mono<GetResult> getAndLock(final String id, final Duration lockTime) {
@@ -249,8 +252,13 @@ public class ReactiveCollection {
 
   /**
    * Fetches a full document and write-locks it for the given duration with custom options.
+   * <p>
+   * Note that the client does not enforce an upper limit on the {@link Duration} lockTime. The maximum lock time
+   * by default on the server is 30 seconds. Any value larger than 30 seconds will be capped down by the server to
+   * the default lock time, which is 15 seconds unless modified on the server side.
    *
    * @param id the document id which is used to uniquely identify it.
+   * @param lockTime how long to write-lock the document for (any duration > 30s will be capped to server default of 15s).
    * @param options custom options to change the default behavior.
    * @return a {@link Mono} completing once loaded or failed.
    */
