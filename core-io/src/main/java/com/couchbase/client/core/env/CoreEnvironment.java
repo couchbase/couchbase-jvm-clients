@@ -30,6 +30,7 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.service.AbstractPooledEndpointServiceConfig;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
@@ -163,7 +164,7 @@ public class CoreEnvironment {
     orphanReporter = new OrphanReporter(eventBus.get(), orphanReporterConfig);
     orphanReporter.start().block();
 
-    if (ioConfig.idleHttpConnectionTimeout().getSeconds() > Duration.ofMinutes(1).getSeconds()) {
+    if (ioConfig.idleHttpConnectionTimeout().toMillis() > AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME.toMillis()) {
       eventBus.get().publish(new HighIdleHttpConnectionTimeoutConfiguredEvent());
     }
   }

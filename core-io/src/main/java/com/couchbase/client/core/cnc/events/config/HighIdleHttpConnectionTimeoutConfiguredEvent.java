@@ -17,12 +17,13 @@
 package com.couchbase.client.core.cnc.events.config;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
+import com.couchbase.client.core.service.AbstractPooledEndpointServiceConfig;
 
 import java.time.Duration;
 
 /**
- * This event is raised if the user configures a idleHttpConnectionTimeout over one minute, which will have some
- * negative side effects on the search service.
+ * This event is raised if the user configures a idleHttpConnectionTimeout over 4.5 seconds, which will have some
+ * negative side effects on most services.
  */
 public class HighIdleHttpConnectionTimeoutConfiguredEvent extends AbstractEvent {
 
@@ -32,8 +33,8 @@ public class HighIdleHttpConnectionTimeoutConfiguredEvent extends AbstractEvent 
 
   @Override
   public String description() {
-    return "A idleHttpConnectionTimeout over 1 minute has been configured - the search service will " +
-      "terminate idle connections after 1 minute and you will see reconnect warnings in the log.";
+    return "A idleHttpConnectionTimeout over "+ AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME.toMillis() + "ms has been configured - most services will " +
+      "terminate idle connections after this period and you will see reconnect warnings in the log.";
   }
 
 }
