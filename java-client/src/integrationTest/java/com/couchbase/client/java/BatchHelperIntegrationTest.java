@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -94,6 +95,13 @@ public class BatchHelperIntegrationTest extends JavaIntegrationTest {
       assertTrue(idsThatExist.contains(entry.getKey()));
       assertEquals(JsonObject.create(), entry.getValue().contentAsObject());
     }
+  }
+
+  @Test
+  void performsBatchWhenNoValueFound() {
+    List<String> toCheck = Arrays.asList("foo", "bar", "baz");
+    Map<String, GetResult> found = BatchHelper.getIfExists(collection, toCheck);
+    assertTrue(found.isEmpty());
   }
 
 }
