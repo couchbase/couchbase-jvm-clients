@@ -32,6 +32,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
@@ -82,28 +83,29 @@ public class MultiObserveViaCasRequest
   }
 
   @Override
-  public MultiObserveViaCasResponse decode(ByteBuf response, KeyValueChannelContext ctx) {
-    ResponseStatus status = decodeStatus(response);
+  public MultiObserveViaCasResponse decode(final ByteBuf response, final KeyValueChannelContext ctx) {
+    final ResponseStatus status = decodeStatus(response);
 
-    Map<byte[], ObserveViaCasResponse.ObserveStatus> observed;
+    final Map<byte[], ObserveViaCasResponse.ObserveStatus> observed = new HashMap<>();
     if (status.success()) {
-      ByteBuf content = body(response).get();
-      observed = new HashMap<>();
-      while (content.isReadable()) {
-        content.skipBytes(2); // skip the vbid
-        short keyLength = content.readShort();
-        byte[] keyEncoded = new byte[keyLength];
-        content.readBytes(keyEncoded, 0, keyLength);
-        byte obs = content.readByte();
-        content.skipBytes(Long.BYTES); // skip reading the cas
-        ObserveViaCasResponse.ObserveStatus decoded = ObserveViaCasResponse.ObserveStatus.valueOf(obs);
-        if (responsePredicate.test(decoded)) {
-          observed.put(keyEncoded, decoded);
+      Optional<ByteBuf> maybeContent = body(response);
+      if (maybeContent.isPresent()) {
+        ByteBuf content = maybeContent.get();
+        while (content.isReadable()) {
+          content.skipBytes(Short.BYTES); // skip the vbid
+          short keyLength = content.readShort();
+          byte[] keyEncoded = new byte[keyLength];
+          content.readBytes(keyEncoded, 0, keyLength);
+          byte obs = content.readByte();
+          content.skipBytes(Long.BYTES); // skip reading the cas
+          ObserveViaCasResponse.ObserveStatus decoded = ObserveViaCasResponse.ObserveStatus.valueOf(obs);
+          if (responsePredicate.test(decoded)) {
+            observed.put(keyEncoded, decoded);
+          }
         }
       }
-    } else {
-      observed = Collections.emptyMap();
     }
+
     return new MultiObserveViaCasResponse(status, observed);
   }
 
