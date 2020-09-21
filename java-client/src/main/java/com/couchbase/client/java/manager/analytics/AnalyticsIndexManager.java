@@ -140,11 +140,11 @@ public class AnalyticsIndexManager {
     block(async.disconnectLink(options));
   }
 
-  public Map<String, Long> getPendingMutations() {
+  public Map<String, Map<String, Long>> getPendingMutations() {
     return block(async.getPendingMutations());
   }
 
-  public Map<String, Long> getPendingMutations(GetPendingMutationsAnalyticsOptions options) {
+  public Map<String, Map<String, Long>> getPendingMutations(final GetPendingMutationsAnalyticsOptions options) {
     return block(async.getPendingMutations(options));
   }
 }

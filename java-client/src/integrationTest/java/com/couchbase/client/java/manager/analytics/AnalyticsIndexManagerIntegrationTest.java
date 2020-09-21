@@ -413,16 +413,14 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @Disabled  // [Michael Reiche]  I have a fix for this in a separate branch
-  @IgnoreWhen(missesCapabilities = Capabilities.COLLECTIONS)
   void getPendingMutations() {
     try {
-      assertEquals(Collections.<String, Long>emptyMap(), analytics.getPendingMutations());
+      assertEquals(Collections.<String, Map<String, Long>>emptyMap(), analytics.getPendingMutations());
 
       analytics.createDataset(dataset, bucket.name());
       analytics.connectLink();
 
-      assertEquals(singletonMap("Default.myDataset", 0L), analytics.getPendingMutations());
+      assertEquals(singletonMap("Default", singletonMap("myDataset", 0L)), analytics.getPendingMutations());
     } finally {
       analytics.disconnectLink();
     }
