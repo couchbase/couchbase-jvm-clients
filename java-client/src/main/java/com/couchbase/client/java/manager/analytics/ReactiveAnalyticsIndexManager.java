@@ -65,7 +65,7 @@ public class ReactiveAnalyticsIndexManager {
   }
 
   public Flux<AnalyticsDataverse> getAllDataverses() {
-    return toFlux(() -> async.getAllDataverses());
+    return toFlux(async::getAllDataverses);
   }
 
   public Mono<Void> createDataset(String datasetName, String bucketName) {
@@ -85,7 +85,7 @@ public class ReactiveAnalyticsIndexManager {
   }
 
   public Flux<AnalyticsDataset> getAllDatasets() {
-    return toFlux(() -> async.getAllDatasets());
+    return toFlux(async::getAllDatasets);
   }
 
   public Flux<AnalyticsDataset> getAllDatasets(GetAllDatasetsAnalyticsOptions options) {
@@ -109,7 +109,7 @@ public class ReactiveAnalyticsIndexManager {
   }
 
   public Flux<AnalyticsIndex> getAllIndexes() {
-    return toFlux(() -> async.getAllIndexes());
+    return toFlux(async::getAllIndexes);
   }
 
   public Flux<AnalyticsIndex> getAllIndexes(GetAllIndexesAnalyticsOptions options) {
@@ -117,7 +117,7 @@ public class ReactiveAnalyticsIndexManager {
   }
 
   public Mono<Void> connectLink() {
-    return toMono(() -> async.connectLink());
+    return toMono(async::connectLink);
   }
 
   public Mono<Void> connectLink(ConnectLinkAnalyticsOptions options) {
@@ -125,18 +125,18 @@ public class ReactiveAnalyticsIndexManager {
   }
 
   public Mono<Void> disconnectLink() {
-    return toMono(() -> async.disconnectLink());
+    return toMono(async::disconnectLink);
   }
 
   public Mono<Void> disconnectLink(DisconnectLinkAnalyticsOptions options) {
     return toMono(() -> async.disconnectLink(options));
   }
 
-  public Mono<Map<String, Long>> getPendingMutations() {
-    return toMono(() -> async.getPendingMutations());
+  public Mono<Map<String, Map<String, Long>>> getPendingMutations() {
+    return toMono(async::getPendingMutations);
   }
 
-  public Mono<Map<String, Long>> getPendingMutations(GetPendingMutationsAnalyticsOptions options) {
+  public Mono<Map<String, Map<String, Long>>> getPendingMutations(final GetPendingMutationsAnalyticsOptions options) {
     return toMono(() -> async.getPendingMutations(options));
   }
 }

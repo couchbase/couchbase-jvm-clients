@@ -291,17 +291,17 @@ public class AsyncAnalyticsIndexManager {
         .thenApply(result -> null);
   }
 
-  public CompletableFuture<Map<String, Long>> getPendingMutations() {
+  public CompletableFuture<Map<String, Map<String, Long>>> getPendingMutations() {
     return getPendingMutations(getPendingMutationsAnalyticsOptions());
   }
 
-  public CompletableFuture<Map<String, Long>> getPendingMutations(GetPendingMutationsAnalyticsOptions options) {
+  public CompletableFuture<Map<String, Map<String, Long>>> getPendingMutations(final GetPendingMutationsAnalyticsOptions options) {
     return sendRequest(HttpMethod.GET, "/analytics/node/agg/stats/remaining", options.build())
         .exceptionally(t -> {
           throw translateException(t);
         })
         .thenApply(response ->
-            Mapper.decodeInto(response.content(), new TypeReference<Map<String, Long>>() {
+            Mapper.decodeInto(response.content(), new TypeReference<Map<String, Map<String, Long>> >() {
             }));
   }
 
