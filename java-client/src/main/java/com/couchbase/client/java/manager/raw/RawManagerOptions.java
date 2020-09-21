@@ -20,6 +20,10 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.JsonSerializer;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import static com.couchbase.client.core.util.Validators.notNull;
 
 public class RawManagerOptions extends CommonOptions<RawManagerOptions> {
@@ -28,11 +32,21 @@ public class RawManagerOptions extends CommonOptions<RawManagerOptions> {
     return new RawManagerOptions();
   }
 
+  private Map<String, Object> httpHeaders;
+
   private JsonSerializer serializer;
 
   public RawManagerOptions serializer(final JsonSerializer serializer) {
     notNull(serializer, "Serializer");
     this.serializer = serializer;
+    return this;
+  }
+
+  public RawManagerOptions httpHeader(final String name, final Object value) {
+    if (httpHeaders == null) {
+      httpHeaders = new HashMap<>();
+    }
+    httpHeaders.put(name, value);
     return this;
   }
 
@@ -50,6 +64,10 @@ public class RawManagerOptions extends CommonOptions<RawManagerOptions> {
 
     public JsonSerializer serializer() {
       return serializer;
+    }
+
+    public Map<String, Object> httpHeaders() {
+      return httpHeaders == null ? Collections.emptyMap() : httpHeaders;
     }
 
   }

@@ -19,6 +19,7 @@ package com.couchbase.client.java.manager.raw;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -30,6 +31,7 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Map;
 
 import static com.couchbase.client.java.manager.raw.RawManagerOptions.rawManagerOptions;
 
@@ -85,7 +87,13 @@ public class RawManager {
       timeout,
       cluster.core().context(),
       retryStrategy,
-      () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, request.method(), request.uri()),
+      () -> {
+        FullHttpRequest httpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, request.method(), request.uri());
+        for (Map.Entry<String, Object> e : opts.httpHeaders().entrySet()) {
+          httpRequest.headers().set(e.getKey(), e.getValue());
+        }
+        return httpRequest;
+      },
       request.method().equals(HttpMethod.GET)
     );
 

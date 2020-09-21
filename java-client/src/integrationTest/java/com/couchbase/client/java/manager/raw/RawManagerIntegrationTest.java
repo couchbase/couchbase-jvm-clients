@@ -16,6 +16,9 @@
 
 package com.couchbase.client.java.manager.raw;
 
+import com.couchbase.client.core.Core;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
+import com.couchbase.client.core.msg.manager.GenericManagerRequest;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -25,15 +28,20 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.time.Duration;
 
 import static com.couchbase.client.test.ClusterType.MOCKED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @IgnoreWhen(clusterTypes = MOCKED)
-public class RawManagerIntegrationTest extends JavaIntegrationTest {
+class RawManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
 
@@ -68,6 +76,26 @@ public class RawManagerIntegrationTest extends JavaIntegrationTest {
 
     assertNotNull(response);
     assertEquals(404, response.httpStatus());
+  }
+
+  @Test
+  void canAddCustomHeader() {
+    RawManagerRequest request = RawManagerRequest.get(ServiceType.MANAGER, "/pools");
+    RawManagerOptions options = RawManagerOptions.rawManagerOptions().httpHeader("Accept", "text/html");
+
+    Cluster clusterMock = mock(Cluster.class);
+    Core core = mock(Core.class);
+    when(clusterMock.environment()).thenReturn(cluster.environment());
+    when(clusterMock.core()).thenReturn(core);
+    when(core.context()).thenReturn(cluster.core().context());
+
+    RawManager.call(clusterMock, request, options);
+
+    ArgumentCaptor<GenericManagerRequest> captor = ArgumentCaptor.forClass(GenericManagerRequest.class);
+    verify(core, times(1)).send(captor.capture());
+
+    FullHttpRequest encoded = captor.getValue().encode();
+    assertEquals(encoded.headers().get("Accept"), "text/html");
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
