@@ -95,9 +95,10 @@ class DecompressionTest {
       DecompressionTest.class
     ));
 
+    long encodedExpiry = 1;
     GetAndTouchRequest request = new GetAndTouchRequest("mydoc",
       Duration.ofSeconds(1), mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"),
-      BestEffortRetryStrategy.INSTANCE, Duration.ofSeconds(1), null);
+      BestEffortRetryStrategy.INSTANCE, encodedExpiry, null);
     GetAndTouchResponse decoded = request.decode(response, null);
 
     assertEquals(

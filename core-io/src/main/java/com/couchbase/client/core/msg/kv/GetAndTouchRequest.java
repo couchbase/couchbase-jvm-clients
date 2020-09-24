@@ -26,7 +26,6 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
@@ -43,12 +42,12 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
   public static final String OPERATION_NAME = "get_and_touch";
 
 
-  private final Duration expiration;
+  private final long expiration;
 
 
   public GetAndTouchRequest(final String key, final Duration timeout, final CoreContext ctx,
                             CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy,
-                            final Duration expiration, final InternalSpan span) {
+                            final long expiration, final InternalSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.expiration = expiration;
   }
@@ -60,7 +59,7 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
 
     try {
       key = encodedKeyWithCollection(alloc, ctx);
-      extras = alloc.buffer(Integer.BYTES).writeInt((int) expiration.getSeconds());
+      extras = alloc.buffer(Integer.BYTES).writeInt((int) expiration);
 
       return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_AND_TOUCH, noDatatype(),
         partition(), opaque, noCas(), extras, key, noBody());

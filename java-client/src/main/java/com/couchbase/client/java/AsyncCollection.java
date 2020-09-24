@@ -55,6 +55,7 @@ import com.couchbase.client.java.kv.CommonDurabilityOptions;
 import com.couchbase.client.java.kv.ExistsAccessor;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
+import com.couchbase.client.java.kv.Expiry;
 import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.GetAllReplicasOptions;
 import com.couchbase.client.java.kv.GetAndLockOptions;
@@ -458,10 +459,11 @@ public class AsyncCollection {
    */
   public CompletableFuture<GetResult> getAndTouch(final String id, final Duration expiry,
                                                   final GetAndTouchOptions options) {
+    notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNull(options, "GetAndTouchOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     GetAndTouchOptions.Built opts = options.build();
     final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
-    return GetAccessor.getAndTouch(core, getAndTouchRequest(id, expiry, opts), transcoder);
+    return GetAccessor.getAndTouch(core, getAndTouchRequest(id, Expiry.relative(expiry), opts), transcoder);
   }
 
   /**
@@ -473,15 +475,16 @@ public class AsyncCollection {
    * @return the get and touch request.
    */
   @Stability.Internal
-  GetAndTouchRequest getAndTouchRequest(final String id, final Duration expiry, final GetAndTouchOptions.Built opts) {
+  GetAndTouchRequest getAndTouchRequest(final String id, final Expiry expiry, final GetAndTouchOptions.Built opts) {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     InternalSpan span = environment.requestTracer().internalSpan(GetAndTouchRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    long encodedExpiry = expiry.encode(environment.eventBus());
     GetAndTouchRequest request = new GetAndTouchRequest(
-      id, timeout, coreContext, collectionIdentifier, retryStrategy, expiry, span
+      id, timeout, coreContext, collectionIdentifier, retryStrategy, encodedExpiry, span
     );
     request.context().clientContext(opts.clientContext());
     return request;
@@ -944,7 +947,8 @@ public class AsyncCollection {
    * @return a {@link MutationResult} once the operation completes.
    */
   public CompletableFuture<MutationResult> touch(final String id, final Duration expiry, final TouchOptions options) {
-    return TouchAccessor.touch(core, touchRequest(id, expiry, options), id);
+    notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    return TouchAccessor.touch(core, touchRequest(id, Expiry.relative(expiry), options), id);
   }
 
   /**
@@ -955,7 +959,7 @@ public class AsyncCollection {
    * @param options the custom options.
    * @return the touch request.
    */
-  TouchRequest touchRequest(final String id, final Duration expiry, final TouchOptions options) {
+  TouchRequest touchRequest(final String id, final Expiry expiry, final TouchOptions options) {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNull(options, "TouchOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
@@ -964,8 +968,9 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     InternalSpan span = environment.requestTracer().internalSpan(TouchRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    long encodedExpiry = expiry.encode(environment.eventBus());
     TouchRequest request = new TouchRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
-      expiry.getSeconds(), span);
+        encodedExpiry, span);
     request.context().clientContext(opts.clientContext());
     return request;
   }
