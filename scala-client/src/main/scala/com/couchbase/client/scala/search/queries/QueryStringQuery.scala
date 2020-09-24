@@ -29,6 +29,14 @@ case class QueryStringQuery(
     private[scala] val boost: Option[Double] = None
 ) extends SearchQuery {
 
+  /** If specified, only this field will be matched.
+    *
+    * @return a copy of this, for chaining
+    */
+  def field(field: String): QueryStringQuery = {
+    copy(field = Some(field))
+  }
+
   /** The boost parameter is used to increase the relative weight of a clause (with a boost greater than 1) or decrease
     * the relative weight (with a boost between 0 and 1)
     *

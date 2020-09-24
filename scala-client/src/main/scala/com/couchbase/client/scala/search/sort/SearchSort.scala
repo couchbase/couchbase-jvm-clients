@@ -31,7 +31,7 @@ sealed trait SearchSort {
 
   private[scala] def injectParams(queryJson: JsonObject): Unit = {
     queryJson.put("by", identifier)
-    descending.foreach(desc => queryJson.put("desc", true))
+    descending.foreach(desc => queryJson.put("desc", desc))
   }
 }
 
