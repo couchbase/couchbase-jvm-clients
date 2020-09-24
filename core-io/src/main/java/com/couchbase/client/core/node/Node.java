@@ -379,6 +379,7 @@ public class Node implements Stateful<NodeState> {
       return;
     }
 
+    request.context().lastDispatchedToNode(identifier);
     service.send(request);
   }
 
