@@ -42,6 +42,7 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.ExistsAccessor;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
+import com.couchbase.client.java.kv.Expiry;
 import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.GetAllReplicasOptions;
 import com.couchbase.client.java.kv.GetAndLockOptions;
@@ -296,7 +297,7 @@ public class ReactiveCollection {
     return Mono.defer(() -> {
       GetAndTouchOptions.Built opts = options.build();
       final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
-      GetAndTouchRequest request = asyncCollection.getAndTouchRequest(id, expiry, opts);
+      GetAndTouchRequest request = asyncCollection.getAndTouchRequest(id, Expiry.relative(expiry), opts);
       return Reactor.wrap(request, GetAccessor.getAndTouch(core, request, transcoder), true);
     });
   }
@@ -560,7 +561,7 @@ public class ReactiveCollection {
    */
   public Mono<MutationResult> touch(final String id, final Duration expiry, final TouchOptions options) {
     return Mono.defer(() -> {
-      TouchRequest request = asyncCollection.touchRequest(id, expiry, options);
+      TouchRequest request = asyncCollection.touchRequest(id, Expiry.relative(expiry), options);
       return Reactor.wrap(request, TouchAccessor.touch(core, request, id), true);
     });
   }

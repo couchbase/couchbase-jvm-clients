@@ -64,7 +64,7 @@ private[scala] class GetAndTouchHandler(hp: HandlerParams)
           hp.core.context(),
           hp.collectionIdentifier,
           retryStrategy,
-          expiration,
+          expiration.getSeconds,
           hp.tracer.internalSpan(GetAndTouchRequest.OPERATION_NAME, parentSpan.orNull)
         )
       )
