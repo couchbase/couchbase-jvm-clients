@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.util.HostAndPort;
 
@@ -80,6 +81,11 @@ public class RequestContext extends CoreContext {
    * The hostname/ip where this request got last dispatched to.
    */
   private volatile HostAndPort lastDispatchedTo;
+
+  /**
+   * The node where this request got last dispatched to.
+   */
+  private volatile NodeIdentifier lastDispatchedToNode;
 
   /**
    * The hostname/ip where this request got last dispatched from.
@@ -234,8 +240,19 @@ public class RequestContext extends CoreContext {
   }
 
   @Stability.Internal
+  public NodeIdentifier lastDispatchedToNode() {
+    return lastDispatchedToNode;
+  }
+
+  @Stability.Internal
   public RequestContext lastDispatchedTo(final HostAndPort lastDispatchedTo) {
     this.lastDispatchedTo = lastDispatchedTo;
+    return this;
+  }
+
+  @Stability.Internal
+  public RequestContext lastDispatchedToNode(final NodeIdentifier lastDispatchedToNode) {
+    this.lastDispatchedToNode = lastDispatchedToNode;
     return this;
   }
 
