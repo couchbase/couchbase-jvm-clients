@@ -29,7 +29,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -448,9 +447,33 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
   void checkExpiry(Duration expiryDuration) {
     String id = UUID.randomUUID().toString();
-    collection.upsert(id, JsonObject.create(), UpsertOptions.upsertOptions().expiry(expiryDuration));
 
-    GetResult result = collection.get(id, GetOptions.getOptions().withExpiry(true));
+    collection.upsert(id, JsonObject.create(), UpsertOptions.upsertOptions().expiry(expiryDuration));
+    assertExpiry(id, expiryDuration);
+    collection.remove(id);
+
+    collection.insert(id, JsonObject.create(), InsertOptions.insertOptions().expiry(expiryDuration));
+    assertExpiry(id, expiryDuration);
+    collection.remove(id);
+
+    collection.upsert(id, JsonObject.create());
+    collection.replace(id, JsonObject.create(), ReplaceOptions.replaceOptions().expiry(expiryDuration));
+    assertExpiry(id, expiryDuration);
+    collection.remove(id);
+
+    collection.upsert(id, JsonObject.create());
+    collection.touch(id, expiryDuration);
+    assertExpiry(id, expiryDuration);
+    collection.remove(id);
+
+    collection.upsert(id, JsonObject.create());
+    collection.getAndTouch(id, expiryDuration);
+    assertExpiry(id, expiryDuration);
+    collection.remove(id);
+  }
+
+  void assertExpiry(String documentId, Duration expiryDuration) {
+    GetResult result = collection.get(documentId, GetOptions.getOptions().withExpiry(true));
 
     Instant actualExpiry = result.expiryTime().orElseThrow(() -> new AssertionError("expected expiry"));
     Instant expectedExpiry = Instant.ofEpochMilli(System.currentTimeMillis()).plus(expiryDuration);
