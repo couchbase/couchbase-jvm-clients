@@ -91,6 +91,11 @@ abstract class PooledService implements Service {
   private final AtomicBoolean disconnected;
 
   /**
+   * Tracked endpoints which are currently connecting but are reserved for a request waiting for it.
+   */
+  private final List<Endpoint> reservedEndpoints;
+
+  /**
    * Creates a new {@link PooledService}.
    *
    * @param serviceConfig the underlying service config.
@@ -99,6 +104,7 @@ abstract class PooledService implements Service {
   PooledService(final ServiceConfig serviceConfig, final ServiceContext serviceContext) {
     this.serviceConfig = serviceConfig;
     this.endpoints = new CopyOnWriteArrayList<>();
+    this.reservedEndpoints = new CopyOnWriteArrayList<>();
 
     final ServiceState initialState = serviceConfig.minEndpoints() > 0
       ? ServiceState.DISCONNECTED
@@ -177,6 +183,10 @@ abstract class PooledService implements Service {
 
   /**
    * Go through the connections and clean up all the idle connections.
+   * <p>
+   * Note that we explicitly do not make any clean up attempts on the {@link #reservedEndpoints}. They will either come
+   * into our endpoint pool when connected, or fall out of the pool when they are disconnected immediately. We only need
+   * to take them into account when checking how many endpoints we have flying around to clean up at max.
    */
   private synchronized void cleanIdleConnections() {
     if (disconnected.get()) {
@@ -187,7 +197,7 @@ abstract class PooledService implements Service {
     Collections.shuffle(endpoints);
 
     for (Endpoint endpoint : endpoints) {
-      if (this.endpoints.size() == serviceConfig.minEndpoints()) {
+      if ((this.endpoints.size() + this.reservedEndpoints.size()) == serviceConfig.minEndpoints()) {
         break;
       }
 
@@ -240,6 +250,7 @@ abstract class PooledService implements Service {
           Map<String, Object> serviceInfo = new HashMap<>();
           input.put("actualIdleTimeMillis", TimeUnit.NANOSECONDS.toMillis(actualIdleTime));
           serviceInfo.put("remainingEndpoints", endpoints.size());
+          serviceInfo.put("reservedEndpoints", reservedEndpoints.size());
           serviceInfo.put("state", state());
           input.put("service", serviceInfo);
         }
@@ -275,18 +286,58 @@ abstract class PooledService implements Service {
       return;
     }
 
-    if (!fixedPool && endpoints.size() < serviceConfig.maxEndpoints()) {
-      synchronized (this) {
-        if (!disconnected.get()) {
-          Endpoint endpoint = createEndpoint();
-          endpointStates.register(endpoint, endpoint);
-          endpoint.connect();
-          endpoints.add(endpoint);
-        }
-      }
-      RetryOrchestrator.maybeRetry(serviceContext, request, RetryReason.ENDPOINT_TEMPORARILY_NOT_AVAILABLE);
+    if (!fixedPool && (endpoints.size() + reservedEndpoints.size()) < serviceConfig.maxEndpoints()) {
+      connectReservedEndpoint(request);
     } else {
       RetryOrchestrator.maybeRetry(serviceContext, request, RetryReason.ENDPOINT_NOT_AVAILABLE);
+    }
+  }
+
+  /**
+   * Connect the reserved endpoint and dispatch the request into it if possible.
+   * <p>
+   * Note that there are two synchronized sections in this method, because the subscription callback works on
+   * a different thread.
+   *
+   * @param request the request that needs to bee dispatched.
+   */
+  private synchronized <R extends Request<? extends Response>> void connectReservedEndpoint(final R request) {
+    if (!disconnected.get()) {
+      Endpoint endpoint = createEndpoint();
+      endpointStates.register(endpoint, endpoint);
+
+      endpoint
+        .states()
+        // The endpoint always starts DISCONNECT, so wait for first CONNECTING
+        .skipUntil(s -> s == EndpointState.CONNECTING)
+        // We only care about CONNECTED and DISCONNECTED events
+        .filter(s -> s == EndpointState.CONNECTED || s == EndpointState.DISCONNECTED)
+        // Once we see the first CONNECTED or DISCONNECTED, unsubscribe
+        .takeUntil(s -> s == EndpointState.CONNECTED || s == EndpointState.DISCONNECTED)
+        // We MUST move it to another scheduler, or the netty IO thread is blocked of the send below
+        .publishOn(context().environment().scheduler())
+        .subscribe(s -> {
+          synchronized (PooledService.this) {
+            reservedEndpoints.remove(endpoint);
+
+            if (disconnected.get()) {
+              endpoint.disconnect();
+              endpointStates.deregister(endpoint);
+              RetryOrchestrator.maybeRetry(serviceContext, request, RetryReason.ENDPOINT_NOT_AVAILABLE);
+            } else {
+              endpoints.add(endpoint);
+
+              if (s == EndpointState.CONNECTED) {
+                endpoint.send(request);
+              } else if (s == EndpointState.DISCONNECTED) {
+                RetryOrchestrator.maybeRetry(serviceContext, request, RetryReason.ENDPOINT_NOT_AVAILABLE);
+              }
+            }
+          }
+        });
+
+      endpoint.connect();
+      reservedEndpoints.add(endpoint);
     }
   }
 
@@ -312,14 +363,19 @@ abstract class PooledService implements Service {
     if (disconnected.compareAndSet(false, true)) {
       serviceContext.environment().eventBus().publish(new ServiceDisconnectInitiatedEvent(
         serviceContext,
-        endpoints.size()
+        endpoints.size() + reservedEndpoints.size()
       ));
 
       for (Endpoint endpoint : endpoints) {
         endpoint.disconnect();
         endpointStates.deregister(endpoint);
       }
+      for (Endpoint endpoint : reservedEndpoints) {
+        endpoint.disconnect();;
+        endpointStates.deregister(endpoint);
+      }
       endpoints.clear();
+      reservedEndpoints.clear();
     }
   }
 
@@ -340,7 +396,9 @@ abstract class PooledService implements Service {
 
   @Override
   public Stream<EndpointDiagnostics> diagnostics() {
-    return endpoints.stream().map(Endpoint::diagnostics);
+    return Stream
+      .concat(endpoints.stream(), reservedEndpoints.stream())
+      .map(Endpoint::diagnostics);
   }
 
 }

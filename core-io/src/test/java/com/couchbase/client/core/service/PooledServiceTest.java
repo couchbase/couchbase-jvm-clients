@@ -34,6 +34,8 @@ import com.couchbase.client.core.cnc.SimpleEventBus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.mockito.invocation.Invocation;
 import reactor.core.publisher.DirectProcessor;
 
 import java.time.Duration;
@@ -43,6 +45,7 @@ import java.util.function.Supplier;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -278,12 +281,14 @@ class PooledServiceTest {
   }
 
   @Test
-  void opensAndRetriesDynamicallyIfSlotAvailable() {
+  void dispatchesDirectlyIfSlotAvailable() {
     int minEndpoints = 0;
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock1.states()).thenReturn(DirectProcessor.create());
+
+    DirectProcessor<EndpointState> states = DirectProcessor.create();
+    when(mock1.states()).thenReturn(states);
     when(mock1.outstandingRequests()).thenReturn(0L);
 
     final List<Endpoint> mocks = Collections.singletonList(mock1);
@@ -305,10 +310,14 @@ class PooledServiceTest {
     );
     service.send(request);
 
+    // Simulate the connecting and connected
+    states.onNext(EndpointState.CONNECTING);
+    states.onNext(EndpointState.CONNECTED);
+
     waitUntilCondition(() -> !service.trackedEndpoints.isEmpty());
     assertEquals(1, service.trackedEndpoints().size());
-    assertTrue(request.context().retryAttempts() > 0);
-    verify(mock1, never()).send(request);
+    assertEquals(0, request.context().retryAttempts());
+    verify(mock1, times(1)).send(request);
   }
 
   @Test
@@ -318,7 +327,9 @@ class PooledServiceTest {
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
     when(mock1.outstandingRequests()).thenReturn(1L);
-    when(mock1.states()).thenReturn(DirectProcessor.create());
+
+    DirectProcessor<EndpointState> states = DirectProcessor.create();
+    when(mock1.states()).thenReturn(states);
 
 
     final List<Endpoint> mocks = Collections.singletonList(mock1);
@@ -347,9 +358,28 @@ class PooledServiceTest {
     service.send(request1);
     service.send(request2);
     assertEquals(1, service.trackedEndpoints().size());
-    assertTrue(request1.context().retryAttempts() > 0);
+
+    // The first request is sent into the free slot without retrying
+    assertEquals(0, request1.context().retryAttempts());
+    // No more slots available, this one goes into retry
     assertTrue(request2.context().retryAttempts() > 0);
-    verify(mock1, never()).send(request1);
+
+    // Simulate the connecting and connected
+    states.onNext(EndpointState.CONNECTING);
+    states.onNext(EndpointState.CONNECTED);
+
+    waitUntilCondition(() -> {
+      Collection<Invocation> invocations = Mockito.mockingDetails(mock1).getInvocations();
+      for (Invocation inv : invocations) {
+        if (inv.getMethod().getName().equals("send")) {
+          if (inv.getArgument(0) == request1) {
+            return true;
+          }
+        }
+      }
+      return false;
+    });
+
     verify(mock1, never()).send(request2);
   }
 
@@ -392,7 +422,8 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock1.states()).thenReturn(DirectProcessor.create());
+    DirectProcessor<EndpointState> states = DirectProcessor.create();
+    when(mock1.states()).thenReturn(states);
     when(mock1.outstandingRequests()).thenReturn(1L);
     when(mock1.lastResponseReceived()).thenReturn(now);
 
@@ -430,6 +461,10 @@ class PooledServiceTest {
 
     waitUntilCondition(() -> service.trackedEndpoints.size() == 2);
 
+    // Simulate the connecting and connected
+    states.onNext(EndpointState.CONNECTING);
+    states.onNext(EndpointState.CONNECTED);
+
     when(mock1.outstandingRequests()).thenReturn(0L);
 
     Thread.sleep(600);
@@ -449,13 +484,15 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock1.states()).thenReturn(DirectProcessor.create());
+    DirectProcessor<EndpointState> states1 = DirectProcessor.create();
+    when(mock1.states()).thenReturn(states1);
     when(mock1.outstandingRequests()).thenReturn(1L);
     doReturn(now).when(mock1).lastResponseReceived(); // trying different format due to a CI error with mockito
 
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock2.states()).thenReturn(DirectProcessor.create());
+    DirectProcessor<EndpointState> states2 = DirectProcessor.create();
+    when(mock2.states()).thenReturn(states2);
     when(mock2.outstandingRequests()).thenReturn(1L);
     doReturn(now).when(mock2).lastResponseReceived(); // trying different format due to a CI error with mockito
 
@@ -477,6 +514,10 @@ class PooledServiceTest {
       CollectionIdentifier.fromDefault("bucket")
     );
     service.send(request1);
+
+    states1.onNext(EndpointState.CONNECTING);
+    states1.onNext(EndpointState.CONNECTED);
+
     NoopRequest request2 = new NoopRequest(
       Duration.ofSeconds(1),
       serviceContext,
@@ -484,6 +525,9 @@ class PooledServiceTest {
       CollectionIdentifier.fromDefault("bucket")
     );
     service.send(request2);
+
+    states2.onNext(EndpointState.CONNECTING);
+    states2.onNext(EndpointState.CONNECTED);
 
     waitUntilCondition(() -> service.trackedEndpoints.size() == 2);
 
@@ -540,7 +584,8 @@ class PooledServiceTest {
   void cleansUpNeverUsedIdleConnections() {
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock1.states()).thenReturn(DirectProcessor.create());
+    DirectProcessor<EndpointState> states = DirectProcessor.create();
+    when(mock1.states()).thenReturn(states);
     when(mock1.outstandingRequests()).thenReturn(0L);
     when(mock1.lastResponseReceived()).thenReturn(0L);
     when(mock1.lastConnectedAt()).thenReturn(0L);
@@ -564,11 +609,108 @@ class PooledServiceTest {
     );
     service.send(request1);
 
+    // Simulate the connecting and connected
+    states.onNext(EndpointState.CONNECTING);
+    states.onNext(EndpointState.CONNECTED);
+
     when(mock1.lastConnectedAt()).thenReturn(System.nanoTime());
     waitUntilCondition(() -> service.trackedEndpoints.size() == 1);
 
     when(mock1.receivedDisconnectSignal()).thenReturn(true);
     waitUntilCondition(() -> service.state() == ServiceState.IDLE);
+  }
+
+  /**
+   * With direct dispatch in the pool it is possible that endpoint for which the socket is
+   * waiting for to be dispatched never goes into a connected state but rather into disconnected
+   * (and then subsequent reconnect). As soon as we observe a disconnect state we need to retry the
+   * op so that it has a chance to complete somewhere else.
+   */
+  @Test
+  void retriesRequestIfEndpointCannotConnect() {
+    int minEndpoints = 0;
+
+    Endpoint mock1 = mock(Endpoint.class);
+    when(mock1.state()).thenReturn(EndpointState.DISCONNECTED);
+
+    DirectProcessor<EndpointState> states = DirectProcessor.create();
+    when(mock1.states()).thenReturn(states);
+    when(mock1.outstandingRequests()).thenReturn(0L);
+
+    final List<Endpoint> mocks = Collections.singletonList(mock1);
+    final AtomicInteger invocation = new AtomicInteger();
+    MockedService service = new MockedService(
+      new MockedServiceConfig(minEndpoints, 2, Duration.ofMillis(500), false),
+      () -> mocks.get(invocation.getAndIncrement()),
+      new FirstEndpointSelectionStrategy()
+    );
+    service.connect();
+
+    assertTrue(service.trackedEndpoints().isEmpty());
+
+    NoopRequest request = new NoopRequest(
+      Duration.ofSeconds(1),
+      serviceContext,
+      BestEffortRetryStrategy.INSTANCE,
+      CollectionIdentifier.fromDefault("bucket")
+    );
+    service.send(request);
+
+    // Simulate the connecting and connected
+    states.onNext(EndpointState.CONNECTING);
+    states.onNext(EndpointState.DISCONNECTED);
+
+    waitUntilCondition(() -> !service.trackedEndpoints.isEmpty());
+    assertEquals(1, service.trackedEndpoints().size());
+    assertTrue(request.context().retryAttempts() >= 1);
+    verify(mock1, never()).send(request);
+  }
+
+  /**
+   * It can happen that while the reserved endpoint connects,
+   * the overall pool got the disconnect signal in the meantime.
+   * <p>
+   * If this happens, make sure we clean up everything properly.
+   */
+  @Test
+  void cleansUpReservedEndpointIfDisconnected() {
+    int minEndpoints = 0;
+
+    Endpoint mock1 = mock(Endpoint.class);
+    when(mock1.state()).thenReturn(EndpointState.CONNECTED);
+
+    DirectProcessor<EndpointState> states = DirectProcessor.create();
+    when(mock1.states()).thenReturn(states);
+    when(mock1.outstandingRequests()).thenReturn(0L);
+
+    final List<Endpoint> mocks = Collections.singletonList(mock1);
+    final AtomicInteger invocation = new AtomicInteger();
+    MockedService service = new MockedService(
+      new MockedServiceConfig(minEndpoints, 2, Duration.ofMillis(500), false),
+      () -> mocks.get(invocation.getAndIncrement()),
+      new FirstEndpointSelectionStrategy()
+    );
+    service.connect();
+
+    assertTrue(service.trackedEndpoints().isEmpty());
+
+    NoopRequest request = new NoopRequest(
+      Duration.ofSeconds(1),
+      serviceContext,
+      BestEffortRetryStrategy.INSTANCE,
+      CollectionIdentifier.fromDefault("bucket")
+    );
+    service.send(request);
+
+    service.disconnect();
+
+    // Simulate the connecting and connected
+    states.onNext(EndpointState.CONNECTING);
+    states.onNext(EndpointState.DISCONNECTED);
+
+    waitUntilCondition(() -> request.context().retryAttempts() >= 1);
+    verify(mock1, never()).send(request);
+    verify(mock1, atLeastOnce()).disconnect();
   }
 
   class MockedService extends PooledService {
