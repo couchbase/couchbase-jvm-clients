@@ -58,7 +58,7 @@ abstract class PooledService implements Service {
   /**
    * The interval when to check if idle sockets are to be cleaned up.
    */
-  public static final Duration DEFAULT_IDLE_TIME_CHECK_INTERVAL = Duration.ofMillis(500);
+  public static final Duration DEFAULT_IDLE_TIME_CHECK_INTERVAL = Duration.ofMillis(100);
 
   /**
    * Holds the config for this service.
