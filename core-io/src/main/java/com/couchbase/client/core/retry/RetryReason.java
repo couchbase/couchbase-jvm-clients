@@ -33,7 +33,11 @@ public enum RetryReason {
   ENDPOINT_NOT_AVAILABLE(true, false),
   /**
    * Retried because no endpoint available, but a new one being opened in parallel.
+   * <p>
+   * This enum variant is deprecated because the SDK now uses a different strategy. Look for
+   * {@link #ENDPOINT_NOT_AVAILABLE} only.
    */
+  @Deprecated
   ENDPOINT_TEMPORARILY_NOT_AVAILABLE(true, true),
   /**
    * Short circuits the endpoint write because the circuit breaker is open at the moment.
