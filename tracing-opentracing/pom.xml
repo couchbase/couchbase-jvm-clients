@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>tracing-opentracing</artifactId>
-    <version>0.2.8</version>
+    <version>0.2.9-SNAPSHOT</version>
 
     <name>OpenTracing Interoperability</name>
     <description>Provides interoperability with OpenTracing</description>

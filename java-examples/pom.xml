@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>java-examples</artifactId>
-    <version>1.0.8</version>
+    <version>1.0.9-SNAPSHOT</version>
 
     <name>Couchbase Java SDK Examples</name>
     <description>Examples for the Couchbase Java SDK</description>
