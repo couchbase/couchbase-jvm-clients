@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.couchbase.client</groupId>
         <artifactId>couchbase-jvm-clients</artifactId>
-        <version>1.9.9</version>
+        <version>1.9.10-SNAPSHOT</version>
     </parent>
 
     <artifactId>core-io</artifactId>
@@ -16,7 +16,7 @@
     <description>The official Couchbase JVM Core IO Library</description>
 
     <properties>
-        <core-io-deps.version>1.0.9</core-io-deps.version>
+        <core-io-deps.version>1.0.10-SNAPSHOT</core-io-deps.version>
     </properties>
 
     <dependencies>
