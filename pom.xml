@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.couchbase.client</groupId>
     <artifactId>couchbase-jvm-clients</artifactId>
-    <version>1.9.10-SNAPSHOT</version>
+    <version>1.9.10</version>
     <packaging>pom</packaging>
 
     <name>Couchbase JVM Client Parent</name>
@@ -21,7 +21,7 @@
         <log4j-slf4j-impl.version>2.13.3</log4j-slf4j-impl.version>
         <jackson.version>2.11.2</jackson.version>
         <reactor.version>3.3.9.RELEASE</reactor.version>
-        <scala.couchbase.version>1.0.9-SNAPSHOT</scala.couchbase.version>
+        <scala.couchbase.version>1.0.9</scala.couchbase.version>
 
         <gpg.keyname></gpg.keyname>
         <gpg.passphrase></gpg.passphrase>
@@ -43,12 +43,12 @@
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>core-io</artifactId>
-                <version>2.0.10-SNAPSHOT</version>
+                <version>2.0.10</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>java-client</artifactId>
-                <version>3.0.9-SNAPSHOT</version>
+                <version>3.0.9</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
@@ -83,12 +83,12 @@
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>test-utils</artifactId>
-                <version>1.0.9-SNAPSHOT</version>
+                <version>1.0.9</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>tracing-opentelemetry</artifactId>
-                <version>0.2.9-SNAPSHOT</version>
+                <version>0.2.9</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
