@@ -1,5 +1,9 @@
 # Couchbase JVM Clients
 
+[![license](https://img.shields.io/github/license/couchbase/couchbase-jvm-clients?color=brightgreen)](https://opensource.org/licenses/Apache-2.0)
+[![java-client](https://img.shields.io/maven-central/v/com.couchbase.client/java-client?color=brightgreen&label=java-client)](https://search.maven.org/artifact/com.couchbase.client/java-client)
+[![scala-client](https://img.shields.io/maven-central/v/com.couchbase.client/scala-client_2.12?color=brightgreen&label=scala-client)](https://search.maven.org/artifact/com.couchbase.client/scala-client_2.12)
+
 This repository contains the third generation of the Couchbase SDKs on the JVM ("SDK 3").
 
 ## Overview
@@ -11,7 +15,7 @@ This repository contains the following projects:
  - `scala-client`: the Scala language binding
  - `tracing-opentracing`: experimental module to integrate with [OpenTracing](https://opentracing.io/)
  - `tracing-opentelemetry`: experimental module to integrate with [OpenTelemetry](https://opentelemetry.io/)
- 
+
 Other toplevel modules might be present which contain examples, experimental code or internal tooling and test infrastructure.
 
 Documentation is now available for [Java](https://docs.couchbase.com/java-sdk/3.0/hello-world/start-using-sdk.html)
@@ -112,7 +116,7 @@ runs against the mock. Recommended topologies:
  - 1 node, no replica
  - 2 nodes, 1 replica
  - 2 nodes, 2 replicas
- 
+
 Also to have maximum service coverage use a cluster which has all services enabled (can be MDS setup).
 
 ### Building Documentation
