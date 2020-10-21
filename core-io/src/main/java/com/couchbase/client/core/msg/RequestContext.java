@@ -337,7 +337,10 @@ public class RequestContext extends CoreContext {
     }
     if (lastDispatchedTo != null) {
       input.put("lastDispatchedTo", redactSystem(lastDispatchedTo));
+    } else if (lastDispatchedToNode != null) {
+      input.put("lastDispatchedTo", redactSystem(lastDispatchedToNode.address()));
     }
+
     if (lastDispatchedFrom != null) {
       input.put("lastDispatchedFrom", redactSystem(lastDispatchedFrom));
     }
