@@ -317,6 +317,19 @@ class PooledServiceTest {
     waitUntilCondition(() -> !service.trackedEndpoints.isEmpty());
     assertEquals(1, service.trackedEndpoints().size());
     assertEquals(0, request.context().retryAttempts());
+
+    waitUntilCondition(() -> {
+      Collection<Invocation> invocations = Mockito.mockingDetails(mock1).getInvocations();
+      for (Invocation inv : invocations) {
+        if (inv.getMethod().getName().equals("send")) {
+          if (inv.getArgument(0) == request) {
+            return true;
+          }
+        }
+      }
+      return false;
+    });
+
     verify(mock1, times(1)).send(request);
   }
 
