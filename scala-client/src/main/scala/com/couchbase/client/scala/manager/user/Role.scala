@@ -17,46 +17,69 @@
 package com.couchbase.client.scala.manager.user
 
 import com.couchbase.client.core.annotation.Stability.Volatile
-import com.couchbase.client.scala.manager.user.AuthDomain.{External, Local}
 import com.couchbase.client.scala.util.CouchbasePickler
-import upickle.default.{macroRW, ReadWriter => RW}
 
 import scala.util.Try
 
 /** Identifies a specific permission possessed by a user.
   *
   * @param name   the role's name
-  * @param bucket the bucket the role applies to, if available
+  * @param bucket the name of the bucket the role applies to.  If empty, it is a system-wide role.
+  * @param scope  the name of the scope the role applies to.  If empty, the role applies to all scopes and
+  *               collections on the bucket
+  * @param collection the name of the collection the role applies to.  If empty, the role applies to all
+  *               collections on the scope
   */
 @Volatile
-case class Role(name: String, bucket: Option[String] = None) {
+case class Role(
+    name: String,
+    bucket: Option[String] = None,
+    scope: Option[String] = None,
+    collection: Option[String] = None
+) {
   def format: String = {
-    bucket match {
-      case Some(b) => name + "[" + b + "]"
-      case _       => name
+    name + {
+      bucket match {
+        case Some(b) =>
+          val sb = new StringBuilder
+          sb.append('[')
+          sb.append(b)
+          scope.foreach(v => sb.append(':').append(v))
+          collection.foreach(v => sb.append(':').append(v))
+          sb.append(']')
+          sb.toString
+        case _ => ""
+      }
     }
   }
 
   override def toString: String = format
 }
 
-object Role {
-  // Get back "role":"admin" but want to store it as a Role, so custom serialization logic
+private[scala] object Role {
   implicit val rw: CouchbasePickler.ReadWriter[Role] = CouchbasePickler
     .readwriter[ujson.Obj]
     .bimap[Role](
-      (x: Role) => {
-        val out = ujson.Obj("role" -> x.name)
-        x.bucket.foreach(bucket => out("bucket") = bucket)
-        out
-      },
-      (json: ujson.Obj) => {
-        Role(
-          Try(json("role").str).getOrElse("COULD NOT PARSE"),
-          Try(Some(json("bucket_name").str)).getOrElse(None)
-        )
-      }
+      (x: Role) => ???, // Never called
+      (json: ujson.Obj) => Role.parse(json)
     )
+
+  // Interpret either "*" or null to mean "all scopes" / "all collections".
+  // Couchbase 7.0 and later will send an explicit wildcard "*".
+  // Earlier servers won't send anything, so this will be null.
+  def parseWildcardOptional(s: Option[String]): Option[String] = s match {
+    case Some("*") | None => None
+    case Some(_)          => s
+  }
+
+  def parse(json: ujson.Obj): Role = {
+    val role                       = json("role").str
+    val bucketName: Option[String] = Try(json("bucket_name").str).toOption
+    val scopeName                  = Role.parseWildcardOptional(Try(json("scope_name").str).toOption)
+    val collectionName             = Role.parseWildcardOptional(Try(json("collection_name").str).toOption)
+
+    Role(role, bucketName, scopeName, collectionName)
+  }
 }
 
 /** Associates a role with its display name and description.
@@ -66,23 +89,21 @@ object Role {
   * @param description the role's description
   */
 @Volatile
-case class RoleAndDescription(role: Role, displayName: String, description: String)
+case class RoleAndDescription(
+    role: Role,
+    displayName: String,
+    description: String
+)
 
 object RoleAndDescription {
   // Get back "role":"admin" but want to store it as a Role, so custom serialization logic
   implicit val rw: CouchbasePickler.ReadWriter[RoleAndDescription] = CouchbasePickler
     .readwriter[ujson.Obj]
     .bimap[RoleAndDescription](
-      (x: RoleAndDescription) => {
-        ujson.Obj(
-          "role" -> x.role.name,
-          "name" -> x.displayName,
-          "desc" -> x.description
-        )
-      },
+      (x: RoleAndDescription) => ???, // Not called
       (json: ujson.Obj) => {
         RoleAndDescription(
-          Role(Try(json("role").str).getOrElse("COULD NOT PARSE")),
+          Role.parse(json),
           Try(json("name").str).getOrElse("COULD NOT PARSE"),
           Try(json("desc").str).getOrElse("COULD NOT PARSE")
         )
@@ -130,18 +151,12 @@ object RoleAndOrigins {
   implicit val rw: CouchbasePickler.ReadWriter[RoleAndOrigins] = CouchbasePickler
     .readwriter[ujson.Obj]
     .bimap[RoleAndOrigins](
-      (x: RoleAndOrigins) => {
-        val json = ujson.Obj()
-        json("role") = x.role.name
-        json("origins") = CouchbasePickler.write(x.origins)
-        json
-      },
+      (x: RoleAndOrigins) => ???, // Never called
       (json: ujson.Obj) => {
-        val origins                    = Try(json("origins")).toOption
-        val bucketName: Option[String] = Try(json("bucket_name").str).toOption
+        val origins = Try(json("origins")).toOption
 
         RoleAndOrigins(
-          Role(json("role").str, bucketName),
+          Role.parse(json),
           origins.map(v => CouchbasePickler.read[Seq[Origin]](v)).getOrElse(Seq())
         )
       }
