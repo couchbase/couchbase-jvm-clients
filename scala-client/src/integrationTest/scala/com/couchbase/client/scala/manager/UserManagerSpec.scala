@@ -192,6 +192,31 @@ class UserManagerSpec extends ScalaIntegrationTest {
     )
   }
 
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.COLLECTIONS))
+  @Test
+  def canAssignCollectionsAwareRoles(): Unit = {
+    val bucket = config.bucketname()
+    assertCanCreateWithRole(Role("data_reader", Some(bucket)))
+    assertCanCreateWithRole(Role("data_reader", Some(bucket), Some("_default")))
+    assertCanCreateWithRole(Role("data_reader", Some(bucket), Some("_default"), Some("_default")))
+  }
+
+  private def assertCanCreateWithRole(role: Role): Unit = {
+    users
+      .upsertUser(
+        User(Username)
+          .password("password")
+          .displayName("Integration Test User")
+          .roles(role)
+      )
+      .get
+    waitUntilUserPresent(Username)
+    val roles = users.getUser(Username, AuthDomain.Local).get.innateRoles
+    assert(Seq(role) == roles)
+    val allRoles = users.availableRoles()
+    assert(true)
+  }
+
   @IgnoreWhen(missesCapabilities = Array(Capabilities.USER_GROUPS)) // test is verifying some groups info
   @Test
   def create(): Unit = {
