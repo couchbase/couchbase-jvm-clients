@@ -126,6 +126,39 @@
             <version>${jackson.version}</version>
             <optional>true</optional>
         </dependency>
+
+        <dependency>
+            <groupId>com.lihaoyi</groupId>
+            <artifactId>upickle_${scala.compat.version}</artifactId>
+            <version>${com.lihaoyi.upickle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.circe</groupId>
+            <artifactId>circe-core_${scala.compat.version}</artifactId>
+            <version>${io.circe.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.circe</groupId>
+            <artifactId>circe-generic_${scala.compat.version}</artifactId>
+            <version>${io.circe.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.circe</groupId>
+            <artifactId>circe-parser_${scala.compat.version}</artifactId>
+            <version>${io.circe.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.typesafe.play</groupId>
+            <artifactId>play-json_${scala.compat.version}</artifactId>
+            <version>${com.typesafe.play.version}</version>
+            <optional>true</optional>
+    </dependency> 
+
     </dependencies>
 
     <profiles>
@@ -201,49 +234,11 @@
                     <value>2.11</value>
                 </property>
             </activation>
-            <dependencies>
-                <dependency>
-                    <groupId>com.lihaoyi</groupId>
-                    <artifactId>upickle_${scala.compat.version}</artifactId>
-                    <version>0.7.4</version>
-                </dependency>
-                <dependency>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-core_${scala.compat.version}</artifactId>
-                    <version>0.11.2</version>
-                    <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-core_${scala.compat.version}</artifactId>
-                    <version>0.11.2</version>
-                    <optional>true</optional>
-                </dependency>
-                <dependency>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-generic_${scala.compat.version}</artifactId>
-                    <version>0.11.2</version>
-                    <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-parser_${scala.compat.version}</artifactId>
-                    <version>0.11.2</version>
-                    <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>com.typesafe.play</groupId>
-                    <artifactId>play-json_${scala.compat.version}</artifactId>
-                    <version>2.7.4</version>
-                    <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>com.typesafe.play</groupId>
-                    <artifactId>play-json_${scala.compat.version}</artifactId>
-                    <version>2.7.4</version>
-                    <optional>true</optional>
-                </dependency>
-            </dependencies>
+            <properties>
+                <com.lihaoyi.upickle.version>0.7.4</com.lihaoyi.upickle.version>
+                <io.circe.version>0.11.2</io.circe.version>
+                <com.typesafe.play.version>2.7.4</com.typesafe.play.version>
+            </properties>
         </profile>
         <profile>
             <id>scala_NOT_2.11</id>
@@ -253,49 +248,11 @@
                     <value>!2.11</value>
                 </property>
             </activation>
-            <dependencies>
-                <dependency>
-                    <groupId>com.lihaoyi</groupId>
-                    <artifactId>upickle_${scala.compat.version}</artifactId>
-                    <version>0.9.8</version>
-                </dependency>
-                <dependency>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-core_${scala.compat.version}</artifactId>
-                    <version>0.12.3</version>
-                    <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-core_${scala.compat.version}</artifactId>
-                    <version>0.12.3</version>
-                    <optional>true</optional>
-                </dependency>
-                <dependency>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-generic_${scala.compat.version}</artifactId>
-                    <version>0.12.3</version>
-                    <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-parser_${scala.compat.version}</artifactId>
-                    <version>0.12.3</version>
-                    <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>com.typesafe.play</groupId>
-                    <artifactId>play-json_${scala.compat.version}</artifactId>
-                    <version>2.8.1</version>
-                    <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>com.typesafe.play</groupId>
-                    <artifactId>play-json_${scala.compat.version}</artifactId>
-                    <version>2.8.1</version>
-                    <optional>true</optional>
-                </dependency>
-            </dependencies>
+            <properties>
+                <com.lihaoyi.upickle.version>0.9.8</com.lihaoyi.upickle.version>
+                <io.circe.version>0.12.3</io.circe.version>
+                <com.typesafe.play.version>2.8.1</com.typesafe.play.version>
+            </properties>
         </profile>
     </profiles>
 
