@@ -50,7 +50,7 @@ object JsonSerializer {
     * If the String should be not serialized and stored on the server as string type, use [[RawStringTranscoder]].
     * If the String should be not serialized and stored on the server as JSON type, use [[RawJsonTranscoder]].
     */
-  implicit object StringConvert extends JsonSerializer[String] {
+  implicit object StringEncode extends JsonSerializer[String] {
     override def serialize(content: String): Try[Array[Byte]] = {
       Try(JacksonTransformers.MAPPER.writeValueAsBytes(content))
     }
@@ -63,35 +63,35 @@ object JsonSerializer {
     *
     * If the content should be stored on the server as binary type, use [[RawBinaryTranscoder]].
     */
-  implicit object BytesConvert extends JsonSerializer[Array[Byte]] {
+  implicit object BytesEncode extends JsonSerializer[Array[Byte]] {
     override def serialize(content: Array[Byte]): Try[Array[Byte]] = {
       Try(content)
     }
   }
 
   /** `JsonSerializer` that can convert a `JsonObject` into `Array[Byte]` for sending to the server. */
-  implicit object JsonObjectConvert extends JsonSerializer[JsonObject] {
+  implicit object JsonObjectEncode extends JsonSerializer[JsonObject] {
     override def serialize(content: JsonObject): Try[Array[Byte]] = {
       Try(JacksonTransformers.MAPPER.writeValueAsBytes(content))
     }
   }
 
   /** `JsonSerializer` that can convert a `JsonObjectSafe` into `Array[Byte]` for sending to the server. */
-  implicit object JsonObjectSafeConvert extends JsonSerializer[JsonObjectSafe] {
+  implicit object JsonObjectSafeEncode extends JsonSerializer[JsonObjectSafe] {
     override def serialize(content: JsonObjectSafe): Try[Array[Byte]] = {
       Try(JacksonTransformers.MAPPER.writeValueAsBytes(content.o))
     }
   }
 
   /** `JsonSerializer` that can convert a `JsonArray` into `Array[Byte]` for sending to the server. */
-  implicit object JsonArrayConvert extends JsonSerializer[JsonArray] {
+  implicit object JsonArrayEncode extends JsonSerializer[JsonArray] {
     override def serialize(content: JsonArray): Try[Array[Byte]] = {
       Try(JacksonTransformers.MAPPER.writeValueAsBytes(content))
     }
   }
 
   /** `JsonSerializer` that can convert a `JsonArraySafe` into `Array[Byte]` for sending to the server. */
-  implicit object JsonArraySafeConvert extends JsonSerializer[JsonArraySafe] {
+  implicit object JsonArraySafeEncode extends JsonSerializer[JsonArraySafe] {
     override def serialize(content: JsonArraySafe): Try[Array[Byte]] = {
       Try(JacksonTransformers.MAPPER.writeValueAsBytes(content.a))
     }
@@ -101,7 +101,7 @@ object JsonSerializer {
     *
     * What's stored is "true" or "false" in UTF8, as bytes.
     */
-  implicit object BooleanConvert extends JsonSerializer[Boolean] {
+  implicit object BooleanEncode extends JsonSerializer[Boolean] {
     override def serialize(content: Boolean): Try[Array[Byte]] = {
       val str = if (content) "true" else "false"
       Try(str.getBytes(CharsetUtil.UTF_8))
@@ -109,28 +109,28 @@ object JsonSerializer {
   }
 
   /** `JsonSerializer` that can convert an `Int` into `Array[Byte]` for sending to the server. */
-  implicit object IntConvert extends JsonSerializer[Int] {
+  implicit object IntEncode extends JsonSerializer[Int] {
     override def serialize(content: Int): Try[Array[Byte]] = {
       Try(content.toString.getBytes(CharsetUtil.UTF_8))
     }
   }
 
   /** `JsonSerializer` that can convert a `Double` into `Array[Byte]` for sending to the server. */
-  implicit object DoubleConvert extends JsonSerializer[Double] {
+  implicit object DoubleEncode extends JsonSerializer[Double] {
     override def serialize(content: Double): Try[Array[Byte]] = {
       Try(content.toString.getBytes(CharsetUtil.UTF_8))
     }
   }
 
   /** `JsonSerializer` that can convert a `Long` into `Array[Byte]` for sending to the server. */
-  implicit object LongConvert extends JsonSerializer[Long] {
+  implicit object LongEncode extends JsonSerializer[Long] {
     override def serialize(content: Long): Try[Array[Byte]] = {
       Try(content.toString.getBytes(CharsetUtil.UTF_8))
     }
   }
 
   /** `JsonSerializer` that can convert a `Short` into `Array[Byte]` for sending to the server. */
-  implicit object ShortConvert extends JsonSerializer[Short] {
+  implicit object ShortEncode extends JsonSerializer[Short] {
     override def serialize(content: Short): Try[Array[Byte]] = {
       Try(content.toString.getBytes(CharsetUtil.UTF_8))
     }
@@ -141,7 +141,7 @@ object JsonSerializer {
     *
     * upickle is an optional dependency.
     */
-  implicit object UjsonConvert extends JsonSerializer[ujson.Value] {
+  implicit object UjsonEncode extends JsonSerializer[ujson.Value] {
     override def serialize(content: ujson.Value): Try[Array[Byte]] = {
       Try(ujson.transform(content, ujson.BytesRenderer()).toBytes)
     }
@@ -185,13 +185,13 @@ object JsonSerializer {
     *
     * Jawn is an optional dependency.
     */
-  implicit object JawnConvert extends JsonSerializer[org.typelevel.jawn.ast.JValue] {
+  implicit object JawnEncode extends JsonSerializer[org.typelevel.jawn.ast.JValue] {
     override def serialize(content: org.typelevel.jawn.ast.JValue): Try[Array[Byte]] = {
       Try(content.render().getBytes(CharsetUtil.UTF_8))
     }
   }
 
-  implicit object MutateInMacroConvert extends JsonSerializer[MutateInMacro] {
+  implicit object MutateInMacroEncode extends JsonSerializer[MutateInMacro] {
     override def serialize(content: MutateInMacro): Try[Array[Byte]] = {
       Try(content.value.getBytes(CharsetUtil.UTF_8))
     }
