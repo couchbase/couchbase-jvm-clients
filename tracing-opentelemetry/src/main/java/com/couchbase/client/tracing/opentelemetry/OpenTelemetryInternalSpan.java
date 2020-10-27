@@ -23,9 +23,11 @@ import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 import com.couchbase.client.core.service.ServiceType;
+import io.grpc.Context;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.trace.Span;
 import io.opentelemetry.trace.Tracer;
+import io.opentelemetry.trace.TracingContextUtils;
 
 import static com.couchbase.client.core.cnc.RequestTracer.SERVICE_IDENTIFIER_ANALYTICS;
 import static com.couchbase.client.core.cnc.RequestTracer.SERVICE_IDENTIFIER_KV;
@@ -49,7 +51,7 @@ public class OpenTelemetryInternalSpan implements InternalSpan {
 
     Span.Builder spanBuilder = tracer.spanBuilder(operationName);
     if (parent != null) {
-      spanBuilder.setParent(parent);
+      spanBuilder.setParent(TracingContextUtils.withSpan(parent, Context.current()));
     } else {
       spanBuilder.setNoParent();
     }
@@ -106,7 +108,7 @@ public class OpenTelemetryInternalSpan implements InternalSpan {
 
   @Override
   public void startDispatch() {
-    dispatchSpan = tracer.spanBuilder(RequestTracer.DISPATCH_SPAN_NAME).setParent(span).startSpan();
+    dispatchSpan = tracer.spanBuilder(RequestTracer.DISPATCH_SPAN_NAME).setParent(TracingContextUtils.withSpan(span, Context.current())).startSpan();
     tracer.withSpan(dispatchSpan).close();
   }
 
@@ -123,7 +125,7 @@ public class OpenTelemetryInternalSpan implements InternalSpan {
 
   @Override
   public void startPayloadEncoding() {
-    encodingSpan = tracer.spanBuilder(RequestTracer.PAYLOAD_ENCODING_SPAN_NAME).setParent(span).startSpan();
+    encodingSpan = tracer.spanBuilder(RequestTracer.PAYLOAD_ENCODING_SPAN_NAME).setParent(TracingContextUtils.withSpan(span, Context.current())).startSpan();
     tracer.withSpan(encodingSpan).close();
   }
 
