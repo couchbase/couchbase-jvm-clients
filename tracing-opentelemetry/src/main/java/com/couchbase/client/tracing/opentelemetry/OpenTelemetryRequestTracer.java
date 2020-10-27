@@ -18,8 +18,10 @@ package com.couchbase.client.tracing.opentelemetry;
 
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
+import io.grpc.Context;
 import io.opentelemetry.trace.Span;
 import io.opentelemetry.trace.Tracer;
+import io.opentelemetry.trace.TracingContextUtils;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -74,7 +76,7 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
   public RequestSpan requestSpan(String operationName, RequestSpan parent) {
     Span.Builder spanBuilder = tracer.spanBuilder(operationName);
     if (parent != null) {
-      spanBuilder.setParent(castSpan(parent));
+      spanBuilder.setParent(TracingContextUtils.withSpan(castSpan(parent), Context.current()));
     } else {
       spanBuilder.setNoParent();
     }

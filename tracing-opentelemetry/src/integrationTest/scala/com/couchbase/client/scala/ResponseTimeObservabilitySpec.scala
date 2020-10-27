@@ -22,9 +22,10 @@ import com.couchbase.client.test._
 import com.couchbase.client.tracing.opentelemetry.OpenTelemetryRequestTracer
 import io.opentelemetry.exporters.inmemory.InMemorySpanExporter
 import io.opentelemetry.sdk.OpenTelemetrySdk
-import io.opentelemetry.sdk.trace.TracerSdkProvider
+import io.opentelemetry.OpenTelemetry
+import io.opentelemetry.sdk.trace.TracerSdkManagement
 import org.junit.jupiter.api.TestInstance.Lifecycle
-import org.junit.jupiter.api._
+import org.junit.jupiter.api.{io, _}
 import _root_.io.opentelemetry.sdk.trace.`export`.SimpleSpanProcessor
 
 @TestInstance(Lifecycle.PER_CLASS)
@@ -35,7 +36,7 @@ class ResponseTimeObservabilitySpec extends ClusterAwareIntegrationTest {
   private var cluster: Cluster = _
   private var coll: Collection = _
   private var env: ClusterEnvironment  = _
-  private var tracer: TracerSdkProvider = _
+  private var tracer: TracerSdkManagement = _
 
   @BeforeAll
   def beforeAll(): Unit = {
@@ -43,11 +44,11 @@ class ResponseTimeObservabilitySpec extends ClusterAwareIntegrationTest {
     val nodeConfig = config.firstNodeWith(Services.KV).get
 
     env = {
-      tracer = OpenTelemetrySdk.getTracerProvider
+      tracer = OpenTelemetrySdk.getTracerManagement
       tracer.addSpanProcessor(SimpleSpanProcessor.newBuilder(exporter).build())
 
       ClusterEnvironment.builder
-        .requestTracer(OpenTelemetryRequestTracer.wrap(tracer.get("integrationTest"))).build.get
+        .requestTracer(OpenTelemetryRequestTracer.wrap(OpenTelemetry.getTracer("integrationTest"))).build.get
     }
 
     cluster = Cluster.connect(

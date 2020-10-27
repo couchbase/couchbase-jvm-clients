@@ -16,7 +16,7 @@
     <description>Provides interoperability with OpenTelemetry</description>
 
     <properties>
-        <opentelemetry.version>0.8.0</opentelemetry.version>
+        <opentelemetry.version>0.9.1</opentelemetry.version>
     </properties>
 
     <dependencies>
