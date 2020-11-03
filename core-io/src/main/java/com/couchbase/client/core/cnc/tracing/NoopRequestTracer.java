@@ -17,7 +17,6 @@
 package com.couchbase.client.core.cnc.tracing;
 
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import reactor.core.publisher.Mono;
 
@@ -28,9 +27,12 @@ import java.time.Duration;
  */
 public class NoopRequestTracer implements RequestTracer {
 
-  @Override
-  public InternalSpan internalSpan(final String operationName, final RequestSpan parent) {
-    return NoopInternalSpan.INSTANCE;
+  /**
+   * Returns the static instance of this tracer.
+   */
+  public static final NoopRequestTracer INSTANCE = new NoopRequestTracer();
+
+  private NoopRequestTracer() {
   }
 
   @Override

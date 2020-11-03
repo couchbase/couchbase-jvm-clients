@@ -17,7 +17,8 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.DiagnosticsResult;
 import com.couchbase.client.core.annotation.Stability;
@@ -343,9 +344,9 @@ public class AsyncCluster {
 
     final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
     final String clientContextId = query.getString("client_context_id");
-    final InternalSpan span = environment()
+    final RequestSpan span = environment()
       .requestTracer()
-      .internalSpan(QueryRequest.OPERATION_NAME, options.parentSpan().orElse(null));
+      .requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, options.parentSpan().orElse(null));
 
     QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, authenticator, statement,
      queryBytes, options.readonly(), clientContextId, span, null);
@@ -397,9 +398,9 @@ public class AsyncCluster {
 
     final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
     final String clientContextId = query.getString("client_context_id");
-    final InternalSpan span = environment()
+    final RequestSpan span = environment()
       .requestTracer()
-      .internalSpan(AnalyticsRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+      .requestSpan(TracingIdentifiers.SPAN_REQUEST_ANALYTICS, opts.parentSpan().orElse(null));
     AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, authenticator,
         queryBytes, opts.priority(), opts.readonly(), clientContextId, statement, span
     );
@@ -441,9 +442,9 @@ public class AsyncCluster {
     Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().searchTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
 
-    final InternalSpan span = environment()
+    final RequestSpan span = environment()
       .requestTracer()
-      .internalSpan(SearchRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+      .requestSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH, opts.parentSpan().orElse(null));
     SearchRequest request = new SearchRequest(timeout, core.context(), retryStrategy, authenticator, indexName, bytes, span);
     request.context().clientContext(opts.clientContext());
     return request;

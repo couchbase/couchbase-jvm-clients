@@ -17,6 +17,9 @@
 package com.couchbase.client.core.io.netty;
 
 import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
@@ -72,6 +75,11 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
    * Holds the current request.
    */
   private NonChunkedHttpRequest<Response> currentRequest;
+
+  /**
+   * Holds the current dispatch span.
+   */
+  private RequestSpan currentDispatchSpan;
 
   /**
    * Stores the remote host for caching purposes.
@@ -145,8 +153,11 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
         encoded.headers().set(HttpHeaderNames.HOST, remoteHost);
         encoded.headers().set(HttpHeaderNames.USER_AGENT, endpointContext.environment().userAgent().formattedLong());
         dispatchTimingStart = System.nanoTime();
-        if (currentRequest.internalSpan() != null) {
-          currentRequest.internalSpan().startDispatch();
+        if (currentRequest.requestSpan() != null) {
+          currentDispatchSpan = endpointContext
+            .environment()
+            .requestTracer()
+            .requestSpan(TracingIdentifiers.SPAN_DISPATCH, currentRequest.requestSpan());
         }
         ctx.write(encoded, promise);
       } catch (Throwable t) {
@@ -200,8 +211,8 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
       if (msg instanceof FullHttpResponse) {
         try {
           currentRequest.context().dispatchLatency(System.nanoTime() - dispatchTimingStart);
-          if (currentRequest.internalSpan() != null) {
-            currentRequest.internalSpan().stopDispatch();
+          if (currentDispatchSpan != null) {
+            currentDispatchSpan.end(endpointContext.environment().requestTracer());
           }
             FullHttpResponse httpResponse = (FullHttpResponse) msg;
             ResponseStatus responseStatus = HttpProtocol.decodeStatus(httpResponse.status());
@@ -220,6 +231,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
           currentRequest.fail(ex);
         } finally {
           currentRequest = null;
+          currentDispatchSpan = null;
           endpoint.markRequestCompletion();
         }
       } else {

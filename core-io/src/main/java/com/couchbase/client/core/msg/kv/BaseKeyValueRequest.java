@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.error.CollectionNotFoundException;
@@ -89,7 +89,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
   }
 
   protected BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                                final String key, final CollectionIdentifier collectionIdentifier, final InternalSpan span) {
+                                final String key, final CollectionIdentifier collectionIdentifier, final RequestSpan span) {
     super(timeout, ctx, retryStrategy, span);
     this.key = encodeKey(key);
     this.collectionIdentifier = collectionIdentifier;

@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
@@ -36,14 +36,11 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 
 public class ReplicaGetRequest extends GetRequest {
 
-  public static final String OPERATION_NAME = "replica_get";
-
-
   private final short replica;
 
   public ReplicaGetRequest(final String key, final Duration timeout,
                            final CoreContext ctx, CollectionIdentifier collectionIdentifier,
-                           final RetryStrategy retryStrategy, final short replica, final InternalSpan span) {
+                           final RetryStrategy retryStrategy, final short replica, final RequestSpan span) {
     super(key, timeout, ctx, collectionIdentifier, retryStrategy, span);
     this.replica = replica;
   }

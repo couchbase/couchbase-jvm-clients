@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.config.BucketCapabilities;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
@@ -49,8 +49,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateResponse> implements SyncDurabilityRequest {
 
-  public static final String OPERATION_NAME = "subdoc_mutate";
-
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
   private static final byte SUBDOC_FLAG_CREATE_PATH = (byte) 0x01;
   private static final byte SUBDOC_FLAG_EXPAND_MACRO = (byte) 0x10;
@@ -75,7 +73,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
                              final boolean insertDocument, final boolean upsertDocument, final boolean accessDeleted,
                              final boolean createAsDeleted,
                              final List<Command> commands, long expiration, long cas,
-                             final Optional<DurabilityLevel> syncReplicationType, final InternalSpan span) {
+                             final Optional<DurabilityLevel> syncReplicationType, final RequestSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     byte flags = 0;
 

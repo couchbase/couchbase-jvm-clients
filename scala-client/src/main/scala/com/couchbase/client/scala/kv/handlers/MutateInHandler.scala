@@ -16,10 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
-import java.{time, util}
-
-import com.couchbase.client.core.cnc.{InternalSpan, RequestSpan}
-import com.couchbase.client.core.config.BucketConfig
+import com.couchbase.client.core.cnc.{RequestSpan, TracingIdentifiers}
 import com.couchbase.client.core.error.context.{KeyValueErrorContext, ReducedKeyValueErrorContext}
 import com.couchbase.client.core.error.{
   CasMismatchException,
@@ -38,8 +35,7 @@ import com.couchbase.client.scala.util.Validate
 import reactor.core.scala.publisher.SMono
 
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.Duration
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Try}
 
 /**
@@ -108,7 +104,8 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
             )
           } else {
             val requiresBucketConfig = createAsDeleted
-            val span                 = hp.tracer.internalSpan(SubdocMutateRequest.OPERATION_NAME, parentSpan.orNull)
+            val span =
+              hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN, parentSpan.orNull)
 
             if (requiresBucketConfig) {
               SMono(BucketConfigUtil.waitForBucketConfig(hp.core, hp.bucketName, timeout))

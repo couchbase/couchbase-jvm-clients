@@ -17,6 +17,7 @@
 package com.couchbase.client.scala.query.handlers
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest
 import com.couchbase.client.scala.HandlerBasicParams
@@ -79,7 +80,8 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
           options.readonly.getOrElse(false),
           params.str("client_context_id"),
           statement,
-          hp.tracer.internalSpan(AnalyticsRequest.OPERATION_NAME, options.parentSpan.orNull)
+          hp.tracer
+            .requestSpan(TracingIdentifiers.SPAN_REQUEST_ANALYTICS, options.parentSpan.orNull)
         )
       })
     }

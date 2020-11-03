@@ -18,7 +18,8 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
@@ -239,7 +240,7 @@ public class AsyncScope {
     options.injectParams(query);
     final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
     final String clientContextId = query.getString("client_context_id");
-    final InternalSpan span = environment.requestTracer().internalSpan(QueryRequest.OPERATION_NAME,
+    final RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY,
         options.parentSpan().orElse(null));
 
     QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(),
@@ -297,9 +298,9 @@ public class AsyncScope {
 
     final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
     final String clientContextId = query.getString("client_context_id");
-    final InternalSpan span = environment()
+    final RequestSpan span = environment()
         .requestTracer()
-        .internalSpan(AnalyticsRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+        .requestSpan(TracingIdentifiers.SPAN_REQUEST_ANALYTICS, opts.parentSpan().orElse(null));
     AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, core.context().authenticator(),
         queryBytes, opts.priority(), opts.readonly(), clientContextId, statement, span
     );

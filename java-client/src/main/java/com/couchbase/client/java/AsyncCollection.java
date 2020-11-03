@@ -19,14 +19,13 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.error.*;
 import com.couchbase.client.core.error.context.AggregateErrorContext;
-import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -45,7 +44,6 @@ import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.msg.kv.TouchRequest;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
-import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.BucketConfigUtil;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -284,7 +282,7 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    InternalSpan span = environment.requestTracer().internalSpan(GetRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET, opts.parentSpan().orElse(null));
     GetRequest request = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy, span);
     request.context().clientContext(opts.clientContext());
     return request;
@@ -369,7 +367,7 @@ public class AsyncCollection {
       }
     }
 
-    InternalSpan span = environment.requestTracer().internalSpan(SubdocGetRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN,  opts.parentSpan().orElse(null));
     SubdocGetRequest request = new SubdocGetRequest(
       timeout, coreContext, collectionIdentifier, retryStrategy, id, (byte) 0x00, commands, span
     );
@@ -428,7 +426,7 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    InternalSpan span = environment.requestTracer().internalSpan(GetAndLockRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GAL, opts.parentSpan().orElse(null));
     GetAndLockRequest request = new GetAndLockRequest(
       id, timeout, coreContext, collectionIdentifier, retryStrategy, lockTime, span
     );
@@ -481,7 +479,7 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    InternalSpan span = environment.requestTracer().internalSpan(GetAndTouchRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GAT, opts.parentSpan().orElse(null));
     long encodedExpiry = expiry.encode(environment.eventBus());
     GetAndTouchRequest request = new GetAndTouchRequest(
       id, timeout, coreContext, collectionIdentifier, retryStrategy, encodedExpiry, span
@@ -526,7 +524,7 @@ public class AsyncCollection {
         .thenApply(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest)))
         .collect(Collectors.toList())
       )
-      .whenComplete((completableFutures, throwable) -> parent.finish());
+      .whenComplete((completableFutures, throwable) -> parent.end(environment.requestTracer()));
   }
 
   /**
@@ -592,7 +590,7 @@ public class AsyncCollection {
       }));
     });
 
-    return anyReplicaFuture.whenComplete((getReplicaResult, throwable) -> parent.finish());
+    return anyReplicaFuture.whenComplete((getReplicaResult, throwable) -> parent.end(environment.requestTracer()));
   }
 
   /**
@@ -614,13 +612,13 @@ public class AsyncCollection {
       int numReplicas = ((CouchbaseBucketConfig) config).numberOfReplicas();
       List<GetRequest> requests = new ArrayList<>(numReplicas + 1);
 
-      InternalSpan span = environment.requestTracer().internalSpan(GetRequest.OPERATION_NAME, parent);
+      RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET, parent);
       GetRequest activeRequest = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy, span);
       activeRequest.context().clientContext(opts.clientContext());
       requests.add(activeRequest);
 
       for (int i = 0; i < numReplicas; i++) {
-        InternalSpan replicaSpan = environment.requestTracer().internalSpan(ReplicaGetRequest.OPERATION_NAME, parent);
+        RequestSpan replicaSpan = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA, parent);
         ReplicaGetRequest replicaRequest = new ReplicaGetRequest(
           id, timeout, coreContext, collectionIdentifier, retryStrategy, (short) (i + 1), replicaSpan
         );
@@ -685,7 +683,7 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    InternalSpan span = environment.requestTracer().internalSpan(GetMetaRequest.OPERATION_NAME_EXISTS, opts.parentSpan().orElse(null));
+    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_EXISTS, opts.parentSpan().orElse(null));
     GetMetaRequest request = new GetMetaRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy, span);
     request.context().clientContext(opts.clientContext());
     return request;
@@ -726,9 +724,9 @@ public class AsyncCollection {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    final InternalSpan span = environment
+    final RequestSpan span = environment
       .requestTracer()
-      .internalSpan(RemoveRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+      .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_REMOVE, opts.parentSpan().orElse(null));
     RemoveRequest request = new RemoveRequest(id, opts.cas(), timeout,
       coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context().clientContext(opts.clientContext());
@@ -776,17 +774,19 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
-    final InternalSpan span = environment
+    final RequestSpan span = environment
       .requestTracer()
-      .internalSpan(InsertRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+      .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_INSERT, opts.parentSpan().orElse(null));
 
+    final RequestSpan encodeSpan = environment
+      .requestTracer()
+      .requestSpan(TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
     long start = System.nanoTime();
     Transcoder.EncodedValue encoded;
     try {
-      span.startPayloadEncoding();
       encoded = transcoder.encode(content);
     } finally {
-      span.stopPayloadEncoding();
+      encodeSpan.end(environment.requestTracer());
     }
     long end = System.nanoTime();
 
@@ -840,17 +840,19 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
-    final InternalSpan span = environment
+    final RequestSpan span = environment
       .requestTracer()
-      .internalSpan(UpsertRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+      .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_UPSERT, opts.parentSpan().orElse(null));
 
+    final RequestSpan encodeSpan = environment
+      .requestTracer()
+      .requestSpan(TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
     long start = System.nanoTime();
     Transcoder.EncodedValue encoded;
     try {
-      span.startPayloadEncoding();
       encoded = transcoder.encode(content);
     } finally {
-      span.stopPayloadEncoding();
+      encodeSpan.end(environment.requestTracer());
     }
     long end = System.nanoTime();
 
@@ -904,17 +906,19 @@ public class AsyncCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
-    final InternalSpan span = environment
+    final RequestSpan span = environment
       .requestTracer()
-      .internalSpan(ReplaceRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+      .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_REPLACE, opts.parentSpan().orElse(null));
 
+    final RequestSpan encodeSpan = environment
+      .requestTracer()
+      .requestSpan(TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
     long start = System.nanoTime();
     Transcoder.EncodedValue encoded;
     try {
-      span.startPayloadEncoding();
       encoded = transcoder.encode(content);
     } finally {
-      span.stopPayloadEncoding();
+      encodeSpan.end(environment.requestTracer());
     }
     long end = System.nanoTime();
 
@@ -967,7 +971,7 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    InternalSpan span = environment.requestTracer().internalSpan(TouchRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_TOUCH, opts.parentSpan().orElse(null));
     long encodedExpiry = expiry.encode(environment.eventBus());
     TouchRequest request = new TouchRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
         encodedExpiry, span);
@@ -1016,7 +1020,7 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    InternalSpan span = environment.requestTracer().internalSpan(UnlockRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_UNLOCK, opts.parentSpan().orElse(null));
     UnlockRequest request = new UnlockRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, cas, span);
     request.context().clientContext(opts.clientContext());
     return request;
@@ -1079,7 +1083,7 @@ public class AsyncCollection {
       flags |= SubdocMutateRequest.SUBDOC_DOC_FLAG_ACCESS_DELETED;
     }
 
-    InternalSpan span = environment.requestTracer().internalSpan(SubdocGetRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, opts.parentSpan().orElse(null));
     SubdocGetRequest request = new SubdocGetRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
       flags, commands, span);
     request.context().clientContext(opts.clientContext());
@@ -1158,26 +1162,29 @@ public class AsyncCollection {
         RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
         JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
 
-        final InternalSpan span = environment
+        final RequestSpan span = environment
           .requestTracer()
-          .internalSpan(SubdocMutateRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+          .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN, opts.parentSpan().orElse(null));
 
         ArrayList<SubdocMutateRequest.Command> commands = new ArrayList<>(specs.size());
 
-        long start = System.nanoTime();
-        try {
-          span.startPayloadEncoding();
+      final RequestSpan encodeSpan = environment
+        .requestTracer()
+        .requestSpan(TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
+      long start = System.nanoTime();
+
+      try {
           for (int i = 0; i < specs.size(); i++) {
             MutateInSpec spec = specs.get(i);
             commands.add(spec.encode(serializer, i));
           }
         } finally {
-          span.stopPayloadEncoding();
+          encodeSpan.end(environment.requestTracer());
         }
-        long end = System.nanoTime();
+      long end = System.nanoTime();
 
-        // xattrs come first
-        commands.sort(Comparator.comparing(v -> !v.xattr()));
+      // xattrs come first
+      commands.sort(Comparator.comparing(v -> !v.xattr()));
 
       long expiry = opts.expiry().encode(environment.eventBus());
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, bucketConfig, retryStrategy, id,

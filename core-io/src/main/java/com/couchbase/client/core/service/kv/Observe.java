@@ -17,8 +17,8 @@
 package com.couchbase.client.core.service.kv;
 
 import com.couchbase.client.core.Reactor;
-import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
@@ -63,7 +63,7 @@ public class Observe {
       return Flux.just(validateReplicas(config, ctx.persistTo(), ctx.replicateTo()));
     })
     .flatMap(replicas -> viaMutationToken(replicas, ctx, parentSpan));
-    return maybeRetry(observed, ctx).timeout(ctx.timeout(), ctx.environment().scheduler()).doFinally(t -> parentSpan.finish());
+    return maybeRetry(observed, ctx).timeout(ctx.timeout(), ctx.environment().scheduler()).doFinally(t -> parentSpan.end(ctx.environment().requestTracer()));
   }
 
   private static Flux<ObserveItem> viaMutationToken(final int bucketReplicas, final ObserveContext ctx,
@@ -79,16 +79,16 @@ public class Observe {
 
     List<ObserveViaSeqnoRequest> requests = new ArrayList<>();
     if (ctx.persistTo() != ObservePersistTo.NONE) {
-      final InternalSpan span = ctx.environment().requestTracer()
-        .internalSpan(ObserveViaSeqnoRequest.OPERATION_NAME, parent);
+      final RequestSpan span = ctx.environment().requestTracer()
+        .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_OBSERVE, parent);
       requests.add(new ObserveViaSeqnoRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, 0, true,
         mutationToken.partitionUUID(), id, span));
     }
 
     if (ctx.persistTo().touchesReplica() || ctx.replicateTo().touchesReplica()) {
       for (short i = 1; i <= bucketReplicas; i++) {
-        final InternalSpan span = ctx.environment().requestTracer()
-          .internalSpan(ObserveViaSeqnoRequest.OPERATION_NAME, parent);
+        final RequestSpan span = ctx.environment().requestTracer()
+          .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_OBSERVE, parent);
         requests.add(new ObserveViaSeqnoRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, i, false,
           mutationToken.partitionUUID(), id, span));
       }

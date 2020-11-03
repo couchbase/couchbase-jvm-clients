@@ -17,6 +17,7 @@
 package com.couchbase.client.scala.query.handlers
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.msg.search.{SearchChunkTrailer, SearchRequest, SearchResponse}
 import com.couchbase.client.scala.HandlerBasicParams
@@ -87,7 +88,7 @@ private[scala] class SearchHandler(hp: HandlerBasicParams) {
           core.context().authenticator(),
           indexName,
           queryBytes,
-          hp.tracer.internalSpan(SearchRequest.OPERATION_NAME, options.parentSpan.orNull)
+          hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH, options.parentSpan.orNull)
         )
       )
     }

@@ -18,7 +18,8 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -114,7 +115,7 @@ public class AsyncBinaryCollection {
 
     Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    InternalSpan span = environment.requestTracer().internalSpan(AppendRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_APPEND, opts.parentSpan().orElse(null));
     AppendRequest request = new AppendRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, content,
       opts.cas(), opts.durabilityLevel(), span);
     request.context().clientContext(opts.clientContext());
@@ -160,7 +161,7 @@ public class AsyncBinaryCollection {
 
     Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    InternalSpan span = environment.requestTracer().internalSpan(PrependRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_PREPEND, opts.parentSpan().orElse(null));
     PrependRequest request = new PrependRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, content,
       opts.cas(), opts.durabilityLevel(), span);
     request.context().clientContext(opts.clientContext());
@@ -200,7 +201,7 @@ public class AsyncBinaryCollection {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    InternalSpan span = environment.requestTracer().internalSpan(IncrementRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_INCREMENT, opts.parentSpan().orElse(null));
 
     long expiry = opts.expiry().encode(environment.eventBus());
     IncrementRequest request = new IncrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
@@ -242,7 +243,7 @@ public class AsyncBinaryCollection {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    InternalSpan span = environment.requestTracer().internalSpan(DecrementRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_DECREMENT, opts.parentSpan().orElse(null));
 
     long expiry = opts.expiry().encode(environment.eventBus());
     DecrementRequest request = new DecrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,

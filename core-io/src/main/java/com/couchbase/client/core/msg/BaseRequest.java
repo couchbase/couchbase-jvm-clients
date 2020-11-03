@@ -17,7 +17,8 @@
 package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.tracing.ThresholdRequestSpan;
 import com.couchbase.client.core.error.AmbiguousTimeoutException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
@@ -79,7 +80,10 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
    */
   private final RetryStrategy retryStrategy;
 
-  private final InternalSpan requestSpan;
+  /**
+   * If present, holds the tracing request span.
+   */
+  private final RequestSpan requestSpan;
 
   /**
    * Stores the time when the request got created.
@@ -111,7 +115,7 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
    * @param ctx the context if provided.
    */
   public BaseRequest(final Duration timeout, final CoreContext ctx,
-                     final RetryStrategy retryStrategy, final InternalSpan requestSpan) {
+                     final RetryStrategy retryStrategy, final RequestSpan requestSpan) {
     if (timeout == null) {
       throw InvalidArgumentException.fromMessage("A Timeout must be provided");
     }
@@ -126,8 +130,8 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
     this.ctx = new RequestContext(ctx, this);
     this.retryStrategy = retryStrategy == null ? ctx.environment().retryStrategy() : retryStrategy;
 
-    if (requestSpan != null) {
-      requestSpan.requestContext(this.ctx);
+    if (requestSpan instanceof ThresholdRequestSpan) {
+      ((ThresholdRequestSpan) requestSpan).requestContext(this.ctx);
     }
     this.requestSpan = requestSpan;
   }
@@ -235,7 +239,7 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   }
 
   @Override
-  public InternalSpan internalSpan() {
+  public RequestSpan requestSpan() {
     return requestSpan;
   }
 

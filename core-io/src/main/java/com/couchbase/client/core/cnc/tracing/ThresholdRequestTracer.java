@@ -18,8 +18,8 @@ package com.couchbase.client.core.cnc.tracing;
 
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.tracing.OverThresholdRequestsRecordedEvent;
 import com.couchbase.client.core.deps.org.jctools.queues.MpscUnboundedArrayQueue;
 import com.couchbase.client.core.env.ThresholdRequestTracerConfig;
@@ -121,13 +121,8 @@ public class ThresholdRequestTracer implements RequestTracer {
   }
 
   @Override
-  public InternalSpan internalSpan(final String operationName, final RequestSpan parent) {
-    return new ThresholdInternalSpan(this, operationName, parent);
-  }
-
-  @Override
-  public RequestSpan requestSpan(final String operationName, final RequestSpan parent) {
-    return ThresholdRequestSpan.INSTANCE;
+  public RequestSpan requestSpan(final String name, final RequestSpan parent) {
+    return new ThresholdRequestSpan();
   }
 
   /**
@@ -135,11 +130,13 @@ public class ThresholdRequestTracer implements RequestTracer {
    *
    * @param span the finished internal span from the toplevel request.
    */
-  void finish(final ThresholdInternalSpan span) {
-    final Request<?> request = span.requestContext().request();
-    if (isOverThreshold(request)) {
-      if (!overThresholdQueue.offer(request)) {
-        // TODO: what to do if dropped because queue full? raise event?
+  void finish(final ThresholdRequestSpan span) {
+    if (span.requestContext() != null) {
+      final Request<?> request = span.requestContext().request();
+      if (isOverThreshold(request)) {
+        if (!overThresholdQueue.offer(request)) {
+          // TODO: what to do if dropped because queue full? raise event?
+        }
       }
     }
   }
@@ -292,27 +289,27 @@ public class ThresholdRequestTracer implements RequestTracer {
 
       List<Map<String, Object>> output = new ArrayList<>();
       if (!kvThresholds.isEmpty()) {
-        output.add(convertThresholdMetadata(kvThresholds, kvThresholdCount, SERVICE_IDENTIFIER_KV));
+        output.add(convertThresholdMetadata(kvThresholds, kvThresholdCount, TracingIdentifiers.SERVICE_KV));
         kvThresholds.clear();
         kvThresholdCount = 0;
       }
       if (!n1qlThresholds.isEmpty()) {
-        output.add(convertThresholdMetadata(n1qlThresholds, n1qlThresholdCount, SERVICE_IDENTIFIER_QUERY));
+        output.add(convertThresholdMetadata(n1qlThresholds, n1qlThresholdCount, TracingIdentifiers.SERVICE_QUERY));
         n1qlThresholds.clear();
         n1qlThresholdCount = 0;
       }
       if (!viewThresholds.isEmpty()) {
-        output.add(convertThresholdMetadata(viewThresholds, viewThresholdCount, SERVICE_IDENTIFIER_VIEW));
+        output.add(convertThresholdMetadata(viewThresholds, viewThresholdCount, TracingIdentifiers.SERVICE_VIEWS));
         viewThresholds.clear();
         viewThresholdCount = 0;
       }
       if (!ftsThresholds.isEmpty()) {
-        output.add(convertThresholdMetadata(ftsThresholds, ftsThresholdCount, SERVICE_IDENTIFIER_SEARCH));
+        output.add(convertThresholdMetadata(ftsThresholds, ftsThresholdCount, TracingIdentifiers.SERVICE_SEARCH));
         ftsThresholds.clear();
         ftsThresholdCount = 0;
       }
       if (!analyticsThresholds.isEmpty()) {
-        output.add(convertThresholdMetadata(analyticsThresholds, analyticsThresholdCount, SERVICE_IDENTIFIER_ANALYTICS));
+        output.add(convertThresholdMetadata(analyticsThresholds, analyticsThresholdCount, TracingIdentifiers.SERVICE_ANALYTICS));
         analyticsThresholds.clear();
         analyticsThresholdCount = 0;
       }

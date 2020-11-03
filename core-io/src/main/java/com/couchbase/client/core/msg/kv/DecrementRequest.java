@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -36,8 +36,6 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
 public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> implements SyncDurabilityRequest {
 
-  public static final String OPERATION_NAME = "decrement";
-
   private final long delta;
   private final Optional<Long> initial;
   private final long expiry;
@@ -46,7 +44,7 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> imp
   public DecrementRequest(Duration timeout, CoreContext ctx, CollectionIdentifier collectionIdentifier,
                           RetryStrategy retryStrategy, String key,
                           long delta, Optional<Long> initial, long expiry,
-                          final Optional<DurabilityLevel> syncReplicationType, InternalSpan span) {
+                          final Optional<DurabilityLevel> syncReplicationType, RequestSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     if (initial.isPresent() && initial.get() < 0) {
       throw InvalidArgumentException.fromMessage("The initial needs to be >= 0");

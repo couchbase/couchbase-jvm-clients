@@ -26,6 +26,8 @@ import com.couchbase.client.scala.util.{DurationConversions, Validate}
 import com.couchbase.client.scala.view.ViewOptions
 import java.nio.charset.StandardCharsets.UTF_8
 
+import com.couchbase.client.core.cnc.TracingIdentifiers
+
 import scala.compat.java8.OptionConverters._
 import com.couchbase.client.core.msg.view.ViewRequest
 import com.couchbase.client.scala.HandlerBasicParams
@@ -104,7 +106,7 @@ private[scala] class ViewHandler(hp: HandlerBasicParams) {
           params,
           bytes.asJava,
           isDevelopment,
-          hp.tracer.internalSpan(ViewRequest.OPERATION_NAME, options.parentSpan.orNull)
+          hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_VIEWS, options.parentSpan.orNull)
         )
       )
     }

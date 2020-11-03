@@ -18,6 +18,9 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.KeyValueErrorMapCodeHandledEvent;
@@ -79,6 +82,11 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   private final IntObjectMap<KeyValueRequest<Response>> writtenRequests;
 
   /**
+   * Holds all outstanding requests based on their opaque.
+   */
+  private final IntObjectMap<RequestSpan> writtenRequestDispatchSpans;
+
+  /**
    * Holds the start timestamps for the outstanding dispatched requests.
    */
   private final IntObjectMap<Long> writtenRequestDispatchTimings;
@@ -129,6 +137,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     this.endpointContext = endpointContext;
     this.writtenRequests = new IntObjectHashMap<>();
     this.writtenRequestDispatchTimings = new IntObjectHashMap<>();
+    this.writtenRequestDispatchSpans = new IntObjectHashMap<>();
     this.compressionConfig = endpointContext.environment().compressionConfig();
     this.eventBus = endpointContext.environment().eventBus();
     this.bucketName = bucketName;
@@ -195,9 +204,14 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       try {
         ctx.write(request.encode(ctx.alloc(), opaque, channelContext), promise);
         writtenRequestDispatchTimings.put(opaque, (Long) System.nanoTime());
-        if (request.internalSpan() != null) {
-          request.internalSpan().startDispatch();
+        if (request.requestSpan() != null) {
+          RequestSpan dispatchSpan = endpointContext
+            .environment()
+            .requestTracer()
+            .requestSpan(TracingIdentifiers.SPAN_DISPATCH, request.requestSpan());
+          writtenRequestDispatchSpans.put(opaque, dispatchSpan);
         }
+
       } catch (Throwable err) {
         writtenRequests.remove(opaque);
         if (err instanceof CollectionNotFoundException) {
@@ -269,8 +283,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     long start = writtenRequestDispatchTimings.remove(opaque);
     request.context().dispatchLatency(System.nanoTime() - start);
 
-    if (request.internalSpan() != null) {
-      request.internalSpan().stopDispatch();
+    RequestSpan dispatchSpan = writtenRequestDispatchSpans.remove(opaque);
+    if (dispatchSpan != null) {
+      dispatchSpan.end(endpointContext.environment().requestTracer());
     }
 
     short statusCode = MemcacheProtocol.status(response);

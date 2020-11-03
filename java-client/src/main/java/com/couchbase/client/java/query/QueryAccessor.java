@@ -19,7 +19,7 @@ package com.couchbase.client.java.query;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.events.request.PreparedStatementRetriedEvent;
 import com.couchbase.client.core.config.ClusterCapabilities;
 import com.couchbase.client.core.config.ClusterConfig;
@@ -240,8 +240,8 @@ public class QueryAccessor {
         }
 
 
-        InternalSpan span = core.context().environment().requestTracer()
-          .internalSpan("prepare", original.internalSpan().toRequestSpan());
+        RequestSpan span = core.context().environment().requestTracer()
+          .requestSpan("prepare", original.requestSpan());
 
         return new QueryRequest(
           original.timeout(),
@@ -271,8 +271,8 @@ public class QueryAccessor {
         query.put("timeout", encodeDurationToMs(original.timeout()));
         originalOptions.injectParams(query);
 
-        InternalSpan span = core.context().environment().requestTracer()
-          .internalSpan("execute", original.internalSpan().toRequestSpan());
+        RequestSpan span = core.context().environment().requestTracer()
+          .requestSpan("execute", original.requestSpan());
 
         return new QueryRequest(
           original.timeout(),

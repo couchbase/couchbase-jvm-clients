@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.cnc.RequestSpan
+import com.couchbase.client.core.cnc.{RequestSpan, RequestTracer, TracingIdentifiers}
 import com.couchbase.client.core.error.EncodingFailureException
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{KeyValueRequest, UpsertRequest, UpsertResponse}
@@ -63,17 +63,18 @@ private[scala] class UpsertHandler(hp: HandlerParams)
     if (validations.isFailure) {
       validations
     } else {
-      val span  = hp.tracer.internalSpan(UpsertRequest.OPERATION_NAME, parentSpan.orNull)
-      val start = System.nanoTime()
-      span.startPayloadEncoding()
+      val span = hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_UPSERT, parentSpan.orNull)
+
+      val encodeSpan = hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_ENCODING, span)
+      val start      = System.nanoTime()
 
       val encoded: Try[EncodedValue] = transcoder match {
         case x: TranscoderWithSerializer    => x.encode(content, serializer)
         case x: TranscoderWithoutSerializer => x.encode(content)
       }
 
-      span.stopPayloadEncoding()
       val end = System.nanoTime()
+      encodeSpan.`end`(hp.tracer)
 
       encoded match {
         case Success(en) =>

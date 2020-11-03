@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
@@ -37,15 +37,13 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
 public class PrependRequest extends BaseKeyValueRequest<PrependResponse> implements SyncDurabilityRequest {
 
-  public static final String OPERATION_NAME = "prepend";
-
   private final byte[] content;
   private final long cas;
   private final Optional<DurabilityLevel> syncReplicationType;
 
   public PrependRequest(Duration timeout, CoreContext ctx, CollectionIdentifier collectionIdentifier,
                         RetryStrategy retryStrategy, String key, byte[] content,
-                        long cas, final Optional<DurabilityLevel> syncReplicationType, InternalSpan span) {
+                        long cas, final Optional<DurabilityLevel> syncReplicationType, RequestSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.content = content;
     this.cas = cas;

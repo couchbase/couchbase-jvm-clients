@@ -17,16 +17,40 @@
 package com.couchbase.client.core.cnc.tracing;
 
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.msg.RequestContext;
 
+import java.time.Instant;
+
+/**
+ * A NOOP implementation of a request span, utilized by the {@link NoopRequestTracer}.
+ * <p>
+ * Calling individual methods on this span won't do anything, since, well, it's a noop.
+ */
 public class NoopRequestSpan implements RequestSpan {
 
-  public static NoopRequestSpan INSTANCE = new NoopRequestSpan();
+  /**
+   * Holds a single, static representation of this span.
+   */
+  public static final NoopRequestSpan INSTANCE = new NoopRequestSpan();
 
   private NoopRequestSpan() {
   }
 
   @Override
-  public void finish() {
-
+  public void setAttribute(String key, String value) {
   }
+
+  @Override
+  public void addEvent(String name, Instant timestamp) {
+  }
+
+  @Override
+  public void end(RequestTracer tracer) {
+  }
+
+  @Override
+  public void requestContext(RequestContext requestContext) {
+  }
+
 }

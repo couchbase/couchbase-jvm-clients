@@ -17,9 +17,14 @@
 package com.couchbase.client.tracing.opentracing;
 
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.msg.RequestContext;
 import io.opentracing.Scope;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -37,6 +42,8 @@ public class OpenTracingRequestSpan implements RequestSpan {
    * The OT tracer in use.
    */
   private final Tracer tracer;
+
+  private volatile RequestContext requestContext;
 
   private OpenTracingRequestSpan(final Tracer tracer, final Span span) {
     notNull(tracer, "Tracer");
@@ -63,9 +70,25 @@ public class OpenTracingRequestSpan implements RequestSpan {
   }
 
   @Override
-  public void finish() {
-    try (Scope scope = tracer.activateSpan(span)) {
+  public void setAttribute(String key, String value) {
+    span.setTag(key, value);
+  }
+
+  @Override
+  public void addEvent(String name, Instant timestamp) {
+    span.log(ChronoUnit.MICROS.between(Instant.EPOCH, timestamp), name);
+  }
+
+  @Override
+  public void end(RequestTracer tracer) {
+    try (Scope scope = this.tracer.activateSpan(span)) {
       span.finish();
     }
   }
+
+  @Override
+  public void requestContext(RequestContext requestContext) {
+    this.requestContext = requestContext;
+  }
+
 }

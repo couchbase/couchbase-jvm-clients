@@ -24,8 +24,6 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
-
 /**
  * Wraps the OpenTracing tracer so it is suitable to be passed in into the couchbase environment and picked up
  * by the rest of the SDK as a result.
@@ -50,12 +48,6 @@ public class OpenTracingRequestTracer implements RequestTracer {
 
   private OpenTracingRequestTracer(Tracer tracer) {
     this.tracer = tracer;
-  }
-
-  @Override
-  public OpenTracingInternalSpan internalSpan(final String operationName, final RequestSpan requestSpan) {
-    notNullOrEmpty(operationName, "OperationName");
-    return new OpenTracingInternalSpan(tracer, castSpan(requestSpan), operationName);
   }
 
   private Span castSpan(final RequestSpan requestSpan) {

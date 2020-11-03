@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.cnc.RequestSpan
+import com.couchbase.client.core.cnc.{RequestSpan, TracingIdentifiers}
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.error.context.KeyValueErrorContext
 import com.couchbase.client.core.msg.ResponseStatus
@@ -65,7 +65,7 @@ private[scala] class GetAndTouchHandler(hp: HandlerParams)
           hp.collectionIdentifier,
           retryStrategy,
           expiration.getSeconds,
-          hp.tracer.internalSpan(GetAndTouchRequest.OPERATION_NAME, parentSpan.orNull)
+          hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GAT, parentSpan.orNull)
         )
       )
     }

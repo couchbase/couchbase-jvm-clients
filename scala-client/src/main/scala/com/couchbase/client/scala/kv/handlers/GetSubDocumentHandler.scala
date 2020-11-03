@@ -18,7 +18,7 @@ package com.couchbase.client.scala.kv.handlers
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-import com.couchbase.client.core.cnc.RequestSpan
+import com.couchbase.client.core.cnc.{RequestSpan, TracingIdentifiers}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.context.{KeyValueErrorContext, ReducedKeyValueErrorContext}
 import com.couchbase.client.core.error.{CouchbaseException, DocumentNotFoundException}
@@ -95,7 +95,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
             id,
             0,
             commands,
-            hp.tracer.internalSpan(SubdocGetRequest.OPERATION_NAME, parentSpan.orNull)
+            hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, parentSpan.orNull)
           )
         )
       }

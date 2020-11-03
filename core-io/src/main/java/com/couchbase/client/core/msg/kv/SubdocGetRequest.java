@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
@@ -44,8 +44,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
-  public static final String OPERATION_NAME = "subdoc_get";
-
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
 
   private final byte flags;
@@ -54,7 +52,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
   public SubdocGetRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                           final RetryStrategy retryStrategy, final String key,
-                          final byte flags, final List<Command> commands, final InternalSpan span) {
+                          final byte flags, final List<Command> commands, final RequestSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.flags = flags;
     this.commands = commands;

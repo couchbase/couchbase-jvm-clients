@@ -19,6 +19,7 @@ package com.couchbase.client.scala.query.handlers
 import java.nio.charset.StandardCharsets
 import java.util.Collections
 
+import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.cnc.events.request.PreparedStatementRetriedEvent
 import com.couchbase.client.core.config.{ClusterCapabilities, ClusterConfig}
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
@@ -144,7 +145,8 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
               queryBytes,
               options.readonly.getOrElse(false),
               params.str("client_context_id"),
-              hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, options.parentSpan.orNull),
+              hp.tracer
+                .requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, options.parentSpan.orNull),
               queryContext.orNull
             )
 
@@ -346,7 +348,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       query.toString.getBytes(StandardCharsets.UTF_8),
       true,
       query.str("client_context_id"),
-      hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, options.parentSpan.orNull),
+      hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, options.parentSpan.orNull),
       original.queryContext()
     )
   }
@@ -380,7 +382,8 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       query.toString.getBytes(StandardCharsets.UTF_8),
       originalOptions.readonly.getOrElse(false),
       query.str("client_context_id"),
-      hp.tracer.internalSpan(QueryRequest.OPERATION_NAME, originalOptions.parentSpan.orNull),
+      hp.tracer
+        .requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, originalOptions.parentSpan.orNull),
       original.queryContext()
     )
   }

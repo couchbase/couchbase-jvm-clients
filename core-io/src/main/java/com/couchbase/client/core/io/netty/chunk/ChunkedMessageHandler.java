@@ -16,6 +16,9 @@
 
 package com.couchbase.client.core.io.netty.chunk;
 
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
@@ -94,6 +97,11 @@ public abstract class ChunkedMessageHandler
   private REQ currentRequest;
 
   /**
+   * Holds the current dispatch span.
+   */
+  private RequestSpan currentDispatchSpan;
+
+  /**
    * Holds the current response.
    */
   private R currentResponse;
@@ -153,8 +161,11 @@ public abstract class ChunkedMessageHandler
       encoded.headers().set(HttpHeaderNames.USER_AGENT, endpointContext.environment().userAgent().formattedLong());
       chunkResponseParser.updateRequestContext(currentRequest.context());
       dispatchTimingStart = System.nanoTime();
-      if (currentRequest.internalSpan() != null) {
-        currentRequest.internalSpan().startDispatch();
+      if (currentRequest.requestSpan() != null) {
+        currentDispatchSpan = endpointContext
+          .environment()
+          .requestTracer()
+          .requestSpan(TracingIdentifiers.SPAN_DISPATCH, currentRequest.requestSpan());
       }
       ctx.write(encoded, promise);
     } catch (Throwable t) {
@@ -221,8 +232,8 @@ public abstract class ChunkedMessageHandler
 
   private void handleHttpResponse(final ChannelHandlerContext ctx, final HttpResponse msg) {
     currentRequest.context().dispatchLatency(System.nanoTime() - dispatchTimingStart);
-    if (currentRequest.internalSpan() != null) {
-      currentRequest.internalSpan().stopDispatch();
+    if (currentDispatchSpan != null) {
+      currentDispatchSpan.end(endpointContext.environment().requestTracer());
     }
     currentResponseStatus = msg;
     chunkResponseParser.updateResponseHeader(msg);
@@ -285,6 +296,7 @@ public abstract class ChunkedMessageHandler
     chunkResponseParser.cleanup();
     currentResponse = null;
     currentRequest = null;
+    currentDispatchSpan = null;
     currentResponseStatus = null;
     dispatchTimingStart = 0;
   }

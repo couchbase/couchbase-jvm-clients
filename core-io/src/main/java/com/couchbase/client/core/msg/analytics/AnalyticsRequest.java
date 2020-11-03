@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.analytics;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -46,9 +46,6 @@ public class AnalyticsRequest
   extends BaseRequest<AnalyticsResponse>
   implements HttpRequest<AnalyticsChunkHeader, AnalyticsChunkRow, AnalyticsChunkTrailer, AnalyticsResponse> {
 
-  public static final String OPERATION_NAME = "analytics";
-
-
   public static final int NO_PRIORITY = 0;
 
   private static final String URI = "/analytics/service";
@@ -62,7 +59,7 @@ public class AnalyticsRequest
 
   public AnalyticsRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
                           final Authenticator authenticator, final byte[] query, int priority, boolean idempotent,
-                          final String contextId, final String statement, final InternalSpan span) {
+                          final String contextId, final String statement, final RequestSpan span) {
     super(timeout, ctx, retryStrategy, span);
     this.query = query;
     this.authenticator = authenticator;

@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
@@ -41,15 +41,13 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
  */
 public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> implements SyncDurabilityRequest {
 
-  public static final String OPERATION_NAME = "remove";
-
   private final long cas;
   private final Optional<DurabilityLevel> syncReplicationType;
 
   public RemoveRequest(final String key, final long cas, final Duration timeout,
                        final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                        final RetryStrategy retryStrategy,
-                       final Optional<DurabilityLevel> syncReplicationType, final InternalSpan span) {
+                       final Optional<DurabilityLevel> syncReplicationType, final RequestSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.cas = cas;
     this.syncReplicationType = syncReplicationType;

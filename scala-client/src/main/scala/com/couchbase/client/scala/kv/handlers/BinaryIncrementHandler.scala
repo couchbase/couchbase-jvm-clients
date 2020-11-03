@@ -18,7 +18,7 @@ package com.couchbase.client.scala.kv.handlers
 
 import java.util.Optional
 
-import com.couchbase.client.core.cnc.RequestSpan
+import com.couchbase.client.core.cnc.{RequestSpan, TracingIdentifiers}
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{IncrementRequest, IncrementResponse, KeyValueRequest}
 import com.couchbase.client.core.retry.RetryStrategy
@@ -79,7 +79,7 @@ private[scala] class BinaryIncrementHandler(hp: HandlerParams)
           i,
           expiration.getSeconds.toInt,
           durability.toDurabilityLevel,
-          hp.tracer.internalSpan(IncrementRequest.OPERATION_NAME, parentSpan.orNull)
+          hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_INCREMENT, parentSpan.orNull)
         )
       )
     }

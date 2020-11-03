@@ -17,10 +17,9 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
@@ -28,7 +27,6 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
-import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
@@ -44,13 +42,8 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
  */
 public class GetMetaRequest extends BaseKeyValueRequest<GetMetaResponse> {
 
-  /**
-   * Note: since we use getMeta for exists, the command is different.
-   */
-  public static final String OPERATION_NAME_EXISTS = "exists";
-
   public GetMetaRequest(final String key, final Duration timeout, final CoreContext ctx,
-                        final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy, final InternalSpan span) {
+                        final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy, final RequestSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
   }
 

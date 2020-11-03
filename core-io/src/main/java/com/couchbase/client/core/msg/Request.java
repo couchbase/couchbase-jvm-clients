@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.msg;
 
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 
@@ -145,7 +145,7 @@ public interface Request<R extends Response> {
    *
    * @return the internal span used for the request.
    */
-  InternalSpan internalSpan();
+  RequestSpan requestSpan();
 
   /**
    * Holds the nanoTime when the request got created.

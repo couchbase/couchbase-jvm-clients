@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
@@ -34,15 +34,13 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
 
 public class ObserveViaSeqnoRequest extends BaseKeyValueRequest<ObserveViaSeqnoResponse> {
 
-  public static final String OPERATION_NAME = "observe_seqno";
-
   private final int replica;
   private final boolean active;
   private final long vbucketUUID;
 
   public ObserveViaSeqnoRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                                 final RetryStrategy retryStrategy,
-                                final int replica, final boolean active, final long vbucketUUID, final String key, final InternalSpan span) {
+                                final int replica, final boolean active, final long vbucketUUID, final String key, final RequestSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.replica = replica;
     this.active = active;

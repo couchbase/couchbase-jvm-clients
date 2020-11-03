@@ -181,8 +181,8 @@ public class RequestContext extends CoreContext {
   @Stability.Internal
   public RequestContext logicallyComplete() {
     this.logicallyCompletedAt = System.nanoTime();
-    if (request.internalSpan() != null) {
-      request.internalSpan().finish();
+    if (request.requestSpan() != null) {
+      request.requestSpan().end(environment().requestTracer());
     }
     return this;
   }

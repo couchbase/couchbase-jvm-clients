@@ -32,57 +32,13 @@ import java.time.Duration;
 public interface RequestTracer {
 
   /**
-   * A common name for the dispatch span that implementations should use.
-   */
-  String DISPATCH_SPAN_NAME = "dispatch_to_server";
-
-  /**
-   * A common name for the value encode span that implementations should use.
-   */
-  String PAYLOAD_ENCODING_SPAN_NAME = "request_encoding";
-
-  /**
-   * The identifier commonly used to identify the kv service.
-   */
-  String SERVICE_IDENTIFIER_KV = "kv";
-
-  /**
-   * The identifier commonly used to identify the query service.
-   */
-  String SERVICE_IDENTIFIER_QUERY = "query";
-
-  /**
-   * The identifier commonly used to identify the search service.
-   */
-  String SERVICE_IDENTIFIER_SEARCH = "search";
-
-  /**
-   * The identifier commonly used to identify the view service.
-   */
-  String SERVICE_IDENTIFIER_VIEW = "view";
-
-  /**
-   * The identifier commonly used to identify the analytics service.
-   */
-  String SERVICE_IDENTIFIER_ANALYTICS = "analytics";
-
-  /**
-   * Creates a new span that represents a full request/response lifecycle in the SDK.
+   * Creates a new request span with or without a parent.
    *
-   * @param operationName the name of the toplevel operation (i.e. "get")
-   * @param parent the parent, can be null.
-   * @return an internal span representing the toplevel request.
-   */
-  InternalSpan internalSpan(String operationName, RequestSpan parent);
-
-  /**
-   * Creates a new span that is created from the underlying tracer.
-   *
-   * @param operationName the name of the toplevel operation (i.e. "get")
-   * @param parent a possible parent.
+   * @param name the name of the toplevel operation (i.e. "cb.get")
+   * @param parent a parent, if no parent is used supply null.
    * @return a request span that wraps the actual tracer implementation span.
    */
-  RequestSpan requestSpan(String operationName, RequestSpan parent);
+  RequestSpan requestSpan(String name, RequestSpan parent);
 
   /**
    * Starts the tracer if it hasn't been started, might be a noop depending on the implementation.

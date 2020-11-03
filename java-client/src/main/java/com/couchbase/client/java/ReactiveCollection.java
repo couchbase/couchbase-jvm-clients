@@ -32,7 +32,6 @@ import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.core.msg.kv.ReplaceRequest;
 import com.couchbase.client.core.msg.kv.ReplicaGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
-import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.msg.kv.TouchRequest;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
@@ -349,7 +348,7 @@ public class ReactiveCollection {
         })
         .map(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest))
       )
-      .doFinally(signalType -> parent.finish());
+      .doFinally(signalType -> parent.end(environment().requestTracer()));
   }
 
   /**
@@ -386,7 +385,7 @@ public class ReactiveCollection {
       built.parentSpan().orElse(null)
     );
     opts.parentSpan(parent);
-    return getAllReplicas(id, opts).next().doFinally(signalType -> parent.finish());
+    return getAllReplicas(id, opts).next().doFinally(signalType -> parent.end(environment().requestTracer()));
   }
 
   /**

@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.cnc.RequestSpan
+import com.couchbase.client.core.cnc.{RequestSpan, TracingIdentifiers}
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv.{GetMetaRequest, GetMetaResponse, KeyValueRequest}
 import com.couchbase.client.core.retry.RetryStrategy
@@ -56,7 +56,7 @@ private[scala] class ExistsHandler(hp: HandlerParams)
           hp.core.context(),
           hp.collectionIdentifier,
           retryStrategy,
-          hp.tracer.internalSpan(GetMetaRequest.OPERATION_NAME_EXISTS, parentSpan.orNull)
+          hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_EXISTS, parentSpan.orNull)
         )
       )
   }

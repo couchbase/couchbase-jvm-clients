@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.cnc.RequestSpan
+import com.couchbase.client.core.cnc.{RequestSpan, TracingIdentifiers}
 import com.couchbase.client.core.config.CouchbaseBucketConfig
 import com.couchbase.client.core.error.CommonExceptions
 import com.couchbase.client.core.msg.ResponseStatus
@@ -72,7 +72,8 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
                   hp.collectionIdentifier,
                   retryStrategy,
                   (replicaIndex + 1).shortValue(),
-                  hp.tracer.internalSpan(ReplicaGetRequest.OPERATION_NAME, parentSpan.orNull)
+                  hp.tracer
+                    .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA, parentSpan.orNull)
                 )
             )
 
@@ -83,7 +84,7 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
               hp.core.context(),
               hp.collectionIdentifier,
               retryStrategy,
-              hp.tracer.internalSpan(GetRequest.OPERATION_NAME, parentSpan.orNull)
+              hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET, parentSpan.orNull)
             )
 
           val requests: Seq[GetRequest] = activeRequest +: replicaRequests

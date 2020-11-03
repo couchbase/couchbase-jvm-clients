@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.cnc.RequestSpan
+import com.couchbase.client.core.cnc.{RequestSpan, TracingIdentifiers}
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
@@ -62,7 +62,7 @@ private[scala] class TouchHandler(hp: HandlerParams)
           retryStrategy,
           id,
           expiry.toSeconds,
-          hp.tracer.internalSpan(TouchRequest.OPERATION_NAME, parentSpan.orNull)
+          hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_TOUCH, parentSpan.orNull)
         )
       )
     }

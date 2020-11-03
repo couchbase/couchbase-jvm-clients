@@ -41,11 +41,6 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.couchbase.client.core.cnc.RequestTracer.SERVICE_IDENTIFIER_ANALYTICS;
-import static com.couchbase.client.core.cnc.RequestTracer.SERVICE_IDENTIFIER_KV;
-import static com.couchbase.client.core.cnc.RequestTracer.SERVICE_IDENTIFIER_QUERY;
-import static com.couchbase.client.core.cnc.RequestTracer.SERVICE_IDENTIFIER_SEARCH;
-import static com.couchbase.client.core.cnc.RequestTracer.SERVICE_IDENTIFIER_VIEW;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
 @Stability.Internal
@@ -199,27 +194,27 @@ public class OrphanReporter {
 
       List<Map<String, Object>> output = new ArrayList<>();
       if (!kvOrphans.isEmpty()) {
-        output.add(convertOrphanMetadata(kvOrphans, kvOrphanCount, SERVICE_IDENTIFIER_KV));
+        output.add(convertOrphanMetadata(kvOrphans, kvOrphanCount, TracingIdentifiers.SERVICE_KV));
         kvOrphans.clear();
         kvOrphanCount = 0;
       }
       if (!queryOrphans.isEmpty()) {
-        output.add(convertOrphanMetadata(queryOrphans, queryOrphanCount, SERVICE_IDENTIFIER_QUERY));
+        output.add(convertOrphanMetadata(queryOrphans, queryOrphanCount, TracingIdentifiers.SERVICE_QUERY));
         queryOrphans.clear();
         queryOrphanCount = 0;
       }
       if (!viewOrphans.isEmpty()) {
-        output.add(convertOrphanMetadata(viewOrphans, viewOrphanCount, SERVICE_IDENTIFIER_VIEW));
+        output.add(convertOrphanMetadata(viewOrphans, viewOrphanCount, TracingIdentifiers.SERVICE_VIEWS));
         viewOrphans.clear();
         viewOrphanCount = 0;
       }
       if (!searchOrphans.isEmpty()) {
-        output.add(convertOrphanMetadata(searchOrphans, searchOrphanCount, SERVICE_IDENTIFIER_SEARCH));
+        output.add(convertOrphanMetadata(searchOrphans, searchOrphanCount, TracingIdentifiers.SERVICE_SEARCH));
         searchOrphans.clear();
         searchOrphanCount = 0;
       }
       if (!analyticsOrphans.isEmpty()) {
-        output.add(convertOrphanMetadata(analyticsOrphans, analyticsOrphanCount, SERVICE_IDENTIFIER_ANALYTICS));
+        output.add(convertOrphanMetadata(analyticsOrphans, analyticsOrphanCount, TracingIdentifiers.SERVICE_ANALYTICS));
         analyticsOrphans.clear();
         analyticsOrphanCount = 0;
       }

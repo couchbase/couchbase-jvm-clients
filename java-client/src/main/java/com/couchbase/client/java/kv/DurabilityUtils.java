@@ -49,7 +49,7 @@ public enum DurabilityUtils {
           key,
           remove,
           request.timeout(),
-          request.internalSpan().toRequestSpan()
+          request.requestSpan()
         );
         return Observe.poll(ctx).toFuture().thenApply(v -> result);
       });

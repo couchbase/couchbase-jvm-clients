@@ -450,7 +450,7 @@ class AsyncCollection(
               id,
               false,
               timeoutActual,
-              request.internalSpan().toRequestSpan()
+              request.requestSpan()
             )
 
             FutureConversions
@@ -845,7 +845,7 @@ object AsyncCollection {
             id,
             remove,
             timeout,
-            in.get.internalSpan().toRequestSpan()
+            in.get.requestSpan()
           )
 
           FutureConversions

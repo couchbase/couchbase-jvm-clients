@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java.tracing;
 
-import com.couchbase.client.core.cnc.InternalSpan;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.error.TimeoutException;
@@ -35,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -77,7 +77,7 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
     collection.get(id);
 
     int totalFinished = 0;
-    for (TrackingInternalSpan span : requestTracer.spans) {
+    for (TrackingRequestSpan span : requestTracer.spans) {
       assertTrue(span.finished);
       totalFinished++;
     }
@@ -96,7 +96,7 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
     }
 
     int totalFinished = 0;
-    for (TrackingInternalSpan span : requestTracer.spans) {
+    for (TrackingRequestSpan span : requestTracer.spans) {
       assertTrue(span.finished);
       totalFinished++;
     }
@@ -104,14 +104,7 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
   }
 
   private static class TrackingRequestTracer implements RequestTracer {
-    final List<TrackingInternalSpan> spans = Collections.synchronizedList(new ArrayList<>());
-
-    @Override
-    public InternalSpan internalSpan(String operationName, RequestSpan parent) {
-      TrackingInternalSpan span = new TrackingInternalSpan();
-      spans.add(span);
-      return span;
-    }
+    final List<TrackingRequestSpan> spans = Collections.synchronizedList(new ArrayList<>());
 
     @Override
     public Mono<Void> start() {
@@ -125,59 +118,31 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
 
     @Override
     public RequestSpan requestSpan(String operationName, RequestSpan parent) {
-      return new TrackingRequestSpan();
-    }
-  }
-
-  private static class TrackingInternalSpan implements InternalSpan {
-
-    volatile boolean finished = false;
-
-    @Override
-    public void finish() {
-      finished = true;
-    }
-
-    @Override
-    public void requestContext(RequestContext ctx) {
-
-    }
-
-    @Override
-    public RequestContext requestContext() {
-      return null;
-    }
-
-    @Override
-    public void startPayloadEncoding() {
-
-    }
-
-    @Override
-    public void stopPayloadEncoding() {
-
-    }
-
-    @Override
-    public void startDispatch() {
-
-    }
-
-    @Override
-    public void stopDispatch() {
-
-    }
-
-    @Override
-    public RequestSpan toRequestSpan() {
-      return new TrackingRequestSpan();
+      TrackingRequestSpan span = new TrackingRequestSpan();
+      spans.add(span);
+      return span;
     }
   }
 
   private static class TrackingRequestSpan implements RequestSpan {
-    @Override
-    public void finish() {
 
+    volatile boolean finished = false;
+
+    @Override
+    public void setAttribute(String key, String value) {
+    }
+
+    @Override
+    public void addEvent(String name, Instant timestamp) {
+    }
+
+    @Override
+    public void requestContext(RequestContext requestContext) {
+    }
+
+    @Override
+    public void end(RequestTracer tracer) {
+      finished = true;
     }
   }
 

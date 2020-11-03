@@ -17,15 +17,39 @@
 package com.couchbase.client.core.cnc.tracing;
 
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.msg.RequestContext;
+
+import java.time.Instant;
 
 public class ThresholdRequestSpan implements RequestSpan {
 
-  public static ThresholdRequestSpan INSTANCE = new ThresholdRequestSpan();
+  private volatile RequestContext requestContext;
 
-  private ThresholdRequestSpan() {
+  ThresholdRequestSpan() { }
+
+  @Override
+  public void setAttribute(String key, String value) { }
+
+  @Override
+  public void addEvent(String name, Instant timestamp) { }
+
+  @Override
+  public void requestContext(RequestContext requestContext) {
+    this.requestContext = requestContext;
+  }
+
+  RequestContext requestContext() {
+    return requestContext;
   }
 
   @Override
-  public void finish() { }
+  public void end(final RequestTracer tracer) {
+    if (tracer instanceof ThresholdRequestTracer) {
+      ((ThresholdRequestTracer) tracer).finish(this);
+    } else {
+      throw new IllegalStateException("The Tracer instance is not a ThresholdRequestTracer, this is a bug!");
+    }
+  }
 
 }

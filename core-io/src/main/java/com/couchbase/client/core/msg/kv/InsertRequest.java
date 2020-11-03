@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
@@ -43,8 +43,6 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
  */
 public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implements SyncDurabilityRequest {
 
-  public static final String OPERATION_NAME = "insert";
-
   private final byte[] content;
   private final long expiration;
   private final int flags;
@@ -55,7 +53,7 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
                        final int flags, final Duration timeout,
                        final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                        final RetryStrategy retryStrategy,
-                       final Optional<DurabilityLevel> syncReplicationType, final InternalSpan span) {
+                       final Optional<DurabilityLevel> syncReplicationType, final RequestSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.content = content;
     this.expiration = expiration;

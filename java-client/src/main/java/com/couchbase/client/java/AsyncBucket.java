@@ -18,7 +18,8 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.InternalSpan;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.HealthPinger;
 import com.couchbase.client.core.diagnostics.PingResult;
@@ -202,9 +203,9 @@ public class AsyncBucket {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().viewTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    final InternalSpan span = environment()
+    final RequestSpan span = environment()
       .requestTracer()
-      .internalSpan(ViewRequest.OPERATION_NAME, opts.parentSpan().orElse(null));
+      .requestSpan(TracingIdentifiers.SPAN_REQUEST_VIEWS, opts.parentSpan().orElse(null));
     ViewRequest request = new ViewRequest(timeout, core.context(), retryStrategy, authenticator, name, designDoc,
       viewName, query, keysJson, development, span);
     request.context().clientContext(opts.clientContext());
