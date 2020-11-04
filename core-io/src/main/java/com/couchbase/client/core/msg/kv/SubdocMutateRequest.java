@@ -339,4 +339,8 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     return syncReplicationType;
   }
 
+  @Override
+  public String name() {
+    return "mutate_in";
+  }
 }

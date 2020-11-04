@@ -27,20 +27,23 @@ import java.util.Map;
  */
 public class OrphansRecordedEvent extends AbstractEvent {
 
-  final List<Map<String, Object>> orphans;
+  final Map<String, Object> orphansNew;
+  final List<Map<String, Object>> orphansOld;
 
-  public OrphansRecordedEvent(final Duration duration, final List<Map<String, Object>> orphans) {
+  public OrphansRecordedEvent(final Duration duration, final Map<String, Object> orphansNew, final List<Map<String, Object>> orphansOld) {
     super(Severity.WARN, Category.TRACING, duration, null);
-    this.orphans = orphans;
+    this.orphansNew = orphansNew;
+    this.orphansOld = orphansOld;
   }
 
+  @Deprecated
   public List<Map<String, Object>> orphans() {
-    return orphans;
+    return orphansOld;
   }
 
   @Override
   public String description() {
-    return "Orphaned requests found: " + Mapper.encodeAsString(orphans);
+    return "Orphaned requests found: " + Mapper.encodeAsString(orphansNew == null ? orphansOld : orphansNew);
   }
 
 }

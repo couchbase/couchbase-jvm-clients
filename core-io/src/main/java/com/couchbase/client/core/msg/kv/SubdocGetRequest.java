@@ -241,4 +241,10 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   public boolean idempotent() {
     return true;
   }
+
+  @Override
+  public String name() {
+    return "lookup_in";
+  }
+
 }

@@ -68,4 +68,10 @@ public class ReplicaGetRequest extends GetRequest {
     ctx.put("replicaNum", replica);
     return ctx;
   }
+
+  @Override
+  public String name() {
+    return "get_replica";
+  }
+
 }

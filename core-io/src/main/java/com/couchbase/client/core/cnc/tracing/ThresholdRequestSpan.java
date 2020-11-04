@@ -26,7 +26,8 @@ public class ThresholdRequestSpan implements RequestSpan {
 
   private volatile RequestContext requestContext;
 
-  ThresholdRequestSpan() { }
+  ThresholdRequestSpan() {
+  }
 
   @Override
   public void setAttribute(String key, String value) { }

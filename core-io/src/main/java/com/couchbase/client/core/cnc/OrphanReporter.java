@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -47,6 +48,17 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 public class OrphanReporter {
 
   private static final AtomicInteger ORPHAN_REPORTER_ID = new AtomicInteger();
+
+  private static final String KEY_TOTAL_MICROS = "total_duration_us";
+  private static final String KEY_DISPATCH_MICROS = "last_dispatch_duration_us";
+  private static final String KEY_ENCODE_MICROS = "encode_duration_us";
+  private static final String KEY_SERVER_MICROS = "last_server_duration_us";
+  private static final String KEY_OPERATION_ID = "operation_id";
+  private static final String KEY_OPERATION_NAME = "operation_name";
+  private static final String KEY_LAST_LOCAL_SOCKET = "last_local_socket";
+  private static final String KEY_LAST_REMOTE_SOCKET = "last_remote_socket";
+  private static final String KEY_LAST_LOCAL_ID = "last_local_id";
+  private static final String KEY_TIMEOUT = "timeout_ms";
 
   private final AtomicBoolean running = new AtomicBoolean(false);
   private final Thread worker;
@@ -102,6 +114,10 @@ public class OrphanReporter {
       System.getProperty("com.couchbase.orphanReporterSleep", "100")
     );
 
+    private final boolean newOutputFormat = Boolean.parseBoolean(
+      System.getProperty("com.couchbase.orphanReporterNewOutputFormat", "false")
+    );
+
     /**
      * Compares request by their logical request latency for the priority threshold queues.
      */
@@ -144,7 +160,11 @@ public class OrphanReporter {
     private void handleOrphanQueue() {
       long now = System.nanoTime();
       if ((now - lastThresholdLog) > emitIntervalNanos) {
-        prepareAndLogOrphans();
+        if (newOutputFormat) {
+          prepareAndLogOrphansNew();
+        } else {
+          prepareAndLogOrphansOld();
+        }
         lastThresholdLog = now;
       }
 
@@ -186,7 +206,42 @@ public class OrphanReporter {
       hasThresholdWritten = true;
     }
 
-    private void prepareAndLogOrphans() {
+    private void prepareAndLogOrphansNew() {
+      if (!hasThresholdWritten) {
+        return;
+      }
+      hasThresholdWritten = false;
+
+      Map<String, Object> output = new HashMap<>();
+      if (!kvOrphans.isEmpty()) {
+        output.put(TracingIdentifiers.SERVICE_KV, convertOrphanMetadataNew(kvOrphans, kvOrphanCount));
+        kvOrphans.clear();
+        kvOrphanCount = 0;
+      }
+      if (!queryOrphans.isEmpty()) {
+        output.put(TracingIdentifiers.SERVICE_QUERY, convertOrphanMetadataNew(queryOrphans, queryOrphanCount));
+        queryOrphans.clear();
+        queryOrphanCount = 0;
+      }
+      if (!viewOrphans.isEmpty()) {
+        output.put(TracingIdentifiers.SERVICE_VIEWS, convertOrphanMetadataNew(viewOrphans, viewOrphanCount));
+        viewOrphans.clear();
+        viewOrphanCount = 0;
+      }
+      if (!searchOrphans.isEmpty()) {
+        output.put(TracingIdentifiers.SERVICE_SEARCH, convertOrphanMetadataNew(searchOrphans, searchOrphanCount));
+        searchOrphans.clear();
+        searchOrphanCount = 0;
+      }
+      if (!analyticsOrphans.isEmpty()) {
+        output.put(TracingIdentifiers.SERVICE_ANALYTICS, convertOrphanMetadataNew(analyticsOrphans, analyticsOrphanCount));
+        analyticsOrphans.clear();
+        analyticsOrphanCount = 0;
+      }
+      logOrphans(output, null);
+    }
+
+    private void prepareAndLogOrphansOld() {
       if (!hasThresholdWritten) {
         return;
       }
@@ -194,34 +249,89 @@ public class OrphanReporter {
 
       List<Map<String, Object>> output = new ArrayList<>();
       if (!kvOrphans.isEmpty()) {
-        output.add(convertOrphanMetadata(kvOrphans, kvOrphanCount, TracingIdentifiers.SERVICE_KV));
+        output.add(convertOrphanMetadataOld(kvOrphans, kvOrphanCount, TracingIdentifiers.SERVICE_KV));
         kvOrphans.clear();
         kvOrphanCount = 0;
       }
       if (!queryOrphans.isEmpty()) {
-        output.add(convertOrphanMetadata(queryOrphans, queryOrphanCount, TracingIdentifiers.SERVICE_QUERY));
+        output.add(convertOrphanMetadataOld(queryOrphans, queryOrphanCount, TracingIdentifiers.SERVICE_QUERY));
         queryOrphans.clear();
         queryOrphanCount = 0;
       }
       if (!viewOrphans.isEmpty()) {
-        output.add(convertOrphanMetadata(viewOrphans, viewOrphanCount, TracingIdentifiers.SERVICE_VIEWS));
+        output.add(convertOrphanMetadataOld(viewOrphans, viewOrphanCount, TracingIdentifiers.SERVICE_VIEWS));
         viewOrphans.clear();
         viewOrphanCount = 0;
       }
       if (!searchOrphans.isEmpty()) {
-        output.add(convertOrphanMetadata(searchOrphans, searchOrphanCount, TracingIdentifiers.SERVICE_SEARCH));
+        output.add(convertOrphanMetadataOld(searchOrphans, searchOrphanCount, TracingIdentifiers.SERVICE_SEARCH));
         searchOrphans.clear();
         searchOrphanCount = 0;
       }
       if (!analyticsOrphans.isEmpty()) {
-        output.add(convertOrphanMetadata(analyticsOrphans, analyticsOrphanCount, TracingIdentifiers.SERVICE_ANALYTICS));
+        output.add(convertOrphanMetadataOld(analyticsOrphans, analyticsOrphanCount, TracingIdentifiers.SERVICE_ANALYTICS));
         analyticsOrphans.clear();
         analyticsOrphanCount = 0;
       }
-      logOrphans(output);
+      logOrphans(null,  output);
     }
 
-    private Map<String, Object> convertOrphanMetadata(Queue<Request<?>> requests, long count, String serviceType) {
+    private Map<String, Object> convertOrphanMetadataNew(Queue<Request<?>> requests, long count) {
+      Map<String, Object> output = new HashMap<>();
+      List<Map<String, Object>> top = new ArrayList<>();
+      for (Request<?> request : requests) {
+        HashMap<String, Object> fieldMap = new HashMap<>();
+
+        if (request != null) {
+          fieldMap.put(KEY_TOTAL_MICROS, TimeUnit.NANOSECONDS.toMicros(request.context().logicalRequestLatency()));
+
+          fieldMap.put(KEY_OPERATION_NAME, request.name());
+
+          String operationId = request.operationId();
+          if (operationId != null) {
+            fieldMap.put(KEY_OPERATION_ID, operationId);
+          }
+
+          String localId = request.context().lastChannelId();
+          if (localId != null) {
+            fieldMap.put(KEY_LAST_LOCAL_ID, redactSystem(localId));
+          }
+
+          long encodeDuration = request.context().encodeLatency();
+          if (encodeDuration > 0) {
+            fieldMap.put(KEY_ENCODE_MICROS, encodeDuration);
+          }
+
+          long dispatchDuration = request.context().dispatchLatency();
+          if (dispatchDuration > 0) {
+            fieldMap.put(KEY_DISPATCH_MICROS, TimeUnit.NANOSECONDS.toMicros(dispatchDuration));
+          }
+
+          HostAndPort local = request.context().lastDispatchedFrom();
+          HostAndPort peer = request.context().lastDispatchedTo();
+          if (local != null) {
+            fieldMap.put(KEY_LAST_LOCAL_SOCKET, redactSystem(local.toString()));
+          }
+          if (peer != null) {
+            fieldMap.put(KEY_LAST_REMOTE_SOCKET, redactSystem(peer.toString()));
+          }
+
+          long serverDuration = request.context().serverLatency();
+          if (serverDuration > 0) {
+            fieldMap.put(KEY_SERVER_MICROS, serverDuration);
+          }
+
+          fieldMap.put(KEY_TIMEOUT, request.timeout().toMillis());
+        }
+
+        top.add(fieldMap);
+      }
+      output.put("total_count", count);
+      output.put("top_requests", top);
+      return output;
+    }
+
+    private Map<String, Object> convertOrphanMetadataOld(Queue<Request<?>> requests, long count, String serviceType) {
       Map<String, Object> output = new HashMap<>();
       List<Map<String, Object>> top = new ArrayList<>();
       for (Request<?> request : requests) {
@@ -275,8 +385,8 @@ public class OrphanReporter {
      * This method is intended to be overridden in test implementations
      * to assert against the output.
      */
-    void logOrphans(final List<Map<String, Object>> toLog) {
-      eventBus.publish(new OrphansRecordedEvent(Duration.ofNanos(emitIntervalNanos), toLog));
+    void logOrphans(final Map<String, Object> toLogNew, final List<Map<String, Object>> toLogOld) {
+      eventBus.publish(new OrphansRecordedEvent(Duration.ofNanos(emitIntervalNanos), toLogNew, toLogOld));
     }
 
   }

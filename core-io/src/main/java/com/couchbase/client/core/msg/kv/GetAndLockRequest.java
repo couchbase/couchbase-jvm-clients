@@ -80,4 +80,8 @@ public class GetAndLockRequest extends BaseKeyValueRequest<GetAndLockResponse> {
     }
   }
 
+  @Override
+  public String name() {
+    return "get_and_lock";
+  }
 }

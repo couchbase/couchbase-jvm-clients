@@ -28,20 +28,24 @@ import java.util.Map;
  */
 public class OverThresholdRequestsRecordedEvent extends AbstractEvent {
 
-  final List<Map<String, Object>> overThreshold;
+  final Map<String, Object> overThresholdNew;
+  final List<Map<String, Object>> overThresholdOld;
 
-  public OverThresholdRequestsRecordedEvent(final Duration duration, final List<Map<String, Object>> overThreshold) {
+  public OverThresholdRequestsRecordedEvent(final Duration duration, final Map<String, Object> overThresholdNew,
+                                            List<Map<String, Object>> overThresholdOld) {
     super(Severity.WARN, Category.TRACING, duration, null);
-    this.overThreshold = overThreshold;
+    this.overThresholdNew = overThresholdNew;
+    this.overThresholdOld = overThresholdOld;
   }
 
+  @Deprecated
   public List<Map<String, Object>> overThreshold() {
-    return overThreshold;
+    return overThresholdOld;
   }
 
   @Override
   public String description() {
-    return "Requests over Threshold found: " + Mapper.encodeAsString(overThreshold);
+    return "Requests over Threshold found: " + Mapper.encodeAsString(overThresholdOld == null ? overThresholdNew : overThresholdOld);
   }
 
 }

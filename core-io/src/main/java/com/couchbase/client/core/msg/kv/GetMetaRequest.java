@@ -76,4 +76,8 @@ public class GetMetaRequest extends BaseKeyValueRequest<GetMetaResponse> {
     return true;
   }
 
+  @Override
+  public String name() {
+    return "exists";
+  }
 }

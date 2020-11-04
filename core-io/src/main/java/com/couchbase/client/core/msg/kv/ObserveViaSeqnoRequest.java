@@ -97,4 +97,9 @@ public class ObserveViaSeqnoRequest extends BaseKeyValueRequest<ObserveViaSeqnoR
   public boolean idempotent() {
     return true;
   }
+
+  @Override
+  public String name() {
+    return "observe";
+  }
 }

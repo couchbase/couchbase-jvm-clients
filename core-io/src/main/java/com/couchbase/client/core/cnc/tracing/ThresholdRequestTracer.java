@@ -49,10 +49,16 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 public class ThresholdRequestTracer implements RequestTracer {
 
   private static final AtomicInteger REQUEST_TRACER_ID = new AtomicInteger();
-  private static final String KEY_TOTAL_MICROS = "total_us";
-  private static final String KEY_DISPATCH_MICROS = "last_dispatch_us";
-  private static final String KEY_ENCODE_MICROS = "encode_us";
-  private static final String KEY_SERVER_MICROS = "server_us";
+
+  private static final String KEY_TOTAL_MICROS = "total_duration_us";
+  private static final String KEY_DISPATCH_MICROS = "last_dispatch_duration_us";
+  private static final String KEY_ENCODE_MICROS = "encode_duration_us";
+  private static final String KEY_SERVER_MICROS = "last_server_duration_us";
+  private static final String KEY_OPERATION_ID = "operation_id";
+  private static final String KEY_OPERATION_NAME = "operation_name";
+  private static final String KEY_LAST_LOCAL_SOCKET = "last_local_socket";
+  private static final String KEY_LAST_REMOTE_SOCKET = "last_remote_socket";
+  private static final String KEY_LAST_LOCAL_ID = "last_local_id";
 
   private final AtomicBoolean running = new AtomicBoolean(false);
   private final Queue<Request<?>> overThresholdQueue;
@@ -197,6 +203,10 @@ public class ThresholdRequestTracer implements RequestTracer {
       System.getProperty("com.couchbase.thresholdRequestTracerSleep", "100")
     );
 
+    private final boolean newOutputFormat = Boolean.parseBoolean(
+      System.getProperty("com.couchbase.thresholdRequestTracerNewOutputFormat", "false")
+    );
+
     /**
      * Compares request by their logical request latency for the priority threshold queues.
      */
@@ -246,7 +256,11 @@ public class ThresholdRequestTracer implements RequestTracer {
     private void handleOverThresholdQueue() {
       long now = System.nanoTime();
       if (now > (lastThresholdLog + emitIntervalNanos)) {
-        prepareAndlogOverThreshold();
+        if (newOutputFormat) {
+          prepareAndlogOverThresholdNew();
+        } else {
+          prepareAndlogOverThresholdOld();
+        }
         lastThresholdLog = now;
       }
 
@@ -281,7 +295,57 @@ public class ThresholdRequestTracer implements RequestTracer {
     /**
      * Logs the over threshold data and resets the sets.
      */
-    private void prepareAndlogOverThreshold() {
+    private void prepareAndlogOverThresholdNew() {
+      if (!hasThresholdWritten) {
+        return;
+      }
+      hasThresholdWritten = false;
+
+      Map<String, Object> output = new HashMap<>();
+      if (!kvThresholds.isEmpty()) {
+        output.put(
+          TracingIdentifiers.SERVICE_KV,
+          convertThresholdMetadataNew(kvThresholds, kvThresholdCount)
+        );
+        kvThresholds.clear();
+        kvThresholdCount = 0;
+      }
+      if (!n1qlThresholds.isEmpty()) {
+        output.put(
+          TracingIdentifiers.SERVICE_QUERY,
+          convertThresholdMetadataNew(n1qlThresholds, n1qlThresholdCount)
+        );
+        n1qlThresholds.clear();
+        n1qlThresholdCount = 0;
+      }
+      if (!viewThresholds.isEmpty()) {
+        output.put(
+          TracingIdentifiers.SERVICE_VIEWS,
+          convertThresholdMetadataNew(viewThresholds, viewThresholdCount)
+        );
+        viewThresholds.clear();
+        viewThresholdCount = 0;
+      }
+      if (!ftsThresholds.isEmpty()) {
+        output.put(
+          TracingIdentifiers.SERVICE_SEARCH,
+          convertThresholdMetadataNew(ftsThresholds, ftsThresholdCount)
+        );
+        ftsThresholds.clear();
+        ftsThresholdCount = 0;
+      }
+      if (!analyticsThresholds.isEmpty()) {
+        output.put(
+          TracingIdentifiers.SERVICE_ANALYTICS,
+          convertThresholdMetadataNew(analyticsThresholds, analyticsThresholdCount)
+        );
+        analyticsThresholds.clear();
+        analyticsThresholdCount = 0;
+      }
+      logOverThreshold(output, null);
+    }
+
+    private void prepareAndlogOverThresholdOld() {
       if (!hasThresholdWritten) {
         return;
       }
@@ -289,31 +353,31 @@ public class ThresholdRequestTracer implements RequestTracer {
 
       List<Map<String, Object>> output = new ArrayList<>();
       if (!kvThresholds.isEmpty()) {
-        output.add(convertThresholdMetadata(kvThresholds, kvThresholdCount, TracingIdentifiers.SERVICE_KV));
+        output.add(convertThresholdMetadataOld(kvThresholds, kvThresholdCount, TracingIdentifiers.SERVICE_KV));
         kvThresholds.clear();
         kvThresholdCount = 0;
       }
       if (!n1qlThresholds.isEmpty()) {
-        output.add(convertThresholdMetadata(n1qlThresholds, n1qlThresholdCount, TracingIdentifiers.SERVICE_QUERY));
+        output.add(convertThresholdMetadataOld(n1qlThresholds, n1qlThresholdCount, TracingIdentifiers.SERVICE_QUERY));
         n1qlThresholds.clear();
         n1qlThresholdCount = 0;
       }
       if (!viewThresholds.isEmpty()) {
-        output.add(convertThresholdMetadata(viewThresholds, viewThresholdCount, TracingIdentifiers.SERVICE_VIEWS));
+        output.add(convertThresholdMetadataOld(viewThresholds, viewThresholdCount, TracingIdentifiers.SERVICE_VIEWS));
         viewThresholds.clear();
         viewThresholdCount = 0;
       }
       if (!ftsThresholds.isEmpty()) {
-        output.add(convertThresholdMetadata(ftsThresholds, ftsThresholdCount, TracingIdentifiers.SERVICE_SEARCH));
+        output.add(convertThresholdMetadataOld(ftsThresholds, ftsThresholdCount, TracingIdentifiers.SERVICE_SEARCH));
         ftsThresholds.clear();
         ftsThresholdCount = 0;
       }
       if (!analyticsThresholds.isEmpty()) {
-        output.add(convertThresholdMetadata(analyticsThresholds, analyticsThresholdCount, TracingIdentifiers.SERVICE_ANALYTICS));
+        output.add(convertThresholdMetadataOld(analyticsThresholds, analyticsThresholdCount, TracingIdentifiers.SERVICE_ANALYTICS));
         analyticsThresholds.clear();
         analyticsThresholdCount = 0;
       }
-      logOverThreshold(output);
+      logOverThreshold(null, output);
     }
 
     /**
@@ -321,11 +385,9 @@ public class ThresholdRequestTracer implements RequestTracer {
      *
      * @param requests the request data to convert
      * @param count the total count
-     * @param ident the identifier to use
      * @return the converted map
      */
-    private Map<String, Object> convertThresholdMetadata(final Queue<Request<?>> requests, final long count,
-                                                         final String ident) {
+    private Map<String, Object> convertThresholdMetadataNew(final Queue<Request<?>> requests, final long count) {
       Map<String, Object> output = new HashMap<>();
       List<Map<String, Object>> top = new ArrayList<>();
       for (Request<?> request : requests) {
@@ -334,24 +396,23 @@ public class ThresholdRequestTracer implements RequestTracer {
 
         String operationId = request.operationId();
         if (operationId != null) {
-          entry.put("last_operation_id", operationId);
+          entry.put(KEY_OPERATION_ID, operationId);
         }
 
-        // todo: does this need to be improved?
-        entry.put("operation_name", request.getClass().getSimpleName());
+        entry.put(KEY_OPERATION_NAME, request.name());
 
         HostAndPort local = request.context().lastDispatchedFrom();
         HostAndPort peer = request.context().lastDispatchedTo();
         if (local != null) {
-          entry.put("last_local_address", redactSystem(local).toString());
+          entry.put(KEY_LAST_LOCAL_SOCKET, redactSystem(local).toString());
         }
         if (peer != null) {
-          entry.put("last_remote_address", redactSystem(peer).toString());
+          entry.put(KEY_LAST_REMOTE_SOCKET, redactSystem(peer).toString());
         }
 
         String localId = request.context().lastChannelId();
         if (localId != null) {
-          entry.put("last_local_id", redactSystem(localId).toString());
+          entry.put(KEY_LAST_LOCAL_ID, redactSystem(localId).toString());
         }
 
         long encodeDuration = request.context().encodeLatency();
@@ -377,6 +438,63 @@ public class ThresholdRequestTracer implements RequestTracer {
       // calls will be shown first.
       top.sort((o1, o2) -> ((Long) o2.get(KEY_TOTAL_MICROS)).compareTo((Long) o1.get(KEY_TOTAL_MICROS)));
 
+      output.put("total_count", count);
+      output.put("top_requests", top);
+      return output;
+    }
+
+    private Map<String, Object> convertThresholdMetadataOld(final Queue<Request<?>> requests, final long count,
+                                                            final String ident) {
+      Map<String, Object> output = new HashMap<>();
+      List<Map<String, Object>> top = new ArrayList<>();
+      for (Request<?> request : requests) {
+        Map<String, Object> entry = new HashMap<>();
+        entry.put("total_us", TimeUnit.NANOSECONDS.toMicros(request.context().logicalRequestLatency()));
+
+        String operationId = request.operationId();
+        if (operationId != null) {
+          entry.put("last_operation_id", operationId);
+        }
+
+        entry.put("operation_name", request.getClass().getSimpleName());
+
+        HostAndPort local = request.context().lastDispatchedFrom();
+        HostAndPort peer = request.context().lastDispatchedTo();
+        if (local != null) {
+          entry.put("last_local_address", redactSystem(local).toString());
+        }
+        if (peer != null) {
+          entry.put("last_remote_address", redactSystem(peer).toString());
+        }
+
+        String localId = request.context().lastChannelId();
+        if (localId != null) {
+          entry.put("last_local_id", redactSystem(localId).toString());
+        }
+
+        long encodeDuration = request.context().encodeLatency();
+        if (encodeDuration > 0) {
+          entry.put("encode_us", encodeDuration);
+        }
+
+        long dispatchDuration = request.context().dispatchLatency();
+        if (dispatchDuration > 0) {
+          entry.put("last_dispatch_us", TimeUnit.NANOSECONDS.toMicros(dispatchDuration));
+        }
+
+        long serverDuration = request.context().serverLatency();
+        if (serverDuration > 0) {
+          entry.put("server_us", TimeUnit.NANOSECONDS.toMicros(serverDuration));
+        }
+
+        top.add(entry);
+      }
+
+      // The queue will keep the most expensive at the top, but sorted in ascending order.
+      // this final sort will bring it into descending order as per spec so that the longest
+      // calls will be shown first.
+      top.sort((o1, o2) -> ((Long) o2.get("total_us")).compareTo((Long) o1.get("total_us")));
+
       output.put("service", ident);
       output.put("count", count);
       output.put("top", top);
@@ -387,8 +505,8 @@ public class ThresholdRequestTracer implements RequestTracer {
      * This method is intended to be overridden in test implementations
      * to assert against the output.
      */
-    void logOverThreshold(final List<Map<String, Object>> toLog) {
-      eventBus.publish(new OverThresholdRequestsRecordedEvent(Duration.ofNanos(emitIntervalNanos), toLog));
+    void logOverThreshold(final Map<String, Object> toLogNew, final List<Map<String, Object>> toLogOld) {
+      eventBus.publish(new OverThresholdRequestsRecordedEvent(Duration.ofNanos(emitIntervalNanos), toLogNew, toLogOld));
     }
 
     /**
@@ -412,7 +530,7 @@ public class ThresholdRequestTracer implements RequestTracer {
 
     private final EventBus eventBus;
 
-    private ThresholdRequestTracerConfig.Builder config = ThresholdRequestTracerConfig.builder();
+    private final ThresholdRequestTracerConfig.Builder config = ThresholdRequestTracerConfig.builder();
 
     Builder(final EventBus eventBus) {
       this.eventBus = eventBus;

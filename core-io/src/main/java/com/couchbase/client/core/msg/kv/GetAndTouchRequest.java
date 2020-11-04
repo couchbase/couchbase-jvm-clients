@@ -79,4 +79,8 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
     }
   }
 
+  @Override
+  public String name() {
+    return "get_and_touch";
+  }
 }

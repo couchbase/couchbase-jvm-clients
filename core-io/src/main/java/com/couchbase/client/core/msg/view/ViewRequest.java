@@ -131,4 +131,8 @@ public class ViewRequest extends BaseRequest<ViewResponse>
     return ctx;
   }
 
+  @Override
+  public String name() {
+    return "views";
+  }
 }
