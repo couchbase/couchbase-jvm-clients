@@ -158,7 +158,11 @@ public interface Event {
     /**
      * Represents event that come from the tracing subsystem.
      */
-    TRACING(CATEGORY_PREFIX + "tracing");
+    TRACING(CATEGORY_PREFIX + "tracing"),
+    /**
+     * Represents events that comes from the metrics subsystem.
+     */
+    METRICS(CATEGORY_PREFIX + "metrics");
 
     private final String path;
 

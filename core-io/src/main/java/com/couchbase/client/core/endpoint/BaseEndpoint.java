@@ -17,6 +17,7 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.Counter;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionAbortedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
@@ -73,10 +74,13 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -147,6 +151,10 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   private final boolean pipelined;
 
+  private final String hostname;
+
+  private final Map<Class<?>, Counter> requestCounters = new ConcurrentHashMap<>();
+
   /**
    * Once connected, contains the channel to work with.
    */
@@ -175,6 +183,7 @@ public abstract class BaseEndpoint implements Endpoint {
                final ServiceContext serviceContext, final CircuitBreakerConfig circuitBreakerConfig,
                final ServiceType serviceType, final boolean pipelined) {
     disconnect = new AtomicBoolean(false);
+    this.hostname = hostname;
     this.pipelined = pipelined;
     if (circuitBreakerConfig.enabled()) {
       this.circuitBreaker = new LazyCircuitBreaker(circuitBreakerConfig);
@@ -534,6 +543,7 @@ public abstract class BaseEndpoint implements Endpoint {
         });
       }
 
+      incrementRequestCounter(request);
       channel
         .writeAndFlush(request)
         .addListener(f -> {
@@ -550,6 +560,17 @@ public abstract class BaseEndpoint implements Endpoint {
         : RetryReason.ENDPOINT_CIRCUIT_OPEN;
       RetryOrchestrator.maybeRetry(endpointContext.get(), request, retryReason);
     }
+  }
+
+  private <R extends Request<? extends Response>> void incrementRequestCounter(final R request) {
+    final Counter counter = requestCounters.computeIfAbsent(request.getClass(), key -> {
+      Map<String, String> tags = new HashMap<>(4);
+      tags.put("cb.service", serviceType.ident());
+      tags.put("cb.remote_hostname", hostname);
+      tags.put("cb.request_type", request.name());
+      return context().environment().meter().counter("cb.requests", tags);
+    });
+    counter.incrementBy(1);
   }
 
   @Override

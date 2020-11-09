@@ -18,6 +18,7 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.events.core.BucketClosedEvent;
 import com.couchbase.client.core.cnc.events.core.BucketOpenInitiatedEvent;
 import com.couchbase.client.core.cnc.events.core.BucketOpenedEvent;
@@ -57,6 +58,7 @@ import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.HostAndPort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -64,11 +66,14 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -179,6 +184,11 @@ public class Core {
   private final Timer timer;
 
   private final Set<SeedNode> seedNodes;
+
+  /**
+   * Holds the response metrics per
+   */
+  private final Map<ResponseMetricIdentifier, ValueRecorder> responseMetrics = new ConcurrentHashMap<>();
 
   /**
    * Creates a new {@link Core} with the given environment.
@@ -432,6 +442,18 @@ public class Core {
       .flatMap(node -> node.addService(serviceType, port, bucket))
       .then();
   }
+
+  @Stability.Internal
+  public ValueRecorder responseMetric(final Request<?> request) {
+    return responseMetrics.computeIfAbsent(new ResponseMetricIdentifier(request), key -> {
+      Map<String, String> tags = new HashMap<>(4);
+      tags.put("cb.service", key.serviceType.ident());
+      tags.put("cb.remote_hostname", key.lastDispatchedTo.hostname());
+      tags.put("cb.request_type", key.requestName);
+      return coreContext.environment().meter().valueRecorder("cb.responses", tags);
+    });
+  }
+
 
   /**
    * Create a {@link Node} from the given identifier.
@@ -798,6 +820,34 @@ public class Core {
         return VIEWS_LOCATOR;
       default:
         throw new IllegalStateException("Unsupported ServiceType: " + serviceType);
+    }
+  }
+
+  private static class ResponseMetricIdentifier {
+
+    private final ServiceType serviceType;
+    private final HostAndPort lastDispatchedTo;
+    private final String requestName;
+
+    ResponseMetricIdentifier(final Request<?> request) {
+      this.serviceType = request.serviceType();
+      this.lastDispatchedTo = request.context().lastDispatchedTo();
+      this.requestName = request.name();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      ResponseMetricIdentifier that = (ResponseMetricIdentifier) o;
+      return serviceType == that.serviceType &&
+        Objects.equals(lastDispatchedTo, that.lastDispatchedTo) &&
+        Objects.equals(requestName, that.requestName);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(serviceType, lastDispatchedTo, requestName);
     }
   }
 

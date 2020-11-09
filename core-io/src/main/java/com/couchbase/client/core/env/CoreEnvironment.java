@@ -22,9 +22,12 @@ import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.cnc.DefaultEventBus;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
+import com.couchbase.client.core.cnc.Meter;
 import com.couchbase.client.core.cnc.OrphanReporter;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.events.config.HighIdleHttpConnectionTimeoutConfiguredEvent;
+import com.couchbase.client.core.cnc.metrics.AggregatingMeter;
+import com.couchbase.client.core.cnc.metrics.NoopMeter;
 import com.couchbase.client.core.cnc.tracing.ThresholdRequestTracer;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -106,6 +109,7 @@ public class CoreEnvironment {
   private final OrphanReporterConfig orphanReporterConfig;
   private final ThresholdRequestTracerConfig thresholdRequestTracerConfig;
   private final Supplier<RequestTracer> requestTracer;
+  private final Supplier<Meter> meter;
   private final LoggerConfig loggerConfig;
   private final RetryStrategy retryStrategy;
   private final Supplier<Scheduler> scheduler;
@@ -159,6 +163,16 @@ public class CoreEnvironment {
 
     if (requestTracer instanceof OwnedSupplier) {
       requestTracer.get().start().block();
+    }
+
+    this.meter = Optional.ofNullable(builder.meter).orElse(new OwnedSupplier<Meter>(
+      // AggregatingMeter.create(eventBus.get())
+      // For now we just default to the noop meter until the default one is polished
+      new NoopMeter()
+    ));
+
+    if (meter instanceof OwnedSupplier) {
+      meter.get().start().block();
     }
 
     orphanReporter = new OrphanReporter(eventBus.get(), orphanReporterConfig);
@@ -317,6 +331,11 @@ public class CoreEnvironment {
     return requestTracer.get();
   }
 
+  @Stability.Volatile
+  public Meter meter() {
+    return meter.get();
+  }
+
   /**
    * Returns the timer used to schedule timeouts and retries amongst other tasks.
    */
@@ -452,6 +471,7 @@ public class CoreEnvironment {
 
     input.put("retryStrategy", retryStrategy.getClass().getSimpleName());
     input.put("requestTracer", requestTracer.get().getClass().getSimpleName());
+    input.put("meter", meter.get().getClass().getSimpleName());
 
     return format.apply(input);
   }
@@ -474,6 +494,7 @@ public class CoreEnvironment {
     private Supplier<EventBus> eventBus = null;
     private Supplier<Scheduler> scheduler = null;
     private Supplier<RequestTracer> requestTracer = null;
+    private Supplier<Meter> meter = null;
     private RetryStrategy retryStrategy = null;
     private long maxNumRequestsInRetry = DEFAULT_MAX_NUM_REQUESTS_IN_RETRY;
 
@@ -736,6 +757,20 @@ public class CoreEnvironment {
     @Stability.Volatile
     public SELF requestTracer(final RequestTracer requestTracer) {
       this.requestTracer = new ExternalSupplier<>(notNull(requestTracer, "RequestTracer"));
+      return self();
+    }
+
+    /**
+     * Allows to configure a custom metrics implementation.
+     * <p>
+     * <strong>IMPORTANT:</strong> this is a volatile, likely to change API!
+     *
+     * @param meter the custom metrics implementation to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    @Stability.Volatile
+    public SELF meter(final Meter meter) {
+      this.meter = new ExternalSupplier<>(notNull(meter, "Meter"));
       return self();
     }
 

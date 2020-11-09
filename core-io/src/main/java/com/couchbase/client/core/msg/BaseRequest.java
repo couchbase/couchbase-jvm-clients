@@ -130,8 +130,8 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
     this.ctx = new RequestContext(ctx, this);
     this.retryStrategy = retryStrategy == null ? ctx.environment().retryStrategy() : retryStrategy;
 
-    if (requestSpan instanceof ThresholdRequestSpan) {
-      ((ThresholdRequestSpan) requestSpan).requestContext(this.ctx);
+    if (requestSpan != null) {
+      requestSpan.requestContext(this.ctx);
     }
     this.requestSpan = requestSpan;
   }

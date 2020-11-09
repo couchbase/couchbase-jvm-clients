@@ -142,6 +142,8 @@
         <module>test-utils</module>
         <module>tracing-opentracing</module>
         <module>tracing-opentelemetry</module>
+        <module>metrics-opentelemetry</module>
+        <module>metrics-micrometer</module>
     </modules>
 
     <build>

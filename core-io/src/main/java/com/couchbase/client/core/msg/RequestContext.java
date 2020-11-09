@@ -95,7 +95,7 @@ public class RequestContext extends CoreContext {
   /**
    * Holds a set of retry reasons.
    */
-  private volatile AtomicReference<Set<RetryReason>> retryReasons = new AtomicReference<>(null);
+  private final AtomicReference<Set<RetryReason>> retryReasons = new AtomicReference<>(null);
 
   /**
    * The number of times the attached request has been retried.
@@ -183,6 +183,9 @@ public class RequestContext extends CoreContext {
     this.logicallyCompletedAt = System.nanoTime();
     if (request.requestSpan() != null) {
       request.requestSpan().end(environment().requestTracer());
+    }
+    if (lastDispatchedTo() != null) {
+      core().responseMetric(request).recordValue(logicalRequestLatency());
     }
     return this;
   }
