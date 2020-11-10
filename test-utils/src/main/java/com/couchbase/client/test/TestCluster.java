@@ -228,7 +228,9 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       capabilities.add(Capabilities.COLLECTIONS);
     }
     if (bucketCapabilities.contains("tombstonedUserXAttrs")) {
+      // note: 6.6 and later
       capabilities.add(Capabilities.CREATE_AS_DELETED);
+      capabilities.add(Capabilities.BUCKET_MINIMUM_DURABILITY);
     }
     return capabilities;
   }

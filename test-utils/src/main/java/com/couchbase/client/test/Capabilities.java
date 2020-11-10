@@ -55,5 +55,9 @@ public enum Capabilities {
   /**
    * The cluster can create documents in a deleted state.
    */
-  CREATE_AS_DELETED
+  CREATE_AS_DELETED,
+  /**
+   * The cluster suppots specifying a minimum durability level on the bucket.
+   */
+  BUCKET_MINIMUM_DURABILITY
 }

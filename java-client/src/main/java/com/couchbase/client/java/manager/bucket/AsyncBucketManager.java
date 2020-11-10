@@ -24,6 +24,7 @@ import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
 import com.couchbase.client.java.manager.ManagerSupport;
 import reactor.core.publisher.Mono;
@@ -126,6 +127,10 @@ public class AsyncBucketManager extends ManagerSupport {
       params.add("evictionPolicy", settings.evictionPolicy().alias());
     }
     params.add("compressionMode", settings.compressionMode().alias());
+
+    if (settings.minimumDurabilityLevel() != DurabilityLevel.NONE) {
+      params.add("durabilityMinLevel", settings.minimumDurabilityLevel().encodeForManagementApi());
+    }
 
     // The following values must not be changed on update
     if (!update) {

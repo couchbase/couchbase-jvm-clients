@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnor
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 
 import java.time.Duration;
 import java.util.Map;
@@ -43,6 +44,7 @@ public class BucketSettings {
   private BucketType bucketType = BucketType.COUCHBASE;
   private ConflictResolutionType conflictResolutionType = ConflictResolutionType.SEQUENCE_NUMBER;
   private EvictionPolicyType evictionPolicy = null; // null means default for the bucket type
+  private DurabilityLevel minimumDurabilityLevel = DurabilityLevel.NONE;
   private boolean healthy = true;
 
   public static BucketSettings create(final String name) {
@@ -81,7 +83,8 @@ public class BucketSettings {
     @JsonProperty("compressionMode") final CompressionMode compressionMode,
     @JsonProperty("bucketType") final BucketType bucketType,
     @JsonProperty("conflictResolutionType") final ConflictResolutionType conflictResolutionType,
-    @JsonProperty("evictionPolicy") final EvictionPolicyType evictionPolicy
+    @JsonProperty("evictionPolicy") final EvictionPolicyType evictionPolicy,
+    @JsonProperty("durabilityMinLevel") final String durabilityMinLevel
   ) {
     this.name = name;
     this.flushEnabled = controllers.containsKey("flush");
@@ -99,6 +102,7 @@ public class BucketSettings {
     this.bucketType = bucketType;
     this.conflictResolutionType = conflictResolutionType;
     this.evictionPolicy = evictionPolicy;
+    this.minimumDurabilityLevel = DurabilityLevel.decodeFromManagementApi(durabilityMinLevel);
   }
 
   /**
@@ -130,6 +134,16 @@ public class BucketSettings {
 
   public boolean replicaIndexes() {
     return replicaIndexes;
+  }
+
+  /**
+   * Returns the minimum durability level set for the bucket.
+   *
+   * Note that if the bucket does not support it, and by default, it is set to {@link DurabilityLevel#NONE}.
+   * @return the minimum durability level for that bucket.
+   */
+  public DurabilityLevel minimumDurabilityLevel() {
+    return minimumDurabilityLevel;
   }
 
   /**
@@ -249,6 +263,17 @@ public class BucketSettings {
     return this;
   }
 
+  /**
+   * Allows to provide a custom minimum {@link DurabilityLevel} for this bucket.
+   *
+   * @param durabilityLevel the minimum level to use for all KV operations.
+   * @return this {@link BucketSettings} object for chainability.
+   */
+  public BucketSettings minimumDurabilityLevel(final DurabilityLevel durabilityLevel) {
+    this.minimumDurabilityLevel = notNull(durabilityLevel, "DurabilityLevel");
+    return this;
+  }
+
   @Stability.Internal
   public boolean healthy() {
     return healthy;
@@ -267,6 +292,7 @@ public class BucketSettings {
       ", bucketType=" + bucketType +
       ", conflictResolutionType=" + conflictResolutionType +
       ", evictionPolicy=" + evictionPolicy +
+      ", minimumDurabilityLevel=" + minimumDurabilityLevel +
       '}';
   }
 }

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.InvalidArgumentException;
 
 /**
  * Specifies enhanced durability options for the mutation.
@@ -54,6 +55,51 @@ public enum DurabilityLevel {
   @Stability.Internal
   public byte code() {
     return code;
+  }
+
+  /**
+   * Decodes the string representation of the durability level from the management API into an enum.
+   *
+   * @param input the management API string.
+   * @return the encoded durability enum. Note that it will be NONE if input is null or unknown.
+   */
+  @Stability.Internal
+  public static DurabilityLevel decodeFromManagementApi(final String input) {
+    if (input == null) {
+      return DurabilityLevel.NONE;
+    }
+
+    switch (input) {
+      case "majority":
+        return DurabilityLevel.MAJORITY;
+      case "majorityAndPersistActive":
+        return DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE;
+      case "persistToMajority":
+        return DurabilityLevel.PERSIST_TO_MAJORITY;
+      default:
+        return DurabilityLevel.NONE;
+    }
+  }
+
+  /**
+   * Encodes the {@link DurabilityLevel} so that the management API understands it.
+   *
+   * @return the encoded durability level for the management API.
+   */
+  @Stability.Internal
+  public String encodeForManagementApi() {
+    switch (this) {
+      case NONE:
+        return "none";
+      case MAJORITY:
+        return "majority";
+      case MAJORITY_AND_PERSIST_TO_ACTIVE:
+        return "majorityAndPersistActive";
+      case PERSIST_TO_MAJORITY:
+        return "persistToMajority";
+      default:
+        throw InvalidArgumentException.fromMessage("The provided durability level is not supported: " + this);
+    }
   }
 
 }

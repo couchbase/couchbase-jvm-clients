@@ -20,6 +20,7 @@ import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.BucketNotFlushableException;
 import com.couchbase.client.core.error.BucketNotFoundException;
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -27,6 +28,7 @@ import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Util;
@@ -176,6 +178,27 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
         .evictionPolicy(FULL));
     BucketSettings settings = buckets.getBucket(name);
     assertEquals(FULL, settings.evictionPolicy());
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Capabilities.BUCKET_MINIMUM_DURABILITY)
+  void createCouchbaseBucketWithMinimumDurability() {
+    String name = UUID.randomUUID().toString();
+    createBucket(BucketSettings.create(name)
+      .bucketType(BucketType.COUCHBASE)
+      .minimumDurabilityLevel(DurabilityLevel.MAJORITY));
+    BucketSettings settings = buckets.getBucket(name);
+    assertEquals(DurabilityLevel.MAJORITY, settings.minimumDurabilityLevel());
+  }
+
+  @Test
+  void shouldPickNoDurabilityLevelIfNotSpecified() {
+    String name = UUID.randomUUID().toString();
+    createBucket(BucketSettings.create(name)
+      .bucketType(BucketType.COUCHBASE));
+
+    BucketSettings settings = buckets.getBucket(name);
+    assertEquals(DurabilityLevel.NONE, settings.minimumDurabilityLevel());
   }
 
   @Test
