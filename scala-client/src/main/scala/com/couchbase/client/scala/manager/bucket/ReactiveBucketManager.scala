@@ -31,6 +31,12 @@ import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.UrlQueryStringBuilder
 import com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode
+import com.couchbase.client.scala.durability.Durability.{
+  Disabled,
+  Majority,
+  MajorityAndPersistToActive,
+  PersistToMajority
+}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.manager.ManagerUtil
 import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral, Memcached}
@@ -167,6 +173,16 @@ class ReactiveBucketManager(core: Core) {
     settings.maxTTL.foreach(v => params.add("maxTTL", v))
     settings.ejectionMethod.foreach(v => params.add("evictionPolicy", v.alias))
     settings.compressionMode.foreach(v => params.add("compressionMode", v.alias))
+
+    settings.minimumDurabilityLevel
+      .filterNot(d => d == Disabled)
+      .map {
+        case Majority                   => "majority"
+        case MajorityAndPersistToActive => "majorityAndPersistActive"
+        case PersistToMajority          => "persistToMajority"
+      }
+      .foreach(v => params.add("durabilityMinLevel", v))
+
     // The following values must not be changed on update
     if (!update) {
       params.add("name", settings.name)

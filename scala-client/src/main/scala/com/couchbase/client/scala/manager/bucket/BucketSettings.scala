@@ -18,8 +18,16 @@ package com.couchbase.client.scala.manager.bucket
 import java.nio.charset.StandardCharsets
 
 import com.couchbase.client.core.annotation.Stability.{Internal, Volatile}
+import com.couchbase.client.scala.durability.Durability
+import com.couchbase.client.scala.durability.Durability.{
+  Disabled,
+  Majority,
+  MajorityAndPersistToActive,
+  PersistToMajority
+}
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral, Memcached}
+import com.couchbase.client.scala.manager.bucket.ConflictResolutionType.{SequenceNumber, Timestamp}
 import com.couchbase.client.scala.manager.bucket.EjectionMethod.{FullEviction, ValueOnly}
 import com.couchbase.client.scala.manager.user.AuthDomain.{External, Local}
 import com.couchbase.client.scala.manager.user._
@@ -183,8 +191,10 @@ case class CreateBucketSettings(
     private[scala] val ejectionMethod: Option[EjectionMethod] = None,
     private[scala] val maxTTL: Option[Int] = None,
     private[scala] val compressionMode: Option[CompressionMode] = None,
-    private[scala] val conflictResolutionType: Option[ConflictResolutionType] = None
+    private[scala] val conflictResolutionType: Option[ConflictResolutionType] = None,
+    private[scala] val minimumDurabilityLevel: Option[Durability] = None
 ) {
+
   def flushEnabled(value: Boolean): CreateBucketSettings = {
     copy(flushEnabled = Some(value))
   }
@@ -220,10 +230,16 @@ case class CreateBucketSettings(
   def conflictResolutionType(value: ConflictResolutionType): CreateBucketSettings = {
     copy(conflictResolutionType = Some(value))
   }
+
+  def minimumDurabilityLevel(value: Durability): CreateBucketSettings = {
+    copy(minimumDurabilityLevel = Some(value))
+  }
 }
 
 object CreateBucketSettings {
   implicit val rw: CouchbasePickler.ReadWriter[CreateBucketSettings] = CouchbasePickler.macroRW
+
+  implicit val rwd: CouchbasePickler.ReadWriter[Durability] = BucketSettings.rw
 }
 
 @Volatile
@@ -242,6 +258,8 @@ case class BucketSettings(
     ejectionMethod: EjectionMethod,
     maxTTL: Int,
     compressionMode: CompressionMode,
+    @upickle.implicits.key("durabilityMinLevel")
+    minimumDurabilityLevel: Durability,
     @Internal private[scala] val healthy: Boolean
 ) {
   def toCreateBucketSettings: CreateBucketSettings = {
@@ -254,7 +272,8 @@ case class BucketSettings(
       Some(bucketType),
       Some(ejectionMethod),
       Some(maxTTL),
-      Some(compressionMode)
+      Some(compressionMode),
+      minimumDurabilityLevel = Some(minimumDurabilityLevel)
     )
   }
 }
@@ -285,6 +304,10 @@ object BucketSettings {
       .map(v => CouchbasePickler.read[CompressionMode](v))
       .getOrElse(CompressionMode.Off)
 
+    val minimumDurabilityLevel = Try('"' + json.str("durabilityMinLevel") + '"')
+      .map(v => CouchbasePickler.read[Durability](v))
+      .getOrElse(Durability.Disabled)
+
     BucketSettings(
       json.str("name"),
       flushEnabled,
@@ -295,6 +318,7 @@ object BucketSettings {
       CouchbasePickler.read[EjectionMethod]('"' + json.str("evictionPolicy") + '"'),
       maxTTL,
       compressionMode,
+      minimumDurabilityLevel,
       isHealthy
     )
   }
@@ -307,4 +331,20 @@ object BucketSettings {
       parseFrom(j)
     })
   }
+
+  implicit val rw: CouchbasePickler.ReadWriter[Durability] = CouchbasePickler
+    .readwriter[String]
+    .bimap[Durability](
+      {
+        case Disabled                   => "none"
+        case Majority                   => "majority"
+        case MajorityAndPersistToActive => "majorityAndPersistActive"
+        case PersistToMajority          => "persistToMajority"
+      }, {
+        case "none"                     => Disabled
+        case "majority"                 => Majority
+        case "majorityAndPersistActive" => MajorityAndPersistToActive
+        case "persistToMajority"        => PersistToMajority
+      }
+    )
 }

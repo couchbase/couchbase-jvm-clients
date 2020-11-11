@@ -24,12 +24,13 @@ import com.couchbase.client.core.error.{
   DocumentNotFoundException,
   InvalidArgumentException
 }
-import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.scala.durability.Durability
+import com.couchbase.client.scala.durability.Durability.Majority
 import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral}
 import com.couchbase.client.scala.manager.bucket.EjectionMethod.{FullEviction, NotRecentlyUsed}
 import com.couchbase.client.scala.manager.bucket._
 import com.couchbase.client.scala.util.{CouchbasePickler, ScalaIntegrationTest}
-import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
+import com.couchbase.client.scala.{Cluster, Collection}
 import com.couchbase.client.test.Util.waitUntilThrows
 import com.couchbase.client.test._
 import org.junit.jupiter.api.Assertions.{assertEquals, assertFalse, assertThrows, assertTrue}
@@ -131,8 +132,20 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     assert(found.ejectionMethod == EjectionMethod.ValueOnly)
     assert(found.maxTTL == 0)
     assert(found.compressionMode == CompressionMode.Passive)
+    assert(found.minimumDurabilityLevel == Durability.Disabled)
     buckets.dropBucket(name).get
     assertFalse(buckets.getAllBuckets().get.exists(_.name == name))
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.BUCKET_MINIMUM_DURABILITY))
+  def createWithMinimumDurabiltiy(): Unit = {
+    val name: String = UUID.randomUUID.toString
+
+    buckets.create(CreateBucketSettings(name, 100, minimumDurabilityLevel = Some(Majority)))
+
+    val bucket = buckets.getBucket(name).get
+    assert(bucket.minimumDurabilityLevel == Majority)
   }
 
   @Test
