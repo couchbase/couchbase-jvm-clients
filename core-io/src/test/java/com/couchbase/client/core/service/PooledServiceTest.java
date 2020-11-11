@@ -675,7 +675,7 @@ class PooledServiceTest {
 
     waitUntilCondition(() -> !service.trackedEndpoints.isEmpty());
     assertEquals(1, service.trackedEndpoints().size());
-    assertTrue(request.context().retryAttempts() >= 1);
+    waitUntilCondition(() -> request.context().retryAttempts() >= 1);
     verify(mock1, never()).send(request);
   }
 
