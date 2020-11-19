@@ -44,7 +44,7 @@ private[scala] class BinaryDecrementHandler(hp: HandlerParams)
       delta: Long,
       initial: Option[Long] = None,
       durability: Durability,
-      expiration: java.time.Duration,
+      expiryEpochTimeSecs: Long,
       timeout: java.time.Duration,
       retryStrategy: RetryStrategy,
       parentSpan: Option[RequestSpan]
@@ -77,7 +77,7 @@ private[scala] class BinaryDecrementHandler(hp: HandlerParams)
           id,
           delta,
           i,
-          expiration.getSeconds.toInt,
+          expiryEpochTimeSecs,
           durability.toDurabilityLevel,
           hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_DECREMENT, parentSpan.orNull)
         )

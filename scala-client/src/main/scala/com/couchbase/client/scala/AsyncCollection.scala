@@ -15,7 +15,9 @@
  */
 package com.couchbase.client.scala
 
+import java.time.Instant
 import java.util.Optional
+import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.cnc.RequestSpan
@@ -32,7 +34,7 @@ import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.kv.handlers._
-import com.couchbase.client.scala.util.{FutureConversions, TimeoutUtil}
+import com.couchbase.client.scala.util.{ExpiryUtil, FutureConversions, TimeoutUtil}
 import reactor.core.scala.publisher.SMono
 
 import scala.compat.java8.FutureConverters
@@ -150,11 +152,12 @@ class AsyncCollection(
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
     val timeoutActual =
       if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
+
     val req = insertHandler.request(
       id,
       content,
       options.durability,
-      options.expiry,
+      ExpiryUtil.expiryActual(options.expiry, options.expiryTime, Instant.now),
       timeoutActual,
       options.retryStrategy.getOrElse(environment.retryStrategy),
       options.transcoder.getOrElse(environment.transcoder),
@@ -193,7 +196,7 @@ class AsyncCollection(
       content,
       options.cas,
       options.durability,
-      options.expiry,
+      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
       timeoutActual,
       options.retryStrategy.getOrElse(environment.retryStrategy),
       options.transcoder.getOrElse(environment.transcoder),
@@ -230,7 +233,7 @@ class AsyncCollection(
       id,
       content,
       options.durability,
-      options.expiry,
+      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
       timeoutActual,
       options.retryStrategy.getOrElse(environment.retryStrategy),
       options.transcoder.getOrElse(environment.transcoder),
@@ -418,7 +421,7 @@ class AsyncCollection(
       options.cas,
       options.document,
       options.durability,
-      options.expiry,
+      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
       timeoutActual,
       options.retryStrategy.getOrElse(environment.retryStrategy),
       options.accessDeleted,
@@ -736,7 +739,7 @@ class AsyncCollection(
     val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
     val req = touchHandler.request(
       id,
-      expiry,
+      ExpiryUtil.expiryActual(expiry, None),
       timeout,
       options.retryStrategy.getOrElse(environment.retryStrategy),
       options.parentSpan

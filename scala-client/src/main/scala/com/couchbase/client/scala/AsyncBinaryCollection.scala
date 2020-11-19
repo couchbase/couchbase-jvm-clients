@@ -24,6 +24,7 @@ import com.couchbase.client.scala.kv.handlers.{
   BinaryPrependHandler
 }
 import com.couchbase.client.scala.kv._
+import com.couchbase.client.scala.util.ExpiryUtil
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
@@ -184,7 +185,7 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       delta,
       options.initial,
       options.durability,
-      options.expiry,
+      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
       timeoutActual,
       options.retryStrategy.getOrElse(environment.retryStrategy),
       options.parentSpan
@@ -233,7 +234,7 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       delta,
       options.initial,
       options.durability,
-      options.expiry,
+      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
       timeoutActual,
       options.retryStrategy.getOrElse(environment.retryStrategy),
       options.parentSpan

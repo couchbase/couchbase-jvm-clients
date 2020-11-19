@@ -43,7 +43,7 @@ private[scala] class UpsertHandler(hp: HandlerParams)
       id: String,
       content: T,
       durability: Durability,
-      expiration: java.time.Duration,
+      expiryEpochTimeSecs: Long,
       timeout: java.time.Duration,
       retryStrategy: RetryStrategy,
       transcoder: Transcoder,
@@ -54,7 +54,7 @@ private[scala] class UpsertHandler(hp: HandlerParams)
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(content, "content")
       _ <- Validate.notNull(durability, "durability")
-      _ <- Validate.notNull(expiration, "expiration")
+      _ <- Validate.notNull(expiryEpochTimeSecs, "expiration")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
       _ <- Validate.notNull(parentSpan, "parentSpan")
@@ -81,7 +81,7 @@ private[scala] class UpsertHandler(hp: HandlerParams)
           val out = new UpsertRequest(
             id,
             en.encoded,
-            expiration.getSeconds,
+            expiryEpochTimeSecs,
             en.flags,
             timeout,
             hp.core.context(),

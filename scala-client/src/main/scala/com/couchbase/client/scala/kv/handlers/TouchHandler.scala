@@ -38,14 +38,14 @@ private[scala] class TouchHandler(hp: HandlerParams)
 
   def request[T](
       id: String,
-      expiry: Duration,
+      expiryEpochTimeSecs: Long,
       timeout: java.time.Duration,
       retryStrategy: RetryStrategy,
       parentSpan: Option[RequestSpan]
   ): Try[TouchRequest] = {
     val validations: Try[TouchRequest] = for {
       _ <- Validate.notNullOrEmpty(id, "id")
-      _ <- Validate.notNull(expiry, "expiry")
+      _ <- Validate.notNull(expiryEpochTimeSecs, "expiry")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
       _ <- Validate.notNull(parentSpan, "parentSpan")
@@ -61,7 +61,7 @@ private[scala] class TouchHandler(hp: HandlerParams)
           hp.collectionIdentifier,
           retryStrategy,
           id,
-          expiry.toSeconds,
+          expiryEpochTimeSecs,
           hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_TOUCH, parentSpan.orNull)
         )
       )

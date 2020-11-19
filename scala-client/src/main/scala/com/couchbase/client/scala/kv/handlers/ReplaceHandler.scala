@@ -43,7 +43,7 @@ private[scala] class ReplaceHandler(hp: HandlerParams)
       content: T,
       cas: Long,
       durability: Durability,
-      expiration: java.time.Duration,
+      expiryEpochTimeSecs: Long,
       timeout: java.time.Duration,
       retryStrategy: RetryStrategy,
       transcoder: Transcoder,
@@ -55,7 +55,7 @@ private[scala] class ReplaceHandler(hp: HandlerParams)
       _ <- Validate.notNull(content, "content")
       _ <- Validate.notNull(cas, "cas")
       _ <- Validate.notNull(durability, "durability")
-      _ <- Validate.notNull(expiration, "expiration")
+      _ <- Validate.notNull(expiryEpochTimeSecs, "expiration")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
       _ <- Validate.notNull(parentSpan, "parentSpan")
@@ -82,7 +82,7 @@ private[scala] class ReplaceHandler(hp: HandlerParams)
           val out = new ReplaceRequest(
             id,
             en.encoded,
-            expiration.getSeconds,
+            expiryEpochTimeSecs,
             en.flags,
             timeout,
             cas,

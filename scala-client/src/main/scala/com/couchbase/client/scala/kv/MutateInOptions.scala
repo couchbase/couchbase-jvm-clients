@@ -15,8 +15,10 @@
  */
 package com.couchbase.client.scala.kv
 
+import java.time.Instant
+
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.annotation.Stability.{Uncommitted, Volatile}
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.codec.Transcoder
@@ -36,9 +38,11 @@ case class MutateInOptions(
     private[scala] val parentSpan: Option[RequestSpan] = None,
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
     private[scala] val transcoder: Option[Transcoder] = None,
-    private[scala] val expiry: Duration = 0.seconds,
+    // null is not very Scala, but is required for backwards-compatibility
+    private[scala] val expiry: Duration = null,
     private[scala] val accessDeleted: Boolean = false,
-    private[scala] val createAsDeleted: Boolean = false
+    private[scala] val createAsDeleted: Boolean = false,
+    private[scala] val expiryTime: Option[Instant] = None
 ) {
 
   /** Controls whether the document should be inserted, upserted, or not touched.  See
@@ -124,8 +128,11 @@ case class MutateInOptions(
 
   /** Changes the expiry setting used for this operation.
     *
+    * This overload should be used for any expiration times < 30 days.  If over that, use the overload that takes an
+    * `Instant` instead.
+    *
     * Couchbase documents optionally can have an expiration field set, e.g. when they will
-    * automatically expire and be removed.  On mutations if this is left at the default (0), then any expiry
+    * automatically expire and be removed.  On mutations if this is left at the default (null), then any expiry
     * will be removed and the document will never expire.  If the application wants to preserve
     * expiration then they should use the `withExpiration` parameter on any gets, and provide
     * the returned expiration parameter to any mutations.
@@ -138,8 +145,11 @@ case class MutateInOptions(
 
   /** Changes the expiry setting used for this operation.
     *
+    * This overload should be used for any expiration times < 30 days.  If over that, use the overload that takes an
+    * `Instant` instead.
+    *
     * Couchbase documents optionally can have an expiration field set, e.g. when they will
-    * automatically expire and be removed.  On mutations if this is left at the default (0), then any expiry
+    * automatically expire and be removed.  On mutations if this is left at the default (null), then any expiry
     * will be removed and the document will never expire.  If the application wants to preserve
     * expiration then they should use the `withExpiration` parameter on any gets, and provide
     * the returned expiration parameter to any mutations.
@@ -153,6 +163,23 @@ case class MutateInOptions(
       case Some(x) => copy(expiry = x)
       case _       => this
     }
+  }
+
+  /** Changes the expiry setting used for this operation.
+    *
+    * This overload should be used for any expiration times >= 30 days.  If below that, use the overload that takes a
+    * `Duration` instead.
+    *
+    * Couchbase documents optionally can have an expiration field set, e.g. when they will
+    * automatically expire and be removed.  On mutations if this is left at the default (0), then any expiry
+    * will be removed and the document will never expire.  If the application wants to preserve
+    * expiration then they should use the `withExpiration` parameter on any gets, and provide
+    * the returned expiration parameter to any mutations.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def expiry(value: Instant): MutateInOptions = {
+    copy(expiryTime = Some(value))
   }
 
   /** Changes the transcoder used for this operation.

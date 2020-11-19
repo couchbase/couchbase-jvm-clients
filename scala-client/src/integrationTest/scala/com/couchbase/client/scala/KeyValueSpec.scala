@@ -2,32 +2,17 @@ package com.couchbase.client.scala
 
 import java.util.concurrent.TimeUnit
 
-import com.couchbase.client.core.error.{
-  CasMismatchException,
-  DocumentNotFoundException,
-  TimeoutException
-}
+import com.couchbase.client.core.error.{DocumentNotFoundException, TimeoutException}
 import com.couchbase.client.core.retry.RetryReason
-import com.couchbase.client.core.retry.reactor.Retry
-import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.implicits.Codec
-import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
-import com.couchbase.client.scala.kv.{
-  GetOptions,
-  GetReplicaResult,
-  GetResult,
-  InsertOptions,
-  MutationResult,
-  UpsertOptions
-}
+import com.couchbase.client.scala.json.JsonObjectSafe
+import com.couchbase.client.scala.kv.{GetOptions, InsertOptions}
 import com.couchbase.client.scala.util.{ScalaIntegrationTest, Validate}
 import com.couchbase.client.test.{ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
-import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 @TestInstance(Lifecycle.PER_CLASS)
@@ -107,32 +92,6 @@ class KeyValueSpec extends ScalaIntegrationTest {
     val content = ujson.Obj("hello" -> "world")
     coll.insert(docId, content) match {
       case Success(result) => assert(result.cas != 0)
-      case Failure(err)    => assert(false, s"unexpected error $err")
-    }
-  }
-  @Test
-  def insert_without_expiry(): Unit = {
-    val docId = cleanupDoc()
-
-    val content = ujson.Obj("hello" -> "world")
-    assert(coll.insert(docId, content, InsertOptions().expiry(5.seconds)).isSuccess)
-
-    coll.get(docId) match {
-      case Success(result) => assert(result.expiry.isEmpty)
-      case Failure(err)    => assert(false, s"unexpected error $err")
-    }
-  }
-
-  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
-  @Test
-  def insert_with_expiry(): Unit = {
-    val docId = cleanupDoc()
-
-    val content = ujson.Obj("hello" -> "world")
-    assert(coll.insert(docId, content, InsertOptions().expiry(5.seconds)).isSuccess)
-
-    coll.get(docId, GetOptions().withExpiry(true)) match {
-      case Success(result) => assert(result.expiry.isDefined)
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
   }

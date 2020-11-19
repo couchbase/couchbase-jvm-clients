@@ -44,7 +44,7 @@ private[scala] class InsertHandler(hp: HandlerParams)
       id: String,
       content: T,
       durability: Durability,
-      expiration: java.time.Duration,
+      expiryEpochTimeSecs: Long,
       timeout: java.time.Duration,
       retryStrategy: RetryStrategy,
       transcoder: Transcoder,
@@ -56,7 +56,6 @@ private[scala] class InsertHandler(hp: HandlerParams)
       _ <- Validate.notNullOrEmpty(id, "id")
       _ <- Validate.notNull(content, "content")
       _ <- Validate.notNull(durability, "durability")
-      _ <- Validate.notNull(expiration, "expiration")
       _ <- Validate.notNull(timeout, "timeout")
       _ <- Validate.notNull(retryStrategy, "retryStrategy")
       _ <- Validate.notNull(parentSpan, "parentSpan")
@@ -83,7 +82,7 @@ private[scala] class InsertHandler(hp: HandlerParams)
           val out = new InsertRequest(
             id,
             en.encoded,
-            expiration.getSeconds,
+            expiryEpochTimeSecs,
             en.flags,
             timeout,
             hp.core.context(),
