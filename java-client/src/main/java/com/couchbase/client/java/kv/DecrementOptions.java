@@ -97,7 +97,6 @@ public class DecrementOptions extends CommonDurabilityOptions<DecrementOptions> 
    * @param expiry the custom expiry value of the document.
    * @return this options class for chaining purposes.
    */
-  @Stability.Uncommitted
   public DecrementOptions expiry(final Instant expiry) {
     this.expiry = Expiry.absolute(expiry);
     return this;

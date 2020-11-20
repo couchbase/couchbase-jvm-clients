@@ -63,7 +63,6 @@ public class InsertOptions extends CommonDurabilityOptions<InsertOptions> {
    * @param expiry the expiry time as an absolute instant.
    * @return this {@link InsertOptions} for chaining purposes.
    */
-  @Stability.Uncommitted
   public InsertOptions expiry(final Instant expiry) {
     this.expiry = Expiry.absolute(expiry);
     return this;

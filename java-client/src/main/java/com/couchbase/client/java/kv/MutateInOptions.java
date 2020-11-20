@@ -69,7 +69,6 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
    * @param expiry the expiry time as an absolute instant.
    * @return this {@link MutateInOptions} for chaining purposes.
    */
-  @Stability.Uncommitted
   public MutateInOptions expiry(final Instant expiry) {
     this.expiry = Expiry.absolute(expiry);
     return this;

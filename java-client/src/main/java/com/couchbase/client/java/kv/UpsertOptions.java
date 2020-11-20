@@ -63,7 +63,6 @@ public class UpsertOptions extends CommonDurabilityOptions<UpsertOptions> {
    * @param expiry the expiry time as an absolute instant.
    * @return this {@link UpsertOptions} for chaining purposes.
    */
-  @Stability.Uncommitted
   public UpsertOptions expiry(final Instant expiry) {
     this.expiry = Expiry.absolute(expiry);
     return this;

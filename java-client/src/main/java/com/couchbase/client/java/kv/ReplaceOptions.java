@@ -65,7 +65,6 @@ public class ReplaceOptions extends CommonDurabilityOptions<ReplaceOptions> {
    * @param expiry the expiry time as an absolute instant.
    * @return this {@link ReplaceOptions} for chaining purposes.
    */
-  @Stability.Uncommitted
   public ReplaceOptions expiry(final Instant expiry) {
     this.expiry = Expiry.absolute(expiry);
     return this;

@@ -97,7 +97,6 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
    * @param expiry the custom expiry value of the document.
    * @return this options class for chaining purposes.
    */
-  @Stability.Uncommitted
   public IncrementOptions expiry(final Instant expiry) {
     this.expiry = Expiry.absolute(expiry);
     return this;
