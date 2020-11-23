@@ -25,15 +25,23 @@ import com.couchbase.client.core.config.ClusterCapabilities;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.error.PreparedStatementFailureException;
+import com.couchbase.client.core.error.context.QueryErrorContext;
+import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.core.msg.query.TargetedQueryRequest;
+import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
+import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.LRUCache;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonObject;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -47,6 +55,7 @@ import java.util.function.Function;
 
 import static com.couchbase.client.core.retry.RetryOrchestrator.capDuration;
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 
 /**
@@ -59,6 +68,7 @@ import static com.couchbase.client.java.query.QueryOptions.queryOptions;
  */
 @Stability.Internal
 public class QueryAccessor {
+    public static final int QUERY_ERROR_TRANSACTION_QUEUE_FULL = 17013;
 
     /**
      * The maximum number of prepared queries that will be kept around if the cache is enabled.
@@ -155,10 +165,45 @@ public class QueryAccessor {
             core.send(request);
             return Reactor
               .wrap(request, request.response(), true)
+              .onErrorResume(err -> handleQueryErrors(request, err))
               .doFinally(signalType -> request.context().logicallyComplete());
         } else {
             return maybePrepareAndExecute(request, options, serializer)
+              .onErrorResume(err -> handleQueryErrors(request, err))
               .doFinally(signalType -> request.context().logicallyComplete());
+        }
+    }
+
+    /**
+     * Internal method to handle particular query errors.
+     *
+     * @param request the request to perform.
+     * @param err the error that was raised
+     * @return empty if the error was handled, else the error is propagated.
+     */
+    private Mono<? extends QueryResponse> handleQueryErrors(QueryRequest request, Throwable err) {
+        boolean handled = false;
+
+        if (err instanceof CouchbaseException) {
+            CouchbaseException ce = (CouchbaseException) err;
+
+            if (ce.context() instanceof QueryErrorContext) {
+                QueryErrorContext ctx = (QueryErrorContext) ce.context();
+
+                for (ErrorCodeAndMessage ec : ctx.errors()) {
+                    if (!handled && ec.code() == QUERY_ERROR_TRANSACTION_QUEUE_FULL) {
+                        RetryOrchestrator.maybeRetry(core.context(), request,
+                                RetryReason.QUERY_PREPARED_STATEMENT_FAILURE);
+                        handled = true;
+                    }
+                }
+            }
+        }
+
+        if (handled) {
+            return Mono.empty();
+        } else {
+            return Mono.error(err);
         }
     }
 
@@ -374,6 +419,34 @@ public class QueryAccessor {
             }
             return Mono.error(t);
         }
+    }
+
+    /**
+     * Used by the transactions library, this provides some binary interface protection against
+     * QueryRequest/TargetedQueryRequest changing.
+     */
+    @Stability.Internal
+    public static QueryRequest targetedQueryRequest(String statement,
+                                                    byte[] queryBytes,
+                                                    String clientContextId,
+                                                    @Nullable NodeIdentifier target,
+                                                    boolean readonly,
+                                                    RetryStrategy retryStrategy,
+                                                    Duration timeout,
+                                                    RequestSpan parentSpan,
+                                                    Core core) {
+        notNullOrEmpty(statement, "Statement", () -> new ReducedQueryErrorContext(statement));
+
+        QueryRequest request;
+        if (target != null) {
+            request = new TargetedQueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), statement,
+                    queryBytes, readonly, clientContextId, parentSpan, null, target);
+        }
+        else {
+            request = new QueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), statement,
+                    queryBytes, readonly, clientContextId, parentSpan, null);
+        }
+        return request;
     }
 
 }

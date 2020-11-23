@@ -136,7 +136,11 @@ public enum RetryReason {
   /**
    * If a collection is requested but not found in the collection map.
    */
-  COLLECTION_NOT_FOUND(true, false);
+  COLLECTION_NOT_FOUND(true, false),
+  /**
+   * The query service has a buffer of statements per-transaction, which is full.
+   */
+  QUERY_TRANSACTION_BUFFER_FULL(true, true);
 
   private final boolean allowsNonIdempotentRetry;
   private final boolean alwaysRetry;

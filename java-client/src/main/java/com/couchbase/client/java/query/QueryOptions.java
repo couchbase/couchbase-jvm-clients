@@ -68,7 +68,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   /**
    * The options should only be instantiated through the {@link #queryOptions()} static method.
    */
-  private QueryOptions() {}
+  protected QueryOptions() {}
 
   /**
    * Creates new {@link QueryOptions} with all default params set.
