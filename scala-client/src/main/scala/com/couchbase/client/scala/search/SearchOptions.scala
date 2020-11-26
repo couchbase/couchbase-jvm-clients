@@ -44,7 +44,8 @@ case class SearchOptions(
     private[scala] val timeout: Option[Duration] = None,
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
     private[scala] val parentSpan: Option[RequestSpan] = None,
-    private[scala] val raw: Option[Map[String, Any]] = None
+    private[scala] val raw: Option[Map[String, Any]] = None,
+    private[scala] val disableScoring: Boolean = false
 ) {
 
   /** Sets the parent `RequestSpan`.
@@ -192,6 +193,18 @@ case class SearchOptions(
     copy(raw = Some(raw))
   }
 
+  /** If set to true, the server will not perform any scoring on the hits.
+    *
+    * This could provide a performance improvement in cases where the score is not required.
+    *
+    * This parameter only has an effect if the Couchbase Cluster version is 6.6.0 or above.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def disableScoring(value: Boolean): SearchOptions = {
+    copy(disableScoring = value)
+  }
+
   /** Exports the whole query as a `JsonObject`.
     */
   private[scala] def export(indexName: String, query: SearchQuery): JsonObject = {
@@ -262,6 +275,7 @@ case class SearchOptions(
     }
 
     if (!control.isEmpty) queryJson.put("ctl", control)
+    if (disableScoring) queryJson.put("score", "none")
 
     raw.foreach(_.foreach(x => queryJson.put(x._1, x._2)))
   }

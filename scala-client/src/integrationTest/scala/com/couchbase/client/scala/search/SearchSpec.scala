@@ -25,6 +25,7 @@ import com.couchbase.client.scala.manager.search.SearchIndex
 import com.couchbase.client.scala.search.facet.SearchFacet
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.SearchFacetResult.{TermRange, TermSearchFacetResult}
+import com.couchbase.client.scala.search.result.SearchResult
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.test.{Capabilities, IgnoreWhen, Util}
@@ -32,7 +33,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
 import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 @IgnoreWhen(missesCapabilities = Array(Capabilities.SEARCH))
 @TestInstance(Lifecycle.PER_CLASS)
@@ -223,4 +224,84 @@ class SearchSpec extends ScalaIntegrationTest {
     runTest()
   }
 
+  /** FTS testing on CI rarely runs smoothly, so retry the test until success
+    * (or timeout, handled by Junit)
+    */
+  private def rerunIfNeeded(
+      searchResult: Try[SearchResult],
+      test: () => Unit,
+      onSuccess: (SearchResult) => Unit
+  ) = {
+
+    val rerunTest: Boolean = searchResult match {
+      case Success(result) =>
+        println(result)
+
+        if (result.metaData.errors.nonEmpty) {
+          println("Running test again as errors")
+          true
+        } else if (result.rows.size < 1) {
+          println("Running test again as not enough rows")
+          true
+        } else {
+          result.metaData.errors.foreach(err => println(s"Err: ${err}"))
+          println(s"Rows: ${result.rows}")
+          assert(1 == result.rows.size)
+
+          onSuccess(result)
+
+          false
+        }
+
+      case Failure(ex) =>
+        println(ex.getMessage)
+        println("Running test again as error")
+        true
+    }
+
+    if (rerunTest) {
+      Thread.sleep(50)
+      test()
+    }
+  }
+
+  @Timeout(value = 1, unit = TimeUnit.MINUTES)
+  // The score:none parameter was added in 6.6, so using CREATE_AS_DELETED support as a handy proxy for that cluster version
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.CREATE_AS_DELETED))
+  @Test
+  def disableScoring_shouldSucceedOnCluster_6_6_plus(): Unit = {
+    def runTest(): Unit = {
+      val result = cluster.searchQuery(
+        indexName,
+        SearchQuery.matchPhrase("John Smith"),
+        SearchOptions().disableScoring(true)
+      )
+
+      rerunIfNeeded(result, runTest, (r: SearchResult) => {
+        assert(r.rows.head.score <= 0.0001)
+        assert(r.rows.head.score >= -0.0001)
+      })
+    }
+
+    runTest()
+  }
+
+  @Timeout(value = 1, unit = TimeUnit.MINUTES)
+  @IgnoreWhen(hasCapabilities = Array(Capabilities.CREATE_AS_DELETED))
+  @Test
+  def disableScoring_shouldBeGracefullyIgnoredOnCluster_6_5_minus(): Unit = {
+    def runTest(): Unit = {
+      val result = cluster.searchQuery(
+        indexName,
+        SearchQuery.matchPhrase("John Smith"),
+        SearchOptions().disableScoring(true)
+      )
+
+      rerunIfNeeded(result, runTest, (r: SearchResult) => {
+        assert(r.rows.head.score >= 0.0001)
+      })
+    }
+
+    runTest()
+  }
 }
