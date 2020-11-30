@@ -17,8 +17,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <netty.version>4.1.52.Final</netty.version>
-        <jackson.version>2.11.2</jackson.version>
+        <netty.version>4.1.54.Final</netty.version>
+        <jackson.version>2.12.0</jackson.version>
 
         <native.folder>${project.build.directory}/native</native.folder>
         <native.epoll.original>libnetty_transport_native_epoll_x86_64.so</native.epoll.original>
@@ -60,7 +60,7 @@
         <dependency>
             <groupId>org.jctools</groupId>
             <artifactId>jctools-core</artifactId>
-            <version>3.1.0</version>
+            <version>3.2.0</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>

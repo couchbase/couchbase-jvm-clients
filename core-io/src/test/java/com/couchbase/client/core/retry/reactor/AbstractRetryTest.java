@@ -26,7 +26,6 @@ import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AbstractRetryTest {
 
@@ -70,21 +69,6 @@ public class AbstractRetryTest {
 
     backoff = abstractRetry.calculateBackoff(retryContext, timeoutInstant);
     assertEquals(backoff, AbstractRetry.RETRY_EXHAUSTED);
-  }
-
-  @Test
-  void calculateTimeoutUsesDefaultClockWhenNoScheduler() {
-    AbstractRetry<String, Integer> abstractRetry = new AbstractRetry<String, Integer>(2, Duration.ofSeconds(1),
-      Backoff.ZERO_BACKOFF, Jitter.NO_JITTER, null, null) {
-      @Override
-      public Publisher<Long> apply(Flux<Integer> integerFlux) {
-        return null;
-      }
-    };
-    Instant oneSecondFromNow = Instant.now().plusSeconds(1);
-    Instant timeout = abstractRetry.calculateTimeout();
-    assertTrue(timeout.toEpochMilli() >= oneSecondFromNow.toEpochMilli(),
-        "timeout " + timeout  + " was not >= " + oneSecondFromNow);
   }
 
   @Test

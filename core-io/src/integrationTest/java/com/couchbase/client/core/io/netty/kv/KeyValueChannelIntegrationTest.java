@@ -180,6 +180,8 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
 
   @Test
   void failWithInvalidBucketCredential() throws Exception {
+    String bucketName = "42eredwefrfe";
+
     TestNodeConfig node = config().nodes().get(0);
     Bootstrap bootstrap = new Bootstrap()
       .remoteAddress(node.hostname(), node.ports().get(Services.KV))
@@ -190,13 +192,14 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
         protected void initChannel(SocketChannel ch) {
           new KeyValueEndpoint.KeyValuePipelineInitializer(
             endpointContext,
-            Optional.of("42eredwefrfe"),
+            Optional.of(bucketName),
             endpointContext.authenticator()
           ).init(null, ch.pipeline());
         }
       });
 
-    assertAuthenticationFailure(bootstrap, "No Access to bucket 42eredwefrfe");
+    assertAuthenticationFailure(bootstrap, "Either the bucket with name \"" + bucketName + "\" is not present " +
+      "or the user does not have the right privileges to access it");
   }
 
 

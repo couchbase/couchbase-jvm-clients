@@ -18,6 +18,7 @@ package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.cnc.SimpleEventBus;
+import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.env.TimeoutConfig;
@@ -42,6 +43,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -103,7 +105,10 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
       SeedNode.create("1.2.3.4")
     ));
 
+
+    SimpleEventBus eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder()
+      .eventBus(eventBus)
       .build();
     core = Core.create(environment, authenticator(), seeds);
 
@@ -111,6 +116,8 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
     openAndClose(bucketName, provider);
     provider.shutdown().block();
+
+    waitUntilCondition(() -> eventBus.publishedEvents().stream().anyMatch(e -> e instanceof EndpointConnectionFailedEvent));
   }
 
   /**
@@ -128,7 +135,9 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
       )
     ));
 
+    SimpleEventBus eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder()
+      .eventBus(eventBus)
       .build();
     core = Core.create(environment, authenticator(), seeds);
 
@@ -136,6 +145,8 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
     openAndClose(bucketName, provider);
     provider.shutdown().block();
+
+    waitUntilCondition(() -> eventBus.publishedEvents().stream().anyMatch(e -> e instanceof EndpointConnectionFailedEvent));
   }
 
   /**
