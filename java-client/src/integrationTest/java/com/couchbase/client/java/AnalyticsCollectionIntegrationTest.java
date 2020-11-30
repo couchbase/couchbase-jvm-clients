@@ -93,6 +93,8 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
 		collectionManager.createCollection(collSpec);
 		waitUntilCondition(() -> collectionExists(collectionManager, collSpec));
 
+		waitForQueryIndexerToHaveBucket(cluster, config().bucketname());
+
 		// this inserts two documents in bucket.scope.collection and creates a primary index.
 		// then inserts one document in bucket._default._default and creates a primary index.
 
