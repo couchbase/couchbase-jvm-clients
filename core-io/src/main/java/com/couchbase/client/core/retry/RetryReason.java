@@ -140,7 +140,7 @@ public enum RetryReason {
   /**
    * The query service has a buffer of statements per-transaction, which is full.
    */
-  QUERY_TRANSACTION_BUFFER_FULL(true, true);
+  QUERY_TRANSACTION_BUFFER_FULL(true, false);
 
   private final boolean allowsNonIdempotentRetry;
   private final boolean alwaysRetry;

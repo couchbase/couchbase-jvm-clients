@@ -73,6 +73,10 @@ public class QueryMessageHandler
       return Optional.of(RetryReason.QUERY_INDEX_NOT_FOUND);
     }
 
+    if (code == 17013) {
+      return Optional.of(RetryReason.QUERY_TRANSACTION_BUFFER_FULL);
+    }
+
     return Optional.empty();
   }
 
