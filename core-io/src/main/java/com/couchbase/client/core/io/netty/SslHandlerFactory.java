@@ -62,7 +62,11 @@ public class SslHandlerFactory {
 
     SSLEngine sslEngine = sslHandler.engine();
     SSLParameters sslParameters = sslEngine.getSSLParameters();
-    sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
+
+    if (config.hostnameVerificationEnabled()) {
+      sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
+    }
+
     sslEngine.setSSLParameters(sslParameters);
 
     return sslHandler;

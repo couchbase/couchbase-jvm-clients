@@ -55,7 +55,13 @@ public class SecurityConfig {
    */
   private static final boolean DEFAULT_NATIVE_TLS_ENABLED = true;
 
+  /**
+   * By default, hostname verification for TLS connections is enabled.
+   */
+  private static final boolean DEFAULT_HOSTNAME_VERIFICATION_ENABLED = true;
+
   private final boolean nativeTlsEnabled;
+  private final boolean hostnameVerificationEnabled;
   private final boolean tlsEnabled;
   private final List<X509Certificate> trustCertificates;
   private final TrustManagerFactory trustManagerFactory;
@@ -86,6 +92,20 @@ public class SecurityConfig {
    */
   public static Builder enableTls(boolean tlsEnabled) {
     return builder().enableTls(tlsEnabled);
+  }
+
+  /**
+   * Allows to enable or disable hostname verification (enabled by default).
+   * <p>
+   * Note that disabling hostname verification will cause the TLS connection to not verify that the hostname/ip
+   * is actually part of the certificate and as a result not detect certain kinds of attacks. Only disable if
+   * you understand the impact and risks!
+   *
+   * @param hostnameVerificationEnabled set to true if it should be enabled, false for disabled.
+   * @return this {@link Builder} for chaining purposes.
+   */
+  public static Builder enableHostnameVerification(boolean hostnameVerificationEnabled) {
+    return builder().enableHostnameVerification(hostnameVerificationEnabled);
   }
 
   /**
@@ -159,6 +179,7 @@ public class SecurityConfig {
     nativeTlsEnabled = builder.nativeTlsEnabled;
     trustCertificates = builder.trustCertificates;
     trustManagerFactory = builder.trustManagerFactory;
+    hostnameVerificationEnabled = builder.hostnameVerificationEnabled;
 
     if (tlsEnabled) {
       if (trustCertificates != null && trustManagerFactory != null) {
@@ -180,6 +201,13 @@ public class SecurityConfig {
    */
   public boolean tlsEnabled() {
     return tlsEnabled;
+  }
+
+  /**
+   * True if TLS hostname verification is enabled, false otherwise.
+   */
+  public boolean hostnameVerificationEnabled() {
+    return hostnameVerificationEnabled;
   }
 
   /**
@@ -217,6 +245,7 @@ public class SecurityConfig {
     final Map<String, Object> export = new LinkedHashMap<>();
     export.put("tlsEnabled", tlsEnabled);
     export.put("nativeTlsEnabled", nativeTlsEnabled);
+    export.put("hostnameVerificationEnabled", hostnameVerificationEnabled);
     export.put("hasTrustCertificates", trustCertificates != null && !trustCertificates.isEmpty());
     export.put("trustManagerFactory", trustManagerFactory != null ? trustManagerFactory.getClass().getSimpleName() : null);
     return export;
@@ -229,6 +258,7 @@ public class SecurityConfig {
 
     private boolean tlsEnabled = DEFAULT_TLS_ENABLED;
     private boolean nativeTlsEnabled = DEFAULT_NATIVE_TLS_ENABLED;
+    private boolean hostnameVerificationEnabled = DEFAULT_HOSTNAME_VERIFICATION_ENABLED;
     private List<X509Certificate> trustCertificates = null;
     private TrustManagerFactory trustManagerFactory = null;
 
@@ -249,6 +279,21 @@ public class SecurityConfig {
      */
     public Builder enableTls(boolean tlsEnabled) {
       this.tlsEnabled = tlsEnabled;
+      return this;
+    }
+
+    /**
+     * Allows to enable or disable hostname verification (enabled by default).
+     * <p>
+     * Note that disabling hostname verification will cause the TLS connection to not verify that the hostname/ip
+     * is actually part of the certificate and as a result not detect certain kinds of attacks. Only disable if
+     * you understand the impact and risks!
+     *
+     * @param hostnameVerificationEnabled set to true if it should be enabled, false for disabled.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public Builder enableHostnameVerification(boolean hostnameVerificationEnabled) {
+      this.hostnameVerificationEnabled = hostnameVerificationEnabled;
       return this;
     }
 

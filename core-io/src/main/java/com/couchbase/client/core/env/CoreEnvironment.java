@@ -26,9 +26,10 @@ import com.couchbase.client.core.cnc.Meter;
 import com.couchbase.client.core.cnc.OrphanReporter;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.events.config.HighIdleHttpConnectionTimeoutConfiguredEvent;
-import com.couchbase.client.core.cnc.metrics.AggregatingMeter;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
+import com.couchbase.client.core.cnc.events.config.InsecureSecurityConfigDetectedEvent;
 import com.couchbase.client.core.cnc.tracing.ThresholdRequestTracer;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -180,6 +181,22 @@ public class CoreEnvironment {
 
     if (ioConfig.idleHttpConnectionTimeout().toMillis() > AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME.toMillis()) {
       eventBus.get().publish(new HighIdleHttpConnectionTimeoutConfiguredEvent());
+    }
+
+    checkInsecureTlsConfig();
+  }
+
+  /**
+   * Helper method to check for insecure TLS settings and emit an event to notify users.
+   */
+  private void checkInsecureTlsConfig() {
+    if (securityConfig.tlsEnabled()) {
+      boolean validateHosts = securityConfig.hostnameVerificationEnabled();
+      boolean insecureTrustManager = securityConfig.trustManagerFactory() instanceof InsecureTrustManagerFactory;
+
+      if (!validateHosts || insecureTrustManager) {
+        eventBus.get().publish(new InsecureSecurityConfigDetectedEvent(validateHosts, insecureTrustManager));
+      }
     }
   }
 
