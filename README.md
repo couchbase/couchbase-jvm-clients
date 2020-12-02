@@ -13,8 +13,10 @@ This repository contains the following projects:
  - `core-io`: the foundational library for all language bindings
  - `java-client`: the Java language binding
  - `scala-client`: the Scala language binding
- - `tracing-opentracing`: experimental module to integrate with [OpenTracing](https://opentracing.io/)
- - `tracing-opentelemetry`: experimental module to integrate with [OpenTelemetry](https://opentelemetry.io/)
+ - `tracing-opentracing`: module to integrate with [OpenTracing](https://opentracing.io/)
+ - `tracing-opentelemetry`: module to integrate with [OpenTelemetry](https://opentelemetry.io/) tracing
+ - `metrics-opentelemetry`: module to integrate with [OpenTelemetry](https://opentelemetry.io/) metrics
+ - `metrics-micrometer`: module to integratr with [Micrometer](https://micrometer.io/) metrics
 
 Other toplevel modules might be present which contain examples, experimental code or internal tooling and test infrastructure.
 
@@ -32,7 +34,7 @@ For Java:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>java-client</artifactId>
-        <version>3.0.8</version>
+        <version>3.1.0</version>
     </dependency>
 </dependencies>
 ```
@@ -44,13 +46,13 @@ For Scala:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>scala-client_2.12</artifactId>
-        <version>1.0.8</version>
+        <version>1.1.0</version>
     </dependency>
 </dependencies>
 ```
 or if you use sbt:
 ```sbt
-libraryDependencies += "com.couchbase.client" %% "scala-client" % "1.0.8"
+libraryDependencies += "com.couchbase.client" %% "scala-client" % "1.1.0"
 ```
 
 ## Building
@@ -104,9 +106,10 @@ each service release. See the tag information for specifics of what's in there.
 
  - [Colossus](https://en.wikipedia.org/wiki/Colossus_computer) (Initial Release 2020-01-10)
 
-| Release Train | Java-Client | Scala-Client | Core-Io | Tracing-OpenTelemetry | Tracing-OpenTracing |
-| ------------- | ----------- | ------------ | ------- | --------------------- | ------------------- |
-| colossus      | 3.0.x       | 1.0.x        | 2.0.x   | 0.2.x                 | 0.2.x               |
+| Release Train | Java-Client | Scala-Client | Core-Io | Tracing-OpenTelemetry | Tracing-OpenTracing | Metrics-OpenTelemetry | Metrics-Micrometer | 
+| ------------- | ----------- | ------------ | ------- | --------------------- | ------------------- | --------------------- | ------------------ |
+| colossus      | 3.0.x       | 1.0.x        | 2.0.x   | 0.2.x                 | 0.2.x               | -                     | -                  |
+| pegasus       | 3.1.x       | 1.1.x        | 2.1.x   | 0.3.x                 | 0.3.x               | 0.1.x                 | 0.1.x              |
 
 ### Testing Info
 
