@@ -26,7 +26,6 @@ object TestUtils {
       guard -= 1
       bucket.ping(PingOptions(Set(serviceType))) match {
         case Success(result) =>
-          println(s"Waiting for service ${serviceType} to be ready, ping result: ${result}")
           if (!result.endpoints.isEmpty && result.endpoints
                 .get(serviceType)
                 .get(0)

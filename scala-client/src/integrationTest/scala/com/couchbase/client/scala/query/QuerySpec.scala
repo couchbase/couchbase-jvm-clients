@@ -56,19 +56,14 @@ class QuerySpec extends ScalaIntegrationTest {
     TestUtils.waitForService(bucket, ServiceType.QUERY)
     TestUtils.waitForIndexerToHaveBucket(cluster, config.bucketname())
 
-    println("Waiting for primary index to be created successfully")
-
     Util.waitUntilCondition(
       () => {
         val result =
           cluster.queryIndexes.createPrimaryIndex(config.bucketname, timeout = 20 seconds)
-        println(result)
         result.isSuccess
       },
       java.time.Duration.ofMinutes(3)
     )
-
-    println("Waiting for primary index to really be created")
 
     cluster.queryIndexes
       .watchIndexes(config.bucketname, Seq(), Duration(1, TimeUnit.MINUTES), watchPrimary = true)
@@ -232,9 +227,6 @@ class QuerySpec extends ScalaIntegrationTest {
       .flatMap(result => {
         result
           .rowsAs[String]
-          .doOnNext(v => {
-            println("GOT A ROW!!" + v)
-          })
           .collectSeq()
           .doOnNext(rows => assert(rows.size == 1))
           .flatMap(_ => result.metaData)
@@ -283,7 +275,6 @@ class QuerySpec extends ScalaIntegrationTest {
             result
               .rowsAs[String]
               .doOnNext(v => assert(false))
-              .doOnError(err => println("expected ERR: " + err))
           })
           .blockLast()
       }
@@ -523,7 +514,6 @@ class QuerySpec extends ScalaIntegrationTest {
       .flatMap(_.rowsAs[JsonObject]) match {
       case Success(rows) =>
         assert(rows.nonEmpty)
-        rows.foreach(row => println(row))
       case Failure(err) =>
         println(s"Error: $err")
     }

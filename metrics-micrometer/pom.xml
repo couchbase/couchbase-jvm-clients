@@ -12,7 +12,7 @@
     </parent>
 
     <properties>
-        <micrometer.version>1.6.0</micrometer.version>
+        <micrometer.version>1.6.1</micrometer.version>
     </properties>
 
     <artifactId>metrics-micrometer</artifactId>
@@ -46,6 +46,7 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-test</artifactId>
             <version>${micrometer.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

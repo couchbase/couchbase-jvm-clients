@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.org.HdrHistogram.Histogram;
 import com.couchbase.client.core.deps.org.LatencyUtils.LatencyStats;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Aggregates value information in a histogram.
@@ -29,11 +30,14 @@ import java.util.Map;
 @Stability.Volatile
 public class AggregatingValueRecorder implements ValueRecorder {
 
+  private final String name;
+
   private final Map<String, String> tags;
 
   private final LatencyStats recorderStats = new LatencyStats();
 
-  public AggregatingValueRecorder(final Map<String, String> tags) {
+  public AggregatingValueRecorder(final String name, final Map<String, String> tags) {
+    this.name = name;
     this.tags = tags;
   }
 
@@ -48,5 +52,26 @@ public class AggregatingValueRecorder implements ValueRecorder {
 
   Map<String, String> tags() {
     return tags;
+  }
+
+  @Override
+  public String toString() {
+    return "AggregatingValueRecorder{" +
+      "name='" + name + '\'' +
+      ", tags=" + tags +
+      '}';
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    AggregatingValueRecorder that = (AggregatingValueRecorder) o;
+    return Objects.equals(name, that.name) && Objects.equals(tags, that.tags);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(name, tags);
   }
 }

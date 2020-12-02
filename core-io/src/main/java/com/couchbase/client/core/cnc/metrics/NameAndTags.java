@@ -16,25 +16,36 @@
 
 package com.couchbase.client.core.cnc.metrics;
 
-import com.couchbase.client.core.cnc.Counter;
-import com.couchbase.client.core.cnc.Meter;
-import com.couchbase.client.core.cnc.ValueRecorder;
+import com.couchbase.client.core.annotation.Stability;
 
 import java.util.Map;
+import java.util.Objects;
 
-public class NoopMeter implements Meter {
-  @Override
-  public Counter counter(String name, Map<String, String> tags) {
-    return new NoopCounter();
+/**
+ * Helper class which consolidates names and tags for caching purposes.
+ */
+@Stability.Internal
+public class NameAndTags {
+
+  private final String name;
+  private final Map<String, String> tags;
+
+  public NameAndTags(String name, Map<String, String> tags) {
+    this.name = name;
+    this.tags = tags;
   }
 
   @Override
-  public ValueRecorder valueRecorder(String name, Map<String, String> tags) {
-    return new NoopValueRecorder();
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    NameAndTags that = (NameAndTags) o;
+    return Objects.equals(name, that.name) && Objects.equals(tags, that.tags);
   }
 
   @Override
-  public String toString() {
-    return "NoopMeter";
+  public int hashCode() {
+    return Objects.hash(name, tags);
   }
+
 }

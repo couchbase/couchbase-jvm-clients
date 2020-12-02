@@ -212,7 +212,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
         try {
           currentRequest.context().dispatchLatency(System.nanoTime() - dispatchTimingStart);
           if (currentDispatchSpan != null) {
-            currentDispatchSpan.end(endpointContext.environment().requestTracer());
+            currentDispatchSpan.end();
           }
             FullHttpResponse httpResponse = (FullHttpResponse) msg;
             ResponseStatus responseStatus = HttpProtocol.decodeStatus(httpResponse.status());

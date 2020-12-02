@@ -26,6 +26,7 @@ import com.couchbase.client.core.cnc.Meter;
 import com.couchbase.client.core.cnc.OrphanReporter;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.events.config.HighIdleHttpConnectionTimeoutConfiguredEvent;
+import com.couchbase.client.core.cnc.metrics.AggregatingMeter;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
 import com.couchbase.client.core.cnc.events.config.InsecureSecurityConfigDetectedEvent;
 import com.couchbase.client.core.cnc.tracing.ThresholdRequestTracer;
@@ -54,7 +55,6 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import static com.couchbase.client.core.util.Validators.notNull;
-import static java.util.Objects.requireNonNull;
 
 /**
  * The Environment is the main place in the SDK where configuration and state lives (i.e. I/O pools).
@@ -109,6 +109,7 @@ public class CoreEnvironment {
   private final TimeoutConfig timeoutConfig;
   private final OrphanReporterConfig orphanReporterConfig;
   private final ThresholdRequestTracerConfig thresholdRequestTracerConfig;
+  private final AggregatingMeterConfig aggregatingMeterConfig;
   private final Supplier<RequestTracer> requestTracer;
   private final Supplier<Meter> meter;
   private final LoggerConfig loggerConfig;
@@ -152,6 +153,7 @@ public class CoreEnvironment {
     this.loggerConfig = builder.loggerConfig.build();
     this.orphanReporterConfig = builder.orphanReporterConfig.build();
     this.thresholdRequestTracerConfig = builder.thresholdRequestTracerConfig.build();
+    this.aggregatingMeterConfig = builder.aggregatingMeterConfig.build();
 
     if (eventBus instanceof OwnedSupplier) {
       eventBus.get().start().block();
@@ -166,10 +168,10 @@ public class CoreEnvironment {
       requestTracer.get().start().block();
     }
 
-    this.meter = Optional.ofNullable(builder.meter).orElse(new OwnedSupplier<Meter>(
-      // AggregatingMeter.create(eventBus.get())
-      // For now we just default to the noop meter until the default one is polished
-      new NoopMeter()
+    this.meter = Optional.ofNullable(builder.meter).orElse(new OwnedSupplier<>(
+      aggregatingMeterConfig.enabled()
+        ? AggregatingMeter.create(eventBus.get(), aggregatingMeterConfig)
+        : new NoopMeter()
     ));
 
     if (meter instanceof OwnedSupplier) {
@@ -485,6 +487,7 @@ public class CoreEnvironment {
     input.put("loggerConfig", loggerConfig.exportAsMap());
     input.put("orphanReporterConfig", orphanReporterConfig.exportAsMap());
     input.put("thresholdRequestTracerConfig", thresholdRequestTracerConfig.exportAsMap());
+    input.put("aggregatingMeterConfig", aggregatingMeterConfig.exportAsMap());
 
     input.put("retryStrategy", retryStrategy.getClass().getSimpleName());
     input.put("requestTracer", requestTracer.get().getClass().getSimpleName());
@@ -508,6 +511,7 @@ public class CoreEnvironment {
     private LoggerConfig.Builder loggerConfig = LoggerConfig.builder();
     private OrphanReporterConfig.Builder orphanReporterConfig = OrphanReporterConfig.builder();
     private ThresholdRequestTracerConfig.Builder thresholdRequestTracerConfig = ThresholdRequestTracerConfig.builder();
+    private AggregatingMeterConfig.Builder aggregatingMeterConfig = AggregatingMeterConfig.builder();
     private Supplier<EventBus> eventBus = null;
     private Supplier<Scheduler> scheduler = null;
     private Supplier<RequestTracer> requestTracer = null;
@@ -611,6 +615,15 @@ public class CoreEnvironment {
      */
     public OrphanReporterConfig.Builder orphanReporterConfig() {
       return orphanReporterConfig;
+    }
+
+    public SELF aggregatingMeterConfig(final AggregatingMeterConfig.Builder aggregatingMeterConfig) {
+      this.aggregatingMeterConfig = notNull(aggregatingMeterConfig, "AggregatingMeterConfig");
+      return self();
+    }
+
+    public AggregatingMeterConfig.Builder aggregatingMeterConfig() {
+      return aggregatingMeterConfig;
     }
 
     /**

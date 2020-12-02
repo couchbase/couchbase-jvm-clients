@@ -19,6 +19,7 @@ package com.couchbase.client.metrics.micrometer;
 import com.couchbase.client.core.cnc.Counter;
 import com.couchbase.client.core.cnc.Meter;
 import com.couchbase.client.core.cnc.ValueRecorder;
+import com.couchbase.client.core.cnc.metrics.NameAndTags;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 
@@ -33,8 +34,8 @@ public class MicrometerMeter implements Meter {
 
   private final MeterRegistry meterRegistry;
 
-  private final Map<String, MicrometerCounter> counters = new ConcurrentHashMap<>();
-  private final Map<String, MicrometerValueRecorder> valueRecorders = new ConcurrentHashMap<>();
+  private final Map<NameAndTags, MicrometerCounter> counters = new ConcurrentHashMap<>();
+  private final Map<NameAndTags, MicrometerValueRecorder> valueRecorders = new ConcurrentHashMap<>();
 
   public static MicrometerMeter wrap(final MeterRegistry meterRegistry) {
     return new MicrometerMeter(meterRegistry);
@@ -47,16 +48,16 @@ public class MicrometerMeter implements Meter {
   @Override
   public Counter counter(final String name, final Map<String, String> tags) {
     return counters.computeIfAbsent(
-      name,
-      key -> new MicrometerCounter(meterRegistry.counter(key, convertTags(tags)))
+      new NameAndTags(name, tags),
+      key -> new MicrometerCounter(meterRegistry.counter(name, convertTags(tags)))
     );
   }
 
   @Override
   public ValueRecorder valueRecorder(final String name, final Map<String, String> tags) {
     return valueRecorders.computeIfAbsent(
-      name,
-      key -> new MicrometerValueRecorder(meterRegistry.summary(key, convertTags(tags)))
+      new NameAndTags(name, tags),
+      key -> new MicrometerValueRecorder(meterRegistry.summary(name, convertTags(tags)))
     );
   }
 

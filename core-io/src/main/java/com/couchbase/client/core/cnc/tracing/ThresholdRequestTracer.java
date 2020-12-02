@@ -128,7 +128,7 @@ public class ThresholdRequestTracer implements RequestTracer {
 
   @Override
   public RequestSpan requestSpan(final String name, final RequestSpan parent) {
-    return new ThresholdRequestSpan();
+    return new ThresholdRequestSpan(this);
   }
 
   /**

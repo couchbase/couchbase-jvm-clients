@@ -15,17 +15,16 @@
  */
 package com.couchbase.client.scala.analytics
 
-import java.util.concurrent.TimeUnit
-
-import com.couchbase.client.core.error.{AnalyticsException, ParsingFailureException}
+import com.couchbase.client.core.error.ParsingFailureException
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
-import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
+import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.test.{Capabilities, IgnoreWhen}
-import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 import org.junit.jupiter.api.TestInstance.Lifecycle
+import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
@@ -33,9 +32,8 @@ import scala.util.{Failure, Success}
 @IgnoreWhen(missesCapabilities = Array(Capabilities.ANALYTICS))
 class AnalyticsSpec extends ScalaIntegrationTest {
 
-  private var cluster: Cluster   = _
-  private var coll: Collection   = _
-  private var bucketName: String = _
+  private var cluster: Cluster = _
+  private var coll: Collection = _
 
   @BeforeAll
   def beforeAll(): Unit = {
@@ -62,24 +60,22 @@ class AnalyticsSpec extends ScalaIntegrationTest {
 
         val meta = result.metaData
 
-        println(meta)
-
-        assert(!meta.clientContextId.isEmpty)
+        assert(meta.clientContextId.nonEmpty)
         assert(meta.signatureAs[JsonObject].isSuccess)
-        assert(!meta.requestId.isEmpty)
+        assert(meta.requestId.nonEmpty)
         assert(meta.status == AnalyticsStatus.Success)
         assert(meta.warnings.isEmpty)
 
-      case Failure(err) => assert(false)
+      case Failure(_) => assert(false)
     }
   }
 
   @Test
   def failsOnError(): Unit = {
     cluster.analyticsQuery("SELECT 1=") match {
-      case Success(result)                       => assert(false)
-      case Failure(err: ParsingFailureException) =>
-      case Failure(err)                          => assert(false)
+      case Success(_)                          => assert(false)
+      case Failure(_: ParsingFailureException) =>
+      case Failure(_)                          => assert(false)
     }
   }
 }

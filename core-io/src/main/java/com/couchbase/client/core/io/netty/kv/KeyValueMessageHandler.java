@@ -285,7 +285,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
     RequestSpan dispatchSpan = writtenRequestDispatchSpans.remove(opaque);
     if (dispatchSpan != null) {
-      dispatchSpan.end(endpointContext.environment().requestTracer());
+      dispatchSpan.end();
     }
 
     short statusCode = MemcacheProtocol.status(response);

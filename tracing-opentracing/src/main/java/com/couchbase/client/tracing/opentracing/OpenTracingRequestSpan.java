@@ -80,7 +80,7 @@ public class OpenTracingRequestSpan implements RequestSpan {
   }
 
   @Override
-  public void end(RequestTracer tracer) {
+  public void end() {
     try (Scope scope = this.tracer.activateSpan(span)) {
       span.finish();
     }

@@ -524,7 +524,7 @@ public class AsyncCollection {
         .thenApply(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest)))
         .collect(Collectors.toList())
       )
-      .whenComplete((completableFutures, throwable) -> parent.end(environment.requestTracer()));
+      .whenComplete((completableFutures, throwable) -> parent.end());
   }
 
   /**
@@ -590,7 +590,7 @@ public class AsyncCollection {
       }));
     });
 
-    return anyReplicaFuture.whenComplete((getReplicaResult, throwable) -> parent.end(environment.requestTracer()));
+    return anyReplicaFuture.whenComplete((getReplicaResult, throwable) -> parent.end());
   }
 
   /**
@@ -786,7 +786,7 @@ public class AsyncCollection {
     try {
       encoded = transcoder.encode(content);
     } finally {
-      encodeSpan.end(environment.requestTracer());
+      encodeSpan.end();
     }
     long end = System.nanoTime();
 
@@ -852,7 +852,7 @@ public class AsyncCollection {
     try {
       encoded = transcoder.encode(content);
     } finally {
-      encodeSpan.end(environment.requestTracer());
+      encodeSpan.end();
     }
     long end = System.nanoTime();
 
@@ -918,7 +918,7 @@ public class AsyncCollection {
     try {
       encoded = transcoder.encode(content);
     } finally {
-      encodeSpan.end(environment.requestTracer());
+      encodeSpan.end();
     }
     long end = System.nanoTime();
 
@@ -1179,7 +1179,7 @@ public class AsyncCollection {
             commands.add(spec.encode(serializer, i));
           }
         } finally {
-          encodeSpan.end(environment.requestTracer());
+          encodeSpan.end();
         }
       long end = System.nanoTime();
 

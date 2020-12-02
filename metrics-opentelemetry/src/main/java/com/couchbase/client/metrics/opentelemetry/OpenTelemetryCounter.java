@@ -14,21 +14,20 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.tracing.opentelemetry;
+package com.couchbase.client.metrics.opentelemetry;
 
-import com.couchbase.client.core.cnc.ValueRecorder;
-import io.opentelemetry.metrics.LongValueRecorder;
+import com.couchbase.client.core.cnc.Counter;
+import io.opentelemetry.api.metrics.LongCounter;
 
-public class OpenTelemetryValueRecorder  implements ValueRecorder {
+public class OpenTelemetryCounter implements Counter {
 
-  private final LongValueRecorder.BoundLongValueRecorder valueRecorder;
-
-  public OpenTelemetryValueRecorder(LongValueRecorder.BoundLongValueRecorder valueRecorder) {
-    this.valueRecorder = valueRecorder;
+  private final LongCounter.BoundLongCounter counter;
+  public OpenTelemetryCounter(LongCounter.BoundLongCounter counter) {
+    this.counter = counter;
   }
-
   @Override
-  public void recordValue(long value) {
-    valueRecorder.record(value);
+  public void incrementBy(long number) {
+    counter.add(number);
   }
+
 }

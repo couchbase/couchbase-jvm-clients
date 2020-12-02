@@ -63,7 +63,6 @@ class AnalyticsIndexManagerSpec extends ScalaIntegrationTest {
       case Success(_)                               =>
       case Failure(err: DataverseNotFoundException) =>
       case Failure(err) =>
-        println(err)
         assert(false)
     }
 

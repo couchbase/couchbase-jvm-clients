@@ -182,7 +182,7 @@ public class RequestContext extends CoreContext {
   public RequestContext logicallyComplete() {
     this.logicallyCompletedAt = System.nanoTime();
     if (request.requestSpan() != null) {
-      request.requestSpan().end(environment().requestTracer());
+      request.requestSpan().end();
     }
     if (lastDispatchedTo() != null) {
       core().responseMetric(request).recordValue(logicalRequestLatency());

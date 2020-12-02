@@ -27,9 +27,9 @@ import java.util.Map;
  */
 public class LatencyMetricsAggregatedEvent extends AbstractEvent {
 
-  private final Map<String, Object> metrics;
+  private final Map<String, Map<String, Object>> metrics;
 
-  public LatencyMetricsAggregatedEvent(final Duration duration, final Map<String, Object> metrics) {
+  public LatencyMetricsAggregatedEvent(final Duration duration, final Map<String, Map<String, Object>> metrics) {
     super(Severity.INFO, Category.METRICS, duration, null);
     this.metrics = metrics;
   }

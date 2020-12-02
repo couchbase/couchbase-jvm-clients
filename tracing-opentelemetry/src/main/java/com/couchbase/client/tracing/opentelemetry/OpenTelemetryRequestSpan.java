@@ -19,12 +19,11 @@ package com.couchbase.client.tracing.opentelemetry;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.msg.RequestContext;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
-import io.opentelemetry.trace.Span;
-import io.opentelemetry.trace.Tracer;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -73,12 +72,12 @@ public class OpenTelemetryRequestSpan implements RequestSpan {
 
   @Override
   public void addEvent(String name, Instant timestamp) {
-    span.addEvent(name, ChronoUnit.NANOS.between(Instant.EPOCH, timestamp));
+    span.addEvent(name, timestamp);
   }
 
   @Override
-  public void end(RequestTracer tracer) {
-    try (Scope scope = this.tracer.withSpan(span)) {
+  public void end() {
+    try (Scope scope = span.makeCurrent()) {
       span.end();
     }
   }

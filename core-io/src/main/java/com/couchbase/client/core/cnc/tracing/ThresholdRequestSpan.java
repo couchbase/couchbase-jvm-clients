@@ -25,8 +25,10 @@ import java.time.Instant;
 public class ThresholdRequestSpan implements RequestSpan {
 
   private volatile RequestContext requestContext;
+  private final ThresholdRequestTracer tracer;
 
-  ThresholdRequestSpan() {
+  ThresholdRequestSpan(final ThresholdRequestTracer tracer) {
+    this.tracer = tracer;
   }
 
   @Override
@@ -45,12 +47,8 @@ public class ThresholdRequestSpan implements RequestSpan {
   }
 
   @Override
-  public void end(final RequestTracer tracer) {
-    if (tracer instanceof ThresholdRequestTracer) {
-      ((ThresholdRequestTracer) tracer).finish(this);
-    } else {
-      throw new IllegalStateException("The Tracer instance is not a ThresholdRequestTracer, this is a bug!");
-    }
+  public void end() {
+    tracer.finish(this);
   }
 
 }

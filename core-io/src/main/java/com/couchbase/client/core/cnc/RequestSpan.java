@@ -56,7 +56,7 @@ public interface RequestSpan {
    *
    * @param tracer the tracer with the help of which it will be completed.
    */
-  void end(RequestTracer tracer);
+  void end();
 
   /**
    * Allows to set a request context to the request span.

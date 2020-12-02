@@ -46,7 +46,7 @@ public class NoopRequestSpan implements RequestSpan {
   }
 
   @Override
-  public void end(RequestTracer tracer) {
+  public void end() {
   }
 
   @Override

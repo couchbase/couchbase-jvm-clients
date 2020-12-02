@@ -63,7 +63,7 @@ public class Observe {
       return Flux.just(validateReplicas(config, ctx.persistTo(), ctx.replicateTo()));
     })
     .flatMap(replicas -> viaMutationToken(replicas, ctx, parentSpan));
-    return maybeRetry(observed, ctx).timeout(ctx.timeout(), ctx.environment().scheduler()).doFinally(t -> parentSpan.end(ctx.environment().requestTracer()));
+    return maybeRetry(observed, ctx).timeout(ctx.timeout(), ctx.environment().scheduler()).doFinally(t -> parentSpan.end());
   }
 
   private static Flux<ObserveItem> viaMutationToken(final int bucketReplicas, final ObserveContext ctx,

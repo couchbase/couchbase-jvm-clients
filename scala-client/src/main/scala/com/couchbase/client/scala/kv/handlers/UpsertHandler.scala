@@ -74,7 +74,7 @@ private[scala] class UpsertHandler(hp: HandlerParams)
       }
 
       val end = System.nanoTime()
-      encodeSpan.`end`(hp.tracer)
+      encodeSpan.`end`()
 
       encoded match {
         case Success(en) =>

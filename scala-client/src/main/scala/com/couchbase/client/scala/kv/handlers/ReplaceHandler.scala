@@ -75,7 +75,7 @@ private[scala] class ReplaceHandler(hp: HandlerParams)
         case x: TranscoderWithoutSerializer => x.encode(content)
       }
       val end = System.nanoTime()
-      encodeSpan.`end`(hp.tracer)
+      encodeSpan.`end`()
 
       encoded match {
         case Success(en) =>

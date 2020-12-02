@@ -23,14 +23,12 @@ import com.couchbase.client.core.cnc.Meter;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.events.metrics.LatencyMetricsAggregatedEvent;
 import com.couchbase.client.core.deps.org.HdrHistogram.Histogram;
-import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.env.AggregatingMeterConfig;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -49,14 +47,17 @@ public class AggregatingMeter implements Meter {
   private final Thread worker;
   private final AtomicBoolean running = new AtomicBoolean(false);
 
-  private final Map<String, AggregatingValueRecorder> valueRecorders = new ConcurrentHashMap<>();
+  private final Map<NameAndTags, AggregatingValueRecorder> valueRecorders = new ConcurrentHashMap<>();
 
-  public static AggregatingMeter create(EventBus eventBus) {
-    return new AggregatingMeter(eventBus);
+  private final long emitIntervalMs;
+
+  public static AggregatingMeter create(EventBus eventBus, AggregatingMeterConfig config) {
+    return new AggregatingMeter(config, eventBus);
   }
 
-  private AggregatingMeter(EventBus eventBus) {
+  private AggregatingMeter(AggregatingMeterConfig config, EventBus eventBus) {
     this.eventBus = eventBus;
+    this.emitIntervalMs = config.emitInterval().toMillis();
 
     worker = new Thread(new Worker());
     worker.setDaemon(true);
@@ -76,8 +77,11 @@ public class AggregatingMeter implements Meter {
   }
 
   @Override
-  public ValueRecorder valueRecorder(String name, Map<String, String> tags) {
-    return valueRecorders.computeIfAbsent(name, unused -> new AggregatingValueRecorder(tags));
+  public synchronized ValueRecorder valueRecorder(String name, Map<String, String> tags) {
+    return valueRecorders.computeIfAbsent(
+      new NameAndTags(name, tags),
+      key -> new AggregatingValueRecorder(name, tags)
+    );
   }
 
   @Override
@@ -102,21 +106,14 @@ public class AggregatingMeter implements Meter {
 
   private class Worker implements Runnable {
 
-    /**
-     * Time this worker spends between check cycles.
-     */
-    private final long workerSleepMs = Long.parseLong(
-      System.getProperty("com.couchbase.aggregatingMeterEmitInterval", Long.toString(Duration.ofMinutes(30).toMillis()))
-    );
-
     @Override
     public void run() {
       Thread.currentThread().setName("cb-metrics-" + METER_ID.incrementAndGet());
 
       while (running.get()) {
         try {
+          Thread.sleep(emitIntervalMs);
           dumpMetrics();
-          Thread.sleep(workerSleepMs);
         } catch (final InterruptedException ex) {
           if (!running.get()) {
             return;
@@ -131,38 +128,43 @@ public class AggregatingMeter implements Meter {
     }
 
     private synchronized void dumpMetrics() {
-      Map<String,  Object> output = new HashMap<>();
+      Map<String,  Map<String, Object>> output = new HashMap<>();
 
       Map<String, Object> meta = new HashMap<>();
-      meta.put("emit_interval_s", TimeUnit.MILLISECONDS.toSeconds(workerSleepMs));
+      meta.put("emit_interval_s", TimeUnit.MILLISECONDS.toSeconds(emitIntervalMs));
       output.put("meta", meta);
 
-      List<Map<String, Object>> data = new ArrayList<>();
+      boolean wroteRow = false;
       for (AggregatingValueRecorder avr : valueRecorders.values()) {
         Histogram histogram = avr.clearStats();
         if (histogram.getTotalCount() == 0) {
           continue;
         }
-        Map<String, Object> row = new HashMap<>();
-        row.put("service", avr.tags().get("cb.service"));
-        row.put("remote_hostname", avr.tags().get("cb.remote_hostname"));
-        row.put("request_type", avr.tags().get("cb.request_type"));
+        wroteRow = true;
+
+        String service = avr.tags().get("cb.service");
+        String hostname = avr.tags().get("cb.remote_hostname");
+
+        Map<String, Object> serviceMap = output.computeIfAbsent(service, k -> new HashMap<>());
+        Map<String, Object> hostMap = (Map<String, Object>) serviceMap.computeIfAbsent(hostname, k -> new HashMap<>());
+
+        hostMap.put("total_count", histogram.getTotalCount());
+
         Map<String, Object> percentiles = new LinkedHashMap<>();
         percentiles.put("50.0", histogram.getValueAtPercentile(50.0) / 1000.0);
         percentiles.put("90.0", histogram.getValueAtPercentile(90.0) / 1000.0);
         percentiles.put("99.0", histogram.getValueAtPercentile(99.0) / 1000.0);
         percentiles.put("99.9", histogram.getValueAtPercentile(99.9) / 1000.0);
         percentiles.put("100.0", histogram.getMaxValue() / 1000.0);
-        row.put("percentiles_us", percentiles);
-        row.put("total_count", histogram.getTotalCount());
-        data.add(row);
+
+        hostMap.put("percentiles_us", percentiles);
       }
 
-      output.put("data", data);
-
-      if (data.size() >  0) {
-        eventBus.publish(new LatencyMetricsAggregatedEvent(Duration.ofMillis(workerSleepMs), output));
+      if (wroteRow) {
+        eventBus.publish(new LatencyMetricsAggregatedEvent(Duration.ofMillis(emitIntervalMs), output));
       }
     }
   }
+
+
 }

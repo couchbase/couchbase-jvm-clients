@@ -69,8 +69,6 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
       .getAllIndexes(config.bucketname)
       .get
       .foreach(index => {
-        println(s"Cleaning up index ${index}")
-
         cluster.queryIndexes.dropIndex(config.bucketname, index.name).get
       })
   }
@@ -307,10 +305,8 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     new Thread(() => {
       try { // sleep first so the watch operation needs to poll more than once.
         SECONDS.sleep(1)
-        println("Building indexes")
         indexes.buildDeferredIndexes(bucketName).get
         assertAllIndexesComeOnline(bucketName)
-        println("All indexes online")
       } catch {
         case e: InterruptedException =>
           throw new RuntimeException(e)

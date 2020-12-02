@@ -141,7 +141,7 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
     }
 
     @Override
-    public void end(RequestTracer tracer) {
+    public void end() {
       finished = true;
     }
   }

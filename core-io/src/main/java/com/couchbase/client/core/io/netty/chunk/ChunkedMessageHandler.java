@@ -233,7 +233,7 @@ public abstract class ChunkedMessageHandler
   private void handleHttpResponse(final ChannelHandlerContext ctx, final HttpResponse msg) {
     currentRequest.context().dispatchLatency(System.nanoTime() - dispatchTimingStart);
     if (currentDispatchSpan != null) {
-      currentDispatchSpan.end(endpointContext.environment().requestTracer());
+      currentDispatchSpan.end();
     }
     currentResponseStatus = msg;
     chunkResponseParser.updateResponseHeader(msg);

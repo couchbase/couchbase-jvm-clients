@@ -348,7 +348,7 @@ public class ReactiveCollection {
         })
         .map(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest))
       )
-      .doFinally(signalType -> parent.end(environment().requestTracer()));
+      .doFinally(signalType -> parent.end());
   }
 
   /**
@@ -385,7 +385,7 @@ public class ReactiveCollection {
       built.parentSpan().orElse(null)
     );
     opts.parentSpan(parent);
-    return getAllReplicas(id, opts).next().doFinally(signalType -> parent.end(environment().requestTracer()));
+    return getAllReplicas(id, opts).next().doFinally(signalType -> parent.end());
   }
 
   /**
