@@ -270,7 +270,6 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
    * @param disableScoring if scoring should be disabled.
    * @return these {@link SearchOptions} for chaining purposes.
    */
-  @Stability.Uncommitted
   public SearchOptions disableScoring(final boolean disableScoring) {
     this.disableScoring = disableScoring;
     return this;

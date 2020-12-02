@@ -369,7 +369,6 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param flexIndex if a flex index should be used, false is the default.
    * @return the same {@link QueryOptions} for chaining purposes.
    */
-  @Stability.Uncommitted
   public QueryOptions flexIndex(final boolean flexIndex) {
     this.flexIndex = flexIndex;
     return this;

@@ -107,10 +107,8 @@ public class GetResult {
    * NOTE: This method always returns an empty Optional unless
    * the Get request was made using {@link GetOptions#withExpiry(boolean)}
    * set to true.
-   * <p>
-   * NOTE: In the future, this method is likely to be deprecated
-   * in favor of {@link #expiryTime()}.
    */
+  @Deprecated
   public Optional<Duration> expiry() {
     return expiry.map(instant -> Duration.ofSeconds(instant.getEpochSecond()));
   }
@@ -123,7 +121,6 @@ public class GetResult {
    * the Get request was made using {@link GetOptions#withExpiry(boolean)}
    * set to true.
    */
-  @Stability.Uncommitted
   public Optional<Instant> expiryTime() {
     return expiry;
   }
