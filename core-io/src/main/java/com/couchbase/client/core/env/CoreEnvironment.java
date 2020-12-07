@@ -429,7 +429,7 @@ public class CoreEnvironment {
         }
         return Mono.empty();
       }))
-      .then(Mono.defer(() -> orphanReporter.stop(timeout)))
+      .then(Mono.defer(orphanReporter::stop))
       .then(Mono.defer(() -> {
         if (scheduler instanceof OwnedSupplier) {
           scheduler.get().dispose();

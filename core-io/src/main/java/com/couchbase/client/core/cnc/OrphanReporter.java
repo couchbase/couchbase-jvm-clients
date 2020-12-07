@@ -67,15 +67,31 @@ public class OrphanReporter {
   private final int sampleSize;
   private final EventBus eventBus;
 
-  public OrphanReporter(EventBus eventBus, OrphanReporterConfig config) {
+  /**
+   * Creates a new {@link OrphanReporter}.
+   * <p>
+   * Please do not instantiate this class directly, but rather let it be handled through the environment and
+   * customize it through the {@link OrphanReporterConfig} which can also be provided on the environment.
+   *
+   * @param eventBus the event bus where the messages should be emitted on.
+   * @param config the configuration for this reporter.
+   */
+  @Stability.Internal
+  public OrphanReporter(final EventBus eventBus, final OrphanReporterConfig config) {
     this.eventBus = eventBus;
     this.orphanQueue = new MpscUnboundedArrayQueue<>(config.queueLength());
     this.emitIntervalNanos = config.emitInterval().toNanos();
     this.sampleSize = config.sampleSize();
+
     worker = new Thread(new Worker());
     worker.setDaemon(true);
   }
 
+  /**
+   * Starts the orphan reporter.
+   *
+   * @return completes the Mono once it has been started properly.
+   */
   public Mono<Void> start() {
     return Mono.defer(() -> {
       if (running.compareAndSet(false, true)) {
@@ -85,7 +101,12 @@ public class OrphanReporter {
     });
   }
 
-  public Mono<Void> stop(final Duration timeout) {
+  /**
+   * Stops the orphan reporter.
+   *
+   * @return completes the Mono once it has been stopped properly.
+   */
+  public Mono<Void> stop() {
     return Mono.defer(() -> {
       if (running.compareAndSet(true, false)) {
         worker.interrupt();
@@ -94,6 +115,17 @@ public class OrphanReporter {
     });
   }
 
+  /**
+   * Reports an orphaned {@link Request}.
+   * <p>
+   * If the orphan could not be recorded because the buffer is full, a {@link OrphanRecordDroppedEvent} will
+   * be raised on the event bus.
+   * <p>
+   * If you wish to ignore certain requests as being considered in the orphan reporting, make sure they implement
+   * the {@link UnmonitoredRequest} marker interface.
+   *
+   * @param request the request to report as orphan.
+   */
   public void report(final Request<?> request) {
       if (request instanceof UnmonitoredRequest) {
         return;
@@ -104,6 +136,10 @@ public class OrphanReporter {
       }
   }
 
+  /**
+   * Worker thread which runs in a separate thread and consumes the orphan queue, aggregates the infos
+   * and puts them onto the event bus at regular intervals.
+   */
   private class Worker implements Runnable {
 
     /**
