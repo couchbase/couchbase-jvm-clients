@@ -37,15 +37,8 @@ public class OpenTelemetryRequestSpan implements RequestSpan {
    */
   private final Span span;
 
-  private final Tracer tracer;
-
-  private volatile RequestContext requestContext;
-
-  private OpenTelemetryRequestSpan(final Tracer tracer, final Span span) {
-    notNull(tracer, "Tracer");
-    notNull(span, "Span");
-    this.tracer = tracer;
-    this.span = span;
+  private OpenTelemetryRequestSpan(final Span span) {
+    this.span = notNull(span, "Span");
   }
 
   /**
@@ -54,8 +47,8 @@ public class OpenTelemetryRequestSpan implements RequestSpan {
    * @param span the span that should act as the parent.
    * @return the created wrapped span.
    */
-  public static OpenTelemetryRequestSpan wrap(final Tracer tracer, final Span span) {
-    return new OpenTelemetryRequestSpan(tracer, span);
+  public static OpenTelemetryRequestSpan wrap(final Span span) {
+    return new OpenTelemetryRequestSpan(span);
   }
 
   /**
@@ -84,6 +77,6 @@ public class OpenTelemetryRequestSpan implements RequestSpan {
 
   @Override
   public void requestContext(final RequestContext requestContext) {
-    this.requestContext = requestContext;
+    // no need for the request context in this implementation
   }
 }

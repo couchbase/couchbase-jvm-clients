@@ -74,7 +74,7 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
     }
     Span span = spanBuilder.startSpan();
     span.makeCurrent().close();
-    return OpenTelemetryRequestSpan.wrap(tracer, span);
+    return OpenTelemetryRequestSpan.wrap(span);
   }
 
   @Override

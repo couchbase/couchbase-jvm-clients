@@ -43,8 +43,6 @@ public class OpenTracingRequestSpan implements RequestSpan {
    */
   private final Tracer tracer;
 
-  private volatile RequestContext requestContext;
-
   private OpenTracingRequestSpan(final Tracer tracer, final Span span) {
     notNull(tracer, "Tracer");
     notNull(span, "Span");
@@ -87,8 +85,8 @@ public class OpenTracingRequestSpan implements RequestSpan {
   }
 
   @Override
-  public void requestContext(RequestContext requestContext) {
-    this.requestContext = requestContext;
+  public void requestContext(final RequestContext requestContext) {
+    // the request context is not needed at this point
   }
 
 }
