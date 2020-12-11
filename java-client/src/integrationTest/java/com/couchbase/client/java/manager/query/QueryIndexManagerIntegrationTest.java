@@ -141,6 +141,7 @@ public class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
     final QueryIndex index = getIndex(indexName);
     assertFalse(index.primary());
     assertEquals("gsi", index.raw().getString("using"));
+    assertFalse(index.partition().isPresent());
 
     Set<String> roundTripFields = index.indexKey().toList().stream()
         .map(Object::toString)

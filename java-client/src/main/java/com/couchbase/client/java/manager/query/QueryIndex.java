@@ -40,7 +40,7 @@ public class QueryIndex {
   private final JsonArray indexKey;
   private final String type;
   private final Optional<String> condition;
-
+  private final Optional<String> partition;
   private final JsonObject raw;
 
   public QueryIndex(JsonObject raw) {
@@ -54,6 +54,7 @@ public class QueryIndex {
     this.condition = Optional.ofNullable(emptyToNull(raw.getString("condition")));
     this.primary = Boolean.TRUE.equals(raw.getBoolean("is_primary"));
     this.type = defaultIfNull(raw.getString("using"), "gsi");
+    this.partition = Optional.ofNullable(emptyToNull(raw.getString("partition")));
   }
 
   public boolean primary() {
@@ -111,6 +112,15 @@ public class QueryIndex {
    */
   public Optional<String> condition() {
     return this.condition;
+  }
+
+  /**
+   * If present, returns the configured partition for the index.
+   *
+   * @return the partition if set, empty if none.
+   */
+  public Optional<String> partition() {
+    return partition;
   }
 
   /**

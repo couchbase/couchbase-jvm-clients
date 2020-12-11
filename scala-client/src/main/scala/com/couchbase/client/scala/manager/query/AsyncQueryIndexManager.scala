@@ -436,7 +436,8 @@ case class QueryIndex(
     state: String,
     private val keyspace_id: String,
     private val index_key: Seq[String],
-    condition: Option[String]
+    condition: Option[String],
+    partition: Option[String]
 ) {
   def keyspaceId: String = keyspace_id
 
