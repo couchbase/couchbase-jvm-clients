@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.*;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.service.ServiceType;
@@ -46,6 +47,7 @@ import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static com.couchbase.client.core.util.CbThrowables.throwIfUnchecked;
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
+import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -59,89 +61,124 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>
  * @author Michael Reiche
  */
-@IgnoreWhen(missesCapabilities = { Capabilities.QUERY, Capabilities.COLLECTIONS },
-    clusterTypes = { ClusterType.MOCKED }, clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER)
+@IgnoreWhen(
+  missesCapabilities = { Capabilities.QUERY, Capabilities.COLLECTIONS },
+  clusterTypes = { ClusterType.MOCKED },
+  clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER
+)
 class QueryCollectionIntegrationTest extends JavaIntegrationTest {
 
-  private static Bucket bucket;
   private static Cluster cluster;
   private static ClusterEnvironment environment;
   private static CollectionManager collectionManager;
 
-  private static String scopeName = "scope_" + randomString();
-  private static String collectionName = "collection_" + randomString();
+  private final static String SCOPE_NAME = "scope_" + randomString();
+  private final static String COLLECTION_NAME = "collection_" + randomString();
 
   /**
    * Holds sample content for simple assertions.
    */
   private static final JsonObject FOO_CONTENT = JsonObject.create().put("foo", "bar");
 
-  public QueryCollectionIntegrationTest() throws NoSuchMethodException {}
-
   @BeforeAll
-  static void setup() {
+  static void beforeAll() {
     environment = environment().build();
     cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
-    bucket = cluster.bucket(config().bucketname());
+    Bucket bucket = cluster.bucket(config().bucketname());
     bucket.waitUntilReady(Duration.ofSeconds(5));
     waitForService(bucket, ServiceType.QUERY);
     waitForQueryIndexerToHaveBucket(cluster, config().bucketname());
     collectionManager = bucket.collections();
-  }
-
-  @AfterAll
-  static void tearDown() {
-    cluster.disconnect();
-    environment.shutdown();
-  }
-
-  @Test
-  @IgnoreWhen(missesCapabilities = { Capabilities.COLLECTIONS })
-  void exerciseCollection() {
 
     // Create the scope.collection (borrowed from CollectionManagerIntegrationTest )
-    CollectionSpec collSpec = CollectionSpec.create(collectionName, scopeName);
-    ScopeSpec scopeSpec = ScopeSpec.create(scopeName);
+    CollectionSpec collSpec = CollectionSpec.create(COLLECTION_NAME, SCOPE_NAME);
+    ScopeSpec scopeSpec = ScopeSpec.create(SCOPE_NAME);
 
-    collectionManager.createScope(scopeName);
+    collectionManager.createScope(SCOPE_NAME);
 
-    waitUntilCondition(() -> scopeExists(collectionManager, scopeName));
-    ScopeSpec found = collectionManager.getScope(scopeName);
+    waitUntilCondition(() -> scopeExists(collectionManager, SCOPE_NAME));
+    ScopeSpec found = collectionManager.getScope(SCOPE_NAME);
     assertEquals(scopeSpec, found);
 
     collectionManager.createCollection(collSpec);
     waitUntilCondition(() -> collectionExists(collectionManager, collSpec));
 
-    assertNotEquals(scopeSpec, collectionManager.getScope(scopeName));
-    assertTrue(collectionManager.getScope(scopeName).collections().contains(collSpec));
+    assertNotEquals(scopeSpec, collectionManager.getScope(SCOPE_NAME));
+    assertTrue(collectionManager.getScope(SCOPE_NAME).collections().contains(collSpec));
 
-    Scope scope = cluster.bucket(config().bucketname()).scope(scopeName);
-    Collection collection = scope.collection(collectionName);
-
-    waitForQueryIndexerToHaveBucket(cluster, collectionName);
+    waitForQueryIndexerToHaveBucket(cluster, COLLECTION_NAME);
 
     // the call to createPrimaryIndex takes about 60 seconds
-    block(createPrimaryIndex(config().bucketname(), scopeName, collectionName));
+    block(createPrimaryIndex(config().bucketname(), SCOPE_NAME, COLLECTION_NAME));
+  }
+
+  @AfterAll
+  static void afterAll() {
+    cluster.disconnect();
+    environment.shutdown();
+  }
+
+  private static boolean collectionExists(CollectionManager mgr, CollectionSpec spec) {
+    try {
+      ScopeSpec scope = mgr.getScope(spec.scopeName());
+      return scope.collections().contains(spec);
+    } catch (ScopeNotFoundException e) {
+      return false;
+    }
+  }
+
+  private static boolean scopeExists(CollectionManager mgr, String scopeName) {
+    try {
+      mgr.getScope(scopeName);
+      return true;
+    } catch (ScopeNotFoundException e) {
+      return false;
+    }
+  }
+
+  @Test
+  void performsAdhocQuery() {
+    Scope scope = cluster.bucket(config().bucketname()).scope(SCOPE_NAME);
+    Collection collection = scope.collection(COLLECTION_NAME);
 
     String id = insertDoc(collection);
 
-    QueryOptions options = QueryOptions.queryOptions().scanConsistency(QueryScanConsistency.REQUEST_PLUS);
-    QueryResult result = scope.query("select * from `" + collectionName + "` where meta().id=\"" + id + "\"", options);
+    QueryOptions options = queryOptions().scanConsistency(QueryScanConsistency.REQUEST_PLUS);
+    QueryResult result = scope.query("select * from `" + COLLECTION_NAME + "` where meta().id=\"" + id + "\"", options);
     assertEquals(QueryStatus.SUCCESS, result.metaData().status());
     assertEquals(1, result.rowsAsObject().size());
 
-    ReactiveScope reactiveScope = cluster.bucket(config().bucketname()).reactive().scope(scopeName);
+    ReactiveScope reactiveScope = cluster.bucket(config().bucketname()).reactive().scope(SCOPE_NAME);
     ReactiveQueryResult reactiveResult = reactiveScope
-        .query("select * from `" + collectionName + "` where meta().id=\"" + id + "\"", options).block();
+        .query("select * from `" + COLLECTION_NAME + "` where meta().id=\"" + id + "\"", options).block();
     assertEquals(QueryStatus.SUCCESS, reactiveResult.metaData().block().status());
     assertEquals(1, reactiveResult.rowsAsObject().blockLast().size());
+  }
 
+  @Test
+  void performsNonAdhocQuery() {
+    Scope scope = cluster.bucket(config().bucketname()).scope(SCOPE_NAME);
+    Collection collection = scope.collection(COLLECTION_NAME);
+
+    String id = insertDoc(collection);
+    QueryResult result = scope.query(
+      "select meta().id as id from `" + COLLECTION_NAME + "`",
+      queryOptions().scanConsistency(QueryScanConsistency.REQUEST_PLUS).adhoc(false)
+    );
+
+    boolean hasDoc = false;
+    for (JsonObject row : result.rowsAsObject()) {
+      if (row.getString("id").equals(id)) {
+        hasDoc = true;
+      }
+    }
+    assertTrue(hasDoc);
   }
 
   /**
    * Inserts a document into the collection and returns the ID of it. It inserts {@link #FOO_CONTENT}.
    */
-  public String insertDoc(Collection collection) {
+  private static String insertDoc(Collection collection) {
     String id = UUID.randomUUID().toString();
     collection.insert(id, FOO_CONTENT);
     return id;
@@ -151,25 +188,7 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
     return UUID.randomUUID().toString().substring(0, 10);
   }
 
-  private boolean collectionExists(CollectionManager mgr, CollectionSpec spec) {
-    try {
-      ScopeSpec scope = mgr.getScope(spec.scopeName());
-      return scope.collections().contains(spec);
-    } catch (ScopeNotFoundException e) {
-      return false;
-    }
-  }
-
-  private boolean scopeExists(CollectionManager mgr, String scopeName) {
-    try {
-      mgr.getScope(scopeName);
-      return true;
-    } catch (ScopeNotFoundException e) {
-      return false;
-    }
-  }
-
-  public CompletableFuture<Void> createPrimaryIndex(String bucketName, String scopeName, String collectionName) {
+  private static CompletableFuture<Void> createPrimaryIndex(String bucketName, String scopeName, String collectionName) {
     CreatePrimaryQueryIndexOptions options = CreatePrimaryQueryIndexOptions.createPrimaryQueryIndexOptions();
     options.timeout(Duration.ofSeconds(300));
     final CreatePrimaryQueryIndexOptions.Built builtOpts = options.build();
@@ -191,15 +210,15 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
     }).thenApply(result -> null);
   }
 
-  private CompletableFuture<QueryResult> exec(/*AsyncQueryIndexManager.QueryType queryType*/ boolean queryType,
+  private static CompletableFuture<QueryResult> exec(boolean queryType,
       CharSequence statement, Map<String, Object> with, CommonOptions<?>.BuiltCommonOptions options) {
     return with.isEmpty() ? exec(queryType, statement, options)
         : exec(queryType, statement + " WITH " + Mapper.encodeAsString(with), options);
   }
 
-  private CompletableFuture<QueryResult> exec(/*AsyncQueryIndexManager.QueryType queryType,*/ boolean queryType,
+  private static CompletableFuture<QueryResult> exec(boolean queryType,
       CharSequence statement, CommonOptions<?>.BuiltCommonOptions options) {
-    QueryOptions queryOpts = toQueryOptions(options).readonly(queryType /*requireNonNull(queryType) == READ_ONLY*/);
+    QueryOptions queryOpts = toQueryOptions(options).readonly(queryType);
 
     return cluster.async().query(statement.toString(), queryOpts).exceptionally(t -> {
       throw translateException(t);
@@ -207,7 +226,7 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
   }
 
   private static QueryOptions toQueryOptions(CommonOptions<?>.BuiltCommonOptions options) {
-    QueryOptions result = QueryOptions.queryOptions();
+    QueryOptions result = queryOptions();
     options.timeout().ifPresent(result::timeout);
     options.retryStrategy().ifPresent(result::retryStrategy);
     return result;
@@ -215,7 +234,7 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
 
   private static final Map<Predicate<QueryException>, Function<QueryException, ? extends QueryException>> errorMessageMap = new LinkedHashMap<>();
 
-  private RuntimeException translateException(Throwable t) {
+  private static RuntimeException translateException(Throwable t) {
     if (t instanceof QueryException) {
       final QueryException e = ((QueryException) t);
 

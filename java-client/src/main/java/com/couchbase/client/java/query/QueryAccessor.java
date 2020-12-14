@@ -241,6 +241,9 @@ public class QueryAccessor {
           "client_context_id",
           options.clientContextId() != null ? options.clientContextId() : UUID.randomUUID().toString()
         );
+        if (original.queryContext() != null) {
+            query.put("query_context", original.queryContext());
+        }
 
         if (enhancedPreparedEnabled) {
             query.put("auto_execute", true);
@@ -277,6 +280,9 @@ public class QueryAccessor {
                                              final QueryOptions.Built originalOptions) {
         JsonObject query = cacheEntry.export();
         query.put("timeout", encodeDurationToMs(original.timeout()));
+        if (original.queryContext() != null) {
+            query.put("query_context", original.queryContext());
+        }
         originalOptions.injectParams(query);
 
         RequestSpan span = core.context().environment().requestTracer()

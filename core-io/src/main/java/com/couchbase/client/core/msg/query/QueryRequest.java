@@ -126,4 +126,15 @@ public class QueryRequest
     }
     return ctx;
   }
+
+  @Override
+  public String toString() {
+    return "QueryRequest{" +
+      "query=" + redactUser(new String(query)) +
+      ", statement='" + redactUser(statement) + '\'' +
+      ", idempotent=" + idempotent +
+      ", contextId='" + contextId + '\'' +
+      ", queryContext='" + redactMeta(queryContext) + '\'' +
+      '}';
+  }
 }
