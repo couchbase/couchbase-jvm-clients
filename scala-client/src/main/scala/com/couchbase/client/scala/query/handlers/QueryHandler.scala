@@ -339,6 +339,10 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       options.encode(query)
     }
 
+    if (original.queryContext() != null) {
+      query.put("query_context", original.queryContext())
+    }
+
     new QueryRequest(
       original.timeout,
       original.context,
@@ -370,6 +374,10 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
     val query = cacheEntry.export
 
     query.put("timeout", encodeDurationToMs(original.timeout))
+
+    if (original.queryContext() != null) {
+      query.put("query_context", original.queryContext())
+    }
 
     originalOptions.encode(query)
 
