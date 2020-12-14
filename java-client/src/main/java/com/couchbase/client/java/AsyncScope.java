@@ -235,7 +235,7 @@ public class AsyncScope {
     final JsonObject query = JsonObject.create();
     query.put("statement", statement);
     query.put("timeout", encodeDurationToMs(timeout));
-    String queryContext = "`default`:`" + bucketName + "`." + scopeName; // MB-40997 - cannot have tics around scope.
+    String queryContext = "`default`:`" + bucketName + "`.`" + scopeName + "`";
     query.put("query_context", queryContext);
     options.injectParams(query);
     final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);

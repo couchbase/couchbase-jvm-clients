@@ -68,8 +68,7 @@ class ReactiveScope(async: AsyncScope, bucketName: String) {
       statement: String,
       options: QueryOptions = QueryOptions()
   ): SMono[ReactiveQueryResult] = {
-    // MB-40997 - cannot have backticks around scope.
-    val queryContext = s"""`default`:`${bucketName}`.${name}"""
+    val queryContext = s"""`default`:`${bucketName}`.`${name}`"""
     async.queryHandler.queryReactive(
       statement,
       options,
