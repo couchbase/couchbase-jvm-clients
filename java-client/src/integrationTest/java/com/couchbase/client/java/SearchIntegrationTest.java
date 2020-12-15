@@ -16,13 +16,10 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.manager.search.SearchIndex;
-import com.couchbase.client.java.search.SearchOptions;
-import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -31,77 +28,89 @@ import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
+import static com.couchbase.client.core.util.CbCollections.listOf;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.java.search.SearchOptions.searchOptions;
-import static org.junit.jupiter.api.Assertions.*;
+import static com.couchbase.client.java.search.SearchQuery.queryString;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.stream.Collectors.toList;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Verifies the basic functionality of analytics queries in an end-to-end fashion.
  */
 @IgnoreWhen(missesCapabilities = Capabilities.SEARCH, clusterTypes = ClusterType.CAVES)
-@Disabled("to be fixed in JCBC-1557")
 class SearchIntegrationTest extends JavaIntegrationTest {
+  private static final Logger LOGGER = LoggerFactory.getLogger(SearchIntegrationTest.class);
 
-    private static Cluster cluster;
-    private static Collection collection;
+  private static Cluster cluster;
+  private static Collection collection;
+  private static final String indexName = "idx-" + config().bucketname();
 
-    @BeforeAll
-    static void setup() {
-        cluster = Cluster.connect(seedNodes(), clusterOptions());
-        Bucket bucket = cluster.bucket(config().bucketname());
-        collection = bucket.defaultCollection();
+  @BeforeAll
+  static void setup() {
+    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    Bucket bucket = cluster.bucket(config().bucketname());
+    collection = bucket.defaultCollection();
 
-        bucket.waitUntilReady(Duration.ofSeconds(5));
-        waitForService(bucket, ServiceType.SEARCH);
-        cluster.searchIndexes().upsertIndex(new SearchIndex("idx-" + config().bucketname(), config().bucketname()));
+    bucket.waitUntilReady(Duration.ofSeconds(5));
+    waitForService(bucket, ServiceType.SEARCH);
+    cluster.searchIndexes().upsertIndex(new SearchIndex(indexName, config().bucketname()));
+  }
+
+  @AfterAll
+  static void tearDown() {
+    cluster.searchIndexes().dropIndex(indexName);
+    cluster.disconnect();
+  }
+
+  @Test
+  void simpleSearch() throws Throwable {
+    String docId = UUID.randomUUID().toString();
+    MutationResult insertResult = collection.insert(docId, mapOf("name", "michael"));
+    try {
+      // should not have to retry here, but newly-created index is flaky
+      runWithRetry(Duration.ofSeconds(5), () -> {
+        SearchResult result = cluster.searchQuery(indexName, queryString("michael"), searchOptions()
+            .consistentWith(MutationState.from(insertResult.mutationToken().get())));
+
+        List<String> actualDocIds = result.rows().stream()
+            .map(SearchRow::id)
+            .collect(toList());
+
+        // make assertion inside the retry, because newly-created index sometimes returns
+        // no rows even though we specified mutation tokens for consistency :-/
+        assertEquals(listOf(docId), actualDocIds);
+      });
+
+    } finally {
+      collection.remove(docId);
     }
+  }
 
-    @AfterAll
-    static void tearDown() {
-        cluster.searchIndexes().dropIndex("idx-" + config().bucketname());
-        cluster.disconnect();
-    }
-
-    @Test
-    void simpleSearch() throws Exception {
-       String docId = UUID.randomUUID().toString();
-       MutationResult insertResult = collection.insert(docId, "{\"name\": \"michael\"}");
-
-       int maxTries = 20;
-       for (int i = 0; i < maxTries; i++) {
-        try {
-            SearchResult result = cluster.searchQuery(
-              "idx-" + config().bucketname(),
-              SearchQuery.queryString("michael"),
-              searchOptions().consistentWith(MutationState.from(insertResult.mutationToken().get()))
-            );
-
-            assertFalse(result.rows().isEmpty());
-            boolean foundInserted = false;
-            for (SearchRow row : result.rows()) {
-                if (row.id().equals(docId)) {
-                    foundInserted = true;
-                }
-            }
-            assertEquals(1, result.metaData().metrics().totalRows());
-            assertTrue(foundInserted);
-            break;
-        } catch (CouchbaseException ex) {
-            // this is a pretty dirty hack to avoid a race where we don't know if the index
-            // is ready yet
-            if (ex.getMessage().contains("no planPIndexes for indexName")
-              || ex.getMessage().contains("pindex_consistency mismatched partition")) {
-                Thread.sleep(500);
-                continue;
-            }
-            throw ex;
-        }
-       }
-    }
-
+  private static void runWithRetry(Duration timeout, Runnable task) throws Throwable {
+    long startNanos = System.nanoTime();
+    Throwable deferred = null;
+    do {
+      if (deferred != null) {
+        MILLISECONDS.sleep(100);
+      }
+      try {
+        task.run();
+        return;
+      } catch (Throwable t) {
+        LOGGER.warn("Retrying due to {}", t.toString()); // don't need stack trace
+        deferred = t;
+      }
+    } while (System.nanoTime() - startNanos < timeout.toNanos());
+    throw deferred;
+  }
 }
