@@ -61,11 +61,12 @@ public class OrphanReporter {
   private static final String KEY_TIMEOUT = "timeout_ms";
 
   private final AtomicBoolean running = new AtomicBoolean(false);
-  private final Thread worker;
+  private volatile Thread worker = null;
   private final Queue<Request<?>> orphanQueue;
   private final long emitIntervalNanos;
   private final int sampleSize;
   private final EventBus eventBus;
+  private final boolean enabled;
 
   /**
    * Creates a new {@link OrphanReporter}.
@@ -82,9 +83,13 @@ public class OrphanReporter {
     this.orphanQueue = new MpscUnboundedArrayQueue<>(config.queueLength());
     this.emitIntervalNanos = config.emitInterval().toNanos();
     this.sampleSize = config.sampleSize();
+    this.enabled = config.enabled();
 
-    worker = new Thread(new Worker());
-    worker.setDaemon(true);
+    // Spawn a thread only if the reporter is enabled.
+    if (enabled) {
+      worker = new Thread(new Worker());
+      worker.setDaemon(true);
+    }
   }
 
   /**
@@ -94,7 +99,7 @@ public class OrphanReporter {
    */
   public Mono<Void> start() {
     return Mono.defer(() -> {
-      if (running.compareAndSet(false, true)) {
+      if (enabled && running.compareAndSet(false, true)) {
         worker.start();
       }
       return Mono.empty();
@@ -108,7 +113,7 @@ public class OrphanReporter {
    */
   public Mono<Void> stop() {
     return Mono.defer(() -> {
-      if (running.compareAndSet(true, false)) {
+      if (enabled && running.compareAndSet(true, false)) {
         worker.interrupt();
       }
       return Mono.empty();

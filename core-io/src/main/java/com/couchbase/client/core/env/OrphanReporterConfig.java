@@ -46,6 +46,11 @@ public class OrphanReporterConfig {
   private static final int DEFAULT_QUEUE_LENGTH = 1024;
 
   /**
+   * Orphan Reporter is enabled by default.
+   */
+  private static final boolean DEFAULT_ENABLED = true;
+
+  /**
    * The currently configured emit interval.
    */
   private final Duration emitInterval;
@@ -61,6 +66,11 @@ public class OrphanReporterConfig {
   private final int queueLength;
 
   /**
+   * The status (enabled/disabled) of this reporter.
+   */
+  private final boolean enabled;
+
+  /**
    * Creates a new {@link OrphanReporterConfig}.
    * <p>
    * Note that this method is private because users are supposed to construct it through the {@link Builder} or
@@ -72,6 +82,7 @@ public class OrphanReporterConfig {
     sampleSize = builder.sampleSize;
     emitInterval = builder.emitInterval;
     queueLength = builder.queueLength;
+    enabled = builder.enabled;
   }
 
   /**
@@ -123,6 +134,16 @@ public class OrphanReporterConfig {
   }
 
   /**
+   * Allows to configure the status (enabled/disabled) of this reporter.
+   *
+   * @param enabled the status of this reporter.
+   * @return this builder for chaining.
+   */
+  public static Builder enabled(final boolean enabled) {
+    return builder().enabled(enabled);
+  }
+
+  /**
    * Returns the configured emit interval.
    */
   public Duration emitInterval() {
@@ -144,6 +165,13 @@ public class OrphanReporterConfig {
   }
 
   /**
+   * Returns the status (enabled/disabled).
+   */
+  public boolean enabled() {
+    return enabled;
+  }
+
+  /**
    * Returns this config as a map so it can be exported into i.e. JSON for display.
    */
   @Stability.Volatile
@@ -152,6 +180,7 @@ public class OrphanReporterConfig {
     export.put("emitIntervalMs", emitInterval.toMillis());
     export.put("sampleSize", sampleSize);
     export.put("queueLength", queueLength);
+    export.put("enabled", enabled);
     return export;
   }
 
@@ -163,6 +192,7 @@ public class OrphanReporterConfig {
     private Duration emitInterval = DEFAULT_EMIT_INTERVAL;
     private int sampleSize = DEFAULT_SAMPLE_SIZE;
     private int queueLength = DEFAULT_QUEUE_LENGTH;
+    private boolean enabled = DEFAULT_ENABLED;
 
     /**
      * Allows to customize the event emit interval
@@ -198,6 +228,17 @@ public class OrphanReporterConfig {
      */
     public Builder sampleSize(final int sampleSize) {
       this.sampleSize = sampleSize;
+      return this;
+    }
+
+    /**
+     * Allows to configure if this reporter is enabled.
+     *
+     * @param enabled the status of this reporter.
+     * @return this builder for chaining.
+     */
+    public Builder enabled(final boolean enabled) {
+      this.enabled = enabled;
       return this;
     }
 
