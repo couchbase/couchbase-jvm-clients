@@ -47,6 +47,8 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 @Stability.Internal
 public class OrphanReporter {
 
+  public static final String ORPHAN_TREAD_PREFIX = "cb-orphan-";
+
   private static final AtomicInteger ORPHAN_REPORTER_ID = new AtomicInteger();
 
   private static final String KEY_TOTAL_MICROS = "total_duration_us";
@@ -183,7 +185,7 @@ public class OrphanReporter {
 
     @Override
     public void run() {
-      Thread.currentThread().setName("cb-orphan-" + ORPHAN_REPORTER_ID.incrementAndGet());
+      Thread.currentThread().setName(ORPHAN_TREAD_PREFIX + ORPHAN_REPORTER_ID.incrementAndGet());
       while (running.get()) {
         try {
           handleOrphanQueue();

@@ -18,52 +18,57 @@ package com.couchbase.client.core.cnc;
 
 import com.couchbase.client.core.env.OrphanReporterConfig;
 
-import java.time.Duration;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import static com.couchbase.client.core.cnc.OrphanReporter.ORPHAN_TREAD_PREFIX;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
+/**
+ * Verifies basic functionality of the {@link OrphanReporter}.
+ */
 class OrphanReporterTest {
 
   @Test
   void enabledReporter() {
-
     OrphanReporter reporter = new OrphanReporter(
         new SimpleEventBus(false),
         OrphanReporterConfig.enabled(true).
-        build());
+        build()
+    );
 
     reporter.start().block();
 
     Set<Thread> threads = Thread.getAllStackTraces().keySet();
 
     for (Thread thread : threads) {
-      if (thread.getName().startsWith("cb-orphan-")) {
+      if (thread.getName().startsWith(ORPHAN_TREAD_PREFIX)) {
         assertTrue(true);
         reporter.stop().block();
         return;
       }
     }
     reporter.stop().block();
+    fail();
   }
 
   @Test
   void disabledReporter() {
-
     OrphanReporter reporter = new OrphanReporter(
         new SimpleEventBus(false),
         OrphanReporterConfig.enabled(false).
-        build());
+        build()
+    );
 
     reporter.start().block();
 
     Set<Thread> threads = Thread.getAllStackTraces().keySet();
 
     for (Thread thread : threads) {
-      if (thread.getName().startsWith("cb-orphan-")) {
-        assertTrue(false);
+      if (thread.getName().startsWith(ORPHAN_TREAD_PREFIX)) {
+        fail();
         reporter.stop().block();
         return;
       }
