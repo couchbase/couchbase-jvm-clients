@@ -16,31 +16,49 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.SimpleEventBus;
+import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.manager.bucket.BucketSettings;
+import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
-import static com.couchbase.client.java.ClusterOptions.clusterOptions;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-public class WaitUntilReadyIntegrationTest {
+public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
 
+  private static Cluster cluster;
   private static ClusterEnvironment environment;
+  private static SimpleEventBus eventBus;
 
   @BeforeAll
   static void beforeAll() {
-    EventBus eventBus = new SimpleEventBus(true);
-    environment = ClusterEnvironment.builder().eventBus(eventBus).build();
+    eventBus = new SimpleEventBus(true);
+    environment = ClusterEnvironment
+      .builder()
+      .eventBus(eventBus)
+      .build();
+    cluster = Cluster.connect(seedNodes(), clusterOptions().environment(environment));
   }
 
   @AfterAll
   static void afterAll() {
+    cluster.disconnect();
     environment.shutdown();
   }
 
@@ -48,7 +66,7 @@ public class WaitUntilReadyIntegrationTest {
   void timesOutClusterWhenNotReady() {
     Cluster cluster =  Cluster.connect(
       "127.0.0.1",
-      clusterOptions("foo", "bar").environment(environment)
+      ClusterOptions.clusterOptions("foo", "bar").environment(environment)
     );
 
     assertThrows(UnambiguousTimeoutException.class, () -> cluster.waitUntilReady(Duration.ofSeconds(2)));
@@ -59,11 +77,48 @@ public class WaitUntilReadyIntegrationTest {
   void timesOutBucketWhenNotReady() {
     Cluster cluster =  Cluster.connect(
       "127.0.0.1",
-      clusterOptions("foo", "bar").environment(environment)
+      ClusterOptions.clusterOptions("foo", "bar").environment(environment)
     );
     Bucket bucket = cluster.bucket("foo");
     assertThrows(UnambiguousTimeoutException.class, () -> bucket.waitUntilReady(Duration.ofSeconds(2)));
     cluster.disconnect();
+  }
+
+  @Test
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  void handlesCreatingBucketDuringWaitUntilReady()  {
+    ExecutorService es = Executors.newFixedThreadPool(1);
+    String bucketName = UUID.randomUUID().toString();
+
+    long creationDelay = 2000;
+    try {
+      Bucket bucket = cluster.bucket(bucketName);
+      es.submit(() -> {
+        try {
+          Thread.sleep(creationDelay);
+        } catch (InterruptedException e) {
+          fail();
+        }
+        cluster.buckets().createBucket(BucketSettings.create(bucketName));
+      });
+
+      long start = System.nanoTime();
+      bucket.waitUntilReady(Duration.ofSeconds(30));
+      long end = System.nanoTime();
+
+      Collection collection = bucket.defaultCollection();
+      collection.upsert("my-doc", JsonObject.create());
+      assertEquals(JsonObject.create(), collection.get("my-doc").contentAsObject());
+
+      assertTrue(TimeUnit.NANOSECONDS.toMillis(end - start) > creationDelay);
+    } finally {
+      es.shutdownNow();
+      try {
+        cluster.buckets().dropBucket(bucketName);
+      } catch (BucketNotFoundException ex) {
+        // ignore
+      }
+    }
   }
 
 }

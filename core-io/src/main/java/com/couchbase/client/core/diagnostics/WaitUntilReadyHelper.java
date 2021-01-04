@@ -54,7 +54,8 @@ public class WaitUntilReadyHelper {
       .interval(Duration.ofMillis(10), core.context().environment().scheduler())
       .filter(i -> !(core.configurationProvider().bucketConfigLoadInProgress()
         || core.configurationProvider().globalConfigLoadInProgress()
-        || (bucketName.isPresent() && core.configurationProvider().collectionMapRefreshInProgress()))
+        || (bucketName.isPresent() && core.configurationProvider().collectionMapRefreshInProgress())
+        || (bucketName.isPresent() && core.clusterConfig().bucketConfig(bucketName.get()) == null))
       )
       .take(1)
       .flatMap(aLong -> {
