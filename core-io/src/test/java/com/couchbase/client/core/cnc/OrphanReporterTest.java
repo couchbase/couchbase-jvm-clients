@@ -18,8 +18,6 @@ package com.couchbase.client.core.cnc;
 
 import com.couchbase.client.core.env.OrphanReporterConfig;
 
-import java.util.Set;
-
 import org.junit.jupiter.api.Test;
 
 import static com.couchbase.client.core.cnc.OrphanReporter.ORPHAN_TREAD_PREFIX;
@@ -41,9 +39,7 @@ class OrphanReporterTest {
 
     reporter.start().block();
 
-    Set<Thread> threads = Thread.getAllStackTraces().keySet();
-
-    for (Thread thread : threads) {
+    for (Thread thread : Thread.getAllStackTraces().keySet()) {
       if (thread.getName().startsWith(ORPHAN_TREAD_PREFIX)) {
         assertTrue(true);
         reporter.stop().block();
@@ -56,6 +52,14 @@ class OrphanReporterTest {
 
   @Test
   void disabledReporter() {
+    int orphansBefore = 0;
+
+    for (Thread thread : Thread.getAllStackTraces().keySet()) {
+      if (thread.getName().startsWith(ORPHAN_TREAD_PREFIX)) {
+        orphansBefore++;
+      }
+    }
+
     OrphanReporter reporter = new OrphanReporter(
         new SimpleEventBus(false),
         OrphanReporterConfig.enabled(false).
@@ -64,15 +68,15 @@ class OrphanReporterTest {
 
     reporter.start().block();
 
-    Set<Thread> threads = Thread.getAllStackTraces().keySet();
+    int orphansAfter = 0;
 
-    for (Thread thread : threads) {
+    for (Thread thread : Thread.getAllStackTraces().keySet()) {
       if (thread.getName().startsWith(ORPHAN_TREAD_PREFIX)) {
-        fail();
-        reporter.stop().block();
-        return;
+        orphansAfter++;
       }
     }
+
     reporter.stop().block();
+    assertTrue(orphansAfter <= orphansBefore);
   }
 }
