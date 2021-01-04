@@ -19,6 +19,7 @@ package com.couchbase.client.core.config;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.config.BucketConfigUpdatedEvent;
+import com.couchbase.client.core.cnc.events.config.BucketOpenRetriedEvent;
 import com.couchbase.client.core.cnc.events.config.CollectionMapDecodingFailedEvent;
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
@@ -34,6 +35,7 @@ import com.couchbase.client.core.config.refresher.KeyValueBucketRefresher;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
+import com.couchbase.client.core.error.BucketNotFoundDuringLoadException;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.RequestCanceledException;
@@ -215,14 +217,25 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
               return loadBucketConfigForSeed(identifier, mappedKvPort, mappedManagerPort, name, alternateAddress);
             })
-            .retryWhen(Retry.from(companion -> companion.map(rs -> {
-              if (rs.failure() instanceof ConfigException
-                && rs.failure().getCause() instanceof RequestCanceledException
-                && ((RequestCanceledException) rs.failure().getCause()).reason() == CancellationReason.TARGET_NODE_REMOVED) {
-                return rs.totalRetries();
-              }
-              throw Exceptions.propagate(rs.failure());
-            })))
+            .retryWhen(
+              Retry.from(companion -> companion.flatMap(rs -> {
+                final Throwable f = rs.failure();
+
+                if ((f instanceof ConfigException
+                  && f.getCause() instanceof RequestCanceledException
+                  && ((RequestCanceledException) f.getCause()).reason() == CancellationReason.TARGET_NODE_REMOVED)
+                  || f instanceof BucketNotFoundDuringLoadException) {
+                  // For bucket not found wait a bit longer, retry the rest quickly
+                  Duration delay = f instanceof BucketNotFoundDuringLoadException
+                    ? Duration.ofMillis(500)
+                    : Duration.ofMillis(1);
+                  eventBus.publish(new BucketOpenRetriedEvent(name, delay, core.context(), f));
+                  return Mono
+                    .just(rs.totalRetries())
+                    .delayElement(delay, core.context().environment().scheduler());
+                }
+                return Mono.error(Exceptions.propagate(rs.failure()));
+              })))
           )
           .take(1)
           .switchIfEmpty(Mono.error(

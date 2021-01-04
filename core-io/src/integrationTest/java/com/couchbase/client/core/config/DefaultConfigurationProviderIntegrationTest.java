@@ -17,12 +17,15 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.SimpleEventBus;
+import com.couchbase.client.core.cnc.events.config.BucketOpenRetriedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.error.AlreadyShutdownException;
+import com.couchbase.client.core.error.BucketNotFoundDuringLoadException;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
@@ -44,9 +47,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the functionality of the {@link DefaultConfigurationProvider}.
@@ -180,9 +183,8 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     long actual = TimeUnit.NANOSECONDS.toMillis(end - start);
     assertTrue(
-      "Expected >= " + connectTimeout.toMillis() + "ms, Actual: " + actual + "ms",
-      actual >= connectTimeout.toMillis()
-    );
+      actual >= connectTimeout.toMillis(),
+      "Expected >= " + connectTimeout.toMillis() + "ms, Actual: " + actual + "ms");
     provider.shutdown().block();
   }
 
@@ -259,8 +261,46 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     assertThrows(AlreadyShutdownException.class, () -> provider.openBucket("foo").block());
     assertThrows(AlreadyShutdownException.class, () -> provider.closeBucket("foo").block());
 
-    configsComplete.await(1, TimeUnit.SECONDS);
+    assertTrue(configsComplete.await(1, TimeUnit.SECONDS));
     assertEquals(3, configEvents.get());
+  }
+
+  /**
+   * Need to make sure that if a bucket is not found during load, we continue retrying the open
+   * bucket attempts.
+   */
+  @Test
+  void retriesOnBucketNotFoundDuringLoadException() {
+    TestNodeConfig cfg = config().firstNodeWith(Services.KV).get();
+    Set<SeedNode> seeds = new HashSet<>(Collections.singletonList(SeedNode.create(
+      cfg.hostname(),
+      Optional.of(cfg.ports().get(Services.KV)),
+      Optional.of(cfg.ports().get(Services.MANAGER))
+    )));
+
+    SimpleEventBus eventBus = new SimpleEventBus(true);
+    environment = CoreEnvironment.builder()
+      .eventBus(eventBus)
+      .build();
+    core = Core.create(environment, authenticator(), seeds);
+
+    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
+
+    try {
+      String bucketName = "this-bucket-does-not-exist";
+      provider.openBucket(bucketName).subscribe(v -> {}, e -> assertTrue(e instanceof ConfigException));
+
+      waitUntilCondition(() -> eventBus.publishedEvents().stream().anyMatch(p -> p instanceof BucketOpenRetriedEvent));
+
+      for (Event event : eventBus.publishedEvents()) {
+        if (event instanceof BucketOpenRetriedEvent) {
+          assertEquals(bucketName, ((BucketOpenRetriedEvent) event).bucketName());
+          assertTrue(event.cause() instanceof BucketNotFoundDuringLoadException);
+        }
+      }
+    } finally {
+      provider.shutdown().block();
+    }
   }
 
   /**

@@ -18,6 +18,7 @@ package com.couchbase.client.core.cnc.events.io;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 
 import java.time.Duration;
 
@@ -45,6 +46,11 @@ public class SelectBucketFailedEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return "Select bucket failed with status code 0x" + Integer.toHexString(status);
+    if (status == MemcacheProtocol.Status.ACCESS_ERROR.status()) {
+      return "Select bucket failed because of an access error " +
+        "(bucket does not exist or insufficient privileges) - status code 0x" + Integer.toHexString(status);
+    } else {
+      return "Select bucket failed with status code 0x" + Integer.toHexString(status);
+    }
   }
 }

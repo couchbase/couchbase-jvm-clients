@@ -19,12 +19,16 @@ package com.couchbase.client.core.config.loader;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.error.BucketNotFoundDuringLoadException;
 import com.couchbase.client.core.error.ConfigException;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.BucketConfigRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Mono;
+
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 
 /**
  * This loader is responsible for loading a config from the cluster manager.
@@ -68,6 +72,8 @@ public class ClusterManagerBucketLoader extends BaseBucketLoader {
     }).map(response -> {
       if (response.status().success()) {
         return response.config();
+      } else if (response.status() == ResponseStatus.NOT_FOUND) {
+        throw new BucketNotFoundDuringLoadException("Bucket [\"" + redactMeta(bucket) + "\"] not found during loading");
       } else {
         throw new ConfigException("Received error status from ClusterManagerBucketLoader: " + response);
       }
