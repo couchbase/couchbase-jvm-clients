@@ -142,6 +142,13 @@ public enum ResponseStatus {
   INVALID_REQUEST,
 
   UNKNOWN_COLLECTION,
+
+  UNKNOWN_SCOPE,
+
+  COLLECTIONS_MANIFEST_AHEAD,
+
+  CANNOT_APPLY_COLLECTIONS_MANIFEST,
+
   /**
    * The server reports that it is not initialized yet.
    */

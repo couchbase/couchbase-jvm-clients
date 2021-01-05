@@ -596,6 +596,12 @@ public enum MemcacheProtocol {
       return ResponseStatus.NOT_INITIALIZED;
     } else if (status == Status.INVALID_REQUEST.status) {
       return ResponseStatus.INVALID_REQUEST;
+    } else  if (status == Status.CANNOT_APPLY_COLLECTIONS_MANIFEST.status) {
+      return ResponseStatus.CANNOT_APPLY_COLLECTIONS_MANIFEST;
+    } else  if (status == Status.COLLECTIONS_MANIFEST_AHEAD.status) {
+      return ResponseStatus.COLLECTIONS_MANIFEST_AHEAD;
+    } else  if (status == Status.UNKNOWN_SCOPE.status) {
+      return ResponseStatus.UNKNOWN_SCOPE;
     } else {
       return ResponseStatus.UNKNOWN;
     }
@@ -1181,7 +1187,23 @@ public enum MemcacheProtocol {
     /**
      * The collection ID provided is unknown, maybe it changed or got dropped.
      */
-    UNKNOWN_COLLECTION((short) 0x88);
+    UNKNOWN_COLLECTION((short) 0x88),
+
+    /**
+     * Bucket Manifest update could not be applied to vbucket(s).
+     */
+    CANNOT_APPLY_COLLECTIONS_MANIFEST((short) 0x8a),
+
+    /**
+     * We have a collection's manifest which is from the future. This means
+     * they we have a uid that is greater than the servers.
+     */
+    COLLECTIONS_MANIFEST_AHEAD((short) 0x8b),
+
+    /**
+     * Operation attempted with an unknown scope.
+     */
+    UNKNOWN_SCOPE((short) 0x8c);
 
     private final short status;
 
