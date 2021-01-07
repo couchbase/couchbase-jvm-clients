@@ -121,14 +121,30 @@ public abstract class BaseKeyValueRequest<R extends Response>
   }
 
   /**
-   * This method with return an encoded key with or without the collection prefix, depending on the
+   * This method returns an encoded key with or without the collection prefix, depending on the
    * context provided.
+   *
+   * <p>Note that it uses the key set during construction, if you want to encode a different key use the
+   * {@link #encodedExternalKeyWithCollection(ByteBufAllocator, KeyValueChannelContext, byte[])} method instead.</p>
    *
    * @param alloc the buffer allocator to use.
    * @param ctx the channel context.
    * @return the encoded ID, maybe with the collection prefix in place.
    */
   protected ByteBuf encodedKeyWithCollection(final ByteBufAllocator alloc, final KeyValueChannelContext ctx) {
+    return encodedExternalKeyWithCollection(alloc, ctx, key);
+  }
+
+  /**
+   * Encodes a given key with the collection prefix if needed.
+   *
+   * @param alloc the buffer allocator to use.
+   * @param ctx the channel context.
+   * @param key the key to encode with collection id.
+   * @return the encoded ID, maybe with the collection prefix in place.
+   */
+  protected ByteBuf encodedExternalKeyWithCollection(final ByteBufAllocator alloc, final KeyValueChannelContext ctx,
+                                                     final byte[] key) {
     if (ctx.collectionsEnabled()) {
       byte[] collection = ctx.collectionMap().get(collectionIdentifier);
       if (collection == null) {
@@ -150,6 +166,8 @@ public abstract class BaseKeyValueRequest<R extends Response>
       }
     }
   }
+
+
 
   /**
    * Checks the key length and throws if too long.

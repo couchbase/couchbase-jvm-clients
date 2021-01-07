@@ -27,6 +27,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.util.UnsignedLEB128;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -71,9 +72,14 @@ public class MultiObserveViaCasRequest
     try {
       content = alloc.buffer(keys.size() * (Short.BYTES * 2));
       for (Map.Entry<byte[], Short> key : keys.entrySet()) {
-        content.writeShort(key.getValue());
-        content.writeShort(key.getKey().length);
-        content.writeBytes(key.getKey());
+        ByteBuf keyWithCollection = encodedExternalKeyWithCollection(alloc, ctx, key.getKey());
+        try {
+          content.writeShort(key.getValue());
+          content.writeShort(keyWithCollection.readableBytes());
+          content.writeBytes(keyWithCollection);
+        } finally {
+          ReferenceCountUtil.release(keyWithCollection);
+        }
       }
       return request(alloc, MemcacheProtocol.Opcode.OBSERVE_CAS, noDatatype(),
         partition(), opaque, noCas(), noExtras(), noKey(), content);
@@ -94,6 +100,10 @@ public class MultiObserveViaCasRequest
         while (content.isReadable()) {
           content.skipBytes(Short.BYTES); // skip the vbid
           short keyLength = content.readShort();
+          if (ctx.collectionsEnabled()) {
+            int skipped = UnsignedLEB128.skip(content);
+            keyLength = (short) (keyLength - skipped);
+          }
           byte[] keyEncoded = new byte[keyLength];
           content.readBytes(keyEncoded, 0, keyLength);
           byte obs = content.readByte();

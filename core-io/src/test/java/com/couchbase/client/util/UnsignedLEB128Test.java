@@ -106,10 +106,10 @@ class UnsignedLEB128Test {
       .writeByte(0x00) // one-byte value
       .writeByte(0x80); // start of an incomplete value
 
-    UnsignedLEB128.skip(buffer);
+    assertEquals(2, UnsignedLEB128.skip(buffer));
     assertEquals(2, buffer.readerIndex());
 
-    UnsignedLEB128.skip(buffer);
+    assertEquals(1, UnsignedLEB128.skip(buffer));
     assertEquals(3, buffer.readerIndex());
 
     assertThrows(IndexOutOfBoundsException.class,

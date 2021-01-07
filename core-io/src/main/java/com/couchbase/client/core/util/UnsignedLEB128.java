@@ -54,12 +54,15 @@ public class UnsignedLEB128 {
    * Advances the buffer's reader index past the unsigned LEB128 value at the reader index.
    * If this methods throws an exception the reader index will be unchanged.
    *
+   * @return the number of bytes skipped.
    * @throws IndexOutOfBoundsException if the buffer's readable bytes do not contain a complete value.
    */
-  public static void skip(ByteBuf buf) {
+  public static int skip(ByteBuf buf) {
     final int readerMark = buf.readerIndex();
+    int bytesSkipped = 0;
     try {
       while (true) {
+        bytesSkipped++;
         if ((buf.readByte() & 0x80) == 0) {
           break;
         }
@@ -68,6 +71,7 @@ public class UnsignedLEB128 {
       buf.readerIndex(readerMark);
       throw e;
     }
+    return bytesSkipped;
   }
 
   /**
