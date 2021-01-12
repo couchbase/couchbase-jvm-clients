@@ -80,7 +80,7 @@ class AsyncCluster(
   /** The environment used to create this cluster */
   val env: ClusterEnvironment = environment
 
-  private[scala] val core =
+  private[couchbase] val core =
     Core.create(environment.coreEnv, authenticator, seedNodes.map(_.toCore).asJava)
   private[scala] val hp                         = HandlerBasicParams(core, env)
   private[scala] val searchTimeout              = javaDurationToScala(env.timeoutConfig.searchTimeout())
