@@ -56,7 +56,13 @@ class AsyncScope private[scala] (
 
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(collectionName: String): AsyncCollection = {
-    core.configurationProvider.refreshCollectionMap(bucketName, false)
+    val defaultScopeAndCollection = collectionName.equals(DefaultResources.DefaultCollection) &&
+      scopeName.equals(DefaultResources.DefaultScope)
+
+    if (!defaultScopeAndCollection) {
+      core.configurationProvider.refreshCollectionMap(bucketName, false)
+    }
+
     new AsyncCollection(collectionName, bucketName, scopeName, core, environment)
   }
 
