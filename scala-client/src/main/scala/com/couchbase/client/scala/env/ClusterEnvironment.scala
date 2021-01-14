@@ -17,11 +17,14 @@
 package com.couchbase.client.scala.env
 
 import java.util.concurrent.{Executors, ThreadFactory}
-
 import com.couchbase.client.core
 import com.couchbase.client.core.annotation.Stability.{Uncommitted, Volatile}
 import com.couchbase.client.core.cnc.{EventBus, RequestTracer}
-import com.couchbase.client.core.env.ConnectionStringPropertyLoader
+import com.couchbase.client.core.env.{
+  ConnectionStringPropertyLoader,
+  CoreEnvironment,
+  PropertyLoader
+}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.codec.{JsonTranscoder, Transcoder}
 import com.couchbase.client.scala.util.DurationConversions._
@@ -32,6 +35,7 @@ import reactor.core.scheduler.Scheduler
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
+import scala.language.existentials
 import scala.util.Try
 
 /** Functions to create a ClusterEnvironment, which provides configuration options for connecting to a Couchbase
@@ -67,7 +71,10 @@ object ClusterEnvironment {
       private[scala] val retryStrategy: Option[RetryStrategy] = None,
       private[scala] val requestTracer: Option[RequestTracer] = None,
       private[scala] val maxNumRequestsInRetry: Option[Int] = None,
-      private[scala] val transcoder: Option[Transcoder] = None
+      private[scala] val transcoder: Option[Transcoder] = None,
+      private[scala] val propertyLoaders: Seq[PropertyLoader[
+        CoreEnvironment.Builder[SELF] forSome { type SELF <: CoreEnvironment.Builder[SELF] }
+      ]] = Seq()
   ) {
 
     def build: Try[ClusterEnvironment] = Try(new ClusterEnvironment(this))
@@ -189,6 +196,21 @@ object ClusterEnvironment {
     def transcoder(transcoder: Transcoder): ClusterEnvironment.Builder = {
       copy(transcoder = Some(transcoder))
     }
+
+    /** Allows to provide custom property loaders into the environment.
+      *
+      * @param propertyLoaders the custom property loaders.
+      * @return this, for chaining purposes.
+      */
+    @Volatile
+    def loaders(
+        propertyLoaders: Seq[PropertyLoader[
+          CoreEnvironment.Builder[SELF] forSome { type SELF <: CoreEnvironment.Builder[SELF] }
+        ]]
+    ): ClusterEnvironment.Builder = {
+      copy(propertyLoaders = propertyLoaders)
+    }
+
   }
 }
 
@@ -253,6 +275,7 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
   builder.retryStrategy.foreach(rs => coreBuilder.retryStrategy(rs))
   builder.requestTracer.foreach(v => coreBuilder.requestTracer(v))
   builder.maxNumRequestsInRetry.foreach(v => coreBuilder.maxNumRequestsInRetry(v))
+  builder.propertyLoaders.foreach(v => coreBuilder.load(v))
 
   private[scala] val coreEnv = new CoreEnvironment(coreBuilder)
 

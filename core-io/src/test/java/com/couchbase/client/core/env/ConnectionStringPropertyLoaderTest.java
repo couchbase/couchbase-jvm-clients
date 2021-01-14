@@ -21,17 +21,11 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConnectionStringPropertyLoaderTest {
@@ -99,7 +93,7 @@ class ConnectionStringPropertyLoaderTest {
    * @param consumer the consumer which will get the full env to assert against.
    */
   private void parse(final String connectionString, final Consumer<CoreEnvironment> consumer) {
-    CoreEnvironment.Builder builder = CoreEnvironment.builder();
+    CoreEnvironment.Builder<?> builder = CoreEnvironment.builder();
     ConnectionStringPropertyLoader loader = new ConnectionStringPropertyLoader(connectionString);
     loader.load(builder);
     CoreEnvironment built = builder.build();

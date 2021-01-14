@@ -16,11 +16,11 @@
 
 package com.couchbase.client.core.env;
 
-import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.util.ConnectionString;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * This {@link PropertyLoader} takes a connection string and applies all properties
@@ -28,17 +28,12 @@ import java.util.Map;
  *
  * @since 2.0.0
  */
-public class ConnectionStringPropertyLoader implements PropertyLoader<CoreEnvironment.Builder> {
+public class ConnectionStringPropertyLoader extends AbstractMapPropertyLoader<CoreEnvironment.Builder> {
 
   /**
    * Holds the connection string provided by the application.
    */
   private final ConnectionString connectionString;
-
-  /**
-   * Holds the dynamic setter to build the properties.
-   */
-  private final BuilderPropertySetter setter = new BuilderPropertySetter();
 
   /**
    * Holds alias values from other connection string implementations (like libcouchbase)
@@ -54,25 +49,21 @@ public class ConnectionStringPropertyLoader implements PropertyLoader<CoreEnviro
   }
 
   @Override
-  public void load(final CoreEnvironment.Builder builder) {
+  protected Map<String, String> propertyMap() {
+    final Map<String, String> properties = connectionString
+      .params()
+      .entrySet()
+      .stream()
+      .collect(Collectors.toMap(
+        entry -> COMPAT_ALIAS.getOrDefault(entry.getKey(), entry.getKey()),
+        Map.Entry::getValue
+      ));
+
     if (connectionString.scheme() == ConnectionString.Scheme.COUCHBASES) {
-      setter.set(builder, "security.enableTls", "true");
+      properties.put("security.enableTls", "true");
     }
 
-    for (Map.Entry<String, String> entry : connectionString.params().entrySet()) {
-      try {
-        String key = entry.getKey();
-        if (COMPAT_ALIAS.containsKey(key)) {
-          key = COMPAT_ALIAS.get(key);
-        }
-        setter.set(builder, key, entry.getValue());
-      } catch (IllegalArgumentException e) {
-        throw InvalidArgumentException.fromMessage(
-          "Failed to apply connection string property \"" + entry.getKey() + "\". " + e.getMessage(), e);
-      }
-    }
+    return properties;
   }
-
-
 
 }

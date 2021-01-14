@@ -16,16 +16,13 @@
 
 package com.couchbase.client.core.env;
 
-import com.couchbase.client.core.error.InvalidArgumentException;
-
+import java.util.Map;
 import java.util.Properties;
-import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
-public class SystemPropertyPropertyLoader implements PropertyLoader<CoreEnvironment.Builder> {
+public class SystemPropertyPropertyLoader extends AbstractMapPropertyLoader<CoreEnvironment.Builder<?>> {
 
   private static final String PREFIX = "com.couchbase.env.";
-
-  private final BuilderPropertySetter setter = new BuilderPropertySetter();
 
   private final Properties properties;
 
@@ -38,25 +35,13 @@ public class SystemPropertyPropertyLoader implements PropertyLoader<CoreEnvironm
   }
 
   @Override
-  public void load(CoreEnvironment.Builder builder) {
-    forEachStringProperty((name, value) -> {
-      if (name.startsWith(PREFIX)) {
-        try {
-          setter.set(builder, name.substring(PREFIX.length()), value);
-
-        } catch (IllegalArgumentException e) {
-          throw InvalidArgumentException.fromMessage(
-            "Failed to apply system property \"" + name + "\". " + e.getMessage(), e);
-        }
-      }
-    });
+  protected Map<String, String> propertyMap() {
+    return properties
+      .entrySet()
+      .stream()
+      .filter(entry -> entry.getKey() instanceof String && entry.getValue() instanceof String)
+      .filter(entry -> ((String) entry.getKey()).startsWith(PREFIX))
+      .collect(Collectors.toMap(e -> ((String) e.getKey()).substring(PREFIX.length()), e -> (String) e.getValue()));
   }
 
-  private void forEachStringProperty(final BiConsumer<String, String> action) {
-    properties.forEach((key, value) -> {
-      if (key instanceof String && value instanceof String) {
-        action.accept((String) key, (String) value);
-      }
-    });
-  }
 }
