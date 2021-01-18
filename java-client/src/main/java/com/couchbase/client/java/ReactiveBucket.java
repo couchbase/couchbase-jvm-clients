@@ -138,18 +138,26 @@ public class ReactiveBucket {
   }
 
   /**
-   * Opens the default collection for this {@link ReactiveBucket}.
+   * Opens the default collection for this {@link ReactiveBucket} using the default scope.
+   * <p>
+   * This method does not block and the client will try to establish all needed resources in the background. If you
+   * need to eagerly await until all resources are established before performing an operation, use the
+   * {@link #waitUntilReady(Duration)} method on the {@link ReactiveBucket}.
    *
-   * @return the {@link ReactiveCollection} once opened.
+   * @return the opened default {@link ReactiveCollection}.
    */
   public ReactiveCollection defaultCollection() {
     return defaultScope().defaultCollection();
   }
 
   /**
-   * Opens the collection with the given name for this {@link ReactiveBucket}.
+   * Provides access to the collection with the given name for this {@link ReactiveBucket} using the default scope.
+   * <p>
+   * This method does not block and the client will try to establish all needed resources in the background. If you
+   * need to eagerly await until all resources are established before performing an operation, use the
+   * {@link #waitUntilReady(Duration)} method on the {@link ReactiveBucket}.
    *
-   * @return the {@link ReactiveCollection} once opened.
+   * @return the opened named {@link ReactiveCollection}.
    */
   @Stability.Volatile
   public ReactiveCollection collection(final String collectionName) {

@@ -163,18 +163,26 @@ public class AsyncBucket {
   }
 
   /**
-   * Opens the default collection for this {@link AsyncBucket}.
+   * Opens the default collection for this {@link AsyncBucket} using the default scope.
+   * <p>
+   * This method does not block and the client will try to establish all needed resources in the background. If you
+   * need to eagerly await until all resources are established before performing an operation, use the
+   * {@link #waitUntilReady(Duration)} method on the {@link AsyncBucket}.
    *
-   * @return the {@link AsyncCollection} once opened.
+   * @return the opened default {@link AsyncCollection}.
    */
   public AsyncCollection defaultCollection() {
     return defaultScope().defaultCollection();
   }
 
   /**
-   * Opens the collection with the given name for this {@link AsyncBucket}.
+   * Provides access to the collection with the given name for this {@link AsyncBucket} using the default scope.
+   * <p>
+   * This method does not block and the client will try to establish all needed resources in the background. If you
+   * need to eagerly await until all resources are established before performing an operation, use the
+   * {@link #waitUntilReady(Duration)} method on the {@link AsyncBucket}.
    *
-   * @return the {@link AsyncCollection} once opened.
+   * @return the opened named {@link AsyncCollection}.
    */
   @Stability.Volatile
   public AsyncCollection collection(final String collectionName) {

@@ -146,18 +146,26 @@ public class Bucket {
   }
 
   /**
-   * Opens the default collection for this {@link Bucket}.
+   * Opens the default collection for this {@link Bucket} using the default scope.
+   * <p>
+   * This method does not block and the client will try to establish all needed resources in the background. If you
+   * need to eagerly await until all resources are established before performing an operation, use the
+   * {@link #waitUntilReady(Duration)} method on the {@link Bucket}.
    *
-   * @return the {@link Collection} once opened.
+   * @return the opened default {@link Collection}.
    */
   public Collection defaultCollection() {
     return defaultScope().defaultCollection();
   }
 
   /**
-   * Opens the collection with the given name for this {@link Bucket}.
+   * Provides access to the collection with the given name for this {@link Bucket} using the default scope.
+   * <p>
+   * This method does not block and the client will try to establish all needed resources in the background. If you
+   * need to eagerly await until all resources are established before performing an operation, use the
+   * {@link #waitUntilReady(Duration)} method on the {@link Bucket}.
    *
-   * @return the {@link Collection} once opened.
+   * @return the opened named {@link Collection}.
    */
   @Stability.Volatile
   public Collection collection(final String collectionName) {
