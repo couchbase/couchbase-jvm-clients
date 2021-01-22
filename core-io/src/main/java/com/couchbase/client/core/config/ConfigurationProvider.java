@@ -18,6 +18,7 @@ package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -119,14 +120,12 @@ public interface ConfigurationProvider  {
   CollectionMap collectionMap();
 
   /**
-   * Helper method to refresh the collection map for the given bucket.
+   * Helper method to refresh the collection map for the given collection.
    *
-   * @param bucket the name of the bucket.
-   * @param force if set, the provider must fetch a new one. otherwise it will only fetch one for the bucket if not
-   *              already present.
+   * @param identifier the identifier to refresh.
    * @return once refreshed completes the mono (or fails if error).
    */
-  void refreshCollectionMap(String bucket, boolean force);
+  void refreshCollectionId(CollectionIdentifier identifier);
 
   /**
    * Returns true if an initial global config load attempt is in progress.

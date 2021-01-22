@@ -18,6 +18,7 @@ package com.couchbase.client.core.cnc.events.config;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.cnc.Context;
+import com.couchbase.client.core.io.CollectionIdentifier;
 
 import java.time.Duration;
 
@@ -28,11 +29,14 @@ public class CollectionMapRefreshFailedEvent extends AbstractEvent {
 
   private final Throwable cause;
   private final Reason reason;
+  private final CollectionIdentifier collectionIdentifier;
 
-  public CollectionMapRefreshFailedEvent(Duration duration, Context context, Throwable cause, Reason reason) {
+  public CollectionMapRefreshFailedEvent(Duration duration, Context context, CollectionIdentifier collectionIdentifier,
+                                         Throwable cause, Reason reason) {
     super(Severity.WARN, Category.CONFIG, duration, context);
     this.cause = cause;
     this.reason = reason;
+    this.collectionIdentifier = collectionIdentifier;
   }
 
   @Override
@@ -42,12 +46,37 @@ public class CollectionMapRefreshFailedEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return "Collection Map refresh failed: " + reason;
+    return "Collection Map refresh (" + collectionIdentifier + ") failed: " + reason;
   }
 
   public enum Reason {
+    /**
+     * Dispatching the operation failed for some reason (see cause).
+     */
     FAILED,
+    /**
+     * Collections are nut supported by the server.
+     */
     NOT_SUPPORTED,
+    /**
+     * The collection the client asked for is unknown to the server.
+     */
+    UNKNOWN_COLLECTION,
+    /**
+     * The server returned success, but it did not send a collection id.
+     */
+    COLLECTION_ID_NOT_PRESENT,
+    /**
+     * The server had no collection manifest at the time of asking.
+     */
+    SERVER_HAS_NO_MANIFEST,
+    /**
+     * The client sent an invalid request to the server.
+     */
+    INVALID_REQUEST,
+    /**
+     * An unknown failure occurred (see cause).
+     */
     UNKNOWN
   }
 

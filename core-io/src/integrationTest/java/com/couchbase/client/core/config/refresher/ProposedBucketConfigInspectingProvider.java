@@ -5,6 +5,7 @@ import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -93,8 +94,8 @@ public class ProposedBucketConfigInspectingProvider implements ConfigurationProv
   }
 
   @Override
-  public void refreshCollectionMap(String bucket, boolean force) {
-    delegate.refreshCollectionMap(bucket, force);
+  public void refreshCollectionId(CollectionIdentifier identifier) {
+    delegate.refreshCollectionId(identifier);
   }
 
   @Override

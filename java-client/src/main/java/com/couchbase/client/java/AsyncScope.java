@@ -41,6 +41,7 @@ import com.couchbase.client.java.query.QueryResult;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -184,7 +185,9 @@ public class AsyncScope {
   private AsyncCollection maybeCreateAsyncCollection(final String collectionName, final boolean refreshMap) {
     return collectionCache.computeIfAbsent(collectionName, name -> {
       if (refreshMap) {
-        core.configurationProvider().refreshCollectionMap(bucketName, false);
+        core
+          .configurationProvider()
+          .refreshCollectionId(new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(name)));
       }
       return new AsyncCollection(name, scopeName, bucketName, core, environment);
     });

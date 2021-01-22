@@ -588,6 +588,8 @@ public enum MemcacheProtocol {
       return ResponseStatus.SUCCESS;
     } else if (status == Status.UNKNOWN_COLLECTION.status) {
       return ResponseStatus.UNKNOWN_COLLECTION;
+    } else if (status == Status.NO_COLLECTIONS_MANIFEST.status) {
+      return ResponseStatus.NO_COLLECTIONS_MANIFEST;
     } else if (status == Status.NO_BUCKET.status) {
       return ResponseStatus.NO_BUCKET;
     } else if (status == Status.INTERNAL_SERVER_ERROR.status) {
@@ -1188,6 +1190,11 @@ public enum MemcacheProtocol {
      * The collection ID provided is unknown, maybe it changed or got dropped.
      */
     UNKNOWN_COLLECTION((short) 0x88),
+
+    /**
+     * No collections manifest has been set on the server.
+     */
+    NO_COLLECTIONS_MANIFEST((short) 0x89),
 
     /**
      * Bucket Manifest update could not be applied to vbucket(s).

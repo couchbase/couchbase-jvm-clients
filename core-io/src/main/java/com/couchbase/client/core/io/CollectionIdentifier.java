@@ -19,6 +19,7 @@ package com.couchbase.client.core.io;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -85,10 +86,10 @@ public class CollectionIdentifier {
   @Override
   public String toString() {
     return "CollectionIdentifier{" +
-      "bucket='" + bucket + '\'' +
-      ", scope=" + scope +
-      ", collection=" + collection +
-      ", isDefault=" + isDefault +
+      "bucket='" + redactMeta(bucket) + '\'' +
+      ", scope=" + redactMeta(scope) +
+      ", collection=" + redactMeta(collection) +
+      ", isDefault=" + redactMeta(isDefault) +
       '}';
   }
 }

@@ -17,10 +17,12 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query.handlers.QueryHandler
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
 
+import java.util.Optional
 import scala.concurrent.{ExecutionContext, Future}
 
 /** Represents a Couchbase scope resource.
@@ -60,7 +62,9 @@ class AsyncScope private[scala] (
       scopeName.equals(DefaultResources.DefaultScope)
 
     if (!defaultScopeAndCollection) {
-      core.configurationProvider.refreshCollectionMap(bucketName, false)
+      core.configurationProvider.refreshCollectionId(
+        new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(collectionName))
+      )
     }
 
     new AsyncCollection(collectionName, bucketName, scopeName, core, environment)

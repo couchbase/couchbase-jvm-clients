@@ -20,8 +20,8 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.config.BucketConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.BucketOpenRetriedEvent;
-import com.couchbase.client.core.cnc.events.config.CollectionMapDecodingFailedEvent;
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEvent;
+import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshSucceededEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.GlobalConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.IndividualGlobalConfigLoadFailedEvent;
@@ -45,6 +45,7 @@ import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.core.msg.kv.GetCollectionManifestRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -128,7 +129,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   private volatile boolean globalConfigLoadInProgress = false;
   private final AtomicInteger bucketConfigLoadInProgress = new AtomicInteger();
-  private volatile boolean collectionMapRefreshInProgress = false;
+  private final AtomicInteger collectionMapRefreshInProgress = new AtomicInteger();
 
   /**
    * Stores the current seed nodes used to bootstrap buckets and global configs.
@@ -499,79 +500,78 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   }
 
   @Override
-  public void refreshCollectionMap(final String bucket, final boolean force) {
-    if (!collectionMap.hasBucketMap(bucket) || force) {
-      collectionMapRefreshInProgress = true;
-      long start = System.nanoTime();
-      GetCollectionManifestRequest request = new GetCollectionManifestRequest(
-        core.context().environment().timeoutConfig().kvTimeout(),
-        core.context(),
-        BestEffortRetryStrategy.INSTANCE,
-        new CollectionIdentifier(bucket, Optional.empty(), Optional.empty())
-      );
-      core.send(request);
-      request.response().whenComplete((response, throwable) -> {
+  public void refreshCollectionId(final CollectionIdentifier identifier) {
+    collectionMapRefreshInProgress.incrementAndGet();
+    long start = System.nanoTime();
+    GetCollectionIdRequest request = new GetCollectionIdRequest(
+      core.context().environment().timeoutConfig().kvTimeout(),
+      core.context(),
+      BestEffortRetryStrategy.INSTANCE,
+      identifier
+    );
+    core.send(request);
+    request.response().whenComplete((response, throwable) -> {
+      try {
         final Duration duration = Duration.ofNanos(System.nanoTime() - start);
         if (throwable != null) {
           eventBus.publish(new CollectionMapRefreshFailedEvent(
             duration,
             core.context(),
+            identifier,
             throwable,
             CollectionMapRefreshFailedEvent.Reason.FAILED
           ));
-          collectionMapRefreshInProgress = false;
           return;
         }
 
-        if (response.status().success() && response.manifest().isPresent()) {
-          parseAndStoreCollectionsManifest(bucket, response.manifest().get());
-        } else {
-          if (response.status() == ResponseStatus.UNKNOWN) {
-            eventBus.publish(new CollectionMapRefreshFailedEvent(
-              duration,
-              core.context(),
-              null,
-              CollectionMapRefreshFailedEvent.Reason.NOT_SUPPORTED
-            ));
+        if (response.status().success()) {
+          if (response.collectionId().isPresent()) {
+            long cid = response.collectionId().get();
+            collectionMap.put(identifier, UnsignedLEB128.encode(cid));
+            eventBus.publish(new CollectionMapRefreshSucceededEvent(duration, core.context(), identifier, cid));
           } else {
             eventBus.publish(new CollectionMapRefreshFailedEvent(
               duration,
               core.context(),
-              new CouchbaseException(response.toString()),
-              CollectionMapRefreshFailedEvent.Reason.UNKNOWN
+              identifier,
+              null,
+              CollectionMapRefreshFailedEvent.Reason.COLLECTION_ID_NOT_PRESENT
             ));
           }
+        } else {
+          Throwable cause = null;
+          CollectionMapRefreshFailedEvent.Reason reason;
+
+          if (response.status() == ResponseStatus.UNKNOWN) {
+            reason = CollectionMapRefreshFailedEvent.Reason.NOT_SUPPORTED;
+          } else if (response.status() == ResponseStatus.UNKNOWN_COLLECTION) {
+            reason = CollectionMapRefreshFailedEvent.Reason.UNKNOWN_COLLECTION;
+          } else if (response.status() == ResponseStatus.NO_COLLECTIONS_MANIFEST) {
+            reason = CollectionMapRefreshFailedEvent.Reason.SERVER_HAS_NO_MANIFEST;
+          } else if (response.status() == ResponseStatus.INVALID_REQUEST) {
+            reason = CollectionMapRefreshFailedEvent.Reason.INVALID_REQUEST;
+          } else {
+            cause = new CouchbaseException(response.toString());
+            reason = CollectionMapRefreshFailedEvent.Reason.UNKNOWN;
+          }
+
+          eventBus.publish(new CollectionMapRefreshFailedEvent(
+            duration,
+            core.context(),
+            identifier,
+            cause,
+            reason
+          ));
         }
-        collectionMapRefreshInProgress = false;
-      });
-    }
+      } finally {
+        collectionMapRefreshInProgress.decrementAndGet();
+      }
+    });
   }
 
   @Override
   public boolean collectionMapRefreshInProgress() {
-    return collectionMapRefreshInProgress;
-  }
-
-  /**
-   * Parses a raw collections manifest and stores it in the collections map.
-   *
-   * @param raw the raw manifest.
-   */
-  private void parseAndStoreCollectionsManifest(final String bucket, final String raw) {
-    try {
-      CollectionsManifest manifest = Mapper.reader().forType(CollectionsManifest.class).readValue(raw);
-      for (CollectionsManifestScope scope : manifest.scopes()) {
-        for (CollectionsManifestCollection collection : scope.collections()) {
-          long parsed = Long.parseLong(collection.uid(), 16);
-          collectionMap.put(
-            new CollectionIdentifier(bucket, Optional.of(scope.name()), Optional.of(collection.name())),
-            UnsignedLEB128.encode(parsed)
-          );
-        }
-      }
-    } catch (Exception ex) {
-      eventBus.publish(new CollectionMapDecodingFailedEvent(core.context(), ex));
-    }
+    return collectionMapRefreshInProgress.get() > 0;
   }
 
   /**

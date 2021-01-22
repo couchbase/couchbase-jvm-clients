@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -51,7 +52,13 @@ public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdR
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     ByteBuf key = null;
     try {
-      key = Unpooled.copiedBuffer(collectionIdentifier().scope() + "." + collectionIdentifier().collection(), UTF_8);
+      CollectionIdentifier ci = collectionIdentifier();
+      if (!ci.collection().isPresent()) {
+        throw InvalidArgumentException.fromMessage("A collection name needs to be present");
+      }
+
+      // Note that the scope can be empty, according to spec it is the same as _default scope
+      key = Unpooled.copiedBuffer(ci.scope().orElse("") + "." + ci.collection().get(), UTF_8);
       return request(alloc, MemcacheProtocol.Opcode.COLLECTIONS_GET_CID, noDatatype(),
         noPartition(), opaque, noCas(), noExtras(), key, noBody());
     } finally {
