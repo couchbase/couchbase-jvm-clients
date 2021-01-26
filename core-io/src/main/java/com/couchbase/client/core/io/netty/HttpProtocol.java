@@ -21,6 +21,9 @@ import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Optional;
+
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 /**
  * Helper methods that need to be used when dealing with the HTTP protocol.
@@ -28,23 +31,6 @@ import java.net.SocketAddress;
  * @since 2.0.0
  */
 public class HttpProtocol {
-
-  /**
-   * Calculates the remote host for caching so that it is set on each query request.
-   *
-   * @param remoteAddress the remote address.
-   * @return the converted remote http host.
-   */
-  public static String remoteHttpHost(final SocketAddress remoteAddress) {
-    final String remoteHost;
-    if (remoteAddress instanceof InetSocketAddress) {
-      InetSocketAddress inetAddr = (InetSocketAddress) remoteAddress;
-      remoteHost = inetAddr.getAddress().getHostAddress() + ":" + inetAddr.getPort();
-    } else {
-      remoteHost = remoteAddress.toString();
-    }
-    return remoteHost;
-  }
 
   /**
    * Converts the http protocol status into its generic format.

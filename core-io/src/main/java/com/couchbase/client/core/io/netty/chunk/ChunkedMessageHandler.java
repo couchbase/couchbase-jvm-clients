@@ -17,7 +17,6 @@
 package com.couchbase.client.core.io.netty.chunk;
 
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
@@ -48,7 +47,6 @@ import com.couchbase.client.core.retry.RetryReason;
 import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
-import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
 
 /**
  * Implements the chunk stream handling for all generic http stream based services.
@@ -178,7 +176,7 @@ public abstract class ChunkedMessageHandler
 
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
-    remoteHost = remoteHttpHost(ctx.channel().remoteAddress());
+    remoteHost = endpoint.remoteHostname() + ":" + endpoint.remotePort();
     ioContext = new IoContext(
       endpointContext,
       ctx.channel().localAddress(),

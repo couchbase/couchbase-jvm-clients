@@ -18,7 +18,6 @@ package com.couchbase.client.core.io.netty;
 
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
@@ -48,7 +47,6 @@ import com.couchbase.client.core.service.ServiceType;
 import java.nio.charset.StandardCharsets;
 
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
-import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
 
 /**
  * This message handler can be considered the opposite of the {@link ChunkedMessageHandler}.
@@ -194,7 +192,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
 
     channelContext = new HttpChannelContext(ctx.channel().id());
 
-    remoteHost = remoteHttpHost(ctx.channel().remoteAddress());
+    remoteHost = endpoint.remoteHostname() + ":" + endpoint.remotePort();
     ctx.pipeline().get(HttpObjectAggregator.class).channelActive(ctx);
     ctx.fireChannelActive();
   }

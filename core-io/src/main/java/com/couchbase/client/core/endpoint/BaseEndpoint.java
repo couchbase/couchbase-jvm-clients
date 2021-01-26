@@ -153,6 +153,8 @@ public abstract class BaseEndpoint implements Endpoint {
 
   private final String hostname;
 
+  private final int port;
+
   private final Map<Class<?>, Counter> requestCounters = new ConcurrentHashMap<>();
 
   /**
@@ -184,6 +186,7 @@ public abstract class BaseEndpoint implements Endpoint {
                final ServiceType serviceType, final boolean pipelined) {
     disconnect = new AtomicBoolean(false);
     this.hostname = hostname;
+    this.port = port;
     this.pipelined = pipelined;
     if (circuitBreakerConfig.enabled()) {
       this.circuitBreaker = new LazyCircuitBreaker(circuitBreakerConfig);
@@ -453,6 +456,16 @@ public abstract class BaseEndpoint implements Endpoint {
   @Override
   public boolean receivedDisconnectSignal() {
     return disconnect.get();
+  }
+
+  @Override
+  public String remoteHostname() {
+    return hostname;
+  }
+
+  @Override
+  public int remotePort() {
+    return port;
   }
 
   /**

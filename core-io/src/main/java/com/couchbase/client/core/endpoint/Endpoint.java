@@ -110,4 +110,14 @@ public interface Endpoint extends Stateful<EndpointState> {
    */
   EndpointContext context();
 
+  /**
+   * Returns the remote hostname this endpoint is connected to (without the port).
+   */
+  String remoteHostname();
+
+  /**
+   * Returns the remotePort this endpoint is connected to.
+   */
+  int remotePort();
+
 }

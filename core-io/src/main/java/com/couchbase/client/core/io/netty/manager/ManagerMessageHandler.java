@@ -48,8 +48,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import static com.couchbase.client.core.io.netty.HttpProtocol.remoteHttpHost;
-
 /**
  * This handler dispatches requests and responses against the cluster manager service.
  *
@@ -97,7 +95,7 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
       Optional.empty()
     );
 
-    remoteHost = remoteHttpHost(ctx.channel().remoteAddress());
+    remoteHost = endpoint.remoteHostname() + ":" + endpoint.remotePort();
     currentContent = ctx.alloc().buffer();
     ctx.fireChannelActive();
   }
