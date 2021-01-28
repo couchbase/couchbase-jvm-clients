@@ -73,6 +73,7 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
       .map(_.scopes().asScala.exists(_.name == scopeName))
   }
 
+  @deprecated(message = "use getAllScopes instead", since = "1.1.2")
   def getScope(
       scopeName: String,
       timeout: Duration = defaultManagerTimeout,

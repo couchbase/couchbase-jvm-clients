@@ -92,7 +92,9 @@ public class ReactiveCollectionManager {
    * @param scopeName the name of the scope.
    * @return a mono containing information about the scope.
    * @throws ScopeNotFoundException (async) if scope does not exist.
+   * @deprecated use {@link #getAllScopes(GetAllScopesOptions)} instead.
    */
+  @Deprecated
   public Mono<ScopeSpec> getScope(final String scopeName, final GetScopeOptions options) {
     return toMono(() -> async.getScope(scopeName, options));
   }
@@ -154,7 +156,9 @@ public class ReactiveCollectionManager {
    * @param scopeName the name of the scope.
    * @return a mono containing information about the scope.
    * @throws ScopeNotFoundException (async) if scope does not exist.
+   * @deprecated use {@link #getAllScopes()} instead.
    */
+  @Deprecated
   public Mono<ScopeSpec> getScope(final String scopeName) {
     return getScope(scopeName, getScopeOptions());
   }

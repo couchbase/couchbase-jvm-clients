@@ -42,6 +42,7 @@ class AsyncCollectionManager(reactive: ReactiveCollectionManager) {
     reactive.scopeExists(scopeName, timeout, retryStrategy).toFuture
   }
 
+  @deprecated(message = "use getAllScopes instead", since = "1.1.2")
   def getScope(
       scopeName: String,
       timeout: Duration = defaultManagerTimeout,

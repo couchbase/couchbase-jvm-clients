@@ -134,7 +134,9 @@ public class CollectionManager {
    * @param scopeName the name of the scope.
    * @return information about the requested scope.
    * @throws ScopeNotFoundException if scope does not exist
+   * @deprecated use {@link #getAllScopes()} instead.
    */
+  @Deprecated
   public ScopeSpec getScope(final String scopeName) {
     return getScope(scopeName, getScopeOptions());
   }
@@ -145,7 +147,9 @@ public class CollectionManager {
    * @param scopeName the name of the scope.
    * @return information about the requested scope.
    * @throws ScopeNotFoundException if scope does not exist
+   * @deprecated use {@link #getAllScopes(GetAllScopesOptions)} instead.
    */
+  @Deprecated
   public ScopeSpec getScope(final String scopeName, final GetScopeOptions options) {
     return block(asyncCollectionManager.getScope(scopeName, options));
   }

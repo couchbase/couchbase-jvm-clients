@@ -200,7 +200,9 @@ public class AsyncCollectionManager extends ManagerSupport {
    * @param scopeName the name of the scope.
    * @return a {@link CompletableFuture} containing information about the scope.
    * @throws ScopeNotFoundException (async) if scope does not exist.
+   * @deprecated use {@link #getAllScopes()} instead.
    */
+  @Deprecated
   public CompletableFuture<ScopeSpec> getScope(final String scopeName) {
     return getScope(scopeName, getScopeOptions());
   }
@@ -211,7 +213,9 @@ public class AsyncCollectionManager extends ManagerSupport {
    * @param scopeName the name of the scope.
    * @return a {@link CompletableFuture} containing information about the scope.
    * @throws ScopeNotFoundException (async) if scope does not exist.
+   * @deprecated use {@link #getAllScopes(GetAllScopesOptions)} instead.
    */
+  @Deprecated
   public CompletableFuture<ScopeSpec> getScope(final String scopeName, final GetScopeOptions options) {
     GetScopeOptions.Built opts = options.build();
     GetAllScopesOptions toPassOptions = getAllScopesOptions();

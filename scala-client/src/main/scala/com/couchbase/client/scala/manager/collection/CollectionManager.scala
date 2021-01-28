@@ -42,6 +42,7 @@ class CollectionManager(reactive: ReactiveCollectionManager) {
     Try(reactive.scopeExists(scopeName, timeout, retryStrategy).block())
   }
 
+  @deprecated(message = "use getAllScopes instead", since = "1.1.2")
   def getScope(
       scopeName: String,
       timeout: Duration = defaultManagerTimeout,
