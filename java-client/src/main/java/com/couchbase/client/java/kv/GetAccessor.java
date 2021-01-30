@@ -25,14 +25,11 @@ import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.SubDocumentField;
-import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
+import com.couchbase.client.core.projections.ProjectionsApplier;
 import com.couchbase.client.java.codec.Transcoder;
-import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.kv.projections.ProjectionsApplier;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -141,7 +138,7 @@ public enum GetAccessor {
 
     if (content == null) {
       try {
-        content = projectRecursive(response);
+        content = ProjectionsApplier.reconstructDocument(response);
       } catch (Exception e) {
         throw new CouchbaseException("Unexpected Exception while decoding Sub-Document get", e);
       }
@@ -152,30 +149,6 @@ public enum GetAccessor {
       : Optional.of(Instant.ofEpochSecond(Long.parseLong(new String(exptime, UTF_8))));
 
     return new GetResult(content, convertedFlags, cas, expiration, transcoder);
-  }
-
-  /**
-   * Helper method to recursively project subdocument fields into a json object structure.
-   *
-   * @param response the raw response from the server.
-   * @return the document, encoded as a byte array.
-   */
-  static byte[] projectRecursive(final SubdocGetResponse response) {
-    JsonObject out = JsonObject.create();
-
-    for (SubDocumentField value : response.values()) {
-      if (value == null
-              || value.status() != SubDocumentOpResponseStatus.SUCCESS
-              || value.path().isEmpty()
-              || LookupInMacro.EXPIRY_TIME.equals(value.path())
-              || LookupInMacro.FLAGS.equals(value.path())) {
-        continue;
-      }
-
-      ProjectionsApplier.parse(out, value.path(), value.value());
-    }
-
-    return out.toBytes();
   }
 
 }
