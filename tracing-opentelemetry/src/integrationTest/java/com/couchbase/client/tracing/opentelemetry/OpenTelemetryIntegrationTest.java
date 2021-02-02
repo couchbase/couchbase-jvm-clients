@@ -27,6 +27,7 @@ import com.couchbase.client.test.TestNodeConfig;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
+import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -43,16 +44,17 @@ class OpenTelemetryIntegrationTest extends ClusterAwareIntegrationTest {
   private static Cluster cluster;
   private static Collection collection;
   private static final InMemorySpanExporter exporter = InMemorySpanExporter.create();
+  private static SdkTracerProvider tracerProvider;
 
   @BeforeAll
   static void beforeAll() {
-    OpenTelemetrySdk.getGlobalTracerManagement().addSpanProcessor(SimpleSpanProcessor.builder(exporter).build());
+    tracerProvider = SdkTracerProvider.builder().addSpanProcessor(SimpleSpanProcessor.create(exporter)).build();
 
     TestNodeConfig config = config().firstNodeWith(Services.KV).get();
 
     environment = ClusterEnvironment
       .builder()
-      .requestTracer(OpenTelemetryRequestTracer.wrap(OpenTelemetry.getGlobalTracer("integrationTest")))
+      .requestTracer(OpenTelemetryRequestTracer.wrap(tracerProvider.get("integrationTest")))
       .build();
 
     cluster = Cluster.connect(
@@ -70,7 +72,7 @@ class OpenTelemetryIntegrationTest extends ClusterAwareIntegrationTest {
   static void afterAll() {
     cluster.disconnect();
     environment.shutdown();
-    OpenTelemetrySdk.getGlobalTracerManagement().shutdown();
+    tracerProvider.shutdown();
   }
 
   @Test

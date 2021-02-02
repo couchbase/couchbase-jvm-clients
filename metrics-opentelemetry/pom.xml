@@ -16,7 +16,7 @@
     <description>Provides interoperability with OpenTelemetry Metrics</description>
 
     <properties>
-        <opentelemetry.version>0.13.1</opentelemetry.version>
+        <opentelemetry.version>0.15.0-alpha</opentelemetry.version>
     </properties>
 
     <dependencies>
@@ -26,7 +26,7 @@
         </dependency>
         <dependency>
             <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-api</artifactId>
+            <artifactId>opentelemetry-api-metrics</artifactId>
             <version>${opentelemetry.version}</version>
         </dependency>
 
@@ -43,18 +43,6 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>test-utils</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-sdk</artifactId>
-            <version>${opentelemetry.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-sdk-testing</artifactId>
-            <version>${opentelemetry.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

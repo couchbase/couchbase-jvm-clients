@@ -17,12 +17,12 @@
 package com.couchbase.client.metrics.opentelemetry;
 
 import com.couchbase.client.core.cnc.Counter;
-import io.opentelemetry.api.metrics.LongCounter;
+import io.opentelemetry.api.metrics.BoundLongCounter;
 
 public class OpenTelemetryCounter implements Counter {
 
-  private final LongCounter.BoundLongCounter counter;
-  public OpenTelemetryCounter(LongCounter.BoundLongCounter counter) {
+  private final BoundLongCounter counter;
+  public OpenTelemetryCounter(BoundLongCounter counter) {
     this.counter = counter;
   }
   @Override

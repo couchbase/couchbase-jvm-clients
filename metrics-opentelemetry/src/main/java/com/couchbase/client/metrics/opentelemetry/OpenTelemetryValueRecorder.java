@@ -17,13 +17,14 @@
 package com.couchbase.client.metrics.opentelemetry;
 
 import com.couchbase.client.core.cnc.ValueRecorder;
+import io.opentelemetry.api.metrics.BoundLongValueRecorder;
 import io.opentelemetry.api.metrics.LongValueRecorder;
 
 public class OpenTelemetryValueRecorder  implements ValueRecorder {
 
-  private final LongValueRecorder.BoundLongValueRecorder valueRecorder;
+  private final BoundLongValueRecorder valueRecorder;
 
-  public OpenTelemetryValueRecorder(LongValueRecorder.BoundLongValueRecorder valueRecorder) {
+  public OpenTelemetryValueRecorder(BoundLongValueRecorder valueRecorder) {
     this.valueRecorder = valueRecorder;
   }
 
