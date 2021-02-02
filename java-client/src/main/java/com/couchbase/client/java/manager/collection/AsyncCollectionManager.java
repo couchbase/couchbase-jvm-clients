@@ -61,17 +61,20 @@ public class AsyncCollectionManager extends ManagerSupport {
     this.bucketName = bucketName;
   }
 
+  private static String pathForScopes(final String bucketName) {
+    return "/pools/default/buckets/" + urlEncode(bucketName) + "/scopes";
+  }
+
   private static String pathForScope(final String bucketName, final String scopeName) {
-    return pathForManifest(bucketName) + "/" + urlEncode(scopeName);
+    return pathForScopes(bucketName) + "/" + urlEncode(scopeName);
   }
 
-  private static String pathForCollection(final String bucketName, final String scopeName,
-                                          final String collectionName) {
-    return pathForScope(bucketName, scopeName) + "/" + urlEncode(collectionName);
+  private static String pathForCollections(final String bucketName, final String scopeName) {
+    return pathForScope(bucketName, scopeName) + "/collections";
   }
 
-  private static String pathForManifest(final String bucketName) {
-    return "/pools/default/buckets/" + urlEncode(bucketName) + "/collections";
+  private static String pathForCollection(final String bucketName, final String scopeName, final String collectionName) {
+    return pathForCollections(bucketName, scopeName) + "/" + urlEncode(collectionName);
   }
 
   /**
@@ -103,7 +106,7 @@ public class AsyncCollectionManager extends ManagerSupport {
       body.add("maxTTL", collectionSpec.maxExpiry().getSeconds());
     }
 
-    final String path = pathForScope(bucketName, collectionSpec.scopeName());
+    final String path = pathForCollections(bucketName, collectionSpec.scopeName());
 
     return sendRequest(HttpMethod.POST, path, body, options.build()).thenApply(response -> {
       checkForErrors(response, collectionSpec.scopeName(), collectionSpec.name());
@@ -133,7 +136,7 @@ public class AsyncCollectionManager extends ManagerSupport {
     final UrlQueryStringBuilder body = UrlQueryStringBuilder
       .create()
       .add("name", scopeName);
-    final String path = pathForManifest(bucketName);
+    final String path = pathForScopes(bucketName);
 
     return sendRequest(HttpMethod.POST, path, body, options.build()).thenApply(response -> {
         checkForErrors(response, scopeName, null);
@@ -322,7 +325,7 @@ public class AsyncCollectionManager extends ManagerSupport {
    * @return the loaded manifest.
    */
   private CompletableFuture<CollectionsManifest> loadManifest(final CommonOptions<?>.BuiltCommonOptions opts) {
-    return sendRequest(HttpMethod.GET, pathForManifest(bucketName), opts)
+    return sendRequest(HttpMethod.GET, pathForScopes(bucketName), opts)
       .thenApply(response -> {
         checkForErrors(response, null, null);
         return Mapper.decodeInto(response.content(), CollectionsManifest.class);

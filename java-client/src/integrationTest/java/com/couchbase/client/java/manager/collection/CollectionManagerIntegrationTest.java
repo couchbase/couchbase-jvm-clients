@@ -32,7 +32,6 @@ import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -44,20 +43,18 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(missesCapabilities = {Capabilities.COLLECTIONS})
+@IgnoreWhen(missesCapabilities = Capabilities.COLLECTIONS)
 class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
   private static ClusterEnvironment environment;
   private static CollectionManager collections;
-  private static ReactiveCollectionManager rcm;
 
   @BeforeAll
   static void setup() {
     environment = environment().ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)).build();
     cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     Bucket bucket = cluster.bucket(config().bucketname());
-    rcm = bucket.reactive().collections();
     collections = bucket.collections();
     bucket.waitUntilReady(Duration.ofSeconds(5));
   }
