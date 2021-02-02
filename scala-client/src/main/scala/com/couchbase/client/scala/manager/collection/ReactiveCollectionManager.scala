@@ -16,8 +16,6 @@
 
 package com.couchbase.client.scala.manager.collection
 
-import java.nio.charset.StandardCharsets
-
 import com.couchbase.client.core.config.CollectionsManifest
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod
 import com.couchbase.client.core.error._
@@ -32,6 +30,7 @@ import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
 import reactor.core.scala.publisher.{SFlux, SMono}
 
+import java.nio.charset.StandardCharsets
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
@@ -114,7 +113,7 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): SMono[Unit] = {
     val body = UrlQueryStringBuilder.create.add("name", collection.name)
-    val path = pathForScope(bucket.name, collection.scopeName)
+    val path = pathForCollections(bucket.name, collection.scopeName)
 
     ManagerUtil
       .sendRequest(core, HttpMethod.POST, path, body, timeout, retryStrategy)
@@ -143,7 +142,7 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): SMono[Unit] = {
     val body = UrlQueryStringBuilder.create.add("name", scopeName)
-    val path = pathForManifest(bucket.name)
+    val path = pathForScopes(bucket.name)
 
     ManagerUtil
       .sendRequest(core, HttpMethod.POST, path, body, timeout, retryStrategy)
@@ -166,24 +165,24 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
       })
   }
 
-  private def pathForScope(bucketName: String, scopeName: String) = {
-    pathForManifest(bucketName) + "/" + urlEncode(scopeName)
-  }
+  private def pathForScopes(bucketName: String) =
+    "/pools/default/buckets/" + urlEncode(bucketName) + "/scopes"
 
-  private def pathForCollection(bucketName: String, scopeName: String, collectionName: String) = {
-    pathForScope(bucketName, scopeName) + "/" + urlEncode(collectionName)
-  }
+  private def pathForScope(bucketName: String, scopeName: String) =
+    pathForScopes(bucketName) + "/" + urlEncode(scopeName)
 
-  private def pathForManifest(bucketName: String) = {
-    "/pools/default/buckets/" + urlEncode(bucketName) + "/collections"
-  }
+  private def pathForCollections(bucketName: String, scopeName: String) =
+    pathForScope(bucketName, scopeName) + "/collections"
+
+  private def pathForCollection(bucketName: String, scopeName: String, collectionName: String) =
+    pathForCollections(bucketName, scopeName) + "/" + urlEncode(collectionName)
 
   private def loadManifest(
       timeout: Duration,
       retryStrategy: RetryStrategy
-  ): SMono[CollectionsManifest] = {
+  ) = {
     ManagerUtil
-      .sendRequest(core, HttpMethod.GET, pathForManifest(bucket.name), timeout, retryStrategy)
+      .sendRequest(core, HttpMethod.GET, pathForScopes(bucket.name), timeout, retryStrategy)
       .flatMap(response => {
         val error = new String(response.content, StandardCharsets.UTF_8)
 
@@ -223,17 +222,26 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
       val error = new String(response.content, StandardCharsets.UTF_8)
 
       if (response.status == ResponseStatus.NOT_FOUND) {
-        if (error.contains("Scope with this name is not found")) {
+        if (error.contains("Scope with this name is not found") || error.contains(
+              "scope_not_found"
+            )) {
           Failure(new ScopeNotFoundException(scopeName))
         } else if (error.contains("Collection with this name is not found")) {
           Failure(new CollectionNotFoundException(collectionName))
+        } else if (error.contains("Not found.") || error.contains("Requested resource not found.")) {
+          Failure(FeatureNotAvailableException.collections())
         } else {
           Failure(new CouchbaseException("Unknown error in CollectionManager: " + error))
         }
       } else if (response.status == ResponseStatus.INVALID_ARGS) {
-        if (error.contains("Scope with this name already exists")) {
+        if (error.contains("Scope with this name is not found")
+            || error.contains("scope_not_found")) {
+          Failure(new ScopeNotFoundException(scopeName))
+        } else if (error.contains("Scope with this name already exists")
+                   || error.matches(".*Scope with name .+ already exists.*")) {
           Failure(new ScopeExistsException(scopeName))
-        } else if (error.contains("Collection with this name already exists")) {
+        } else if (error.contains("Collection with this name already exists")
+                   || error.matches(".*Collection with name .+ already exists.*")) {
           Failure(new CollectionExistsException(collectionName))
         } else {
           Failure(new IllegalArgumentException("Unknown error in CollectionManager: " + error))
