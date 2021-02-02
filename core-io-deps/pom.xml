@@ -195,6 +195,7 @@
                                 <exclude>META-INF/native/${native.tcnative-linux.original}</exclude>
                                 <exclude>META-INF/native/${native.tcnative-osx.original}</exclude>
                                 <exclude>META-INF/native/${native.tcnative-windows.original}</exclude>
+                                <resource>META-INF/services/reactor.blockhound.integration.BlockHoundIntegration</resource>
                             </excludes>
                         </filter>
                     </filters>

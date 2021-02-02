@@ -34,6 +34,11 @@
             <version>1.7.30</version>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>io.projectreactor.tools</groupId>
+            <artifactId>blockhound</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <!-- Internal Dependencies -->
         <dependency>

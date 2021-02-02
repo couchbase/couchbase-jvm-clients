@@ -18,6 +18,10 @@ package com.couchbase.client.test;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import reactor.blockhound.BlockHound;
+import reactor.blockhound.integration.BlockHoundIntegration;
 
 /**
  * Parent class which drives all dynamic integration tests based on the configured
@@ -27,6 +31,28 @@ import org.junit.jupiter.api.extension.ExtendWith;
  */
 @ExtendWith(ClusterInvocationProvider.class)
 public class ClusterAwareIntegrationTest {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(ClusterAwareIntegrationTest.class);
+
+  static {
+    try {
+      BlockHound
+        .builder()
+        .with(builder -> {
+          builder
+            .allowBlockingCallsInside(Util.class.getName(), "waitUntilCondition")
+            .allowBlockingCallsInside(Util.class.getName(), "waitUntilThrows")
+            .allowBlockingCallsInside("reactor.core.scheduler.ParallelScheduler", "dispose");
+         })
+        // We need to do a custom callback, since the default one seems to be stuck in tests for some reason
+        .blockingMethodCallback(blockingMethod -> LOGGER.warn("Blocking Method Detected: " + blockingMethod))
+        .install();
+    } catch (Exception ex) {
+      // For now, silently ignore not running
+      // with blockhound enabled, see
+      // https://github.com/reactor/BlockHound/issues/33
+    }
+  }
 
   private static TestClusterConfig testClusterConfig;
 
@@ -41,5 +67,6 @@ public class ClusterAwareIntegrationTest {
   public static TestClusterConfig config() {
     return testClusterConfig;
   }
+
 
 }
