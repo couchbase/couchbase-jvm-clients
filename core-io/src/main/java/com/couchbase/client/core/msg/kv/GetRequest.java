@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
@@ -49,8 +50,13 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.tryDecompre
 public class GetRequest extends BaseKeyValueRequest<GetResponse> {
 
   public GetRequest(final String key, final Duration timeout, final CoreContext ctx,
-                    final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy, final RequestSpan span) {
+                    final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy,
+                    final RequestSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
+
+    if (span != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_GET);
+    }
   }
 
   @Override

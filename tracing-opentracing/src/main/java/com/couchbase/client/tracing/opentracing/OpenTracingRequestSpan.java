@@ -73,6 +73,16 @@ public class OpenTracingRequestSpan implements RequestSpan {
   }
 
   @Override
+  public void setAttribute(String key, boolean value) {
+    span.setTag(key, value);
+  }
+
+  @Override
+  public void setAttribute(String key, long value) {
+    span.setTag(key, value);
+  }
+
+  @Override
   public void addEvent(String name, Instant timestamp) {
     span.log(ChronoUnit.MICROS.between(Instant.EPOCH, timestamp), name);
   }

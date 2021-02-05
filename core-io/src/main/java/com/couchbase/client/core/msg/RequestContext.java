@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
@@ -43,14 +44,24 @@ import static com.couchbase.client.core.util.Validators.notNull;
 public class RequestContext extends CoreContext {
 
   /**
-   * Holds the dispatch latency if set already (or at all).
+   * Holds the last dispatch latency if set already (or at all).
    */
   private volatile long dispatchLatency;
 
   /**
-   * Holds the server latency if reported.
+   * Stores the sum of all dispatch latencies.
+   */
+  private final AtomicLong totalDispatchLatency = new AtomicLong(0);
+
+  /**
+   * Holds the last server latency if reported.
    */
   private volatile long serverLatency;
+
+  /**
+   * Stores the sum of all server latencies.
+   */
+  private final AtomicLong totalServerLatency = new AtomicLong(0);
 
   /**
    * The time when the request got logically completed.
@@ -138,7 +149,16 @@ public class RequestContext extends CoreContext {
   @Stability.Internal
   public RequestContext dispatchLatency(long dispatchLatency) {
     this.dispatchLatency = dispatchLatency;
+    this.totalDispatchLatency.addAndGet(dispatchLatency);
     return this;
+  }
+
+  public long totalDispatchLatency() {
+    return totalDispatchLatency.get();
+  }
+
+  public long totalServerLatency() {
+    return totalServerLatency.get();
   }
 
   @Stability.Volatile
@@ -171,6 +191,7 @@ public class RequestContext extends CoreContext {
   @Stability.Internal
   public RequestContext serverLatency(long serverLatency) {
     this.serverLatency = serverLatency;
+    this.totalServerLatency.addAndGet(serverLatency);
     return this;
   }
 
@@ -327,8 +348,15 @@ public class RequestContext extends CoreContext {
       if (dispatchLatency != 0) {
         timings.put("dispatchMicros", TimeUnit.NANOSECONDS.toMicros(dispatchLatency));
       }
+
+      if (totalDispatchLatency.get() != 0) {
+        timings.put("totalDispatchMicros", TimeUnit.NANOSECONDS.toMicros(totalDispatchLatency.get()));
+      }
       if (serverLatency != 0) {
         timings.put("serverMicros", TimeUnit.NANOSECONDS.toMicros(serverLatency));
+      }
+      if (totalServerLatency.get() != 0) {
+        timings.put("totalServerMicros", TimeUnit.NANOSECONDS.toMicros(totalServerLatency.get()));
       }
       if (logicalLatency != 0) {
         timings.put("totalMicros", TimeUnit.NANOSECONDS.toMicros(logicalLatency));

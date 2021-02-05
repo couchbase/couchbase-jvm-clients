@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
@@ -48,6 +49,10 @@ public class AppendRequest extends BaseKeyValueRequest<AppendResponse> implement
     this.content = content;
     this.cas = cas;
     this.syncReplicationType = syncReplicationType;
+
+    if (span != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_APPEND);
+    }
   }
 
   @Override

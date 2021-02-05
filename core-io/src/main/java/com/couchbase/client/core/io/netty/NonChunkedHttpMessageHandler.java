@@ -36,6 +36,7 @@ import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
+import com.couchbase.client.core.io.netty.kv.ChannelAttributes;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -47,6 +48,7 @@ import com.couchbase.client.core.service.ServiceType;
 import java.nio.charset.StandardCharsets;
 
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
+import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchSpanAttributes;
 
 /**
  * This message handler can be considered the opposite of the {@link ChunkedMessageHandler}.
@@ -156,6 +158,16 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
             .environment()
             .requestTracer()
             .requestSpan(TracingIdentifiers.SPAN_DISPATCH, currentRequest.requestSpan());
+
+          setCommonDispatchSpanAttributes(
+            currentDispatchSpan,
+            ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).get(),
+            ioContext.localHostname(),
+            ioContext.localPort(),
+            endpoint.remoteHostname(),
+            endpoint.remotePort(),
+            currentRequest.operationId()
+          );
         }
         ctx.write(encoded, promise);
       } catch (Throwable t) {

@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.error.CollectionNotFoundException;
@@ -94,6 +95,15 @@ public abstract class BaseKeyValueRequest<R extends Response>
     this.key = encodeKey(key);
     this.collectionIdentifier = collectionIdentifier;
     this.opaque = nextOpaque();
+
+    if (span != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_KV);
+      if (collectionIdentifier != null) {
+        span.setAttribute(TracingIdentifiers.ATTR_NAME, collectionIdentifier.bucket());
+        span.setAttribute(TracingIdentifiers.ATTR_SCOPE, collectionIdentifier.scope().orElse(CollectionIdentifier.DEFAULT_SCOPE));
+        span.setAttribute(TracingIdentifiers.ATTR_COLLECTION, collectionIdentifier.collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION));
+      }
+    }
   }
 
   public static int nextOpaque() {

@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
@@ -51,6 +52,10 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> implement
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.cas = cas;
     this.syncReplicationType = syncReplicationType;
+
+    if (span != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_REMOVE);
+    }
   }
 
   @Override

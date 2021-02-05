@@ -52,8 +52,10 @@ public class ThresholdRequestTracer implements RequestTracer {
 
   private static final String KEY_TOTAL_MICROS = "total_duration_us";
   private static final String KEY_DISPATCH_MICROS = "last_dispatch_duration_us";
+  private static final String KEY_TOTAL_DISPATCH_MICROS = "total_dispatch_duration_us";
   private static final String KEY_ENCODE_MICROS = "encode_duration_us";
   private static final String KEY_SERVER_MICROS = "last_server_duration_us";
+  private static final String KEY_TOTAL_SERVER_MICROS = "total_server_duration_us";
   private static final String KEY_OPERATION_ID = "operation_id";
   private static final String KEY_OPERATION_NAME = "operation_name";
   private static final String KEY_LAST_LOCAL_SOCKET = "last_local_socket";
@@ -424,10 +426,18 @@ public class ThresholdRequestTracer implements RequestTracer {
         if (dispatchDuration > 0) {
           entry.put(KEY_DISPATCH_MICROS, TimeUnit.NANOSECONDS.toMicros(dispatchDuration));
         }
+        long totalDispatchDuration = request.context().totalDispatchLatency();
+        if (totalDispatchDuration > 0) {
+          entry.put(KEY_TOTAL_DISPATCH_MICROS, TimeUnit.NANOSECONDS.toMicros(totalDispatchDuration));
+        }
 
         long serverDuration = request.context().serverLatency();
         if (serverDuration > 0) {
           entry.put(KEY_SERVER_MICROS, TimeUnit.NANOSECONDS.toMicros(serverDuration));
+        }
+        long totalServerDuration = request.context().totalServerLatency();
+        if (totalServerDuration > 0) {
+          entry.put(KEY_TOTAL_SERVER_MICROS, TimeUnit.NANOSECONDS.toMicros(totalServerDuration));
         }
 
         top.add(entry);

@@ -19,7 +19,6 @@ package com.couchbase.client.core.io.netty.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
@@ -41,6 +40,7 @@ import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.netty.TracingUtils;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -54,6 +54,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
+import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchSpanAttributes;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.AUTH;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.CONN_STATE_INVALIDATED;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.ITEM_LOCKED;
@@ -209,6 +210,17 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
             .environment()
             .requestTracer()
             .requestSpan(TracingIdentifiers.SPAN_DISPATCH, request.requestSpan());
+
+          setCommonDispatchSpanAttributes(
+            dispatchSpan,
+            ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).get(),
+            ioContext.localHostname(),
+            ioContext.localPort(),
+            endpoint.remoteHostname(),
+            endpoint.remotePort(),
+            request.operationId()
+          );
+
           writtenRequestDispatchSpans.put(opaque, dispatchSpan);
         }
 
@@ -285,6 +297,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
     RequestSpan dispatchSpan = writtenRequestDispatchSpans.remove(opaque);
     if (dispatchSpan != null) {
+      TracingUtils.setServerDurationAttribute(dispatchSpan, serverTime);
       dispatchSpan.end();
     }
 

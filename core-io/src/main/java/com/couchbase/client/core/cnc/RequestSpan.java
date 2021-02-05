@@ -42,6 +42,26 @@ public interface RequestSpan {
   void setAttribute(String key, String value);
 
   /**
+   * Sets an attribute on the span, which is translated to the corresponding implementation specific tag.
+   * <p>
+   * Note that, depending on the implementation, attributes might be ignored.
+   *
+   * @param key the key of the attribute.
+   * @param value the value of the attribute.
+   */
+  void setAttribute(String key, boolean value);
+
+  /**
+   * Sets an attribute on the span, which is translated to the corresponding implementation specific tag.
+   * <p>
+   * Note that, depending on the implementation, attributes might be ignored.
+   *
+   * @param key the key of the attribute.
+   * @param value the value of the attribute.
+   */
+  void setAttribute(String key, long value);
+
+  /**
    * Sets an event on the span, which is translated to the corresponding implementation specific event.
    * <p>
    * Note that, depending on the implementation, events might be ignored.

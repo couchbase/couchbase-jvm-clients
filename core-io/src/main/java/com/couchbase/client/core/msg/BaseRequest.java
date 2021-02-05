@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.ThresholdRequestSpan;
 import com.couchbase.client.core.error.AmbiguousTimeoutException;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -132,7 +133,9 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
 
     if (requestSpan != null) {
       requestSpan.requestContext(this.ctx);
+      requestSpan.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
     }
+
     this.requestSpan = requestSpan;
   }
 

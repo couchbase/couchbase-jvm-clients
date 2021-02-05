@@ -42,6 +42,16 @@ public class NoopRequestSpan implements RequestSpan {
   }
 
   @Override
+  public void setAttribute(String key, boolean value) {
+
+  }
+
+  @Override
+  public void setAttribute(String key, long value) {
+
+  }
+
+  @Override
   public void addEvent(String name, Instant timestamp) {
   }
 

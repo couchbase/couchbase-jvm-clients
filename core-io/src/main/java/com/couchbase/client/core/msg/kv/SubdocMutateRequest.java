@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.config.BucketCapabilities;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
@@ -110,6 +111,10 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     this.origKey = key;
     this.syncReplicationType = syncReplicationType;
     this.createAsDeleted = createAsDeleted;
+
+    if (span != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN);
+    }
   }
 
   @Override

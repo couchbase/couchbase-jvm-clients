@@ -18,6 +18,7 @@ package com.couchbase.client.core.io;
 
 import com.couchbase.client.core.CoreContext;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Optional;
@@ -34,6 +35,10 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 public class IoContext extends CoreContext {
 
   private final SocketAddress localSocket;
+
+  private final String localHostname;
+
+  private final int localPort;
 
   private final SocketAddress remoteSocket;
 
@@ -53,6 +58,14 @@ public class IoContext extends CoreContext {
     this.localSocket = localSocket;
     this.remoteSocket = remoteSocket;
     this.bucket = bucket;
+
+    if (localSocket instanceof InetSocketAddress) {
+      localHostname = ((InetSocketAddress) localSocket).getHostString();
+      localPort = ((InetSocketAddress) localSocket).getPort();
+    } else {
+      localHostname = null;
+      localPort = 0;
+    }
   }
 
   @Override
@@ -75,6 +88,20 @@ public class IoContext extends CoreContext {
    */
   public SocketAddress remoteSocket() {
     return remoteSocket;
+  }
+
+  /**
+   * Returns the local hostname, might be null if not available.
+   */
+  public String localHostname() {
+    return localHostname;
+  }
+
+  /**
+   * Returns the local port, might be 0 if not available.
+   */
+  public int localPort() {
+    return localPort;
   }
 
   /**

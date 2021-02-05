@@ -35,6 +35,7 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.HttpProtocol;
+import com.couchbase.client.core.io.netty.kv.ChannelAttributes;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.chunk.ChunkHeader;
@@ -47,6 +48,7 @@ import com.couchbase.client.core.retry.RetryReason;
 import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
+import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchSpanAttributes;
 
 /**
  * Implements the chunk stream handling for all generic http stream based services.
@@ -164,6 +166,16 @@ public abstract class ChunkedMessageHandler
           .environment()
           .requestTracer()
           .requestSpan(TracingIdentifiers.SPAN_DISPATCH, currentRequest.requestSpan());
+
+        setCommonDispatchSpanAttributes(
+          currentDispatchSpan,
+          ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).get(),
+          ioContext.localHostname(),
+          ioContext.localPort(),
+          endpoint.remoteHostname(),
+          endpoint.remotePort(),
+          currentRequest.operationId()
+        );
       }
       ctx.write(encoded, promise);
     } catch (Throwable t) {

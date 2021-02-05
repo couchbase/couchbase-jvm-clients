@@ -133,6 +133,14 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
     }
 
     @Override
+    public void setAttribute(String key, boolean value) {
+    }
+
+    @Override
+    public void setAttribute(String key, long value) {
+    }
+
+    @Override
     public void addEvent(String name, Instant timestamp) {
     }
 
