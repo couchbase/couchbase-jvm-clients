@@ -17,26 +17,31 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.kv.MutationToken;
-import com.couchbase.client.java.json.JsonArray;
+import com.couchbase.client.core.msg.kv.MutationTokenAggregator;
 import com.couchbase.client.java.json.JsonObject;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
+
+import static java.util.Objects.requireNonNull;
 
 /**
- * Aggregation of one or more {@link MutationToken MutationToken} into one {@link MutationState}.
+ * Aggregation of one or more {@link MutationToken}s for specifying
+ * consistency requirements of N1QL or FTS queries.
+ * <p>
+ * Thread-safe.
  *
- * @author Michael Nitschinger
  * @since 2.3.0
  */
 public class MutationState implements Iterable<MutationToken> {
 
-    private final List<MutationToken> tokens;
+    private final MutationTokenAggregator tokens;
 
     private MutationState() {
-        this.tokens = new ArrayList<>();
+        this.tokens = new MutationTokenAggregator();
+    }
+
+    private MutationState(MutationTokenAggregator tokens) {
+        this.tokens = requireNonNull(tokens);
     }
 
     /**
@@ -60,7 +65,7 @@ public class MutationState implements Iterable<MutationToken> {
             throw InvalidArgumentException.fromMessage("At least one MutationToken must be provided.");
         }
         for (MutationToken t : mutationTokens) {
-            addToken(t);
+            tokens.add(t);
         }
         return this;
     }
@@ -72,35 +77,10 @@ public class MutationState implements Iterable<MutationToken> {
      * @return the modified {@link MutationState}.
      */
     public MutationState add(final MutationState mutationState) {
-        for(MutationToken token : mutationState) {
-            addToken(token);
-        }
-        return this;
-    }
-
-    /**
-     * Helper method to check the incoming token and store it if needed.
-     *
-     * Note that the token is only stored if it doesn't exist for the given vbucket already or the given sequence
-     * number is higher than the one stored.
-     *
-     * @param token the token to check and maybe store.
-     */
-    private void addToken(final MutationToken token) {
-        if (token != null) {
-            ListIterator<MutationToken> tokenIterator = tokens.listIterator();
-            while (tokenIterator.hasNext()) {
-                MutationToken t = tokenIterator.next();
-                if (t.partitionID() == token.partitionID() && t.bucketName().equals(token.bucketName())) {
-                    if (token.sequenceNumber() > t.sequenceNumber()) {
-                        tokenIterator.set(token);
-                    }
-                    return;
-                }
-            }
-
+        for (MutationToken token : mutationState) {
             tokens.add(token);
         }
+        return this;
     }
 
     @Override
@@ -115,20 +95,7 @@ public class MutationState implements Iterable<MutationToken> {
      * @return the exported {@link JsonObject}.
      */
     public JsonObject export() {
-        JsonObject result = JsonObject.create();
-        for (MutationToken token : tokens) {
-            JsonObject bucket = result.getObject(token.bucketName());
-            if (bucket == null) {
-                bucket = JsonObject.create();
-                result.put(token.bucketName(), bucket);
-            }
-
-            bucket.put(
-                String.valueOf(token.partitionID()),
-                JsonArray.from(token.sequenceNumber(), String.valueOf(token.partitionUUID()))
-            );
-        }
-        return result;
+        return JsonObject.from(tokens.export());
     }
 
     /**
@@ -137,15 +104,7 @@ public class MutationState implements Iterable<MutationToken> {
      * @return the exported {@link JsonObject} for one FTS index.
      */
     public JsonObject exportForSearch() {
-        JsonObject result = JsonObject.create();
-        for (MutationToken token : tokens) {
-            String tokenKey = token.partitionID() + "/" + token.partitionUUID();
-            Long seqno = result.getLong(tokenKey);
-            if (seqno == null || seqno < token.sequenceNumber()) {
-                result.put(tokenKey, token.sequenceNumber());
-            }
-        }
-        return result;
+        return JsonObject.from(tokens.exportForSearch());
     }
 
     /**
@@ -165,24 +124,7 @@ public class MutationState implements Iterable<MutationToken> {
      * @return the created {@link MutationState}.
      */
     public static MutationState from(JsonObject source) {
-        try {
-            MutationState state = new MutationState();
-            for (String bucketName : source.getNames()) {
-                JsonObject bucket = source.getObject(bucketName);
-                for (String vbid : bucket.getNames()) {
-                    JsonArray values = bucket.getArray(vbid);
-                    state.addToken(new MutationToken(
-                        Short.parseShort(vbid),
-                        Long.parseLong(values.getString(1)),
-                        values.getLong(0),
-                        bucketName
-                    ));
-                }
-            }
-            return state;
-        } catch (Exception ex) {
-            throw new IllegalStateException("Could not import MutationState from JSON.", ex);
-        }
+        return new MutationState(MutationTokenAggregator.from(source.toMap()));
     }
 
     @Override
@@ -190,7 +132,7 @@ public class MutationState implements Iterable<MutationToken> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MutationState state = (MutationState) o;
-        return tokens.containsAll(state.tokens) && state.tokens.containsAll(tokens);
+        return tokens.equals(state.tokens);
     }
 
     @Override
