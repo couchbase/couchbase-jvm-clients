@@ -23,6 +23,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -388,10 +389,10 @@ public class SecurityConfig {
       notNull(trustStorePath, "TrustStorePath");
       notNull(trustStoreType, "TrustStoreType");
 
-      try {
+      try (InputStream trustStoreInputStream = Files.newInputStream(trustStorePath)) {
         final KeyStore store = KeyStore.getInstance(trustStoreType.orElse(KeyStore.getDefaultType()));
         store.load(
-          Files.newInputStream(trustStorePath),
+          trustStoreInputStream,
           trustStorePassword != null ? trustStorePassword.toCharArray() : null
         );
         return trustStore(store);

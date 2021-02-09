@@ -20,6 +20,7 @@ import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
 import javax.net.ssl.KeyManagerFactory;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyStore;
@@ -55,10 +56,10 @@ public class CertificateAuthenticator implements Authenticator {
     notNull(keyStorePath, "KeyStorePath");
     notNull(keyStoreType, "KeyStoreType");
 
-    try {
+    try (InputStream keyStoreInputStream = Files.newInputStream(keyStorePath)) {
       final KeyStore store = KeyStore.getInstance(keyStoreType.orElse(KeyStore.getDefaultType()));
       store.load(
-        Files.newInputStream(keyStorePath),
+        keyStoreInputStream,
         keyStorePassword != null ? keyStorePassword.toCharArray() : null
       );
       return fromKeyStore(store, keyStorePassword);
