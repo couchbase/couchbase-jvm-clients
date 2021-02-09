@@ -31,8 +31,8 @@ public class TargetedQueryRequest extends QueryRequest implements TargetedReques
 
     public TargetedQueryRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy, Authenticator authenticator,
                                 String statement, byte[] query, boolean idempotent, String contextId, final RequestSpan parentSpan,
-                                final String queryContext, NodeIdentifier target) {
-        super(timeout, ctx, retryStrategy, authenticator, statement, query, idempotent, contextId, parentSpan, queryContext);
+                                final String bucket, String scope, NodeIdentifier target) {
+        super(timeout, ctx, retryStrategy, authenticator, statement, query, idempotent, contextId, parentSpan, bucket, scope);
         this.target = target;
     }
 

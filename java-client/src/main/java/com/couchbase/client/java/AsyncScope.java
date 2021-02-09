@@ -238,7 +238,7 @@ public class AsyncScope {
     final JsonObject query = JsonObject.create();
     query.put("statement", statement);
     query.put("timeout", encodeDurationToMs(timeout));
-    String queryContext = "`default`:`" + bucketName + "`.`" + scopeName + "`";
+    String queryContext = QueryRequest.queryContext(bucketName, scopeName);
     query.put("query_context", queryContext);
     options.injectParams(query);
     final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
@@ -247,7 +247,7 @@ public class AsyncScope {
         options.parentSpan().orElse(null));
 
     QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(),
-        statement, queryBytes, options.readonly(), clientContextId, span, queryContext);
+        statement, queryBytes, options.readonly(), clientContextId, span, bucketName, scopeName);
     request.context().clientContext(options.clientContext());
     return request;
   }
@@ -293,10 +293,7 @@ public class AsyncScope {
     JsonObject query = JsonObject.create();
     query.put("statement", statement);
     query.put("timeout", encodeDurationToMs(timeout));
-    // The bucketName.scopeName are quoted and treated as a single unit.
-    String queryContext = "default:`"  + bucketName + "." + scopeName+"`" ;
-
-    query.put("query_context", queryContext);
+    query.put("query_context", AnalyticsRequest.queryContext(bucketName, scopeName));
     opts.injectParams(query);
 
     final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
@@ -305,7 +302,7 @@ public class AsyncScope {
         .requestTracer()
         .requestSpan(TracingIdentifiers.SPAN_REQUEST_ANALYTICS, opts.parentSpan().orElse(null));
     AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, core.context().authenticator(),
-        queryBytes, opts.priority(), opts.readonly(), clientContextId, statement, span
+        queryBytes, opts.priority(), opts.readonly(), clientContextId, statement, span, bucketName, scopeName
     );
     request.context().clientContext(opts.clientContext());
     return request;

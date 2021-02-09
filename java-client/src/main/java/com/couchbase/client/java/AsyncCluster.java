@@ -349,7 +349,7 @@ public class AsyncCluster {
       .requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, options.parentSpan().orElse(null));
 
     QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, authenticator, statement,
-     queryBytes, options.readonly(), clientContextId, span, null);
+     queryBytes, options.readonly(), clientContextId, span, null, null);
     request.context().clientContext(options.clientContext());
     return request;
   }
@@ -402,7 +402,7 @@ public class AsyncCluster {
       .requestTracer()
       .requestSpan(TracingIdentifiers.SPAN_REQUEST_ANALYTICS, opts.parentSpan().orElse(null));
     AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, authenticator,
-        queryBytes, opts.priority(), opts.readonly(), clientContextId, statement, span
+        queryBytes, opts.priority(), opts.readonly(), clientContextId, statement, span, null, null
     );
     request.context().clientContext(opts.clientContext());
     return request;

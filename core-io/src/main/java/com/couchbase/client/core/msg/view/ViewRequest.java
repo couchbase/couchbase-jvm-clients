@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.view;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -68,6 +69,12 @@ public class ViewRequest extends BaseRequest<ViewResponse>
     this.development = development;
     this.query = requireNonNull(query);
     this.keysJson = requireNonNull(keysJson);
+
+    if (span != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_VIEWS);
+      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, "/" + design + "/" + view);
+      span.setAttribute(TracingIdentifiers.ATTR_NAME, bucket);
+    }
   }
 
   @Override

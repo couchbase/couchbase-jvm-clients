@@ -87,7 +87,6 @@ class AsyncScope private[scala] (
     */
   @Volatile
   def query(statement: String, options: QueryOptions = QueryOptions()): Future[QueryResult] = {
-    val queryContext = s"""`default`:`${bucketName}`.`${scopeName}`"""
-    queryHandler.queryAsync(statement, options, environment, Some(queryContext))
+    queryHandler.queryAsync(statement, options, environment, Some(bucketName), Some(scopeName))
   }
 }

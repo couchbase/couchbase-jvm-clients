@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.analytics;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -54,12 +55,15 @@ public class AnalyticsRequest
   private final boolean idempotent;
   private final String contextId;
   private final String statement;
+  private final String bucket;
+  private final String scope;
 
   private final Authenticator authenticator;
 
   public AnalyticsRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
                           final Authenticator authenticator, final byte[] query, int priority, boolean idempotent,
-                          final String contextId, final String statement, final RequestSpan span) {
+                          final String contextId, final String statement, final RequestSpan span, final String bucket,
+                          final String scope) {
     super(timeout, ctx, retryStrategy, span);
     this.query = query;
     this.authenticator = authenticator;
@@ -67,6 +71,30 @@ public class AnalyticsRequest
     this.idempotent = idempotent;
     this.contextId = contextId;
     this.statement = statement;
+    this.bucket = bucket;
+    this.scope = scope;
+
+    if (span != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_ANALYTICS);
+      span.setAttribute(TracingIdentifiers.ATTR_STATEMENT, statement);
+      if (bucket != null) {
+        span.setAttribute(TracingIdentifiers.ATTR_NAME, bucket);
+      }
+      if (scope != null) {
+        span.setAttribute(TracingIdentifiers.ATTR_SCOPE, scope);
+      }
+    }
+  }
+
+  /**
+   * Helper method to build the query context from bucket and scope.
+   *
+   * @param bucket the name of the bucket.
+   * @param scope the name of the scope.
+   * @return the build query context string.
+   */
+  public static String queryContext(final String bucket, final String scope) {
+    return "default:`"  + bucket + "`.`" + scope +"`" ;
   }
 
   @Override
@@ -120,6 +148,13 @@ public class AnalyticsRequest
     ctx.put("operationId", redactMeta(operationId()));
     ctx.put("statement", redactUser(statement()));
     ctx.put("priority", priority);
+    if (bucket != null) {
+      ctx.put("bucket", redactMeta(bucket));
+    }
+    if (scope != null) {
+      ctx.put("scope", redactMeta(scope));
+    }
     return ctx;
   }
+
 }

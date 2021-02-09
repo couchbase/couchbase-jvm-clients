@@ -98,7 +98,8 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       statement: String,
       options: QueryOptions,
       environment: ClusterEnvironment,
-      queryContext: Option[String]
+      bucket: Option[String],
+      scope: Option[String]
   ): Try[QueryRequest] = {
 
     val validations = for {
@@ -127,7 +128,9 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
         case _ =>
           val params = options.encode()
           params.put("statement", statement)
-          queryContext.foreach(v => params.put("query_context", v))
+          if (scope.isDefined) {
+            params.put("query_context", QueryRequest.queryContext(bucket.get, scope.get))
+          }
 
           Try(JacksonTransformers.MAPPER.writeValueAsString(params)).map(queryStr => {
             val queryBytes = queryStr.getBytes(CharsetUtil.UTF_8)
@@ -147,7 +150,8 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
               params.str("client_context_id"),
               hp.tracer
                 .requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, options.parentSpan.orNull),
-              queryContext.orNull
+              bucket.orNull,
+              scope.orNull
             )
 
             request
@@ -339,8 +343,8 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       options.encode(query)
     }
 
-    if (original.queryContext() != null) {
-      query.put("query_context", original.queryContext())
+    if (original.scope != null) {
+      query.put("query_context", QueryRequest.queryContext(original.bucket, original.scope))
     }
 
     new QueryRequest(
@@ -353,7 +357,8 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       true,
       query.str("client_context_id"),
       hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, options.parentSpan.orNull),
-      original.queryContext()
+      original.bucket(),
+      original.scope()
     )
   }
 
@@ -375,8 +380,8 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
 
     query.put("timeout", encodeDurationToMs(original.timeout))
 
-    if (original.queryContext() != null) {
-      query.put("query_context", original.queryContext())
+    if (original.scope() != null) {
+      query.put("query_context", QueryRequest.queryContext(original.bucket, original.scope))
     }
 
     originalOptions.encode(query)
@@ -392,7 +397,8 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       query.str("client_context_id"),
       hp.tracer
         .requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, originalOptions.parentSpan.orNull),
-      original.queryContext()
+      original.bucket(),
+      original.scope()
     )
   }
 
@@ -416,9 +422,10 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       statement: String,
       options: QueryOptions,
       environment: ClusterEnvironment,
-      queryContext: Option[String]
+      bucket: Option[String],
+      scope: Option[String]
   ): SMono[ReactiveQueryResult] = {
-    request(statement, options, environment, queryContext) match {
+    request(statement, options, environment, bucket, scope) match {
       case Success(req) => queryReactive(req, options)
       case Failure(err) => SMono.raiseError(err)
     }
@@ -432,10 +439,11 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       statement: String,
       options: QueryOptions,
       environment: ClusterEnvironment,
-      queryContext: Option[String]
+      bucket: Option[String],
+      scope: Option[String]
   ): Future[QueryResult] = {
 
-    request(statement, options, environment, queryContext) match {
+    request(statement, options, environment, bucket, scope) match {
       case Success(req) =>
         queryReactive(req, options)
         // Buffer the responses

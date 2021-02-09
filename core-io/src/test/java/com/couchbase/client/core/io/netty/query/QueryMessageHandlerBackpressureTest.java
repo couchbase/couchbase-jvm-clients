@@ -147,7 +147,8 @@ class QueryMessageHandlerBackpressureTest {
       true,
       null,
       null,
-      null
+      null,
+       null
     );
     channel.writeAndFlush(request);
 

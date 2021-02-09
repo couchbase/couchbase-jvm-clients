@@ -68,12 +68,12 @@ class ReactiveScope(async: AsyncScope, bucketName: String) {
       statement: String,
       options: QueryOptions = QueryOptions()
   ): SMono[ReactiveQueryResult] = {
-    val queryContext = s"""`default`:`${bucketName}`.`${name}`"""
     async.queryHandler.queryReactive(
       statement,
       options,
       async.environment,
-      Some(queryContext)
+      Some(bucketName),
+      Some(name)
     )
   }
 }

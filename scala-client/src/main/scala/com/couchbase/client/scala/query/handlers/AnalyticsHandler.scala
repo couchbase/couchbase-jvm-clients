@@ -42,7 +42,9 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
       statement: String,
       options: AnalyticsOptions,
       core: Core,
-      environment: ClusterEnvironment
+      environment: ClusterEnvironment,
+      bucket: Option[String],
+      scope: Option[String]
   ): Try[AnalyticsRequest] = {
 
     val validations: Try[AnalyticsRequest] = for {
@@ -81,7 +83,9 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
           params.str("client_context_id"),
           statement,
           hp.tracer
-            .requestSpan(TracingIdentifiers.SPAN_REQUEST_ANALYTICS, options.parentSpan.orNull)
+            .requestSpan(TracingIdentifiers.SPAN_REQUEST_ANALYTICS, options.parentSpan.orNull),
+          bucket.orNull,
+          scope.orNull
         )
       })
     }

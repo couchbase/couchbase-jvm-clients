@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.search;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.*;
@@ -50,6 +51,11 @@ public class SearchRequest extends BaseRequest<SearchResponse>
         this.indexName = indexName;
         this.content = content;
         this.authenticator = authenticator;
+
+        if (span != null) {
+            span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_SEARCH);
+            span.setAttribute(TracingIdentifiers.ATTR_OPERATION, indexName);
+        }
     }
 
     @Override

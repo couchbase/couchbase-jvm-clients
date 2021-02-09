@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.query;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -27,6 +28,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValu
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -52,18 +54,42 @@ public class QueryRequest
   private final boolean idempotent;
   private final Authenticator authenticator;
   private final String contextId;
-  private final String queryContext;
+  private final String bucket;
+  private final String scope;
 
   public QueryRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
                       final Authenticator authenticator, final String statement, final byte[] query, boolean idempotent,
-                      final String contextId, final RequestSpan span, final String queryContext) {
+                      final String contextId, final RequestSpan span, final String bucket, final String scope) {
     super(timeout, ctx, retryStrategy, span);
     this.query = query;
     this.statement = statement;
     this.authenticator = authenticator;
     this.idempotent = idempotent;
     this.contextId = contextId;
-    this.queryContext = queryContext;
+    this.bucket = bucket;
+    this.scope = scope;
+
+    if (span != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_QUERY);
+      span.setAttribute(TracingIdentifiers.ATTR_STATEMENT, statement);
+      if (bucket != null) {
+        span.setAttribute(TracingIdentifiers.ATTR_NAME, bucket);
+      }
+      if (scope != null) {
+        span.setAttribute(TracingIdentifiers.ATTR_SCOPE, scope);
+      }
+    }
+  }
+
+  /**
+   * Helper method to build the query context from bucket and scope.
+   *
+   * @param bucket the name of the bucket.
+   * @param scope the name of the scope.
+   * @return the build query context string.
+   */
+  public static String queryContext(final String bucket, final String scope) {
+    return "`default`:`" + bucket + "`.`" + scope + "`";
   }
 
   @Override
@@ -111,8 +137,12 @@ public class QueryRequest
     return idempotent;
   }
 
-  public String queryContext() {
-    return queryContext;
+  public String bucket() {
+    return bucket;
+  }
+
+  public String scope() {
+    return scope;
   }
 
   @Override
@@ -121,8 +151,11 @@ public class QueryRequest
     ctx.put("type", serviceType().ident());
     ctx.put("operationId", redactMeta(operationId()));
     ctx.put("statement", redactUser(statement()));
-    if (queryContext != null) {
-      ctx.put("queryContext", redactMeta(queryContext()));
+    if (bucket != null) {
+      ctx.put("bucket", redactMeta(bucket));
+    }
+    if (scope != null) {
+      ctx.put("scope", redactMeta(scope));
     }
     return ctx;
   }
@@ -134,7 +167,8 @@ public class QueryRequest
       ", statement='" + redactUser(statement) + '\'' +
       ", idempotent=" + idempotent +
       ", contextId='" + contextId + '\'' +
-      ", queryContext='" + redactMeta(queryContext) + '\'' +
+      ", bucket='" + redactMeta(bucket) + '\'' +
+      ", scope='" + redactMeta(scope) + '\'' +
       '}';
   }
 }

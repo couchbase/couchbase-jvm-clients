@@ -105,7 +105,7 @@ class ReactiveCluster(val async: AsyncCluster) {
       statement: String,
       options: QueryOptions
   ): SMono[ReactiveQueryResult] = {
-    async.queryHandler.queryReactive(statement, options, env, None)
+    async.queryHandler.queryReactive(statement, options, env, None, None)
   }
 
   /** Performs a N1QL query against the cluster.
@@ -154,7 +154,7 @@ class ReactiveCluster(val async: AsyncCluster) {
       statement: String,
       options: AnalyticsOptions
   ): SMono[ReactiveAnalyticsResult] = {
-    async.analyticsHandler.request(statement, options, async.core, async.env) match {
+    async.analyticsHandler.request(statement, options, async.core, async.env, None, None) match {
       case Success(request) =>
         SMono.defer(() => {
           async.core.send(request)

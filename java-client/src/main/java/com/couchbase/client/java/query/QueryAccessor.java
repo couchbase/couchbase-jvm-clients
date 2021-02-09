@@ -25,15 +25,12 @@ import com.couchbase.client.core.config.ClusterCapabilities;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.error.PreparedStatementFailureException;
-import com.couchbase.client.core.error.context.QueryErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.msg.query.TargetedQueryRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
-import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
@@ -241,8 +238,8 @@ public class QueryAccessor {
           "client_context_id",
           options.clientContextId() != null ? options.clientContextId() : UUID.randomUUID().toString()
         );
-        if (original.queryContext() != null) {
-            query.put("query_context", original.queryContext());
+        if (original.scope() != null) {
+            query.put("query_context", QueryRequest.queryContext(original.bucket(), original.scope()));
         }
 
         if (enhancedPreparedEnabled) {
@@ -264,7 +261,8 @@ public class QueryAccessor {
           true,
           query.getString("client_context_id"),
           span,
-          original.queryContext()
+          original.bucket(),
+          original.scope()
         );
     }
 
@@ -280,8 +278,8 @@ public class QueryAccessor {
                                              final QueryOptions.Built originalOptions) {
         JsonObject query = cacheEntry.export();
         query.put("timeout", encodeDurationToMs(original.timeout()));
-        if (original.queryContext() != null) {
-            query.put("query_context", original.queryContext());
+        if (original.scope() != null) {
+            query.put("query_context", QueryRequest.queryContext(original.bucket(), original.scope()));
         }
         originalOptions.injectParams(query);
 
@@ -298,7 +296,8 @@ public class QueryAccessor {
           originalOptions.readonly(),
           query.getString("client_context_id"),
           span,
-          original.queryContext()
+          original.bucket(),
+          original.scope()
         );
     }
 
@@ -409,11 +408,10 @@ public class QueryAccessor {
         QueryRequest request;
         if (target != null) {
             request = new TargetedQueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), statement,
-                    queryBytes, readonly, clientContextId, parentSpan, null, target);
-        }
-        else {
+                    queryBytes, readonly, clientContextId, parentSpan, null, null, target);
+        } else {
             request = new QueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), statement,
-                    queryBytes, readonly, clientContextId, parentSpan, null);
+                    queryBytes, readonly, clientContextId, parentSpan, null, null);
         }
         return request;
     }
