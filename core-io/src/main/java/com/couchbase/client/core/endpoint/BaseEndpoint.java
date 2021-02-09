@@ -36,6 +36,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.SecurityException;
 import com.couchbase.client.core.io.netty.PipelineErrorHandler;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
 import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
