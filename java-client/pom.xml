@@ -86,6 +86,7 @@
                 <configuration>
                     <links>
                         <link>https://projectreactor.io/docs/core/release/api/</link>
+                        <link>https://docs.couchbase.com/sdk-api/couchbase-core-io/</link>
                     </links>
                 </configuration>
             </plugin>
