@@ -18,6 +18,8 @@ package com.couchbase.client.java.manager.bucket;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.BucketNotFoundException;
@@ -71,7 +73,10 @@ public class AsyncBucketManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> createBucket(final BucketSettings settings, final CreateBucketOptions options) {
-    return sendRequest(POST, pathForBuckets(), convertSettingsToParams(settings, false), options.build()).thenApply(response -> {
+    CreateBucketOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MB_CREATE_BUCKET, built.parentSpan().orElse(null), settings.name());
+
+    return sendRequest(POST, pathForBuckets(), convertSettingsToParams(settings, false), built, span).thenApply(response -> {
       if (response.status() == ResponseStatus.INVALID_ARGS && response.content() != null) {
         String content = new String(response.content(), StandardCharsets.UTF_8);
         if (content.contains("Bucket with given name already exists")) {
@@ -92,10 +97,12 @@ public class AsyncBucketManager extends ManagerSupport {
 
   public CompletableFuture<Void> updateBucket(final BucketSettings settings, final UpdateBucketOptions options) {
     UpdateBucketOptions.Built builtOpts = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MB_UPDATE_BUCKET, builtOpts.parentSpan().orElse(null), settings.name());
 
     GetAllBucketOptions getAllBucketOptions = getAllBucketOptions();
     builtOpts.timeout().ifPresent(getAllBucketOptions::timeout);
     builtOpts.retryStrategy().ifPresent(getAllBucketOptions::retryStrategy);
+    getAllBucketOptions.parentSpan(span);
 
     return Mono
       .fromFuture(() -> getAllBuckets(getAllBucketOptions))
@@ -104,7 +111,7 @@ public class AsyncBucketManager extends ManagerSupport {
         if (!bucketExists) {
           return Mono.error(BucketNotFoundException.forBucket(settings.name()));
         }
-        return Mono.fromFuture(sendRequest(POST, pathForBucket(settings.name()), convertSettingsToParams(settings, true), builtOpts).thenApply(response -> {
+        return Mono.fromFuture(sendRequest(POST, pathForBucket(settings.name()), convertSettingsToParams(settings, true), builtOpts, span).thenApply(response -> {
           checkStatus(response, "update bucket [" + redactMeta(settings) + "]", settings.name());
           return null;
         }));
@@ -150,7 +157,10 @@ public class AsyncBucketManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> dropBucket(final String bucketName, final DropBucketOptions options) {
-    return sendRequest(DELETE, pathForBucket(bucketName), options.build()).thenApply(response -> {
+    DropBucketOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MB_DROP_BUCKET, built.parentSpan().orElse(null), bucketName);
+
+    return sendRequest(DELETE, pathForBucket(bucketName), built, span).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw BucketNotFoundException.forBucket(bucketName);
       }
@@ -164,7 +174,10 @@ public class AsyncBucketManager extends ManagerSupport {
   }
 
   public CompletableFuture<BucketSettings> getBucket(final String bucketName, final GetBucketOptions options) {
-    return sendRequest(GET, pathForBucket(bucketName), options.build()).thenApply(response -> {
+    GetBucketOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MB_GET_BUCKET, built.parentSpan().orElse(null), bucketName);
+
+    return sendRequest(GET, pathForBucket(bucketName), built, span).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw BucketNotFoundException.forBucket(bucketName);
       }
@@ -179,7 +192,10 @@ public class AsyncBucketManager extends ManagerSupport {
   }
 
   public CompletableFuture<Map<String, BucketSettings>> getAllBuckets(final GetAllBucketOptions options) {
-    return sendRequest(GET, pathForBuckets(), options.build()).thenApply(response -> {
+    GetAllBucketOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MB_GET_ALL_BUCKETS, built.parentSpan().orElse(null), null);
+
+    return sendRequest(GET, pathForBuckets(), built, span).thenApply(response -> {
       checkStatus(response, "get all buckets", null);
       JsonNode tree = Mapper.decodeIntoTree(response.content());
       Map<String, BucketSettings> out = new HashMap<>();
@@ -196,13 +212,24 @@ public class AsyncBucketManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> flushBucket(final String bucketName, final FlushBucketOptions options) {
-    return sendRequest(POST, pathForBucketFlush(bucketName), options.build()).thenApply(response -> {
+    FlushBucketOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MB_FLUSH_BUCKET, built.parentSpan().orElse(null), bucketName);
+
+    return sendRequest(POST, pathForBucketFlush(bucketName), options.build(), span).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw BucketNotFoundException.forBucket(bucketName);
       }
       checkStatus(response, "flush bucket [" + redactMeta(bucketName) + "]", bucketName);
       return null;
     });
+  }
+
+  private RequestSpan buildSpan(final String spanName, final RequestSpan parent, final String bucketName) {
+    RequestSpan span = environment().requestTracer().requestSpan(spanName, parent);
+    if (bucketName != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_NAME, bucketName);
+    }
+    return span;
   }
 
 }

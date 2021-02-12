@@ -94,7 +94,8 @@ public class RawManager {
         }
         return httpRequest;
       },
-      request.method().equals(HttpMethod.GET)
+      request.method().equals(HttpMethod.GET),
+      null
     );
 
     cluster.core().send(req);

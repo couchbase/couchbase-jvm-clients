@@ -17,6 +17,8 @@
 package com.couchbase.client.java.manager.analytics;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
@@ -66,13 +68,6 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 public class AsyncAnalyticsIndexManager {
-  private static final int DATAVERSE_NOT_FOUND = 24034;
-  private static final int DATAVERSE_ALREADY_EXISTS = 24039;
-  private static final int DATASET_NOT_FOUND = 24025;
-  private static final int DATASET_ALREADY_EXISTS = 24040;
-  private static final int INDEX_NOT_FOUND = 24047;
-  private static final int INDEX_ALREADY_EXISTS = 24048;
-  private static final int LINK_NOT_FOUND = 24006;
 
   private final AsyncCluster cluster;
   private final Core core;
@@ -102,7 +97,7 @@ public class AsyncAnalyticsIndexManager {
       statement += " IF NOT EXISTS";
     }
 
-    return exec(statement, builtOpts)
+    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_CREATE_DATAVERSE)
         .thenApply(result -> null);
   }
 
@@ -135,7 +130,7 @@ public class AsyncAnalyticsIndexManager {
       statement += " IF EXISTS";
     }
 
-    return exec(statement, builtOpts)
+    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_DROP_DATAVERSE)
         .thenApply(result -> null);
   }
 
@@ -162,7 +157,7 @@ public class AsyncAnalyticsIndexManager {
       statement += " WHERE " + condition;
     }
 
-    return exec(statement, builtOpts)
+    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_CREATE_DATASET)
         .thenApply(result -> null);
   }
 
@@ -181,7 +176,7 @@ public class AsyncAnalyticsIndexManager {
       statement += " IF EXISTS";
     }
 
-    return exec(statement, builtOpts)
+    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_DROP_DATASET)
         .thenApply(result -> null);
   }
 
@@ -193,7 +188,7 @@ public class AsyncAnalyticsIndexManager {
     final GetAllDatasetsAnalyticsOptions.Built builtOpts = options.build();
     String statement = "SELECT d.* FROM Metadata.`Dataset` d WHERE d.DataverseName <> \"Metadata\"";
 
-    return exec(statement, builtOpts)
+    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_GET_ALL_DATASETS)
         .thenApply(result -> result.rowsAsObject().stream()
             .map(AnalyticsDataset::new)
             .collect(toList()));
@@ -218,7 +213,7 @@ public class AsyncAnalyticsIndexManager {
 
     statement += " ON " + quote(dataverseName, datasetName) + " " + formatIndexFields(fields);
 
-    return exec(statement, builtOpts)
+    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_CREATE_INDEX)
         .thenApply(result -> null);
   }
 
@@ -230,7 +225,7 @@ public class AsyncAnalyticsIndexManager {
     final GetAllIndexesAnalyticsOptions.Built builtOpts = options.build();
     String statement = "SELECT d.* FROM Metadata.`Index` d WHERE d.DataverseName <> \"Metadata\"";
 
-    return exec(statement, builtOpts)
+    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_GET_ALL_INDEXES)
         .thenApply(result -> result.rowsAsObject().stream()
             .map(AnalyticsIndex::new)
             .collect(toList()));
@@ -255,7 +250,7 @@ public class AsyncAnalyticsIndexManager {
       statement += " IF EXISTS";
     }
 
-    return exec(statement, builtOpts)
+    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_DROP_INDEX)
         .thenApply(result -> null);
   }
 
@@ -273,7 +268,7 @@ public class AsyncAnalyticsIndexManager {
       statement += " WITH " + Mapper.encodeAsString(singletonMap("force", true));
     }
 
-    return exec(statement, builtOpts)
+    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_CONNECT_LINK)
         .thenApply(result -> null);
   }
 
@@ -287,7 +282,7 @@ public class AsyncAnalyticsIndexManager {
         builtOpts.dataverseName().orElse(DEFAULT_DATAVERSE),
         builtOpts.linkName().orElse(DEFAULT_LINK));
 
-    return exec(statement, builtOpts)
+    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_DISCONNECT_LINK)
         .thenApply(result -> null);
   }
 
@@ -296,18 +291,27 @@ public class AsyncAnalyticsIndexManager {
   }
 
   public CompletableFuture<Map<String, Map<String, Long>>> getPendingMutations(final GetPendingMutationsAnalyticsOptions options) {
-    return sendRequest(HttpMethod.GET, "/analytics/node/agg/stats/remaining", options.build())
+    return sendRequest(HttpMethod.GET, "/analytics/node/agg/stats/remaining", options.build(), TracingIdentifiers.SPAN_REQUEST_MA_GET_PENDING_MUTATIONS)
         .exceptionally(t -> {
           throw translateException(t);
         })
         .thenApply(response ->
-            Mapper.decodeInto(response.content(), new TypeReference<Map<String, Map<String, Long>> >() {
-            }));
+          Mapper.decodeInto(response.content(), new TypeReference<Map<String, Map<String, Long>> >() {
+        }));
   }
 
-  private CompletableFuture<GenericAnalyticsResponse> sendRequest(HttpMethod method, String path, CommonOptions<?>.BuiltCommonOptions options) {
+  private CompletableFuture<GenericAnalyticsResponse> sendRequest(final HttpMethod method, final String path,
+                                                                  final CommonOptions<?>.BuiltCommonOptions options,
+                                                                  final String spanName) {
+    final RequestSpan span = core
+      .context()
+      .environment()
+      .requestTracer()
+      .requestSpan(spanName, options.parentSpan().orElse(null));
+
     return sendRequest(new GenericAnalyticsRequest(timeout(options), core.context(), retryStrategy(options),
-        () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path), method == HttpMethod.GET));
+        () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path), method == HttpMethod.GET, span))
+      .whenComplete((r, t) -> span.end());
   }
 
   private CompletableFuture<GenericAnalyticsResponse> sendRequest(GenericAnalyticsRequest request) {
@@ -325,17 +329,25 @@ public class AsyncAnalyticsIndexManager {
     return options.retryStrategy().orElse(core.context().environment().retryStrategy());
   }
 
-  private CompletableFuture<AnalyticsResult> exec(String statement, CommonOptions<?>.BuiltCommonOptions options) {
-    return cluster.analyticsQuery(statement, toAnalyticsOptions(options))
-        .exceptionally(t -> {
-          throw translateException(t);
-        });
+  private CompletableFuture<AnalyticsResult> exec(String statement, CommonOptions<?>.BuiltCommonOptions options, String spanName) {
+    final AnalyticsOptions analyticsOptions = toAnalyticsOptions(options);
+
+    RequestSpan parent = cluster.environment().requestTracer().requestSpan(spanName, options.parentSpan().orElse(null));
+    analyticsOptions.parentSpan(parent);
+
+    return cluster
+      .analyticsQuery(statement, analyticsOptions)
+      .exceptionally(t -> {
+        throw translateException(t);
+      })
+      .whenComplete((r, t) -> parent.end());
   }
 
-  private static AnalyticsOptions toAnalyticsOptions(CommonOptions<?>.BuiltCommonOptions options) {
+  private static AnalyticsOptions toAnalyticsOptions(final CommonOptions<?>.BuiltCommonOptions options) {
     AnalyticsOptions result = analyticsOptions();
     options.timeout().ifPresent(result::timeout);
     options.retryStrategy().ifPresent(result::retryStrategy);
+    result.clientContext(options.clientContext());
     return result;
   }
 
@@ -358,14 +370,28 @@ public class AsyncAnalyticsIndexManager {
     return (t instanceof RuntimeException) ? (RuntimeException) t : new RuntimeException(t);
   }
 
-  private static String quote(String s) {
+  /**
+   * Quotes an individual string/component.
+   *
+   * @param s the string to quote.
+   * @return the quoted string.
+   * @throws InvalidArgumentException if the string already contains backticks.
+   */
+  private static String quote(final String s) {
     if (s.contains("`")) {
       throw InvalidArgumentException.fromMessage("Value [" + redactMeta(s) + "] may not contain backticks.");
     }
     return "`" + s + "`";
   }
 
-  private static String quote(String... components) {
+  /**
+   * Quote a list of components and return them .-separated as a string.
+   *
+   * @param components the components to be quoted.
+   * @return the fully quoted string (from the individual components).
+   * @throws InvalidArgumentException if an individual component already contains backticks.
+   */
+  private static String quote(final String... components) {
     return Arrays.stream(components)
         .map(AsyncAnalyticsIndexManager::quote)
         .collect(Collectors.joining("."));

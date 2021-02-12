@@ -18,6 +18,8 @@ package com.couchbase.client.java.manager.view;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
@@ -78,8 +80,10 @@ public class AsyncViewIndexManager {
       super(core);
     }
 
-    public CompletableFuture<GenericManagerResponse> sendRequest(HttpMethod method, String path, CommonOptions<?>.BuiltCommonOptions options) {
-      return super.sendRequest(method, path, options);
+    public CompletableFuture<GenericManagerResponse> sendRequest(HttpMethod method, String path,
+                                                                 CommonOptions<?>.BuiltCommonOptions options,
+                                                                 RequestSpan span) {
+      return super.sendRequest(method, path, options, span);
     }
   }
 
@@ -117,7 +121,14 @@ public class AsyncViewIndexManager {
     notNull(namespace, "DesignDocumentNamespace", () -> new ReducedViewErrorContext(null, null, bucket));
     notNull(options, "GetAllDesignDocumentsOptions", () -> new ReducedViewErrorContext(null, null, bucket));
 
-    return new ConfigManager().sendRequest(GET, pathForAllDesignDocuments(), options.build()).thenApply(response -> {
+    GetAllDesignDocumentsOptions.Built built = options.build();
+    RequestSpan span = buildSpan(
+      TracingIdentifiers.SPAN_REQUEST_MV_GET_ALL_DD,
+      built.parentSpan().orElse(null)
+    );
+    span.setAttribute(TracingIdentifiers.ATTR_NAME, bucket);
+
+    return new ConfigManager().sendRequest(GET, pathForAllDesignDocuments(), built, span).thenApply(response -> {
       // Unlike the other view management requests, this request goes through the config manager endpoint.
       // That endpoint treats any complete HTTP response as a success, so it's up to us to check the status code.
       if (response.status() != ResponseStatus.SUCCESS) {
@@ -165,7 +176,13 @@ public class AsyncViewIndexManager {
     notNull(namespace, "DesignDocumentNamespace", () -> new ReducedViewErrorContext(name, null, bucket));
     notNull(options, "GetDesignDocumentOptions", () -> new ReducedViewErrorContext(name, null, bucket));
 
-    return sendRequest(GET, pathForDesignDocument(name, namespace), options.build())
+    GetDesignDocumentOptions.Built built = options.build();
+    RequestSpan span = buildSpan(
+      TracingIdentifiers.SPAN_REQUEST_MV_GET_DD,
+      built.parentSpan().orElse(null)
+    );
+
+    return sendRequest(GET, pathForDesignDocument(name, namespace), built, span)
         .exceptionally(t -> {
           throw notFound(t)
               ? DesignDocumentNotFoundException.forName(name, namespace.toString())
@@ -206,8 +223,14 @@ public class AsyncViewIndexManager {
     notNull(namespace, "DesignDocumentNamespace", () -> new ReducedViewErrorContext(doc.name(), null, bucket));
     notNull(options, "UpsertDesignDocumentOptions", () -> new ReducedViewErrorContext(doc.name(), null, bucket));
 
+    UpsertDesignDocumentOptions.Built built = options.build();
+    RequestSpan span = buildSpan(
+      TracingIdentifiers.SPAN_REQUEST_MV_UPSERT_DD,
+      built.parentSpan().orElse(null)
+    );
+
     final ObjectNode body = toJson(doc);
-    return sendJsonRequest(PUT, pathForDesignDocument(doc.name(), namespace), options.build(), body)
+    return sendJsonRequest(PUT, pathForDesignDocument(doc.name(), namespace), built, body, span)
         .thenApply(response -> null);
   }
 
@@ -233,7 +256,17 @@ public class AsyncViewIndexManager {
   public CompletableFuture<Void> publishDesignDocument(final String name, final PublishDesignDocumentOptions options) {
     notNullOrEmpty(name, "Name", () -> new ReducedViewErrorContext(null, null, bucket));
     notNull(options, "PublishDesignDocumentOptions", () -> new ReducedViewErrorContext(name, null, bucket));
-    return getDesignDocument(name, DEVELOPMENT).thenCompose(doc -> upsertDesignDocument(doc, PRODUCTION));
+
+    PublishDesignDocumentOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MV_PUBLISH_DD, built.parentSpan().orElse(null));
+
+    return getDesignDocument(name, DEVELOPMENT, getDesignDocumentOptions().parentSpan(span))
+      .thenCompose(doc -> upsertDesignDocument(doc, PRODUCTION, upsertDesignDocumentOptions().parentSpan(span)))
+      .whenComplete((r, t) -> {
+        if (span != null) {
+          span.end();
+        }
+      });
   }
 
   /**
@@ -261,7 +294,13 @@ public class AsyncViewIndexManager {
     notNull(namespace, "DesignDocumentNamespace", () -> new ReducedViewErrorContext(name, null, bucket));
     notNull(options, "DropDesignDocumentOptions", () -> new ReducedViewErrorContext(name, null, bucket));
 
-    return sendRequest(DELETE, pathForDesignDocument(name, namespace), options.build())
+    DropDesignDocumentOptions.Built built = options.build();
+    RequestSpan span = buildSpan(
+      TracingIdentifiers.SPAN_REQUEST_MV_DROP_DD,
+      built.parentSpan().orElse(null)
+    );
+
+    return sendRequest(DELETE, pathForDesignDocument(name, namespace), built, span)
         .exceptionally(t -> {
           if (notFound(t)) {
             throw DesignDocumentNotFoundException.forName(name, namespace.toString());
@@ -303,21 +342,33 @@ public class AsyncViewIndexManager {
   }
 
   private CompletableFuture<GenericViewResponse> sendRequest(final HttpMethod method, final String path,
-                                                             final CommonOptions<?>.BuiltCommonOptions options) {
+                                                             final CommonOptions<?>.BuiltCommonOptions options,
+                                                             final RequestSpan span) {
     return sendRequest(new GenericViewRequest(timeout(options), core.context(), retryStrategy(options),
-        () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path), method == GET, bucket));
+        () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path), method == GET, bucket, span))
+      .whenComplete((r, t) -> {
+        if (span != null) {
+          span.end();
+        }
+      });
   }
 
   private CompletableFuture<GenericViewResponse> sendJsonRequest(final HttpMethod method, final String path,
                                                                  final CommonOptions<?>.BuiltCommonOptions options,
-                                                                 final Object body) {
+                                                                 final Object body,
+                                                                 final RequestSpan span) {
     return sendRequest(new GenericViewRequest(timeout(options), core.context(), retryStrategy(options), () -> {
       ByteBuf content = Unpooled.copiedBuffer(Mapper.encodeAsBytes(body));
       DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content);
       req.headers().add("Content-Type", HttpHeaderValues.APPLICATION_JSON);
       req.headers().add("Content-Length", content.readableBytes());
       return req;
-    }, method == GET, bucket));
+    }, method == GET, bucket, span))
+      .whenComplete((r, t) -> {
+        if (span != null) {
+          span.end();
+        }
+      });
   }
 
   /**
@@ -341,6 +392,10 @@ public class AsyncViewIndexManager {
    */
   private RetryStrategy retryStrategy(final CommonOptions<?>.BuiltCommonOptions options) {
     return options.retryStrategy().orElse(core.context().environment().retryStrategy());
+  }
+
+  private RequestSpan buildSpan(final String spanName, final RequestSpan parent) {
+    return core.context().environment().requestTracer().requestSpan(spanName, parent);
   }
 
 }

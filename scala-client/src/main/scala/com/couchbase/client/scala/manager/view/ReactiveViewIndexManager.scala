@@ -136,7 +136,8 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
             req
           },
           false,
-          bucket
+          bucket,
+          null
         )
 
         SMono.defer(() => {
@@ -262,7 +263,8 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
         retryStrategy,
         () => new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
         method == GET,
-        bucket
+        bucket,
+        null
       )
     )
   }
@@ -287,7 +289,8 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
           req
         },
         method == GET,
-        bucket
+        bucket,
+        null
       )
     )
   }

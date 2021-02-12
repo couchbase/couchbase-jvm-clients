@@ -128,7 +128,8 @@ class NonChunkedHttpMessageHandlerTest {
       BestEffortRetryStrategy.INSTANCE,
       () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"),
       true,
-      "bucket"
+      "bucket",
+      null
     );
     channel.writeAndFlush(request);
 

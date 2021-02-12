@@ -18,6 +18,8 @@ package com.couchbase.client.java.manager.collection;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.config.CollectionsManifest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.error.CollectionExistsException;
@@ -73,7 +75,8 @@ public class AsyncCollectionManager extends ManagerSupport {
     return pathForScope(bucketName, scopeName) + "/collections";
   }
 
-  private static String pathForCollection(final String bucketName, final String scopeName, final String collectionName) {
+  private static String pathForCollection(final String bucketName, final String scopeName,
+                                          final String collectionName) {
     return pathForCollections(bucketName, scopeName) + "/" + urlEncode(collectionName);
   }
 
@@ -97,7 +100,17 @@ public class AsyncCollectionManager extends ManagerSupport {
    * @throws CollectionExistsException (async) if the collection already exists
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    */
-  public CompletableFuture<Void> createCollection(final CollectionSpec collectionSpec, final CreateCollectionOptions options) {
+  public CompletableFuture<Void> createCollection(final CollectionSpec collectionSpec,
+                                                  final CreateCollectionOptions options) {
+    CreateCollectionOptions.Built built = options.build();
+    RequestSpan span = buildSpan(
+      TracingIdentifiers.SPAN_REQUEST_MC_CREATE_COLLECTION,
+      built.parentSpan().orElse(null),
+      bucketName,
+      collectionSpec.scopeName(),
+      collectionSpec.name()
+    );
+
     final UrlQueryStringBuilder body = UrlQueryStringBuilder
       .create()
       .add("name", collectionSpec.name());
@@ -108,7 +121,7 @@ public class AsyncCollectionManager extends ManagerSupport {
 
     final String path = pathForCollections(bucketName, collectionSpec.scopeName());
 
-    return sendRequest(HttpMethod.POST, path, body, options.build()).thenApply(response -> {
+    return sendRequest(HttpMethod.POST, path, body, built, span).thenApply(response -> {
       checkForErrors(response, collectionSpec.scopeName(), collectionSpec.name());
       return null;
     });
@@ -133,12 +146,21 @@ public class AsyncCollectionManager extends ManagerSupport {
    * @throws ScopeExistsException (async) if the scope already exists.
    */
   public CompletableFuture<Void> createScope(final String scopeName, final CreateScopeOptions options) {
+    CreateScopeOptions.Built built = options.build();
+    RequestSpan span = buildSpan(
+      TracingIdentifiers.SPAN_REQUEST_MC_CREATE_SCOPE,
+      built.parentSpan().orElse(null),
+      bucketName,
+      scopeName,
+      null
+    );
+
     final UrlQueryStringBuilder body = UrlQueryStringBuilder
       .create()
       .add("name", scopeName);
     final String path = pathForScopes(bucketName);
 
-    return sendRequest(HttpMethod.POST, path, body, options.build()).thenApply(response -> {
+    return sendRequest(HttpMethod.POST, path, body, built, span).thenApply(response -> {
         checkForErrors(response, scopeName, null);
         return null;
       });
@@ -164,9 +186,19 @@ public class AsyncCollectionManager extends ManagerSupport {
    * @throws CollectionNotFoundException (async) if the collection did not exist.
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    */
-  public CompletableFuture<Void> dropCollection(final CollectionSpec collectionSpec, final DropCollectionOptions options) {
+  public CompletableFuture<Void> dropCollection(final CollectionSpec collectionSpec,
+                                                final DropCollectionOptions options) {
+    DropCollectionOptions.Built built = options.build();
+    RequestSpan span = buildSpan(
+      TracingIdentifiers.SPAN_REQUEST_MC_DROP_COLLECTION,
+      built.parentSpan().orElse(null),
+      bucketName,
+      collectionSpec.scopeName(),
+      collectionSpec.name()
+    );
+
     final String path = pathForCollection(bucketName, collectionSpec.scopeName(), collectionSpec.name());
-    return sendRequest(HttpMethod.DELETE, path, options.build()).thenApply(response -> {
+    return sendRequest(HttpMethod.DELETE, path, built, span).thenApply(response -> {
       checkForErrors(response, collectionSpec.scopeName(), collectionSpec.name());
       return null;
     });
@@ -191,7 +223,16 @@ public class AsyncCollectionManager extends ManagerSupport {
    * @throws ScopeNotFoundException (async) if the scope did not exist.
    */
   public CompletableFuture<Void> dropScope(final String scopeName, final DropScopeOptions options) {
-    return sendRequest(HttpMethod.DELETE, pathForScope(bucketName, scopeName), options.build()).thenApply(response -> {
+    DropScopeOptions.Built built = options.build();
+    RequestSpan span = buildSpan(
+      TracingIdentifiers.SPAN_REQUEST_MC_DROP_SCOCPE,
+      built.parentSpan().orElse(null),
+      bucketName,
+      scopeName,
+      null
+    );
+
+    return sendRequest(HttpMethod.DELETE, pathForScope(bucketName, scopeName), built, span).thenApply(response -> {
       checkForErrors(response, scopeName, null);
       return null;
     });
@@ -250,13 +291,26 @@ public class AsyncCollectionManager extends ManagerSupport {
    * @return a {@link CompletableFuture} with a list of scopes in the bucket.
    */
   public CompletableFuture<List<ScopeSpec>> getAllScopes(final GetAllScopesOptions options) {
-    return loadManifest(options.build()).thenApply(manifest ->
+    GetAllScopesOptions.Built built = options.build();
+    RequestSpan span = buildSpan(
+      TracingIdentifiers.SPAN_REQUEST_MC_GET_ALL_SCOPES,
+      built.parentSpan().orElse(null),
+      bucketName,
+      null,
+      null
+    );
+
+    return loadManifest(built, span).thenApply(manifest ->
       manifest
         .scopes()
         .stream()
         .map(s -> ScopeSpec.create(
           s.name(),
-          s.collections().stream().map(c -> CollectionSpec.create(c.name(), s.name(), Duration.ofSeconds(c.maxExpiry()))).collect(Collectors.toSet()))
+          s
+            .collections()
+            .stream()
+            .map(c -> CollectionSpec.create(c.name(), s.name(), Duration.ofSeconds(c.maxExpiry())))
+            .collect(Collectors.toSet()))
         )
         .collect(Collectors.toList()));
   }
@@ -266,7 +320,8 @@ public class AsyncCollectionManager extends ManagerSupport {
    *
    * @param response the response to check.
    */
-  private void checkForErrors(final GenericManagerResponse response, final String scopeName, final String collectionName) {
+  private void checkForErrors(final GenericManagerResponse response, final String scopeName,
+                              final String collectionName) {
     if (response.status().success()) {
       return;
     }
@@ -324,12 +379,28 @@ public class AsyncCollectionManager extends ManagerSupport {
    *
    * @return the loaded manifest.
    */
-  private CompletableFuture<CollectionsManifest> loadManifest(final CommonOptions<?>.BuiltCommonOptions opts) {
-    return sendRequest(HttpMethod.GET, pathForScopes(bucketName), opts)
+  private CompletableFuture<CollectionsManifest> loadManifest(final CommonOptions<?>.BuiltCommonOptions opts,
+                                                              RequestSpan span) {
+    return sendRequest(HttpMethod.GET, pathForScopes(bucketName), opts, span)
       .thenApply(response -> {
         checkForErrors(response, null, null);
         return Mapper.decodeInto(response.content(), CollectionsManifest.class);
       });
+  }
+
+  private RequestSpan buildSpan(final String spanName, final RequestSpan parent, final String bucketName,
+                                final String scopeName, final String collectionName) {
+    RequestSpan span = environment().requestTracer().requestSpan(spanName, parent);
+    if (bucketName != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_NAME, bucketName);
+    }
+    if (scopeName != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_SCOPE, scopeName);
+    }
+    if (collectionName != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_COLLECTION, collectionName);
+    }
+    return span;
   }
 
 }

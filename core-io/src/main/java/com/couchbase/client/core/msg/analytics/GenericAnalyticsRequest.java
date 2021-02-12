@@ -17,6 +17,8 @@
 package com.couchbase.client.core.msg.analytics;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
 import com.couchbase.client.core.io.netty.HttpChannelContext;
@@ -38,10 +40,17 @@ public class GenericAnalyticsRequest extends BaseRequest<GenericAnalyticsRespons
   private final boolean idempotent;
 
   public GenericAnalyticsRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                                 final Supplier<FullHttpRequest> requestSupplier, boolean idempotent) {
-    super(timeout, ctx, retryStrategy);
+                                 final Supplier<FullHttpRequest> requestSupplier, boolean idempotent, final RequestSpan span) {
+    super(timeout, ctx, retryStrategy, span);
     this.requestSupplier = requireNonNull(requestSupplier);
     this.idempotent = idempotent;
+
+    if (span != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_ANALYTICS);
+
+      FullHttpRequest request = requestSupplier.get();
+      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, request.method().toString() + " " + request.uri());
+    }
   }
 
   @Override

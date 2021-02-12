@@ -17,6 +17,8 @@
 package com.couchbase.client.core.msg.view;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
 import com.couchbase.client.core.io.netty.HttpChannelContext;
@@ -40,11 +42,20 @@ public class GenericViewRequest extends BaseRequest<GenericViewResponse>
   private final String bucket;
 
   public GenericViewRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                            final Supplier<FullHttpRequest> requestSupplier, boolean idempotent, final String bucket) {
-    super(timeout, ctx, retryStrategy);
+                            final Supplier<FullHttpRequest> requestSupplier, boolean idempotent, final String bucket,
+                            final RequestSpan span) {
+    super(timeout, ctx, retryStrategy, span);
     this.httpRequest = requireNonNull(requestSupplier);
     this.idempotent = idempotent;
     this.bucket = requireNonNull(bucket);
+
+    if (span != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_VIEWS);
+      span.setAttribute(TracingIdentifiers.ATTR_NAME, bucket);
+
+      FullHttpRequest request = requestSupplier.get();
+      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, request.method().toString() + " " + request.uri());
+    }
   }
 
   @Override

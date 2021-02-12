@@ -159,7 +159,14 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
       timeout: Duration,
       retryStrategy: RetryStrategy
   ): GenericSearchRequest = {
-    new GenericSearchRequest(timeout, core.context, retryStrategy, () => httpRequest, idempotent)
+    new GenericSearchRequest(
+      timeout,
+      core.context,
+      retryStrategy,
+      () => httpRequest,
+      idempotent,
+      null
+    )
   }
 
 }

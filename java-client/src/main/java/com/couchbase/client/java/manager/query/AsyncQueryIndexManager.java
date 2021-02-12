@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.manager.query;
 
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexesNotReadyException;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -84,7 +86,7 @@ public class AsyncQueryIndexManager {
 
     String statement = "CREATE INDEX " + quote(indexName) + " ON " + quote(bucketName) + formatIndexFields(fields);
 
-    return exec(WRITE, statement, builtOpts.with(), builtOpts)
+    return exec(WRITE, statement, builtOpts.with(), builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_INDEX, bucketName)
         .exceptionally(t -> {
           if (builtOpts.ignoreIfExists() && hasCause(t, IndexExistsException.class)) {
             return null;
@@ -109,7 +111,7 @@ public class AsyncQueryIndexManager {
     }
     statement += "ON " + quote(bucketName);
 
-    return exec(WRITE, statement, builtOpts.with(), builtOpts)
+    return exec(WRITE, statement, builtOpts.with(), builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_PRIMARY_INDEX, bucketName)
         .exceptionally(t -> {
           if (builtOpts.ignoreIfExists() && hasCause(t, IndexExistsException.class)) {
             return null;
@@ -138,7 +140,7 @@ public class AsyncQueryIndexManager {
         " AND `using` = \"gsi\"" +
         " ORDER BY is_primary DESC, name ASC";
 
-    return exec(READ_ONLY, statement, builtOpts)
+    return exec(READ_ONLY, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_GET_ALL_INDEXES, bucketName)
         .thenApply(result -> result.rowsAsObject().stream()
             .map(QueryIndex::new)
             .collect(toList()));
@@ -155,7 +157,7 @@ public class AsyncQueryIndexManager {
 
     String statement = "DROP PRIMARY INDEX ON " + quote(bucketName);
 
-    return exec(WRITE, statement, builtOpts)
+    return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_DROP_PRIMARY_INDEX, bucketName)
         .exceptionally(t -> {
           if (builtOpts.ignoreIfNotExists() && hasCause(t, IndexNotFoundException.class)) {
             return null;
@@ -177,7 +179,7 @@ public class AsyncQueryIndexManager {
 
     String statement = "DROP INDEX " + quote(bucketName, indexName);
 
-    return exec(WRITE, statement, builtOpts)
+    return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_DROP_INDEX, bucketName)
         .exceptionally(t -> {
           if (builtOpts.ignoreIfNotExists() && hasCause(t, IndexNotFoundException.class)) {
             return null;
@@ -196,6 +198,7 @@ public class AsyncQueryIndexManager {
     GetAllQueryIndexesOptions result = getAllQueryIndexesOptions();
     opts.retryStrategy().ifPresent(result::retryStrategy);
     opts.timeout().ifPresent(result::timeout);
+    result.clientContext(opts.clientContext());
     return result;
   }
 
@@ -219,7 +222,7 @@ public class AsyncQueryIndexManager {
                   .map(AsyncQueryIndexManager::quote)
                   .collect(Collectors.joining(",")) + ")";
 
-          return exec(WRITE, statement, builtOpts);
+          return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_BUILD_DEFERRED_INDEXES, bucketName);
 
         })
         .thenApply(result -> null);
@@ -235,13 +238,16 @@ public class AsyncQueryIndexManager {
     Set<String> indexNameSet = new HashSet<>(indexNames);
     WatchQueryIndexesOptions.Built builtOpts = options.build();
 
-    return Mono.fromFuture(() -> failIfIndexesOffline(bucketName, indexNameSet, builtOpts.watchPrimary()))
+    RequestSpan parent = cluster.environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, null);
+
+    return Mono.fromFuture(() -> failIfIndexesOffline(bucketName, indexNameSet, builtOpts.watchPrimary(), parent))
         .retryWhen(Retry.onlyIf(ctx -> hasCause(ctx.exception(), IndexesNotReadyException.class))
             .exponentialBackoff(Duration.ofMillis(50), Duration.ofSeconds(1))
             .timeout(timeout)
             .toReactorRetry())
         .onErrorMap(t -> t instanceof RetryExhaustedException ? toWatchTimeoutException(t, timeout) : t)
-        .toFuture();
+        .toFuture()
+        .whenComplete((r, t) -> parent.end());
   }
 
   private static TimeoutException toWatchTimeoutException(Throwable t, Duration timeout) {
@@ -255,13 +261,14 @@ public class AsyncQueryIndexManager {
 
   private CompletableFuture<Void> failIfIndexesOffline(String bucketName,
                                                        Set<String> indexNames,
-                                                       boolean includePrimary)
+                                                       boolean includePrimary,
+                                                       RequestSpan parentSpan)
       throws IndexesNotReadyException, IndexNotFoundException {
 
     requireNonNull(bucketName);
     requireNonNull(indexNames);
 
-    return getAllIndexes(bucketName)
+    return getAllIndexes(bucketName, getAllQueryIndexesOptions().parentSpan(parentSpan))
         .thenApply(allIndexes -> {
           final List<QueryIndex> matchingIndexes = allIndexes.stream()
               .filter(idx -> indexNames.contains(idx.name()) || (includePrimary && idx.primary()))
@@ -304,26 +311,37 @@ public class AsyncQueryIndexManager {
     return result;
   }
 
-  private CompletableFuture<QueryResult> exec(QueryType queryType, CharSequence statement, Map<String, Object> with, CommonOptions<?>.BuiltCommonOptions options) {
+  private CompletableFuture<QueryResult> exec(QueryType queryType, CharSequence statement, Map<String, Object> with,
+                                              CommonOptions<?>.BuiltCommonOptions options, String spanName, String bucketName) {
     return with.isEmpty()
-        ? exec(queryType, statement, options)
-        : exec(queryType, statement + " WITH " + Mapper.encodeAsString(with), options);
+        ? exec(queryType, statement, options, spanName, bucketName)
+        : exec(queryType, statement + " WITH " + Mapper.encodeAsString(with), options, spanName, bucketName);
   }
 
-  private CompletableFuture<QueryResult> exec(QueryType queryType, CharSequence statement, CommonOptions<?>.BuiltCommonOptions options) {
+  private CompletableFuture<QueryResult> exec(QueryType queryType, CharSequence statement,
+                                              CommonOptions<?>.BuiltCommonOptions options, String spanName, String bucketName) {
     QueryOptions queryOpts = toQueryOptions(options)
         .readonly(requireNonNull(queryType) == READ_ONLY);
 
-    return cluster.query(statement.toString(), queryOpts)
-        .exceptionally(t -> {
-          throw translateException(t);
-        });
+    RequestSpan parent = cluster.environment().requestTracer().requestSpan(spanName, options.parentSpan().orElse(null));
+    if (bucketName != null) {
+      parent.setAttribute(TracingIdentifiers.ATTR_NAME, bucketName);
+    }
+    queryOpts.parentSpan(parent);
+
+    return cluster
+      .query(statement.toString(), queryOpts)
+      .exceptionally(t -> {
+        throw translateException(t);
+      })
+      .whenComplete((r, t) -> parent.end());
   }
 
   private static QueryOptions toQueryOptions(CommonOptions<?>.BuiltCommonOptions options) {
     QueryOptions result = QueryOptions.queryOptions();
     options.timeout().ifPresent(result::timeout);
     options.retryStrategy().ifPresent(result::retryStrategy);
+    result.clientContext(options.clientContext());
     return result;
   }
 

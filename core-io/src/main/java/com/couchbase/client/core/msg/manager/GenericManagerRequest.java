@@ -17,6 +17,8 @@
 package com.couchbase.client.core.msg.manager;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -32,16 +34,23 @@ public class GenericManagerRequest extends BaseManagerRequest<GenericManagerResp
   private final Supplier<FullHttpRequest> requestSupplier;
   private final boolean idempotent;
 
-  public GenericManagerRequest(CoreContext ctx, Supplier<FullHttpRequest> requestSupplier, boolean idempotent) {
+  public GenericManagerRequest(CoreContext ctx, Supplier<FullHttpRequest> requestSupplier, boolean idempotent, RequestSpan span) {
     this(ctx.environment().timeoutConfig().managementTimeout(), ctx, ctx.environment().retryStrategy(), requestSupplier,
-      idempotent);
+      idempotent, span);
   }
 
   public GenericManagerRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                               Supplier<FullHttpRequest> requestSupplier, boolean idempotent) {
-    super(timeout, ctx, retryStrategy);
+                               Supplier<FullHttpRequest> requestSupplier, boolean idempotent, RequestSpan span) {
+    super(timeout, ctx, retryStrategy, span);
     this.requestSupplier = requireNonNull(requestSupplier);
     this.idempotent = idempotent;
+
+    if (span != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_MGMT);
+
+      FullHttpRequest request = requestSupplier.get();
+      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, request.method().toString() + " " + request.uri());
+    }
   }
 
   @Override

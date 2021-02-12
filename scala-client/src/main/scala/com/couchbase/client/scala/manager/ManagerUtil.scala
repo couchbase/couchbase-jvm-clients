@@ -62,7 +62,8 @@ object ManagerUtil {
         core.context,
         retryStrategy,
         () => new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
-        idempotent
+        idempotent,
+        null
       )
     )
   }
@@ -84,7 +85,7 @@ object ManagerUtil {
         req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED)
         req.headers.add("Content-Length", content.readableBytes)
         req
-      }, idempotent)
+      }, idempotent, null)
     )
   }
 

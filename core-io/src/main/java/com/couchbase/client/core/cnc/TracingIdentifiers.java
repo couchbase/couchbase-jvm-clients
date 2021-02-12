@@ -57,6 +57,11 @@ public class TracingIdentifiers {
   public static final String SERVICE_VIEWS = "views";
 
   /**
+   * The identifier commonly used to identify the management service.
+   */
+  public static final String SERVICE_MGMT = "management";
+
+  /**
    * The identifier commonly used to identify the analytics service.
    */
   public static final String SERVICE_ANALYTICS = "analytics";
@@ -105,19 +110,68 @@ public class TracingIdentifiers {
 
   public static final String SPAN_REQUEST_KV_OBSERVE = "observe";
 
-  public static final String SPAN_REQUEST_MANAGER_ANALYTICS = "manager_analytics";
 
-  public static final String SPAN_REQUEST_MANAGER_QUERY = "manager_query";
+  public static final String SPAN_REQUEST_MA_CONNECT_LINK = "manager_analytics_connect_link";
+  public static final String SPAN_REQUEST_MA_CREATE_DATASET = "manager_analytics_create_dataset";
+  public static final String SPAN_REQUEST_MA_CREATE_DATAVERSE = "manager_analytics_create_dataverse";
+  public static final String SPAN_REQUEST_MA_CREATE_INDEX = "manager_analytics_create_index";
+  public static final String SPAN_REQUEST_MA_DISCONNECT_LINK = "manager_analytics_disconnect_link";
+  public static final String SPAN_REQUEST_MA_DROP_DATASET = "manager_analytics_drop_dataset";
+  public static final String SPAN_REQUEST_MA_DROP_DATAVERSE = "manager_analytics_drop_dataverse";
+  public static final String SPAN_REQUEST_MA_DROP_INDEX = "manager_analytics_drop_index";
+  public static final String SPAN_REQUEST_MA_GET_ALL_DATASETS = "manager_analytics_get_all_datasets";
+  public static final String SPAN_REQUEST_MA_GET_ALL_INDEXES = "manager_analytics_get_all_indexes";
+  public static final String SPAN_REQUEST_MA_GET_PENDING_MUTATIONS = "manager_analytics_get_pending_mutations";
 
-  public static final String SPAN_REQUEST_MANAGER_BUCKETS = "manager_buckets";
+  public static final String SPAN_REQUEST_MQ_BUILD_DEFERRED_INDEXES = "manager_query_build_deferred_indexes";
+  public static final String SPAN_REQUEST_MQ_CREATE_INDEX = "manager_query_create_index";
+  public static final String SPAN_REQUEST_MQ_CREATE_PRIMARY_INDEX = "manager_query_create_primary_index";
+  public static final String SPAN_REQUEST_MQ_DROP_INDEX = "manager_query_drop_index";
+  public static final String SPAN_REQUEST_MQ_DROP_PRIMARY_INDEX = "manager_query_drop_primary_index";
+  public static final String SPAN_REQUEST_MQ_GET_ALL_INDEXES = "manager_query_get_all_indexes";
+  public static final String SPAN_REQUEST_MQ_WATCH_INDEXES = "manager_query_watch_indexes";
 
-  public static final String SPAN_REQUEST_MANAGER_COLLECTIONS = "manager_collections";
+  public static final String SPAN_REQUEST_MB_CREATE_BUCKET = "manager_buckets_create_bucket";
+  public static final String SPAN_REQUEST_MB_DROP_BUCKET = "manager_buckets_drop_bucket";
+  public static final String SPAN_REQUEST_MB_FLUSH_BUCKET = "manager_buckets_flush_bucket";
+  public static final String SPAN_REQUEST_MB_GET_ALL_BUCKETS = "manager_buckets_get_all_buckets";
+  public static final String SPAN_REQUEST_MB_GET_BUCKET = "manager_buckets_get_bucket";
+  public static final String SPAN_REQUEST_MB_UPDATE_BUCKET = "manager_buckets_update_bucket";
 
-  public static final String SPAN_REQUEST_MANAGER_SEARCH = "manager_search";
+  public static final String SPAN_REQUEST_MC_CREATE_COLLECTION = "manager_collections_create_collection";
+  public static final String SPAN_REQUEST_MC_CREATE_SCOPE = "manager_collections_create_scope";
+  public static final String SPAN_REQUEST_MC_DROP_COLLECTION = "manager_collections_drop_collection";
+  public static final String SPAN_REQUEST_MC_DROP_SCOCPE = "manager_collections_drop_scope";
+  public static final String SPAN_REQUEST_MC_GET_ALL_SCOPES = "manager_collections_get_all_scopes";
 
-  public static final String SPAN_REQUEST_MANAGER_USERS = "manager_user";
+  public static final String SPAN_REQUEST_MS_ALLOW_QUERYING = "manager_search_allow_querying";
+  public static final String SPAN_REQUEST_MS_ANALYZE_DOCUMENT = "manager_search_analyze_document";
+  public static final String SPAN_REQUEST_MS_DISALLOW_QUERYING = "manager_search_disallow_querying";
+  public static final String SPAN_REQUEST_MS_DROP_INDEX = "manager_search_drop_index";
+  public static final String SPAN_REQUEST_MS_FREEZE_PLAN = "manager_search_freeze_plan";
+  public static final String SPAN_REQUEST_MS_GET_ALL_INDEXES = "manager_search_get_all_indexes";
+  public static final String SPAN_REQUEST_MS_GET_INDEX = "manager_search_get_index";
+  public static final String SPAN_REQUEST_MS_GET_IDX_DOC_COUNT = "manager_search_get_indexed_documents_count";
+  public static final String SPAN_REQUEST_MS_PAUSE_INGEST = "manager_search_pause_ingest";
+  public static final String SPAN_REQUEST_MS_RESUME_INGEST = "manager_search_resume_ingest";
+  public static final String SPAN_REQUEST_MS_UNFREEZE_PLAN = "manager_search_unfreeze_plan";
+  public static final String SPAN_REQUEST_MS_UPSERT_INDEX = "manager_search_upsert_index";
 
-  public static final String SPAN_REQUEST_MANAGER_VIEWS = "manager_view";
+  public static final String SPAN_REQUEST_MU_DROP_GROUP = "manager_users_drop_group";
+  public static final String SPAN_REQUEST_MU_DROP_USER = "manager_users_drop_user";
+  public static final String SPAN_REQUEST_MU_GET_ALL_GROUPS = "manager_users_get_all_groups";
+  public static final String SPAN_REQUEST_MU_GET_ALL_USERS = "manager_users_get_all_users";
+  public static final String SPAN_REQUEST_MU_GET_GROUP = "manager_users_get_group";
+  public static final String SPAN_REQUEST_MU_GET_ROLES = "manager_users_get_roles";
+  public static final String SPAN_REQUEST_MU_GET_USER = "manager_users_get_user";
+  public static final String SPAN_REQUEST_MU_UPSERT_GROUP = "manager_users_upsert_group";
+  public static final String SPAN_REQUEST_MU_UPSERT_USER = "manager_users_upsert_user";
+
+  public static final String SPAN_REQUEST_MV_DROP_DD = "manager_views_drop_design_document";
+  public static final String SPAN_REQUEST_MV_GET_ALL_DD = "manager_views_get_all_design_documents";
+  public static final String SPAN_REQUEST_MV_GET_DD = "manager_views_get_design_document";
+  public static final String SPAN_REQUEST_MV_PUBLISH_DD = "manager_views_publish_design_document";
+  public static final String SPAN_REQUEST_MV_UPSERT_DD = "manager_views_upsert_design_document";
 
   public static final String ATTR_SYSTEM = "db.system";
 

@@ -17,6 +17,8 @@
 package com.couchbase.client.java.manager.user;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.error.GroupNotFoundException;
 import com.couchbase.client.core.error.UserNotFoundException;
@@ -77,7 +79,10 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<UserAndMetadata> getUser(AuthDomain domain, String username, GetUserOptions options) {
-    return sendRequest(GET, pathForUser(domain, username), options.build()).thenApply(response -> {
+    GetUserOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_GET_USER, built.parentSpan().orElse(null));
+
+    return sendRequest(GET, pathForUser(domain, username), built, span).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw UserNotFoundException.forUser(domain.alias(), username);
       }
@@ -91,7 +96,10 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<List<UserAndMetadata>> getAllUsers(GetAllUsersOptions options) {
-    return sendRequest(GET, pathForUsers(), options.build()).thenApply(response -> {
+    GetAllUsersOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_GET_ALL_USERS, built.parentSpan().orElse(null));
+
+    return sendRequest(GET, pathForUsers(), built, span).thenApply(response -> {
       checkStatus(response, "get all users", null);
       return Mapper.decodeInto(response.content(), new TypeReference<List<UserAndMetadata>>() {
       });
@@ -103,7 +111,10 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<List<RoleAndDescription>> getRoles(GetRolesOptions options) {
-    return sendRequest(GET, pathForRoles(), options.build()).thenApply(response -> {
+    GetRolesOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_GET_ROLES, built.parentSpan().orElse(null));
+
+    return sendRequest(GET, pathForRoles(), built, span).thenApply(response -> {
       checkStatus(response, "get all roles", null);
       return Mapper.decodeInto(response.content(), new TypeReference<List<RoleAndDescription>>() {
       });
@@ -115,6 +126,9 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> upsertUser(User user, UpsertUserOptions options) {
+    UpsertUserOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_UPSERT_USER, built.parentSpan().orElse(null));
+
     final String username = user.username();
 
     final UrlQueryStringBuilder params = UrlQueryStringBuilder.createForUrlSafeNames()
@@ -132,7 +146,7 @@ public class AsyncUserManager extends ManagerSupport {
     // Password is required when creating user, but optional when updating existing user.
     user.password().ifPresent(pwd -> params.add("password", pwd));
 
-    return sendRequest(PUT, pathForUser(AuthDomain.LOCAL, username), params, options.build()).thenApply(response -> {
+    return sendRequest(PUT, pathForUser(AuthDomain.LOCAL, username), params, built, span).thenApply(response -> {
       checkStatus(response, "create user [" + redactUser(username) + "]", username);
       return null;
     });
@@ -143,9 +157,12 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> dropUser(String username, DropUserOptions options) {
+    DropUserOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_DROP_USER, built.parentSpan().orElse(null));
+
     final AuthDomain domain = AuthDomain.LOCAL;
 
-    return sendRequest(DELETE, pathForUser(domain, username), options.build()).thenApply(response -> {
+    return sendRequest(DELETE, pathForUser(domain, username), built, span).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw UserNotFoundException.forUser(domain.alias(), username);
       }
@@ -159,7 +176,10 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<Group> getGroup(String groupName, GetGroupOptions options) {
-    return sendRequest(GET, pathForGroup(groupName), options.build()).thenApply(response -> {
+    GetGroupOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_GET_GROUP, built.parentSpan().orElse(null));
+
+    return sendRequest(GET, pathForGroup(groupName), built, span).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw GroupNotFoundException.forGroup(groupName);
       }
@@ -173,7 +193,10 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<List<Group>> getAllGroups(GetAllGroupsOptions options) {
-    return sendRequest(GET, pathForGroups(), options.build()).thenApply(response -> {
+    GetAllGroupsOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_GET_ALL_GROUPS, built.parentSpan().orElse(null));
+
+    return sendRequest(GET, pathForGroups(), built, span).thenApply(response -> {
       checkStatus(response, "get all groups", null);
       return Mapper.decodeInto(response.content(), new TypeReference<List<Group>>() {
       });
@@ -185,6 +208,9 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> upsertGroup(Group group, UpsertGroupOptions options) {
+    UpsertGroupOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_UPSERT_GROUP, built.parentSpan().orElse(null));
+
     final UrlQueryStringBuilder params = UrlQueryStringBuilder.createForUrlSafeNames()
         .add("description", group.description())
         .add("ldap_group_ref", group.ldapGroupReference().orElse(""))
@@ -192,7 +218,7 @@ public class AsyncUserManager extends ManagerSupport {
             .map(Role::format)
             .collect(Collectors.joining(",")));
 
-    return sendRequest(PUT, pathForGroup(group.name()), params, options.build()).thenApply(response -> {
+    return sendRequest(PUT, pathForGroup(group.name()), params, built, span).thenApply(response -> {
       checkStatus(response, "create group [" + redactMeta(group.name()) + "]", group.name());
       return null;
     });
@@ -203,7 +229,10 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> dropGroup(String groupName, DropGroupOptions options) {
-    return sendRequest(DELETE, pathForGroup(groupName), options.build()).thenApply(response -> {
+    DropGroupOptions.Built built = options.build();
+    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_DROP_GROUP, built.parentSpan().orElse(null));
+
+    return sendRequest(DELETE, pathForGroup(groupName), built, span).thenApply(response -> {
       if (response.status() == ResponseStatus.NOT_FOUND) {
         throw GroupNotFoundException.forGroup(groupName);
       }
@@ -211,4 +240,9 @@ public class AsyncUserManager extends ManagerSupport {
       return null;
     });
   }
+
+  private RequestSpan buildSpan(final String spanName, final RequestSpan parent) {
+    return environment().requestTracer().requestSpan(spanName, parent);
+  }
+
 }

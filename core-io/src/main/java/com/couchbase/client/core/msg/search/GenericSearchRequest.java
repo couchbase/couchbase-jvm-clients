@@ -17,6 +17,8 @@
 package com.couchbase.client.core.msg.search;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
 import com.couchbase.client.core.io.netty.HttpChannelContext;
@@ -38,10 +40,17 @@ public class GenericSearchRequest extends BaseRequest<GenericSearchResponse>
   private final boolean idempotent;
 
   public GenericSearchRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                              final Supplier<FullHttpRequest> requestSupplier, boolean idempotent) {
+                              final Supplier<FullHttpRequest> requestSupplier, boolean idempotent, RequestSpan span) {
     super(timeout, ctx, retryStrategy);
     this.requestSupplier = requireNonNull(requestSupplier);
     this.idempotent = idempotent;
+
+    if (span != null) {
+      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_SEARCH);
+
+      FullHttpRequest request = requestSupplier.get();
+      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, request.method().toString() + " " + request.uri());
+    }
   }
 
   @Override

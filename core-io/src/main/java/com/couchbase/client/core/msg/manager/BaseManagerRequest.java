@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.manager;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -31,6 +32,10 @@ public abstract class BaseManagerRequest<R extends Response> extends BaseRequest
 
   BaseManagerRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy) {
     super(timeout, ctx, retryStrategy);
+  }
+
+  BaseManagerRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy, RequestSpan span) {
+    super(timeout, ctx, retryStrategy, span);
   }
 
   @Override
