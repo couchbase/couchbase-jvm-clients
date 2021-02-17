@@ -68,15 +68,13 @@ public class ClusterEnvironment extends CoreEnvironment {
   }
 
   /**
-   * Helper method to detect if a non-shadowed jackson object mapper is present.
-   *
-   * @return true if present, false otherwise.
+   * Returns true if a non-shadowed Jackson library is present, otherwise false.
    */
   private boolean nonShadowedJacksonPresent() {
     try {
-      Class.forName("com.fasterxml.jackson.databind.ObjectMapper", false, getClass().getClassLoader());
+      JacksonJsonSerializer.preflightCheck();
       return true;
-    } catch (ClassNotFoundException e) {
+    } catch (Throwable t) {
       return false;
     }
   }

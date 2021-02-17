@@ -18,6 +18,7 @@ package com.couchbase.client.java.codec;
 
 import com.couchbase.client.java.json.JsonValueModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
 
 class JacksonJsonSerializerTest extends JsonSerializerTestBase {
   private static final JsonSerializer serializer = createSerializer();
@@ -31,5 +32,10 @@ class JacksonJsonSerializerTest extends JsonSerializerTestBase {
   @Override
   protected JsonSerializer serializer() {
     return serializer;
+  }
+
+  @Test
+  void preflightCheckPassesWhenJacksonIsPresent() throws Throwable {
+    JacksonJsonSerializer.preflightCheck();
   }
 }

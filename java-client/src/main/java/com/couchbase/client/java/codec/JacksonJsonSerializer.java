@@ -18,13 +18,15 @@ package com.couchbase.client.java.codec;
 
 // CHECKSTYLE:OFF IllegalImport - Allow unbundled Jackson
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.encryption.CryptoManager;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.EncodingFailureException;
-import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.json.JsonValueModule;
-import com.couchbase.client.core.encryption.CryptoManager;
 import com.couchbase.client.java.encryption.annotation.Encrypted;
 import com.couchbase.client.java.encryption.databind.jackson.EncryptionModule;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.json.JsonValueModule;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -145,5 +147,41 @@ public class JacksonJsonSerializer implements JsonSerializer {
       throw new DecodingFailureException("Deserialization of content into target " + target
           + " failed; encoded = " + redactUser(new String(input, UTF_8)), e);
     }
+  }
+
+  /**
+   * Throws something if the user-provided Jackson library is absent or broken.
+   *
+   * @throws Throwable if JacksonJsonSerializer should not be used.
+   * @implNote Looking for ObjectMapper on the class path is not sufficient;
+   * we've seen at least one case where ObjectMapper was present but its
+   * dependencies were missing.
+   */
+  @SuppressWarnings("RedundantThrows")
+  @Stability.Internal
+  public static void preflightCheck() throws Throwable {
+    JsonSerializer serializer = JacksonJsonSerializer.create();
+    PreflightCheckSubject serializeMe = new PreflightCheckSubject();
+    serializeMe.name = "x";
+    byte[] json = serializer.serialize(serializeMe);
+    String expected = "{\"n\":\"x\"}";
+    String actual = new String(json, UTF_8);
+    if (!expected.equals(actual)) {
+      throw new RuntimeException("Serialization failed; expected " + expected + " but got " + actual);
+    }
+    // could use PreflightCheckSubject.class instead of TypeRef, but let's test the exotic stuff
+    PreflightCheckSubject deserialized = serializer.deserialize(new TypeRef<PreflightCheckSubject>() {
+    }, json);
+    if (!"x".equals(deserialized.name)) {
+      throw new RuntimeException("Deserialization failed; expected 'x' but got '" + deserialized.name + "'");
+    }
+  }
+
+  // public in case there's something about the runtime environment
+  // that prevents Jackson from accessing private classes.
+  @Stability.Internal
+  public static class PreflightCheckSubject {
+    @JsonProperty("n")
+    public String name;
   }
 }
