@@ -62,6 +62,8 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       return new MockTestCluster(properties);
     } else if (clusterType.equals("unmanaged")) {
       return new UnmanagedTestCluster(properties);
+    } else if (clusterType.equals("caves")) {
+      return new CavesTestCluster(properties);
     } else {
       throw new IllegalStateException("Unsupported test cluster type: " + clusterType);
     }

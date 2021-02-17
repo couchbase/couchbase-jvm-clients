@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Couchbase, Inc.
+ * Copyright (c) 2021 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,11 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.test;
 
-public enum ClusterType {
-  CONTAINERIZED,
-  MOCKED,
-  UNMANAGED,
-  CAVES
+package com.couchbase.client.test.caves;
+
+import java.util.Map;
+
+public class CavesResponse {
+
+  private final Map<String, Object> payload;
+
+  public CavesResponse(Map<String, Object> payload) {
+    this.payload = payload;
+  }
+
+  public Map<String, Object> payload() {
+    return payload;
+  }
+
 }

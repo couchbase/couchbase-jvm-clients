@@ -32,7 +32,7 @@ import java.util.Optional;
  * @since 2.0.0
  */
 public class ClusterInvocationProvider
-  implements BeforeAllCallback, ParameterResolver, ExecutionCondition {
+  implements BeforeAllCallback, AfterAllCallback, ParameterResolver, ExecutionCondition, BeforeEachCallback, AfterEachCallback {
 
   /**
    * Identifier for the container in the root store.
@@ -55,7 +55,30 @@ public class ClusterInvocationProvider
 
   @Override
   public void beforeAll(final ExtensionContext ctx) {
-    accessAndMaybeInitTestCluster(ctx);
+    TestCluster testCluster = accessAndMaybeInitTestCluster(ctx);
+
+    if (testCluster.type() == ClusterType.CAVES) {
+      CavesTestCluster ctc = (CavesTestCluster) testCluster;
+      try {
+        ctc.startTesting();
+      } catch (Exception exception) {
+        throw new RuntimeException("Failed to start caves testing", exception);
+      }
+    }
+  }
+
+  @Override
+  public void afterAll(ExtensionContext context) throws Exception {
+    TestCluster testCluster = accessAndMaybeInitTestCluster(context);
+
+    if (testCluster.type() == ClusterType.CAVES) {
+      CavesTestCluster ctc = (CavesTestCluster) testCluster;
+      try {
+        ctc.endTesting();
+      } catch (Exception exception) {
+        throw new RuntimeException("Failed to end caves testing", exception);
+      }
+    }
   }
 
   /**
@@ -127,4 +150,27 @@ public class ClusterInvocationProvider
     return ConditionEvaluationResult.enabled("Test is allowed to run based on @IgnoreWhen");
   }
 
+  @Override
+  public void afterEach(final ExtensionContext context) throws Exception {
+    Optional<Caves> annotation = AnnotationSupport.findAnnotation(context.getElement(), Caves.class);
+    if (annotation.isPresent()) {
+      TestCluster testCluster = accessAndMaybeInitTestCluster(context);
+      if (testCluster.type() == ClusterType.CAVES) {
+        CavesTestCluster ctc = (CavesTestCluster) testCluster;
+        ctc.endTest();
+      }
+    }
+  }
+
+  @Override
+  public void beforeEach(final ExtensionContext context) throws Exception {
+    Optional<Caves> annotation = AnnotationSupport.findAnnotation(context.getElement(), Caves.class);
+    if (annotation.isPresent()) {
+      TestCluster testCluster = accessAndMaybeInitTestCluster(context);
+      if (testCluster.type() == ClusterType.CAVES) {
+        CavesTestCluster ctc = (CavesTestCluster) testCluster;
+        ctc.startTest(annotation.get().value());
+      }
+    }
+  }
 }
