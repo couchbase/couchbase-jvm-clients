@@ -20,10 +20,10 @@ import com.couchbase.client.core.cnc.Counter;
 import com.couchbase.client.core.cnc.Meter;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.metrics.NameAndTags;
-import io.opentelemetry.api.common.Labels;
-import io.opentelemetry.api.common.LabelsBuilder;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.LongValueRecorder;
+import io.opentelemetry.api.metrics.common.Labels;
+import io.opentelemetry.api.metrics.common.LabelsBuilder;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
