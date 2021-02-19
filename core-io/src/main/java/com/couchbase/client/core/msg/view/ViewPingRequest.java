@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.view;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
@@ -52,8 +53,7 @@ public class ViewPingRequest extends BaseRequest<ViewPingResponse>
 
   @Override
   public ViewPingResponse decode(final FullHttpResponse response, final HttpChannelContext context) {
-    byte[] dst = new byte[response.content().readableBytes()];
-    response.content().readBytes(dst);
+    byte[] dst = ByteBufUtil.getBytes(response.content());
     return new ViewPingResponse(decodeStatus(response.status()), dst, context.channelId().asShortText());
   }
 

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -99,8 +100,8 @@ public class MemcacheProtocolVerificationHandler extends ChannelDuplexHandler {
       endpointContext.bucket()
     );
 
-    byte[] packet = new byte[msg.readableBytes()];
-    msg.readBytes(packet);
+
+    byte[] packet = ByteBufUtil.getBytes(msg);
     ReferenceCountUtil.release(msg);
 
     endpointContext.environment().eventBus().publish(new InvalidPacketDetectedEvent(

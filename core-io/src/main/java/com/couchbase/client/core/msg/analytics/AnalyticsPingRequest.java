@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.analytics;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
@@ -50,8 +51,7 @@ public class AnalyticsPingRequest extends BaseRequest<AnalyticsPingResponse>
 
   @Override
   public AnalyticsPingResponse decode(final FullHttpResponse response, final HttpChannelContext context) {
-    byte[] dst = new byte[response.content().readableBytes()];
-    response.content().readBytes(dst);
+    byte[] dst = ByteBufUtil.getBytes(response.content());
     return new AnalyticsPingResponse(decodeStatus(response.status()), dst, context.channelId().asShortText());
   }
 

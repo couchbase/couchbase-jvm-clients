@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.events.io.ErrorMapLoadedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapUndecodableEvent;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
@@ -187,8 +188,7 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
   private Optional<ErrorMap> extractErrorMap(final ByteBuf msg) {
     Optional<ByteBuf> body = body(msg);
     if (body.isPresent()) {
-      byte[] input = new byte[body.get().readableBytes()];
-      body.get().readBytes(input);
+      byte[] input = ByteBufUtil.getBytes(body.get());
       try {
         return Optional.of(ErrorMap.fromJson(input));
       } catch (IOException e) {

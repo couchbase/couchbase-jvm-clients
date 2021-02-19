@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.events.io.SaslAuthenticationRestartedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslMechanismsSelectedEvent;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
@@ -371,8 +372,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
     }
 
     ByteBuf responseBody = body(response).orElse(Unpooled.EMPTY_BUFFER);
-    byte[] payload = new byte[responseBody.readableBytes()];
-    responseBody.readBytes(payload);
+    byte[] payload = ByteBufUtil.getBytes(responseBody);
 
     try {
       byte[] evaluatedBytes = saslClient.evaluateChallenge(payload);
@@ -456,9 +456,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
         // This is a proper response, try to extract server context
         Optional<ByteBuf> body = MemcacheProtocol.body(lastPacket);
         if (body.isPresent()) {
-          byte[] content = new byte[body.get().readableBytes()];
-          body.get().readBytes(content);
-
+          byte[] content = ByteBufUtil.getBytes(body.get());
           try {
             serverContext = Mapper.decodeInto(content, new TypeReference<Map<String, Object>>() {});
           } catch (Exception ex) {

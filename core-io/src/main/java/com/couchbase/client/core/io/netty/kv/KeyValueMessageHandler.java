@@ -28,6 +28,7 @@ import com.couchbase.client.core.cnc.events.io.UnknownResponseStatusReceivedEven
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
@@ -373,8 +374,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param response the response to decode and handle.
    */
   private void handleUnknownResponseReceived(final ChannelHandlerContext ctx, final ByteBuf response) {
-    byte[] packet = new byte[response.readableBytes()];
-    response.readBytes(packet);
+    byte[] packet = ByteBufUtil.getBytes(response);
     ioContext.environment().eventBus().publish(
       new UnknownResponseReceivedEvent(ioContext, packet)
     );

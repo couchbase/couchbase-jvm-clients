@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg.view;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
 import com.couchbase.client.core.io.netty.HttpChannelContext;
@@ -60,8 +61,7 @@ public class GenericViewRequest extends BaseRequest<GenericViewResponse>
 
   @Override
   public GenericViewResponse decode(final FullHttpResponse response, HttpChannelContext context) {
-    byte[] dst = new byte[response.content().readableBytes()];
-    response.content().readBytes(dst);
+    byte[] dst = ByteBufUtil.getBytes(response.content());
     return new GenericViewResponse(decodeStatus(response.status()), dst);
   }
 
