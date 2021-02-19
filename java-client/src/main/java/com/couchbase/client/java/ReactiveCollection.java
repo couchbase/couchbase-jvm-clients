@@ -21,6 +21,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
@@ -331,9 +332,10 @@ public class ReactiveCollection {
     GetAllReplicasOptions.Built opts = options.build();
     Duration timeout = opts.timeout().orElse(environment().timeoutConfig().kvTimeout());
     RequestSpan parent = environment().requestTracer().requestSpan(
-      "get_all_replicas",
+      TracingIdentifiers.SPAN_GET_ALL_REPLICAS,
       opts.parentSpan().orElse(null)
     );
+    parent.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
     final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
 
     return Reactor

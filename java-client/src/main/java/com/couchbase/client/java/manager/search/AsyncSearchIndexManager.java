@@ -606,7 +606,9 @@ public class AsyncSearchIndexManager {
   }
 
   private RequestSpan buildSpan(final String spanName, final RequestSpan parent) {
-    return core.context().environment().requestTracer().requestSpan(spanName, parent);
+    RequestSpan span = core.context().environment().requestTracer().requestSpan(spanName, parent);
+    span.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
+    return span;
   }
 
 }

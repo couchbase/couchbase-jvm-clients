@@ -514,9 +514,10 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RequestSpan parent = environment.requestTracer().requestSpan(
-      "get_all_replicas",
+      TracingIdentifiers.SPAN_GET_ALL_REPLICAS,
       opts.parentSpan().orElse(null)
     );
+    parent.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     return getAllReplicasRequests(id, opts, timeout, parent)
       .thenApply(stream -> stream.map(request -> GetAccessor

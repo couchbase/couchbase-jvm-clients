@@ -242,7 +242,9 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   private RequestSpan buildSpan(final String spanName, final RequestSpan parent) {
-    return environment().requestTracer().requestSpan(spanName, parent);
+    RequestSpan span = environment().requestTracer().requestSpan(spanName, parent);
+    span.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
+    return span;
   }
 
 }

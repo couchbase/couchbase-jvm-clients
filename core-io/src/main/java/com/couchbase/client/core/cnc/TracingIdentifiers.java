@@ -110,6 +110,7 @@ public class TracingIdentifiers {
 
   public static final String SPAN_REQUEST_KV_OBSERVE = "observe";
 
+  public static final String SPAN_GET_ALL_REPLICAS = "get_all_replicas";
 
   public static final String SPAN_REQUEST_MA_CONNECT_LINK = "manager_analytics_connect_link";
   public static final String SPAN_REQUEST_MA_CREATE_DATASET = "manager_analytics_create_dataset";

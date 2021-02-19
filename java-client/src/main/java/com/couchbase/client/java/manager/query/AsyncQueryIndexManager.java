@@ -239,6 +239,7 @@ public class AsyncQueryIndexManager {
     WatchQueryIndexesOptions.Built builtOpts = options.build();
 
     RequestSpan parent = cluster.environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, null);
+    parent.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     return Mono.fromFuture(() -> failIfIndexesOffline(bucketName, indexNameSet, builtOpts.watchPrimary(), parent))
         .retryWhen(Retry.onlyIf(ctx -> hasCause(ctx.exception(), IndexesNotReadyException.class))
@@ -324,6 +325,8 @@ public class AsyncQueryIndexManager {
         .readonly(requireNonNull(queryType) == READ_ONLY);
 
     RequestSpan parent = cluster.environment().requestTracer().requestSpan(spanName, options.parentSpan().orElse(null));
+    parent.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
+
     if (bucketName != null) {
       parent.setAttribute(TracingIdentifiers.ATTR_NAME, bucketName);
     }

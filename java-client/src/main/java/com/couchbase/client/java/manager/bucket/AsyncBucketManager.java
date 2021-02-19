@@ -97,7 +97,9 @@ public class AsyncBucketManager extends ManagerSupport {
 
   public CompletableFuture<Void> updateBucket(final BucketSettings settings, final UpdateBucketOptions options) {
     UpdateBucketOptions.Built builtOpts = options.build();
+
     RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MB_UPDATE_BUCKET, builtOpts.parentSpan().orElse(null), settings.name());
+    span.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     GetAllBucketOptions getAllBucketOptions = getAllBucketOptions();
     builtOpts.timeout().ifPresent(getAllBucketOptions::timeout);

@@ -333,6 +333,7 @@ public class AsyncAnalyticsIndexManager {
     final AnalyticsOptions analyticsOptions = toAnalyticsOptions(options);
 
     RequestSpan parent = cluster.environment().requestTracer().requestSpan(spanName, options.parentSpan().orElse(null));
+    parent.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
     analyticsOptions.parentSpan(parent);
 
     return cluster
