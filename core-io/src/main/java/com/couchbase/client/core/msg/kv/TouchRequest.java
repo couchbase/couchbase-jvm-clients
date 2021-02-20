@@ -77,4 +77,8 @@ public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
     );
   }
 
+  @Override
+  public String name() {
+    return "touch";
+  }
 }

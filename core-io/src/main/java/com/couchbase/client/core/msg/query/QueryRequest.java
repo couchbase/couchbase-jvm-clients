@@ -171,4 +171,9 @@ public class QueryRequest
       ", scope='" + redactMeta(scope) + '\'' +
       '}';
   }
+
+  @Override
+  public String name() {
+    return "query";
+  }
 }

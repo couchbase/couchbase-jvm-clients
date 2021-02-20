@@ -115,4 +115,9 @@ public class AppendRequest extends BaseKeyValueRequest<AppendResponse> implement
     return syncReplicationType;
   }
 
+  @Override
+  public String name() {
+    return "append";
+  }
+
 }

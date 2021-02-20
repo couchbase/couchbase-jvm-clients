@@ -134,4 +134,9 @@ public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> impleme
     return syncReplicationType;
   }
 
+  @Override
+  public String name() {
+    return "replace";
+  }
+
 }

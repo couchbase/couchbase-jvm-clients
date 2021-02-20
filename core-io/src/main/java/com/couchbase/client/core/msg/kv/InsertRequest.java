@@ -133,4 +133,8 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
     return syncReplicationType;
   }
 
+  @Override
+  public String name() {
+    return "insert";
+  }
 }

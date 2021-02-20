@@ -157,4 +157,9 @@ public class AnalyticsRequest
     return ctx;
   }
 
+  @Override
+  public String name() {
+    return "analytics";
+  }
+
 }

@@ -92,4 +92,9 @@ public class SearchRequest extends BaseRequest<SearchResponse>
         ctx.put("indexName", redactMeta(indexName));
         return ctx;
     }
+
+    @Override
+    public String name() {
+        return "search";
+    }
 }

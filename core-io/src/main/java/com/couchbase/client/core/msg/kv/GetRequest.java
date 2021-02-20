@@ -91,4 +91,9 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
     return true;
   }
 
+  @Override
+  public String name() {
+    return "get";
+  }
+
 }

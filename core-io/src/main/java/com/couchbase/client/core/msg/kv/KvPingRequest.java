@@ -61,4 +61,9 @@ public class KvPingRequest extends NoopRequest implements TargetedRequest {
     return ctx;
   }
 
+  @Override
+  public String name() {
+    return "ping";
+  }
+
 }

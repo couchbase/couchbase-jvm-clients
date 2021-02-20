@@ -114,4 +114,9 @@ public class PrependRequest extends BaseKeyValueRequest<PrependResponse> impleme
     return syncReplicationType;
   }
 
+  @Override
+  public String name() {
+    return "prepend";
+  }
+
 }

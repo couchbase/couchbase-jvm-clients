@@ -107,4 +107,5 @@ public class ObserveViaSeqnoRequest extends BaseKeyValueRequest<ObserveViaSeqnoR
   public String name() {
     return "observe";
   }
+
 }

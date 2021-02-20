@@ -115,4 +115,8 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> imp
     return syncReplicationType;
   }
 
+  @Override
+  public String name() {
+    return "decrement";
+  }
 }

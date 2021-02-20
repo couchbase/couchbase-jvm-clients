@@ -80,4 +80,10 @@ public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdR
   public boolean idempotent() {
     return true;
   }
+
+  @Override
+  public String name() {
+    return "get_collection_id";
+  }
+
 }

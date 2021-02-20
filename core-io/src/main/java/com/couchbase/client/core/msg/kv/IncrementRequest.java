@@ -116,4 +116,9 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> imp
   public Optional<DurabilityLevel> durabilityLevel() {
     return syncReplicationType;
   }
+
+  @Override
+  public String name() {
+    return "increment";
+  }
 }

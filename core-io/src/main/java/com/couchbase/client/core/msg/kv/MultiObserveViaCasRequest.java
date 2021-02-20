@@ -129,4 +129,9 @@ public class MultiObserveViaCasRequest
     return true;
   }
 
+  @Override
+  public String name() {
+    return "multi_observe_via_cas";
+  }
+
 }

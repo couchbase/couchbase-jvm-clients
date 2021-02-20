@@ -102,4 +102,9 @@ public class ObserveViaCasRequest extends BaseKeyValueRequest<ObserveViaCasRespo
     return true;
   }
 
+  @Override
+  public String name() {
+    return "observe_via_cas";
+  }
+
 }

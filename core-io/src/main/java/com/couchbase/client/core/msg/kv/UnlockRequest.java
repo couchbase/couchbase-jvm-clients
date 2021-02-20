@@ -65,4 +65,9 @@ public class UnlockRequest extends BaseKeyValueRequest<UnlockResponse> {
   public UnlockResponse decode(ByteBuf response, KeyValueChannelContext ctx) {
     return new UnlockResponse(decodeStatus(response), cas(response), Optional.empty());
   }
+
+  @Override
+  public String name() {
+    return "unlock";
+  }
 }

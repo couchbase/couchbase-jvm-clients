@@ -60,4 +60,9 @@ public class NoopRequest extends BaseKeyValueRequest<NoopResponse> {
   public boolean idempotent() {
     return true;
   }
+
+  @Override
+  public String name() {
+    return "noop";
+  }
 }

@@ -79,4 +79,9 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
     return ctx;
   }
 
+  @Override
+  public String name() {
+    return "carrier_bucket_config";
+  }
+
 }

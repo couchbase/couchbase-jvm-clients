@@ -132,4 +132,8 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
     return syncReplicationType;
   }
 
+  @Override
+  public String name() {
+    return "upsert";
+  }
 }

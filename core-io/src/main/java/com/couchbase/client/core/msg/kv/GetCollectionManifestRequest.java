@@ -71,4 +71,9 @@ public class GetCollectionManifestRequest extends BaseKeyValueRequest<GetCollect
     return true;
   }
 
+  @Override
+  public String name() {
+    return "get_collection_manifest";
+  }
+
 }

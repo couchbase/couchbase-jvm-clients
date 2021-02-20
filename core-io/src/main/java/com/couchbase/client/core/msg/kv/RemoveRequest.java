@@ -104,4 +104,8 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> implement
     return syncReplicationType;
   }
 
+  @Override
+  public String name() {
+    return "remove";
+  }
 }

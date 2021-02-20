@@ -96,4 +96,9 @@ public class CarrierGlobalConfigRequest
     return ctx;
   }
 
+  @Override
+  public String name() {
+    return "carrier_global_config";
+  }
+
 }
