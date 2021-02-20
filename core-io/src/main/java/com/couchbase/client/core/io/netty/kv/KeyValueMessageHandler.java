@@ -56,6 +56,7 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
 import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchSpanAttributes;
+import static com.couchbase.client.core.io.netty.TracingUtils.setNumericOperationId;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.AUTH;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.CONN_STATE_INVALIDATED;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.ITEM_LOCKED;
@@ -219,8 +220,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
             ioContext.localPort(),
             endpoint.remoteHostname(),
             endpoint.remotePort(),
-            request.operationId()
+            null
           );
+          setNumericOperationId(dispatchSpan, request.opaque());
 
           writtenRequestDispatchSpans.put(opaque, dispatchSpan);
         }

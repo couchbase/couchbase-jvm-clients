@@ -65,6 +65,16 @@ public class TracingUtils {
   }
 
   /**
+   * Sets the operation ID as a numeric value.
+   *
+   * @param span the span where it should be set.
+   * @param operationId the numeric operation id.
+   */
+  public static void setNumericOperationId(final RequestSpan span, final long operationId) {
+    span.setAttribute(TracingIdentifiers.ATTR_OPERATION_ID, operationId);
+  }
+
+  /**
    * Sets the server duration attribute, if larger than 0 (will ignore it otherwise).
    *
    * @param span the span where it should be set.
