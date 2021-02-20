@@ -31,8 +31,10 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import wiremock.org.checkerframework.checker.units.qual.A;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -85,19 +87,27 @@ class MicrometerMeterIntegrationTest extends ClusterAwareIntegrationTest {
       }
     }
 
+    final AtomicBoolean counterGood = new AtomicBoolean(false);
+    final AtomicBoolean summaryGood = new AtomicBoolean(false);
+
     waitUntilCondition(() -> {
-      boolean counterGood = false;
-      boolean summaryGood = false;
+
       for (io.micrometer.core.instrument.Meter meter : meterRegistry.getMeters()) {
         if (meter instanceof Counter) {
-          counterGood = ((Counter) meter).count() >= numRequests
+          boolean cg = ((Counter) meter).count() >= numRequests
             && meter.getId().getName().equals("cb.requests");
+          if (cg) {
+            counterGood.set(true);
+          }
         } else if (meter instanceof DistributionSummary) {
-          summaryGood = ((DistributionSummary) meter).count() >= numRequests
+          boolean sg = ((DistributionSummary) meter).count() >= numRequests
             && meter.getId().getName().equals("cb.responses");
+          if (sg) {
+            summaryGood.set(true);
+          }
         }
       }
-      return counterGood && summaryGood;
+      return counterGood.get() && summaryGood.get();
     });
   }
 
