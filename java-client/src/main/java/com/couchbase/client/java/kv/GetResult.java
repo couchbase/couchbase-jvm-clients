@@ -175,8 +175,13 @@ public class GetResult {
    * Converts the content to a string representation if possible (for toString).
    */
   protected String convertContentToString() {
+    if (content.length == 0) {
+      return "";
+    }
+
     boolean printable = CodecFlags.hasCommonFormat(flags, CodecFlags.JSON_COMMON_FLAGS)
-      || CodecFlags.hasCommonFormat(flags, CodecFlags.STRING_COMMON_FLAGS);
+      || CodecFlags.hasCommonFormat(flags, CodecFlags.STRING_COMMON_FLAGS)
+      || (flags == 0 && content[0] == '{') ;
 
     if (printable) {
       return new String(content, StandardCharsets.UTF_8);
