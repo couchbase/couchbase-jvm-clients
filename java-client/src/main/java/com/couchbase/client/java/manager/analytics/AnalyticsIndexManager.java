@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.manager.analytics;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DataverseExistsException;
 import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.java.Cluster;
@@ -72,6 +73,12 @@ public class AnalyticsIndexManager {
     block(async.dropDataverse(dataverseName, options));
   }
 
+  @Stability.Uncommitted
+  public List<AnalyticsDataverse> getAllDataverses(GetAllDataversesAnalyticsOptions options) {
+    return block(async.getAllDataverses(options));
+  }
+
+  @Stability.Uncommitted
   public List<AnalyticsDataverse> getAllDataverses() {
     return block(async.getAllDataverses());
   }

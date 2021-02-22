@@ -17,6 +17,7 @@
 package com.couchbase.client.java.manager.analytics;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
@@ -61,6 +62,7 @@ import static com.couchbase.client.java.manager.analytics.DropDatasetAnalyticsOp
 import static com.couchbase.client.java.manager.analytics.DropDataverseAnalyticsOptions.dropDataverseAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.DropIndexAnalyticsOptions.dropIndexAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.GetAllDatasetsAnalyticsOptions.getAllDatasetsAnalyticsOptions;
+import static com.couchbase.client.java.manager.analytics.GetAllDataversesAnalyticsOptions.getAllDataversesAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.GetAllIndexesAnalyticsOptions.getAllIndexesAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.GetPendingMutationsAnalyticsOptions.getPendingMutationsAnalyticsOptions;
 import static java.util.Collections.singletonMap;
@@ -101,13 +103,21 @@ public class AsyncAnalyticsIndexManager {
         .thenApply(result -> null);
   }
 
-
+  @Stability.Uncommitted
   public CompletableFuture<List<AnalyticsDataverse>> getAllDataverses() {
-    return cluster.analyticsQuery("SELECT DataverseName from Metadata.`Dataverse`")
-        .thenApply(result -> result.rowsAsObject().stream()
-            .map((dv) -> dv.put("DataverseName",((String)dv.get("DataverseName")).replace("@.",".")))
-            .map(AnalyticsDataverse::new)
-            .collect(toList()));
+    return getAllDataverses(getAllDataversesAnalyticsOptions());
+  }
+
+  @Stability.Uncommitted
+  public CompletableFuture<List<AnalyticsDataverse>> getAllDataverses(final GetAllDataversesAnalyticsOptions options) {
+    final GetAllDataversesAnalyticsOptions.Built builtOpts = options.build();
+
+    String statement = "SELECT DataverseName from Metadata.`Dataverse`";
+    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_GET_ALL_DATAVERSES)
+      .thenApply(result -> result.rowsAsObject().stream()
+        .map((dv) -> dv.put("DataverseName",((String)dv.get("DataverseName")).replace("@.",".")))
+        .map(AnalyticsDataverse::new)
+        .collect(toList()));
   }
 
   /**

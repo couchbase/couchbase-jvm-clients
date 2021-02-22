@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.manager.analytics;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DataverseExistsException;
 import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.java.AsyncCluster;
@@ -64,8 +65,14 @@ public class ReactiveAnalyticsIndexManager {
     return toMono(() -> async.dropDataverse(dataverseName, options));
   }
 
+  @Stability.Uncommitted
   public Flux<AnalyticsDataverse> getAllDataverses() {
     return toFlux(async::getAllDataverses);
+  }
+
+  @Stability.Uncommitted
+  public Flux<AnalyticsDataverse> getAllDataverses(GetAllDataversesAnalyticsOptions options) {
+    return toFlux(() -> async.getAllDataverses(options));
   }
 
   public Mono<Void> createDataset(String datasetName, String bucketName) {
