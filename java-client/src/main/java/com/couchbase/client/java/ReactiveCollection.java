@@ -383,7 +383,7 @@ public class ReactiveCollection {
       opts.transcoder(built.transcoder());
     }
     RequestSpan parent = environment().requestTracer().requestSpan(
-      "get_any_replica",
+      TracingIdentifiers.SPAN_GET_ANY_REPLICA,
       built.parentSpan().orElse(null)
     );
     opts.parentSpan(parent);

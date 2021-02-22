@@ -525,7 +525,16 @@ public class AsyncCollection {
         .thenApply(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest)))
         .collect(Collectors.toList())
       )
-      .whenComplete((completableFutures, throwable) -> parent.end());
+      .whenComplete((completableFutures, throwable) -> {
+        final AtomicInteger toComplete = new AtomicInteger(completableFutures.size());
+        for (CompletableFuture<GetReplicaResult> cf : completableFutures) {
+          cf.whenComplete((a, b) -> {
+            if (toComplete.decrementAndGet() == 0) {
+              parent.end();
+            }
+          });
+        }
+      });
   }
 
   /**
@@ -557,11 +566,10 @@ public class AsyncCollection {
       opts.transcoder(built.transcoder());
     }
     RequestSpan parent = environment.requestTracer().requestSpan(
-      "get_any_replica",
+      TracingIdentifiers.SPAN_GET_ANY_REPLICA,
       built.parentSpan().orElse(null)
     );
     opts.parentSpan(parent);
-
 
     CompletableFuture<List<CompletableFuture<GetReplicaResult>>> listOfFutures = getAllReplicas(id, opts);
 
