@@ -145,6 +145,7 @@
         <module>scala-implicits</module>
         <module>scala-client</module>
         <module>scala-examples</module>
+        <module>kotlin-client</module>
         <module>test-utils</module>
         <module>tracing-opentracing</module>
         <module>tracing-opentelemetry</module>
