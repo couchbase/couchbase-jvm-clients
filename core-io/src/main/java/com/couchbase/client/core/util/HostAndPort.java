@@ -28,11 +28,13 @@ public class HostAndPort {
   private final String hostname;
   private final int port;
   private final String stringified;
+  private final int hashCode;
 
   public HostAndPort(final String hostname, final int port) {
     this.hostname = hostname;
     this.port = port;
     this.stringified = redactSystem(hostname + ":" + port).toString();
+    this.hashCode = Objects.hash(hostname, port);
   }
 
   public String hostname() {
@@ -54,7 +56,7 @@ public class HostAndPort {
 
   @Override
   public int hashCode() {
-    return Objects.hash(hostname, port);
+    return hashCode;
   }
 
   @Override
