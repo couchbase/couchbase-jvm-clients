@@ -17,6 +17,8 @@
 package com.couchbase.client.core.annotation;
 
 import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
  * This annotation describes the stability guarantees of the annotated
@@ -41,6 +43,7 @@ public @interface Stability {
    * </ul>
    */
   @Documented
+  @Retention(RetentionPolicy.RUNTIME)
   @interface Volatile {
   }
 
@@ -53,6 +56,7 @@ public @interface Stability {
    * interfaces may mature into committed interfaces.</p>
    */
   @Documented
+  @Retention(RetentionPolicy.RUNTIME)
   @interface Uncommitted {
   }
 
@@ -72,6 +76,7 @@ public @interface Stability {
    * marked otherwise.</p>
    */
   @Documented
+  @Retention(RetentionPolicy.RUNTIME)
   @interface Committed {
   }
 
@@ -87,6 +92,7 @@ public @interface Stability {
    * <p>Use at your own risk!</p>
    */
   @Documented
+  @Retention(RetentionPolicy.RUNTIME)
   @interface Internal {
   }
 
