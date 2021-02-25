@@ -32,7 +32,7 @@ import java.util.Optional;
  * @since 2.0.0
  */
 public class ClusterInvocationProvider
-  implements BeforeAllCallback, AfterAllCallback, ParameterResolver, ExecutionCondition, BeforeEachCallback, AfterEachCallback {
+  implements AfterAllCallback, ParameterResolver, ExecutionCondition, BeforeEachCallback, AfterEachCallback {
 
   /**
    * Identifier for the container in the root store.
@@ -51,20 +51,6 @@ public class ClusterInvocationProvider
       testCluster.start();
       return testCluster;
     });
-  }
-
-  @Override
-  public void beforeAll(final ExtensionContext ctx) {
-    TestCluster testCluster = accessAndMaybeInitTestCluster(ctx);
-
-    if (testCluster.type() == ClusterType.CAVES) {
-      CavesTestCluster ctc = (CavesTestCluster) testCluster;
-      try {
-        ctc.startTesting();
-      } catch (Exception exception) {
-        throw new RuntimeException("Failed to start caves testing", exception);
-      }
-    }
   }
 
   @Override

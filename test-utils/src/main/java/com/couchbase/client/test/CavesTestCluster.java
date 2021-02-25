@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
 
 public class CavesTestCluster extends TestCluster {
 
-  private static final String CAVES_VERSION = "v0.0.1-29";
+  private static final String CAVES_VERSION = "v0.0.1-32";
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CavesTestCluster.class);
 
@@ -128,26 +128,22 @@ public class CavesTestCluster extends TestCluster {
 
     LOGGER.debug("Received hello from CAVES, proceeding with cluster setup.");
 
-    /*Map<String, Object> result = controlServer.createCluster();
-    String connstr = (String) result.get("connstr");
-    List<String> mgmtAddrs = (List<String>) result.get("mgmt_addrs");*/
 
-    String connstr = controlServer.startTesting(testId, "java-sdk");
-
-    // TODO: bring back once it is part of starttesting
-    List<String> mgmtAddrs = Collections.emptyList();
+    Map<String, Object> response = controlServer.startTesting(testId, "java-sdk");
+    String connstr = (String) response.get("connstr");
+    List<String> mgmtAddrs = (List<String>) response.get("mgmt_addrs");
 
     LOGGER.info("CAVES connection string is {}", connstr);
 
     List<UnresolvedSocket> kvSockets = parseHosts(connstr);
-    //List<UnresolvedSocket> mgmtSockets = mgmtAddrs.stream().flatMap(s -> parseHosts(s).stream()).collect(Collectors.toList());
+    List<UnresolvedSocket> mgmtSockets = mgmtAddrs.stream().flatMap(s -> parseHosts(s).stream()).collect(Collectors.toList());
 
     List<TestNodeConfig> nodes = new ArrayList<>();
     int idx = 0;
     for (UnresolvedSocket kvSocket : kvSockets) {
       Map<Services, Integer> ports = new HashMap<>();
       ports.put(Services.KV, kvSocket.port());
-      //ports.put(Services.MANAGER, mgmtSockets.get(idx).port());
+      ports.put(Services.MANAGER, mgmtSockets.get(idx).port());
       idx++;
       nodes.add(new TestNodeConfig(kvSocket.hostname(), ports));
     }
@@ -162,10 +158,6 @@ public class CavesTestCluster extends TestCluster {
       Collections.emptySet(),
       null
     );
-  }
-
-  public String startTesting() throws Exception {
-    return controlServer.startTesting(testId, "java-test-utils");
   }
 
   public Map<String, Object> endTesting() throws Exception {

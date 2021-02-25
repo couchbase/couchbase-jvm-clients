@@ -95,14 +95,14 @@ public class CavesControlServer {
     return request.response();
   }
 
-  public String startTesting(String runId, String clientName) throws Exception {
+  public Map<String, Object> startTesting(String runId, String clientName) throws Exception {
     Map<String, Object> payload = new HashMap<>();
     payload.put("type", "starttesting");
     payload.put("run", runId);
     payload.put("client", clientName);
 
     CavesResponse response = sendRequest(payload).get(10, TimeUnit.SECONDS);
-    return (String) response.payload().get("connstr");
+    return response.payload();
   }
 
   public Map<String, Object> endTesting(String runId) throws Exception {
