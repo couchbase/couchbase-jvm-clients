@@ -10,19 +10,37 @@ import com.couchbase.client.core.io.CollectionMap;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Helper class for integration tests to measure the proposed bucket configurations.
  */
 public class ProposedBucketConfigInspectingProvider implements ConfigurationProvider {
 
+  public static class ProposedConfigAndTimestamp {
+    private final ProposedBucketConfigContext config;
+    private final long nanoTime;
+
+    public ProposedConfigAndTimestamp(ProposedBucketConfigContext config, long nanoTime) {
+      this.config = requireNonNull(config);
+      this.nanoTime = nanoTime;
+    }
+
+    public ProposedBucketConfigContext proposedConfig() {
+      return config;
+    }
+
+    public long nanosSince(ProposedConfigAndTimestamp other) {
+      return nanoTime - other.nanoTime;
+    }
+  }
+
   private final ConfigurationProvider delegate;
-  private final List<ProposedBucketConfigContext> configs = Collections.synchronizedList(new ArrayList<>());
-  private final List<Long> timings = Collections.synchronizedList(new ArrayList<>());
+  private final List<ProposedConfigAndTimestamp> configs = new CopyOnWriteArrayList<>();
 
   ProposedBucketConfigInspectingProvider(final ConfigurationProvider delegate) {
     this.delegate = delegate;
@@ -30,17 +48,12 @@ public class ProposedBucketConfigInspectingProvider implements ConfigurationProv
 
   @Override
   public void proposeBucketConfig(final ProposedBucketConfigContext ctx) {
-    timings.add(System.nanoTime());
-    configs.add(ctx);
+    configs.add(new ProposedConfigAndTimestamp(ctx, System.nanoTime()));
     delegate.proposeBucketConfig(ctx);
   }
 
-  List<ProposedBucketConfigContext> proposedConfigs() {
+  List<ProposedConfigAndTimestamp> proposedConfigs() {
     return configs;
-  }
-
-  List<Long> proposedTimings() {
-    return timings;
   }
 
   @Override

@@ -20,14 +20,13 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.util.CoreIntegrationTest;
-import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Makes sure that the cluster manager refresher streams new configurations from the cluster.
@@ -63,9 +62,9 @@ class ClusterManagerBucketRefresherIntegrationTest extends CoreIntegrationTest {
 
     refresher.register(config().bucketname()).block();
 
-    waitUntilCondition(() -> inspectingProvider.proposedTimings().size() >= 1);
+    waitUntilCondition(() -> !inspectingProvider.proposedConfigs().isEmpty());
 
-    ProposedBucketConfigContext proposed = inspectingProvider.proposedConfigs().get(0);
+    ProposedBucketConfigContext proposed = inspectingProvider.proposedConfigs().get(0).proposedConfig();
     assertEquals(config().bucketname(), proposed.bucketName());
     assertNotNull(proposed.config());
 

@@ -17,21 +17,21 @@
 package com.couchbase.client.core.config.refresher;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.config.ProposedBucketConfigContext;
+import com.couchbase.client.core.config.refresher.ProposedBucketConfigInspectingProvider.ProposedConfigAndTimestamp;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Util;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Verifies the functionality of the {@link KeyValueBucketRefresher}.
@@ -77,22 +77,19 @@ class KeyValueBucketRefresherIntegrationTest extends CoreIntegrationTest {
     long expected = env.ioConfig().configPollInterval().toNanos();
 
     Util.waitUntilCondition(() -> {
-      List<Long> timings = new ArrayList<>(inspectingProvider.proposedTimings());
-      int size = timings.size();
+      List<ProposedConfigAndTimestamp> configs = new ArrayList<>(inspectingProvider.proposedConfigs());
+      int size = configs.size();
       if (size < 2) {
         return false; // we need at least 2 records to compare
       }
-      return (timings.get(size - 1) - timings.get(size - 2)) >= expected;
+      return configs.get(size - 1).nanosSince(configs.get(size - 2)) >= expected;
     });
 
     refresher.deregister(config().bucketname()).block();
 
-    long size = inspectingProvider.proposedTimings().size();
-    Util.waitUntilCondition(() -> inspectingProvider.proposedTimings().size() == size);
-
-    for (ProposedBucketConfigContext config : inspectingProvider.proposedConfigs()) {
-      assertEquals(config().bucketname(), config.bucketName());
-      assertNotNull(config.config());
+    for (ProposedConfigAndTimestamp configAndTimestamp : inspectingProvider.proposedConfigs()) {
+      assertEquals(config().bucketname(), configAndTimestamp.proposedConfig().bucketName());
+      assertNotNull(configAndTimestamp.proposedConfig());
     }
 
     refresher.shutdown().block();
