@@ -34,9 +34,9 @@
             <artifactId>blockhound</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.github.Couchbase</groupId>
+            <groupId>com.couchbase.mock</groupId>
             <artifactId>CouchbaseMock</artifactId>
-            <version>73e493d259</version>
+            <version>1.5.25</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -54,13 +54,6 @@
             <version>4.1.59.Final</version>
         </dependency>
     </dependencies>
-
-    <repositories>
-        <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
-        </repository>
-    </repositories>
 
     <build>
         <plugins>
