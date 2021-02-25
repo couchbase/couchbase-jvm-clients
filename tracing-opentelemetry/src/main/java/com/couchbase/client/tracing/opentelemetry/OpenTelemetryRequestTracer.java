@@ -64,6 +64,13 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
     }
   }
 
+  /**
+   * Returns the inner OpenTelemetry tracer.
+   */
+  public Tracer tracer() {
+    return  tracer;
+  }
+
   @Override
   public RequestSpan requestSpan(String operationName, RequestSpan parent) {
     SpanBuilder spanBuilder = tracer.spanBuilder(operationName);

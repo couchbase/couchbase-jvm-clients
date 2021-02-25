@@ -17,7 +17,6 @@
 package com.couchbase.client.tracing.opentracing;
 
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.msg.RequestContext;
 import io.opentracing.Scope;
 import io.opentracing.Span;
@@ -61,9 +60,9 @@ public class OpenTracingRequestSpan implements RequestSpan {
   }
 
   /**
-   * Returns the OT parent span if present.
+   * Returns the wrapped OpenTracing span.
    */
-  Span span() {
+  public Span span() {
     return span;
   }
 

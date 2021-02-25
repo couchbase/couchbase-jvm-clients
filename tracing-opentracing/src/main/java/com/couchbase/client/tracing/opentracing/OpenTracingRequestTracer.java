@@ -73,6 +73,13 @@ public class OpenTracingRequestTracer implements RequestTracer {
     return OpenTracingRequestSpan.wrap(tracer, span);
   }
 
+  /**
+   * Returns the inner OpenTracing tracer.
+   */
+  public Tracer tracer() {
+    return  tracer;
+  }
+
   @Override
   public Mono<Void> start() {
     return Mono.empty(); // Tracer is not started by us

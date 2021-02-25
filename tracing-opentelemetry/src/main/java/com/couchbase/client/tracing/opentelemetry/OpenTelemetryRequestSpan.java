@@ -17,10 +17,8 @@
 package com.couchbase.client.tracing.opentelemetry;
 
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.msg.RequestContext;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 
 import java.time.Instant;
@@ -52,9 +50,9 @@ public class OpenTelemetryRequestSpan implements RequestSpan {
   }
 
   /**
-   * Returns the OT parent span if present.
+   * Returns the wrapped OpenTelemetry span.
    */
-  Span span() {
+  public Span span() {
     return span;
   }
 
