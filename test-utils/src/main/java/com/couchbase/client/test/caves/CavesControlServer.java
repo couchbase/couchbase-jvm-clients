@@ -39,13 +39,10 @@ import java.util.concurrent.TimeUnit;
 
 public class CavesControlServer {
 
-  private final ObjectMapper mapper = new ObjectMapper();
-
   private final EventLoopGroup bossGroup = new NioEventLoopGroup(1);
   private final EventLoopGroup workerGroup = new NioEventLoopGroup();
 
   private volatile Channel channel;
-  private volatile boolean receivedHello = false;
 
   private volatile CavesControlServerHandler cavesControlServerHandler;
   private volatile SocketChannel childChannel;
@@ -61,13 +58,13 @@ public class CavesControlServer {
     ServerBootstrap bootstrap = new ServerBootstrap()
       .group(bossGroup, workerGroup)
       .channel(NioServerSocketChannel.class)
-      .handler(new LoggingHandler(LogLevel.INFO))
+      .handler(new LoggingHandler(LogLevel.DEBUG))
       .childHandler(new ChannelInitializer<SocketChannel>() {
         @Override
         protected void initChannel(SocketChannel ch) {
           childChannel = ch;
           ch.pipeline()
-            .addLast(new LoggingHandler(LogLevel.INFO))
+            .addLast(new LoggingHandler(LogLevel.DEBUG))
             .addLast(cavesControlServerHandler);
         }
       });
@@ -96,15 +93,6 @@ public class CavesControlServer {
     CavesRequest request = new CavesRequest(payload);
     childChannel.writeAndFlush(request);
     return request.response();
-  }
-
-  public Map<String, Object> createCluster() throws Exception {
-    Map<String, Object> payload = new HashMap<>();
-    payload.put("type", "createcluster");
-    payload.put("id", UUID.randomUUID().toString());
-
-    CavesResponse response = sendRequest(payload).get(10, TimeUnit.SECONDS);
-    return response.payload();
   }
 
   public String startTesting(String runId, String clientName) throws Exception {

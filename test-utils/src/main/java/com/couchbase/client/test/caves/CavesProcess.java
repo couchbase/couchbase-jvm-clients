@@ -56,7 +56,7 @@ public class CavesProcess {
             .lines()
             .collect(Collectors.joining("\n"));
 
-          // System.err.println(text);
+           // System.err.println(text);
 
           try {
             Thread.sleep(1000);
