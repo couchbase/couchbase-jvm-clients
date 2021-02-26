@@ -344,7 +344,7 @@ public class OrphanReporter {
 
           long encodeDuration = request.context().encodeLatency();
           if (encodeDuration > 0) {
-            fieldMap.put(KEY_ENCODE_MICROS, encodeDuration);
+            fieldMap.put(KEY_ENCODE_MICROS, TimeUnit.NANOSECONDS.toMicros(encodeDuration));
           }
 
           long dispatchDuration = request.context().dispatchLatency();
@@ -371,7 +371,7 @@ public class OrphanReporter {
           }
           long totalServerDuration = request.context().totalServerLatency();
           if (totalServerDuration > 0) {
-            fieldMap.put(KEY_TOTAL_SERVER_MICROS, TimeUnit.NANOSECONDS.toMicros(totalServerDuration));
+            fieldMap.put(KEY_TOTAL_SERVER_MICROS, totalServerDuration);
           }
 
           fieldMap.put(KEY_TIMEOUT, request.timeout().toMillis());

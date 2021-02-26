@@ -419,7 +419,7 @@ public class ThresholdRequestTracer implements RequestTracer {
 
         long encodeDuration = request.context().encodeLatency();
         if (encodeDuration > 0) {
-          entry.put(KEY_ENCODE_MICROS, encodeDuration);
+          entry.put(KEY_ENCODE_MICROS, TimeUnit.NANOSECONDS.toMicros(encodeDuration));
         }
 
         long dispatchDuration = request.context().dispatchLatency();
@@ -433,11 +433,11 @@ public class ThresholdRequestTracer implements RequestTracer {
 
         long serverDuration = request.context().serverLatency();
         if (serverDuration > 0) {
-          entry.put(KEY_SERVER_MICROS, TimeUnit.NANOSECONDS.toMicros(serverDuration));
+          entry.put(KEY_SERVER_MICROS, serverDuration);
         }
         long totalServerDuration = request.context().totalServerLatency();
         if (totalServerDuration > 0) {
-          entry.put(KEY_TOTAL_SERVER_MICROS, TimeUnit.NANOSECONDS.toMicros(totalServerDuration));
+          entry.put(KEY_TOTAL_SERVER_MICROS, totalServerDuration);
         }
 
         top.add(entry);
@@ -484,7 +484,7 @@ public class ThresholdRequestTracer implements RequestTracer {
 
         long encodeDuration = request.context().encodeLatency();
         if (encodeDuration > 0) {
-          entry.put("encode_us", encodeDuration);
+          entry.put("encode_us", TimeUnit.NANOSECONDS.toMicros(encodeDuration));
         }
 
         long dispatchDuration = request.context().dispatchLatency();
@@ -494,7 +494,7 @@ public class ThresholdRequestTracer implements RequestTracer {
 
         long serverDuration = request.context().serverLatency();
         if (serverDuration > 0) {
-          entry.put("server_us", TimeUnit.NANOSECONDS.toMicros(serverDuration));
+          entry.put("server_us", serverDuration);
         }
 
         top.add(entry);
