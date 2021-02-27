@@ -137,7 +137,7 @@ public class OrphanReporter {
    * @param request the request to report as orphan.
    */
   public void report(final Request<?> request) {
-      if (request instanceof UnmonitoredRequest) {
+      if (!enabled || request instanceof UnmonitoredRequest) {
         return;
       }
 
