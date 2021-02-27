@@ -17,12 +17,13 @@
 package com.couchbase.client.core.cnc;
 
 import com.couchbase.client.core.env.OrphanReporterConfig;
-
 import org.junit.jupiter.api.Test;
 
-import static com.couchbase.client.core.cnc.OrphanReporter.ORPHAN_TREAD_PREFIX;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Verifies basic functionality of the {@link OrphanReporter}.
@@ -30,53 +31,32 @@ import static org.junit.jupiter.api.Assertions.fail;
 class OrphanReporterTest {
 
   @Test
-  void enabledReporter() {
-    OrphanReporter reporter = new OrphanReporter(
-        new SimpleEventBus(false),
-        OrphanReporterConfig.enabled(true).
-        build()
-    );
+  void enabledReporter() throws Exception {
+    OrphanReporter reporter = newOrphanReporter(
+        OrphanReporterConfig.enabled(true));
 
     reporter.start().block();
+    assertNotNull(reporter.worker);
+    assertTrue(reporter.worker.isAlive());
 
-    for (Thread thread : Thread.getAllStackTraces().keySet()) {
-      if (thread.getName().startsWith(ORPHAN_TREAD_PREFIX)) {
-        assertTrue(true);
-        reporter.stop().block();
-        return;
-      }
-    }
     reporter.stop().block();
-    fail();
+    reporter.worker.join(SECONDS.toMillis(30));
+    assertFalse(reporter.worker.isAlive());
   }
 
   @Test
   void disabledReporter() {
-    int orphansBefore = 0;
-
-    for (Thread thread : Thread.getAllStackTraces().keySet()) {
-      if (thread.getName().startsWith(ORPHAN_TREAD_PREFIX)) {
-        orphansBefore++;
-      }
-    }
-
-    OrphanReporter reporter = new OrphanReporter(
-        new SimpleEventBus(false),
-        OrphanReporterConfig.enabled(false).
-        build()
-    );
+    OrphanReporter reporter = newOrphanReporter(
+        OrphanReporterConfig.enabled(false));
 
     reporter.start().block();
+    assertNull(reporter.worker);
 
-    int orphansAfter = 0;
-
-    for (Thread thread : Thread.getAllStackTraces().keySet()) {
-      if (thread.getName().startsWith(ORPHAN_TREAD_PREFIX)) {
-        orphansAfter++;
-      }
-    }
-
+    // stopping should not throw an exception
     reporter.stop().block();
-    assertTrue(orphansAfter <= orphansBefore);
+  }
+
+  private static OrphanReporter newOrphanReporter(OrphanReporterConfig.Builder builder) {
+    return new OrphanReporter(new SimpleEventBus(false), builder.build());
   }
 }

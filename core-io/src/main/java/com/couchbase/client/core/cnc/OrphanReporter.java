@@ -65,7 +65,7 @@ public class OrphanReporter {
   private static final String KEY_TIMEOUT = "timeout_ms";
 
   private final AtomicBoolean running = new AtomicBoolean(false);
-  private volatile Thread worker = null;
+  volatile Thread worker = null; // visible for testing
   private final Queue<Request<?>> orphanQueue;
   private final long emitIntervalNanos;
   private final int sampleSize;
@@ -93,6 +93,7 @@ public class OrphanReporter {
     if (enabled) {
       worker = new Thread(new Worker());
       worker.setDaemon(true);
+      worker.setName(ORPHAN_TREAD_PREFIX + ORPHAN_REPORTER_ID.incrementAndGet());
     }
   }
 
@@ -187,7 +188,6 @@ public class OrphanReporter {
 
     @Override
     public void run() {
-      Thread.currentThread().setName(ORPHAN_TREAD_PREFIX + ORPHAN_REPORTER_ID.incrementAndGet());
       while (running.get()) {
         try {
           handleOrphanQueue();
