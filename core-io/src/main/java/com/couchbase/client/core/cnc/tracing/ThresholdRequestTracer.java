@@ -21,7 +21,7 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.tracing.OverThresholdRequestsRecordedEvent;
-import com.couchbase.client.core.deps.org.jctools.queues.MpscUnboundedArrayQueue;
+import com.couchbase.client.core.deps.org.jctools.queues.MpscArrayQueue;
 import com.couchbase.client.core.env.ThresholdRequestTracerConfig;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.service.ServiceType;
@@ -115,7 +115,7 @@ public class ThresholdRequestTracer implements RequestTracer {
    */
   private ThresholdRequestTracer(final EventBus eventBus, ThresholdRequestTracerConfig config) {
     this.eventBus = eventBus;
-    this.overThresholdQueue = new MpscUnboundedArrayQueue<>(config.queueLength());
+    this.overThresholdQueue = new MpscArrayQueue<>(config.queueLength());
     kvThreshold = config.kvThreshold().toNanos();
     analyticsThreshold = config.analyticsThreshold().toNanos();
     searchThreshold = config.searchThreshold().toNanos();

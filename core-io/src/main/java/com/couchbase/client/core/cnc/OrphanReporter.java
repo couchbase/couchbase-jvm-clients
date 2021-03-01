@@ -20,7 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.tracing.OrphanRecordDroppedEvent;
 import com.couchbase.client.core.cnc.events.tracing.OrphanReporterFailureDetectedEvent;
 import com.couchbase.client.core.cnc.events.tracing.OrphansRecordedEvent;
-import com.couchbase.client.core.deps.org.jctools.queues.MpscUnboundedArrayQueue;
+import com.couchbase.client.core.deps.org.jctools.queues.MpscArrayQueue;
 import com.couchbase.client.core.env.OrphanReporterConfig;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.UnmonitoredRequest;
@@ -84,7 +84,7 @@ public class OrphanReporter {
   @Stability.Internal
   public OrphanReporter(final EventBus eventBus, final OrphanReporterConfig config) {
     this.eventBus = eventBus;
-    this.orphanQueue = new MpscUnboundedArrayQueue<>(config.queueLength());
+    this.orphanQueue = new MpscArrayQueue<>(config.queueLength());
     this.emitIntervalNanos = config.emitInterval().toNanos();
     this.sampleSize = config.sampleSize();
     this.enabled = config.enabled();
