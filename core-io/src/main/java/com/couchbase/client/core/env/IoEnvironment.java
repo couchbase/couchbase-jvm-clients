@@ -80,6 +80,9 @@ public class IoEnvironment {
    */
   public static final boolean DEFAULT_NATIVE_IO_ENABLED = true;
 
+  @Stability.Internal
+  public static final int DEFAULT_EVENT_LOOP_THREAD_COUNT = fairThreadCount();
+
   private final boolean nativeIoEnabled;
   private final int eventLoopThreadCount;
   private final Supplier<EventLoopGroup> managerEventLoopGroup;
@@ -462,7 +465,7 @@ public class IoEnvironment {
     private Supplier<EventLoopGroup> analyticsEventLoopGroup = null;
     private Supplier<EventLoopGroup> searchEventLoopGroup = null;
     private Supplier<EventLoopGroup> viewEventLoopGroup = null;
-    private int eventLoopThreadCount = fairThreadCount();
+    private int eventLoopThreadCount = DEFAULT_EVENT_LOOP_THREAD_COUNT;
 
     /**
      * Allows to specify a custom event loop group (I/O event loop thread pool) for the management service.

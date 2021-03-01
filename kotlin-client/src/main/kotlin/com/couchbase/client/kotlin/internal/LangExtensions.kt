@@ -16,6 +16,12 @@
 
 package com.couchbase.client.kotlin.internal
 
+import kotlinx.coroutines.future.await
+import reactor.core.publisher.Mono
 import java.nio.charset.StandardCharsets.UTF_8
 
 internal fun ByteArray.toStringUtf8() = toString(UTF_8)
+
+internal fun <T> T?.toOptional() = java.util.Optional.ofNullable(this)
+
+internal suspend fun Mono<Void>.await() = toFuture().await()

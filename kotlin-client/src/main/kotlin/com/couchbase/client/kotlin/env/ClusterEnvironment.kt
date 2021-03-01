@@ -16,24 +16,33 @@
 
 package com.couchbase.client.kotlin.env
 
+import com.couchbase.client.core.cnc.EventBus
+import com.couchbase.client.core.cnc.Meter
+import com.couchbase.client.core.cnc.RequestTracer
 import com.couchbase.client.core.encryption.CryptoManager
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.core.env.PropertyLoader
+import com.couchbase.client.kotlin.annotations.UncommittedApi
+import com.couchbase.client.kotlin.annotations.VolatileApi
 import com.couchbase.client.kotlin.codec.JacksonJsonSerializer
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.JsonTranscoder
 import com.couchbase.client.kotlin.codec.Transcoder
+import com.couchbase.client.kotlin.env.dsl.clusterEnvironment
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jsonMapper
+import reactor.core.scheduler.Scheduler
 
 public interface ClusterPropertyLoader : PropertyLoader<ClusterEnvironment.Builder>
 
 /**
  * Resources and configuration for connecting to a Couchbase cluster.
  *
- * Create new instances from a [ClusterEnvironment.Builder].
- * Get a builder from [ClusterEnvironment.builder].
+ * Create a new instance using the [clusterEnvironment] DSL builder.
+ *
+ * Alternatively, call [ClusterEnvironment.builder] and configure it
+ * using the builder's Java API.
  */
 public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvironment(builder) {
     private val jsonSerializer: JsonSerializer
@@ -55,8 +64,8 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
          *
          * @return the [Builder] to customize.
          */
-        public fun builder(): ClusterEnvironment.Builder {
-            return ClusterEnvironment.Builder()
+        public fun builder(): Builder {
+            return Builder()
         }
     }
 
@@ -82,6 +91,8 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
 
         /**
          * Sets the default serializer for converting between JSON and Java objects.
+         *
+         * Defaults to a [JacksonJsonSerializer] with modules for Kotlin and JDK8.
          */
         public fun jsonSerializer(jsonSerializer: JsonSerializer?): Builder {
             this.jsonSerializer = jsonSerializer
@@ -90,6 +101,8 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
 
         /**
          * Specifies the default transcoder for all KV operations.
+         *
+         * Defaults to a [JsonTranscoder] backed by this environment's [JsonSerializer].
          *
          * @param transcoder the transcoder that should be used by default.
          * @return this [Builder] for chaining purposes.
@@ -103,6 +116,8 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
          * Sets the cryptography manager for Field-Level Encryption
          * (reading and writing encrypted document fields).
          *
+         * Defaults to null, which disables encryption.
+         *
          * Note: Use of the Field-Level Encryption functionality is
          * subject to the [Couchbase Inc. Enterprise Subscription License Agreement v7](https://www.couchbase.com/ESLA01162020)
          *
@@ -112,6 +127,26 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
         public fun cryptoManager(cryptoManager: CryptoManager?): Builder {
             this.cryptoManager = cryptoManager
             return this
+        }
+
+        @UncommittedApi
+        override fun eventBus(eventBus: EventBus?): Builder {
+            return super.eventBus(eventBus)
+        }
+
+        @UncommittedApi
+        override fun scheduler(scheduler: Scheduler?): Builder {
+            return super.scheduler(scheduler)
+        }
+
+        @VolatileApi
+        override fun requestTracer(requestTracer: RequestTracer?): Builder {
+            return super.requestTracer(requestTracer)
+        }
+
+        @VolatileApi
+        override fun meter(meter: Meter?): Builder {
+            return super.meter(meter)
         }
 
         /**

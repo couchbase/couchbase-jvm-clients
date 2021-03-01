@@ -46,20 +46,23 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
  */
 public class SecurityConfig {
 
-  /**
-   * By default, TLS is disabled.
-   */
-  private static final boolean DEFAULT_TLS_ENABLED = false;
+  @Stability.Internal
+  public static class Defaults {
+    /**
+     * By default, TLS is disabled.
+     */
+    public static final boolean DEFAULT_TLS_ENABLED = false;
 
-  /**
-   * By default, netty native tls (OpenSSL) is enabled for better performance.
-   */
-  private static final boolean DEFAULT_NATIVE_TLS_ENABLED = true;
+    /**
+     * By default, netty native tls (OpenSSL) is enabled for better performance.
+     */
+    public static final boolean DEFAULT_NATIVE_TLS_ENABLED = true;
 
-  /**
-   * By default, hostname verification for TLS connections is enabled.
-   */
-  private static final boolean DEFAULT_HOSTNAME_VERIFICATION_ENABLED = true;
+    /**
+     * By default, hostname verification for TLS connections is enabled.
+     */
+    public static final boolean DEFAULT_HOSTNAME_VERIFICATION_ENABLED = true;
+  }
 
   private final boolean nativeTlsEnabled;
   private final boolean hostnameVerificationEnabled;
@@ -257,9 +260,9 @@ public class SecurityConfig {
    */
   public static class Builder {
 
-    private boolean tlsEnabled = DEFAULT_TLS_ENABLED;
-    private boolean nativeTlsEnabled = DEFAULT_NATIVE_TLS_ENABLED;
-    private boolean hostnameVerificationEnabled = DEFAULT_HOSTNAME_VERIFICATION_ENABLED;
+    private boolean tlsEnabled = Defaults.DEFAULT_TLS_ENABLED;
+    private boolean nativeTlsEnabled = Defaults.DEFAULT_NATIVE_TLS_ENABLED;
+    private boolean hostnameVerificationEnabled = Defaults.DEFAULT_HOSTNAME_VERIFICATION_ENABLED;
     private List<X509Certificate> trustCertificates = null;
     private TrustManagerFactory trustManagerFactory = null;
 

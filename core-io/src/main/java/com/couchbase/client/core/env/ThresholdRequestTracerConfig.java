@@ -25,14 +25,17 @@ import java.util.Map;
 
 public class ThresholdRequestTracerConfig {
 
-  private static final Duration DEFAULT_EMIT_INTERVAL = Duration.ofSeconds(10);
-  private static final int DEFAULT_QUEUE_LENGTH = 1024;
-  private static final Duration DEFAULT_KV_THRESHOLD = Duration.ofMillis(500);
-  private static final Duration DEFAULT_QUERY_THRESHOLD = Duration.ofSeconds(1);
-  private static final Duration DEFAULT_VIEW_THRESHOLD = Duration.ofSeconds(1);
-  private static final Duration DEFAULT_SEARCH_THRESHOLD = Duration.ofSeconds(1);
-  private static final Duration DEFAULT_ANALYTICS_THRESHOLD = Duration.ofSeconds(1);
-  private static final int DEFAULT_SAMPLE_SIZE = 10;
+  @Stability.Internal
+  public static class Defaults {
+    public static final Duration DEFAULT_EMIT_INTERVAL = Duration.ofSeconds(10);
+    public static final int DEFAULT_QUEUE_LENGTH = 1024;
+    public static final Duration DEFAULT_KV_THRESHOLD = Duration.ofMillis(500);
+    public static final Duration DEFAULT_QUERY_THRESHOLD = Duration.ofSeconds(1);
+    public static final Duration DEFAULT_VIEW_THRESHOLD = Duration.ofSeconds(1);
+    public static final Duration DEFAULT_SEARCH_THRESHOLD = Duration.ofSeconds(1);
+    public static final Duration DEFAULT_ANALYTICS_THRESHOLD = Duration.ofSeconds(1);
+    public static final int DEFAULT_SAMPLE_SIZE = 10;
+  }
 
   private final Duration emitInterval;
   private final int queueLength;
@@ -197,14 +200,14 @@ public class ThresholdRequestTracerConfig {
 
   public static class Builder {
 
-    private Duration emitInterval = DEFAULT_EMIT_INTERVAL;
-    private int queueLength = DEFAULT_QUEUE_LENGTH;
-    private int sampleSize = DEFAULT_SAMPLE_SIZE;
-    private Duration kvThreshold = DEFAULT_KV_THRESHOLD;
-    private Duration queryThreshold = DEFAULT_QUERY_THRESHOLD;
-    private Duration viewThreshold = DEFAULT_VIEW_THRESHOLD;
-    private Duration searchThreshold = DEFAULT_SEARCH_THRESHOLD;
-    private Duration analyticsThreshold = DEFAULT_ANALYTICS_THRESHOLD;
+    private Duration emitInterval = Defaults.DEFAULT_EMIT_INTERVAL;
+    private int queueLength = Defaults.DEFAULT_QUEUE_LENGTH;
+    private int sampleSize = Defaults.DEFAULT_SAMPLE_SIZE;
+    private Duration kvThreshold = Defaults.DEFAULT_KV_THRESHOLD;
+    private Duration queryThreshold = Defaults.DEFAULT_QUERY_THRESHOLD;
+    private Duration viewThreshold = Defaults.DEFAULT_VIEW_THRESHOLD;
+    private Duration searchThreshold = Defaults.DEFAULT_SEARCH_THRESHOLD;
+    private Duration analyticsThreshold = Defaults.DEFAULT_ANALYTICS_THRESHOLD;
 
     /**
      * Allows to customize the emit interval

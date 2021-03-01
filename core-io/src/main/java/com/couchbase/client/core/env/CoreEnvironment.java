@@ -571,6 +571,14 @@ public class CoreEnvironment {
     }
 
     /**
+     * Returns the currently stored IoEnvironment builder.
+     * @return the current builder.
+     */
+    public IoEnvironment.Builder ioEnvironment() {
+      return ioEnvironment;
+    }
+
+    /**
      * Allows to customize various I/O-related configuration properties.
      * <p>
      * The I/O config is the main way to control how the SDK behaves at the lower levels. It allows to customize

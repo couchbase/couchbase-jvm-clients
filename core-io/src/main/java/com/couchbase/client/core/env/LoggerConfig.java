@@ -24,6 +24,14 @@ import java.util.Map;
 
 public class LoggerConfig {
 
+  @Stability.Internal
+  public static class Defaults {
+    public static final boolean DEFAULT_FALLBACK_TO_CONSOLE = false;
+    public static final boolean DEFAULT_DISABLE_SLF4J = false;
+    public static final String DEFAULT_LOGGER_NAME = "CouchbaseLogger";
+    public static final boolean DEFAULT_DIAGNOSTIC_CONTEXT_ENABLED = false;
+  }
+
   private final LoggingEventConsumer.Logger customLogger;
   private final boolean fallbackToConsole;
   private final boolean disableSlf4J;
@@ -101,12 +109,11 @@ public class LoggerConfig {
   }
 
   public static class Builder {
-
     private LoggingEventConsumer.Logger customLogger = null;
-    private boolean fallbackToConsole = false;
-    private boolean disableSlf4J = false;
-    private String loggerName = "CouchbaseLogger";
-    private boolean diagnosticContextEnabled = false;
+    private boolean fallbackToConsole = Defaults.DEFAULT_FALLBACK_TO_CONSOLE;
+    private boolean disableSlf4J = Defaults.DEFAULT_DISABLE_SLF4J;
+    private String loggerName = Defaults.DEFAULT_LOGGER_NAME;
+    private boolean diagnosticContextEnabled = Defaults.DEFAULT_DIAGNOSTIC_CONTEXT_ENABLED;
 
     /**
      * Allows to specify a custom logger. This is used for testing only.

@@ -102,6 +102,9 @@
                         <!-- Require explicit visibility modifiers so we don't
                              accidentally leak stuff into the public API -->
                         <arg>-Xexplicit-api=strict</arg>
+
+                        <!-- Flag uncommitted and volatile API -->
+                        <arg>-Xopt-in=kotlin.RequiresOptIn</arg>
                     </args>
                 </configuration>
                 <executions>

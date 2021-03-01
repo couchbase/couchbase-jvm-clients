@@ -33,9 +33,12 @@ import java.util.Map;
 @Stability.Volatile
 public class AggregatingMeterConfig {
 
-  private static final boolean DEFAULT_ENABLED = false;
+  @Stability.Internal
+  public static class Defaults {
+    public static final boolean DEFAULT_ENABLED = false;
 
-  private static final Duration DEFAULT_EMIT_INTERVAL = Duration.ofSeconds(600);
+    public static final Duration DEFAULT_EMIT_INTERVAL = Duration.ofSeconds(600);
+  }
 
   private final Duration emitInterval;
   private final boolean enabled;
@@ -91,8 +94,8 @@ public class AggregatingMeterConfig {
 
   public static class Builder {
 
-    private Duration emitInterval = DEFAULT_EMIT_INTERVAL;
-    private boolean enabled = DEFAULT_ENABLED;
+    private Duration emitInterval = Defaults.DEFAULT_EMIT_INTERVAL;
+    private boolean enabled = Defaults.DEFAULT_ENABLED;
 
     /**
      * Allows to customize the emit interval

@@ -18,7 +18,6 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.OrphanReporter;
-import com.couchbase.client.core.cnc.tracing.ThresholdRequestTracer;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
 import java.time.Duration;
@@ -29,26 +28,28 @@ import java.util.Map;
  * Allows to customize the behavior of the {@link OrphanReporter}.
  */
 public class OrphanReporterConfig {
+  @Stability.Internal
+  public static class Defaults {
+    /**
+     * Emit the event by default every 10 seconds.
+     */
+    public static final Duration DEFAULT_EMIT_INTERVAL = Duration.ofSeconds(10);
 
-  /**
-   * Emit the event by default every 10 seconds.
-   */
-  private static final Duration DEFAULT_EMIT_INTERVAL = Duration.ofSeconds(10);
+    /**
+     * Only sample a maximum amount of 10 entries per interval.
+     */
+    public static final int DEFAULT_SAMPLE_SIZE = 10;
 
-  /**
-   * Only sample a maximum amount of 10 entries per interval.
-   */
-  private static final int DEFAULT_SAMPLE_SIZE = 10;
+    /**
+     * Only allow to enqueue a maximum of 1024 orphans that are waiting to be picked up by the reporter.
+     */
+    public static final int DEFAULT_QUEUE_LENGTH = 1024;
 
-  /**
-   * Only allow to enqueue a maximum of 1024 orphans that are waiting to be picked up by the reporter.
-   */
-  private static final int DEFAULT_QUEUE_LENGTH = 1024;
-
-  /**
-   * Orphan Reporter is enabled by default.
-   */
-  private static final boolean DEFAULT_ENABLED = true;
+    /**
+     * Orphan Reporter is enabled by default.
+     */
+    public static final boolean DEFAULT_ENABLED = true;
+  }
 
   /**
    * The currently configured emit interval.
@@ -189,10 +190,10 @@ public class OrphanReporterConfig {
    */
   public static class Builder {
 
-    private Duration emitInterval = DEFAULT_EMIT_INTERVAL;
-    private int sampleSize = DEFAULT_SAMPLE_SIZE;
-    private int queueLength = DEFAULT_QUEUE_LENGTH;
-    private boolean enabled = DEFAULT_ENABLED;
+    private Duration emitInterval = Defaults.DEFAULT_EMIT_INTERVAL;
+    private int sampleSize = Defaults.DEFAULT_SAMPLE_SIZE;
+    private int queueLength = Defaults.DEFAULT_QUEUE_LENGTH;
+    private boolean enabled = Defaults.DEFAULT_ENABLED;
 
     /**
      * Allows to customize the event emit interval
