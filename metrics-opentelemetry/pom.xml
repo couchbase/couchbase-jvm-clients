@@ -16,7 +16,7 @@
     <description>Provides interoperability with OpenTelemetry Metrics</description>
 
     <properties>
-        <opentelemetry.version>0.17.1-alpha</opentelemetry.version>
+        <opentelemetry.version>1.0.0-alpha</opentelemetry.version>
     </properties>
 
     <dependencies>
