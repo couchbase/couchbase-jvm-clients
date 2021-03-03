@@ -58,8 +58,8 @@ public class IoConfigDslBuilder(private val wrapped: IoConfig.Builder) {
     /**
      * @see IoConfig.Builder.captureTraffic
      */
-    public fun captureTraffic(vararg service: ServiceType) {
-        wrapped.captureTraffic(*service)
+    public fun captureTraffic(vararg services: ServiceType) {
+        wrapped.captureTraffic(*services)
     }
 
     /**

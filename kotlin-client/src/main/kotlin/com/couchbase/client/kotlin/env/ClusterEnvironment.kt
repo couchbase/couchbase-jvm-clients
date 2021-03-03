@@ -22,32 +22,41 @@ import com.couchbase.client.core.cnc.RequestTracer
 import com.couchbase.client.core.encryption.CryptoManager
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.core.env.PropertyLoader
+import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.annotations.UncommittedApi
 import com.couchbase.client.kotlin.annotations.VolatileApi
 import com.couchbase.client.kotlin.codec.JacksonJsonSerializer
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.JsonTranscoder
 import com.couchbase.client.kotlin.codec.Transcoder
-import com.couchbase.client.kotlin.env.dsl.clusterEnvironment
+import com.couchbase.client.kotlin.createBuilderWithDefaultSettings
+import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
+import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentDslBuilder
+import com.couchbase.client.kotlin.internal.await
+import com.couchbase.client.kotlin.preconfigureBuilderUsingDsl
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jsonMapper
 import reactor.core.scheduler.Scheduler
+import java.time.Duration
 
 public interface ClusterPropertyLoader : PropertyLoader<ClusterEnvironment.Builder>
 
 /**
  * Resources and configuration for connecting to a Couchbase cluster.
  *
- * Create a new instance using the [clusterEnvironment] DSL builder.
+ * You don't need to worry about creating an environment unless you want
+ * to share a single environment between multiple clusters. In that case,
+ * create an environment using a builder returned by
+ * [ClusterEnvironment.builder].
  *
- * Alternatively, call [ClusterEnvironment.builder] and configure it
- * using the builder's Java API.
+ * @see Cluster.connectUsingSharedEnvironment
+ * @see ClusterEnvironment.builder
  */
 public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvironment(builder) {
-    private val jsonSerializer: JsonSerializer
-    private val transcoder: Transcoder
-    private val cryptoManager: CryptoManager?
+    internal val jsonSerializer: JsonSerializer
+    internal val transcoder: Transcoder
+    internal val cryptoManager: CryptoManager?
 
     init {
         this.cryptoManager = builder.cryptoManager
@@ -60,19 +69,63 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
 
     public companion object {
         /**
-         * Creates a [Builder] to customize the properties of the environment.
+         * Returns a new [ClusterEnvironment.Builder]. If you provide an
+         * environment config DSL block, the returned builder has
+         * settings configured by the block. Otherwise the builder has
+         * default settings, which you can customize by calling methods
+         * on the builder.
          *
-         * @return the [Builder] to customize.
+         * Pass the returned builder to one of the [Cluster.connect] methods,
+         * or call [build] and pass the resulting [ClusterEnvironment] to
+         * [Cluster.connectUsingSharedEnvironment]. Remember: if you call
+         * build() yourself, you are responsible for shutting down the
+         * environment after disconnecting the clusters that share it.
+         *
+         * @param configBlock an optional lambda for configuring the new
+         * builder using cluster environment config DSL.
+         *
+         * @sample createBuilderWithDefaultSettings
+         * @sample preconfigureBuilderUsingDsl
          */
-        public fun builder(): Builder {
-            return Builder()
+        public fun builder(configBlock: ClusterEnvironmentConfigBlock = {}): Builder {
+            val builder = ClusterEnvironmentDslBuilder()
+            builder.configBlock()
+            return builder.toCore()
         }
     }
 
+    /**
+     * Pick your tagline.
+     *
+     * "A modern programming language that makes developers happier."
+     *     -- https://kotlinlang.org
+     *
+     * "Kotlin: So you don’t need a billion lines of code to get your shit done!"
+     *     -- [Erik Meijer](https://youtu.be/NKeHrApPWlo?t=92s)
+     */
     override fun defaultAgentTitle(): String {
         return "kotlin"
     }
 
+    /**
+     * Shuts down this environment. Does the same thing as [shutdown],
+     * but suspends instead of blocking.
+     *
+     * This should be the very last operation in the SDK shutdown process,
+     * after all clients sharing this environment have disconnected.
+     *
+     * Note that once shut down, the environment cannot be restarted.
+     */
+    public suspend fun shutdownSuspend(timeout: Duration = timeoutConfig().disconnectTimeout()) {
+        shutdownReactive(timeout).await()
+    }
+
+    /**
+     * Used for configuring cluster environment settings, or creating
+     * a shared cluster environment.
+     *
+     * Call [ClusterEnvironment.builder] to create a new instance.
+     */
     public class Builder internal constructor() : CoreEnvironment.Builder<Builder>() {
         internal var jsonSerializer: JsonSerializer? = null
         internal var transcoder: Transcoder? = null
@@ -152,9 +205,12 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
         /**
          * Creates a [ClusterEnvironment] from the values of this builder.
          *
+         * IMPORTANT: If you call this method, you are responsible for
+         * shutting down the environment when it is no longer needed.
+         *
          * @return the created cluster environment.
+         * @see shutdownSuspend
          */
         override fun build(): ClusterEnvironment = ClusterEnvironment(this)
     }
-
 }

@@ -22,90 +22,26 @@ import com.couchbase.client.core.cnc.RequestTracer
 import com.couchbase.client.core.encryption.CryptoManager
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.core.env.CoreEnvironment.DEFAULT_MAX_NUM_REQUESTS_IN_RETRY
-import com.couchbase.client.core.env.NetworkResolution
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.kotlin.annotations.UncommittedApi
 import com.couchbase.client.kotlin.annotations.VolatileApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
-import com.couchbase.client.kotlin.codec.RawJsonTranscoder
 import com.couchbase.client.kotlin.codec.Transcoder
+import com.couchbase.client.kotlin.configureManyThingsUsingDsl
+import com.couchbase.client.kotlin.configureTlsUsingDsl
 import com.couchbase.client.kotlin.env.ClusterEnvironment
+import com.couchbase.client.kotlin.preconfigureBuilderUsingDsl
 import reactor.core.scheduler.Scheduler
-import java.nio.file.Paths
-import java.time.Duration
 import kotlin.properties.Delegates.observable
 
 /**
- * Starts a cluster environment configuration DSL block.
- * Returns the [ClusterEnvironment.Builder] configured by the block.
+ * A lambda for the cluster environment configuration DSL.
  *
- * @sample configureTls
- * @sample configureManyThings
+ * @sample configureTlsUsingDsl
+ * @sample preconfigureBuilderUsingDsl
+ * @sample configureManyThingsUsingDsl
  */
-public fun clusterEnvironment(
-    initializer: ClusterEnvironmentDslBuilder.() -> Unit
-): ClusterEnvironment.Builder {
-    val builder = ClusterEnvironmentDslBuilder()
-    builder.initializer()
-    return builder.toCore()
-}
-
-internal fun configureTls() {
-    clusterEnvironment {
-        security {
-            enableTls = true
-            trust = TrustSource.trustStore(
-                Paths.get("/path/to/truststore.jks"),
-                "password"
-            )
-        }
-    }
-}
-
-internal fun configureManyThings() {
-    clusterEnvironment {
-        transcoder = RawJsonTranscoder
-
-        ioEnvironment {
-            enableNativeIo = false
-        }
-
-        io {
-            enableDnsSrv = false
-            networkResolution = NetworkResolution.EXTERNAL
-            tcpKeepAliveTime = Duration.ofSeconds(45)
-
-            captureTraffic(ServiceType.KV, ServiceType.QUERY)
-
-            // specify defaults before customizing individual breakers
-            allCircuitBreakers {
-                enabled = true
-                volumeThreshold = 30
-                errorThresholdPercentage = 20
-                rollingWindow = Duration.ofSeconds(30)
-            }
-
-            kvCircuitBreaker {
-                enabled = false
-            }
-
-            queryCircuitBreaker {
-                rollingWindow = Duration.ofSeconds(10)
-            }
-        }
-
-        timeout {
-            kvTimeout = Duration.ofSeconds(3)
-            kvDurableTimeout = Duration.ofSeconds(20)
-            connectTimeout = Duration.ofSeconds(15)
-        }
-
-        orphanReporter {
-            emitInterval = Duration.ofSeconds(20)
-        }
-    }
-}
+public typealias ClusterEnvironmentConfigBlock = ClusterEnvironmentDslBuilder.() -> Unit
 
 @DslMarker
 internal annotation class ClusterEnvironmentDslMarker
@@ -115,7 +51,7 @@ internal annotation class ClusterEnvironmentDslMarker
  */
 @ClusterEnvironmentDslMarker
 public class ClusterEnvironmentDslBuilder {
-    private val wrapped = ClusterEnvironment.builder()
+    private val wrapped = ClusterEnvironment.Builder()
 
     /**
      * @see ClusterEnvironment.Builder.jsonSerializer
