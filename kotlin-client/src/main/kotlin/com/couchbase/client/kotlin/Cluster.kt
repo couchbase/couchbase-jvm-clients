@@ -74,7 +74,7 @@ public class Cluster internal constructor(
     authenticator: Authenticator,
     seedNodes: Set<SeedNode>,
 ) {
-    private val core = Core.create(environment, authenticator, seedNodes)
+    internal val core = Core.create(environment, authenticator, seedNodes)
     private val bucketCache = ConcurrentHashMap<String, Bucket>()
 
     init {
