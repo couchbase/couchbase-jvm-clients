@@ -20,8 +20,10 @@ import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.msg.kv.CodecFlags
 import com.couchbase.client.kotlin.internal.toStringUtf8
 import com.fasterxml.jackson.module.kotlin.jsonMapper
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 internal class JsonTranscoderTest {
     private val transcoder: Transcoder = JsonTranscoder(JacksonJsonSerializer(jsonMapper()))
@@ -46,7 +48,7 @@ internal class JsonTranscoderTest {
     @Test
     fun `prevents null from sneaking into non-nullable type`() {
         val encoded = transcoder.encode(null as String?)
-        assertThrows(NullPointerException::class.java) {
+        assertThrows<NullPointerException> {
             transcoder.decode<Any>(encoded)
         }
     }
@@ -70,14 +72,14 @@ internal class JsonTranscoderTest {
 
     @Test
     fun `fails to decode as bytes`() {
-        assertThrows(InvalidArgumentException::class.java) {
+        assertThrows<InvalidArgumentException> {
             transcoder.decode<ByteArray>(Content.json("\"\""))
         }
     }
 
     @Test
     fun `fails to encode bytes`() {
-        assertThrows(InvalidArgumentException::class.java) {
+        assertThrows<InvalidArgumentException> {
             transcoder.encode("xyzzy".toByteArray())
         }
     }

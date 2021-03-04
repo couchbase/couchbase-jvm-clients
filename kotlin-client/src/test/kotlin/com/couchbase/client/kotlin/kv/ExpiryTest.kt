@@ -21,8 +21,10 @@ import com.couchbase.client.kotlin.kv.Expiry.Companion.relative
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.greaterThanOrEqualTo
 import org.hamcrest.Matchers.lessThanOrEqualTo
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.TimeUnit.DAYS
@@ -36,14 +38,14 @@ internal class ExpiryTest {
 
     @Test
     fun `zero duration is invalid`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows<IllegalArgumentException> {
             relative(Duration.ZERO)
         }
     }
 
     @Test
     fun `negative duration is invalid`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows<IllegalArgumentException> {
             relative(Duration.ofSeconds(-1))
         }
     }
@@ -66,21 +68,21 @@ internal class ExpiryTest {
 
     @Test
     fun `zero instant is invalid`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows<IllegalArgumentException> {
             absolute(Instant.EPOCH)
         }
     }
 
     @Test
     fun `negative instant is invalid`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows<IllegalArgumentException> {
             absolute(Instant.ofEpochSecond(-1))
         }
     }
 
     @Test
     fun `instant in distant past is invalid`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows<IllegalArgumentException> {
             absolute(Instant.ofEpochSecond(DAYS.toSeconds(30)))
         }
     }

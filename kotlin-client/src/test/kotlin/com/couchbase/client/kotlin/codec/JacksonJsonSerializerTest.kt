@@ -20,8 +20,11 @@ import com.couchbase.client.kotlin.internal.toStringUtf8
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jsonMapper
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 internal class JacksonJsonSerializerTest {
     private val serializer = JacksonJsonSerializer(jsonMapper { addModule(KotlinModule()) })
@@ -38,7 +41,7 @@ internal class JacksonJsonSerializerTest {
 
     @Test
     fun `prevents null from sneaking into non-nullable type`() {
-        assertThrows(NullPointerException::class.java) {
+        assertThrows<NullPointerException> {
             serializer.deserialize<String>("null".toByteArray())
         }
     }

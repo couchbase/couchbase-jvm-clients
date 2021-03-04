@@ -19,8 +19,11 @@ package com.couchbase.client.kotlin.codec
 import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.msg.kv.CodecFlags
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 internal class RawBinaryTranscoderTest {
 
@@ -34,7 +37,7 @@ internal class RawBinaryTranscoderTest {
 
     @Test
     fun `fails to encode null`() {
-        assertThrows(InvalidArgumentException::class.java) {
+        assertThrows<InvalidArgumentException> {
             transcoder.encode<ByteArray?>(null)
         }
     }
@@ -53,14 +56,14 @@ internal class RawBinaryTranscoderTest {
 
     @Test
     fun `fails to decode as string`() {
-        assertThrows(DecodingFailureException::class.java) {
+        assertThrows<DecodingFailureException> {
             transcoder.decode<String>(Content.string("xyzzy"))
         }
     }
 
     @Test
     fun `fails to encode string`() {
-        assertThrows(InvalidArgumentException::class.java) {
+        assertThrows<InvalidArgumentException> {
             transcoder.encode("xyzzy")
         }
     }

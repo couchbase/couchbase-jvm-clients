@@ -98,6 +98,7 @@
                 <artifactId>kotlin-maven-plugin</artifactId>
                 <version>${kotlin.version}</version>
                 <configuration>
+                    <jvmTarget>8</jvmTarget>
                     <args>
                         <!-- Require explicit visibility modifiers so we don't
                              accidentally leak stuff into the public API -->
