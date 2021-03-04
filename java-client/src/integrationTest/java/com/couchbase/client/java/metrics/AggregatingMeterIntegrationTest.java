@@ -87,8 +87,8 @@ class AggregatingMeterIntegrationTest extends JavaIntegrationTest {
 
     for (Event ev : events) {
       String desc = ev.description();
-      assertTrue(desc.contains("{\"emit_interval_s\":2}"));
-      assertTrue(desc.contains("kv"));
+      assertTrue(desc.contains("{\"emit_interval_s\":2}"), "Actual description: " + desc);
+      assertTrue(desc.contains("kv"), "Actual description: " + desc);
     }
   }
 
