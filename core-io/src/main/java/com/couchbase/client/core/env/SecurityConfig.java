@@ -69,6 +69,7 @@ public class SecurityConfig {
   private final boolean tlsEnabled;
   private final List<X509Certificate> trustCertificates;
   private final TrustManagerFactory trustManagerFactory;
+  private final List<String> ciphers;
 
   /**
    * Creates a builder to customize the {@link SecurityConfig} configuration.
@@ -178,12 +179,29 @@ public class SecurityConfig {
     return builder().trustManagerFactory(trustManagerFactory);
   }
 
+  /**
+   * Allows to customize the list of ciphers that is negotiated with the cluster.
+   * <p>
+   * Note that this method is considered advanced API, please only customize the cipher list if you know what
+   * you are doing (for example if you want to shrink the cipher list down  to a very specific subset for security
+   * or compliance reasons).
+   * <p>
+   * If no custom ciphers are configured, the default set will be used.
+   *
+   * @param ciphers the custom list of ciphers to use.
+   * @return this {@link Builder} for chaining purposes.
+   */
+  public static Builder ciphers(final List<String> ciphers) {
+    return  builder().ciphers(ciphers);
+  }
+
   private SecurityConfig(final Builder builder) {
     tlsEnabled = builder.tlsEnabled;
     nativeTlsEnabled = builder.nativeTlsEnabled;
     trustCertificates = builder.trustCertificates;
     trustManagerFactory = builder.trustManagerFactory;
     hostnameVerificationEnabled = builder.hostnameVerificationEnabled;
+    ciphers = builder.ciphers;
 
     if (tlsEnabled) {
       if (trustCertificates != null && trustManagerFactory != null) {
@@ -242,6 +260,15 @@ public class SecurityConfig {
   }
 
   /**
+   * Returns the custom list of ciphers.
+   *
+   * @return the custom list of ciphers.
+   */
+  public List<String> ciphers() {
+    return ciphers;
+  }
+
+  /**
    * Returns this config as a map so it can be exported into i.e. JSON for display.
    */
   @Stability.Volatile
@@ -252,6 +279,7 @@ public class SecurityConfig {
     export.put("hostnameVerificationEnabled", hostnameVerificationEnabled);
     export.put("hasTrustCertificates", trustCertificates != null && !trustCertificates.isEmpty());
     export.put("trustManagerFactory", trustManagerFactory != null ? trustManagerFactory.getClass().getSimpleName() : null);
+    export.put("ciphers", ciphers);
     return export;
   }
 
@@ -265,6 +293,7 @@ public class SecurityConfig {
     private boolean hostnameVerificationEnabled = Defaults.DEFAULT_HOSTNAME_VERIFICATION_ENABLED;
     private List<X509Certificate> trustCertificates = null;
     private TrustManagerFactory trustManagerFactory = null;
+    private List<String> ciphers = Collections.emptyList();
 
     /**
      * Builds the {@link SecurityConfig} out of this builder.
@@ -402,6 +431,23 @@ public class SecurityConfig {
       } catch (Exception ex) {
         throw InvalidArgumentException.fromMessage("Could not initialize TrustStore", ex);
       }
+    }
+
+    /**
+     * Allows to customize the list of ciphers that is negotiated with the cluster.
+     * <p>
+     * Note that this method is considered advanced API, please only customize the cipher list if you know what
+     * you are doing (for example if you want to shrink the cipher list down  to a very specific subset for security
+     * or compliance reasons).
+     * <p>
+     * If no custom ciphers are configured, the default set will be used.
+     *
+     * @param ciphers the custom list of ciphers to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public Builder ciphers(final List<String> ciphers) {
+      this.ciphers = notNullOrEmpty(ciphers, "Ciphers");
+      return this;
     }
 
   }

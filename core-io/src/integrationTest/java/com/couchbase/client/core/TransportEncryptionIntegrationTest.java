@@ -131,6 +131,29 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
+  void allowsToConfigureCustomCipher() throws Exception {
+    if (!config().clusterCert().isPresent()) {
+      fail("Cluster Certificate must be present for this test!");
+    }
+
+    CoreEnvironment env = secureEnvironment(SecurityConfig
+      .enableTls(true)
+      .ciphers(Collections.singletonList("TLS_AES_256_GCM_SHA384"))
+      .trustCertificates(Collections.singletonList(config().clusterCert().get())), null);
+    Core core = Core.create(env, authenticator(), secureSeeds());
+    core.openBucket(config().bucketname());
+
+    waitUntilCondition(() -> core.clusterConfig().hasClusterOrBucketConfig());
+
+    try {
+      runKeyValueOperation(core, env);
+    } finally {
+      core.shutdown().block();
+      env.shutdown();
+    }
+  }
+
+  @Test
   void loadsSecurityConfigFromTrustStore() throws Exception {
     if (!config().clusterCert().isPresent()) {
       fail("Cluster Certificate must be present for this test!");

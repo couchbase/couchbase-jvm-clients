@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty;
 
+import com.couchbase.client.core.cnc.events.io.CustomTlsCiphersEnabledEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
@@ -27,6 +28,7 @@ import com.couchbase.client.core.deps.io.netty.handler.ssl.SslProvider;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import java.security.cert.X509Certificate;
+import java.util.List;
 
 /**
  * This factory creates {@link SslHandler} based on a given configuration.
@@ -50,6 +52,14 @@ public class SslHandlerFactory {
       context.trustManager(config.trustManagerFactory());
     } else if (config.trustCertificates() != null && !config.trustCertificates().isEmpty()) {
       context.trustManager(config.trustCertificates().toArray(new X509Certificate[0]));
+    }
+
+    List<String> ciphers = config.ciphers();
+    if (ciphers != null  && !ciphers.isEmpty()) {
+      context.ciphers(ciphers);
+      endpointContext.environment().eventBus().publish(
+        new CustomTlsCiphersEnabledEvent(ciphers, endpointContext)
+      );
     }
 
     endpointContext.authenticator().applyTlsProperties(context);
