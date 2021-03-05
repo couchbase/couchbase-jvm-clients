@@ -16,11 +16,19 @@
 
 package com.couchbase.client.kotlin.codec
 
+import com.couchbase.client.kotlin.CommonOptions
+
 public interface Transcoder {
 
     public fun <T> encode(input: T, type: TypeRef<T>): Content {
-        return if (input is Content) input // already encoded!
-        else doEncode(input, type)
+        return when (input) {
+            is Content -> input // already encoded!
+            is CommonOptions -> throw IllegalArgumentException(
+                "Expected document content but got ${CommonOptions::class.java.simpleName}." +
+                        " Was the 'content' argument accidentally omitted?"
+            )
+            else -> doEncode(input, type)
+        }
     }
 
     /**

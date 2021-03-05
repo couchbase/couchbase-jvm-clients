@@ -19,6 +19,23 @@ package com.couchbase.client.kotlin.annotations
 import com.couchbase.client.core.annotation.Stability
 
 /**
+ * An API marked as internal is not part of the SDK's public API, and may not
+ * be relied upon at all.
+ *
+ * These interfaces are not intended for external consumption. They are
+ * visible only because they can't be made private due to technical limitations
+ * (usually related to inlining).
+ *
+ * Use at your own risk!
+ *
+ * Note: This annotation corresponds to [Stability.Internal] from the
+ * Couchbase Java SDK and core-io library. The Kotlin SDK uses a separate
+ * annotation in order to specify opt-in requirements.
+ */
+@RequiresOptIn(level = RequiresOptIn.Level.ERROR)
+public annotation class InternalApi
+
+/**
  * APIs marked as volatile can change any time and for any reason.
  *
  * They may be volatile for reasons including:
