@@ -51,6 +51,12 @@ public class SecurityConfigDslBuilder(private val wrapped: SecurityConfig.Builde
             by observable(DEFAULT_NATIVE_TLS_ENABLED) { _, _, it -> wrapped.enableNativeTls(it) }
 
     /**
+     * @see SecurityConfig.Builder.ciphers
+     */
+    public var ciphers: List<String>
+            by observable(emptyList()) { _, _, it -> wrapped.ciphers(it) }
+
+    /**
      * Specifies where the trusted certificates come from.
      */
     public var trust: TrustSource
