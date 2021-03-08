@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.CustomTlsCiphersEnabledEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.SecurityConfig;
@@ -24,6 +25,8 @@ import com.couchbase.client.core.deps.io.netty.handler.ssl.OpenSsl;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslHandler;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslProvider;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
@@ -35,6 +38,7 @@ import java.util.List;
  *
  * @since 2.0.0
  */
+@Stability.Internal
 public class SslHandlerFactory {
 
   /**
@@ -44,9 +48,7 @@ public class SslHandlerFactory {
 
   public static SslHandler get(final ByteBufAllocator allocator, final SecurityConfig config,
                                final EndpointContext endpointContext) throws Exception {
-    SslProvider provider =  OPENSSL_AVAILABLE && config.nativeTlsEnabled() ? SslProvider.OPENSSL : SslProvider.JDK;
-
-    SslContextBuilder context = SslContextBuilder.forClient().sslProvider(provider);
+    SslContextBuilder context = sslContextBuilder(config.nativeTlsEnabled());
 
     if (config.trustManagerFactory() != null) {
       context.trustManager(config.trustManagerFactory());
@@ -80,6 +82,43 @@ public class SslHandlerFactory {
     sslEngine.setSSLParameters(sslParameters);
 
     return sslHandler;
+  }
+
+  private static SslContextBuilder sslContextBuilder(final boolean nativeTlsEnabled) {
+    SslProvider provider = OPENSSL_AVAILABLE && nativeTlsEnabled ? SslProvider.OPENSSL : SslProvider.JDK;
+    return SslContextBuilder.forClient().sslProvider(provider);
+  }
+
+  /**
+   * True if the native ssl transport is available, false otherwise.
+   */
+  @Stability.Internal
+  public static boolean opensslAvailable() {
+    return OPENSSL_AVAILABLE;
+  }
+
+  /**
+   * Lists the default ciphers used for this platform.
+   * <p>
+   * Note that the list of ciphers can differ whether native TLS is enabled or not, so the parameter should reflect
+   * the actual security configuration used. Native TLS is enabled by default on the configuration, so if it is not
+   * overridden it should be set to true here as well.
+   *
+   * @param nativeTlsEnabled if native TLS is enabled on the security configuration (defaults to yes there).
+   * @return the list of default ciphers.
+   */
+  @Stability.Internal
+  public static List<String> defaultCiphers(final boolean nativeTlsEnabled) {
+    if (nativeTlsEnabled && !SslHandlerFactory.OPENSSL_AVAILABLE) {
+      throw InvalidArgumentException.fromMessage("nativeTlsEnabled, but it is not available on this platform!");
+    }
+
+    try {
+      SslContextBuilder builder = SslHandlerFactory.sslContextBuilder(nativeTlsEnabled);
+      return builder.build().cipherSuites();
+    } catch (Exception ex) {
+      throw new CouchbaseException("Could not get list of default ciphers", ex);
+    }
   }
 
 }

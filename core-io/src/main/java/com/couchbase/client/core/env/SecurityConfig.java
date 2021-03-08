@@ -17,7 +17,10 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.io.netty.SslHandlerFactory;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
@@ -437,10 +440,14 @@ public class SecurityConfig {
      * Allows to customize the list of ciphers that is negotiated with the cluster.
      * <p>
      * Note that this method is considered advanced API, please only customize the cipher list if you know what
-     * you are doing (for example if you want to shrink the cipher list down  to a very specific subset for security
+     * you are doing (for example if you want to shrink the cipher list down to a very specific subset for security
      * or compliance reasons).
      * <p>
      * If no custom ciphers are configured, the default set will be used.
+     * <p>
+     * If you wish to add additional ciphers instead of providing an exclusive list, you can use the static
+     * {@link #defaultCiphers(boolean)} method to load the default list first, add your own ciphers and then
+     * pass it into this method.
      *
      * @param ciphers the custom list of ciphers to use.
      * @return this {@link Builder} for chaining purposes.
@@ -477,6 +484,20 @@ public class SecurityConfig {
         throw InvalidArgumentException.fromMessage("Could not generate certificate from raw input: \"" + c + "\"", e);
       }
     }).collect(Collectors.toList());
+  }
+
+  /**
+   * Lists the default ciphers used for this platform.
+   * <p>
+   * Note that the list of ciphers can differ whether native TLS is enabled or not, so the parameter should reflect
+   * the actual security configuration used. Native TLS is enabled by default on the configuration, so if it is not
+   * overridden it should be set to true here as well.
+   *
+   * @param nativeTlsEnabled if native TLS is enabled on the security configuration (defaults to yes there).
+   * @return the list of default ciphers.
+   */
+  public static List<String> defaultCiphers(final boolean nativeTlsEnabled) {
+    return SslHandlerFactory.defaultCiphers(nativeTlsEnabled);
   }
 
 }
