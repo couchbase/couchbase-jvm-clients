@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit.DAYS
 
 internal class ExpiryTest {
@@ -47,6 +48,14 @@ internal class ExpiryTest {
     fun `negative duration is invalid`() {
         assertThrows<IllegalArgumentException> {
             relative(Duration.ofSeconds(-1))
+        }
+    }
+
+    @Test
+    fun `duration ending after 2106 is invalid`() {
+        val daysUntil2107 = ChronoUnit.DAYS.between(Instant.now(), Instant.parse("2107-01-01T00:00:00Z"))
+        assertThrows<IllegalArgumentException> {
+            relative(Duration.ofDays(daysUntil2107))
         }
     }
 
@@ -84,6 +93,13 @@ internal class ExpiryTest {
     fun `instant in distant past is invalid`() {
         assertThrows<IllegalArgumentException> {
             absolute(Instant.ofEpochSecond(DAYS.toSeconds(30)))
+        }
+    }
+
+    @Test
+    fun `instant in distant future is invalid`() {
+        assertThrows<IllegalArgumentException> {
+            absolute(Instant.ofEpochSecond(DAYS.toSeconds(356) * 200))
         }
     }
 

@@ -25,7 +25,9 @@ import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.test.ClusterAwareIntegrationTest
 import com.couchbase.client.test.Services
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Timeout
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
@@ -33,6 +35,38 @@ import kotlin.contracts.contract
 
 @Timeout(value = 10, unit = TimeUnit.MINUTES)
 internal open class KotlinIntegrationTest : ClusterAwareIntegrationTest() {
+
+    private val lazyCluster = lazy {
+        connect {
+            timeout {
+                val jenkinsSludgeFactor = 30L
+                connectTimeout = connectTimeout.multipliedBy(jenkinsSludgeFactor)
+                disconnectTimeout = disconnectTimeout.multipliedBy(jenkinsSludgeFactor)
+                kvTimeout = kvTimeout.multipliedBy(jenkinsSludgeFactor)
+                kvDurableTimeout = kvDurableTimeout.multipliedBy(jenkinsSludgeFactor)
+                queryTimeout = queryTimeout.multipliedBy(jenkinsSludgeFactor)
+                managementTimeout = managementTimeout.multipliedBy(jenkinsSludgeFactor)
+                analyticsTimeout = analyticsTimeout.multipliedBy(jenkinsSludgeFactor)
+                searchTimeout = searchTimeout.multipliedBy(jenkinsSludgeFactor)
+            }
+        }
+    }
+    private val cluster by lazyCluster
+
+    protected val collection by lazy {
+        runBlocking {
+            cluster.bucket(config().bucketname())
+                // It should not take this long, but the Jenkins box...
+//                .waitUntilReady(Duration.ofSeconds(30))
+                .defaultCollection()
+        }
+    }
+
+    @AfterAll
+    fun afterAll() = runBlocking {
+        if (lazyCluster.isInitialized()) cluster.disconnect()
+    }
+
     fun authenticator(): Authenticator {
         return PasswordAuthenticator.create(config().adminUsername(), config().adminPassword())
     }

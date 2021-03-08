@@ -42,6 +42,13 @@ public sealed class Expiry {
                             " Earliest valid expiry instant is $EARLIEST_VALID_EXPIRY_INSTANT"
                 )
             }
+
+            require(instant <= LATEST_VALID_EXPIRY_INSTANT) {
+                expiryErrorMessage(
+                    "expiry instant $instant is too far in the future." +
+                            " Latest valid expiry instant is $LATEST_VALID_EXPIRY_INSTANT"
+                )
+            }
         }
 
         override fun encode() = instant.epochSecond
@@ -51,6 +58,13 @@ public sealed class Expiry {
         init {
             require(duration.seconds > 0L) {
                 expiryErrorMessage("expiry duration $duration is less than one second")
+            }
+
+            require(currentTimeSeconds() + duration.seconds <= LATEST_VALID_EXPIRY_INSTANT.epochSecond) {
+                expiryErrorMessage(
+                    "expiry duration $duration ends too far in the future." +
+                            " Latest valid expiry instant is $LATEST_VALID_EXPIRY_INSTANT"
+                )
             }
         }
 
@@ -95,9 +109,10 @@ private val RELATIVE_EXPIRY_CUTOFF_SECONDS = DAYS.toSeconds(30).toInt()
 // we don't need to worry about the relative expiry cutoff.
 private val EARLIEST_VALID_EXPIRY_INSTANT = Instant.ofEpochSecond(DAYS.toSeconds(31))
 
-public fun main() {
-    println(EARLIEST_VALID_EXPIRY_INSTANT)
-}
+// The server interprets the 32-bit expiry field as an unsigned
+// integer. This means the maximum value is 4294967295 seconds,
+// which corresponds to 2106-02-07T06:28:15Z.
+private val LATEST_VALID_EXPIRY_INSTANT = Instant.ofEpochSecond(4294967295)
 
 private fun currentTimeSeconds() = MILLISECONDS.toSeconds(System.currentTimeMillis())
 

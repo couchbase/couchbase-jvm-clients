@@ -21,41 +21,22 @@ import com.couchbase.client.kotlin.kv.PersistTo
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.time.Duration
 import java.util.*
 
 internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
 
-    private val cluster by lazy { connect() }
-    private val collection by lazy {
-        runBlocking {
-            cluster.bucket(config().bucketname())
-                // It should not take this long, but the Jenkins box...
-                .waitUntilReady(Duration.ofSeconds(30))
-                .defaultCollection()
-        }
-    }
-
-    @AfterAll
-    fun afterAll() = runBlocking {
-        cluster.disconnect()
-    }
-
     @Test
     fun `can upsert with client verified durability`(): Unit = runBlocking {
         val id = UUID.randomUUID().toString()
-        collection.upsert(
-            id, "some value",
-            durability = clientVerified(PersistTo.ACTIVE)
-        )
-        // todo GET the result
+        val content = "some value"
+        collection.upsert(id, content, durability = clientVerified(PersistTo.ACTIVE))
+        assertEquals(content, collection.get(id).contentAs<String>())
     }
-
 
     @Test
     fun `upsert can insert and update`(): Unit = runBlocking {
@@ -63,6 +44,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         val insertResult = collection.upsert(id, mapOf("foo" to true))
         assertNotEquals(0, insertResult.cas)
         assertNotNull(insertResult.mutationToken)
+        assertEquals(mapOf("foo" to true), collection.get(id).contentAs<Any>())
 
         val updateResult = collection.upsert(id, mapOf("foo" to false))
 
@@ -71,16 +53,35 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
 
         assertNotEquals(insertResult.cas, updateResult.cas)
         assertNotEquals(insertResult.mutationToken, updateResult.mutationToken)
-
-        // todo GET the result
+        assertEquals(mapOf("foo" to false), collection.get(id).contentAs<Any>())
     }
 
     @Test
     fun `upserting CommonOptions gives nice error message`(): Unit = runBlocking {
-        val t = assertThrows<IllegalArgumentException> {
-            collection.upsert("foo", CommonOptions())
-        }
+        val t = assertThrows<IllegalArgumentException> { collection.upsert("foo", CommonOptions()) }
         assertThat(t.message).startsWith("Expected document content")
     }
 
+    @Test
+    fun `can get with projections`(): Unit = runBlocking {
+        val id = UUID.randomUUID().toString()
+        collection.upsert(
+            id, mapOf(
+                "numbers" to mapOf(
+                    "one" to 1,
+                    "two" to 2,
+                ),
+                "fruit" to "apple",
+            )
+        )
+
+        val expected = mapOf(
+            "numbers" to mapOf(
+                "one" to 1,
+            )
+        )
+
+        val result = collection.get(id, project = listOf("numbers.one"))
+        assertEquals(expected, result.contentAs<Any>())
+    }
 }
