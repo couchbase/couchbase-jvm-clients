@@ -34,4 +34,11 @@ public class GetCollectionIdResponse extends BaseResponse {
     return collectionId;
   }
 
+  @Override
+  public String toString() {
+    return "GetCollectionIdResponse{" +
+      "collectionId=" + collectionId +
+      ", status=" + status() +
+      '}';
+  }
 }

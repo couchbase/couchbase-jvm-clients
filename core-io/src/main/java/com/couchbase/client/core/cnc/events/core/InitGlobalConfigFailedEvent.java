@@ -59,6 +59,7 @@ public class InitGlobalConfigFailedEvent extends AbstractEvent {
     UNSUPPORTED(Severity.DEBUG),
     NO_CONFIG_FOUND(Severity.WARN),
     UNKNOWN(Severity.WARN),
+    NO_ACCESS(Severity.WARN),
     SHUTDOWN(Severity.DEBUG);
 
     private final Severity severity;

@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.config.BucketConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.BucketOpenRetriedEvent;
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEvent;
+import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshSucceededEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.GlobalConfigUpdatedEvent;
@@ -42,11 +43,9 @@ import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.SeedNodeOutdatedException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
-import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
-import com.couchbase.client.core.msg.kv.GetCollectionManifestRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
@@ -59,6 +58,7 @@ import reactor.core.publisher.ReplayProcessor;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -129,7 +129,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   private volatile boolean globalConfigLoadInProgress = false;
   private final AtomicInteger bucketConfigLoadInProgress = new AtomicInteger();
-  private final AtomicInteger collectionMapRefreshInProgress = new AtomicInteger();
+  private final Set<CollectionIdentifier> collectionMapRefreshInProgress = new HashSet<>();
 
   /**
    * Stores the current seed nodes used to bootstrap buckets and global configs.
@@ -500,8 +500,12 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   }
 
   @Override
-  public void refreshCollectionId(final CollectionIdentifier identifier) {
-    collectionMapRefreshInProgress.incrementAndGet();
+  public synchronized void refreshCollectionId(final CollectionIdentifier identifier) {
+    if (collectionMapRefreshInProgress.contains(identifier)) {
+      eventBus.publish(new CollectionMapRefreshIgnoredEvent(core.context(), identifier));
+    }
+    collectionMapRefreshInProgress.add(identifier);
+
     long start = System.nanoTime();
     GetCollectionIdRequest request = new GetCollectionIdRequest(
       core.context().environment().timeoutConfig().kvTimeout(),
@@ -546,8 +550,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             reason = CollectionMapRefreshFailedEvent.Reason.NOT_SUPPORTED;
           } else if (response.status() == ResponseStatus.UNKNOWN_COLLECTION) {
             reason = CollectionMapRefreshFailedEvent.Reason.UNKNOWN_COLLECTION;
-          } else if (response.status() == ResponseStatus.NO_COLLECTIONS_MANIFEST) {
-            reason = CollectionMapRefreshFailedEvent.Reason.SERVER_HAS_NO_MANIFEST;
+          } else if (response.status() == ResponseStatus.UNKNOWN_SCOPE) {
+            reason = CollectionMapRefreshFailedEvent.Reason.UNKNOWN_SCOPE;
           } else if (response.status() == ResponseStatus.INVALID_REQUEST) {
             reason = CollectionMapRefreshFailedEvent.Reason.INVALID_REQUEST;
           } else {
@@ -564,14 +568,14 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           ));
         }
       } finally {
-        collectionMapRefreshInProgress.decrementAndGet();
+        collectionMapRefreshInProgress.remove(identifier);
       }
     });
   }
 
   @Override
-  public boolean collectionMapRefreshInProgress() {
-    return collectionMapRefreshInProgress.get() > 0;
+  public synchronized boolean collectionMapRefreshInProgress() {
+    return !collectionMapRefreshInProgress.isEmpty();
   }
 
   /**

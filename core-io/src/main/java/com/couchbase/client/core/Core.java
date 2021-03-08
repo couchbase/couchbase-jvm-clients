@@ -350,6 +350,8 @@ public class Core {
               if (ctx.request().cancellationReason() == CancellationReason.SHUTDOWN) {
                 reason = InitGlobalConfigFailedEvent.Reason.SHUTDOWN;
               }
+            } else if (throwable.getMessage().contains("NO_ACCESS")) {
+              reason = InitGlobalConfigFailedEvent.Reason.NO_ACCESS;
             }
           }
           eventBus.publish(new InitGlobalConfigFailedEvent(

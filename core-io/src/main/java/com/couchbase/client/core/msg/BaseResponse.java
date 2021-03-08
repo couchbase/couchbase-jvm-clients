@@ -34,4 +34,11 @@ public class BaseResponse implements Response {
     return status;
   }
 
+  @Override
+  public String toString() {
+    return getClass().getSimpleName() + "{" +
+      "status=" + status +
+      '}';
+  }
+
 }

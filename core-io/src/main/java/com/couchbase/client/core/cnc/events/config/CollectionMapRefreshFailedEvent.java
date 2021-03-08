@@ -63,13 +63,13 @@ public class CollectionMapRefreshFailedEvent extends AbstractEvent {
      */
     UNKNOWN_COLLECTION,
     /**
+     * The scope the client asked for is unknown to the server.
+     */
+    UNKNOWN_SCOPE,
+    /**
      * The server returned success, but it did not send a collection id.
      */
     COLLECTION_ID_NOT_PRESENT,
-    /**
-     * The server had no collection manifest at the time of asking.
-     */
-    SERVER_HAS_NO_MANIFEST,
     /**
      * The client sent an invalid request to the server.
      */
