@@ -48,9 +48,9 @@ public class RawJsonTranscoder implements Transcoder {
   @Override
   @SuppressWarnings("unchecked")
   public <T> T decode(final Class<T> target, final byte[] input, int flags) {
-    if (target.isAssignableFrom(byte[].class)) {
+    if (target.equals(byte[].class)) {
       return (T) input;
-    } else if (target.isAssignableFrom(String.class)) {
+    } else if (target.equals(String.class)) {
       return (T) new String(input, StandardCharsets.UTF_8);
     } else {
       throw new DecodingFailureException("RawJsonTranscoder can only decode into either byte[] or String!");

@@ -46,7 +46,7 @@ public class RawStringTranscoder implements Transcoder {
   @Override
   @SuppressWarnings("unchecked")
   public <T> T decode(final Class<T> target, final byte[] input, int flags) {
-    if (target.isAssignableFrom(String.class)) {
+    if (target.equals(String.class)) {
       return (T) new String(input, StandardCharsets.UTF_8);
     } else {
       throw new DecodingFailureException("RawStringTranscoder can only decode into String!");

@@ -52,7 +52,7 @@ public class JsonTranscoder implements Transcoder {
 
   @Override
   public <T> T decode(final Class<T> target, final byte[] input, int flags) {
-    if (target.isAssignableFrom(byte[].class)) {
+    if (target.equals(byte[].class)) {
       throw InvalidArgumentException.fromMessage("byte[] input is not supported for the JsonTranscoder!. " +
         "If you want to read already encoded JSON, use the RawJsonTranscoder, otherwise read it " +
         "with the RawBinaryTranscoder!");

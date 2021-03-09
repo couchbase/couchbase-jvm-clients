@@ -55,9 +55,9 @@ public class LegacyTranscoder implements Transcoder {
   @Override
   @SuppressWarnings("unchecked")
   public <T> T decode(final Class<T> target, final byte[] input, int flags) {
-    if (target.isAssignableFrom(byte[].class)) {
+    if (target.equals(byte[].class)) {
       return (T) input;
-    } else if (target.isAssignableFrom(String.class)) {
+    } else if (target.equals(String.class)) {
       return (T) new String(input, StandardCharsets.UTF_8);
     } else {
       return jsonSerializer.deserialize(target, input);

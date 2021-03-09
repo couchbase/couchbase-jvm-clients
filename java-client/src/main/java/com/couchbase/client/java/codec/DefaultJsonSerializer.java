@@ -79,7 +79,7 @@ public class DefaultJsonSerializer implements JsonSerializer {
 
   @Override
   public <T> T deserialize(final Class<T> target, final byte[] input) {
-    if (target.isAssignableFrom(byte[].class)) {
+    if (target.equals(byte[].class)) {
       return (T) input;
     }
 

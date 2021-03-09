@@ -136,6 +136,13 @@ abstract class JsonSerializerTestBase {
   }
 
   @Test
+  void decodesObject() {
+    assertEquals(
+        listOf("a", 1, true),
+        serializer().deserialize(Object.class, "[\"a\",1,true]".getBytes(UTF_8)));
+  }
+
+  @Test
   void handlesBytesOnEncode() {
     byte[] result = serializer().serialize("foobar".getBytes(UTF_8));
     assertEquals("foobar", new String(result, UTF_8));

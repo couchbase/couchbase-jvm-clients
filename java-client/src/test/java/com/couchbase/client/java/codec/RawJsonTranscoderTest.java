@@ -16,21 +16,15 @@
 
 package com.couchbase.client.java.codec;
 
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.msg.kv.CodecFlags;
-import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.json.JsonObject;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Verifies the functionality of the {@link RawJsonTranscoder}.
@@ -62,6 +56,15 @@ class RawJsonTranscoderTest {
       CodecFlags.JSON_COMPAT_FLAGS
     );
     assertEquals(input, output);
+  }
+
+  @Test
+  void rejectsDecodingAsObject() {
+    assertThrows(DecodingFailureException.class, () ->
+        RAW_JSON_TRANSCODER.decode(
+            Object.class,
+            "{\"hello\": true}".getBytes(StandardCharsets.UTF_8),
+            CodecFlags.JSON_COMPAT_FLAGS));
   }
 
   @Test

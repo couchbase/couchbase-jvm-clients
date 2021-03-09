@@ -44,7 +44,7 @@ public class RawBinaryTranscoder implements Transcoder {
   @Override
   @SuppressWarnings("unchecked")
   public <T> T decode(final Class<T> target, final byte[] input, int flags) {
-    if (target.isAssignableFrom(byte[].class)) {
+    if (target.equals(byte[].class)) {
       return (T) input;
     } else {
       throw new DecodingFailureException("RawBinaryTranscoder can only decode into byte[]!");
