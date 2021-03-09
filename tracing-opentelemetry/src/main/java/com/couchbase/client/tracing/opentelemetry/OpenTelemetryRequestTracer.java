@@ -18,6 +18,7 @@ package com.couchbase.client.tracing.opentelemetry;
 
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.Tracer;
@@ -33,23 +34,23 @@ import java.time.Duration;
 public class OpenTelemetryRequestTracer implements RequestTracer {
 
   /**
-   * Holds the actual OT tracer.
+   * Holds the actual OTel tracer.
    */
   private final Tracer tracer;
 
   /**
-   * Wraps the OpenTelemetry tracer and returns a datatype that can be passed into the requestTracer method of the
+   * Wraps OpenTelemetry and returns a datatype that can be passed into the requestTracer method of the
    * environment.
    *
-   * @param tracer the tracer to wrap.
-   * @return the wrapped tracer ready to be passed in.
+   * @param openTelemetry the OpenTelemetry instance to wrap.
+   * @return the wrapped OpenTelemetry ready to be passed in.
    */
-  public static OpenTelemetryRequestTracer wrap(final Tracer tracer) {
-    return new OpenTelemetryRequestTracer(tracer);
+  public static OpenTelemetryRequestTracer wrap(final OpenTelemetry openTelemetry) {
+    return new OpenTelemetryRequestTracer(openTelemetry);
   }
 
-  private OpenTelemetryRequestTracer(Tracer tracer) {
-    this.tracer = tracer;
+  private OpenTelemetryRequestTracer(OpenTelemetry openTelemetry) {
+    this.tracer = openTelemetry.getTracer("com.couchbase.client");
   }
 
   private Span castSpan(final RequestSpan requestSpan) {
@@ -68,19 +69,17 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
    * Returns the inner OpenTelemetry tracer.
    */
   public Tracer tracer() {
-    return  tracer;
+    return tracer;
   }
 
   @Override
   public RequestSpan requestSpan(String operationName, RequestSpan parent) {
     SpanBuilder spanBuilder = tracer.spanBuilder(operationName);
+    Context parentContext = Context.current();
     if (parent != null) {
-      spanBuilder.setParent(Context.current().with(castSpan(parent)));
-    } else {
-      spanBuilder.setNoParent();
+      parentContext = parentContext.with(castSpan(parent));
     }
-    Span span = spanBuilder.startSpan();
-    span.makeCurrent().close();
+    Span span = spanBuilder.setParent(parentContext).startSpan();
     return OpenTelemetryRequestSpan.wrap(span);
   }
 

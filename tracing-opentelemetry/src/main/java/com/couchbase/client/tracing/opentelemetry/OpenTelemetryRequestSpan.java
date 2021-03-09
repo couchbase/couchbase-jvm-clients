@@ -78,9 +78,7 @@ public class OpenTelemetryRequestSpan implements RequestSpan {
 
   @Override
   public void end() {
-    try (Scope scope = span.makeCurrent()) {
-      span.end();
-    }
+    span.end();
   }
 
   @Override

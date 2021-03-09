@@ -24,37 +24,36 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
-import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
-import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
-import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.context.Scope;
+import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
+import java.time.Duration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import java.time.Duration;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.assertThat;
 
 class OpenTelemetryIntegrationTest extends ClusterAwareIntegrationTest {
 
   private static ClusterEnvironment environment;
   private static Cluster cluster;
   private static Collection collection;
-  private static final InMemorySpanExporter exporter = InMemorySpanExporter.create();
-  private static SdkTracerProvider tracerProvider;
+
+  @RegisterExtension
+  static final OpenTelemetryExtension otelTesting = OpenTelemetryExtension.create();
 
   @BeforeAll
   static void beforeAll() {
-    tracerProvider = SdkTracerProvider.builder().addSpanProcessor(SimpleSpanProcessor.create(exporter)).build();
-
     TestNodeConfig config = config().firstNodeWith(Services.KV).get();
 
     environment = ClusterEnvironment
       .builder()
-      .requestTracer(OpenTelemetryRequestTracer.wrap(tracerProvider.get("integrationTest")))
+      .requestTracer(OpenTelemetryRequestTracer.wrap(otelTesting.getOpenTelemetry()))
       .build();
 
     cluster = Cluster.connect(
@@ -72,11 +71,51 @@ class OpenTelemetryIntegrationTest extends ClusterAwareIntegrationTest {
   static void afterAll() {
     cluster.disconnect();
     environment.shutdown();
-    tracerProvider.shutdown();
   }
 
   @Test
   void capturesTraceSpans() {
+    Span parent = otelTesting.getOpenTelemetry().getTracer("integrationtest")
+        .spanBuilder("test")
+        .setSpanKind(SpanKind.SERVER)
+        .startSpan();
+    try (Scope ignored = parent.makeCurrent()) {
+      collection.get("myid");
+    } catch (DocumentNotFoundException ignored) {
+      // expected
+    } finally {
+      parent.end();
+    }
+
+    waitUntilCondition(() -> {
+      otelTesting.assertTraces()
+          .hasTracesSatisfyingExactly(
+              trace -> trace.hasSpansSatisfyingExactly(
+                  span -> span
+                      .hasName("test")
+                      .hasKind(SpanKind.SERVER),
+                  span -> span
+                      .hasName("get")
+                      .hasParentSpanId(parent.getSpanContext().getSpanId())
+                      .hasKind(SpanKind.INTERNAL)
+                      .hasAttributesSatisfying(attributes -> assertThat(attributes)
+                          .containsEntry("db.system", "couchbase")
+                          .containsEntry("db.operation", "get")
+                          .containsEntry("db.couchbase.service", "kv")
+                          .containsEntry("db.couchbase.collection", "_default")
+                          .containsEntry("db.couchbase.scope", "_default")),
+                  span -> span
+                      .hasName("dispatch_to_server")
+                      .hasKind(SpanKind.INTERNAL)
+                      .hasAttributesSatisfying(attributes -> assertThat(attributes)
+                          .containsEntry("db.system", "couchbase"))
+          ));
+      return true;
+    });
+  }
+
+  @Test
+  void stressTest() {
     int numRequests = 100;
     for (int i = 0; i < 100; i++) {
       try {
@@ -86,7 +125,10 @@ class OpenTelemetryIntegrationTest extends ClusterAwareIntegrationTest {
       }
     }
 
-    waitUntilCondition(() -> exporter.getFinishedSpanItems().size() >= numRequests);
+    waitUntilCondition(() -> {
+      otelTesting.assertTraces().hasSizeGreaterThanOrEqualTo(numRequests);
+      return true;
+    });
   }
 
 }
