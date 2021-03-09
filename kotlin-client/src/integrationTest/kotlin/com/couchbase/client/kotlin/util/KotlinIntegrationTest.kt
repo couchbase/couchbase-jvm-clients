@@ -23,6 +23,8 @@ import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.test.ClusterAwareIntegrationTest
+import com.couchbase.client.test.ClusterType.MOCKED
+import com.couchbase.client.test.IgnoreWhen
 import com.couchbase.client.test.Services
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
@@ -36,28 +38,14 @@ import kotlin.contracts.contract
 @Timeout(value = 10, unit = TimeUnit.MINUTES)
 internal open class KotlinIntegrationTest : ClusterAwareIntegrationTest() {
 
-    private val lazyCluster = lazy {
-        connect {
-            timeout {
-                val jenkinsSludgeFactor = 30L
-                connectTimeout = connectTimeout.multipliedBy(jenkinsSludgeFactor)
-                disconnectTimeout = disconnectTimeout.multipliedBy(jenkinsSludgeFactor)
-                kvTimeout = kvTimeout.multipliedBy(jenkinsSludgeFactor)
-                kvDurableTimeout = kvDurableTimeout.multipliedBy(jenkinsSludgeFactor)
-                queryTimeout = queryTimeout.multipliedBy(jenkinsSludgeFactor)
-                managementTimeout = managementTimeout.multipliedBy(jenkinsSludgeFactor)
-                analyticsTimeout = analyticsTimeout.multipliedBy(jenkinsSludgeFactor)
-                searchTimeout = searchTimeout.multipliedBy(jenkinsSludgeFactor)
-            }
-        }
-    }
+    private val lazyCluster = lazy { connect() }
     private val cluster by lazyCluster
 
     protected val collection by lazy {
         runBlocking {
             cluster.bucket(config().bucketname())
                 // It should not take this long, but the Jenkins box...
-//                .waitUntilReady(Duration.ofSeconds(30))
+                .waitUntilReady(Duration.ofSeconds(30))
                 .defaultCollection()
         }
     }

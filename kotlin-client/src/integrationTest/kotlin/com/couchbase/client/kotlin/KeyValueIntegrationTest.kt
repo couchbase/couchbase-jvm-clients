@@ -19,6 +19,8 @@ package com.couchbase.client.kotlin
 import com.couchbase.client.kotlin.kv.Durability.Companion.clientVerified
 import com.couchbase.client.kotlin.kv.PersistTo
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
+import com.couchbase.client.test.ClusterType
+import com.couchbase.client.test.IgnoreWhen
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -28,6 +30,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.*
 
+// Prevent timeouts against the Mock from interfering
+// with Gerrit verification.  Remove when mock is fixed:
+//    http://review.couchbase.org/c/CouchbaseMock/+/148081
+@IgnoreWhen(clusterTypes = [ClusterType.MOCKED])
 internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
 
     @Test
