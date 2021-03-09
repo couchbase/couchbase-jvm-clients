@@ -503,6 +503,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   public synchronized void refreshCollectionId(final CollectionIdentifier identifier) {
     if (collectionMapRefreshInProgress.contains(identifier)) {
       eventBus.publish(new CollectionMapRefreshIgnoredEvent(core.context(), identifier));
+      return;
     }
     collectionMapRefreshInProgress.add(identifier);
 
@@ -546,7 +547,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           Throwable cause = null;
           CollectionMapRefreshFailedEvent.Reason reason;
 
-          if (response.status() == ResponseStatus.UNKNOWN) {
+          if (response.status() == ResponseStatus.UNKNOWN
+            || response.status() == ResponseStatus.NO_COLLECTIONS_MANIFEST) {
             reason = CollectionMapRefreshFailedEvent.Reason.NOT_SUPPORTED;
           } else if (response.status() == ResponseStatus.UNKNOWN_COLLECTION) {
             reason = CollectionMapRefreshFailedEvent.Reason.UNKNOWN_COLLECTION;
@@ -829,6 +831,13 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    */
   Set<SeedNode> currentSeedNodes() {
     return currentSeedNodes.get();
+  }
+
+  /**
+   * Visible for testing.
+   */
+  Set<CollectionIdentifier> collectionRefreshInProgress() {
+    return collectionMapRefreshInProgress;
   }
 
   private void setSeedNodes(Set<SeedNode> seedNodes) {

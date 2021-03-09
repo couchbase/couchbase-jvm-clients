@@ -39,6 +39,10 @@ public class CollectionMapRefreshFailedEvent extends AbstractEvent {
     this.collectionIdentifier = collectionIdentifier;
   }
 
+  public CollectionIdentifier collectionIdentifier() {
+    return collectionIdentifier;
+  }
+
   @Override
   public Throwable cause() {
     return cause;

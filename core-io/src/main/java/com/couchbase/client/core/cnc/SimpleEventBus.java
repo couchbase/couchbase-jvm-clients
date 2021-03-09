@@ -99,6 +99,10 @@ public class SimpleEventBus implements EventBus {
     return new ArrayList<>(publishedEvents);
   }
 
+  public synchronized void clear() {
+    publishedEvents.clear();
+  }
+
   @Override
   public Mono<Void> start() {
     return Mono.empty();

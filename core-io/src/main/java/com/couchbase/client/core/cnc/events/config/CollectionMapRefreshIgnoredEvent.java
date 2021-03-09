@@ -35,6 +35,10 @@ public class CollectionMapRefreshIgnoredEvent extends AbstractEvent {
     this.collectionIdentifier = collectionIdentifier;
   }
 
+  public CollectionIdentifier collectionIdentifier() {
+    return collectionIdentifier;
+  }
+
   @Override
   public String description() {
     return "CollectionMap refresh ignored for identifier: " + collectionIdentifier;
