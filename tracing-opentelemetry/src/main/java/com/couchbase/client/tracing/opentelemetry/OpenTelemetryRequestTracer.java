@@ -50,7 +50,7 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
   }
 
   private OpenTelemetryRequestTracer(OpenTelemetry openTelemetry) {
-    this.tracer = openTelemetry.getTracer("com.couchbase.client");
+    this.tracer = openTelemetry.getTracer("com.couchbase.client.java");
   }
 
   private Span castSpan(final RequestSpan requestSpan) {
