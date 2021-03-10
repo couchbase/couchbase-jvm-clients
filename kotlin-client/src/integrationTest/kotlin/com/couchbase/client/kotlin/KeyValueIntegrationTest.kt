@@ -26,6 +26,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.*
@@ -89,5 +90,17 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
 
         val result = collection.get(id, project = listOf("numbers.one"))
         assertEquals(expected, result.contentAs<Any>())
+    }
+
+    @Test
+    fun `getOrNull returns null for absent document`(): Unit = runBlocking {
+        assertNull(collection.getOrNull("does-not-exist")?.contentAs<String>())
+    }
+
+    @Test
+    fun `getOrNull returns present document`(): Unit = runBlocking {
+        val id = UUID.randomUUID().toString()
+        collection.upsert(id, "foo")
+        assertEquals("foo", collection.getOrNull(id)?.contentAs<String>())
     }
 }

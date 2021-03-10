@@ -115,6 +115,23 @@ public class Collection internal constructor(
     }
 
     /**
+     * Like [get], but returns null instead of throwing
+     * [DocumentNotFoundException] if the document is not found.
+     *
+     * @see get
+     */
+    public suspend inline fun getOrNull(
+        id: String,
+        options: CommonOptions = CommonOptions.Default,
+        withExpiry: Boolean = false,
+        project: List<String> = emptyList(),
+    ): GetResult? = try {
+        get(id, options, withExpiry, project)
+    } catch (t: DocumentNotFoundException) {
+        null
+    }
+
+    /**
      * Updates a document if it exists, otherwise inserts it.
      *
      * To update a document using a Compare And Swap (CAS) value,

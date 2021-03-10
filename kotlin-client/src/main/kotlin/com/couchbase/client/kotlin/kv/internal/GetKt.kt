@@ -161,10 +161,9 @@ private fun parseExpiry(expiryBytes: ByteArray?): Expiry {
 }
 
 /**
- * Does the actual upsert after [GetResult.contentAs] captures the content's reified type.
+ * Does the actual work after [GetResult.contentAs] captures the content's reified type.
  *
- * Hides [GetResult.defaultTranscoder] from the public API. (Apparently it's not
- * possible to require opt-in for property access.)
+ * Hides [GetResult.defaultTranscoder] from the public API.
  *
  * Public because it's called from a public inline method. Lives over here
  * (instead of on GetResult) so it's less visible to users.
