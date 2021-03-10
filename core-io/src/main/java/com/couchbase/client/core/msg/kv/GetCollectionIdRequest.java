@@ -17,6 +17,9 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -24,33 +27,33 @@ import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 
 import java.time.Duration;
 import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+/**
+ * Fetches the collection ID from the cluster based on a {@link CollectionIdentifier}.
+ */
 public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdResponse> {
 
   public GetCollectionIdRequest(final Duration timeout, final CoreContext ctx,
                                 final RetryStrategy retryStrategy,
-                                CollectionIdentifier collectionIdentifier) {
+                                final CollectionIdentifier collectionIdentifier) {
     super(timeout, ctx, retryStrategy, null, collectionIdentifier);
   }
 
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf key = null;
+    ByteBuf body = null;
     try {
       CollectionIdentifier ci = collectionIdentifier();
       if (!ci.collection().isPresent()) {
@@ -58,11 +61,11 @@ public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdR
       }
 
       // Note that the scope can be empty, according to spec it is the same as _default scope
-      key = Unpooled.copiedBuffer(ci.scope().orElse("") + "." + ci.collection().get(), UTF_8);
+      body = Unpooled.copiedBuffer(ci.scope().orElse("") + "." + ci.collection().get(), UTF_8);
       return request(alloc, MemcacheProtocol.Opcode.COLLECTIONS_GET_CID, noDatatype(),
-        noPartition(), opaque, noCas(), noExtras(), key, noBody());
+        noPartition(), opaque, noCas(), noExtras(), noKey(), body);
     } finally {
-      ReferenceCountUtil.release(key);
+      ReferenceCountUtil.release(body);
     }
   }
 
