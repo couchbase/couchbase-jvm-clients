@@ -39,9 +39,9 @@ import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.GetResult
 import com.couchbase.client.kotlin.kv.MutationResult
+import com.couchbase.client.kotlin.kv.internal.InternalUpsert
 import com.couchbase.client.kotlin.kv.internal.createSubdocGetRequest
 import com.couchbase.client.kotlin.kv.internal.parseSubdocGet
-import com.couchbase.client.kotlin.kv.internal.upsertWithReifiedType
 import kotlinx.coroutines.future.await
 
 /**
@@ -152,7 +152,7 @@ public class Collection internal constructor(
         expiry: Expiry = Expiry.None,
     ): MutationResult {
         @OptIn(InternalApi::class)
-        return upsertWithReifiedType(this, id, content, typeRef(), common, transcoder, durability, expiry)
+        return InternalUpsert.upsertWithReifiedType(this, id, content, typeRef(), common, transcoder, durability, expiry)
     }
 
     internal suspend fun <R : Response> exec(

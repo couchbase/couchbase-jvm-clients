@@ -33,39 +33,41 @@ import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.MutationResult
 import kotlin.system.measureNanoTime
 
-/**
- * Does the actual upsert after [Collection.upsert] captures the content's reified type.
- *
- * Public because it's called from a public inline method. Lives over here
- * (instead of on Collection) so it's less visible to users.
- */
 @InternalApi
-public suspend fun <T> upsertWithReifiedType(
-    collection: Collection,
-    id: String,
-    content: T,
-    contentType: TypeRef<T>,
-    options: CommonOptions,
-    transcoder: Transcoder?,
-    durability: Durability,
-    expiry: Expiry,
-): MutationResult {
-    val request = collection.upsertRequest(
-        id, content, contentType, options,
-        transcoder ?: collection.defaultTranscoder,
-        durability, expiry,
-    )
-    try {
-        val response = collection.exec(request, options)
+public object InternalUpsert {
+    /**
+     * Does the actual upsert after [Collection.upsert] captures the content's reified type.
+     *
+     * Public because it's called from a public inline method. Lives over here
+     * (instead of on Collection) so it's less visible to users.
+     */
+    public suspend fun <T> upsertWithReifiedType(
+        collection: Collection,
+        id: String,
+        content: T,
+        contentType: TypeRef<T>,
+        options: CommonOptions,
+        transcoder: Transcoder?,
+        durability: Durability,
+        expiry: Expiry,
+    ): MutationResult {
+        val request = collection.upsertRequest(
+            id, content, contentType, options,
+            transcoder ?: collection.defaultTranscoder,
+            durability, expiry,
+        )
+        try {
+            val response = collection.exec(request, options)
 
-        if (durability is Durability.ClientVerified) {
-            observe(collection, request, id, durability, response.cas(), response.mutationToken())
+            if (durability is Durability.ClientVerified) {
+                observe(collection, request, id, durability, response.cas(), response.mutationToken())
+            }
+
+            return MutationResult(response.cas(), response.mutationToken().orElse(null))
+
+        } finally {
+            request.endSpan()
         }
-
-        return MutationResult(response.cas(), response.mutationToken().orElse(null))
-
-    } finally {
-        request.endSpan()
     }
 }
 

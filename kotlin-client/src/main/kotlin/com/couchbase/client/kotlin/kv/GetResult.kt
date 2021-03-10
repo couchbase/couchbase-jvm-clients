@@ -20,7 +20,7 @@ import com.couchbase.client.kotlin.annotations.InternalApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.Transcoder
 import com.couchbase.client.kotlin.codec.typeRef
-import com.couchbase.client.kotlin.kv.internal.contentAsWithReifiedType
+import com.couchbase.client.kotlin.kv.internal.InternalGet
 
 /**
  * The result retrieving a full document.
@@ -63,7 +63,7 @@ public class GetResult private constructor(
      */
     public inline fun <reified T> contentAs(transcoder: Transcoder? = null): T {
         @OptIn(InternalApi::class)
-        return contentAsWithReifiedType(this, transcoder, typeRef())
+        return InternalGet.contentAsWithReifiedType(this, transcoder, typeRef())
     }
 
     internal companion object {

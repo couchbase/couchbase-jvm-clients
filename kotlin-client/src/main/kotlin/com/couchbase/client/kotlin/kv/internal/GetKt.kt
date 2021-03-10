@@ -37,6 +37,21 @@ import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.*
 
+@InternalApi
+public object InternalGet {
+    /**
+     * Does the actual work after [GetResult.contentAs] captures the content's reified type.
+     *
+     * Hides [GetResult.defaultTranscoder] from the public API.
+     *
+     * Public because it's called from a public inline method. Lives over here
+     * (instead of on GetResult) so it's less visible to users.
+     */
+    public fun <T> contentAsWithReifiedType(getResult: GetResult, transcoder: Transcoder?, type: TypeRef<T>): T {
+        return (transcoder ?: getResult.defaultTranscoder).decode(getResult.content, type)
+    }
+}
+
 internal fun Collection.createSubdocGetRequest(
     id: String,
     withExpiry: Boolean = false,
@@ -158,17 +173,4 @@ private fun parseExpiry(expiryBytes: ByteArray?): Expiry {
     if (expiryBytes == null) return Expiry.None
     val epochSecond = String(expiryBytes, StandardCharsets.UTF_8).toLong()
     return if (epochSecond == 0L) Expiry.None else Expiry.Absolute(Instant.ofEpochSecond(epochSecond))
-}
-
-/**
- * Does the actual work after [GetResult.contentAs] captures the content's reified type.
- *
- * Hides [GetResult.defaultTranscoder] from the public API.
- *
- * Public because it's called from a public inline method. Lives over here
- * (instead of on GetResult) so it's less visible to users.
- */
-@InternalApi
-public fun <T> contentAsWithReifiedType(getResult: GetResult, transcoder: Transcoder?, type: TypeRef<T>): T {
-    return (transcoder ?: getResult.defaultTranscoder).decode(getResult.content, type)
 }
