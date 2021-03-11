@@ -20,17 +20,20 @@
         <netty.version>4.1.59.Final</netty.version>
         <jackson.version>2.12.1</jackson.version>
 
+        <shaded.package.prefix>com.couchbase.client.core.deps.</shaded.package.prefix>
+        <shaded.native.lib.prefix>com_couchbase_client_core_deps_</shaded.native.lib.prefix>
+
         <native.folder>${project.build.directory}/native</native.folder>
         <native.epoll.original>libnetty_transport_native_epoll_x86_64.so</native.epoll.original>
-        <native.epoll.renamed>libcom_couchbase_client_core_deps_netty_transport_native_epoll_x86_64.so</native.epoll.renamed>
+        <native.epoll.renamed>lib${shaded.native.lib.prefix}netty_transport_native_epoll_x86_64.so</native.epoll.renamed>
         <native.kqueue.original>libnetty_transport_native_kqueue_x86_64.jnilib</native.kqueue.original>
-        <native.kqueue.renamed>libcom_couchbase_client_core_deps_netty_transport_native_kqueue_x86_64.jnilib</native.kqueue.renamed>
+        <native.kqueue.renamed>lib${shaded.native.lib.prefix}netty_transport_native_kqueue_x86_64.jnilib</native.kqueue.renamed>
         <native.tcnative-linux.original>libnetty_tcnative_linux_x86_64.so</native.tcnative-linux.original>
-        <native.tcnative-linux.renamed>libcom_couchbase_client_core_deps_netty_tcnative_linux_x86_64.so</native.tcnative-linux.renamed>
+        <native.tcnative-linux.renamed>lib${shaded.native.lib.prefix}netty_tcnative_linux_x86_64.so</native.tcnative-linux.renamed>
         <native.tcnative-osx.original>libnetty_tcnative_osx_x86_64.jnilib</native.tcnative-osx.original>
-        <native.tcnative-osx.renamed>libcom_couchbase_client_core_deps_netty_tcnative_osx_x86_64.jnilib</native.tcnative-osx.renamed>
+        <native.tcnative-osx.renamed>lib${shaded.native.lib.prefix}netty_tcnative_osx_x86_64.jnilib</native.tcnative-osx.renamed>
         <native.tcnative-windows.original>netty_tcnative_windows_x86_64.dll</native.tcnative-windows.original>
-        <native.tcnative-windows.renamed>com_couchbase_client_core_deps_netty_tcnative_windows_x86_64.dll</native.tcnative-windows.renamed>
+        <native.tcnative-windows.renamed>${shaded.native.lib.prefix}netty_tcnative_windows_x86_64.dll</native.tcnative-windows.renamed>
     </properties>
 
     <dependencies>
@@ -136,31 +139,27 @@
                     <relocations>
                         <relocation>
                             <pattern>io.netty</pattern>
-                            <shadedPattern>com.couchbase.client.core.deps.io.netty</shadedPattern>
+                            <shadedPattern>${shaded.package.prefix}io.netty</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>com.fasterxml.jackson</pattern>
-                            <shadedPattern>com.couchbase.client.core.deps.com.fasterxml.jackson</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>com.couchbase.client.core.com.couchbase.client.core.deps.io.netty</pattern>
-                            <shadedPattern>com.couchbase.client.core.io.netty</shadedPattern>
+                            <shadedPattern>${shaded.package.prefix}com.fasterxml.jackson</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.iq80.snappy</pattern>
-                            <shadedPattern>com.couchbase.client.core.deps.org.iq80.snappy</shadedPattern>
+                            <shadedPattern>${shaded.package.prefix}org.iq80.snappy</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.LatencyUtils</pattern>
-                            <shadedPattern>com.couchbase.client.core.deps.org.LatencyUtils</shadedPattern>
+                            <shadedPattern>${shaded.package.prefix}org.LatencyUtils</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.HdrHistogram</pattern>
-                            <shadedPattern>com.couchbase.client.core.deps.org.HdrHistogram</shadedPattern>
+                            <shadedPattern>${shaded.package.prefix}org.HdrHistogram</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.jctools</pattern>
-                            <shadedPattern>com.couchbase.client.core.deps.org.jctools</shadedPattern>
+                            <shadedPattern>${shaded.package.prefix}org.jctools</shadedPattern>
                         </relocation>
                     </relocations>
                     <transformers>
