@@ -16,12 +16,10 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.analytics.AnalyticsMetaData;
-import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.analytics.AnalyticsStatus;
 import com.couchbase.client.java.json.JsonObject;
@@ -53,12 +51,18 @@ import static com.couchbase.client.java.manager.analytics.CreateDatasetAnalytics
 import static com.couchbase.client.java.manager.analytics.DropDatasetAnalyticsOptions.dropDatasetAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.DropIndexAnalyticsOptions.dropIndexAnalyticsOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the basic functionality of analytics queries in an end-to-end fashion.
  */
-@IgnoreWhen(missesCapabilities = {Capabilities.ANALYTICS, Capabilities.COLLECTIONS})
+@IgnoreWhen(
+	missesCapabilities = {Capabilities.ANALYTICS, Capabilities.COLLECTIONS},
+	clusterTypes = ClusterType.CAVES
+)
 class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
 
 	private static Cluster cluster;

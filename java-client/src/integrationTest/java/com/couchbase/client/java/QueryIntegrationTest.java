@@ -35,6 +35,7 @@ import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.query.QueryScanConsistency;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
+import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -59,7 +60,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>
  * Disabling against 5.5.  See comment on QueryIndexManagerIntegrationTest for details.
  */
-@IgnoreWhen( missesCapabilities = { Capabilities.QUERY }, clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER)
+@IgnoreWhen(
+  missesCapabilities = Capabilities.QUERY,
+  clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
+  clusterTypes = ClusterType.CAVES
+)
 class QueryIntegrationTest extends JavaIntegrationTest {
 
     private static Cluster cluster;

@@ -63,7 +63,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @IgnoreWhen(
   missesCapabilities = { Capabilities.QUERY, Capabilities.COLLECTIONS },
-  clusterTypes = { ClusterType.MOCKED },
+  clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES },
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER
 )
 class QueryCollectionIntegrationTest extends JavaIntegrationTest {

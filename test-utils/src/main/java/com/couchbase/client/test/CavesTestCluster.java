@@ -20,6 +20,7 @@ import com.couchbase.client.test.caves.CavesControlServer;
 import com.couchbase.client.test.caves.CavesProcess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.shaded.okhttp3.Credentials;
 import org.testcontainers.shaded.okhttp3.OkHttpClient;
 import org.testcontainers.shaded.okhttp3.Request;
 import org.testcontainers.shaded.okhttp3.Response;
@@ -30,8 +31,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -47,7 +46,7 @@ import java.util.stream.Collectors;
 
 public class CavesTestCluster extends TestCluster {
 
-  private static final String CAVES_VERSION = "v0.0.1-32";
+  private static final String CAVES_VERSION = "v0.0.1-35";
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CavesTestCluster.class);
 
@@ -135,28 +134,37 @@ public class CavesTestCluster extends TestCluster {
 
     LOGGER.info("CAVES connection string is {}", connstr);
 
-    List<UnresolvedSocket> kvSockets = parseHosts(connstr);
     List<UnresolvedSocket> mgmtSockets = mgmtAddrs.stream().flatMap(s -> parseHosts(s).stream()).collect(Collectors.toList());
 
-    List<TestNodeConfig> nodes = new ArrayList<>();
-    int idx = 0;
-    for (UnresolvedSocket kvSocket : kvSockets) {
-      Map<Services, Integer> ports = new HashMap<>();
-      ports.put(Services.KV, kvSocket.port());
-      ports.put(Services.MANAGER, mgmtSockets.get(idx).port());
-      idx++;
-      nodes.add(new TestNodeConfig(kvSocket.hostname(), ports));
-    }
+    String bucketname = "default";
+    String username = "Administrator";
+    String password = "password";
+
+    Response getResponse = httpClient.newCall(new Request.Builder()
+      .header("Authorization", Credentials.basic(username, password))
+      .url("http://" + mgmtSockets.get(0).hostname + ":" + mgmtSockets.get(0).port + "/pools/default/b/" + bucketname)
+      .build())
+      .execute();
+
+    String raw = getResponse.body().string();
+
+    Response getClusterVersionResponse = httpClient.newCall(new Request.Builder()
+      .header("Authorization", Credentials.basic(username, password))
+      .url("http://" + mgmtSockets.get(0).hostname + ":" + mgmtSockets.get(0).port + "/pools")
+      .build())
+      .execute();
+
+    ClusterVersion clusterVersion = parseClusterVersion(getClusterVersionResponse);
 
     return new TestClusterConfig(
-      "default",
-      "Administrator",
-      "password",
-      nodes,
-      0,
+      bucketname,
+      username,
+      password,
+      nodesFromRaw(mgmtSockets.get(0).hostname, raw),
+      replicasFromRaw(raw),
       Optional.empty(),
-      Collections.emptySet(),
-      null
+      capabilitiesFromRaw(raw),
+      clusterVersion
     );
   }
 

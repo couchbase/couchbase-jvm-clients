@@ -47,7 +47,7 @@ class ClusterLevelQueryIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(missesCapabilities = {Capabilities.GLOBAL_CONFIG, Capabilities.QUERY})
+  @IgnoreWhen(missesCapabilities = {Capabilities.GLOBAL_CONFIG, Capabilities.QUERY}, clusterTypes = ClusterType.CAVES)
   void performsClusterLevelQueryWithoutOpenBucket() {
     cluster.waitUntilReady(Duration.ofSeconds(5));
 

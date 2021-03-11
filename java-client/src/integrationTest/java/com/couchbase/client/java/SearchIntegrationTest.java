@@ -27,6 +27,7 @@ import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
+import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -42,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Verifies the basic functionality of analytics queries in an end-to-end fashion.
  */
-@IgnoreWhen( missesCapabilities = { Capabilities.SEARCH })
+@IgnoreWhen(missesCapabilities = Capabilities.SEARCH, clusterTypes = ClusterType.CAVES)
 @Disabled("to be fixed in JCBC-1557")
 class SearchIntegrationTest extends JavaIntegrationTest {
 

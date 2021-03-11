@@ -56,6 +56,7 @@ import static com.couchbase.client.java.manager.analytics.DropDatasetAnalyticsOp
 import static com.couchbase.client.java.manager.analytics.DropDataverseAnalyticsOptions.dropDataverseAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.DropIndexAnalyticsOptions.dropIndexAnalyticsOptions;
 import static com.couchbase.client.test.Capabilities.ANALYTICS;
+import static com.couchbase.client.test.ClusterType.CAVES;
 import static com.couchbase.client.test.ClusterType.MOCKED;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -64,7 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@IgnoreWhen(clusterTypes = MOCKED, missesCapabilities = ANALYTICS)
+@IgnoreWhen(clusterTypes = {MOCKED, CAVES}, missesCapabilities = ANALYTICS)
 class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   private static final String dataset = "myDataset";
