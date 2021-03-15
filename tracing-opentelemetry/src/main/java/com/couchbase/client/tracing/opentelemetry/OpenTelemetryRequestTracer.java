@@ -18,20 +18,56 @@ package com.couchbase.client.tracing.opentelemetry;
 
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.env.CoreEnvironment;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.trace.TracerProvider;
 import io.opentelemetry.context.Context;
 import reactor.core.publisher.Mono;
 
+import java.net.URL;
 import java.time.Duration;
+import java.util.Enumeration;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.jar.Attributes;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 
 /**
  * Wraps the OpenTelemetry tracer so it is suitable to be passed in into the couchbase environment and picked up
  * by the rest of the SDK as a result.
  */
 public class OpenTelemetryRequestTracer implements RequestTracer {
+
+  public static final String INSTRUMENTATION_NAME = "com.couchbase.client.jvm";
+
+  private static final Map<String, Attributes> MANIFEST_INFOS = new ConcurrentHashMap<>();
+
+  static {
+    try {
+      Enumeration<URL> resources = CoreEnvironment.class.getClassLoader().getResources(JarFile.MANIFEST_NAME);
+      while (resources.hasMoreElements()) {
+        URL manifestUrl = resources.nextElement();
+        if (manifestUrl == null) {
+          continue;
+        }
+        Manifest manifest = new Manifest(manifestUrl.openStream());
+        if (manifest.getEntries() == null) {
+          continue;
+        }
+        for (Map.Entry<String, Attributes> entry : manifest.getEntries().entrySet()) {
+          if (entry.getKey().startsWith("couchbase-")) {
+            MANIFEST_INFOS.put(entry.getKey(), entry.getValue());
+          }
+        }
+      }
+    } catch (Exception e) {
+      // Ignored on purpose.
+    }
+  }
 
   /**
    * Holds the actual OTel tracer.
@@ -46,11 +82,31 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
    * @return the wrapped OpenTelemetry ready to be passed in.
    */
   public static OpenTelemetryRequestTracer wrap(final OpenTelemetry openTelemetry) {
-    return new OpenTelemetryRequestTracer(openTelemetry);
+    return wrap(openTelemetry.getTracerProvider());
   }
 
-  private OpenTelemetryRequestTracer(OpenTelemetry openTelemetry) {
-    this.tracer = openTelemetry.getTracer("com.couchbase.client.jvm");
+  /**
+   * Wraps OpenTelemetry and returns a datatype that can be passed into the requestTracer method of the
+   * environment.
+   *
+   * @param tracerProvider the OpenTelemetry TracerProvider instance to wrap.
+   * @return the wrapped OpenTelemetry ready to be passed in.
+   */
+  public static OpenTelemetryRequestTracer wrap(final TracerProvider tracerProvider) {
+    return new OpenTelemetryRequestTracer(tracerProvider);
+  }
+
+  private OpenTelemetryRequestTracer(TracerProvider tracerProvider) {
+    String version = null;
+    try {
+      version = MANIFEST_INFOS.get("couchbase-java-tracing-opentelemetry").getValue("Impl-Version");
+    } catch (Exception ex) {
+      // ignored on purpose
+    }
+
+    this.tracer = version != null
+      ? tracerProvider.get(INSTRUMENTATION_NAME, version)
+      : tracerProvider.get(INSTRUMENTATION_NAME);
   }
 
   private Span castSpan(final RequestSpan requestSpan) {
