@@ -22,7 +22,7 @@ import com.couchbase.client.core.msg.kv.UpsertRequest
 import com.couchbase.client.core.util.Validators
 import com.couchbase.client.kotlin.Collection
 import com.couchbase.client.kotlin.CommonOptions
-import com.couchbase.client.kotlin.annotations.InternalApi
+import com.couchbase.client.kotlin.annotations.InternalCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.Transcoder
 import com.couchbase.client.kotlin.codec.TypeRef
@@ -33,7 +33,7 @@ import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.MutationResult
 import kotlin.system.measureNanoTime
 
-@InternalApi
+@InternalCouchbaseApi
 public object InternalUpsert {
     /**
      * Does the actual upsert after [Collection.upsert] captures the content's reified type.

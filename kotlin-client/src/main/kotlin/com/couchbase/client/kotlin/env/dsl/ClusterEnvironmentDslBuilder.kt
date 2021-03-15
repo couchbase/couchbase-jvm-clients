@@ -23,8 +23,8 @@ import com.couchbase.client.core.encryption.CryptoManager
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.core.env.CoreEnvironment.DEFAULT_MAX_NUM_REQUESTS_IN_RETRY
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.kotlin.annotations.UncommittedApi
-import com.couchbase.client.kotlin.annotations.VolatileApi
+import com.couchbase.client.kotlin.annotations.UncommittedCoucbaseApi
+import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.Transcoder
 import com.couchbase.client.kotlin.configureManyThingsUsingDsl
@@ -121,28 +121,28 @@ public class ClusterEnvironmentDslBuilder {
     /**
      * @see CoreEnvironment.Builder.eventBus
      */
-    @UncommittedApi
+    @UncommittedCoucbaseApi
     public var eventBus: EventBus?
             by observable(null) { _, _, it -> wrapped.eventBus(it) }
 
     /**
      * @see CoreEnvironment.Builder.scheduler
      */
-    @UncommittedApi
+    @UncommittedCoucbaseApi
     public var scheduler: Scheduler?
             by observable(null) { _, _, it -> wrapped.scheduler(it) }
 
     /**
      * @see CoreEnvironment.Builder.requestTracer
      */
-    @VolatileApi
+    @VolatileCouchbaseApi
     public var requestTracer: RequestTracer?
             by observable(null) { _, _, it -> wrapped.requestTracer(it) }
 
     /**
      * @see CoreEnvironment.Builder.meter
      */
-    @VolatileApi
+    @VolatileCouchbaseApi
     public var meter: Meter?
             by observable(null) { _, _, it -> wrapped.meter(it) }
 

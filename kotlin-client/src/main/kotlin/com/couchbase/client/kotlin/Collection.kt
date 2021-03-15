@@ -28,8 +28,8 @@ import com.couchbase.client.core.msg.Response
 import com.couchbase.client.core.msg.kv.GetRequest
 import com.couchbase.client.core.msg.kv.KeyValueRequest
 import com.couchbase.client.core.msg.kv.SubdocGetResponse
-import com.couchbase.client.kotlin.annotations.InternalApi
-import com.couchbase.client.kotlin.annotations.VolatileApi
+import com.couchbase.client.kotlin.annotations.InternalCouchbaseApi
+import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.Transcoder
@@ -121,7 +121,7 @@ public class Collection internal constructor(
      *
      * @see get
      */
-    @VolatileApi
+    @VolatileCouchbaseApi
     public suspend inline fun getOrNull(
         id: String,
         options: CommonOptions = CommonOptions.Default,
@@ -153,7 +153,7 @@ public class Collection internal constructor(
         durability: Durability = Durability.disabled(),
         expiry: Expiry = Expiry.None,
     ): MutationResult {
-        @OptIn(InternalApi::class)
+        @OptIn(InternalCouchbaseApi::class)
         return InternalUpsert.upsertWithReifiedType(this, id, content, typeRef(), common, transcoder, durability, expiry)
     }
 

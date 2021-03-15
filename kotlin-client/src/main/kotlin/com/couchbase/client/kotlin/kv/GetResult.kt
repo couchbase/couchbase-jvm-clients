@@ -16,7 +16,7 @@
 
 package com.couchbase.client.kotlin.kv
 
-import com.couchbase.client.kotlin.annotations.InternalApi
+import com.couchbase.client.kotlin.annotations.InternalCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.Transcoder
 import com.couchbase.client.kotlin.codec.typeRef
@@ -62,7 +62,7 @@ public class GetResult private constructor(
      * configured on the cluster environment.
      */
     public inline fun <reified T> contentAs(transcoder: Transcoder? = null): T {
-        @OptIn(InternalApi::class)
+        @OptIn(InternalCouchbaseApi::class)
         return InternalGet.contentAsWithReifiedType(this, transcoder, typeRef())
     }
 

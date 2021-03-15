@@ -16,7 +16,7 @@
 
 package com.couchbase.client.kotlin
 
-import com.couchbase.client.kotlin.annotations.VolatileApi
+import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.kv.Durability.Companion.clientVerified
 import com.couchbase.client.kotlin.kv.PersistTo
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
@@ -95,7 +95,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
 
     @Test
     fun `getOrNull returns null for absent document`(): Unit = runBlocking {
-        @OptIn(VolatileApi::class)
+        @OptIn(VolatileCouchbaseApi::class)
         assertNull(collection.getOrNull("does-not-exist")?.contentAs<String>())
     }
 
@@ -103,7 +103,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
     fun `getOrNull returns present document`(): Unit = runBlocking {
         val id = UUID.randomUUID().toString()
         collection.upsert(id, "foo")
-        @OptIn(VolatileApi::class)
+        @OptIn(VolatileCouchbaseApi::class)
         assertEquals("foo", collection.getOrNull(id)?.contentAs<String>())
     }
 }

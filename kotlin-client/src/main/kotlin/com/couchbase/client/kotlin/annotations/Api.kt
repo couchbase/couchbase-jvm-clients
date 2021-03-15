@@ -33,7 +33,7 @@ import com.couchbase.client.core.annotation.Stability
  * annotation in order to specify opt-in requirements.
  */
 @RequiresOptIn(level = RequiresOptIn.Level.ERROR)
-public annotation class InternalApi
+public annotation class InternalCouchbaseApi
 
 /**
  * APIs marked as volatile can change any time and for any reason.
@@ -53,7 +53,7 @@ public annotation class InternalApi
  * annotation in order to specify opt-in requirements.
  */
 @RequiresOptIn(level = RequiresOptIn.Level.ERROR)
-public annotation class VolatileApi
+public annotation class VolatileCouchbaseApi
 
 /**
  * No commitment is made about the API.
@@ -70,4 +70,4 @@ public annotation class VolatileApi
  * annotation in order to specify opt-in requirements.
  */
 @RequiresOptIn(level = RequiresOptIn.Level.WARNING)
-public annotation class UncommittedApi
+public annotation class UncommittedCoucbaseApi
