@@ -39,6 +39,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jsonMapper
 import reactor.core.scheduler.Scheduler
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicBoolean
 
 public interface ClusterPropertyLoader : PropertyLoader<ClusterEnvironment.Builder>
 
@@ -130,6 +131,7 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
         internal var jsonSerializer: JsonSerializer? = null
         internal var transcoder: Transcoder? = null
         internal var cryptoManager: CryptoManager? = null
+        internal var used = AtomicBoolean()
 
         /**
          * Immediately loads the properties from the given loader into the environment.
@@ -209,8 +211,17 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
          * shutting down the environment when it is no longer needed.
          *
          * @return the created cluster environment.
+         * @throws IllegalStateException if this method has already been called.
          * @see shutdownSuspend
          */
-        override fun build(): ClusterEnvironment = ClusterEnvironment(this)
+        override fun build(): ClusterEnvironment {
+            // Prevent passing the same builder to Cluster.connect()
+            // multiple times with different connection strings.
+            // Don't want the connection string params to leak into the builder.
+            check(!used.compareAndSet(false, true)) {
+                "ClusterEnvironment.Builder.build() may only be called once."
+            }
+            return ClusterEnvironment(this)
+        }
     }
 }
