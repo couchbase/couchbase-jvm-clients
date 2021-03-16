@@ -27,30 +27,12 @@ import com.couchbase.client.core.msg.kv.SubdocGetResponse
 import com.couchbase.client.core.projections.ProjectionsApplier
 import com.couchbase.client.kotlin.Collection
 import com.couchbase.client.kotlin.CommonOptions
-import com.couchbase.client.kotlin.annotations.InternalCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
-import com.couchbase.client.kotlin.codec.Transcoder
-import com.couchbase.client.kotlin.codec.TypeRef
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.GetResult
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.*
-
-@InternalCouchbaseApi
-public object InternalGet {
-    /**
-     * Does the actual work after [GetResult.contentAs] captures the content's reified type.
-     *
-     * Hides [GetResult.defaultTranscoder] from the public API.
-     *
-     * Public because it's called from a public inline method. Lives over here
-     * (instead of on GetResult) so it's less visible to users.
-     */
-    public fun <T> contentAsWithReifiedType(getResult: GetResult, transcoder: Transcoder?, type: TypeRef<T>): T {
-        return (transcoder ?: getResult.defaultTranscoder).decode(getResult.content, type)
-    }
-}
 
 internal fun Collection.createSubdocGetRequest(
     id: String,

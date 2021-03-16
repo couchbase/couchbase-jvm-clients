@@ -16,11 +16,9 @@
 
 package com.couchbase.client.kotlin.kv
 
-import com.couchbase.client.kotlin.annotations.InternalCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.Transcoder
 import com.couchbase.client.kotlin.codec.typeRef
-import com.couchbase.client.kotlin.kv.internal.InternalGet
 
 /**
  * The result retrieving a full document.
@@ -52,6 +50,7 @@ public class GetResult private constructor(
      */
     public val expiry: Expiry?,
 
+    @property:PublishedApi
     internal val defaultTranscoder: Transcoder,
 ) {
     /**
@@ -62,8 +61,7 @@ public class GetResult private constructor(
      * configured on the cluster environment.
      */
     public inline fun <reified T> contentAs(transcoder: Transcoder? = null): T {
-        @OptIn(InternalCouchbaseApi::class)
-        return InternalGet.contentAsWithReifiedType(this, transcoder, typeRef())
+        return (transcoder ?: defaultTranscoder).decode(content, typeRef())
     }
 
     internal companion object {

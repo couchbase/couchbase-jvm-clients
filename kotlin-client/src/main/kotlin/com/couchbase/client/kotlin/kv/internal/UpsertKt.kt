@@ -22,7 +22,6 @@ import com.couchbase.client.core.msg.kv.UpsertRequest
 import com.couchbase.client.core.util.Validators
 import com.couchbase.client.kotlin.Collection
 import com.couchbase.client.kotlin.CommonOptions
-import com.couchbase.client.kotlin.annotations.InternalCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.Transcoder
 import com.couchbase.client.kotlin.codec.TypeRef
@@ -33,41 +32,36 @@ import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.MutationResult
 import kotlin.system.measureNanoTime
 
-@InternalCouchbaseApi
-public object InternalUpsert {
-    /**
-     * Does the actual upsert after [Collection.upsert] captures the content's reified type.
-     *
-     * Public because it's called from a public inline method. Lives over here
-     * (instead of on Collection) so it's less visible to users.
-     */
-    public suspend fun <T> upsertWithReifiedType(
-        collection: Collection,
-        id: String,
-        content: T,
-        contentType: TypeRef<T>,
-        options: CommonOptions,
-        transcoder: Transcoder?,
-        durability: Durability,
-        expiry: Expiry,
-    ): MutationResult {
-        val request = collection.upsertRequest(
-            id, content, contentType, options,
-            transcoder ?: collection.defaultTranscoder,
-            durability, expiry,
-        )
-        try {
-            val response = collection.exec(request, options)
+/**
+ * Does the actual upsert after [Collection.upsert] captures the content's reified type.
+ */
+@PublishedApi
+internal suspend fun <T> upsertWithReifiedType(
+    collection: Collection,
+    id: String,
+    content: T,
+    contentType: TypeRef<T>,
+    options: CommonOptions,
+    transcoder: Transcoder?,
+    durability: Durability,
+    expiry: Expiry,
+): MutationResult {
+    val request = collection.upsertRequest(
+        id, content, contentType, options,
+        transcoder ?: collection.defaultTranscoder,
+        durability, expiry,
+    )
+    try {
+        val response = collection.exec(request, options)
 
-            if (durability is Durability.ClientVerified) {
-                observe(collection, request, id, durability, response.cas(), response.mutationToken())
-            }
-
-            return MutationResult(response.cas(), response.mutationToken().orElse(null))
-
-        } finally {
-            request.endSpan()
+        if (durability is Durability.ClientVerified) {
+            observe(collection, request, id, durability, response.cas(), response.mutationToken())
         }
+
+        return MutationResult(response.cas(), response.mutationToken().orElse(null))
+
+    } finally {
+        request.endSpan()
     }
 }
 
