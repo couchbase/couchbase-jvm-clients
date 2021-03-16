@@ -824,6 +824,28 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
       }
     }
 
+    @Test
+    void rejectsCasWithWrongStoreSemantics() {
+      String docId = docId();
+
+      assertThrows(
+        InvalidArgumentException.class,
+        () -> coll.mutateIn(
+          docId,
+          Collections.singletonList(MutateInSpec.insert("foo", "bar")),
+          mutateInOptions().cas(1234).storeSemantics(StoreSemantics.INSERT)
+        )
+      );
+      assertThrows(
+        InvalidArgumentException.class,
+        () -> coll.mutateIn(
+          docId,
+          Collections.singletonList(MutateInSpec.insert("foo", "bar")),
+          mutateInOptions().cas(1234).storeSemantics(StoreSemantics.UPSERT)
+        )
+      );
+    }
+
     // JCBC-1600
     @Test
     void expiryWithDocumentFlagsShouldNotFail() {

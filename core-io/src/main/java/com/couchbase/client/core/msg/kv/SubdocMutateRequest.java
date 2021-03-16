@@ -88,6 +88,10 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       throw InvalidArgumentException.fromMessage("Cannot both insert and upsert full document");
     }
 
+    if (cas != 0 && (insertDocument || upsertDocument)) {
+      throw InvalidArgumentException.fromMessage("A cas value can only be applied to \"replace\" store semantics.");
+    }
+
     if (upsertDocument) {
       flags |= SUBDOC_DOC_FLAG_MKDOC;
     }
