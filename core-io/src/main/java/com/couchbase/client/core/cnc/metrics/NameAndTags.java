@@ -35,6 +35,14 @@ public class NameAndTags {
     this.tags = tags;
   }
 
+  public String name() {
+    return name;
+  }
+
+  public Map<String, String> tags() {
+    return tags;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;

@@ -211,5 +211,7 @@ public class TracingIdentifiers {
 
   public static final String ATTR_SCOPE = "db.couchbase.scope";
 
+  public static final String METER_REQUESTS = "db.couchbase.requests";
+
 
 }

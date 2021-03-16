@@ -18,6 +18,7 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.events.core.BucketClosedEvent;
 import com.couchbase.client.core.cnc.events.core.BucketOpenInitiatedEvent;
@@ -449,10 +450,10 @@ public class Core {
   public ValueRecorder responseMetric(final Request<?> request) {
     return responseMetrics.computeIfAbsent(new ResponseMetricIdentifier(request), key -> {
       Map<String, String> tags = new HashMap<>(4);
-      tags.put("cb.service", key.serviceType.ident());
-      tags.put("cb.remote_hostname", key.lastDispatchedTo.hostname());
-      tags.put("cb.request_type", key.requestName);
-      return coreContext.environment().meter().valueRecorder("cb.responses", tags);
+      tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceType.ident());
+      tags.put(TracingIdentifiers.ATTR_REMOTE_HOSTNAME, key.lastDispatchedTo.hostname());
+      tags.put(TracingIdentifiers.ATTR_OPERATION, key.requestName);
+      return coreContext.environment().meter().valueRecorder(TracingIdentifiers.METER_REQUESTS, tags);
     });
   }
 

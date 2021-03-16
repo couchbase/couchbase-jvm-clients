@@ -75,7 +75,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -155,8 +154,6 @@ public abstract class BaseEndpoint implements Endpoint {
   private final String hostname;
 
   private final int port;
-
-  private final Map<Class<?>, Counter> requestCounters = new ConcurrentHashMap<>();
 
   /**
    * Once connected, contains the channel to work with.
@@ -557,7 +554,6 @@ public abstract class BaseEndpoint implements Endpoint {
         });
       }
 
-      incrementRequestCounter(request);
       channel
         .writeAndFlush(request)
         .addListener(f -> {
@@ -574,17 +570,6 @@ public abstract class BaseEndpoint implements Endpoint {
         : RetryReason.ENDPOINT_CIRCUIT_OPEN;
       RetryOrchestrator.maybeRetry(endpointContext.get(), request, retryReason);
     }
-  }
-
-  private <R extends Request<? extends Response>> void incrementRequestCounter(final R request) {
-    final Counter counter = requestCounters.computeIfAbsent(request.getClass(), key -> {
-      Map<String, String> tags = new HashMap<>(4);
-      tags.put("cb.service", serviceType.ident());
-      tags.put("cb.remote_hostname", hostname);
-      tags.put("cb.request_type", request.name());
-      return context().environment().meter().counter("cb.requests", tags);
-    });
-    counter.incrementBy(1);
   }
 
   @Override

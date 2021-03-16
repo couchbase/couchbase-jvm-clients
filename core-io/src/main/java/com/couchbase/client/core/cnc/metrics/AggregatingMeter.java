@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Counter;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.Meter;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.events.metrics.LatencyMetricsAggregatedEvent;
 import com.couchbase.client.core.deps.org.HdrHistogram.Histogram;
@@ -127,6 +128,7 @@ public class AggregatingMeter implements Meter {
       }
     }
 
+    @SuppressWarnings("unchecked")
     private synchronized void dumpMetrics() {
       Map<String,  Map<String, Object>> output = new HashMap<>();
 
@@ -135,15 +137,21 @@ public class AggregatingMeter implements Meter {
       output.put("meta", meta);
 
       boolean wroteRow = false;
-      for (AggregatingValueRecorder avr : valueRecorders.values()) {
+
+      for (Map.Entry<NameAndTags, AggregatingValueRecorder> entry : valueRecorders.entrySet()) {
+        if (!entry.getKey().name().equals(TracingIdentifiers.METER_REQUESTS)) {
+          continue;
+        }
+
+        AggregatingValueRecorder avr = entry.getValue();
         Histogram histogram = avr.clearStats();
         if (histogram.getTotalCount() == 0) {
           continue;
         }
         wroteRow = true;
 
-        String service = avr.tags().get("cb.service");
-        String hostname = avr.tags().get("cb.remote_hostname");
+        String service = avr.tags().get(TracingIdentifiers.ATTR_SERVICE);
+        String hostname = avr.tags().get(TracingIdentifiers.ATTR_REMOTE_HOSTNAME);
 
         Map<String, Object> serviceMap = output.computeIfAbsent(service, k -> new HashMap<>());
         Map<String, Object> hostMap = (Map<String, Object>) serviceMap.computeIfAbsent(hostname, k -> new HashMap<>());
