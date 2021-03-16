@@ -23,8 +23,6 @@ import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.test.ClusterAwareIntegrationTest
-import com.couchbase.client.test.ClusterType.MOCKED
-import com.couchbase.client.test.IgnoreWhen
 import com.couchbase.client.test.Services
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
@@ -39,7 +37,7 @@ import kotlin.contracts.contract
 internal open class KotlinIntegrationTest : ClusterAwareIntegrationTest() {
 
     private val lazyCluster = lazy { connect() }
-    private val cluster by lazyCluster
+    protected val cluster by lazyCluster
 
     protected val collection by lazy {
         runBlocking {
@@ -80,9 +78,6 @@ internal open class KotlinIntegrationTest : ClusterAwareIntegrationTest() {
     fun connect(envConfig: ClusterEnvironmentConfigBlock = {}) =
         Cluster.connect(connectionString, authenticator, envConfig)
 }
-
-internal val Cluster.env
-    get() = core.context().environment()
 
 /**
  * Disconnects the cluster after executing the given block.

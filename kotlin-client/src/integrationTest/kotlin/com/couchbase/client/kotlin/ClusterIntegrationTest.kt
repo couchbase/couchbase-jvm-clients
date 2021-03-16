@@ -19,11 +19,14 @@ package com.couchbase.client.kotlin
 import com.couchbase.client.core.error.UnambiguousTimeoutException
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
-import com.couchbase.client.kotlin.util.env
 import com.couchbase.client.kotlin.util.use
 import com.couchbase.client.kotlin.util.withSystemProperty
 import com.couchbase.client.test.ClusterType
 import com.couchbase.client.test.IgnoreWhen
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame

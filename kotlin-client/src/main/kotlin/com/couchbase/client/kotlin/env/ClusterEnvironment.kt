@@ -16,6 +16,7 @@
 
 package com.couchbase.client.kotlin.env
 
+import com.couchbase.client.core.Core
 import com.couchbase.client.core.cnc.EventBus
 import com.couchbase.client.core.cnc.Meter
 import com.couchbase.client.core.cnc.RequestTracer
@@ -225,3 +226,6 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
         }
     }
 }
+
+internal val Core.env : ClusterEnvironment
+    get() = context().environment() as ClusterEnvironment
