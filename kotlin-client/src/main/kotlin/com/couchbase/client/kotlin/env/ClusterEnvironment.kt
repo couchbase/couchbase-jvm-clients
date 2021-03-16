@@ -218,7 +218,7 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
             // Prevent passing the same builder to Cluster.connect()
             // multiple times with different connection strings.
             // Don't want the connection string params to leak into the builder.
-            check(!used.compareAndSet(false, true)) {
+            check(used.compareAndSet(false, true)) {
                 "ClusterEnvironment.Builder.build() may only be called once."
             }
             return ClusterEnvironment(this)
