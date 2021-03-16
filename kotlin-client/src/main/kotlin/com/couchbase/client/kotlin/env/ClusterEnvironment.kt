@@ -23,7 +23,7 @@ import com.couchbase.client.core.encryption.CryptoManager
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.core.env.PropertyLoader
 import com.couchbase.client.kotlin.Cluster
-import com.couchbase.client.kotlin.annotations.UncommittedCoucbaseApi
+import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JacksonJsonSerializer
 import com.couchbase.client.kotlin.codec.JsonSerializer
@@ -184,12 +184,12 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
             return this
         }
 
-        @UncommittedCoucbaseApi
+        @UncommittedCouchbaseApi
         override fun eventBus(eventBus: EventBus?): Builder {
             return super.eventBus(eventBus)
         }
 
-        @UncommittedCoucbaseApi
+        @UncommittedCouchbaseApi
         override fun scheduler(scheduler: Scheduler?): Builder {
             return super.scheduler(scheduler)
         }

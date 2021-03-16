@@ -53,4 +53,4 @@ public annotation class VolatileCouchbaseApi
  * annotation in order to specify opt-in requirements.
  */
 @RequiresOptIn(level = RequiresOptIn.Level.WARNING)
-public annotation class UncommittedCoucbaseApi
+public annotation class UncommittedCouchbaseApi

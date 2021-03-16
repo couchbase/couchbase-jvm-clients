@@ -23,7 +23,7 @@ import com.couchbase.client.core.encryption.CryptoManager
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.core.env.CoreEnvironment.DEFAULT_MAX_NUM_REQUESTS_IN_RETRY
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.kotlin.annotations.UncommittedCoucbaseApi
+import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.Transcoder
@@ -121,14 +121,14 @@ public class ClusterEnvironmentDslBuilder {
     /**
      * @see CoreEnvironment.Builder.eventBus
      */
-    @UncommittedCoucbaseApi
+    @UncommittedCouchbaseApi
     public var eventBus: EventBus?
             by observable(null) { _, _, it -> wrapped.eventBus(it) }
 
     /**
      * @see CoreEnvironment.Builder.scheduler
      */
-    @UncommittedCoucbaseApi
+    @UncommittedCouchbaseApi
     public var scheduler: Scheduler?
             by observable(null) { _, _, it -> wrapped.scheduler(it) }
 
