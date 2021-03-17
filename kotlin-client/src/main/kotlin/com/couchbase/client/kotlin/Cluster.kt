@@ -48,7 +48,8 @@ import com.couchbase.client.kotlin.query.QueryRow
 import com.couchbase.client.kotlin.query.QueryScanConsistency
 import com.couchbase.client.kotlin.query.QueryTuning
 import com.couchbase.client.kotlin.samples.bufferedQuery
-import com.couchbase.client.kotlin.samples.singleValueQuery
+import com.couchbase.client.kotlin.samples.singleValueQueryAnonymous
+import com.couchbase.client.kotlin.samples.singleValueQueryNamed
 import com.couchbase.client.kotlin.samples.streamingQuery
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
@@ -157,9 +158,10 @@ public class Cluster internal constructor(
      * and the default serializer for parsing [QueryRow] content.
      * Defaults to the serializer configured on the cluster environment.
      *
-     * @sample singleValueQuery
      * @sample bufferedQuery
      * @sample streamingQuery
+     * @sample singleValueQueryAnonymous
+     * @sample singleValueQueryNamed
      */
     public fun query(
         statement: String,
