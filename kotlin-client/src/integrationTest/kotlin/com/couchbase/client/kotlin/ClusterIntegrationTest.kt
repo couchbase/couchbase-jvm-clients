@@ -23,10 +23,6 @@ import com.couchbase.client.kotlin.util.use
 import com.couchbase.client.kotlin.util.withSystemProperty
 import com.couchbase.client.test.ClusterType
 import com.couchbase.client.test.IgnoreWhen
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
