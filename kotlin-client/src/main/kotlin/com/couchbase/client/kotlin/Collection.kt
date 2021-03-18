@@ -49,17 +49,16 @@ import kotlinx.coroutines.future.await
  */
 public class Collection internal constructor(
     public val name: String,
-    public val scopeName: String,
-    public val bucket: Bucket,
+    public val scope: Scope,
 ) {
     internal val collectionId: CollectionIdentifier =
-        CollectionIdentifier(bucket.name, scopeName.toOptional(), name.toOptional())
+        CollectionIdentifier(scope.bucket.name, scope.name.toOptional(), name.toOptional())
 
-    internal val core: Core = bucket.core
-    internal val env: ClusterEnvironment = bucket.env
+    internal val core: Core = scope.bucket.core
+    internal val env: ClusterEnvironment = scope.bucket.env
 
-    internal val defaultSerializer: JsonSerializer = bucket.env.jsonSerializer
-    internal val defaultTranscoder: Transcoder = bucket.env.transcoder
+    internal val defaultSerializer: JsonSerializer = env.jsonSerializer
+    internal val defaultTranscoder: Transcoder = env.transcoder
 
     internal fun CommonOptions.actualKvTimeout() = timeout ?: env.timeoutConfig().kvTimeout()
     internal fun CommonOptions.actualRetryStrategy() = retryStrategy ?: env.retryStrategy()

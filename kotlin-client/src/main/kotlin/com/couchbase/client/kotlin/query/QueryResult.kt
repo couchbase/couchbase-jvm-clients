@@ -44,7 +44,7 @@ public class QueryResult(
      *
      * @param T the serializer reads the field value as this type.
      *
-     * @throws IllegalStateException if there is more than one result row
+     * @throws IllegalArgumentException if there is more than one result row
      * @throws NoSuchElementException if there is no field with the given name
      *
      * @sample singleValueQueryAnonymous

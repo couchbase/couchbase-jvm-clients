@@ -20,13 +20,13 @@ import com.couchbase.client.core.Core
 import com.couchbase.client.core.diagnostics.ClusterState
 import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper
 import com.couchbase.client.core.error.UnambiguousTimeoutException
-import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.internal.toOptional
 import kotlinx.coroutines.future.await
 import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
 
 public class Bucket internal constructor(
     public val name: String,
@@ -34,12 +34,28 @@ public class Bucket internal constructor(
 ) {
     internal val env = core.context().environment() as ClusterEnvironment
 
+    private val scopeCache = ConcurrentHashMap<String, Scope>()
+
     /**
      * Returns the default collection in this bucket's default scope.
      */
-    public fun defaultCollection(): Collection {
-        return Collection(DEFAULT_COLLECTION, DEFAULT_SCOPE, this)
-    }
+    public fun defaultCollection(): Collection = defaultScope().defaultCollection()
+
+    /**
+     * Returns the requested collection in the bucket's default scope.
+     */
+    public fun collection(name: String): Collection = defaultScope().collection(name)
+
+    /**
+     * Returns this bucket's default scope.
+     */
+    public fun defaultScope(): Scope = scope(DEFAULT_SCOPE)
+
+    /**
+     * Returns the requested scope.
+     */
+    public fun scope(name: String): Scope =
+        scopeCache.computeIfAbsent(name) { Scope(name, this) }
 
     /**
      * Waits until SDK bootstrap is complete and the desired [ClusterState]
