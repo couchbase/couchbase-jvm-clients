@@ -16,6 +16,9 @@
 
 package com.couchbase.client.kotlin.query
 
+/**
+ * Create instances using the [positional] or [named] factory methods.
+ */
 public sealed class QueryParameters {
 
     internal abstract fun inject(queryJson: MutableMap<String, Any?>)

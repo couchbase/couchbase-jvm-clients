@@ -33,20 +33,20 @@ import com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASES
 import com.couchbase.client.core.util.ConnectionStringUtil
 import com.couchbase.client.core.util.Golang
 import com.couchbase.client.kotlin.Cluster.Companion.connect
+import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.env.env
 import com.couchbase.client.kotlin.internal.await
-import com.couchbase.client.kotlin.query.QueryDiagnostics
 import com.couchbase.client.kotlin.query.QueryFlowItem
 import com.couchbase.client.kotlin.query.QueryMetadata
 import com.couchbase.client.kotlin.query.QueryParameters
+import com.couchbase.client.kotlin.query.QueryProfile
 import com.couchbase.client.kotlin.query.QueryResult
 import com.couchbase.client.kotlin.query.QueryRow
 import com.couchbase.client.kotlin.query.QueryScanConsistency
-import com.couchbase.client.kotlin.query.QueryTuning
 import com.couchbase.client.kotlin.samples.bufferedQuery
 import com.couchbase.client.kotlin.samples.singleValueQueryAnonymous
 import com.couchbase.client.kotlin.samples.singleValueQueryNamed
@@ -140,8 +140,8 @@ public class Cluster internal constructor(
     }
 
     /**
-     * Returns a Flow which may be collected to execute the query and process
-     * the results.
+     * Returns a Flow which may be collected to execute a N1QL query and
+     * process the results.
      *
      * The returned Flow is cold, meaning the query is not executed unless
      * the Flow is collected. If you collect the flow multiple times,
@@ -151,33 +151,90 @@ public class Cluster internal constructor(
      * when the results are known to fit in memory. It simply collects the flow
      * into a [QueryResult].
      *
-     * For larger query results, prefer the streaming version:
+     * For larger query results, prefer the streaming version which takes a
+     * lambda to invoke when each row is received from the server:
      * `Flow<QueryFlowItem>.execute { row -> ... }`.
+     *
+     * @param statement the N1QL statement to execute.
+     *
+     * @param common options common to all requests.
+     *
+     * @param parameters parameters to the N1QL statement.
      *
      * @param serializer the serializer to use for converting parameters to JSON,
      * and the default serializer for parsing [QueryRow] content.
      * Defaults to the serializer configured on the cluster environment.
+     *
+     * @param consistency required if you want to read your own writes.
+     * Values other than [QueryScanConsistency.notBounded]
+     * tell the server to wait for the indexer to catch up with a certain
+     * state of the K/V service before executing the query.
+     *
+     * @param readonly pass true if the N1QL statement does not modify documents.
+     * This allows the client to retry the query if necessary.
+     *
+     * @param adhoc pass false if this is a commonly used query that should be
+     * turned into a prepared statement for faster execution.
+     *
+     * @param flexIndex pass true to use a full-text index instead of a query index.
+     *
+     * @param metrics pass true to include metrics in the response (access via
+     * [QueryMetadata.metrics]). Relatively inexpensive, and may be enabled
+     * in production with minimal impact.
+     *
+     * @param profile specifies how much profiling information to include in
+     * the response (access via [QueryMetadata.profile]). Profiling is
+     * relatively expensive, and can impact the performance of the server
+     * query engine. Not recommended for use in production, unless you're
+     * diagnosing a specific issue.
+     *
+     * @param maxParallelism Specifies the maximum parallelism for the query.
+     *
+     * @param scanCap Maximum buffered channel size between the indexer client
+     * and the query service for index scans. This parameter controls when to use
+     * scan backfill. Use 0 or a negative number to disable. Smaller values
+     * reduce GC, while larger values reduce indexer backfill.
+     *
+     * @param pipelineBatch Controls the number of items execution operators
+     * can batch for Fetch from the KV.
+     *
+     * @param pipelineCap Maximum number of items each execution operator
+     * can buffer between various operators.
+     *
+     * @param clientContextId an arbitrary string that identifies this query
+     * for diagnostic purposes.
+     *
+     * @param raw an "escape hatch" for passing arbitrary query options that
+     * aren't otherwise exposed by this method.
      *
      * @sample bufferedQuery
      * @sample streamingQuery
      * @sample singleValueQueryAnonymous
      * @sample singleValueQueryNamed
      */
+    @OptIn(VolatileCouchbaseApi::class)
     public fun query(
         statement: String,
         common: CommonOptions = CommonOptions.Default,
         parameters: QueryParameters = QueryParameters.None,
-        readonly: Boolean = false,
-        adhoc: Boolean = true,
 
         serializer: JsonSerializer? = null,
-        raw: Map<String, Any?> = emptyMap(),
 
-        consistency: QueryScanConsistency = QueryScanConsistency.NotBounded,
-        diagnostics: QueryDiagnostics = QueryDiagnostics.Default,
-        tuning: QueryTuning = QueryTuning.Default,
+        consistency: QueryScanConsistency = QueryScanConsistency.notBounded(),
+        readonly: Boolean = false,
+        adhoc: Boolean = true,
+        flexIndex: Boolean = false,
+
+        metrics: Boolean = false,
+        @VolatileCouchbaseApi profile: QueryProfile = QueryProfile.OFF,
+
+        maxParallelism: Int? = null,
+        scanCap: Int? = null,
+        pipelineBatch: Int? = null,
+        pipelineCap: Int? = null,
 
         clientContextId: String? = UUID.randomUUID().toString(),
+        raw: Map<String, Any?> = emptyMap(),
 
         ): Flow<QueryFlowItem> {
 
@@ -190,14 +247,20 @@ public class Cluster internal constructor(
 
         queryJson["statement"] = statement
         queryJson["timeout"] = Golang.encodeDurationToMs(timeout)
+
+        if (readonly) queryJson["readonly"] = true
+        if (flexIndex) queryJson["use_fts"] = true
+        if (!metrics) queryJson["metrics"] = false
+
+        if (profile !== QueryProfile.OFF) queryJson["profile"] = profile.toString()
+
         clientContextId?.let { queryJson["client_context_id"] = it }
-        if (readonly) {
-            queryJson["readonly"] = true
-        }
+        maxParallelism?.let { queryJson["max_parallelism"] = it.toString() }
+        pipelineCap?.let { queryJson["pipeline_cap"] = it.toString() }
+        pipelineBatch?.let { queryJson["pipeline_batch"] = it.toString() }
+        scanCap?.let { queryJson["scan_cap"] = it.toString() }
 
         consistency.inject(queryJson)
-        diagnostics.inject(queryJson)
-        tuning.inject(queryJson)
         parameters.inject(queryJson)
 
         queryJson.putAll(raw)
@@ -382,4 +445,3 @@ public class Cluster internal constructor(
         }
     }
 }
-

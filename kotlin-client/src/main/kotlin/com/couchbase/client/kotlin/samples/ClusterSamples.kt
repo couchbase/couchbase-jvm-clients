@@ -23,6 +23,7 @@ import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.kotlin.codec.RawJsonTranscoder
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.env.dsl.TrustSource
+import com.couchbase.client.kotlin.query.execute
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Paths
 import java.time.Duration
@@ -39,16 +40,19 @@ internal fun quickstart() {
         val bucket = cluster.bucket("travel-sample")
         val collection = bucket.defaultCollection()
 
-        // Perform a N1QL query
-        // val queryResult = cluster.query(
-        //     "select * from `travel-sample` limit 5"
-        // )
-        // println(queryResult.rowsAsObject())
+        runBlocking {
+            // Perform a N1QL query
+            val queryResult = cluster
+                .query("select * from `travel-sample` limit 3")
+                .execute()
+            queryResult.rows.forEach { println(it) }
+            println(queryResult.metadata)
 
-        // Perform a KV request and load a document
-        // val getResult = collection.get("airline_10")
-        // println(getResult.contentAs<Map>())
-
+            // Get a document from the K/V service
+            val getResult = collection.get("airline_10")
+            println(getResult)
+            println(getResult.contentAs<Map<String, Any?>>())
+        }
     } finally {
         runBlocking { cluster.disconnect() }
     }

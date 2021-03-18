@@ -16,11 +16,17 @@
 
 package com.couchbase.client.kotlin.query
 
-import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.util.Golang
 import com.couchbase.client.kotlin.kv.MutationState
+import com.couchbase.client.kotlin.query.QueryScanConsistency.Companion.consistentWith
+import com.couchbase.client.kotlin.query.QueryScanConsistency.Companion.notBounded
+import com.couchbase.client.kotlin.query.QueryScanConsistency.Companion.requestPlus
 import java.time.Duration
 
+/**
+ * Create instances using the [requestPlus], [consistentWith], or [notBounded]
+ * factory methods.
+ */
 public sealed class QueryScanConsistency(
     private val wireName: String?,
     private val scanWait: Duration?,
@@ -33,31 +39,32 @@ public sealed class QueryScanConsistency(
 
     public companion object {
         /**
-         * The indexer will return whatever state it has to the query engine at the time of query.
-         *
-         * This is the default (for single-statement requests). No timestamp vector is used in the index scan. This is also
-         * the fastest mode, because we avoid the cost of obtaining the vector, and we also avoid any wait for the index to
-         * catch up to the vector.
+         * For when speed matters more than consistency. Executes the query
+         * immediately, without waiting for prior K/V mutations to be indexed.
          */
         public fun notBounded(): QueryScanConsistency =
             NotBounded
 
         /**
-         * The indexer will wait until all mutations have been processed at the time of request before returning to the
-         * query engine.
+         * Strong consistency. Waits for all prior K/V mutations to be indexed
+         * before executing the query.
          *
-         * This implements strong consistency per request. Before processing the request, a current vector is obtained. The
-         * vector is used as a lower bound for the statements in the request. If there are DML statements in the request,
-         * RYOW ("read your own write") is also applied within the request.
+         * @param scanWait max time to wait for the indexer to catch up
          */
         public fun requestPlus(scanWait: Duration? = null): QueryScanConsistency =
             RequestPlus(scanWait)
 
+        /**
+         * Targeted consistency. Waits for specific K/V mutations to be indexed
+         * before executing the query.
+         *
+         * Sometimes referred to as "At Plus".
+         *
+         * @param tokens the mutations to await before executing the query
+         * @param scanWait max time to wait for the indexer to catch up
+         */
         public fun consistentWith(tokens: MutationState, scanWait: Duration? = null): QueryScanConsistency =
-            ConsistentWith(tokens, scanWait)
-
-        public fun consistentWith(tokens: Iterable<MutationToken>, scanWait: Duration? = null): QueryScanConsistency =
-            ConsistentWith(MutationState(tokens), scanWait)
+            if (tokens.isEmpty()) NotBounded else ConsistentWith(tokens, scanWait)
     }
 
     public object NotBounded : QueryScanConsistency(null, null)
@@ -75,3 +82,5 @@ public sealed class QueryScanConsistency(
         }
     }
 }
+
+private fun Iterable<*>.isEmpty() = !iterator().hasNext()

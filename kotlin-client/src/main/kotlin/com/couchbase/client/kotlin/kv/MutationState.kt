@@ -20,8 +20,10 @@ import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.msg.kv.MutationTokenAggregator
 
 /**
- * Aggregation of one or more [MutationToken]s for specifying
- * advanced scan consistency requirements for N1QL or FTS queries.
+ * Aggregation of [MutationToken]s from [MutationResult]s.
+ *
+ * Used for specifying advanced scan consistency requirements
+ * for N1QL or FTS queries.
  *
  * Thread-safe.
  */
@@ -45,6 +47,19 @@ public class MutationState private constructor(
      * Adds the given token to this state.
      */
     public fun add(token: MutationToken): Unit = tokens.add(token)
+
+    /**
+     * Adds the given mutation result's token to this state.
+     *
+     * @throws IllegalArgumentException if the result has no token
+     */
+    public fun add(result: MutationResult): Unit {
+        require(result.mutationToken != null) {
+            "MutationResult is missing mutation token." +
+                    " Are mutation tokens disabled in the cluster environment?"
+        }
+        add(result.mutationToken)
+    }
 
     /**
      * Exports the this mutation state into a universal format,

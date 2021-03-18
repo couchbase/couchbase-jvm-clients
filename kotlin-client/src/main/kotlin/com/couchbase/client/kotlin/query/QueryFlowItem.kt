@@ -28,6 +28,9 @@ import java.util.*
 
 public sealed class QueryFlowItem
 
+/**
+ * One row of a query result.
+ */
 public class QueryRow(
     public val content: ByteArray,
     @property:PublishedApi internal val defaultSerializer: JsonSerializer,
@@ -42,6 +45,9 @@ public class QueryRow(
     }
 }
 
+/**
+ * Metadata about query execution. Always the last item in the flow.
+ */
 public class QueryMetadata(
     private val header: QueryChunkHeader,
     private val trailer: QueryChunkTrailer,

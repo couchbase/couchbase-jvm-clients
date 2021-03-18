@@ -64,6 +64,10 @@ public class GetResult private constructor(
         return (transcoder ?: defaultTranscoder).decode(content, typeRef())
     }
 
+    override fun toString(): String {
+        return "GetResult(id='$id', cas=$cas, expiry=$expiry, content=$content)"
+    }
+
     internal companion object {
         fun withKnownExpiry(
             id: String,

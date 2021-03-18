@@ -20,7 +20,10 @@ import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 
 
 /**
- * Query profiling information received from the server query engine.
+ * Controls how much query profiling information is included in the response
+ * metadata.
+ *
+ * Access the returned info via [QueryMetadata.profile].
  */
 @VolatileCouchbaseApi
 public enum class QueryProfile {
