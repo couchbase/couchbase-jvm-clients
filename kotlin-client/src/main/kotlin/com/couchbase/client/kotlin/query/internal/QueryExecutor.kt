@@ -26,8 +26,8 @@ import com.couchbase.client.kotlin.Scope
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.typeRef
-import com.couchbase.client.kotlin.endSpan
 import com.couchbase.client.kotlin.env.env
+import com.couchbase.client.kotlin.logicallyComplete
 import com.couchbase.client.kotlin.query.QueryFlowItem
 import com.couchbase.client.kotlin.query.QueryMetadata
 import com.couchbase.client.kotlin.query.QueryParameters
@@ -135,7 +135,7 @@ internal class QueryExecutor(
                     .map { QueryMetadata(response.header(), it) })
 
             } finally {
-                request.endSpan()
+                request.logicallyComplete()
             }
         }
     }

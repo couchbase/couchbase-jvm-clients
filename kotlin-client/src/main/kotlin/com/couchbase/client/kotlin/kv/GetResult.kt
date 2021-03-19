@@ -23,7 +23,7 @@ import com.couchbase.client.kotlin.codec.typeRef
 /**
  * The result retrieving a full document.
  */
-public class GetResult private constructor(
+public open class GetResult internal constructor(
     /**
      * The document ID of the retrieved document.
      */
