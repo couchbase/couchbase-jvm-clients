@@ -28,9 +28,9 @@ public sealed class QueryParameters {
         }
     }
 
-    public class Named(private val values: Map<String, Any?>) : QueryParameters() {
-        public constructor(vararg pairs: Pair<String, Any?>) : this(pairs.toMap())
-
+    public class Named internal constructor(
+        private val values: Map<String, Any?>,
+    ) : QueryParameters() {
         override fun inject(queryJson: MutableMap<String, Any?>): Unit =
             values.forEach { (key, value) ->
                 queryJson[key.addPrefixIfAbsent("$")] = value
@@ -40,9 +40,9 @@ public sealed class QueryParameters {
             if (startsWith(prefix)) this else prefix + this
     }
 
-    public class Positional(private val values: List<Any?>) : QueryParameters() {
-        public constructor(vararg values: Any?) : this(values.toList())
-
+    public class Positional internal constructor(
+        private val values: List<Any?>,
+    ) : QueryParameters() {
         override fun inject(queryJson: MutableMap<String, Any?>): Unit {
             if (values.isNotEmpty()) {
                 queryJson["args"] = values
@@ -53,5 +53,6 @@ public sealed class QueryParameters {
     public companion object {
         public fun positional(values: List<Any?>): QueryParameters = Positional(values)
         public fun named(values: Map<String, Any?>): QueryParameters = Named(values)
+        public fun named(vararg values: Pair<String, Any?>): QueryParameters = Named(values.toMap())
     }
 }

@@ -17,7 +17,6 @@
 package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.diagnostics.ClusterState
 import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper
 import com.couchbase.client.core.env.Authenticator
@@ -26,16 +25,13 @@ import com.couchbase.client.core.env.ConnectionStringPropertyLoader
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.env.SeedNode
 import com.couchbase.client.core.error.UnambiguousTimeoutException
-import com.couchbase.client.core.msg.query.QueryRequest
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASES
 import com.couchbase.client.core.util.ConnectionStringUtil
-import com.couchbase.client.core.util.Golang
 import com.couchbase.client.kotlin.Cluster.Companion.connect
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
-import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.env.env
@@ -47,16 +43,13 @@ import com.couchbase.client.kotlin.query.QueryProfile
 import com.couchbase.client.kotlin.query.QueryResult
 import com.couchbase.client.kotlin.query.QueryRow
 import com.couchbase.client.kotlin.query.QueryScanConsistency
+import com.couchbase.client.kotlin.query.internal.QueryExecutor
 import com.couchbase.client.kotlin.samples.bufferedQuery
 import com.couchbase.client.kotlin.samples.singleValueQueryAnonymous
 import com.couchbase.client.kotlin.samples.singleValueQueryNamed
 import com.couchbase.client.kotlin.samples.streamingQuery
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
-import kotlinx.coroutines.reactive.asFlow
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -104,6 +97,8 @@ public class Cluster internal constructor(
 
     private val bucketCache = ConcurrentHashMap<String, Bucket>()
 
+    private val queryExecutor = QueryExecutor(core)
+
     init {
         core.initGlobalConfig()
     }
@@ -140,8 +135,8 @@ public class Cluster internal constructor(
     }
 
     /**
-     * Returns a Flow which may be collected to execute a N1QL query and
-     * process the results.
+     * Returns a Flow which may be collected to execute a cluster-level
+     * N1QL query and process the results.
      *
      * The returned Flow is cold, meaning the query is not executed unless
      * the Flow is collected. If you collect the flow multiple times,
@@ -238,76 +233,25 @@ public class Cluster internal constructor(
 
         ): Flow<QueryFlowItem> {
 
-        if (!adhoc) TODO("adhoc=false not yet implemented")
-
-        val timeout = common.actualQueryTimeout()
-
-        // use interface type so less capable serializers don't freak out
-        val queryJson: MutableMap<String, Any?> = HashMap<String, Any?>()
-
-        queryJson["statement"] = statement
-        queryJson["timeout"] = Golang.encodeDurationToMs(timeout)
-
-        if (readonly) queryJson["readonly"] = true
-        if (flexIndex) queryJson["use_fts"] = true
-        if (!metrics) queryJson["metrics"] = false
-
-        if (profile !== QueryProfile.OFF) queryJson["profile"] = profile.toString()
-
-        clientContextId?.let { queryJson["client_context_id"] = it }
-        maxParallelism?.let { queryJson["max_parallelism"] = it.toString() }
-        pipelineCap?.let { queryJson["pipeline_cap"] = it.toString() }
-        pipelineBatch?.let { queryJson["pipeline_batch"] = it.toString() }
-        scanCap?.let { queryJson["scan_cap"] = it.toString() }
-
-        consistency.inject(queryJson)
-        parameters.inject(queryJson)
-
-        queryJson.putAll(raw)
-
-        val actualSerializer = serializer ?: env.jsonSerializer
-        val queryBytes = actualSerializer.serialize(queryJson, typeRef())
-
-        return flow {
-            val bucketName: String? = null
-            val scopeName: String? = null
-
-            val request = QueryRequest(
-                timeout,
-                core.context(),
-                common.actualRetryStrategy(),
-                authenticator,
-                statement,
-                queryBytes,
-                readonly,
-                clientContextId,
-                common.actualSpan(TracingIdentifiers.SPAN_REQUEST_QUERY),
-                bucketName,
-                scopeName,
-            )
-
-            request.context().clientContext(common.clientContext)
-
-            try {
-                core.send(request)
-
-                val response = request.response().await()
-
-                emitAll(response.rows().asFlow()
-                    .map { QueryRow(it.data(), actualSerializer) })
-
-                emitAll(response.trailer().asFlow()
-                    .map { QueryMetadata(response.header(), it) })
-
-            } finally {
-                request.endSpan()
-            }
-        }
+        return queryExecutor.query(
+            statement,
+            common,
+            parameters,
+            serializer,
+            consistency,
+            readonly,
+            adhoc,
+            flexIndex,
+            metrics,
+            profile,
+            maxParallelism,
+            scanCap,
+            pipelineBatch,
+            pipelineCap,
+            clientContextId,
+            raw,
+        )
     }
-
-    private fun CommonOptions.actualQueryTimeout() = timeout ?: env.timeoutConfig().queryTimeout()
-    private fun CommonOptions.actualRetryStrategy() = retryStrategy ?: env.retryStrategy()
-    private fun CommonOptions.actualSpan(name: String) = env.requestTracer().requestSpan(name, parentSpan)
 
     /**
      * Gives any in-flight requests a chance to complete, then disposes
