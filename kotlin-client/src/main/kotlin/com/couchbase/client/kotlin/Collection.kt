@@ -18,6 +18,7 @@ package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.cnc.TracingIdentifiers
+import com.couchbase.client.core.env.TimeoutConfig
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.error.DefaultErrorUtil
 import com.couchbase.client.core.error.DocumentNotFoundException
@@ -43,6 +44,7 @@ import com.couchbase.client.kotlin.kv.internal.createSubdocGetRequest
 import com.couchbase.client.kotlin.kv.internal.parseSubdocGet
 import com.couchbase.client.kotlin.kv.internal.upsertWithReifiedType
 import kotlinx.coroutines.future.await
+import java.time.Duration
 
 /**
  * Operations that act on a Couchbase collection.
@@ -60,7 +62,12 @@ public class Collection internal constructor(
     internal val defaultSerializer: JsonSerializer = env.jsonSerializer
     internal val defaultTranscoder: Transcoder = env.transcoder
 
-    internal fun CommonOptions.actualKvTimeout() = timeout ?: env.timeoutConfig().kvTimeout()
+    private fun TimeoutConfig.kvTimeout(durability: Durability): Duration =
+        if (durability.isPersistent()) kvDurableTimeout() else kvTimeout()
+
+    internal fun CommonOptions.actualKvTimeout(durability: Durability): Duration =
+        timeout ?: env.timeoutConfig().kvTimeout(durability)
+
     internal fun CommonOptions.actualRetryStrategy() = retryStrategy ?: env.retryStrategy()
     internal fun CommonOptions.actualSpan(name: String) = env.requestTracer().requestSpan(name, parentSpan)
 
@@ -90,7 +97,7 @@ public class Collection internal constructor(
         if (!withExpiry && project.isEmpty()) {
             val request = GetRequest(
                 id,
-                options.actualKvTimeout(),
+                options.actualKvTimeout(Durability.disabled()),
                 core.context(),
                 collectionId,
                 options.actualRetryStrategy(),

@@ -28,6 +28,7 @@ import com.couchbase.client.core.projections.ProjectionsApplier
 import com.couchbase.client.kotlin.Collection
 import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.codec.Content
+import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.GetResult
 import java.nio.charset.StandardCharsets
@@ -79,7 +80,7 @@ internal fun Collection.createSubdocGetRequest(
     }
 
     return SubdocGetRequest(
-        options.actualKvTimeout(),
+        options.actualKvTimeout(Durability.disabled()),
         core.context(),
         collectionId,
         options.actualRetryStrategy(),

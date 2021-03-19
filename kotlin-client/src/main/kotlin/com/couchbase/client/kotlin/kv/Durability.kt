@@ -11,19 +11,26 @@ import com.couchbase.client.core.service.kv.Observe.ObserveReplicateTo
  * Specifies the durability requirements for a mutation.
  */
 public sealed class Durability {
+    internal abstract fun isPersistent(): Boolean
 
     public object Disabled : Durability() {
+        override fun isPersistent(): Boolean = false
         override fun toString(): String = "Disabled"
     }
 
     public data class Synchronous internal constructor(
         val level: DurabilityLevel,
-    ) : Durability()
+    ) : Durability() {
+        override fun isPersistent(): Boolean =
+            level == MAJORITY_AND_PERSIST_TO_ACTIVE || level == PERSIST_TO_MAJORITY
+    }
 
     public data class ClientVerified internal constructor(
         val persistTo: PersistTo,
         val replicateTo: ReplicateTo,
-    ) : Durability()
+    ) : Durability() {
+        override fun isPersistent(): Boolean = persistTo != PersistTo.NONE
+    }
 
     public companion object {
         /**

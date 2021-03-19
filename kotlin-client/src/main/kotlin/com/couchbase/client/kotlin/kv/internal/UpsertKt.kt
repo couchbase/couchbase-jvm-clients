@@ -95,7 +95,7 @@ internal fun <T> Collection.upsertRequest(
         encodedContent.bytes,
         expiry.encode(),
         encodedContent.flags,
-        options.actualKvTimeout(),
+        options.actualKvTimeout(durability),
         core.context(),
         collectionId,
         options.actualRetryStrategy(),
