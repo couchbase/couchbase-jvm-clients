@@ -166,7 +166,7 @@ public class Collection internal constructor(
             collectionId,
             common.actualRetryStrategy(),
             lockTime,
-            common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_GAL),
+            common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_LOCK),
         )
 
         return exec(request, common) {
@@ -186,7 +186,7 @@ public class Collection internal constructor(
             collectionId,
             common.actualRetryStrategy(),
             expiry.encode(),
-            common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_GAT),
+            common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH),
         )
 
         return exec(request, common) {

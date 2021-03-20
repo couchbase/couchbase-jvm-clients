@@ -49,7 +49,7 @@ public class GetAndLockRequest extends BaseKeyValueRequest<GetAndLockResponse> {
     this.lockFor = lockFor;
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_GAL);
+      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_LOCK);
     }
   }
 

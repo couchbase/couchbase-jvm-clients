@@ -426,7 +426,7 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GAL, opts.parentSpan().orElse(null));
+    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_LOCK, opts.parentSpan().orElse(null));
     GetAndLockRequest request = new GetAndLockRequest(
       id, timeout, coreContext, collectionIdentifier, retryStrategy, lockTime, span
     );
@@ -479,7 +479,7 @@ public class AsyncCollection {
 
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GAT, opts.parentSpan().orElse(null));
+    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH, opts.parentSpan().orElse(null));
     long encodedExpiry = expiry.encode(environment.eventBus());
     GetAndTouchRequest request = new GetAndTouchRequest(
       id, timeout, coreContext, collectionIdentifier, retryStrategy, encodedExpiry, span

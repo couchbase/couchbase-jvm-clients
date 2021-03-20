@@ -63,7 +63,7 @@ private[scala] class GetAndLockHandler(hp: HandlerParams)
           hp.collectionIdentifier,
           retryStrategy,
           expiration,
-          hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GAL, parentSpan.orNull)
+          hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_LOCK, parentSpan.orNull)
         )
       )
     }

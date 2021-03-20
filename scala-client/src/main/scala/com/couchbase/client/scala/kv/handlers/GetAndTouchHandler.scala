@@ -65,7 +65,7 @@ private[scala] class GetAndTouchHandler(hp: HandlerParams)
           hp.collectionIdentifier,
           retryStrategy,
           expiration.getSeconds,
-          hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GAT, parentSpan.orNull)
+          hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH, parentSpan.orNull)
         )
       )
     }

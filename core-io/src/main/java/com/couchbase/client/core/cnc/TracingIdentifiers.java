@@ -16,9 +16,12 @@
 
 package com.couchbase.client.core.cnc;
 
+import com.couchbase.client.core.annotation.Stability;
+
 /**
  * Holds static tracing identifiers throughout the SDK.
  */
+@Stability.Internal
 public class TracingIdentifiers {
 
   /**
@@ -86,9 +89,9 @@ public class TracingIdentifiers {
 
   public static final String SPAN_REQUEST_KV_REMOVE = "remove";
 
-  public static final String SPAN_REQUEST_KV_GAL = "get_and_lock";
+  public static final String SPAN_REQUEST_KV_GET_AND_LOCK = "get_and_lock";
 
-  public static final String SPAN_REQUEST_KV_GAT = "get_and_touch";
+  public static final String SPAN_REQUEST_KV_GET_AND_TOUCH = "get_and_touch";
 
   public static final String SPAN_REQUEST_KV_EXISTS = "exists";
 
