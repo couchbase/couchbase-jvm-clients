@@ -16,9 +16,11 @@
 
 package com.couchbase.client.kotlin
 
+import com.couchbase.client.core.config.CouchbaseBucketConfig
 import com.couchbase.client.core.error.CasMismatchException
 import com.couchbase.client.core.error.DocumentExistsException
 import com.couchbase.client.core.error.DocumentNotFoundException
+import com.couchbase.client.core.error.DocumentUnretrievableException
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.error.TimeoutException
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
@@ -27,9 +29,11 @@ import com.couchbase.client.kotlin.internal.toStringUtf8
 import com.couchbase.client.kotlin.kv.Durability.Companion.clientVerified
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.PersistTo
+import com.couchbase.client.kotlin.kv.ReplicateTo
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.test.ClusterType
 import com.couchbase.client.test.IgnoreWhen
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -42,8 +46,10 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import reactor.core.publisher.Mono
 import java.time.Duration
 import java.time.Instant
+import kotlin.math.min
 import kotlin.system.measureNanoTime
 import java.time.temporal.ChronoUnit.DAYS as ChronoDays
 import java.time.temporal.ChronoUnit.SECONDS as ChronoSeconds
@@ -52,10 +58,99 @@ import java.time.temporal.ChronoUnit.SECONDS as ChronoSeconds
 // with Gerrit verification.  Remove when mock is fixed:
 //    http://review.couchbase.org/c/CouchbaseMock/+/148081
 @IgnoreWhen(clusterTypes = [ClusterType.MOCKED])
+@OptIn(VolatileCouchbaseApi::class)
 internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
 
     val nearFutureExpiry = Expiry.absolute(Instant.now().plus(3, ChronoDays).truncatedTo(ChronoSeconds))
-    val ABSENT_ID = "this document does not exist"
+
+    val availableReplicas by lazy {
+        runBlocking {
+            val bucketConfig = cluster
+                .bucket(config().bucketname())
+                .config(Duration.ofSeconds(30)) as CouchbaseBucketConfig
+
+            min(bucketConfig.nodes().size - 1, bucketConfig.numberOfReplicas())
+        }
+    }
+
+    @Nested
+    inner class GetAllReplicas {
+        @Test
+        fun `flow is empty when not found`(): Unit = runBlocking {
+            val flow = collection.getAllReplicas(ABSENT_ID)
+            assertThat(flow.toList()).isEmpty()
+        }
+
+        @Test
+        fun `flow is cold`(): Unit = runBlocking {
+            val id = nextId()
+            val flow = collection.getAllReplicas(id)
+
+            assertThat(flow.toList()).isEmpty()
+
+            collection.upsert(id, "foo")
+            assertThat(flow.toList()).isNotEmpty()
+        }
+
+        @Test
+        fun `reactor sucks`(): Unit = runBlocking {
+            println(Mono.empty<String>().block())
+        }
+
+        @Test
+        fun `returns primary and replicas`(): Unit = runBlocking {
+            val id = nextId()
+            collection.upsert(
+                id, "foo",
+                durability = clientVerified(PersistTo.NONE, ReplicateTo.replicas(availableReplicas))
+            )
+
+            val result = collection.getAllReplicas(id).toList()
+
+            result.forEach {
+                assertEquals(id, it.id)
+                assertEquals("foo", it.contentAs<String>())
+            }
+
+            assertThat(result).hasSize(availableReplicas + 1)
+            assertThat(result.filter { !it.replica }).hasSize(1)
+        }
+    }
+
+    @Nested
+    inner class GetAnyReplica {
+        @Test
+        fun `throws DocumentUnretrievableException`(): Unit = runBlocking {
+            assertThrows<DocumentUnretrievableException> { collection.getAnyReplica(ABSENT_ID) }
+        }
+
+        @Test
+        fun `returns result`(): Unit = runBlocking {
+            val id = nextId()
+            collection.upsert(id, "foo")
+
+            assertEquals(id, collection.getAnyReplica(id).id)
+            assertEquals("foo", collection.getAnyReplica(id).contentAs<String>())
+        }
+    }
+
+    @Nested
+    @VolatileCouchbaseApi
+    inner class GetAnyReplicaOrNull {
+        @Test
+        fun `returns null`(): Unit = runBlocking {
+            assertNull(collection.getAnyReplicaOrNull(ABSENT_ID))
+        }
+
+        @Test
+        fun `returns result`(): Unit = runBlocking {
+            val id = nextId()
+            collection.upsert(id, "foo")
+
+            assertEquals(id, collection.getAnyReplicaOrNull(id)?.id)
+            assertEquals("foo", collection.getAnyReplicaOrNull(id)?.contentAs<String>())
+        }
+    }
 
     @Nested
     inner class Get {
@@ -138,7 +233,6 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
     inner class GetOrNull {
         @Test
         fun `returns null for absent document`(): Unit = runBlocking {
-            @OptIn(VolatileCouchbaseApi::class)
             assertNull(collection.getOrNull(ABSENT_ID)?.contentAs<String>())
         }
 
@@ -146,7 +240,6 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         fun `returns present document`(): Unit = runBlocking {
             val id = nextId()
             collection.upsert(id, "foo")
-            @OptIn(VolatileCouchbaseApi::class)
             assertEquals("foo", collection.getOrNull(id)?.contentAs<String>())
         }
     }
@@ -521,3 +614,5 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         assertEquals(expiry, collection.get(id, withExpiry = true).expiry)
     }
 }
+
+private const val ABSENT_ID = "this document does not exist"

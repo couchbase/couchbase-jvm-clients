@@ -131,7 +131,7 @@ public class Cluster internal constructor(
      */
     public fun bucket(name: String): Bucket = bucketCache.computeIfAbsent(name) { key ->
         core.openBucket(key)
-        Bucket(key, core)
+        Bucket(key, this, core)
     }
 
     /**

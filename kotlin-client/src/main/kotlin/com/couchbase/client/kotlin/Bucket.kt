@@ -17,19 +17,25 @@
 package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.config.BucketConfig
 import com.couchbase.client.core.diagnostics.ClusterState
 import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper
 import com.couchbase.client.core.error.UnambiguousTimeoutException
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.core.util.BucketConfigUtil
+import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.internal.toOptional
+import kotlinx.coroutines.flow.single
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.reactive.asFlow
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 
 public class Bucket internal constructor(
     public val name: String,
+    public val cluster: Cluster,
     internal val core: Core,
 ) {
     internal val env = core.context().environment() as ClusterEnvironment
@@ -77,4 +83,8 @@ public class Bucket internal constructor(
         WaitUntilReadyHelper.waitUntilReady(core, services, timeout, desiredState, name.toOptional()).await()
         return this
     }
+
+    @VolatileCouchbaseApi
+    public suspend fun config(timeout: Duration): BucketConfig =
+        BucketConfigUtil.waitForBucketConfig(core, name, timeout).asFlow().single()
 }

@@ -18,7 +18,6 @@ package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.cnc.TracingIdentifiers
-import com.couchbase.client.core.cnc.TracingIdentifiers.SPAN_GET_ALL_REPLICAS
 import com.couchbase.client.core.env.TimeoutConfig
 import com.couchbase.client.core.error.DefaultErrorUtil
 import com.couchbase.client.core.error.DocumentExistsException
@@ -45,9 +44,9 @@ import com.couchbase.client.core.msg.kv.SubdocMutateResponse
 import com.couchbase.client.core.msg.kv.TouchRequest
 import com.couchbase.client.core.msg.kv.UnlockRequest
 import com.couchbase.client.core.msg.kv.UpsertRequest
+import com.couchbase.client.core.service.kv.ReplicaHelper
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
-import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.Transcoder
 import com.couchbase.client.kotlin.codec.TypeRef
 import com.couchbase.client.kotlin.codec.typeRef
@@ -65,8 +64,10 @@ import com.couchbase.client.kotlin.kv.internal.levelIfSynchronous
 import com.couchbase.client.kotlin.kv.internal.observe
 import com.couchbase.client.kotlin.kv.internal.parseSubdocGet
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.reactive.awaitSingleOrNull
 import java.time.Duration
 
 /**
@@ -82,7 +83,6 @@ public class Collection internal constructor(
     internal val core: Core = scope.bucket.core
     internal val env: ClusterEnvironment = scope.bucket.env
 
-    internal val defaultSerializer: JsonSerializer = env.jsonSerializer
     internal val defaultTranscoder: Transcoder = env.transcoder
 
     private fun TimeoutConfig.kvTimeout(durability: Durability): Duration =
@@ -194,10 +194,18 @@ public class Collection internal constructor(
         }
     }
 
-    public suspend fun getAllReplicas(
+    public fun getAllReplicas(
         id: String,
-        common: CommonOptions,
-    ): Flow<GetReplicaResult> = internalGetAllReplicas(id, common, SPAN_GET_ALL_REPLICAS)
+        common: CommonOptions = CommonOptions.Default,
+    ): Flow<GetReplicaResult> = ReplicaHelper.getAllReplicasReactive(
+        core,
+        collectionId,
+        id,
+        common.actualKvTimeout(Durability.disabled()),
+        common.actualRetryStrategy(),
+        common.clientContext,
+        common.parentSpan,
+    ).asFlow().map { GetReplicaResult(id, it, defaultTranscoder) }
 
     /**
      * @throws DocumentUnretrievableException if the document could not be
@@ -205,16 +213,33 @@ public class Collection internal constructor(
      */
     public suspend fun getAnyReplica(
         id: String,
-        common: CommonOptions,
-    ): GetReplicaResult = internalGetAllReplicas(id, common, SPAN_GET_ALL_REPLICAS).first()
+        common: CommonOptions = CommonOptions.Default,
+    ): GetReplicaResult {
+        @OptIn(VolatileCouchbaseApi::class)
+        return getAnyReplicaOrNull(id, common)
+            ?: throw DocumentUnretrievableException(ReducedKeyValueErrorContext.create(id, collectionId))
+    }
 
-    private suspend fun internalGetAllReplicas(
+    /**
+     * Like [getAnyReplica], but returns null instead of throwing
+     * [DocumentUnretrievableException] if the document was not found.
+     */
+    @VolatileCouchbaseApi
+    public suspend fun getAnyReplicaOrNull(
         id: String,
-        common: CommonOptions,
-        tracingIdentifier: String,
-    ): Flow<GetReplicaResult> {
-        validateDocumentId(id)
-        TODO()
+        common: CommonOptions = CommonOptions.Default,
+    ): GetReplicaResult? {
+        val response = ReplicaHelper.getAnyReplicaReactive(
+            core,
+            collectionId,
+            id,
+            common.actualKvTimeout(Durability.disabled()),
+            common.actualRetryStrategy(),
+            common.clientContext,
+            common.parentSpan,
+        ).awaitSingleOrNull() ?: return null
+
+        return GetReplicaResult(id, response, defaultTranscoder)
     }
 
     public suspend fun exists(

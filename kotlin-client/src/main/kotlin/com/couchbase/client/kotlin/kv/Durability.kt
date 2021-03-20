@@ -6,6 +6,7 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel.MAJORITY_AND_PERSIST_TO_
 import com.couchbase.client.core.msg.kv.DurabilityLevel.PERSIST_TO_MAJORITY
 import com.couchbase.client.core.service.kv.Observe.ObservePersistTo
 import com.couchbase.client.core.service.kv.Observe.ObserveReplicateTo
+import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 
 /**
  * Specifies the durability requirements for a mutation.
@@ -84,6 +85,17 @@ public enum class ReplicateTo(internal val coreHandle: ObserveReplicateTo) {
     ONE(ObserveReplicateTo.ONE),
     TWO(ObserveReplicateTo.TWO),
     THREE(ObserveReplicateTo.THREE);
+
+    public companion object {
+        @VolatileCouchbaseApi
+        public fun replicas(replicas: Int): ReplicateTo = when (replicas) {
+            0 -> NONE
+            1 -> ONE
+            2 -> TWO
+            3 -> THREE
+            else -> throw IllegalArgumentException("Requested replica count $replicas not in range [0,3]")
+        }
+    }
 }
 
 public enum class PersistTo(internal val coreHandle: ObservePersistTo) {

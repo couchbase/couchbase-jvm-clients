@@ -28,6 +28,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Timeout
 import java.time.Duration
+import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.contracts.ExperimentalContracts
@@ -50,7 +51,7 @@ internal open class KotlinIntegrationTest : ClusterAwareIntegrationTest() {
     }
 
     private val nextIdCounter = AtomicLong()
-    private val nextIdBase = "integration-test-${System.currentTimeMillis()}-"
+    private val nextIdBase = "integration-test-${System.currentTimeMillis()}-${UUID.randomUUID()}-"
     protected fun nextId() = nextIdBase + nextIdCounter.getAndIncrement()
 
     @AfterAll

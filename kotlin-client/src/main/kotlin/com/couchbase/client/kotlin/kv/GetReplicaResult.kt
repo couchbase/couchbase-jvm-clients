@@ -16,16 +16,32 @@
 
 package com.couchbase.client.kotlin.kv
 
+import com.couchbase.client.core.service.kv.ReplicaHelper
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.Transcoder
 
+/**
+ * The result of retrieving a full document, possibly from a replica
+ * instead of the primary.
+ */
 public class GetReplicaResult internal constructor(
-    public val replica: Boolean,
-    id: String, cas: Long, content: Content, expiry: Expiry?, defaultTranscoder: Transcoder
+    id: String,
+    r: ReplicaHelper.GetReplicaResponse,
+    defaultTranscoder: Transcoder,
 ) : GetResult(
     id,
-    cas,
-    content,
-    expiry, defaultTranscoder,
-)
+    r.response.cas(),
+    Content(r.response.content(), r.response.flags()),
+    null,
+    defaultTranscoder,
+) {
+    /**
+     * True if the result is from a replica; false if it's from the primary.
+     */
+    public val replica: Boolean = r.isFromReplica
+
+    override fun toString(): String {
+        return "GetReplicaResult(replica=$replica, id='$id', cas=$cas, content=$content)"
+    }
+}
 
