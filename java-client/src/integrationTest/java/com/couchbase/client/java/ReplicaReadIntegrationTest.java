@@ -17,10 +17,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
-import com.couchbase.client.core.retry.FailFastRetryStrategy;
-import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -46,8 +42,10 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -126,6 +124,78 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
     assertNotNull(results.get(1));
     assertEquals("Hello, World!", results.get(0).contentAs(String.class));
     assertEquals("Hello, World!", results.get(1).contentAs(String.class));
+  }
+
+  @Test
+  void reactiveGetAnyReturnsEmptyMonoWhenNotFound() throws Exception {
+    assertNull(collection.reactive().getAnyReplica("this document does not exist").block());
+  }
+
+  @Test
+  void reactiveGetAllReturnsEmptyFluxWhenNotFound() throws Exception {
+    assertEquals(emptyList(),
+        collection.reactive()
+            .getAllReplicas("this document does not exist")
+            .collectList()
+            .block());
+  }
+
+  @Test
+  void reactiveGetAllFluxIsCold() throws Exception {
+    String id = UUID.randomUUID().toString();
+
+    Flux<GetReplicaResult> flux = collection.reactive().getAllReplicas(id);
+    assertEquals(emptyList(), flux.collectList().block());
+
+    collection.upsert(id, "Hello, World!");
+    assertNotEquals(emptyList(), flux.collectList().block());
+  }
+
+  @Test
+  void reactiveGetAnyMonoIsCold() throws Exception {
+    String id = UUID.randomUUID().toString();
+
+    Mono<GetReplicaResult> mono = collection.reactive().getAnyReplica(id);
+    assertNull(mono.block());
+
+    collection.upsert(id, "Hello, World!");
+    assertNotNull(mono.block());
+  }
+
+  @Test
+  void reactiveGetAllReturnsResult() throws Exception {
+    String id = UUID.randomUUID().toString();
+    collection.upsert(id, "Hello, World!");
+
+    List<GetReplicaResult> results = collection.reactive()
+        .getAllReplicas(id)
+        .collectList()
+        .block();
+
+    assertNotNull(results);
+    assertNotEquals(0, results.size());
+
+    int primaryCount = 0;
+    for (GetReplicaResult result : results) {
+      if (!result.isReplica()) {
+        primaryCount++;
+      }
+      assertEquals("Hello, World!", result.contentAs(String.class));
+    }
+    assertEquals(1, primaryCount);
+  }
+
+  @Test
+  void reactiveGetAnyReturnsResult() throws Exception {
+    String id = UUID.randomUUID().toString();
+    collection.upsert(id, "Hello, World!");
+
+    GetReplicaResult result = collection.reactive()
+        .getAnyReplica(id)
+        .block();
+
+    assertNotNull(result);
+    assertEquals("Hello, World!", result.contentAs(String.class));
   }
 
   /**

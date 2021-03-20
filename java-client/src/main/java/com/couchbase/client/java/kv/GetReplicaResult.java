@@ -17,6 +17,8 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.msg.kv.GetResponse;
+import com.couchbase.client.core.service.kv.ReplicaHelper;
 import com.couchbase.client.java.codec.Transcoder;
 
 import java.time.Instant;
@@ -51,14 +53,15 @@ public class GetReplicaResult extends GetResult {
   }
 
   @Stability.Internal
-  public static GetReplicaResult from(GetResult response, boolean isReplica) {
+  public static GetReplicaResult from(ReplicaHelper.GetReplicaResponse response, Transcoder transcoder) {
+    GetResponse get = response.getResponse();
     return new GetReplicaResult(
-      response.content,
-      response.flags,
-      response.cas(),
-      response.expiryTime(),
-      response.transcoder,
-      isReplica
+        get.content(),
+        get.flags(),
+        get.cas(),
+        Optional.empty(),
+        transcoder,
+        response.isFromReplica()
     );
   }
 

@@ -20,9 +20,6 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
@@ -31,11 +28,11 @@ import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.core.msg.kv.ReplaceRequest;
-import com.couchbase.client.core.msg.kv.ReplicaGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.TouchRequest;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
+import com.couchbase.client.core.service.kv.ReplicaHelper;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -78,6 +75,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -304,11 +302,11 @@ public class ReactiveCollection {
 
   /**
    * Reads all available replicas, including the active, and returns the results as a flux.
-   *
-   * <p>Note that individual errors are ignored, so you can think of this API as a best effort
-   * approach which explicitly emphasises availability over consistency.</p>
    * <p>
-   * Raises NoSuchElementException on the flux if no replica was available.
+   * Note that individual errors are ignored, so you can think of this API as a best effort
+   * approach which explicitly emphasises availability over consistency.
+   * <p>
+   * If the read requests all fail, the flux emits nothing.
    *
    * @param id the document id.
    * @return a flux of results from all replicas
@@ -320,7 +318,10 @@ public class ReactiveCollection {
   /**
    * Reads all available replicas, including the active, and returns the results as a flux.
    * <p>
-   * Raises NoSuchElementException on the flux if no replica was available.
+   * Note that individual errors are ignored, so you can think of this API as a best effort
+   * approach which explicitly emphasises availability over consistency.
+   * <p>
+   * If the read requests all fail, the flux emits nothing.
    *
    * @param id the document id.
    * @param options the custom options.
@@ -330,33 +331,23 @@ public class ReactiveCollection {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
     notNull(options, "GetAllReplicasOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
     GetAllReplicasOptions.Built opts = options.build();
-    Duration timeout = opts.timeout().orElse(environment().timeoutConfig().kvTimeout());
-    RequestSpan parent = environment().requestTracer().requestSpan(
-      TracingIdentifiers.SPAN_GET_ALL_REPLICAS,
-      opts.parentSpan().orElse(null)
-    );
-    parent.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
-    final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+    final Transcoder transcoder = Optional.ofNullable(opts.transcoder()).orElse(environment().transcoder());
 
-    return Reactor
-      .toMono(() -> asyncCollection.getAllReplicasRequests(id, opts, timeout, parent))
-      .flux()
-      .flatMap(Flux::fromStream)
-      .flatMap(request -> Reactor
-        .wrap(request, GetAccessor.get(core, request, transcoder), true)
-        .onErrorResume(t -> {
-          coreContext.environment().eventBus().publish(new IndividualReplicaGetFailedEvent(request.context()));
-          return Mono.empty(); // Swallow any errors from individual replicas
-        })
-        .map(response -> GetReplicaResult.from(response, request instanceof ReplicaGetRequest))
-      )
-      .doFinally(signalType -> parent.end());
+    return ReplicaHelper.getAllReplicasReactive(
+        core,
+        asyncCollection.collectionIdentifier(),
+        id,
+        opts.timeout().orElse(environment().timeoutConfig().kvTimeout()),
+        opts.retryStrategy().orElse(environment().retryStrategy()),
+        opts.clientContext(),
+        opts.parentSpan().orElse(null)
+    ).map(response -> GetReplicaResult.from(response, transcoder));
   }
 
   /**
    * Reads all available replicas, and returns the first found.
    * <p>
-   * Raises NoSuchElementException on the mono if no replica was available.
+   * If the read requests all fail, the mono emits nothing.
    *
    * @param id the document id.
    * @return a mono containing the first available replica.
@@ -365,29 +356,28 @@ public class ReactiveCollection {
     return getAnyReplica(id, DEFAULT_GET_ANY_REPLICA_OPTIONS);
   }
 
-    /**
-     * Reads all available replicas, and returns the first found.
-     * <p>
-     * Raises NoSuchElementException on the mono if no replica was available.
-     *
-     * @param id the document id.
-     * @param options the custom options.
-     * @return a mono containing the first available replica.
-     */
+  /**
+   * Reads all available replicas, and returns the first found.
+   * <p>
+   * If the read requests all fail, the mono emits nothing.
+   *
+   * @param id the document id.
+   * @param options the custom options.
+   * @return a mono containing the first available replica.
+   */
   public Mono<GetReplicaResult> getAnyReplica(final String id, final GetAnyReplicaOptions options) {
-    GetAnyReplicaOptions.Built built = options.build();
-    GetAllReplicasOptions opts = GetAllReplicasOptions.getAllReplicasOptions().clientContext(built.clientContext());
-    built.timeout().ifPresent(opts::timeout);
-    built.retryStrategy().ifPresent(opts::retryStrategy);
-    if (built.transcoder() != null) {
-      opts.transcoder(built.transcoder());
-    }
-    RequestSpan parent = environment().requestTracer().requestSpan(
-      TracingIdentifiers.SPAN_GET_ANY_REPLICA,
-      built.parentSpan().orElse(null)
-    );
-    opts.parentSpan(parent);
-    return getAllReplicas(id, opts).next().doFinally(signalType -> parent.end());
+    GetAnyReplicaOptions.Built opts = options.build();
+    final Transcoder transcoder = Optional.ofNullable(opts.transcoder()).orElse(environment().transcoder());
+
+    return ReplicaHelper.getAnyReplicaReactive(
+        core,
+        asyncCollection.collectionIdentifier(),
+        id,
+        opts.timeout().orElse(environment().timeoutConfig().kvTimeout()),
+        opts.retryStrategy().orElse(environment().retryStrategy()),
+        opts.clientContext(),
+        opts.parentSpan().orElse(null)
+    ).map(response -> GetReplicaResult.from(response, transcoder));
   }
 
   /**
