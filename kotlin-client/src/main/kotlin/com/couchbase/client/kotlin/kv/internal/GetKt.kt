@@ -39,7 +39,7 @@ internal fun Collection.createSubdocGetRequest(
     id: String,
     withExpiry: Boolean = false,
     project: List<String>,
-    options: CommonOptions,
+    common: CommonOptions,
 ): SubdocGetRequest {
     validateProjections(id, project, withExpiry)
     val commands = ArrayList<SubdocGetRequest.Command>(16)
@@ -80,14 +80,14 @@ internal fun Collection.createSubdocGetRequest(
     }
 
     return SubdocGetRequest(
-        options.actualKvTimeout(Durability.disabled()),
+        common.actualKvTimeout(Durability.disabled()),
         core.context(),
         collectionId,
-        options.actualRetryStrategy(),
+        common.actualRetryStrategy(),
         id,
         0x00,
         commands,
-        options.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN)
+        common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN)
     )
 }
 

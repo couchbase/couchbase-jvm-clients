@@ -111,27 +111,27 @@ public class Collection internal constructor(
      */
     public suspend fun get(
         id: String,
-        options: CommonOptions = CommonOptions.Default,
+        common: CommonOptions = CommonOptions.Default,
         withExpiry: Boolean = false,
         project: List<String> = emptyList(),
     ): GetResult {
         if (!withExpiry && project.isEmpty()) {
             val request = GetRequest(
                 validateDocumentId(id),
-                options.actualKvTimeout(Durability.disabled()),
+                common.actualKvTimeout(Durability.disabled()),
                 core.context(),
                 collectionId,
-                options.actualRetryStrategy(),
-                options.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET),
+                common.actualRetryStrategy(),
+                common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET),
             )
 
-            return exec(request, options) {
+            return exec(request, common) {
                 GetResult.withUnknownExpiry(id, it.cas(), Content(it.content(), it.flags()), defaultTranscoder)
             }
         }
 
-        val request = createSubdocGetRequest(validateDocumentId(id), withExpiry, project, options)
-        return exec(request, options) { response -> parseSubdocGet(id, response) }
+        val request = createSubdocGetRequest(validateDocumentId(id), withExpiry, project, common)
+        return exec(request, common) { response -> parseSubdocGet(id, response) }
     }
     /**
      * Like [get], but returns null instead of throwing
@@ -142,11 +142,11 @@ public class Collection internal constructor(
     @VolatileCouchbaseApi
     public suspend inline fun getOrNull(
         id: String,
-        options: CommonOptions = CommonOptions.Default,
+        common: CommonOptions = CommonOptions.Default,
         withExpiry: Boolean = false,
         project: List<String> = emptyList(),
     ): GetResult? = try {
-        get(id, options, withExpiry, project)
+        get(id, common, withExpiry, project)
     } catch (t: DocumentNotFoundException) {
         null
     }
@@ -455,11 +455,11 @@ public class Collection internal constructor(
 
     internal suspend inline fun <RESPONSE : Response, RESULT> exec(
         request: KeyValueRequest<RESPONSE>,
-        options: CommonOptions,
+        common: CommonOptions,
         resultExtractor: (RESPONSE) -> RESULT,
     ): RESULT {
         try {
-            val response = core.exec(request, options)
+            val response = core.exec(request, common)
             if (response.status().success()) return resultExtractor(response)
 
             if (response is SubdocGetResponse) response.error().ifPresent { throw it }
@@ -475,8 +475,8 @@ public class Collection internal constructor(
         }
     }
 
-    internal suspend fun <R : Response> Core.exec(request: Request<R>, options: CommonOptions): R {
-        request.context().clientContext(options.clientContext)
+    internal suspend fun <R : Response> Core.exec(request: Request<R>, common: CommonOptions): R {
+        request.context().clientContext(common.clientContext)
         send(request)
         return request.response().await()
     }
