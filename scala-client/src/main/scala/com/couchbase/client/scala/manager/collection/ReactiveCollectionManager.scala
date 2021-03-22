@@ -222,11 +222,11 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
       val error = new String(response.content, StandardCharsets.UTF_8)
 
       if (response.status == ResponseStatus.NOT_FOUND) {
-        if (error.contains("Scope with this name is not found") || error.contains(
+        if (error.matches(".*Scope.+not found.*") || error.contains(
               "scope_not_found"
             )) {
           Failure(new ScopeNotFoundException(scopeName))
-        } else if (error.contains("Collection with this name is not found")) {
+        } else if (error.matches(".*Collection.+not found.*")) {
           Failure(new CollectionNotFoundException(collectionName))
         } else if (error.contains("Not found.") || error.contains("Requested resource not found.")) {
           Failure(FeatureNotAvailableException.collections())
@@ -234,14 +234,12 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
           Failure(new CouchbaseException("Unknown error in CollectionManager: " + error))
         }
       } else if (response.status == ResponseStatus.INVALID_ARGS) {
-        if (error.contains("Scope with this name is not found")
+        if (error.matches(".*Scope.+not found.*")
             || error.contains("scope_not_found")) {
           Failure(new ScopeNotFoundException(scopeName))
-        } else if (error.contains("Scope with this name already exists")
-                   || error.matches(".*Scope with name .+ already exists.*")) {
+        } else if (error.matches(".*Scope.+already exists.*")) {
           Failure(new ScopeExistsException(scopeName))
-        } else if (error.contains("Collection with this name already exists")
-                   || error.matches(".*Collection with name .+ already exists.*")) {
+        } else if (error.matches(".*Collection.+already exists.*")) {
           Failure(new CollectionExistsException(collectionName))
         } else {
           Failure(new IllegalArgumentException("Unknown error in CollectionManager: " + error))

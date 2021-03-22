@@ -334,32 +334,30 @@ public class AsyncCollectionManager extends ManagerSupport {
         throw FeatureNotAvailableException.collections();
       }
 
-      if (error.contains("Scope with this name is not found") || error.contains("scope_not_found")) {
+      if (error.matches(".*Scope.+not found.*") || error.contains("scope_not_found")) {
         throw ScopeNotFoundException.forScope(scopeName);
       }
 
-      if (error.contains("Collection with this name is not found")) {
+      if (error.matches(".*Collection.+not found.*")) {
         throw CollectionNotFoundException.forCollection(collectionName);
       }
     }
 
     if (response.status() == ResponseStatus.INVALID_ARGS) {
-      if (error.contains("Scope with this name already exists")
-        || error.matches(".*Scope with name .+ already exists.*")) {
+      if (error.matches(".*Scope.+already exists.*")) {
         throw ScopeExistsException.forScope(scopeName);
       }
       if (error.contains("scope_not_found")) {
         throw ScopeNotFoundException.forScope(scopeName);
       }
-      if (error.contains("Collection with this name already exists")
-        || error.matches(".*Collection with name .+ already exists.*")) {
+      if (error.matches(".*Collection.+already exists.*")) {
         throw CollectionExistsException.forCollection(collectionName);
       }
       if (error.contains("Not allowed on this version of cluster")) {
         // This happens on 6.5 if collections dev preview is not enabled
         throw FeatureNotAvailableException.collections();
       }
-      if (error.contains("Collection with this name is not found")
+      if (error.matches(".*Collection.+not found.*")
         || error.contains("collection_not_found")) {
         throw CollectionNotFoundException.forCollection(collectionName);
       }
