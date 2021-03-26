@@ -313,7 +313,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       byte[] path = this.path.getBytes(UTF_8);
       int pathLength = path.length;
 
-      ByteBuf buffer = alloc.buffer(4 + pathLength + fragment.length);
+      ByteBuf buffer = alloc.buffer(8 + pathLength + fragment.length);
       buffer.writeByte(type.opcode());
       byte flags = 0;
       if (xattr) {
