@@ -348,7 +348,8 @@ case class Upsert(
 }
 
 case class Remove(path: String, private[scala] val _xattr: Boolean = false) extends MutateInSpec {
-  override val typ: SubdocCommandType = SubdocCommandType.DELETE
+  override val typ: SubdocCommandType =
+    if (path.isEmpty) SubdocCommandType.DELETE_DOC else SubdocCommandType.DELETE
 
   /** Sets that this is an extended attribute (xattr) field (default is false).  Extended
     * Attributes (xattrs) are an advanced feature in which additional fields can be stored

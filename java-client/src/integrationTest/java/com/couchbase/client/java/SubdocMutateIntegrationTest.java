@@ -51,6 +51,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
+import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.java.kv.MutateInOptions.mutateInOptions;
 import static com.couchbase.client.java.kv.MutateInSpec.upsert;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -138,6 +139,26 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         assertFalse(getContent(docId).containsKey("foo"));
     }
 
+    @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+    @Test
+    void removeFullDocAndSetSystemXattr() {
+        JsonObject content = JsonObject.create().put("foo", "bar");
+        String docId = prepare(content);
+
+        // leading underscore lets it survive document deletion
+        String systemXattrName = "_x";
+
+        coll.mutateIn(docId, listOf(
+                MutateInSpec.remove(""),
+                MutateInSpec.insert(systemXattrName, "y").xattr()));
+
+        LookupInResult result = coll.lookupIn(
+                docId,
+                listOf(LookupInSpec.get(systemXattrName).xattr()),
+                LookupInOptions.lookupInOptions().accessDeleted(true));
+        assertEquals("y", result.contentAs(0, String.class));
+        assertTrue(result.isDeleted());
+    }
 
     private JsonObject checkSingleOpSuccess(JsonObject content, MutateInSpec ops) {
         return checkSingleOpSuccess(content, Arrays.asList(ops));

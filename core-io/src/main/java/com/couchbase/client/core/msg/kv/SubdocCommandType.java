@@ -28,6 +28,7 @@ public enum SubdocCommandType {
   ARRAY_ADD_UNIQUE((byte) 0xce),
   ARRAY_INSERT((byte) 0xcd),
   DELETE((byte) 0xc9),
+  DELETE_DOC((byte) 0x04),
 
   // lookupIn
   GET((byte) 0xc5),

@@ -1,7 +1,5 @@
 package com.couchbase.client.scala.subdoc
 
-import java.util.concurrent.TimeUnit
-
 import com.couchbase.client.core.error.subdoc.{PathExistsException, PathNotFoundException}
 import com.couchbase.client.core.error.{
   CouchbaseException,
@@ -19,6 +17,7 @@ import com.couchbase.client.test.{ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
+import java.util.concurrent.TimeUnit
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.{Duration, _}
 import scala.util.{Failure, Success, Try}
@@ -181,6 +180,20 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     }
 
     Assertions.assertThrows(classOf[NoSuchElementException], () => (getContent(docId)("foo")))
+  }
+
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @Test
+  def remove_full_doc_and_set_system_xattr(): Unit = {
+    val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
+    val (docId, cas) = prepare(content)
+
+    coll.mutateIn(docId, Array(MutateInSpec.remove(""), MutateInSpec.insert("_x", "y").xattr)) match {
+      case Success(result) => assert(result.cas != cas)
+      case Failure(err)    => assert(false, s"unexpected error $err")
+    }
+
+    assert(!coll.exists(docId).get.exists, s"did not expect document to still exist")
   }
 
   private def checkSingleOpSuccess(content: ujson.Obj, ops: collection.Seq[MutateInSpec]) = {

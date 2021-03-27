@@ -45,7 +45,7 @@ public class Remove extends MutateInSpec {
 
     public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer, int originalIndex) {
         return new SubdocMutateRequest.Command(
-                SubdocCommandType.DELETE,
+                path.isEmpty() ? SubdocCommandType.DELETE_DOC : SubdocCommandType.DELETE,
                 path,
                 Bytes.EMPTY_BYTE_ARRAY,
                 false,
