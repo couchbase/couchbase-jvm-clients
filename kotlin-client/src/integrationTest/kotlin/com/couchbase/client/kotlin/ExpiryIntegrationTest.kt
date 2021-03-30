@@ -45,7 +45,7 @@ internal class ExpiryIntegrationTest : KotlinIntegrationTest() {
     @Test
     fun `document expires immediately when expiry is in past`(): Unit = runBlocking {
         val id = UUID.randomUUID().toString()
-        collection.upsert(id, "foo", expiry = Expiry.absolute(Instant.now().minus(3, DAYS)))
+        collection.upsert(id, "foo", expiry = Expiry.of(Instant.now().minus(3, DAYS)))
         assertThrows<DocumentNotFoundException> { collection.get(id) }
     }
 
@@ -64,7 +64,7 @@ internal class ExpiryIntegrationTest : KotlinIntegrationTest() {
     @Test
     fun `GetResult expiry is null when unknown`(): Unit = runBlocking {
         val id = UUID.randomUUID().toString()
-        collection.upsert(id, "foo", expiry = Expiry.relative(ofDays(1)))
+        collection.upsert(id, "foo", expiry = Expiry.ofDays(1))
         assertNull(collection.get(id, withExpiry = false).expiry)
     }
 
@@ -88,7 +88,7 @@ internal class ExpiryIntegrationTest : KotlinIntegrationTest() {
     private fun checkAbsoluteExpiry(instant: Instant): Unit = runBlocking {
         val id = UUID.randomUUID().toString()
 
-        val expiry = Expiry.absolute(instant.truncatedTo(SECONDS))
+        val expiry = Expiry.of(instant.truncatedTo(SECONDS))
         collection.upsert(id, "foo", expiry = expiry)
 
         assertEquals(expiry, collection.get(id, withExpiry = true).expiry)
@@ -98,7 +98,7 @@ internal class ExpiryIntegrationTest : KotlinIntegrationTest() {
         val id = UUID.randomUUID().toString()
 
         val duration = Duration.ofDays(days)
-        collection.upsert(id, "foo", expiry = Expiry.relative(duration))
+        collection.upsert(id, "foo", expiry = Expiry.of(duration))
 
         val actualExpiry = collection.get(id, withExpiry = true).expiry as Expiry.Absolute
         assertThat(actualExpiry.instant).isBetween(

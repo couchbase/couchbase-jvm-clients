@@ -88,7 +88,35 @@ public sealed class Expiry {
          * The document will expire after the given duration.
          * @throws IllegalArgumentException if the duration is less than 1 second.
          */
-        public fun relative(duration: Duration): Expiry = Relative(duration)
+        public fun of(duration: Duration): Expiry = Relative(duration)
+
+        /**
+         * The document will expire after the given number of seconds.
+         * Shorthand for `Expiry.of(Duration.ofSeconds(x))`
+         * @throws IllegalArgumentException if seconds < 1
+         */
+        public fun ofSeconds(seconds: Long): Expiry = of(Duration.ofSeconds(seconds))
+
+        /**
+         * The document will expire after the given number of minutes.
+         * Shorthand for `Expiry.of(Duration.ofMinutes(x))`
+         * @throws IllegalArgumentException if minutes < 1
+         */
+        public fun ofMinutes(minutes: Long): Expiry = of(Duration.ofMinutes(minutes))
+
+        /**
+         * The document will expire after the given number of hours.
+         * Shorthand for `Expiry.of(Duration.ofHours(x))`
+         * @throws IllegalArgumentException if hours < 1
+         */
+        public fun ofHours(hours: Long): Expiry = of(Duration.ofHours(hours))
+
+        /**
+         * The document will expire after the given number of days.
+         * Shorthand for `Expiry.of(Duration.ofDays(x))`
+         * @throws IllegalArgumentException if days < 1
+         */
+        public fun ofDays(days: Long): Expiry = of(Duration.ofDays(days))
 
         /**
          * The document will expire at the given instant.
@@ -96,7 +124,7 @@ public sealed class Expiry {
          * @throws IllegalArgumentException if the instant is in the distant past
          * (prior to 1970-02-01T00:00:00Z).
          */
-        public fun absolute(instant: Instant): Expiry = Absolute(instant)
+        public fun of(instant: Instant): Expiry = Absolute(instant)
     }
 }
 

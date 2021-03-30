@@ -61,7 +61,7 @@ import java.time.temporal.ChronoUnit.SECONDS as ChronoSeconds
 @OptIn(VolatileCouchbaseApi::class)
 internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
 
-    val nearFutureExpiry = Expiry.absolute(Instant.now().plus(3, ChronoDays).truncatedTo(ChronoSeconds))
+    val nearFutureExpiry = Expiry.of(Instant.now().plus(3, ChronoDays).truncatedTo(ChronoSeconds))
 
     val availableReplicas by lazy {
         runBlocking {
@@ -362,7 +362,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         @Test
         fun `overrides existing expiry`(): Unit = runBlocking {
             val id = nextId()
-            collection.upsert(id, "foo", expiry = Expiry.relative(Duration.ofMinutes(15)))
+            collection.upsert(id, "foo", expiry = Expiry.ofMinutes(15))
 
             collection.getAndTouch(id, nearFutureExpiry).let {
                 assertEquals("foo", it.contentAs<String>())
@@ -411,7 +411,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         @Test
         fun `overrides existing expiry`(): Unit = runBlocking {
             val id = nextId()
-            collection.upsert(id, "foo", expiry = Expiry.relative(Duration.ofMinutes(15)))
+            collection.upsert(id, "foo", expiry = Expiry.ofMinutes(15))
             collection.touch(id, nearFutureExpiry)
             assertExpiry(nearFutureExpiry, id)
         }
