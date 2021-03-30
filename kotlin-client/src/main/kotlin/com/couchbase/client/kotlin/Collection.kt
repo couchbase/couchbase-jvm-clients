@@ -69,6 +69,8 @@ import com.couchbase.client.kotlin.kv.internal.encodeInSpan
 import com.couchbase.client.kotlin.kv.internal.levelIfSynchronous
 import com.couchbase.client.kotlin.kv.internal.observe
 import com.couchbase.client.kotlin.kv.internal.subdocGet
+import com.couchbase.client.kotlin.samples.subdocLookup
+import com.couchbase.client.kotlin.samples.subdocLookupWithoutLambda
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
@@ -490,9 +492,17 @@ public class Collection internal constructor(
         exec(request, common) {}
     }
 
-    public suspend inline fun <T> lookupIn(
+    /**
+     * Retrieves specific fields of a document.
+     *
+     * @param block callback for processing the results, with [LookupInResult] as the receiver.
+     *
+     * @sample subdocLookup
+     * @sample subdocLookupWithoutLambda
+     */
+    public suspend inline fun <T, L : LookupInSpec> lookupIn(
         id: String,
-        spec: LookupInSpec,
+        spec: L,
         common: CommonOptions = CommonOptions.Default,
         accessDeleted: Boolean = false,
         block: LookupInResult.() -> T
@@ -501,6 +511,12 @@ public class Collection internal constructor(
         return block(result)
     }
 
+    /**
+     * Retrieves specific fields of a document.
+     *
+     * @sample subdocLookup
+     * @sample subdocLookupWithoutLambda
+     */
     public suspend fun lookupIn(
         id: String,
         spec: LookupInSpec,
@@ -509,8 +525,6 @@ public class Collection internal constructor(
     ): LookupInResult {
         require(spec.commands.isNotEmpty()) { "Must specify at least one lookup" }
         require(spec.commands.size <= 16) { "Must specify no more than 16 lookups" }
-        spec.checkNotExecuted()
-        spec.executed = true
 
         val flags: Byte = if (accessDeleted) SubdocMutateRequest.SUBDOC_DOC_FLAG_ACCESS_DELETED else 0
         val request = SubdocGetRequest(

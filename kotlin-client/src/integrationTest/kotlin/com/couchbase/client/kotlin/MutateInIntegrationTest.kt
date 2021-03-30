@@ -70,10 +70,11 @@ internal class MutateInIntegrationTest : KotlinIntegrationTest() {
 
         assertFalse(collection.exists(id).exists)
 
-        val spec = LookupInSpec()
-        val systemXattr = spec.get(systemXattrName, xattr = true)
+        val spec = object : LookupInSpec() {
+            val systemXattr = get(systemXattrName, xattr = true)
+        }
         val result = collection.lookupIn(id, spec, accessDeleted = true)
-        assertEquals("y", systemXattr.contentAs<String>(result))
+        assertEquals("y", spec.systemXattr.contentAs<String>(result))
     }
 
     @Test

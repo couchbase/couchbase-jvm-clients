@@ -721,10 +721,11 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
             val seqno = collection.mutateIn(id, spec, storeSemantics = upsert())
                 .mutationToken!!.sequenceNumber()
 
-            val lookupSpec = LookupInSpec()
-            val foo = lookupSpec.get("foo", xattr = true)
+            val lookupSpec = object : LookupInSpec() {
+                val foo = get("foo", xattr = true)
+            }
             collection.lookupIn(id, lookupSpec) {
-                assertEquals("0x%016x".format(seqno), foo.contentAs<String>())
+                assertEquals("0x%016x".format(seqno), lookupSpec.foo.contentAs<String>())
             }
         }
     }

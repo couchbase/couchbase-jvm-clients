@@ -46,31 +46,34 @@ internal suspend fun Collection.subdocGet(
 ): SubdocGetResult {
     validateProjections(id, project, withExpiry)
 
-    val spec = LookupInSpec()
-    val wholeDoc = if (project.isEmpty()) spec.get("") else null
-    val projections = project.map { spec.get(it) }
-    val expiry = if (!withExpiry) null else spec.get(LookupInMacro.ExpiryTime)
+    val spec = object : LookupInSpec() {
+        val wholeDoc = if (project.isEmpty()) get("") else null
+        val projections = project.map { get(it) }
+        val expiry = if (!withExpiry) null else get(LookupInMacro.ExpiryTime)
 
-    // If we have projections, we know the result is JSON. Otherwise fetch the flags.
-    val flagsSpec = if (project.isNotEmpty()) null else spec.get(LookupInMacro.Flags)
+        // If we have projections, we know the result is JSON. Otherwise fetch the flags.
+        val flagsSpec = if (project.isNotEmpty()) null else get(LookupInMacro.Flags)
+    }
 
     lookupIn(id, spec, common) {
-        val content = wholeDoc?.content
-            ?: ProjectionsApplier.reconstructDocument(
-                // build map of path -> content for all existing paths
-                projections.mapNotNull {
-                    runCatching { it.path to it.content }
-                        .recover { t -> if (meansPathIsAbsent(t)) null else throw t }
-                        .getOrThrow()
-                }.toMap()
-            )
+        with(spec) {
+            val content = wholeDoc?.content
+                ?: ProjectionsApplier.reconstructDocument(
+                    // build map of path -> content for all existing paths
+                    projections.mapNotNull {
+                        runCatching { it.path to it.content }
+                            .recover { t -> if (meansPathIsAbsent(t)) null else throw t }
+                            .getOrThrow()
+                    }.toMap()
+                )
 
-        return SubdocGetResult(
-            cas,
-            content,
-            flagsSpec?.contentAs<Int>() ?: CodecFlags.JSON_COMPAT_FLAGS,
-            parseExpiry(expiry?.content),
-        )
+            return SubdocGetResult(
+                cas,
+                content,
+                flagsSpec?.contentAs<Int>() ?: CodecFlags.JSON_COMPAT_FLAGS,
+                parseExpiry(expiry?.content),
+            )
+        }
     }
 }
 

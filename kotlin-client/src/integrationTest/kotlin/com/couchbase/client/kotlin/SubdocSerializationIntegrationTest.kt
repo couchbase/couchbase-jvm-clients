@@ -30,6 +30,11 @@ public data class Point(public val x: Int, public val y: Int)
 @IgnoreWhen(clusterTypes = [MOCKED])
 internal class SubdocSerializationIntegrationTest : KotlinIntegrationTest() {
 
+    // shared lookup spec
+    private val lookup = object : LookupInSpec() {
+        val foo = get("foo")
+    }
+
     @Test
     fun `single bean`(): Unit = runBlocking {
         val docId = nextId()
@@ -37,10 +42,8 @@ internal class SubdocSerializationIntegrationTest : KotlinIntegrationTest() {
             insert("foo", Point(1, 2))
         }
 
-        val spec = LookupInSpec()
-        val foo = spec.get("foo")
-        val result = collection.lookupIn(docId, spec)
-        assertEquals(Point(1, 2), foo.contentAs<Point>(result))
+        val result = collection.lookupIn(docId, lookup)
+        assertEquals(Point(1, 2), lookup.foo.contentAs<Point>(result))
     }
 
     @Test
@@ -50,10 +53,8 @@ internal class SubdocSerializationIntegrationTest : KotlinIntegrationTest() {
             insert("foo", listOf(Point(1, 2), Point(3, 4)))
         }
 
-        val spec = LookupInSpec()
-        val foo = spec.get("foo")
-        val result = collection.lookupIn(docId, spec)
-        assertEquals(listOf(Point(1, 2), Point(3, 4)), foo.contentAs<List<Point>>(result))
+        val result = collection.lookupIn(docId, lookup)
+        assertEquals(listOf(Point(1, 2), Point(3, 4)), lookup.foo.contentAs<List<Point>>(result))
     }
 
     @Test
@@ -63,10 +64,8 @@ internal class SubdocSerializationIntegrationTest : KotlinIntegrationTest() {
             arrayAppend("foo", listOf(Point(1, 2), Point(3, 4)))
         }
 
-        val spec = LookupInSpec()
-        val foo = spec.get("foo")
-        val result = collection.lookupIn(docId, spec)
-        assertEquals(listOf(Point(1, 2), Point(3, 4)), foo.contentAs<List<Point>>(result))
+        val result = collection.lookupIn(docId, lookup)
+        assertEquals(listOf(Point(1, 2), Point(3, 4)), lookup.foo.contentAs<List<Point>>(result))
     }
 
     @Test
@@ -76,9 +75,10 @@ internal class SubdocSerializationIntegrationTest : KotlinIntegrationTest() {
             arrayAppend("foo", listOf(listOf(Point(1, 2), Point(3, 4))))
         }
 
-        val spec = LookupInSpec()
-        val foo = spec.get("foo")
-        val result = collection.lookupIn(docId, spec)
-        assertEquals(listOf(listOf(Point(1, 2), Point(3, 4))), foo.contentAs<List<List<Point>>>(result))
+        val result = collection.lookupIn(docId, lookup)
+        assertEquals(
+            listOf(listOf(Point(1, 2), Point(3, 4))),
+            lookup.foo.contentAs<List<List<Point>>>(result)
+        )
     }
 }

@@ -20,6 +20,7 @@ import com.couchbase.client.core.msg.kv.SubdocCommandType
 import com.couchbase.client.core.msg.kv.SubdocGetRequest
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.kv.internal.LookupInMacro
+import com.couchbase.client.kotlin.samples.subdocLookup
 
 public class Subdoc internal constructor(
     public val path: String,
@@ -61,12 +62,15 @@ public class SubdocExists internal constructor(
     }
 }
 
-public class LookupInSpec {
-    internal var executed = false // Guards against misuse. Volatile would be stricter, but worth the cost?
+/**
+ * Specifies which fields to retrieve when doing a subdoc lookup.
+ *
+ * @sample subdocLookup
+ */
+public abstract class LookupInSpec {
     internal val commands = ArrayList<SubdocGetRequest.Command>()
 
-    public fun get(path: String, xattr: Boolean = false): Subdoc {
-        checkNotExecuted()
+    protected fun get(path: String, xattr: Boolean = false): Subdoc {
         val origIndex = commands.size
         val subdoc = Subdoc(path, xattr, this, origIndex)
         val type = if (path == "") SubdocCommandType.GET_DOC else SubdocCommandType.GET
@@ -75,26 +79,21 @@ public class LookupInSpec {
     }
 
     @VolatileCouchbaseApi
-    public fun get(macro: LookupInMacro): Subdoc = get(macro.value, xattr = true)
+    protected fun get(macro: LookupInMacro): Subdoc = get(macro.value, xattr = true)
 
-    public fun count(path: String, xattr: Boolean = false): SubdocCount {
-        checkNotExecuted()
+    protected fun count(path: String, xattr: Boolean = false): SubdocCount {
         val origIndex = commands.size
         val subdoc = SubdocCount(path, xattr, this, origIndex)
         commands.add(SubdocGetRequest.Command(SubdocCommandType.COUNT, path, xattr, origIndex))
         return subdoc
     }
 
-    public fun exists(path: String, xattr: Boolean = false): SubdocExists {
-        checkNotExecuted()
+    protected fun exists(path: String, xattr: Boolean = false): SubdocExists {
         val origIndex = commands.size
         val subdoc = SubdocExists(path, xattr, this, origIndex)
         commands.add(SubdocGetRequest.Command(SubdocCommandType.EXISTS, path, xattr, origIndex))
         return subdoc
     }
-
-    internal fun checkNotExecuted() =
-        check(!executed) { "This LookupInSpec has already been executed. Create a fresh one for each call to Collection.lookupIn()." }
 
     override fun toString(): String {
         return "LookupInSpec(items=$commands)"

@@ -13,7 +13,9 @@ import com.couchbase.client.test.ClusterType
 import com.couchbase.client.test.IgnoreWhen
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -25,18 +27,23 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
     @Test
     fun `fails when spec is empty`(): Unit = runBlocking {
         val id = nextId()
-        assertThrows<IllegalArgumentException> { collection.lookupIn(id, LookupInSpec()) }
+        val emptySpec = object : LookupInSpec() {}
+        assertThrows<IllegalArgumentException> { collection.lookupIn(id, emptySpec) }
     }
 
     @Test
-    fun `fails when spec is reused`(): Unit = runBlocking {
+    fun `can reuse spec`(): Unit = runBlocking {
         val id = nextId()
         collection.upsert(id, mapOf("foo" to "bar"))
 
-        val spec = LookupInSpec()
-        spec.get("foo")
-        collection.lookupIn(id, spec)
-        assertThrows<IllegalStateException> { collection.lookupIn(id, spec) }
+        val spec = object : LookupInSpec() {
+            val foo = get("foo")
+        }
+        repeat(2) {
+            collection.lookupIn(id, spec) {
+                assertEquals("bar", spec.foo.contentAs<String>())
+            }
+        }
     }
 
     @Test
@@ -44,12 +51,18 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
         val id = nextId()
         collection.upsert(id, mapOf("foo" to "bar"))
 
-        val spec = LookupInSpec()
-        val foo = spec.get("foo")
+        val spec = object : LookupInSpec() {
+            val foo = get("foo")
+        }
+
         val result = collection.lookupIn(id, spec)
-        Assertions.assertEquals("bar", foo.contentAs<String>(result))
+        assertEquals("bar", spec.foo.contentAs<String>(result))
+
         val t = assertThrows<IllegalArgumentException> {
-            LookupInSpec().get("foo").contentAs<String>(result)
+            val otherSpec = object : LookupInSpec() {
+                val foo = get("foo")
+            }
+            otherSpec.foo.contentAs<String>(result)
         }
         assertThat(t).hasMessageContaining("not created from the same LookupInSpec")
 
@@ -57,8 +70,10 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
 
     @Test
     fun `throws DocumentNotFoundException when document is absent`(): Unit = runBlocking {
-        val spec = LookupInSpec()
-        spec.get("foo")
+        val spec = object : LookupInSpec() {
+            @Suppress("unused")
+            val foo = get("foo")
+        }
         assertThrows<DocumentNotFoundException> { collection.lookupIn(ABSENT_ID, spec) }
     }
 
@@ -67,9 +82,11 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
         val id = nextId()
         val cas = collection.upsert(id, mapOf("foo" to "bar")).cas
 
-        val spec = LookupInSpec()
-        spec.get("foo")
-        Assertions.assertEquals(cas, collection.lookupIn(id, spec).cas)
+        val spec = object : LookupInSpec() {
+            @Suppress("unused")
+            val foo = get("foo")
+        }
+        assertEquals(cas, collection.lookupIn(id, spec).cas)
     }
 
     @Nested
@@ -79,11 +96,12 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
             val id = nextId()
             collection.upsert(id, mapOf("foo" to "bar"))
 
-            val spec = LookupInSpec()
-            val fooExists = spec.exists("foo")
+            val spec = object : LookupInSpec() {
+                val fooExists = exists("foo")
+            }
             collection.lookupIn(id, spec) {
-                Assertions.assertTrue(fooExists.value)
-                Assertions.assertTrue(fooExists.get(this))
+                assertTrue(spec.fooExists.value)
+                assertTrue(spec.fooExists.get(this))
             }
         }
 
@@ -92,11 +110,12 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
             val id = nextId()
             collection.upsert(id, mapOf("foo" to "bar"))
 
-            val spec = LookupInSpec()
-            val nope = spec.exists("nope")
+            val spec = object : LookupInSpec() {
+                val nope = exists("nope")
+            }
             collection.lookupIn(id, spec) {
-                Assertions.assertFalse(nope.value)
-                Assertions.assertFalse(nope.get(this))
+                assertFalse(spec.nope.value)
+                assertFalse(spec.nope.get(this))
             }
         }
 
@@ -105,11 +124,12 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
             val id = nextId()
             collection.upsert(id, deeplyNested(128, "foo"))
 
-            val spec = LookupInSpec()
-            val fooExists = spec.exists("foo")
+            val spec = object : LookupInSpec() {
+                val fooExists = exists("foo")
+            }
             collection.lookupIn(id, spec) {
-                assertThrows<DocumentTooDeepException> { fooExists.value }
-                assertThrows<DocumentTooDeepException> { fooExists.get(this) }
+                assertThrows<DocumentTooDeepException> { spec.fooExists.value }
+                assertThrows<DocumentTooDeepException> { spec.fooExists.get(this) }
             }
         }
     }
@@ -122,11 +142,12 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
             collection.upsert(id, mapOf("foo" to "bar"))
             collection.remove(id)
 
-            val spec = LookupInSpec()
-            val flags = spec.get(LookupInMacro.Flags)
+            val spec = object : LookupInSpec() {
+                val flags = get(LookupInMacro.Flags)
+            }
             collection.lookupIn(id, spec, accessDeleted = true) {
-                Assertions.assertTrue(this.deleted)
-                Assertions.assertEquals(CodecFlags.JSON_COMMON_FLAGS, flags.contentAs())
+                assertTrue(this.deleted)
+                assertEquals(CodecFlags.JSON_COMMON_FLAGS, spec.flags.contentAs())
             }
         }
 
@@ -135,13 +156,14 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
             val id = nextId()
             collection.upsert(id, mapOf("foo" to "bar"))
 
-            val spec = LookupInSpec()
-            val foo = spec.get("foo")
-            val flags = spec.get(LookupInMacro.Flags)
+            val spec = object : LookupInSpec() {
+                val foo = get("foo")
+                val flags = get(LookupInMacro.Flags)
+            }
             collection.lookupIn(id, spec) {
-                Assertions.assertFalse(this.deleted)
-                Assertions.assertEquals(CodecFlags.JSON_COMPAT_FLAGS, flags.contentAs())
-                Assertions.assertEquals("bar", foo.contentAs())
+                assertFalse(this.deleted)
+                assertEquals(CodecFlags.JSON_COMPAT_FLAGS, spec.flags.contentAs<Int>())
+                assertEquals("bar", spec.foo.contentAs<String>())
             }
         }
 
@@ -150,10 +172,11 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
             val id = nextId()
             collection.upsert(id, deeplyNested(128))
 
-            val spec = LookupInSpec()
-            val foo = spec.get("foo")
+            val spec = object : LookupInSpec() {
+                val foo = get("foo")
+            }
             collection.lookupIn(id, spec) {
-                assertThrows<DocumentTooDeepException> { foo.content }
+                assertThrows<DocumentTooDeepException> { spec.foo.content }
             }
         }
 
@@ -162,9 +185,10 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
             val id = nextId()
             collection.upsert(id, Content.binary("xyzzy".toByteArray()))
 
-            val spec = LookupInSpec()
-            val doc = spec.get("")
-            collection.lookupIn(id, spec) { Assertions.assertEquals("xyzzy", doc.content.toStringUtf8()) }
+            val spec = object : LookupInSpec() {
+                val doc = get("")
+            }
+            collection.lookupIn(id, spec) { assertEquals("xyzzy", spec.doc.content.toStringUtf8()) }
         }
     }
 
@@ -175,9 +199,10 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
             val id = nextId()
             collection.upsert(id, listOf(1, 2, 3))
 
-            val spec = LookupInSpec()
-            val count = spec.count("")
-            collection.lookupIn(id, spec) { Assertions.assertEquals(3, count.value) }
+            val spec = object : LookupInSpec() {
+                val count = count("")
+            }
+            collection.lookupIn(id, spec) { assertEquals(3, spec.count.value) }
         }
     }
 }

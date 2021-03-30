@@ -96,10 +96,11 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
     ): ObjectNode {
         val docId = prepareXattr(content)
         collection.mutateIn(docId, block = block)
-        val spec = LookupInSpec()
-        val x = spec.get("x", xattr = true)
+        val spec = object : LookupInSpec() {
+            val x = get("x", xattr = true)
+        }
         val result = collection.lookupIn(docId, spec)
-        return x.contentAs(result)
+        return spec.x.contentAs(result)
     }
 
     private suspend inline fun <reified T : Throwable> checkSingleOpFailure(
@@ -492,15 +493,18 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
         }
         assertThrows<DocumentNotFoundException> { collection.get(docId) }
         assertThrows<DocumentNotFoundException> {
-            val spec = LookupInSpec()
-            spec.get("foo", xattr = true)
+            val spec = object : LookupInSpec() {
+                @Suppress("unused")
+                val foo = get("foo", xattr = true)
+            }
             collection.lookupIn(docId, spec)
         }
 
-        val spec = LookupInSpec()
-        val foo = spec.get("foo", xattr = true)
+        val spec = object : LookupInSpec() {
+            val foo = get("foo", xattr = true)
+        }
         val result = collection.lookupIn(docId, spec, accessDeleted = true)
-        assertEquals("bar", foo.contentAs<String>(result))
+        assertEquals("bar", spec.foo.contentAs<String>(result))
     }
 
     @Test
@@ -515,10 +519,11 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
             insert("foo", "bar", xattr = true)
         }
 
-        val spec = LookupInSpec()
-        val foo = spec.get("foo", xattr = true)
+        val spec = object : LookupInSpec() {
+            val foo = get("foo", xattr = true)
+        }
         val result = collection.lookupIn(docId, spec)
-        assertEquals("bar", foo.contentAs<String>(result))
+        assertEquals("bar", spec.foo.contentAs<String>(result))
     }
 }
 
