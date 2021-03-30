@@ -622,11 +622,10 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
 
   @Test
   def insert_string_already_there_xattr_createPath(): Unit = {
-    // Seems this should return PATH_EXISTS instead...
     checkSingleOpFailureXattr(
       ujson.Obj("foo" -> ujson.Obj("baz" -> "bar")),
-      Array(insert("x.foo.baz", "bar2")),
-      classOf[PathNotFoundException]
+      Array(insert("x.foo.baz", "bar2").xattr.createPath),
+      classOf[PathExistsException]
     )
   }
 

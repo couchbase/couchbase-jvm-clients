@@ -553,7 +553,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     @Test
     void insertStringAlreadyThereXattrCreatePath() {
         checkSingleOpFailureXattr(JsonObject.create().put("foo", JsonObject.create().put("baz", "bar")),
-                Arrays.asList(MutateInSpec.insert("x.foo.baz", "bar2")), PathNotFoundException.class);
+                Arrays.asList(MutateInSpec.insert("x.foo.baz", "bar2").xattr().createPath()), PathExistsException.class);
     }
 
     @Test
