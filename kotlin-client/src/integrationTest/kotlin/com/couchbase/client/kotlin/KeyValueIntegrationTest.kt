@@ -23,13 +23,22 @@ import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.error.DocumentUnretrievableException
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.error.TimeoutException
+import com.couchbase.client.core.error.subdoc.DocumentNotJsonException
+import com.couchbase.client.core.error.subdoc.DocumentTooDeepException
+import com.couchbase.client.core.error.subdoc.PathMismatchException
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.internal.toStringUtf8
 import com.couchbase.client.kotlin.kv.Durability.Companion.clientVerified
 import com.couchbase.client.kotlin.kv.Expiry
+import com.couchbase.client.kotlin.kv.LookupInSpec
+import com.couchbase.client.kotlin.kv.MutateInMacro
+import com.couchbase.client.kotlin.kv.MutateInSpec
 import com.couchbase.client.kotlin.kv.PersistTo
 import com.couchbase.client.kotlin.kv.ReplicateTo
+import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.insert
+import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.replace
+import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.upsert
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.test.ClusterType
 import com.couchbase.client.test.IgnoreWhen
@@ -46,7 +55,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import reactor.core.publisher.Mono
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.min
@@ -90,11 +98,6 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
 
             collection.upsert(id, "foo")
             assertThat(flow.toList()).isNotEmpty()
-        }
-
-        @Test
-        fun `reactor sucks`(): Unit = runBlocking {
-            println(Mono.empty<String>().block())
         }
 
         @Test
@@ -183,6 +186,21 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         }
 
         @Test
+        fun `binary content with and without expiry`(): Unit = runBlocking {
+            val id = nextId()
+            val contentBytes = "xyzzy".toByteArray()
+
+            collection.upsert(id, Content.binary(contentBytes), expiry = nearFutureExpiry)
+            val result = collection.get(id, withExpiry = true)
+            assertArrayEquals(contentBytes, result.content.bytes)
+            assertEquals(nearFutureExpiry, result.expiry)
+
+            collection.upsert(id, Content.binary(contentBytes))
+            assertEquals(Expiry.none(), collection.get(id, withExpiry = true).expiry)
+            assertNull(collection.get(id).expiry)
+        }
+
+        @Test
         fun `with and without expiry`(): Unit = runBlocking {
             val id = nextId()
             collection.upsert(id, "foo")
@@ -213,8 +231,25 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
                 )
             )
 
-            val result = collection.get(id, project = listOf("numbers.one"))
+            val path = "numbers.one"
+            // repeated, absent, and mismatched paths should all have no effect
+            val harmlessGarbage = listOf(path, "no-such-path", "numbers[0]")
+            val result = collection.get(id, project = listOf(path) + harmlessGarbage)
             assertEquals(expected, result.contentAs<Any>())
+        }
+
+        @Test
+        fun `projection fails when document is too deep`(): Unit = runBlocking {
+            val id = nextId()
+            collection.upsert(id, deeplyNested(128, "foo"))
+            assertThrows<DocumentTooDeepException> { collection.get(id, project = listOf("foo")) }
+        }
+
+        @Test
+        fun `projection fails when document is binary`(): Unit = runBlocking {
+            val id = nextId()
+            collection.upsert(id, Content.binary("xyzzy".toByteArray()))
+            assertThrows<DocumentNotJsonException> { collection.get(id, project = listOf("foo")) }
         }
 
         @Test
@@ -610,9 +645,97 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         }
     }
 
+    @Nested
+    inner class MutateIn {
+        @Test
+        fun `insert succeeds if document does not already exist`(): Unit = runBlocking {
+            val id = nextId()
+
+            val spec = MutateInSpec()
+            spec.upsert("foo", "bar")
+            collection.mutateIn(id, spec, storeSemantics = insert())
+
+            assertEquals(mapOf("foo" to "bar"), collection.get(id).contentAs<Any>())
+        }
+
+        @Test
+        fun `insert throws DocumentExistsException`(): Unit = runBlocking {
+            val id = nextId()
+            collection.upsert(id, mapOf<String, Any?>())
+
+            val spec = MutateInSpec().apply { upsert("foo", "bar") }
+            assertThrows<DocumentExistsException> {
+                collection.mutateIn(id, spec, storeSemantics = insert())
+            }
+        }
+
+        @Test
+        fun `replace throws DocumentNotFoundException`(): Unit = runBlocking {
+            val id = nextId()
+            val spec = MutateInSpec().apply { upsert("foo", "bar") }
+            assertThrows<DocumentNotFoundException> {
+                collection.mutateIn(id, spec, storeSemantics = replace())
+            }
+        }
+
+        @Test
+        fun `replace fails on path mismatch`(): Unit = runBlocking {
+            val id = nextId()
+            collection.upsert(id, listOf<Any>())
+            val spec = MutateInSpec().apply { upsert("foo", "bar") }
+            assertThrows<PathMismatchException> { collection.mutateIn(id, spec) }
+        }
+
+        @Test
+        fun `replace throws CasMismatchException`(): Unit = runBlocking {
+            val id = nextId()
+            val cas = collection.upsert(id, mapOf<String, Any?>()).cas
+            val spec = MutateInSpec().apply { upsert("foo", "bar") }
+            assertThrows<CasMismatchException> {
+                collection.mutateIn(id, spec, storeSemantics = replace(cas + 1))
+            }
+        }
+
+        @Test
+        fun `upsert does not care if document already exists`(): Unit = runBlocking {
+            val id = nextId()
+
+            run {
+                val spec = MutateInSpec().apply { upsert("foo", "bar") }
+                collection.mutateIn(id, spec, storeSemantics = upsert())
+                assertEquals(mapOf("foo" to "bar"), collection.get(id).contentAs<Any>())
+            }
+
+            run {
+                val spec = MutateInSpec().apply { upsert("one", 1) }
+                collection.mutateIn(id, spec, storeSemantics = upsert())
+                assertEquals(mapOf("foo" to "bar", "one" to 1), collection.get(id).contentAs<Any>())
+            }
+        }
+
+        @Test
+        fun `can upsert macro`(): Unit = runBlocking {
+            val id = nextId()
+
+            val spec = MutateInSpec().apply { upsert("foo", MutateInMacro.SeqNo) }
+            val seqno = collection.mutateIn(id, spec, storeSemantics = upsert())
+                .mutationToken!!.sequenceNumber()
+
+            val lookupSpec = LookupInSpec()
+            val foo = lookupSpec.get("foo", xattr = true)
+            collection.lookupIn(id, lookupSpec) {
+                assertEquals("0x%016x".format(seqno), foo.contentAs<String>())
+            }
+        }
+    }
+
     private suspend fun assertExpiry(expiry: Expiry, id: String) {
         assertEquals(expiry, collection.get(id, withExpiry = true).expiry)
     }
 }
 
-private const val ABSENT_ID = "this document does not exist"
+internal fun deeplyNested(depth: Int, fieldName: String = "x"): Map<String, Any?> {
+    return if (depth == 0) mapOf() else mapOf(fieldName to deeplyNested(depth - 1))
+}
+
+internal const val ABSENT_ID = "this document does not exist"

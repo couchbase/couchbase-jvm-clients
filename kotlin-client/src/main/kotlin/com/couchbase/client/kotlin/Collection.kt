@@ -19,34 +19,36 @@ package com.couchbase.client.kotlin
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.env.TimeoutConfig
+import com.couchbase.client.core.error.CasMismatchException
 import com.couchbase.client.core.error.DefaultErrorUtil
 import com.couchbase.client.core.error.DocumentExistsException
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.error.DocumentUnretrievableException
 import com.couchbase.client.core.error.InvalidArgumentException
-import com.couchbase.client.core.error.context.KeyValueErrorContext
+import com.couchbase.client.core.error.context.KeyValueErrorContext.completedRequest
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.msg.Request
 import com.couchbase.client.core.msg.Response
 import com.couchbase.client.core.msg.ResponseStatus
+import com.couchbase.client.core.msg.ResponseStatus.SUBDOC_FAILURE
 import com.couchbase.client.core.msg.kv.GetAndLockRequest
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest
 import com.couchbase.client.core.msg.kv.GetMetaRequest
 import com.couchbase.client.core.msg.kv.GetRequest
 import com.couchbase.client.core.msg.kv.InsertRequest
-import com.couchbase.client.core.msg.kv.InsertResponse
 import com.couchbase.client.core.msg.kv.KeyValueRequest
 import com.couchbase.client.core.msg.kv.RemoveRequest
 import com.couchbase.client.core.msg.kv.ReplaceRequest
-import com.couchbase.client.core.msg.kv.SubdocGetResponse
-import com.couchbase.client.core.msg.kv.SubdocMutateResponse
+import com.couchbase.client.core.msg.kv.SubdocGetRequest
+import com.couchbase.client.core.msg.kv.SubdocMutateRequest
 import com.couchbase.client.core.msg.kv.TouchRequest
 import com.couchbase.client.core.msg.kv.UnlockRequest
 import com.couchbase.client.core.msg.kv.UpsertRequest
 import com.couchbase.client.core.service.kv.ReplicaHelper
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
+import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.Transcoder
 import com.couchbase.client.kotlin.codec.TypeRef
 import com.couchbase.client.kotlin.codec.typeRef
@@ -57,12 +59,16 @@ import com.couchbase.client.kotlin.kv.ExistsResult
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.GetReplicaResult
 import com.couchbase.client.kotlin.kv.GetResult
+import com.couchbase.client.kotlin.kv.LookupInResult
+import com.couchbase.client.kotlin.kv.LookupInSpec
+import com.couchbase.client.kotlin.kv.MutateInResult
+import com.couchbase.client.kotlin.kv.MutateInSpec
 import com.couchbase.client.kotlin.kv.MutationResult
-import com.couchbase.client.kotlin.kv.internal.createSubdocGetRequest
+import com.couchbase.client.kotlin.kv.StoreSemantics
 import com.couchbase.client.kotlin.kv.internal.encodeInSpan
 import com.couchbase.client.kotlin.kv.internal.levelIfSynchronous
 import com.couchbase.client.kotlin.kv.internal.observe
-import com.couchbase.client.kotlin.kv.internal.parseSubdocGet
+import com.couchbase.client.kotlin.kv.internal.subdocGet
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
@@ -83,6 +89,7 @@ public class Collection internal constructor(
     internal val core: Core = scope.bucket.core
     internal val env: ClusterEnvironment = scope.bucket.env
 
+    internal val defaultJsonSerializer: JsonSerializer = env.jsonSerializer
     internal val defaultTranscoder: Transcoder = env.transcoder
 
     private fun TimeoutConfig.kvTimeout(durability: Durability): Duration =
@@ -130,8 +137,9 @@ public class Collection internal constructor(
             }
         }
 
-        val request = createSubdocGetRequest(validateDocumentId(id), withExpiry, project, common)
-        return exec(request, common) { response -> parseSubdocGet(id, response) }
+        subdocGet(validateDocumentId(id), withExpiry, project, common).let {
+            return GetResult(id, it.cas, Content(it.content, it.flags), it.expiry, defaultTranscoder)
+        }
     }
     /**
      * Like [get], but returns null instead of throwing
@@ -261,7 +269,7 @@ public class Collection internal constructor(
 
             return when {
                 success && !response.deleted() -> ExistsResult(true, response.cas())
-                response.status() == ResponseStatus.NOT_FOUND || success -> ExistsResult.NotFound
+                success || response.status() == ResponseStatus.NOT_FOUND -> ExistsResult.NotFound
                 else -> throw DefaultErrorUtil.keyValueStatusToException(request, response)
             }
         } finally {
@@ -330,11 +338,15 @@ public class Collection internal constructor(
         )
         request.context().encodeLatency(encodingNanos)
 
-        return exec(request, common) {
-            if (durability is Durability.ClientVerified) {
-                observe(request, id, durability, it.cas(), it.mutationToken())
+        try {
+            return exec(request, common) {
+                if (durability is Durability.ClientVerified) {
+                    observe(request, id, durability, it.cas(), it.mutationToken())
+                }
+                MutationResult(it.cas(), it.mutationToken().orElse(null))
             }
-            MutationResult(it.cas(), it.mutationToken().orElse(null))
+        } catch (t: CasMismatchException) {
+            throw DocumentExistsException(t.context())
         }
     }
 
@@ -478,6 +490,158 @@ public class Collection internal constructor(
         exec(request, common) {}
     }
 
+    public suspend inline fun <T> lookupIn(
+        id: String,
+        spec: LookupInSpec,
+        common: CommonOptions = CommonOptions.Default,
+        accessDeleted: Boolean = false,
+        block: LookupInResult.() -> T
+    ): T {
+        val result = lookupIn(id, spec, common, accessDeleted)
+        return block(result)
+    }
+
+    public suspend fun lookupIn(
+        id: String,
+        spec: LookupInSpec,
+        common: CommonOptions = CommonOptions.Default,
+        accessDeleted: Boolean = false,
+    ): LookupInResult {
+        require(spec.commands.isNotEmpty()) { "Must specify at least one lookup" }
+        require(spec.commands.size <= 16) { "Must specify no more than 16 lookups" }
+        spec.checkNotExecuted()
+        spec.executed = true
+
+        val flags: Byte = if (accessDeleted) SubdocMutateRequest.SUBDOC_DOC_FLAG_ACCESS_DELETED else 0
+        val request = SubdocGetRequest(
+            common.actualKvTimeout(Durability.disabled()),
+            core.context(),
+            collectionId,
+            common.actualRetryStrategy(),
+            id,
+            flags,
+            spec.commands.sortedBy { !it.xattr() }, // xattr commands must come first
+            common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN)
+        )
+
+        try {
+            core.exec(request, common).let { response ->
+                if (response.status().success() || response.status() == SUBDOC_FAILURE) {
+                    return LookupInResult(
+                        id,
+                        spec.commands.size,
+                        response.cas(),
+                        response.isDeleted,
+                        response.values().toList(),
+                        defaultJsonSerializer,
+                        spec,
+                    )
+                }
+                throw DefaultErrorUtil.keyValueStatusToException(request, response)
+            }
+        } finally {
+            request.logicallyComplete()
+        }
+    }
+
+    public suspend fun mutateIn(
+        id: String,
+        common: CommonOptions = CommonOptions.Default,
+        expiry: Expiry = Expiry.none(),
+        durability: Durability = Durability.disabled(),
+        storeSemantics: StoreSemantics = StoreSemantics.replace(),
+        serializer: JsonSerializer? = null,
+        accessDeleted: Boolean = false,
+        createAsDeleted: Boolean = false,
+        block: MutateInSpec.() -> Unit,
+    ): MutateInResult {
+        // contract { callsInPlace(block, EXACTLY_ONCE) }
+        //
+        // When contracts become stable, we can do cool things like:
+        //    val counter : SubdocLong
+        //    val result = collection.mutateIn("foo") { counter = incrementAndGet("bar") }
+        //    println(counter.get(result))
+
+        val spec = MutateInSpec()
+        spec.block()
+        return mutateIn(
+            id,
+            spec,
+            common,
+            expiry,
+            durability,
+            storeSemantics,
+            serializer,
+            accessDeleted,
+            createAsDeleted
+        )
+    }
+
+    public suspend fun mutateIn(
+        id: String,
+        spec: MutateInSpec,
+        common: CommonOptions = CommonOptions.Default,
+        expiry: Expiry = Expiry.none(),
+        durability: Durability = Durability.disabled(),
+        storeSemantics: StoreSemantics = StoreSemantics.replace(),
+        serializer: JsonSerializer? = null,
+        accessDeleted: Boolean = false,
+        createAsDeleted: Boolean = false,
+    ): MutateInResult {
+        require(spec.commands.isNotEmpty()) { "Must specify at least one mutation" }
+        require(spec.commands.size <= 16) { "Must specify no more than 16 mutations" }
+        spec.checkNotExecuted()
+        spec.executed = true
+
+        val defaultCreateParent = (storeSemantics as? StoreSemantics.Replace)?.createParent ?: true
+        val encodedCommands = spec.commands.map { it.encode(defaultCreateParent, serializer ?: defaultJsonSerializer) }
+        val timeout = common.actualKvTimeout(durability)
+
+        @OptIn(VolatileCouchbaseApi::class)
+        val request = SubdocMutateRequest(
+            timeout,
+            core.context(),
+            collectionId,
+            if (createAsDeleted) scope.bucket.config(timeout) else null,
+            common.actualRetryStrategy(),
+            id,
+            storeSemantics == StoreSemantics.Insert,
+            storeSemantics == StoreSemantics.Upsert,
+            accessDeleted,
+            createAsDeleted,
+            encodedCommands.sortedBy { !it.xattr() }, // xattr commands must come first
+            expiry.encode(),
+            (storeSemantics as? StoreSemantics.Replace)?.cas ?: 0L,
+            durability.levelIfSynchronous(),
+            common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN),
+        )
+
+        try {
+            core.exec(request, common).let { response ->
+                if (response.status().success()) {
+                    if (durability is Durability.ClientVerified) {
+                        observe(request, id, durability, response.cas(), response.mutationToken())
+                    }
+                    return MutateInResult(
+                        spec.commands.size,
+                        response.values().toList(),
+                        response.cas(),
+                        response.mutationToken().orElse(null),
+                        spec,
+                    )
+                }
+
+                if (storeSemantics == StoreSemantics.Insert && response.status() == ResponseStatus.EXISTS) {
+                    throw DocumentExistsException(completedRequest(request, response.status()))
+                }
+                if (response.status() == SUBDOC_FAILURE) response.error().map { throw it }
+                throw DefaultErrorUtil.keyValueStatusToException(request, response)
+            }
+        } finally {
+            request.logicallyComplete()
+        }
+    }
+
     internal suspend inline fun <RESPONSE : Response, RESULT> exec(
         request: KeyValueRequest<RESPONSE>,
         common: CommonOptions,
@@ -486,14 +650,6 @@ public class Collection internal constructor(
         try {
             val response = core.exec(request, common)
             if (response.status().success()) return resultExtractor(response)
-
-            if (response is SubdocGetResponse) response.error().ifPresent { throw it }
-            if (response is SubdocMutateResponse) response.error().ifPresent { throw it }
-
-            if (response is InsertResponse && response.status() == ResponseStatus.EXISTS) {
-                throw DocumentExistsException(KeyValueErrorContext.completedRequest(request, response.status()))
-            }
-
             throw DefaultErrorUtil.keyValueStatusToException(request, response)
         } finally {
             request.logicallyComplete()
@@ -511,5 +667,5 @@ internal fun <R : Response> Request<R>.logicallyComplete() = context().logically
 
 private fun validateDocumentId(id: String): String {
     require(id.isNotEmpty()) { "Document ID must not be empty." }
-    return id;
+    return id
 }

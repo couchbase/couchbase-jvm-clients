@@ -22,7 +22,7 @@ import com.couchbase.client.kotlin.env.dsl.IoConfigDslBuilder
 /**
  * Result returned from all kinds of Key-Value mutation operations.
  */
-public class MutationResult internal constructor(
+public open class MutationResult internal constructor(
     /**
      * The Compare And Swap (CAS) value of the document after the mutation.
      */

@@ -26,6 +26,7 @@ import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Helper functions to aid with parsing get-with-projections calls.
@@ -62,10 +63,20 @@ public class ProjectionsApplier {
     return Mapper.encodeAsBytes(result);
   }
 
+  public static byte[] reconstructDocument(Map<String, byte[]> pathToValue) {
+    ObjectNode result = Mapper.createObjectNode();
+    pathToValue.forEach((path, value) -> insert(result, path, value));
+    return Mapper.encodeAsBytes(result);
+  }
+
   private static void insert(ObjectNode document, SubDocumentField field) {
-    List<PathElement> path = JsonPathParser.parse(field.path());
-    JsonNode content = Mapper.decodeIntoTree(field.value());
-    insertRecursive(document, path, content);
+    insert(document, field.path(), field.value());
+  }
+
+  private static void insert(ObjectNode document, String path, byte[] value) {
+    List<PathElement> parsedPath = JsonPathParser.parse(path);
+    JsonNode content = Mapper.decodeIntoTree(value);
+    insertRecursive(document, parsedPath, content);
   }
 
   /**

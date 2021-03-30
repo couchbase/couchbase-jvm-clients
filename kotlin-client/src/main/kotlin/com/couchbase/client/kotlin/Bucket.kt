@@ -86,5 +86,6 @@ public class Bucket internal constructor(
 
     @VolatileCouchbaseApi
     public suspend fun config(timeout: Duration): BucketConfig =
-        BucketConfigUtil.waitForBucketConfig(core, name, timeout).asFlow().single()
+        core.clusterConfig().bucketConfig(name)
+            ?: BucketConfigUtil.waitForBucketConfig(core, name, timeout).asFlow().single()
 }

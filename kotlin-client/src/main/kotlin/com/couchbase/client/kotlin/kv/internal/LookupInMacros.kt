@@ -16,24 +16,21 @@
 
 package com.couchbase.client.kotlin.kv.internal
 
-internal class LookupInMacro {
-    internal companion object {
-        internal const val DOCUMENT = "\$document"
+import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 
-        internal const val EXPIRY_TIME = "\$document.exptime"
+@VolatileCouchbaseApi
+public open class LookupInMacro internal constructor(internal val value: String) {
+    public object Document : LookupInMacro("\$document")
+    public object ExpiryTime : LookupInMacro("\$document.exptime")
+    public object Cas : LookupInMacro("\$document.CAS")
+    public object SeqNo : LookupInMacro("\$document.seqno")
+    public object LastModified : LookupInMacro("\$document.last_modified")
+    public object Deleted : LookupInMacro("\$document.deleted")
+    public object ValueSizeBytes : LookupInMacro("\$document.value_bytes")
+    public object RevId : LookupInMacro("\$document.revid")
+    public object Flags : LookupInMacro("\$document.flags")
 
-        internal const val CAS = "\$document.CAS"
-
-        internal const val SEQ_NO = "\$document.seqno"
-
-        internal const val LAST_MODIFIED = "\$document.last_modified"
-
-        internal const val IS_DELETED = "\$document.deleted"
-
-        internal const val VALUE_SIZE_BYTES = "\$document.value_bytes"
-
-        internal const val REV_ID = "\$document.revid"
-
-        internal const val FLAGS = "\$document.flags"
+    override fun toString(): String {
+        return "LookupInMacro(value='$value')"
     }
 }
