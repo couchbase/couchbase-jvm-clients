@@ -70,8 +70,8 @@ class KeyValueMessageHandlerTest {
 
   private static CoreEnvironment ENV;
   private static EndpointContext CTX;
-  private static String BUCKET = "bucket";
-  private static CollectionIdentifier CID = CollectionIdentifier.fromDefault(BUCKET);
+  private static final String BUCKET = "bucket";
+  private static final CollectionIdentifier CID = CollectionIdentifier.fromDefault(BUCKET);
 
   @BeforeAll
   static void setup() {
@@ -260,6 +260,24 @@ class KeyValueMessageHandlerTest {
       } finally {
         channel.finishAndReleaseAll();
       }
+    }
+  }
+
+  @Test
+  void incrementsNotMyVbucketIndicator() {
+    EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
+
+    try {
+      GetRequest request = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE, null);
+      channel.writeOutbound(request);
+
+      ByteBuf getResponse = MemcacheProtocol.response(channel.alloc(), MemcacheProtocol.Opcode.GET, (byte) 0,
+        MemcacheProtocol.Status.NOT_MY_VBUCKET.status(), request.opaque(), 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
+      channel.writeInbound(getResponse);
+
+      assertEquals(1, request.rejectedWithNotMyVbucket());
+    } finally {
+      channel.finishAndReleaseAll();
     }
   }
 

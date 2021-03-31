@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.KeyValueErrorMapCodeHandledEvent;
+import com.couchbase.client.core.cnc.events.io.NotMyVbucketReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseStatusReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
@@ -466,6 +467,10 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param response the response to extract the config from, potentially.
    */
   private void handleNotMyVbucket(final KeyValueRequest<Response> request, final ByteBuf response) {
+    request.indicateRejectedWithNotMyVbucket();
+
+    eventBus.publish(new NotMyVbucketReceivedEvent(ioContext, request.partition()));
+
     final String origin = request.context().lastDispatchedTo() != null ? request.context().lastDispatchedTo().hostname() : null;
     RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_NOT_MY_VBUCKET);
 

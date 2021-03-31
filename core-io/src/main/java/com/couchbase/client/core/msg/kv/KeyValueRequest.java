@@ -73,4 +73,14 @@ public interface KeyValueRequest<R extends Response> extends Request<R>, ScopedR
 
   int opaque();
 
+  /**
+   * Returns the number of times this request has been rejected with a not my vbucket response before.
+   */
+  int rejectedWithNotMyVbucket();
+
+  /**
+   * Increments the counter indicating that this request has been rejected with a not my vbucket response.
+   */
+  void indicateRejectedWithNotMyVbucket();
+
 }

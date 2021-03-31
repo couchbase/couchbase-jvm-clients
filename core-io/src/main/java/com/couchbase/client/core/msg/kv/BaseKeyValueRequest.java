@@ -84,6 +84,11 @@ public abstract class BaseKeyValueRequest<R extends Response>
    */
   private volatile short partition;
 
+  /**
+   * Indicates if this request has been rejected with a NMVB before.
+   */
+  private final AtomicInteger rejectedWithNotMyVbucket = new AtomicInteger(0);
+
   protected BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
                                 final String key, final CollectionIdentifier collectionIdentifier) {
     this(timeout, ctx, retryStrategy, key, collectionIdentifier, null);
@@ -223,6 +228,11 @@ public abstract class BaseKeyValueRequest<R extends Response>
       ((SyncDurabilityRequest) this).durabilityLevel().ifPresent(d -> ctx.put("syncDurability", d));
     }
 
+    int nmvb = rejectedWithNotMyVbucket.get();
+    if (nmvb > 0) {
+      ctx.put("rejectedWithNotMyVbucket", nmvb);
+    }
+
     return ctx;
   }
 
@@ -244,6 +254,16 @@ public abstract class BaseKeyValueRequest<R extends Response>
   @Override
   public String operationId() {
     return "0x" + Integer.toHexString(opaque);
+  }
+
+  @Override
+  public int rejectedWithNotMyVbucket() {
+    return rejectedWithNotMyVbucket.get();
+  }
+
+  @Override
+  public void indicateRejectedWithNotMyVbucket() {
+    rejectedWithNotMyVbucket.incrementAndGet();
   }
 
 }

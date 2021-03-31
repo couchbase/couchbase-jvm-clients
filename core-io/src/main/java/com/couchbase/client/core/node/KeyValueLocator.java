@@ -181,11 +181,11 @@ public class KeyValueLocator implements Locator {
   private static int calculateNodeId(int partitionId, final KeyValueRequest<?> request,
                                      final CouchbaseBucketConfig config) {
 
-    // Note that number of retry attempts module 2 has been chosen so that the "fast path" if no retry
-    // attempts have been made always goes tot he active first. And then since it might or might not have
-    // been switched over yet on the server the modulo will make sure that it "alternates" between fast-forward
-    // and non-fast-forward maps to give it the greatest chance of eventually completing.
-    boolean useFastForward = config.hasFastForwardMap() && request.context().retryAttempts() % 2 == 1;
+    // Only use the Fast-Forward node if we have a map in the first place, and more importantly,
+    // if the request at least got rejected once from a different node with a "not my vbucket"
+    // response. This prevents the client going to the newer node prematurely and potentially
+    // having the request being stuck on the server side during rebalance.
+    boolean useFastForward = config.hasFastForwardMap() && request.rejectedWithNotMyVbucket() > 0;
 
     if (request instanceof ReplicaGetRequest) {
       return config.nodeIndexForReplica(partitionId, ((ReplicaGetRequest) request).replica() - 1, useFastForward);

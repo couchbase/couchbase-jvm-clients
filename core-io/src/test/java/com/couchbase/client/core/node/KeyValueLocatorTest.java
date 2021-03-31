@@ -29,7 +29,6 @@ import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
-import com.couchbase.client.core.msg.manager.BucketConfigRequest;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -84,7 +83,7 @@ class KeyValueLocatorTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  void pickFastForwardIfAvailableAndRetry() {
+  void pickFastForwardIfAvailableAndNmvbSeen() {
     Locator locator = new KeyValueLocator();
 
     // Setup 2 nodes
@@ -126,29 +125,18 @@ class KeyValueLocatorTest {
     verify(node1Mock, times(1)).send(getRequest);
     verify(node2Mock, never()).send(getRequest);
 
-    // Dispatch with retry 1
+    // Dispatch with retry 1 but no nmvb seen, still go to the active
     when(requestCtx.retryAttempts()).thenReturn(1);
     locator.dispatch(getRequest, nodes, configMock, null);
-    verify(node1Mock, times(1)).send(getRequest);
-    verify(node2Mock, times(1)).send(getRequest);
+    verify(node1Mock, times(2)).send(getRequest);
+    verify(node2Mock, never()).send(getRequest);
 
-    // Dispatch with retry 2
+    // Dispatch with retry 2, now we see a NMVB
     when(requestCtx.retryAttempts()).thenReturn(2);
+    when(getRequest.rejectedWithNotMyVbucket()).thenReturn(1);
     locator.dispatch(getRequest, nodes, configMock, null);
     verify(node1Mock, times(2)).send(getRequest);
     verify(node2Mock, times(1)).send(getRequest);
-
-    // Dispatch with retry 3
-    when(requestCtx.retryAttempts()).thenReturn(3);
-    locator.dispatch(getRequest, nodes, configMock, null);
-    verify(node1Mock, times(2)).send(getRequest);
-    verify(node2Mock, times(2)).send(getRequest);
-
-    // Dispatch with retry 4
-    when(requestCtx.retryAttempts()).thenReturn(4);
-    locator.dispatch(getRequest, nodes, configMock, null);
-    verify(node1Mock, times(3)).send(getRequest);
-    verify(node2Mock, times(2)).send(getRequest);
   }
 
   @Test
@@ -204,6 +192,54 @@ class KeyValueLocatorTest {
     when(requestCtx.retryAttempts()).thenReturn(5);
     locator.dispatch(getRequest, nodes, configMock, null);
     verify(node1Mock, times(3)).send(getRequest);
+    verify(node2Mock, never()).send(getRequest);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void pickCurrentIfNoFFMapAndNmvbSeen() {
+    Locator locator = new KeyValueLocator();
+
+    // Setup 2 nodes
+    NodeInfo nodeInfo1 = new NodeInfo("http://foo:1234", "192.168.56.101:8091",
+      Collections.EMPTY_MAP, null);
+    NodeInfo nodeInfo2 = new NodeInfo("http://foo:1234", "192.168.56.102:8091",
+      Collections.EMPTY_MAP, null);
+    Node node1Mock = mock(Node.class);
+    when(node1Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.101", 8091));
+    Node node2Mock = mock(Node.class);
+    when(node2Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.102", 8091));
+    List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock));
+
+    // Configure Cluster and Bucket config
+    ClusterConfig configMock = mock(ClusterConfig.class);
+    CouchbaseBucketConfig bucketMock = mock(CouchbaseBucketConfig.class);
+    when(configMock.bucketConfig("bucket")).thenReturn(bucketMock);
+    when(bucketMock.nodes()).thenReturn(Arrays.asList(nodeInfo1, nodeInfo2));
+    when(bucketMock.numberOfPartitions()).thenReturn(1024);
+    when(bucketMock.nodeAtIndex(0)).thenReturn(nodeInfo1);
+    when(bucketMock.nodeAtIndex(1)).thenReturn(nodeInfo2);
+    when(bucketMock.hasFastForwardMap()).thenReturn(false);
+
+    // Fake a vbucket move in ffwd map from node 0 to node 1
+    when(bucketMock.nodeIndexForActive(656, false)).thenReturn((short) 0);
+    when(bucketMock.nodeIndexForActive(656, true)).thenReturn((short) 1);
+
+    // Create Request
+    GetRequest getRequest = mock(GetRequest.class);
+    when(getRequest.bucket()).thenReturn("bucket");
+    when(getRequest.key()).thenReturn("key".getBytes(UTF_8));
+    RequestContext requestCtx = mock(RequestContext.class);
+    when(getRequest.context()).thenReturn(requestCtx);
+
+    when(getRequest.rejectedWithNotMyVbucket()).thenReturn(9);
+    locator.dispatch(getRequest, nodes, configMock, null);
+    verify(node1Mock, times(1)).send(getRequest);
+    verify(node2Mock, never()).send(getRequest);
+
+    when(getRequest.rejectedWithNotMyVbucket()).thenReturn(1);
+    locator.dispatch(getRequest, nodes, configMock, null);
+    verify(node1Mock, times(2)).send(getRequest);
     verify(node2Mock, never()).send(getRequest);
   }
 
