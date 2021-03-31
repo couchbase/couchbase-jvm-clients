@@ -30,11 +30,11 @@ import com.couchbase.client.kotlin.codec.JacksonJsonSerializer
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.JsonTranscoder
 import com.couchbase.client.kotlin.codec.Transcoder
-import com.couchbase.client.kotlin.createBuilderWithDefaultSettings
+import com.couchbase.client.kotlin.samples.createBuilderWithDefaultSettings
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentDslBuilder
 import com.couchbase.client.kotlin.internal.await
-import com.couchbase.client.kotlin.preconfigureBuilderUsingDsl
+import com.couchbase.client.kotlin.samples.preconfigureBuilderUsingDsl
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jsonMapper

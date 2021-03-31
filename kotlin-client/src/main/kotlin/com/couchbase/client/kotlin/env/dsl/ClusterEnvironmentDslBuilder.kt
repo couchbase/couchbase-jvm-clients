@@ -27,10 +27,10 @@ import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.Transcoder
-import com.couchbase.client.kotlin.configureManyThingsUsingDsl
-import com.couchbase.client.kotlin.configureTlsUsingDsl
+import com.couchbase.client.kotlin.samples.configureManyThingsUsingDsl
+import com.couchbase.client.kotlin.samples.configureTlsUsingDsl
 import com.couchbase.client.kotlin.env.ClusterEnvironment
-import com.couchbase.client.kotlin.preconfigureBuilderUsingDsl
+import com.couchbase.client.kotlin.samples.preconfigureBuilderUsingDsl
 import reactor.core.scheduler.Scheduler
 import kotlin.properties.Delegates.observable
 

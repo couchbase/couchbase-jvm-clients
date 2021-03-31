@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.kotlin
+package com.couchbase.client.kotlin.samples
 
 import com.couchbase.client.core.env.NetworkResolution
 import com.couchbase.client.core.env.SecurityConfig
 import com.couchbase.client.core.retry.FailFastRetryStrategy
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.codec.RawJsonTranscoder
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.env.dsl.TrustSource
