@@ -19,6 +19,7 @@ package com.couchbase.client.core.io.netty.query;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DmlFailureException;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.InternalServerFailureException;
@@ -140,8 +141,10 @@ public class QueryChunkResponseParser
         return new IndexExistsException(errorContext);
       } else if (code >= 5000 && code < 6000) {
         return new InternalServerFailureException(errorContext);
-      } else if (code == 12009) {
+      } else if (code == 12009 && message.contains("CAS mismatch")) {
         return new CasMismatchException(errorContext);
+      } else if (code == 12009) {
+        return new DmlFailureException(errorContext);
       } else if (code >= 10000 && code < 11000) {
         return new AuthenticationFailureException("Could not authenticate query", errorContext, null);
       } else if ((code >= 12000 && code < 13000) || (code >= 14000 && code < 15000)) {
