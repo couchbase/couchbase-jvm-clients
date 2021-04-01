@@ -33,16 +33,19 @@ import com.couchbase.client.core.config.loader.KeyValueBucketLoader;
 import com.couchbase.client.core.config.refresher.ClusterManagerBucketRefresher;
 import com.couchbase.client.core.config.refresher.GlobalRefresher;
 import com.couchbase.client.core.config.refresher.KeyValueBucketRefresher;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.BucketNotFoundDuringLoadException;
+import com.couchbase.client.core.error.BucketNotReadyDuringLoadException;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.SeedNodeOutdatedException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
@@ -67,6 +70,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -225,9 +229,11 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
                 if ((f instanceof ConfigException
                   && f.getCause() instanceof RequestCanceledException
                   && ((RequestCanceledException) f.getCause()).reason() == CancellationReason.TARGET_NODE_REMOVED)
-                  || f instanceof BucketNotFoundDuringLoadException) {
+                  || f instanceof BucketNotFoundDuringLoadException
+                  || f instanceof BucketNotReadyDuringLoadException) {
                   // For bucket not found wait a bit longer, retry the rest quickly
                   Duration delay = f instanceof BucketNotFoundDuringLoadException
+                    || f instanceof BucketNotReadyDuringLoadException
                     ? Duration.ofMillis(500)
                     : Duration.ofMillis(1);
                   eventBus.publish(new BucketOpenRetriedEvent(name, delay, core.context(), f));
@@ -284,6 +290,14 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         return clusterManagerLoader.load(
           identifier, mappedManagerPort, name, alternateAddress
         );
+      })
+      .flatMap(ctx -> {
+        JsonNode configRoot = Mapper.decodeIntoTree(ctx.config());
+        if (configRoot.get("nodes").isEmpty()) {
+          return Mono.error(new BucketNotReadyDuringLoadException("No KV node in the config (yet), can't use it for now."));
+        } else {
+          return Mono.just(ctx);
+        }
       });
   }
 

@@ -21,12 +21,14 @@ import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.java.manager.bucket.BucketSettings;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -117,6 +119,28 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
         cluster.buckets().dropBucket(bucketName);
       } catch (BucketNotFoundException ex) {
         // ignore
+      }
+    }
+  }
+
+  @RepeatedTest(3) // first time often succeeds regardless
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  void waitsForNewlyCreatedBucket() {
+    String bucketName = UUID.randomUUID().toString();
+    Cluster cluster = Cluster.connect(connectionString(), config().adminUsername(), config().adminPassword());
+    try {
+      cluster.waitUntilReady(Duration.ofSeconds(30));
+      cluster.buckets().createBucket(BucketSettings.create(bucketName).ramQuotaMB(100));
+      Bucket bucket = cluster.bucket(bucketName);
+      bucket.waitUntilReady(Duration.ofSeconds(30));
+      Collection collection = bucket.defaultCollection();
+      collection.upsert("foo", "bar", UpsertOptions.upsertOptions().timeout(Duration.ofMillis(2500)));
+    } finally {
+      try {
+        cluster.buckets().dropBucket(bucketName);
+      } catch (BucketNotFoundException ignore) {
+      } finally {
+        cluster.disconnect();
       }
     }
   }

@@ -17,6 +17,8 @@
 package com.couchbase.client.core.error.context;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.AbstractContext;
+import com.couchbase.client.core.diagnostics.WaitUntilReadyContext;
 import com.couchbase.client.core.msg.RequestContext;
 
 import java.util.Map;
@@ -29,10 +31,18 @@ import java.util.Map;
 public class CancellationErrorContext extends ErrorContext {
 
   private final RequestContext requestContext;
+  private final WaitUntilReadyContext waitUntilReadyContext;
 
   public CancellationErrorContext(RequestContext requestContext) {
     super(null);
     this.requestContext = requestContext;
+    this.waitUntilReadyContext = null;
+  }
+
+  public CancellationErrorContext(WaitUntilReadyContext waitUntilReadyContext) {
+    super(null);
+    this.waitUntilReadyContext = waitUntilReadyContext;
+    this.requestContext = null;
   }
 
   @Override
@@ -41,13 +51,22 @@ public class CancellationErrorContext extends ErrorContext {
     if (requestContext != null) {
       requestContext.injectExportableParams(input);
     }
+    if (waitUntilReadyContext != null) {
+      waitUntilReadyContext.injectExportableParams(input);
+    }
   }
 
   /**
-   * Returns the underlying request context for debug reasons.
+   * Returns the underlying request context (if present) for debug reasons.
    */
   public RequestContext requestContext() {
     return requestContext;
   }
 
+  /**
+   * Returns the wait until ready context if present.
+   */
+  public WaitUntilReadyContext getWaitUntilReadyContext() {
+    return waitUntilReadyContext;
+  }
 }

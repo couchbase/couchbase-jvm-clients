@@ -185,6 +185,20 @@ public class Mapper {
   }
 
   /**
+   * Decodes a string into a tree of JSON nodes.
+   *
+   * @param input the input byte array.
+   * @return the created node.
+   */
+  public static JsonNode decodeIntoTree(String input) {
+    try {
+      return mapper.readTree(input);
+    } catch (Exception ex) {
+      throw new MapperException("Could not decode from JSON: " + redactUser(input), ex);
+    }
+  }
+
+  /**
    * Converts an object to the requested type using
    * {@link ObjectMapper#convertValue(Object, Class)}.
    */

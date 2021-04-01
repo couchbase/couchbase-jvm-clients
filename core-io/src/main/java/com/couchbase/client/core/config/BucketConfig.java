@@ -129,4 +129,19 @@ public interface BucketConfig {
    */
   Set<BucketCapabilities> bucketCapabilities();
 
+  /**
+   * Returns the port information from the "nodesExt" section.
+   * <p>
+   * NOTE: If you are unsure if you want to use this api, very likely you want to use {@link #nodes()} instead!
+   * <p>
+   * The nodes API is very similar to this port infos (in fact, they are built from each other), but there is one
+   * big difference: when the KV and VIEW service are defined on a bucket but not yet ready, the nodes API will
+   * NOT include them in the services list, while this API will. Most of the time you do not want to consume a
+   * service until it is ready, but for some functionality (like waitUntilReady) it can be needed to "look ahead"
+   * what will become active and wait for it.
+   *
+   * @return the port infos.
+   */
+  List<PortInfo> portInfos();
+
 }

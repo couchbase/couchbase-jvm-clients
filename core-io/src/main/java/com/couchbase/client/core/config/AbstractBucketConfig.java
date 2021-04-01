@@ -17,7 +17,6 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.util.CbCollections;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -43,6 +42,7 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     private final Set<BucketCapabilities> bucketCapabilities;
     private final Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities;
     private final String origin;
+    private final List<PortInfo> portInfos;
 
     protected AbstractBucketConfig(String uuid, String name, BucketNodeLocator locator, String uri, String streamingUri,
                                    List<NodeInfo> nodeInfos, List<PortInfo> portInfos,
@@ -57,6 +57,7 @@ public abstract class AbstractBucketConfig implements BucketConfig {
         this.bucketCapabilities = convertBucketCapabilities(bucketCapabilities);
         this.clusterCapabilities = convertClusterCapabilities(clusterCapabilities);
         this.origin = origin;
+        this.portInfos = portInfos == null ? Collections.emptyList() : portInfos;
         this.nodeInfo = portInfos == null ? nodeInfos : nodeInfoFromExtended(portInfos, nodeInfos);
         int es = 0;
         for (NodeInfo info : nodeInfo) {
@@ -143,7 +144,7 @@ public abstract class AbstractBucketConfig implements BucketConfig {
      * @return the generated node infos.
      */
     private List<NodeInfo> nodeInfoFromExtended(final List<PortInfo> nodesExt, final List<NodeInfo> nodeInfos) {
-        List<NodeInfo> converted = new ArrayList<NodeInfo>(nodesExt.size());
+        List<NodeInfo> converted = new ArrayList<>(nodesExt.size());
         for (int i = 0; i < nodesExt.size(); i++) {
             String hostname = nodesExt.get(i).hostname();
 
@@ -159,9 +160,9 @@ public abstract class AbstractBucketConfig implements BucketConfig {
                     hostname = origin;
                 }
             }
-            Map<ServiceType, Integer> ports = nodesExt.get(i).ports();
-            Map<ServiceType, Integer> sslPorts = nodesExt.get(i).sslPorts();
-            Map<String, AlternateAddress> aa = nodesExt.get(i).alternateAddresses();
+            Map<ServiceType, Integer> ports = new HashMap<>(nodesExt.get(i).ports());
+            Map<ServiceType, Integer> sslPorts = new HashMap<>(nodesExt.get(i).sslPorts());
+            Map<String, AlternateAddress> aa = new HashMap<>(nodesExt.get(i).alternateAddresses());
 
             // this is an ephemeral bucket (not supporting views), don't enable views!
             if (!bucketCapabilities.contains(BucketCapabilities.COUCHAPI)) {
@@ -231,5 +232,10 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     @Override
     public Set<BucketCapabilities> bucketCapabilities() {
         return bucketCapabilities;
+    }
+
+    @Override
+    public List<PortInfo> portInfos() {
+        return portInfos;
     }
 }
