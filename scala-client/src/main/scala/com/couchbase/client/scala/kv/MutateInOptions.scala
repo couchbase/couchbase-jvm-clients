@@ -42,7 +42,8 @@ case class MutateInOptions(
     private[scala] val expiry: Duration = null,
     private[scala] val accessDeleted: Boolean = false,
     private[scala] val createAsDeleted: Boolean = false,
-    private[scala] val expiryTime: Option[Instant] = None
+    private[scala] val expiryTime: Option[Instant] = None,
+    private[scala] val preserveExpiry: Boolean = false
 ) {
 
   /** Controls whether the document should be inserted, upserted, or not touched.  See
@@ -180,6 +181,21 @@ case class MutateInOptions(
     */
   def expiry(value: Instant): MutateInOptions = {
     copy(expiryTime = Some(value))
+  }
+
+  /** Changes whether an existing document's expiry should be preserved.
+    * Defaults to false.
+    *
+    * If true, and the document exists, its expiry will not be modified.
+    * Otherwise the document's expiry is determined by the `expiry` or
+    * `expiryTime` setting.
+    *
+    * Requires Couchbase Server 7.0 or later.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def preserveExpiry(value: Boolean): MutateInOptions = {
+    copy(preserveExpiry = value)
   }
 
   /** Changes the transcoder used for this operation.

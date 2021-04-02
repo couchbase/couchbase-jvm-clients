@@ -53,6 +53,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
       document: StoreSemantics = StoreSemantics.Replace,
       durability: Durability,
       expiryEpochTimeSecs: Long,
+      preserveExpiry: Boolean,
       timeout: java.time.Duration,
       retryStrategy: RetryStrategy,
       accessDeleted: Boolean,
@@ -124,6 +125,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
                       createAsDeleted,
                       commands,
                       expiryEpochTimeSecs,
+                      preserveExpiry,
                       cas,
                       durability.toDurabilityLevel,
                       span
@@ -145,6 +147,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
                   createAsDeleted,
                   commands,
                   expiryEpochTimeSecs,
+                  preserveExpiry,
                   cas,
                   durability.toDurabilityLevel,
                   span

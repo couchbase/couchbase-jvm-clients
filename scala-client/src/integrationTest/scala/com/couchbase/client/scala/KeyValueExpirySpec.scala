@@ -1,25 +1,16 @@
 package com.couchbase.client.scala
 
-import java.time.Instant
-import java.time.temporal.ChronoUnit
-import java.util.concurrent.TimeUnit
-
 import com.couchbase.client.core.error.DocumentNotFoundException
-import com.couchbase.client.scala.kv.{
-  DecrementOptions,
-  GetOptions,
-  IncrementOptions,
-  InsertOptions,
-  MutateInOptions,
-  MutateInSpec,
-  ReplaceOptions,
-  UpsertOptions
-}
+import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.test.{ClusterType, IgnoreWhen}
+import com.couchbase.client.test.{Capabilities, ClusterType, IgnoreWhen}
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
+import java.time.Instant
+import java.time.temporal.ChronoUnit.{DAYS, SECONDS}
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
@@ -74,7 +65,7 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
   def all_expiry_operations(): Unit = {
     val content        = ujson.Obj("hello" -> "world")
     val expiryDuration = 3.second
-    val nearFuture     = Instant.now.plus(expiryDuration.toSeconds, ChronoUnit.SECONDS)
+    val nearFuture     = Instant.now.plus(expiryDuration.toSeconds, SECONDS)
 
     val insertWithInstant = DocAndOperation(
       (docId) => assert(coll.insert(docId, content, InsertOptions().expiry(nearFuture)).isSuccess),
@@ -213,6 +204,145 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
         case x                                     => assert(false, s"Unexpected result $x")
       }
     })
+  }
+
+  private val NEAR_FUTURE_INSTANT = Instant.now().plus(5, DAYS)
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.PRESERVE_EXPIRY))
+  def upsert_can_preserve_expiry(): Unit = {
+    val docId = TestUtils.docId()
+
+    coll
+      .upsert(
+        docId,
+        "foo",
+        UpsertOptions()
+          .expiry(NEAR_FUTURE_INSTANT)
+          .preserveExpiry(true)
+      )
+      .get
+    assertExpiry(docId, NEAR_FUTURE_INSTANT)
+
+    coll
+      .upsert(
+        docId,
+        "foo",
+        UpsertOptions()
+          .expiry(NEAR_FUTURE_INSTANT.plus(5, DAYS))
+          .preserveExpiry(true)
+      )
+      .get
+    assertExpiry(docId, NEAR_FUTURE_INSTANT)
+
+    coll
+      .upsert(
+        docId,
+        "foo",
+        UpsertOptions()
+          .preserveExpiry(true)
+      )
+      .get
+    assertExpiry(docId, NEAR_FUTURE_INSTANT)
+
+    coll.upsert(docId, "foo").get
+    assertNoExpiry(docId)
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.PRESERVE_EXPIRY))
+  def replace_can_preserve_expiry(): Unit = {
+    val docId = TestUtils.docId()
+
+    coll.insert(docId, "foo").get
+
+    coll
+      .replace(
+        docId,
+        "foo",
+        ReplaceOptions()
+          .expiry(NEAR_FUTURE_INSTANT)
+      )
+      .get
+    assertExpiry(docId, NEAR_FUTURE_INSTANT)
+
+    coll
+      .replace(
+        docId,
+        "foo",
+        ReplaceOptions()
+          .expiry(NEAR_FUTURE_INSTANT.plus(5, DAYS))
+          .preserveExpiry(true)
+      )
+      .get
+    assertExpiry(docId, NEAR_FUTURE_INSTANT)
+
+    coll
+      .replace(
+        docId,
+        "foo",
+        ReplaceOptions()
+          .preserveExpiry(true)
+      )
+      .get
+    assertExpiry(docId, NEAR_FUTURE_INSTANT)
+
+    coll.replace(docId, "foo").get
+    assertNoExpiry(docId)
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.PRESERVE_EXPIRY))
+  def subdoc_can_preserve_expiry(): Unit = {
+    val docId = TestUtils.docId()
+
+    coll
+      .mutateIn(
+        docId,
+        Array(MutateInSpec.upsert("foo", "bar")),
+        MutateInOptions()
+          .document(StoreSemantics.Insert)
+          .expiry(NEAR_FUTURE_INSTANT)
+          .preserveExpiry(true)
+      )
+      .get
+    assertExpiry(docId, NEAR_FUTURE_INSTANT)
+
+    coll
+      .mutateIn(
+        docId,
+        Array(MutateInSpec.upsert("foo", "bar")),
+        MutateInOptions()
+          .document(StoreSemantics.Upsert)
+          .expiry(NEAR_FUTURE_INSTANT.plus(5, DAYS))
+          .preserveExpiry(true)
+      )
+      .get
+    assertExpiry(docId, NEAR_FUTURE_INSTANT)
+
+    coll
+      .mutateIn(
+        docId,
+        Array(MutateInSpec.upsert("foo", "bar")),
+        MutateInOptions()
+          .preserveExpiry(true)
+      )
+      .get
+    assertExpiry(docId, NEAR_FUTURE_INSTANT)
+
+    coll.mutateIn(docId, Array(MutateInSpec.upsert("foo", "bar"))).get
+    assertNoExpiry(docId)
+  }
+
+  private def assertExpiry(docId: String, expectedExpiry: Instant): Unit = {
+    assertEquals(
+      expectedExpiry.truncatedTo(SECONDS),
+      coll.get(docId, GetOptions().withExpiry(true)).get.expiryTime.get
+    )
+  }
+
+  private def assertNoExpiry(docId: String): Unit = {
+    assertExpiry(docId, Instant.EPOCH)
   }
 
 }

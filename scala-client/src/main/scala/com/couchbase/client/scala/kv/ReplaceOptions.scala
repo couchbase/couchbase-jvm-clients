@@ -37,7 +37,8 @@ case class ReplaceOptions(
     private[scala] val transcoder: Option[Transcoder] = None,
     // null is not very Scala, but is required for backwards-compatibility
     private[scala] val expiry: Duration = null,
-    private[scala] val expiryTime: Option[Instant] = None
+    private[scala] val expiryTime: Option[Instant] = None,
+    private[scala] val preserveExpiry: Boolean = false
 ) {
 
   /** Couchbase documents all have a CAS (Compare-And-Set) field, a simple integer that allows
@@ -156,6 +157,21 @@ case class ReplaceOptions(
     */
   def expiry(value: Instant): ReplaceOptions = {
     copy(expiryTime = Some(value))
+  }
+
+  /** Changes whether the document's expiry should be preserved.
+    * Defaults to false.
+    *
+    * If true, the document's expiry will not be modified.
+    * Otherwise the document's expiry is determined by the `expiry` or
+    * `expiryTime` setting.
+    *
+    * Requires Couchbase Server 7.0 or later.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def preserveExpiry(value: Boolean): ReplaceOptions = {
+    copy(preserveExpiry = value)
   }
 
   /** Changes the transcoder used for this operation.
