@@ -487,7 +487,7 @@ public class IoEnvironment {
     }
 
     /**
-     * Allows to specify a custom event loop group (I/O event loop thread pool) for the management service.
+     * Allows to specify a custom event loop group (I/O event loop thread pool) for the KV service.
      * <p>
      * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
      * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
