@@ -55,6 +55,7 @@ class CompressionTest {
   private final long cas = 0;
   private final ByteBufAllocator allocator = UnpooledByteBufAllocator.DEFAULT;
   private final long expiry = 0;
+  private final boolean preserveExpiry = false;
   private final int flags = 0;
   private final Optional<DurabilityLevel> durability = Optional.empty();
   private final CollectionIdentifier cid = CollectionIdentifier.fromDefault("b");
@@ -169,7 +170,7 @@ class CompressionTest {
 
   @Test
   void doesNotCompressIfDisabledUpsert() {
-    UpsertRequest request = new UpsertRequest(key, longContent, expiry, flags, timeout,
+    UpsertRequest request = new UpsertRequest(key, longContent, expiry, preserveExpiry, flags, timeout,
       coreContext, cid, retryStrategy, Optional.empty(), null);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(false));
@@ -181,7 +182,7 @@ class CompressionTest {
 
   @Test
   void doesNotCompressIfTooShortUpsert() {
-    UpsertRequest request = new UpsertRequest(key, shortContent, expiry, flags, timeout,
+    UpsertRequest request = new UpsertRequest(key, shortContent, expiry, preserveExpiry, flags, timeout,
       coreContext, cid, retryStrategy, Optional.empty(), null);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
@@ -193,7 +194,7 @@ class CompressionTest {
 
   @Test
   void doesCompressLongUpsert() {
-    UpsertRequest request = new UpsertRequest(key, longContent, expiry, flags, timeout,
+    UpsertRequest request = new UpsertRequest(key, longContent, expiry, preserveExpiry, flags, timeout,
       coreContext, cid, retryStrategy, Optional.empty(), null);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
@@ -205,7 +206,7 @@ class CompressionTest {
 
   @Test
   void doesNotCompressIfDisabledReplace() {
-    ReplaceRequest request = new ReplaceRequest(key, longContent, expiry, flags, timeout,
+    ReplaceRequest request = new ReplaceRequest(key, longContent, expiry, preserveExpiry, flags, timeout,
       cas, coreContext, cid, retryStrategy, durability, null);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(false));
@@ -217,7 +218,7 @@ class CompressionTest {
 
   @Test
   void doesNotCompressIfTooShortReplace() {
-    ReplaceRequest request = new ReplaceRequest(key, shortContent, expiry, flags, timeout,
+    ReplaceRequest request = new ReplaceRequest(key, shortContent, expiry, preserveExpiry, flags, timeout,
       cas, coreContext, cid, retryStrategy, durability, null);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
@@ -229,7 +230,7 @@ class CompressionTest {
 
   @Test
   void doesCompressLongReplace() {
-    ReplaceRequest request = new ReplaceRequest(key, longContent, expiry, flags, timeout,
+    ReplaceRequest request = new ReplaceRequest(key, longContent, expiry, preserveExpiry, flags, timeout,
       cas, coreContext, cid, retryStrategy, durability, null);
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
@@ -250,6 +251,7 @@ class CompressionTest {
       false,
       new CollectionMap(),
       null,
+      false,
       false
     );
   }

@@ -61,26 +61,14 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> implement
   @Override
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     ByteBuf key = null;
-    ByteBuf flexibleExtras = null;
+    ByteBuf flexibleExtras = mutationFlexibleExtras(this, ctx, alloc, syncReplicationType);
 
     try {
       key = encodedKeyWithCollection(alloc, ctx);
-      ByteBuf request;
-      if (syncReplicationType.isPresent()) {
-        if (ctx.syncReplicationEnabled()) {
-          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout(), context());
-          request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
-            partition(), opaque, cas, flexibleExtras, noExtras(), key, noBody());
-        }
-        else {
-          throw new DurabilityLevelNotAvailableException(KeyValueErrorContext.incompleteRequest(this));
-        }
-      } else {
-        request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
-          partition(), opaque, cas, noExtras(), key, noBody());
-      }
 
-      return request;
+      return MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
+            partition(), opaque, cas, flexibleExtras, noExtras(), key, noBody());
+
     } finally {
       ReferenceCountUtil.release(key);
       ReferenceCountUtil.release(flexibleExtras);

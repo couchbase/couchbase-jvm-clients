@@ -19,21 +19,26 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
-import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 
 public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> implements SyncDurabilityRequest {
 
@@ -66,7 +71,7 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> imp
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     ByteBuf key = null;
     ByteBuf extras = null;
-    ByteBuf flexibleExtras = null;
+    ByteBuf flexibleExtras = mutationFlexibleExtras(this, ctx, alloc, syncReplicationType);
 
     try {
       key = encodedKeyWithCollection(alloc, ctx);
@@ -80,21 +85,9 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> imp
         extras.writeInt(COUNTER_NOT_EXISTS_EXPIRY);
       }
 
-      ByteBuf request;
-      if (syncReplicationType.isPresent()) {
-        if (ctx.syncReplicationEnabled()) {
-          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout(), context());
-          request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.INCREMENT, noDatatype(),
-            partition(), opaque, noCas(), flexibleExtras, extras, key, noBody());
-        }
-        else {
-          throw new DurabilityLevelNotAvailableException(KeyValueErrorContext.incompleteRequest(this));
-        }
-      } else {
-        request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.INCREMENT, noDatatype(),
-          partition(), opaque, noCas(), extras, key, noBody());
-      }
-      return request;
+      return MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.INCREMENT, noDatatype(),
+          partition(), opaque, noCas(), flexibleExtras, extras, key, noBody());
+
     } finally {
       ReferenceCountUtil.release(key);
       ReferenceCountUtil.release(extras);

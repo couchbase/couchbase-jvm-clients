@@ -57,7 +57,11 @@ public enum Capabilities {
    */
   CREATE_AS_DELETED,
   /**
-   * The cluster suppots specifying a minimum durability level on the bucket.
+   * The cluster supports specifying a minimum durability level on the bucket.
    */
-  BUCKET_MINIMUM_DURABILITY
+  BUCKET_MINIMUM_DURABILITY,
+  /**
+   * The cluster can modify a document without changing its expiry.
+   */
+  PRESERVE_EXPIRY
 }

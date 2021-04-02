@@ -35,7 +35,7 @@ public class ChannelAttributes {
   /**
    * Holds the negotiated server features in a channel.
    */
-  static final AttributeKey<List<ServerFeature>> SERVER_FEATURE_KEY =
+  static final AttributeKey<Set<ServerFeature>> SERVER_FEATURE_KEY =
     AttributeKey.newInstance("ServerFeatures");
 
   /**

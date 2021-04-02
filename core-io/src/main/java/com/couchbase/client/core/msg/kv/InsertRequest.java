@@ -19,23 +19,24 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
-import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
-import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 
 /**
  * Uses the KV "add" command to  insert documents if they do not already exist.
@@ -71,7 +72,7 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
     ByteBuf key = null;
     ByteBuf content = null;
     ByteBuf extras = null;
-    ByteBuf flexibleExtras = null;
+    ByteBuf flexibleExtras = mutationFlexibleExtras(this, ctx, alloc, syncReplicationType);
 
     try {
       key = encodedKeyWithCollection(alloc, ctx);
@@ -94,22 +95,9 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
       extras.writeInt(flags);
       extras.writeInt((int) expiration);
 
-      ByteBuf request;
-      if (syncReplicationType.isPresent()) {
-        if (ctx.syncReplicationEnabled()) {
-          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout(), context());
-          request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.ADD, datatype,
-            partition(), opaque, noCas(), flexibleExtras, extras, key, content);
-        }
-        else {
-          throw new DurabilityLevelNotAvailableException(KeyValueErrorContext.incompleteRequest(this));
-        }
-      } else {
-        request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.ADD, datatype, partition(),
-          opaque, noCas(), extras, key, content);
-      }
+      return MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.ADD, datatype,
+          partition(), opaque, noCas(), flexibleExtras, extras, key, content);
 
-      return request;
     } finally {
       ReferenceCountUtil.release(key);
       ReferenceCountUtil.release(extras);

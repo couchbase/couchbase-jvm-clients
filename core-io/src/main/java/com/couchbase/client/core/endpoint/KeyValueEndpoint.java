@@ -29,8 +29,7 @@ import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 
-import java.util.Arrays;
-import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
 
@@ -93,15 +92,16 @@ public class KeyValueEndpoint extends BaseEndpoint {
      * @return the server features to negotiate.
      */
     private Set<ServerFeature> serverFeatures() {
-      Set<ServerFeature> features = new HashSet<>(Arrays.asList(
+      Set<ServerFeature> features = EnumSet.of(
         ServerFeature.SELECT_BUCKET,
         ServerFeature.XATTR,
         ServerFeature.XERROR,
         ServerFeature.ALT_REQUEST,
         ServerFeature.SYNC_REPLICATION,
         ServerFeature.COLLECTIONS,
-        ServerFeature.TRACING
-      ));
+        ServerFeature.TRACING,
+        ServerFeature.PRESERVE_TTL
+      );
 
       if (ctx.environment().ioConfig().mutationTokensEnabled()) {
         features.add(ServerFeature.MUTATION_SEQNO);

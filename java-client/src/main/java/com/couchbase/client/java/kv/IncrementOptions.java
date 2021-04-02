@@ -81,9 +81,12 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
   }
 
   /**
-   * Set a relative expiration time for the document (by default no expiry is set).
+   * Sets the expiry for the document. By default the document will never expire.
+   * <p>
+   * The duration must be less than 50 years. For expiry further in the
+   * future, use {@link #expiry(Instant)}.
    *
-   * @param expiry the custom expiry value of the document.
+   * @param expiry the duration after which the document will expire.
    * @return this options class for chaining purposes.
    */
   public IncrementOptions expiry(final Duration expiry) {
@@ -92,9 +95,9 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
   }
 
   /**
-   * Set an absolute expiration time for the document (by default no expiry is set).
+   * Sets the expiry for the document. By default the document will never expire.
    *
-   * @param expiry the custom expiry value of the document.
+   * @param expiry the point in time when the document will expire.
    * @return this options class for chaining purposes.
    */
   public IncrementOptions expiry(final Instant expiry) {

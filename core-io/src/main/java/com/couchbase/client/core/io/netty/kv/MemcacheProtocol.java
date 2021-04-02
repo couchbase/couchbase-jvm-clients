@@ -18,20 +18,37 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.io.DurabilityTimeoutCoercedEvent;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.deps.org.iq80.snappy.Snappy;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.context.SubDocumentErrorContext;
-import com.couchbase.client.core.error.subdoc.*;
+import com.couchbase.client.core.error.subdoc.DeltaInvalidException;
+import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
+import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
+import com.couchbase.client.core.error.subdoc.NumberTooBigException;
+import com.couchbase.client.core.error.subdoc.PathExistsException;
+import com.couchbase.client.core.error.subdoc.PathMismatchException;
+import com.couchbase.client.core.error.subdoc.PathNotFoundException;
+import com.couchbase.client.core.error.subdoc.PathTooDeepException;
+import com.couchbase.client.core.error.subdoc.ValueInvalidException;
+import com.couchbase.client.core.error.subdoc.ValueTooDeepException;
+import com.couchbase.client.core.error.subdoc.XattrCannotModifyVirtualAttributeException;
+import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
+import com.couchbase.client.core.error.subdoc.XattrNoAccessException;
+import com.couchbase.client.core.error.subdoc.XattrUnknownMacroException;
+import com.couchbase.client.core.error.subdoc.XattrUnknownVirtualAttributeException;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
-import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.org.iq80.snappy.Snappy;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -93,7 +110,12 @@ public enum MemcacheProtocol {
   /**
    * Flag which indicates that this flexible extra frame is for syc replication.
    */
-  public static final byte SYNC_REPLICATION_FLEXIBLE_IDENT = 0b00010000;
+  public static final byte SYNC_REPLICATION_FLEXIBLE_IDENT = 1 << 4;
+
+  /**
+   * Flag which indicates that this flexible extra frame is for preserve ttl.
+   */
+  public static final byte PRESERVE_TTL_FLEXIBLE_IDENT = 5 << 4;
 
   /**
    * Minimum sync durability timeout that can be set and which will override any lower
@@ -113,6 +135,10 @@ public enum MemcacheProtocol {
                                         final short partition, final int opaque, final long cas,
                                         final ByteBuf framingExtras, final ByteBuf extras, final ByteBuf key,
                                         final ByteBuf body) {
+    if (!framingExtras.isReadable()) {
+      return request(alloc, opcode, datatype, partition, opaque, cas, extras, key, body);
+    }
+
     int keySize = key.readableBytes();
     int extrasSize = extras.readableBytes();
     int framingExtrasSize = framingExtras.readableBytes();
@@ -462,20 +488,62 @@ public enum MemcacheProtocol {
     return decodeStatus(status(message));
   }
 
+  public static ByteBuf mutationFlexibleExtras(KeyValueRequest<?> request,
+                                               KeyValueChannelContext ctx,
+                                               ByteBufAllocator alloc,
+                                               Optional<DurabilityLevel> durabilityLevel) {
+    return mutationFlexibleExtras(request, ctx, alloc, durabilityLevel, false);
+  }
+
+  public static ByteBuf mutationFlexibleExtras(KeyValueRequest<?> request,
+                                               KeyValueChannelContext ctx,
+                                               ByteBufAllocator alloc,
+                                               Optional<DurabilityLevel> durabilityLevel,
+                                               boolean preserveExpiry) {
+    if (!durabilityLevel.isPresent() && !preserveExpiry) {
+      return Unpooled.EMPTY_BUFFER;
+    }
+
+    ByteBuf result = alloc.buffer(5);
+    try {
+      if (preserveExpiry) {
+        if (!ctx.preserveTtl()) {
+          throw new FeatureNotAvailableException(
+              "This version of Couchbase Server does not support preserving expiry when modifying documents.");
+        }
+
+        result.writeByte(PRESERVE_TTL_FLEXIBLE_IDENT);
+      }
+
+      durabilityLevel.ifPresent(level -> {
+        if (!ctx.syncReplicationEnabled()) {
+          throw new DurabilityLevelNotAvailableException(KeyValueErrorContext.incompleteRequest(request));
+        }
+        flexibleSyncReplication(result, level, request.timeout(), request.context());
+      });
+
+      return result;
+
+    } catch (Throwable t) {
+      ReferenceCountUtil.release(result);
+      throw t;
+    }
+  }
+
   /**
-   * Helper method to create the flexible extras for sync replication.
+   * Helper method to write the flexible extras for sync replication.
    * <p>
    * Note that this method writes a short value from an integer deadline. The netty method will make sure to
    * only look at the lower 16 bits - this allows us to write an unsigned short!
    *
-   * @param alloc the allocator to use.
+   * @param buffer the buffer to write to.
    * @param type the type of sync replication.
    * @param timeout the timeout to use.
    * @param ctx the core context to use.
-   * @return a buffer which contains the flexible extras.
+   * @return the same buffer
    */
-  public static ByteBuf flexibleSyncReplication(final ByteBufAllocator alloc, final DurabilityLevel type,
-                                                final Duration timeout, final CoreContext ctx) {
+  static ByteBuf flexibleSyncReplication(final ByteBuf buffer, final DurabilityLevel type,
+                                         final Duration timeout, final CoreContext ctx) {
     long userTimeout = timeout.toMillis();
 
     int deadline;
@@ -493,8 +561,7 @@ public enum MemcacheProtocol {
       ctx.environment().eventBus().publish(new DurabilityTimeoutCoercedEvent(ctx, userTimeout, deadline));
     }
 
-    return alloc
-      .buffer(4)
+    return buffer
       .writeByte(SYNC_REPLICATION_FLEXIBLE_IDENT | (byte) 0x03)
       .writeByte(type.code())
       .writeShort(deadline);

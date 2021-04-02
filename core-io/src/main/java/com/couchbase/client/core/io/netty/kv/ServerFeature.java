@@ -139,6 +139,13 @@ public enum ServerFeature {
   COLLECTIONS((short) 0x12),
 
   /**
+   * Enables preserving expiry when updating document.
+   *
+   * @since Couchbase Server 7.0
+   */
+  PRESERVE_TTL((short) 0x14),
+
+  /**
    * Enables the vattr feature.
    *
    * Note that vattrs (such as $document) were available before this, but this flag signifies that if a vattr is
@@ -154,7 +161,8 @@ public enum ServerFeature {
    *
    * @since Couchbase Server 6.6
    */
-  CREATE_AS_DELETED((short) 0x17);
+  CREATE_AS_DELETED((short) 0x17),
+  ;
 
   /**
    * The actual byte representation on the wire.
@@ -221,6 +229,8 @@ public enum ServerFeature {
         return SYNC_REPLICATION;
       case 0x12:
         return COLLECTIONS;
+      case 0x14:
+        return PRESERVE_TTL;
       case 0x15:
         return VATTR;
       case 0x17:

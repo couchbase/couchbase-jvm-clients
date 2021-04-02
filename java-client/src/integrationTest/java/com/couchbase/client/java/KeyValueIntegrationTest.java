@@ -16,11 +16,23 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.error.*;
+import com.couchbase.client.core.error.CasMismatchException;
+import com.couchbase.client.core.error.DocumentExistsException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.core.error.ValueTooLargeException;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.java.codec.RawBinaryTranscoder;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.kv.*;
+import com.couchbase.client.java.kv.CounterResult;
+import com.couchbase.client.java.kv.ExistsResult;
+import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.InsertOptions;
+import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
@@ -34,25 +46,31 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
+import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
 import static com.couchbase.client.java.kv.GetAndLockOptions.getAndLockOptions;
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
 import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
 import static com.couchbase.client.java.kv.InsertOptions.insertOptions;
+import static com.couchbase.client.java.kv.MutateInOptions.mutateInOptions;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
+import static com.couchbase.client.java.kv.ReplaceOptions.replaceOptions;
 import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static java.time.temporal.ChronoUnit.DAYS;
+import static java.time.temporal.ChronoUnit.SECONDS;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This integration test makes sure the various KV-based APIs work as they are intended to.
@@ -386,9 +404,9 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(upsert.cas() != 0);
 
     assertThrows(CasMismatchException.class, () -> collection.replace(
-      id,
-      JsonObject.create(),
-      ReplaceOptions.replaceOptions().cas(upsert.cas() + 1))
+        id,
+        JsonObject.create(),
+        replaceOptions().cas(upsert.cas() + 1))
     );
 
     JsonObject expected = JsonObject.create().put("foo", false);
@@ -448,7 +466,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   void checkExpiry(Duration expiryDuration) {
     String id = UUID.randomUUID().toString();
 
-    collection.upsert(id, JsonObject.create(), UpsertOptions.upsertOptions().expiry(expiryDuration));
+    collection.upsert(id, JsonObject.create(), upsertOptions().expiry(expiryDuration));
     assertExpiry(id, expiryDuration);
     collection.remove(id);
 
@@ -457,7 +475,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     collection.remove(id);
 
     collection.upsert(id, JsonObject.create());
-    collection.replace(id, JsonObject.create(), ReplaceOptions.replaceOptions().expiry(expiryDuration));
+    collection.replace(id, JsonObject.create(), replaceOptions().expiry(expiryDuration));
     assertExpiry(id, expiryDuration);
     collection.remove(id);
 
@@ -484,12 +502,91 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(Math.abs(secondsDifference) < acceptanceThresholdSeconds);
   }
 
+  private static void assertExpiry(String docId, Instant expectedExpiry) {
+    assertEquals(
+        Optional.of(expectedExpiry.truncatedTo(SECONDS)),
+        collection.get(docId, GetOptions.getOptions().withExpiry(true)).expiryTime()
+    );
+  }
+
+  private static void assertNoExpiry(String docId) {
+    assertExpiry(docId, Instant.EPOCH);
+  }
+
+  private static final Instant NEAR_FUTURE_INSTANT = Instant.now().plus(5, DAYS);
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY)
+  void upsertCanPreserveExpiry() {
+    String id = UUID.randomUUID().toString();
+    collection.upsert(id, "foo", upsertOptions()
+        .expiry(NEAR_FUTURE_INSTANT)
+        .preserveExpiry(true)
+    );
+    assertExpiry(id, NEAR_FUTURE_INSTANT);
+
+    collection.upsert(id, "bar", upsertOptions()
+        .expiry(NEAR_FUTURE_INSTANT.plus(5, DAYS))
+        .preserveExpiry(true)
+    );
+    assertExpiry(id, NEAR_FUTURE_INSTANT);
+
+    collection.upsert(id, "bar", upsertOptions()
+        .preserveExpiry(true)
+    );
+    assertExpiry(id, NEAR_FUTURE_INSTANT);
+
+    collection.upsert(id, "bar");
+    assertNoExpiry(id);
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY)
+  void replaceCanPreserveExpiry() {
+    String id = UUID.randomUUID().toString();
+    collection.upsert(id, "foo", upsertOptions().expiry(NEAR_FUTURE_INSTANT));
+
+    collection.replace(id, "bar", replaceOptions().preserveExpiry(true));
+    assertExpiry(id, NEAR_FUTURE_INSTANT);
+
+    collection.replace(id, "boo");
+    assertNoExpiry(id);
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY)
+  void subdocCanPreserveExpiry() {
+    String id = UUID.randomUUID().toString();
+
+    collection.mutateIn(id, listOf(MutateInSpec.upsert("foo", "bar")), mutateInOptions()
+        .storeSemantics(StoreSemantics.INSERT)
+        .expiry(NEAR_FUTURE_INSTANT)
+    );
+    assertExpiry(id, NEAR_FUTURE_INSTANT);
+
+    collection.mutateIn(id, listOf(MutateInSpec.upsert("foo", "bar")), mutateInOptions()
+        .storeSemantics(StoreSemantics.UPSERT)
+        .expiry(NEAR_FUTURE_INSTANT.plus(5, DAYS))
+        .preserveExpiry(true)
+    );
+    assertExpiry(id, NEAR_FUTURE_INSTANT);
+
+    collection.mutateIn(id, listOf(MutateInSpec.upsert("foo", "bar")), mutateInOptions()
+        .storeSemantics(StoreSemantics.REPLACE)
+        .preserveExpiry(true)
+    );
+    assertExpiry(id, NEAR_FUTURE_INSTANT);
+
+    collection.mutateIn(id, listOf(MutateInSpec.upsert("foo", "bar")));
+    assertNoExpiry(id);
+  }
+
   /**
    * Right now the mock does not change the cas on touch, so we need to ignore the test
    * until https://github.com/couchbase/CouchbaseMock/issues/50 is resolved.
    */
   @Test
-  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
   void touch() throws Exception {
     String id = UUID.randomUUID().toString();
 
@@ -755,9 +852,9 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       collection.mutateIn(id, Collections.singletonList(
                 MutateInSpec.insert("txn", JsonObject.create()).xattr()
               ),
-              MutateInOptions.mutateInOptions()
-                      .storeSemantics(StoreSemantics.UPSERT)
-                      .createAsDeleted(true));
+              mutateInOptions()
+              .storeSemantics(StoreSemantics.UPSERT)
+              .createAsDeleted(true));
     });
   }
 

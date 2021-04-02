@@ -19,22 +19,24 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
-import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
-import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 
 public class PrependRequest extends BaseKeyValueRequest<PrependResponse> implements SyncDurabilityRequest {
 
@@ -59,7 +61,7 @@ public class PrependRequest extends BaseKeyValueRequest<PrependResponse> impleme
   public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
     ByteBuf key = null;
     ByteBuf content = null;
-    ByteBuf flexibleExtras = null;
+    ByteBuf flexibleExtras = mutationFlexibleExtras(this, ctx, alloc, syncReplicationType);
 
     try {
       key = encodedKeyWithCollection(alloc, ctx);
@@ -78,21 +80,9 @@ public class PrependRequest extends BaseKeyValueRequest<PrependResponse> impleme
         content = Unpooled.wrappedBuffer(this.content);
       }
 
-      ByteBuf request;
-      if (syncReplicationType.isPresent()) {
-        if (ctx.syncReplicationEnabled()) {
-          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout(), context());
-          request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.PREPEND, datatype, partition(),
-            opaque, cas, flexibleExtras, noExtras(), key, content);
-        }
-        else {
-          throw new DurabilityLevelNotAvailableException(KeyValueErrorContext.incompleteRequest(this));
-        }
-      } else {
-        request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.PREPEND, datatype, partition(),
-          opaque, cas, noExtras(), key, content);
-      }
-      return request;
+      return MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.PREPEND, datatype, partition(),
+          opaque, cas, flexibleExtras, noExtras(), key, content);
+
     } finally {
       ReferenceCountUtil.release(key);
       ReferenceCountUtil.release(content);

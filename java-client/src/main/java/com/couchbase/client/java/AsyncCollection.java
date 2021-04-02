@@ -757,7 +757,7 @@ public class AsyncCollection {
     long end = System.nanoTime();
 
     long expiry = opts.expiry().encode(environment.eventBus());
-    final UpsertRequest request = new UpsertRequest(id, encoded.encoded(), expiry, encoded.flags(),
+    final UpsertRequest request = new UpsertRequest(id, encoded.encoded(), expiry, opts.preserveExpiry(), encoded.flags(),
       timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context()
       .clientContext(opts.clientContext())
@@ -823,7 +823,7 @@ public class AsyncCollection {
     long end = System.nanoTime();
 
     long expiry = opts.expiry().encode(environment.eventBus());
-    ReplaceRequest request = new ReplaceRequest(id, encoded.encoded(), expiry, encoded.flags(),
+    ReplaceRequest request = new ReplaceRequest(id, encoded.encoded(), expiry, opts.preserveExpiry(), encoded.flags(),
       timeout, opts.cas(), coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context()
       .clientContext(opts.clientContext())
@@ -1089,7 +1089,7 @@ public class AsyncCollection {
       long expiry = opts.expiry().encode(environment.eventBus());
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, bucketConfig, retryStrategy, id,
           opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT,
-          opts.accessDeleted(), opts.createAsDeleted(), commands, expiry, opts.cas(),
+          opts.accessDeleted(), opts.createAsDeleted(), commands, expiry, opts.preserveExpiry(), opts.cas(),
           opts.durabilityLevel(), span
         );
         request.context()

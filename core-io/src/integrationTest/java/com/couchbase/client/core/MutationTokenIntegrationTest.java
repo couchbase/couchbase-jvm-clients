@@ -32,8 +32,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MutationTokenIntegrationTest extends CoreIntegrationTest {
 
@@ -61,7 +61,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, content,
-      0, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
+      0, false, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty(), null);
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
@@ -84,7 +84,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, content,
-      0, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
+      0, false, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty(), null);
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
@@ -107,7 +107,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "{}".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, content,
-      0, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
+      0, false, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty(), null);
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
@@ -126,7 +126,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     );
     SubdocMutateRequest subdocMutateRequest = new SubdocMutateRequest(Duration.ofSeconds(1),
       core.context(), collectionIdentifier, null, env.retryStrategy(), id,
-      false, false, false, false, commands, 0, 0, Optional.empty(), null);
+      false, false, false, false, commands, 0, false, 0, Optional.empty(), null);
     core.send(subdocMutateRequest);
 
     SubdocMutateResponse subdocMutateResponse = subdocMutateRequest.response().get();
@@ -140,7 +140,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, content,
-      0, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
+      0, false, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty(), null);
     core.send(upsertRequest);
 
@@ -155,7 +155,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, content,
-      0, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
+      0, false, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty(), null);
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
@@ -163,7 +163,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     assertMutationToken(upsertResponse.mutationToken());
 
     ReplaceRequest replaceRequest = new ReplaceRequest(id, content,
-      0, 0, Duration.ofSeconds(1), upsertResponse.cas(), core.context(),
+      0, false, 0, Duration.ofSeconds(1), upsertResponse.cas(), core.context(),
       collectionIdentifier, env.retryStrategy(), Optional.empty(), null);
     core.send(replaceRequest);
 
@@ -178,7 +178,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, content,
-      0, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
+      0, false, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty(), null);
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();

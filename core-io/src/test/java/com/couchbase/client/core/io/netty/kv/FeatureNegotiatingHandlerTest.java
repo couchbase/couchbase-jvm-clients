@@ -258,8 +258,8 @@ class FeatureNegotiatingHandlerTest extends AbstractKeyValueEmbeddedChannelTest 
     );
     assertEquals(Event.Severity.DEBUG, event.severity());
 
-    List<ServerFeature> serverFeatures = channel.attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
-    assertEquals(toNegotiate, new HashSet<>(serverFeatures));
+    Set<ServerFeature> serverFeatures = channel.attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
+    assertEquals(toNegotiate, serverFeatures);
     assertNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
 
     ReferenceCountUtil.release(writtenRequest);
@@ -312,7 +312,7 @@ class FeatureNegotiatingHandlerTest extends AbstractKeyValueEmbeddedChannelTest 
     );
     assertEquals(Event.Severity.DEBUG, event.severity());
 
-    List<ServerFeature> serverFeatures = channel.attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
+    Set<ServerFeature> serverFeatures = channel.attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
     assertTrue(serverFeatures.isEmpty());
     assertNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
 
@@ -367,8 +367,8 @@ class FeatureNegotiatingHandlerTest extends AbstractKeyValueEmbeddedChannelTest 
       event.description()
     );
 
-    List<ServerFeature> serverFeatures = channel.attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
-    assertEquals(toNegotiate, new HashSet<>(serverFeatures));
+    Set<ServerFeature> serverFeatures = channel.attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
+    assertEquals(toNegotiate, serverFeatures);
     assertNull(channel.pipeline().get(FeatureNegotiatingHandler.class));
 
     ReferenceCountUtil.release(writtenRequest);

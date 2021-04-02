@@ -20,20 +20,21 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiationFailedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
-import com.couchbase.client.core.endpoint.EndpointContext;
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -187,10 +188,10 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
           new FeaturesNegotiationFailedEvent(ioContext, status((ByteBuf) msg))
         );
       }
-      List<ServerFeature> negotiated = extractFeaturesFromBody((ByteBuf) msg);
+      Set<ServerFeature> negotiated = extractFeaturesFromBody((ByteBuf) msg);
       ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).set(negotiated);
       endpointContext.environment().eventBus().publish(
-        new FeaturesNegotiatedEvent(ioContext, latency.orElse(Duration.ZERO), negotiated)
+        new FeaturesNegotiatedEvent(ioContext, latency.orElse(Duration.ZERO), new ArrayList<>(negotiated))
       );
       interceptedConnectPromise.trySuccess();
       ctx.pipeline().remove(this);
@@ -209,9 +210,9 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
    * @param response the response to extract from.
    * @return the list of server features, may be empty but never null.
    */
-  private List<ServerFeature> extractFeaturesFromBody(final ByteBuf response) {
+  private Set<ServerFeature> extractFeaturesFromBody(final ByteBuf response) {
     Optional<ByteBuf> body = MemcacheProtocol.body(response);
-    List<ServerFeature> negotiated = new ArrayList<>();
+    Set<ServerFeature> negotiated = EnumSet.noneOf(ServerFeature.class);
     List<ServerFeature> unsolicited = new ArrayList<>();
 
     if (!body.isPresent()) {

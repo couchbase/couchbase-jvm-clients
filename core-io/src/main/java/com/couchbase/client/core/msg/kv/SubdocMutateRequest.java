@@ -21,31 +21,41 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.config.BucketCapabilities;
 import com.couchbase.client.core.config.BucketConfig;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
+import com.couchbase.client.core.error.context.SubDocumentErrorContext;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
 import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
 import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Status;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeSubDocumentStatus;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.flexibleRequest;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mapSubDocumentError;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateResponse> implements SyncDurabilityRequest {
@@ -63,17 +73,34 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
   private final byte flags;
   private final long expiration;
+  private final boolean preserveExpiry;
   private final long cas;
   private final List<Command> commands;
   private final String origKey;
   private final Optional<DurabilityLevel> syncReplicationType;
   private final boolean createAsDeleted;
 
+  /**
+   * @deprecated Please use constructor that takes preserveExpiry
+   */
+  @Deprecated
   public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                              final BucketConfig bucketConfig, final RetryStrategy retryStrategy, final String key,
                              final boolean insertDocument, final boolean upsertDocument, final boolean accessDeleted,
                              final boolean createAsDeleted,
-                             final List<Command> commands, long expiration, long cas,
+                             final List<Command> commands, long expiration,
+                             long cas,
+                             final Optional<DurabilityLevel> syncReplicationType, final RequestSpan span) {
+    this(timeout, ctx, collectionIdentifier, bucketConfig, retryStrategy, key, insertDocument, upsertDocument, accessDeleted, createAsDeleted, commands, expiration, false, cas, syncReplicationType, span);
+  }
+
+  public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
+                             final BucketConfig bucketConfig, final RetryStrategy retryStrategy, final String key,
+                             final boolean insertDocument, final boolean upsertDocument, final boolean accessDeleted,
+                             final boolean createAsDeleted,
+                             final List<Command> commands, long expiration,
+                             boolean preserveExpiry,
+                             long cas,
                              final Optional<DurabilityLevel> syncReplicationType, final RequestSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     byte flags = 0;
@@ -90,6 +117,15 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
     if (cas != 0 && (insertDocument || upsertDocument)) {
       throw InvalidArgumentException.fromMessage("A cas value can only be applied to \"replace\" store semantics.");
+    }
+
+    if (preserveExpiry) {
+      if (insertDocument) {
+        throw InvalidArgumentException.fromMessage("When using 'insert' store semantics, must not specify `preserveExpiry`.");
+      }
+      if (!upsertDocument && expiration != 0) {
+        throw InvalidArgumentException.fromMessage("When using 'replace' store semantics (the default), must not specify both `expiry` and `preserveExpiry`.");
+      }
     }
 
     if (upsertDocument) {
@@ -111,6 +147,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     this.flags = flags;
     this.commands = commands;
     this.expiration = expiration;
+    this.preserveExpiry = preserveExpiry;
     this.cas = cas;
     this.origKey = key;
     this.syncReplicationType = syncReplicationType;
@@ -126,16 +163,16 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     ByteBuf key = null;
     ByteBuf extras = null;
     ByteBuf content = null;
-    ByteBuf flexibleExtras = null;
-
-    if (createAsDeleted && !ctx.createAsDeleted()) {
-      // Memcached 6.5.0 and below will reset the connection if this flag is sent, hence checking the createAsDeleted HELO
-      // This should never trigger, it should be preempted by the BucketCapabilities.CREATE_AS_DELETED check above.
-      // It is left purely as an additional safety measure.
-      throw new FeatureNotAvailableException("Cannot use createAsDeleted Sub-Document flag, as it is not supported by this version of the cluster");
-    }
+    ByteBuf flexibleExtras = mutationFlexibleExtras(this, ctx, alloc, syncReplicationType, preserveExpiry);
 
     try {
+      if (createAsDeleted && !ctx.createAsDeleted()) {
+        // Memcached 6.5.0 and below will reset the connection if this flag is sent, hence checking the createAsDeleted HELO
+        // This should never trigger, it should be preempted by the BucketCapabilities.CREATE_AS_DELETED check above.
+        // It is left purely as an additional safety measure.
+        throw new FeatureNotAvailableException("Cannot use createAsDeleted Sub-Document flag, as it is not supported by this version of the cluster");
+      }
+
       key = encodedKeyWithCollection(alloc, ctx);
 
       extras = alloc.buffer();
@@ -162,21 +199,9 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
         }
       }
 
-      ByteBuf request;
-      if (syncReplicationType.isPresent()) {
-        if (ctx.syncReplicationEnabled()) {
-          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout(), context());
-          request = flexibleRequest(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
-            cas, flexibleExtras, extras, key, content);
-        }
-        else {
-          throw new DurabilityLevelNotAvailableException(KeyValueErrorContext.incompleteRequest(this));
-        }
-      } else {
-        request = request(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
-          cas, extras, key, content);
-      }
-      return request;
+      return flexibleRequest(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
+          cas, flexibleExtras, extras, key, content);
+
     } finally {
       ReferenceCountUtil.release(key);
       ReferenceCountUtil.release(extras);

@@ -19,23 +19,24 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
-import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
-import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 
 /**
  * Uses the KV "set" command to unconditionally replace or insert documents regardless if they
@@ -47,17 +48,32 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
 
   private final byte[] content;
   private final long expiration;
+  private final boolean preserveExpiry;
   private final int flags;
   private final Optional<DurabilityLevel> syncReplicationType;
 
+
+  /**
+   * @deprecated Please use version that takes preserveExpiry
+   */
+  @Deprecated
   public UpsertRequest(final String key, final byte[] content,
                        final long expiration, final int flags, final Duration timeout,
+                       final CoreContext ctx, CollectionIdentifier collectionIdentifier,
+                       final RetryStrategy retryStrategy,
+                       final Optional<DurabilityLevel> syncReplicationType, final RequestSpan span) {
+    this(key, content, expiration, false, flags, timeout, ctx, collectionIdentifier, retryStrategy, syncReplicationType, span);
+  }
+
+  public UpsertRequest(final String key, final byte[] content,
+                       final long expiration, final boolean preserveExpiry, final int flags, final Duration timeout,
                        final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                        final RetryStrategy retryStrategy,
                        final Optional<DurabilityLevel> syncReplicationType, final RequestSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.content = content;
     this.expiration = expiration;
+    this.preserveExpiry = preserveExpiry;
     this.flags = flags;
     this.syncReplicationType = syncReplicationType;
 
@@ -71,7 +87,7 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
     ByteBuf key = null;
     ByteBuf content = null;
     ByteBuf extras = null;
-    ByteBuf flexibleExtras = null;
+    ByteBuf flexibleExtras = mutationFlexibleExtras(this, ctx, alloc, syncReplicationType, preserveExpiry);
 
     try {
       key = encodedKeyWithCollection(alloc, ctx);
@@ -94,21 +110,9 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
       extras.writeInt(flags);
       extras.writeInt((int) expiration);
 
-      ByteBuf request;
-      if (syncReplicationType.isPresent()) {
-        if (ctx.syncReplicationEnabled()) {
-          flexibleExtras = flexibleSyncReplication(alloc, syncReplicationType.get(), timeout(), context());
-          request = MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.SET, datatype,
-            partition(), opaque, noCas(), flexibleExtras, extras, key, content);
-        }
-        else {
-          throw new DurabilityLevelNotAvailableException(KeyValueErrorContext.incompleteRequest(this));
-        }
-      } else {
-        request = MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.SET, datatype, partition(),
-          opaque, noCas(), extras, key, content);
-      }
-      return request;
+      return MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.SET, datatype,
+          partition(), opaque, noCas(), flexibleExtras, extras, key, content);
+
     } finally {
       ReferenceCountUtil.release(key);
       ReferenceCountUtil.release(extras);

@@ -18,12 +18,6 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.endpoint.EndpointContext;
-import com.couchbase.client.core.env.Authenticator;
-import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.TimeoutConfig;
-import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
@@ -31,6 +25,12 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
 import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
+import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.TimeoutConfig;
+import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.HostAndPort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,7 @@ import org.junit.jupiter.api.Test;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
@@ -117,7 +117,7 @@ class SelectBucketHandlerTest {
       new InetSocketAddress("1.2.3.4", 1234)
     );
     channel.attr(ChannelAttributes.SERVER_FEATURE_KEY)
-      .set(Collections.singletonList(ServerFeature.SELECT_BUCKET));
+      .set(EnumSet.of(ServerFeature.SELECT_BUCKET));
     channel.pipeline().fireChannelActive();
 
     Thread.sleep(timeout.toMillis() + 5);

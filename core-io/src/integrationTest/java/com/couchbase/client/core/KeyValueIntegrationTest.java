@@ -18,6 +18,7 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -25,6 +26,9 @@ import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.GetResponse;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.InsertResponse;
+import com.couchbase.client.core.msg.kv.ReplaceRequest;
+import com.couchbase.client.core.msg.kv.SubdocCommandType;
+import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
@@ -33,14 +37,16 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
+import static com.couchbase.client.core.util.CbCollections.listOf;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class KeyValueIntegrationTest extends CoreIntegrationTest {
 
@@ -119,7 +125,40 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(hasCapabilities = { Capabilities.COLLECTIONS })
+  void replaceThrowsInvalidArgumentForBadPreserveExpiry() {
+    byte[] content = "hello, world".getBytes(UTF_8);
+
+    final long expiry = 30;
+    final boolean preserveExpiry = true;
+
+    Throwable t = assertThrows(InvalidArgumentException.class, () -> new ReplaceRequest(
+        "foo", content, expiry, preserveExpiry, 0, Duration.ofSeconds(5), 0, core.context(),
+        CollectionIdentifier.fromDefault(config().bucketname()),
+        env.retryStrategy(), Optional.empty(), null));
+
+    assertTrue(t.getMessage().contains("preserveExpiry"));
+  }
+
+  @Test
+  void mutateInThrowsInvalidArgumentForBadPreserveExpiry() {
+    assertMutateInThrowsInvalidArgument(true, false, 0, true, "preserveExpiry"); // insert with preserveExpiry
+    assertMutateInThrowsInvalidArgument(false, false, 30, true, "preserveExpiry"); // replace with expiry + preserveExpiry
+  }
+
+  void assertMutateInThrowsInvalidArgument(boolean insert, boolean upsert, long expiry, boolean preserveExpiry, String expectedMessageSubstring) {
+    List<SubdocMutateRequest.Command> commands = listOf(
+        new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "foo", "\"bar\"".getBytes(UTF_8), true, false, false, 0)
+    );
+
+    Throwable t = assertThrows(InvalidArgumentException.class, () -> new SubdocMutateRequest(Duration.ofSeconds(1),
+        core.context(), CollectionIdentifier.fromDefault(config().bucketname()), null, env.retryStrategy(), "foo",
+        insert, upsert, false, false, commands, expiry, preserveExpiry, 0, Optional.empty(), null));
+
+    assertTrue(t.getMessage().contains(expectedMessageSubstring));
+  }
+
+  @Test
+  @IgnoreWhen(hasCapabilities = {Capabilities.COLLECTIONS})
   void shortCircuitCollectionsIfNotAvailable() {
     String id = UUID.randomUUID().toString();
     byte[] content = "hello, world".getBytes(UTF_8);

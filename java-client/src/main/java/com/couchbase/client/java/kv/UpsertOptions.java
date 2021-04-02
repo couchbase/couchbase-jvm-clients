@@ -27,6 +27,7 @@ import static com.couchbase.client.core.util.Validators.notNull;
 public class UpsertOptions extends CommonDurabilityOptions<UpsertOptions> {
 
   private Expiry expiry = Expiry.none();
+  private boolean preserveExpiry;
   private Transcoder transcoder;
 
   private UpsertOptions() { }
@@ -36,16 +37,13 @@ public class UpsertOptions extends CommonDurabilityOptions<UpsertOptions> {
   }
 
   /**
-   * Sets the expiry time for the document as a relative duration.
+   * Sets the expiry for the document. By default the document will never expire.
    * <p>
-   * IMPORTANT: we recommend using a relative duration only if the provided value is less than 30 days. The reason
-   * is that the server will assume any value larger than that to be an absolute unix timestamp. The SDK tries its
-   * best to coerce it into sane values, but to avoid any unexpected behavior please stick to the less than 30 days
-   * as a relative duration. For every expiry > 30 days, please provide it as an absolute instant through the
-   * {@link #expiry(Instant)} overload.
+   * The duration must be less than 50 years. For expiry further in the
+   * future, use {@link #expiry(Instant)}.
    *
-   * @param expiry the expiry time as a relative duration.
-   * @return this {@link UpsertOptions} for chaining purposes.
+   * @param expiry the duration after which the document will expire.
+   * @return this options class for chaining purposes.
    */
   public UpsertOptions expiry(final Duration expiry) {
     this.expiry = Expiry.relative(expiry);
@@ -53,18 +51,32 @@ public class UpsertOptions extends CommonDurabilityOptions<UpsertOptions> {
   }
 
   /**
-   * Sets the expiry time for the document as a absolute duration.
-   * <p>
-   * Note that the absolute instant will be converted into a unix timestamp in seconds before sending it over the
-   * wire to the server. If you need to provide a relative duration you can use {@link #expiry(Duration)} but please
-   * see its javadoc for common pitfalls and edge cases. If in doubt, please provide it as an absolute instant on this
-   * overload.
+   * Sets the expiry for the document. By default the document will never expire.
    *
-   * @param expiry the expiry time as an absolute instant.
-   * @return this {@link UpsertOptions} for chaining purposes.
+   * @param expiry the point in time when the document will expire.
+   * @return this options class for chaining purposes.
    */
   public UpsertOptions expiry(final Instant expiry) {
     this.expiry = Expiry.absolute(expiry);
+    return this;
+  }
+
+  /**
+   * Specifies whether an existing document's expiry should be preserved.
+   * Defaults to false.
+   * <p>
+   * If true, and the document exists, its expiry will not be modified.
+   * Otherwise the document's expiry is determined by
+   * {@link #expiry(Duration)} or {@link #expiry(Instant)}.
+   * <p>
+   * Requires Couchbase Server 7.0 or later.
+   *
+   * @param preserveExpiry true to preserve expiry, false to set new expiry
+   * @return this options class for chaining purposes.
+   */
+  @Stability.Uncommitted
+  public UpsertOptions preserveExpiry(boolean preserveExpiry) {
+    this.preserveExpiry = preserveExpiry;
     return this;
   }
 
@@ -86,10 +98,15 @@ public class UpsertOptions extends CommonDurabilityOptions<UpsertOptions> {
 
   public class Built extends BuiltCommonDurabilityOptions {
 
-    Built() { }
+    Built() {
+    }
 
     public Expiry expiry() {
       return expiry;
+    }
+
+    public boolean preserveExpiry() {
+      return preserveExpiry;
     }
 
     public Transcoder transcoder() {
