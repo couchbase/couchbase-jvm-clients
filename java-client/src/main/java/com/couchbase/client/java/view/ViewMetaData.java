@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java.view;
 
-import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.view.ViewChunkHeader;
 import com.couchbase.client.java.json.JsonObject;
 
@@ -58,7 +57,7 @@ public class ViewMetaData {
      */
     static ViewMetaData from(final ViewChunkHeader header) {
         return new ViewMetaData(
-            header.debug().map(bytes -> Mapper.decodeInto(bytes, JsonObject.class)),
+            header.debug().map(JsonObject::fromJson),
             header.totalRows()
         );
     }

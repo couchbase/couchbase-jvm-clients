@@ -97,6 +97,15 @@ class ViewIntegrationTest extends JavaIntegrationTest {
     assertFalse(viewResult.metaData().debug().isPresent());
   }
 
+  /**
+   * Regression test for JCBC-1798
+   */
+  @Test
+  void canReadDebugInfo() {
+    ViewResult viewResult = bucket.viewQuery(DDOC_NAME, VIEW_NAME, viewOptions().debug(true));
+    assertTrue(viewResult.metaData().debug().isPresent());
+  }
+
   @Test
   void returnsDataJustWritten() {
     int docsToWrite = 10;
