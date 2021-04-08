@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.util.EnumLookupTable;
 
 public class ObserveViaCasResponse extends BaseResponse {
 
@@ -85,27 +86,15 @@ public class ObserveViaCasResponse extends BaseResponse {
 
     private final byte value;
 
+    private static final EnumLookupTable<ObserveStatus> lookupTable =
+        EnumLookupTable.create(ObserveStatus.class, e -> Byte.toUnsignedInt(e.value()));
+
     ObserveStatus(byte b) {
       value = b;
     }
 
     public static ObserveStatus valueOf(byte b) {
-      switch (b) {
-        case (byte) 0x00:
-          return ObserveStatus.FOUND_NOT_PERSISTED;
-        case (byte) 0x01:
-          return ObserveStatus.FOUND_PERSISTED;
-        case (byte) 0x80:
-          return ObserveStatus.NOT_FOUND_PERSISTED;
-        case (byte) 0x81:
-          return ObserveStatus.NOT_FOUND_NOT_PERSISTED;
-        case (byte) 0xfe:
-          return ObserveStatus.MODIFIED;
-        case (byte) 0xf0:
-          return ObserveStatus.UNKNOWN;
-        default:
-          return ObserveStatus.UNINITIALIZED;
-      }
+      return lookupTable.getOrDefault(Byte.toUnsignedInt(b), UNINITIALIZED);
     }
 
     public byte value() {

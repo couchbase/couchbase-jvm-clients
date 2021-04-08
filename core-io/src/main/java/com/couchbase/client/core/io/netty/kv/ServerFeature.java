@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.util.EnumLookupTable;
 
 /**
  * The {@link ServerFeature} enum describes all the different negotiation modes
@@ -164,6 +165,9 @@ public enum ServerFeature {
   CREATE_AS_DELETED((short) 0x17),
   ;
 
+  private static final EnumLookupTable<ServerFeature> lookupTable =
+      EnumLookupTable.create(ServerFeature.class, e -> Short.toUnsignedInt(e.value()));
+
   /**
    * The actual byte representation on the wire.
    */
@@ -188,55 +192,9 @@ public enum ServerFeature {
   }
 
   /**
-   * Helper method to get a server feature enum from the raw
-   * short value.
-   *
-   * <p>If none is found, null is returned.</p>
+   * Returns the server feature associated with the raw short value, or null if not found.
    */
   static ServerFeature from(final short input) {
-    switch (input) {
-      case 0x01:
-        return DATATYPE;
-      case 0x02:
-        return TLS;
-      case 0x03:
-        return TCPNODELAY;
-      case 0x04:
-        return MUTATION_SEQNO;
-      case 0x05:
-        return TCPDELAY;
-      case 0x06:
-        return XATTR;
-      case 0x07:
-        return XERROR;
-      case 0x08:
-        return SELECT_BUCKET;
-      case 0x0a:
-        return SNAPPY;
-      case 0x0b:
-        return JSON;
-      case 0x0c:
-        return DUPLEX;
-      case 0x0d:
-        return CLUSTERMAP_CHANGE_NOTIFICATION;
-      case 0x0e:
-        return UNORDERED_EXECUTION;
-      case 0x0f:
-        return TRACING;
-      case 0x10:
-        return ALT_REQUEST;
-      case 0x11:
-        return SYNC_REPLICATION;
-      case 0x12:
-        return COLLECTIONS;
-      case 0x14:
-        return PRESERVE_TTL;
-      case 0x15:
-        return VATTR;
-      case 0x17:
-        return CREATE_AS_DELETED;
-      default:
-        return null;
-    }
+    return lookupTable.getOrDefault(Short.toUnsignedInt(input), null);
   }
 }
