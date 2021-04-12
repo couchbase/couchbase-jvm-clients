@@ -20,7 +20,7 @@ This repository contains the following projects:
 
 Other toplevel modules might be present which contain examples, experimental code or internal tooling and test infrastructure.
 
-Documentation is now available for [Java](https://docs.couchbase.com/java-sdk/3.0/hello-world/start-using-sdk.html)
+Documentation is available for [Java](https://docs.couchbase.com/java-sdk/3.0/hello-world/start-using-sdk.html)
 and [Scala](https://docs.couchbase.com/scala-sdk/1.0/start-using-sdk.html)
 
 ## Usage
