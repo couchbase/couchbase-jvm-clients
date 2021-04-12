@@ -142,10 +142,15 @@ public interface ConfigurationProvider  {
   boolean bucketConfigLoadInProgress();
 
   /**
-   * Returns true if a collection map refresh is in progress.
-   *
-   * @return true if in progress, false if not.
+   * Returns true while a collection refresh is in progress at all.
    */
-  boolean collectionMapRefreshInProgress();
+  boolean collectionRefreshInProgress();
+
+  /**
+   * Returns true if a collection refresh is in progress for the given identifier.
+   *
+   * @param identifier the collection identifier to check.
+   */
+  boolean collectionRefreshInProgress(CollectionIdentifier identifier);
 
 }

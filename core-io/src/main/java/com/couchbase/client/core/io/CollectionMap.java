@@ -18,6 +18,8 @@ package com.couchbase.client.core.io;
 
 import com.couchbase.client.core.util.UnsignedLEB128;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -75,4 +77,12 @@ public class CollectionMap {
     return false;
   }
 
+  /**
+   * Returns the inner map, mainly for print/debug purposes.
+   *
+   * @return the inner map, immutable.
+   */
+  public Map<CollectionIdentifier, byte[]> inner() {
+    return Collections.unmodifiableMap(inner);
+  }
 }

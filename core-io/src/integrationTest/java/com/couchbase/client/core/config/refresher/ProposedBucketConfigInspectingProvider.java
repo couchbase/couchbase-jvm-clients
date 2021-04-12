@@ -10,6 +10,7 @@ import com.couchbase.client.core.io.CollectionMap;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -117,8 +118,12 @@ public class ProposedBucketConfigInspectingProvider implements ConfigurationProv
   }
 
   @Override
-  public boolean collectionMapRefreshInProgress() {
-    return false;
+  public boolean collectionRefreshInProgress() {
+    return delegate.collectionRefreshInProgress();
   }
 
+  @Override
+  public boolean collectionRefreshInProgress(CollectionIdentifier identifier) {
+    return delegate.collectionRefreshInProgress(identifier);
+  }
 }

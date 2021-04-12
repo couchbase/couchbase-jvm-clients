@@ -39,9 +39,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
@@ -63,7 +60,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -396,25 +392,22 @@ class DefaultConfigurationProviderTest {
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, seedNodes);
 
-    assertFalse(provider.collectionMapRefreshInProgress());
-    assertTrue(provider.collectionRefreshInProgress().isEmpty());
+    assertFalse(provider.collectionRefreshInProgress());
 
     CollectionIdentifier identifier1 = new CollectionIdentifier("bucket", Optional.of("scope"), Optional.of("collection"));
     CollectionIdentifier identifier2 = new CollectionIdentifier("bucket", Optional.of("_default"), Optional.of("_default"));
 
     provider.refreshCollectionId(identifier1);
-    assertTrue(provider.collectionMapRefreshInProgress());
-    assertEquals(1, provider.collectionRefreshInProgress().size());
-    assertTrue(provider.collectionRefreshInProgress().contains(identifier1));
+    assertEquals(1, provider.collectionMapRefreshInProgress.size());
+    assertTrue(provider.collectionMapRefreshInProgress.contains(identifier1));
 
     provider.refreshCollectionId(identifier2);
-    assertTrue(provider.collectionMapRefreshInProgress());
-    assertEquals(2, provider.collectionRefreshInProgress().size());
-    assertTrue(provider.collectionRefreshInProgress().contains(identifier2));
+    assertEquals(2, provider.collectionMapRefreshInProgress.size());
+    assertTrue(provider.collectionMapRefreshInProgress.contains(identifier2));
 
     provider.refreshCollectionId(identifier2);
-    assertEquals(2, provider.collectionRefreshInProgress().size());
-    assertTrue(provider.collectionRefreshInProgress().contains(identifier2));
+    assertEquals(2, provider.collectionMapRefreshInProgress.size());
+    assertTrue(provider.collectionMapRefreshInProgress.contains(identifier2));
 
     boolean found = false;
     for (Event event : EVENT_BUS.publishedEvents()) {
@@ -426,10 +419,10 @@ class DefaultConfigurationProviderTest {
     assertTrue(found);
 
     capturedRequests.get(0).succeed(new GetCollectionIdResponse(ResponseStatus.SUCCESS, Optional.of(1234L)));
-    assertTrue(provider.collectionMapRefreshInProgress());
+    assertTrue(provider.collectionRefreshInProgress());
 
     capturedRequests.get(1).cancel(CancellationReason.TIMEOUT);
-    waitUntilCondition(() -> !provider.collectionMapRefreshInProgress());
+    waitUntilCondition(() -> !provider.collectionRefreshInProgress());
 
     found = false;
     for (Event event : EVENT_BUS.publishedEvents()) {

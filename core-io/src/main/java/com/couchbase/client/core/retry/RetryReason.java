@@ -58,7 +58,7 @@ public enum RetryReason {
   /**
    * The collection identifier for the KV service has been outdated.
    */
-  KV_COLLECTION_OUTDATED(true, true),
+  KV_COLLECTION_OUTDATED(true, false),
   /**
    * The KV error map indicated a retry action on an unknown response code.
    */

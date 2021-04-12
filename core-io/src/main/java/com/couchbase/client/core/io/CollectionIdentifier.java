@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.io;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -91,5 +93,13 @@ public class CollectionIdentifier {
       ", collection=" + redactMeta(collection) +
       ", isDefault=" + redactMeta(isDefault) +
       '}';
+  }
+
+  public Map<String, Object> toMap() {
+    Map<String, Object> exported = new HashMap<>();
+    exported.put("bucket", redactMeta(bucket()));
+    exported.put("scope", redactMeta(scope().orElse(CollectionIdentifier.DEFAULT_SCOPE)));
+    exported.put("collection", redactMeta(collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION)));
+    return exported;
   }
 }

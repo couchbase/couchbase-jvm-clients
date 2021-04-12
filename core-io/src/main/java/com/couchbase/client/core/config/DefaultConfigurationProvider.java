@@ -61,12 +61,14 @@ import reactor.core.publisher.ReplayProcessor;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -133,7 +135,11 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   private volatile boolean globalConfigLoadInProgress = false;
   private final AtomicInteger bucketConfigLoadInProgress = new AtomicInteger();
-  private final Set<CollectionIdentifier> collectionMapRefreshInProgress = new HashSet<>();
+
+  /**
+   * Made package private so it can be inspected during testing.
+   */
+  final Set<CollectionIdentifier> collectionMapRefreshInProgress = ConcurrentHashMap.newKeySet();
 
   /**
    * Stores the current seed nodes used to bootstrap buckets and global configs.
@@ -515,7 +521,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   @Override
   public synchronized void refreshCollectionId(final CollectionIdentifier identifier) {
-    if (collectionMapRefreshInProgress.contains(identifier)) {
+    if (collectionRefreshInProgress(identifier)) {
       eventBus.publish(new CollectionMapRefreshIgnoredEvent(core.context(), identifier));
       return;
     }
@@ -590,8 +596,13 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   }
 
   @Override
-  public synchronized boolean collectionMapRefreshInProgress() {
+  public boolean collectionRefreshInProgress() {
     return !collectionMapRefreshInProgress.isEmpty();
+  }
+
+  @Override
+  public boolean collectionRefreshInProgress(final CollectionIdentifier identifier) {
+    return collectionMapRefreshInProgress.contains(identifier);
   }
 
   /**
@@ -845,13 +856,6 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    */
   Set<SeedNode> currentSeedNodes() {
     return currentSeedNodes.get();
-  }
-
-  /**
-   * Visible for testing.
-   */
-  Set<CollectionIdentifier> collectionRefreshInProgress() {
-    return collectionMapRefreshInProgress;
   }
 
   private void setSeedNodes(Set<SeedNode> seedNodes) {

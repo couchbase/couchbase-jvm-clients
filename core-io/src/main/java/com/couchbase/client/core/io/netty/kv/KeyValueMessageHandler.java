@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
+import com.couchbase.client.core.cnc.events.io.CollectionOutdatedHandledEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.KeyValueErrorMapCodeHandledEvent;
 import com.couchbase.client.core.cnc.events.io.NotMyVbucketReceivedEvent;
@@ -41,6 +42,8 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.TracingUtils;
 import com.couchbase.client.core.msg.Request;
@@ -51,9 +54,15 @@ import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.UnsignedLEB128;
 
+import java.net.SocketAddress;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
 import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchSpanAttributes;
@@ -65,6 +74,7 @@ import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETR
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETRY_NOW;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.TEMP;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -234,7 +244,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
         writtenRequests.remove(opaque);
         if (err instanceof CollectionNotFoundException) {
           if (channelContext.collectionsEnabled()) {
-            if (ioContext.core().configurationProvider().collectionMapRefreshInProgress()) {
+            if (ioContext.core().configurationProvider().collectionRefreshInProgress(request.collectionIdentifier())) {
               RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.COLLECTION_MAP_REFRESH_IN_PROGRESS);
             } else {
               handleOutdatedCollection(request, RetryReason.COLLECTION_NOT_FOUND);
@@ -490,8 +500,35 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param request the request to retry.
    */
   private void handleOutdatedCollection(final KeyValueRequest<Response> request, final RetryReason retryReason) {
+    eventBus.publish(new CollectionOutdatedHandledEvent(
+      request.collectionIdentifier(),
+      retryReason,
+      new OutdatedCollectionContext(ioContext, ioContext.core().configurationProvider().collectionMap())
+    ));
+
     ioContext.core().configurationProvider().refreshCollectionId(request.collectionIdentifier());
     RetryOrchestrator.maybeRetry(ioContext, request, retryReason);
+  }
+
+  static class OutdatedCollectionContext extends IoContext {
+
+    private final CollectionMap collectionMap;
+
+    public OutdatedCollectionContext(IoContext ioContext, CollectionMap collectionMap) {
+      super(ioContext, ioContext.localSocket(), ioContext.remoteSocket(), ioContext.bucket());
+      this.collectionMap = collectionMap;
+    }
+
+    @Override
+    public void injectExportableParams(final Map<String, Object> input) {
+      super.injectExportableParams(input);
+
+      input.put("open", collectionMap.inner().entrySet().stream().map(e -> {
+        Map<String, Object> converted = new HashMap<>(e.getKey().toMap());
+        converted.put("id", "0x" + Long.toHexString(UnsignedLEB128.decode(e.getValue())));
+        return converted;
+      }).collect(Collectors.toList()));
+    }
   }
 
 }
