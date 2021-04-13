@@ -26,9 +26,9 @@ import com.couchbase.client.core.cnc.Meter;
 import com.couchbase.client.core.cnc.OrphanReporter;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.events.config.HighIdleHttpConnectionTimeoutConfiguredEvent;
+import com.couchbase.client.core.cnc.events.config.InsecureSecurityConfigDetectedEvent;
 import com.couchbase.client.core.cnc.metrics.AggregatingMeter;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
-import com.couchbase.client.core.cnc.events.config.InsecureSecurityConfigDetectedEvent;
 import com.couchbase.client.core.cnc.tracing.ThresholdRequestTracer;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -572,9 +572,21 @@ public class CoreEnvironment {
 
     /**
      * Returns the currently stored IoEnvironment builder.
+     *
+     * @return the current builder.
+     * @deprecated Please use {@link #ioEnvironmentConfig()} instead.
+     */
+    @Deprecated
+    public IoEnvironment.Builder ioEnvironment() {
+      return ioEnvironmentConfig();
+    }
+
+    /**
+     * Returns the currently stored IoEnvironment builder.
+     *
      * @return the current builder.
      */
-    public IoEnvironment.Builder ioEnvironment() {
+    public IoEnvironment.Builder ioEnvironmentConfig() {
       return ioEnvironment;
     }
 

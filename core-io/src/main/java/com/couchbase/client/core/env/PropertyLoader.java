@@ -16,8 +16,26 @@
 
 package com.couchbase.client.core.env;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import static java.util.Collections.unmodifiableMap;
+
 public interface PropertyLoader<B extends CoreEnvironment.Builder> {
 
   void load(B builder);
 
+  /**
+   * Returns a new property loader that loads the properties from the given map.
+   */
+  static <T extends CoreEnvironment.Builder> PropertyLoader<T> fromMap(Map<String, String> properties) {
+    Map<String, String> defensiveCopy = unmodifiableMap(new HashMap<>(properties));
+
+    return new AbstractMapPropertyLoader<T>() {
+      @Override
+      protected Map<String, String> propertyMap() {
+        return defensiveCopy;
+      }
+    };
+  }
 }

@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,13 +38,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BuilderPropertySetterTest {
   private static final BuilderPropertySetter setter = new BuilderPropertySetter();
 
-  private static CoreEnvironment.Builder newEnvironmentBuilder() {
+  private static CoreEnvironment.Builder<?> newEnvironmentBuilder() {
     return CoreEnvironment.builder();
   }
 
   @Test
   void setBoolean() {
-    CoreEnvironment.Builder builder = newEnvironmentBuilder();
+    CoreEnvironment.Builder<?> builder = newEnvironmentBuilder();
     setter.set(builder, "io.queryCircuitBreaker.enabled", "true");
     setter.set(builder, "io.analyticsCircuitBreaker.enabled", "1");
     setter.set(builder, "io.viewCircuitBreaker.enabled", "false");
@@ -59,12 +60,12 @@ class BuilderPropertySetterTest {
       () -> setter.set(builder, "io.kvCircuitBreaker.enabled", "TRUE"));
 
     assertEquals("Expected a boolean (\"true\", \"false\", \"1\", or \"0\") but got \"TRUE\".",
-      e.getMessage());
+      e.getCause().getMessage());
   }
 
   @Test
   void setInt() {
-    CoreEnvironment.Builder builder = newEnvironmentBuilder();
+    CoreEnvironment.Builder<?> builder = newEnvironmentBuilder();
     setter.set(builder, "io.maxHttpConnections", "76");
 
     IoConfig io = builder.ioConfig().build();
@@ -74,12 +75,12 @@ class BuilderPropertySetterTest {
       () -> setter.set(builder, "io.maxHttpConnections", "garbage"));
 
     assertEquals("Expected an int but got \"garbage\".",
-      e.getMessage());
+      e.getCause().getMessage());
   }
 
   @Test
   void setDuration() {
-    CoreEnvironment.Builder builder = newEnvironmentBuilder();
+    CoreEnvironment.Builder<?> builder = newEnvironmentBuilder();
 
     setter.set(builder, "io.idleHttpConnectionTimeout", "0");
     setter.set(builder, "io.tcpKeepAliveTime", "2s");
@@ -91,15 +92,15 @@ class BuilderPropertySetterTest {
 
   @Test
   void rejectNegativeDuration() {
-    CoreEnvironment.Builder builder = newEnvironmentBuilder();
+    CoreEnvironment.Builder<?> builder = newEnvironmentBuilder();
 
-    InvalidArgumentException e = assertThrows(InvalidArgumentException.class,
+    assertThrows(InvalidArgumentException.class,
       () -> setter.set(builder, "service.queryService.idleTime", "-3s"));
   }
 
   @Test
   void setEnumArray() {
-    CoreEnvironment.Builder builder = newEnvironmentBuilder();
+    CoreEnvironment.Builder<?> builder = newEnvironmentBuilder();
 
     setter.set(builder, "io.captureTraffic", " KV , ANALYTICS ");
 
@@ -115,12 +116,12 @@ class BuilderPropertySetterTest {
       () -> setter.set(builder, "io.captureTraffic", "garbage"));
 
     assertEquals("Expected one of " + EnumSet.allOf(ServiceType.class) + " but got \"garbage\"",
-      e.getMessage());
+      e.getCause().getMessage());
   }
 
   @Test
   void setDouble() {
-    CoreEnvironment.Builder builder = newEnvironmentBuilder();
+    CoreEnvironment.Builder<?> builder = newEnvironmentBuilder();
 
     setter.set(builder, "compression.minRatio", "3.14159");
 
@@ -130,7 +131,24 @@ class BuilderPropertySetterTest {
     InvalidArgumentException e = assertThrows(InvalidArgumentException.class,
       () -> setter.set(builder, "compression.minRatio", "garbage"));
 
-    assertEquals("Expected a double but got \"garbage\".", e.getMessage());
+    assertEquals("Expected a double but got \"garbage\".", e.getCause().getMessage());
+  }
+
+  @Test
+  void worksWithIoEnvironmentAndPropertyLoaderFromMap() {
+    CoreEnvironment.Builder<?> builder = newEnvironmentBuilder()
+        .load(PropertyLoader.fromMap(
+            mapOf("ioEnvironment.enableNativeIo", "false")));
+
+    IoEnvironment ioEnv = builder.ioEnvironmentConfig().build();
+    assertFalse(ioEnv.nativeIoEnabled());
+
+    InvalidPropertyException e = assertThrows(InvalidPropertyException.class, () ->
+        builder.load(PropertyLoader.fromMap(
+            mapOf("io.maxHttpConnections", "garbage"))));
+
+    assertEquals("io.maxHttpConnections", e.propertyName());
+    assertEquals("garbage", e.propertyValue());
   }
 
   @Test
@@ -147,8 +165,8 @@ class BuilderPropertySetterTest {
     InvalidArgumentException e = assertThrows(InvalidArgumentException.class,
       () -> setter.set(overloads, "value", "garbage"));
 
-    assertTrue(e.getMessage().startsWith("Found multiple one-arg setters"));
-    final Set<String> suppressedMessages = Arrays.stream(e.getSuppressed()).map(Throwable::getMessage).collect(toSet());
+    assertTrue(e.getCause().getMessage().startsWith("Found multiple one-arg setters"));
+    final Set<String> suppressedMessages = Arrays.stream(e.getCause().getSuppressed()).map(Throwable::getMessage).collect(toSet());
     final Set<String> expectedSuppressedMessages = new HashSet<>(Arrays.asList(
       "Expected an int but got \"garbage\".",
       "Expected a duration qualified by a time unit (like \"2.5s\" or \"300ms\") but got \"garbage\".",

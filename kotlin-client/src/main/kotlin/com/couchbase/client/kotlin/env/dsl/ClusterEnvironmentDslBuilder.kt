@@ -71,7 +71,7 @@ public class ClusterEnvironmentDslBuilder {
     public var cryptoManager: CryptoManager?
             by observable(null, { _, _, it -> wrapped.cryptoManager(it) })
 
-    private var ioEnvironmentDslBuilder = IoEnvironmentDslBuilder(wrapped.ioEnvironment())
+    private var ioEnvironmentDslBuilder = IoEnvironmentDslBuilder(wrapped.ioEnvironmentConfig())
     public fun ioEnvironment(initializer: IoEnvironmentDslBuilder.() -> Unit) {
         ioEnvironmentDslBuilder.initializer()
     }

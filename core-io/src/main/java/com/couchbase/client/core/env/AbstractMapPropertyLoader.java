@@ -16,8 +16,6 @@
 
 package com.couchbase.client.core.env;
 
-import com.couchbase.client.core.error.InvalidArgumentException;
-
 import java.util.Map;
 
 /**
@@ -43,14 +41,7 @@ public abstract class AbstractMapPropertyLoader<B extends CoreEnvironment.Builde
 
   @Override
   public void load(B builder) {
-    for (Map.Entry<String, String> entry : propertyMap().entrySet()) {
-      try {
-        setter.set(builder, entry.getKey(), entry.getValue());
-      } catch (IllegalArgumentException e) {
-        throw InvalidArgumentException.fromMessage(
-          "Failed to apply property \"" + entry.getKey() + "\". " + e.getMessage(), e);
-      }
-    }
+    propertyMap().forEach((key, value) -> setter.set(builder, key, value));
   }
 
 }

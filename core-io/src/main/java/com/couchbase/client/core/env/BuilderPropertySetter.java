@@ -45,8 +45,12 @@ import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
+@SuppressWarnings("rawtypes")
 class BuilderPropertySetter {
 
+  /**
+   * @throws InvalidPropertyException if the property could not be applied to the builder
+   */
   public void set(Object builder, String propertyName, String propertyValue) {
 
     // By convention, builder methods that return child builders have names ending with this.
@@ -96,12 +100,11 @@ class BuilderPropertySetter {
         }
       }
 
-    } catch (IllegalAccessException e) {
-      throw InvalidArgumentException.fromMessage("Failed to access the corresponding builder method.", e);
-
     } catch (InvocationTargetException e) {
-      Throwable cause = e.getCause();
-      throw (cause instanceof RuntimeException) ? (RuntimeException) cause : new RuntimeException(cause);
+      throw InvalidPropertyException.forProperty(propertyName, propertyValue, e.getCause());
+
+    } catch (Exception e) {
+      throw InvalidPropertyException.forProperty(propertyName, propertyValue, e);
     }
   }
 
@@ -266,7 +269,7 @@ class BuilderPropertySetter {
         .register(Duration.class, "a duration qualified by a time unit (like \"2.5s\" or \"300ms\")",
             d -> requireNonNegative(Golang.parseDuration(d)))
 
-        .register(Path.class, "an open file from a path", s -> Paths.get(s))
+        .register(Path.class, "an open file from a path", Paths::get)
 
         .register(Iterable.class, new CollectionConverter(ArrayList.class))
         .register(Collection.class, new CollectionConverter(ArrayList.class))
