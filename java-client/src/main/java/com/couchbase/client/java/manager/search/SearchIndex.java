@@ -19,11 +19,18 @@ package com.couchbase.client.java.manager.search;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
+
+
+/**
+ * A full text search index definition.
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SearchIndex {
 
@@ -65,6 +72,20 @@ public class SearchIndex {
     this.planParams = planParams;
   }
 
+  /**
+   * Takes a encoded index definition and turns it into a {@link SearchIndex} which can be used.
+   *
+   * @param input the encoded JSON index definition.
+   * @return the instantiated index.
+   */
+  public static SearchIndex fromJson(final String input) {
+    try {
+      return Mapper.decodeInto(input, SearchIndex.class);
+    } catch (Exception ex) {
+      throw InvalidArgumentException.fromMessage("Could not decode search index JSON", ex);
+    }
+  }
+
   public String name() {
     return name;
   }
@@ -73,8 +94,9 @@ public class SearchIndex {
     return uuid;
   }
 
-  public void uuid(String uuid) {
+  public SearchIndex uuid(String uuid) {
     this.uuid = uuid;
+    return this;
   }
 
   public String sourceName() {
@@ -89,40 +111,45 @@ public class SearchIndex {
     return params;
   }
 
-  public void params(Map<String, Object> params) {
+  public SearchIndex params(Map<String, Object> params) {
     this.params = params;
+    return this;
   }
 
   public String sourceUuid() {
     return sourceUuid;
   }
 
-  public void sourceUuid(String sourceUuid) {
+  public SearchIndex sourceUuid(String sourceUuid) {
     this.sourceUuid = sourceUuid;
+    return this;
   }
 
   public Map<String, Object> sourceParams() {
     return sourceParams;
   }
 
-  public void sourceParams(Map<String, Object> sourceParams) {
+  public SearchIndex sourceParams(Map<String, Object> sourceParams) {
     this.sourceParams = sourceParams;
+    return this;
   }
 
   public String sourceType() {
     return sourceType;
   }
 
-  public void sourceType(String sourceType) {
+  public SearchIndex sourceType(String sourceType) {
     this.sourceType = sourceType;
+    return this;
   }
 
   public Map<String, Object> planParams() {
     return planParams;
   }
 
-  public void planParams(Map<String, Object> planParams) {
+  public SearchIndex planParams(Map<String, Object> planParams) {
     this.planParams = planParams;
+    return this;
   }
 
   public String toJson() {
@@ -135,6 +162,20 @@ public class SearchIndex {
     output.put("sourceName", sourceName);
     output.put("type", type == null ? "fulltext-index" : type);
     output.put("sourceType", sourceType == null ? "couchbase" : sourceType);
+
+    if (!isNullOrEmpty(params))  {
+      output.put("params", params);
+    }
+    if (!isNullOrEmpty(planParams)) {
+      output.put("planParams", planParams);
+    }
+    if (!isNullOrEmpty(sourceParams)) {
+      output.put("sourceParams", sourceParams);
+    }
+    if (sourceUuid != null) {
+      output.put("sourceUUID", sourceUuid);
+    }
+
     return Mapper.encodeAsString(output);
   }
 
