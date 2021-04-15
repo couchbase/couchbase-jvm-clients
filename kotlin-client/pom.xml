@@ -19,7 +19,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kotlin.version>1.4.32</kotlin.version>
-        <kotlin.coroutines.version>1.4.2</kotlin.coroutines.version>
+        <kotlin.coroutines.version>1.4.3</kotlin.coroutines.version>
         <kotlin.code.style>official</kotlin.code.style>
     </properties>
 
