@@ -29,6 +29,8 @@ import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
+import com.couchbase.client.core.msg.NonChunkedHttpRequest;
+import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.view.GenericViewRequest;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -150,10 +152,9 @@ class NonChunkedHttpMessageHandlerTest {
     }
 
     @Override
-    protected Exception failRequestWith(HttpResponseStatus status, String content) {
+    protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
       return new Exception(content);
     }
-
   }
 
 }

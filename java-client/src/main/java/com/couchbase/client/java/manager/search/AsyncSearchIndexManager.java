@@ -33,11 +33,11 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.error.context.SearchErrorContext;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.search.GenericSearchRequest;
 import com.couchbase.client.core.msg.search.GenericSearchResponse;
-import com.couchbase.client.core.msg.view.GenericViewRequest;
-import com.couchbase.client.core.msg.view.GenericViewResponse;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.nio.charset.StandardCharsets;
@@ -180,7 +180,7 @@ public class AsyncSearchIndexManager {
       built.parentSpan().orElse(null)
     );
 
-    return sendRequest(HttpMethod.GET, indexesPath(), span).thenApply(response -> {
+    return sendRequest(HttpMethod.GET, indexesPath(), span, null).thenApply(response -> {
       JsonNode rootNode = Mapper.decodeIntoTree(response.content());
       JsonNode indexDefs = rootNode.get("indexDefs").get("indexDefs");
       Map<String, SearchIndex> indexes = Mapper.convertValue(
@@ -216,13 +216,7 @@ public class AsyncSearchIndexManager {
       built.parentSpan().orElse(null)
     );
 
-    return sendRequest(HttpMethod.GET, indexCountPath(name), span)
-      .exceptionally(throwable -> {
-        if (throwable.getMessage().contains("index not found")) {
-          throw new IndexNotFoundException(name);
-        }
-        throw new CouchbaseException("Failed to get indexed documents count search index", throwable);
-      })
+    return sendRequest(HttpMethod.GET, indexCountPath(name), span, name)
       .thenApply(response -> {
         JsonNode rootNode = Mapper.decodeIntoTree(response.content());
         return rootNode.get("count").asLong();
@@ -266,7 +260,7 @@ public class AsyncSearchIndexManager {
       request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
       request.headers().set(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes());
       return request;
-    }, false, span).thenApply(response -> null);
+    }, false, span, index.name(), indexPath(index.name())).thenApply(response -> null);
   }
 
   /**
@@ -294,13 +288,7 @@ public class AsyncSearchIndexManager {
       built.parentSpan().orElse(null)
     );
 
-    return sendRequest(HttpMethod.DELETE, indexPath(name), span)
-      .exceptionally(throwable -> {
-        if (throwable.getMessage().contains("index not found")) {
-          throw new IndexNotFoundException(name);
-        }
-        throw new CouchbaseException("Failed to drop search index", throwable);
-      })
+    return sendRequest(HttpMethod.DELETE, indexPath(name), span, name)
       .thenApply(response -> null);
   }
 
@@ -344,14 +332,15 @@ public class AsyncSearchIndexManager {
       request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
       request.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
       return request;
-    }, true, span)
+    }, true, span, name, analyzeDocumentPath(name))
       .exceptionally(throwable -> {
         if (throwable.getMessage().contains("Page not found")) {
           throw new FeatureNotAvailableException("Document analysis is not available on this server version!");
-        } else if (throwable.getMessage().contains("no indexName:")) {
-          throw new IndexNotFoundException(name);
+        } else if (throwable instanceof RuntimeException) {
+          throw (RuntimeException) throwable;
+        } else {
+          throw new CouchbaseException("Failed to analyze search document", throwable);
         }
-        throw new CouchbaseException("Failed to analyze search document", throwable);
       })
       .thenApply(response -> {
         JsonNode rootNode = Mapper.decodeIntoTree(response.content());
@@ -388,13 +377,7 @@ public class AsyncSearchIndexManager {
       built.parentSpan().orElse(null)
     );
 
-    return sendRequest(HttpMethod.POST, pauseIngestPath(name), span)
-      .exceptionally(throwable -> {
-        if (throwable.getMessage().contains("index not found")) {
-          throw new IndexNotFoundException(name);
-        }
-        throw new CouchbaseException("Failed to pause search index ingest", throwable);
-      })
+    return sendRequest(HttpMethod.POST, pauseIngestPath(name), span, name)
       .thenApply(response -> null);
   }
 
@@ -423,13 +406,7 @@ public class AsyncSearchIndexManager {
       built.parentSpan().orElse(null)
     );
 
-    return sendRequest(HttpMethod.POST, resumeIngestPath(name), span)
-      .exceptionally(throwable -> {
-        if (throwable.getMessage().contains("index not found")) {
-          throw new IndexNotFoundException(name);
-        }
-        throw new CouchbaseException("Failed to resume search index ingest", throwable);
-      })
+    return sendRequest(HttpMethod.POST, resumeIngestPath(name), span, name)
       .thenApply(response -> null);
   }
 
@@ -458,13 +435,7 @@ public class AsyncSearchIndexManager {
       built.parentSpan().orElse(null)
     );
 
-    return sendRequest(HttpMethod.POST, allowQueryingPath(name), span)
-      .exceptionally(throwable -> {
-        if (throwable.getMessage().contains("index not found")) {
-          throw new IndexNotFoundException(name);
-        }
-        throw new CouchbaseException("Failed to allow querying on the search index", throwable);
-      })
+    return sendRequest(HttpMethod.POST, allowQueryingPath(name), span, name)
       .thenApply(response -> null);
   }
 
@@ -493,13 +464,7 @@ public class AsyncSearchIndexManager {
       built.parentSpan().orElse(null)
     );
 
-    return sendRequest(HttpMethod.POST, disallowQueryingPath(name), span)
-      .exceptionally(throwable -> {
-        if (throwable.getMessage().contains("index not found")) {
-          throw new IndexNotFoundException(name);
-        }
-        throw new CouchbaseException("Failed to disallow querying on the search index", throwable);
-      })
+    return sendRequest(HttpMethod.POST, disallowQueryingPath(name), span, name)
       .thenApply(response -> null);
   }
 
@@ -528,13 +493,7 @@ public class AsyncSearchIndexManager {
       built.parentSpan().orElse(null)
     );
 
-    return sendRequest(HttpMethod.POST, freezePlanPath(name), span)
-      .exceptionally(throwable -> {
-        if (throwable.getMessage().contains("index not found")) {
-          throw new IndexNotFoundException(name);
-        }
-        throw new CouchbaseException("Failed to freeze plan on the search index", throwable);
-      })
+    return sendRequest(HttpMethod.POST, freezePlanPath(name), span, name)
       .thenApply(response -> null);
   }
 
@@ -563,34 +522,33 @@ public class AsyncSearchIndexManager {
       built.parentSpan().orElse(null)
     );
 
-    return sendRequest(HttpMethod.POST, unfreezePlanPath(name), span)
-      .exceptionally(throwable -> {
-        if (throwable.getMessage().contains("index not found")) {
-          throw new IndexNotFoundException(name);
-        }
-        throw new CouchbaseException("Failed to unfreeze plan on the search index", throwable);
-      })
+    return sendRequest(HttpMethod.POST, unfreezePlanPath(name), span, name)
       .thenApply(response -> null);
   }
 
   private CompletableFuture<GenericSearchResponse> sendRequest(final HttpMethod method, final String path,
-                                                               final RequestSpan span) {
+                                                               final RequestSpan span, final String indexName) {
     return sendRequest(
       () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
       method == HttpMethod.GET,
-      span
+      span,
+      indexName,
+      path
     );
   }
 
   private CompletableFuture<GenericSearchResponse> sendRequest(final Supplier<FullHttpRequest> httpRequest,
-                                                               boolean idempotent, RequestSpan span) {
+                                                               boolean idempotent, RequestSpan span,
+                                                               final String indexName, final String path) {
     GenericSearchRequest request = new GenericSearchRequest(
       environment.timeoutConfig().managementTimeout(),
       core.context(),
       environment.retryStrategy(),
       httpRequest,
       idempotent,
-      span
+      span,
+      indexName,
+      path
     );
 
     return sendRequest(request).whenComplete((r, t) -> {

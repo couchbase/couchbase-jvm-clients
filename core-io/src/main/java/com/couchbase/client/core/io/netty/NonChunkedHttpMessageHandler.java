@@ -124,7 +124,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
    * @param content the raw full content body of the response if not successful.
    * @return the exception with which the request will be failed.
    */
-  protected abstract Exception failRequestWith(HttpResponseStatus status, String content);
+  protected abstract Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request);
 
   /**
    * Writes a given request and encodes it.
@@ -232,7 +232,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
                 currentRequest.succeed(response);
               } else {
                 String body = httpResponse.content().toString(StandardCharsets.UTF_8);
-                currentRequest.fail(failRequestWith(httpResponse.status(), body));
+                currentRequest.fail(failRequestWith(httpResponse.status(), body, currentRequest));
               }
             } else {
               ioContext.environment().orphanReporter().report(currentRequest);

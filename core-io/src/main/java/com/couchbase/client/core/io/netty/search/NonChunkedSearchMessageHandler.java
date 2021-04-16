@@ -19,7 +19,13 @@ package com.couchbase.client.core.io.netty.search;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.IndexExistsException;
+import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.error.context.SearchErrorContext;
+import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.NonChunkedHttpMessageHandler;
+import com.couchbase.client.core.msg.NonChunkedHttpRequest;
+import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.service.ServiceType;
 
 class NonChunkedSearchMessageHandler extends NonChunkedHttpMessageHandler {
@@ -29,9 +35,26 @@ class NonChunkedSearchMessageHandler extends NonChunkedHttpMessageHandler {
   }
 
   @Override
-  protected Exception failRequestWith(final HttpResponseStatus status, final String content) {
-    // todo: this needs to be cleaned up with the management apis later
-    return new CouchbaseException("Unknown search error: " + content);
+  protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
+    SearchErrorContext errorContext = new SearchErrorContext(
+      HttpProtocol.decodeStatus(status),
+      request.context(),
+      status.code()
+    );
+
+    if (status == HttpResponseStatus.BAD_REQUEST && content.contains("index missing for update")) {
+      return IndexNotFoundException.withMessageAndErrorContext("The index has not been found during an update on upsert. " +
+        "If you did not intend to perform an index update, remove (or null out) the UUID property on the index.", errorContext);
+    } else if (status == HttpResponseStatus.BAD_REQUEST && content.contains("index not found")) {
+      return IndexNotFoundException.withMessageAndErrorContext("Index not found", errorContext);
+    } else if (status == HttpResponseStatus.BAD_REQUEST && content.contains("index with the same name already exists")) {
+      return new IndexExistsException("The index already exists. If you meant to replace/update it, make sure " +
+        "that the UUID property is set.", errorContext);
+    } else if (content.contains("Page not found")) {
+
+    }
+
+    return new CouchbaseException("Unknown search error: " + content, errorContext);
   }
 
 }

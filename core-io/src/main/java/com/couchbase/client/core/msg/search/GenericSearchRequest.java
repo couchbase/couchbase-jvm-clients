@@ -29,9 +29,13 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.io.netty.HttpProtocol.decodeStatus;
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 public class GenericSearchRequest extends BaseRequest<GenericSearchResponse>
@@ -39,12 +43,17 @@ public class GenericSearchRequest extends BaseRequest<GenericSearchResponse>
 
   private final Supplier<FullHttpRequest> requestSupplier;
   private final boolean idempotent;
+  private final String indexName;
+  private final String path;
 
   public GenericSearchRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                              final Supplier<FullHttpRequest> requestSupplier, boolean idempotent, RequestSpan span) {
+                              final Supplier<FullHttpRequest> requestSupplier, boolean idempotent, RequestSpan span,
+                              final String indexName, final String path) {
     super(timeout, ctx, retryStrategy);
     this.requestSupplier = requireNonNull(requestSupplier);
     this.idempotent = idempotent;
+    this.indexName = indexName;
+    this.path = path;
 
     if (span != null) {
       span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_SEARCH);
@@ -75,6 +84,17 @@ public class GenericSearchRequest extends BaseRequest<GenericSearchResponse>
   @Override
   public boolean idempotent() {
     return idempotent;
+  }
+
+  @Override
+  public Map<String, Object> serviceContext() {
+    Map<String, Object> ctx = new TreeMap<>();
+    ctx.put("type", serviceType().ident());
+    ctx.put("path", redactMeta(path));
+    if (!isNullOrEmpty(indexName)) {
+      ctx.put("indexName", redactMeta(indexName));
+    }
+    return ctx;
   }
 
 }

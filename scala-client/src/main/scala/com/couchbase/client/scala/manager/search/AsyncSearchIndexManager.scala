@@ -20,7 +20,6 @@ import java.nio.charset.StandardCharsets
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled
 import com.couchbase.client.core.deps.io.netty.handler.codec.http._
-import com.couchbase.client.core.error.IndexNotFoundException
 import com.couchbase.client.core.msg.search.{GenericSearchRequest, GenericSearchResponse}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode
@@ -31,7 +30,6 @@ import com.couchbase.client.scala.util.DurationConversions._
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
 
 @Stability.Volatile
 class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
@@ -41,15 +39,6 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
   private val DefaultTimeout: Duration =
     core.context().environment().timeoutConfig().managementTimeout()
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
-
-  /** Maps any raw errors into more useful ones. */
-  private def transformer(
-      indexName: String
-  ): Throwable => Throwable =
-    err =>
-      if (err.getMessage.contains("index not found")) {
-        new IndexNotFoundException(indexName)
-      } else err
 
   def getIndex(
       indexName: String,
@@ -63,7 +52,6 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
         val read = CouchbasePickler.read[SearchIndexWrapper](response.content())
         read.indexDef.copy(numPlanPIndexes = read.numPlanPIndexes)
       })
-      .transform(identity, transformer(indexName))
     out.onComplete(_ => request.context.logicallyComplete())
     out
   }
@@ -72,7 +60,7 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): Future[Seq[SearchIndex]] = {
-    val request = searchRequest(HttpMethod.GET, indexesPath, timeout, retryStrategy)
+    val request = searchRequest(HttpMethod.GET, indexesPath, timeout, retryStrategy, null)
 
     core.send(request)
     val out = request.response.toScala
@@ -101,11 +89,17 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
       request.headers.set(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes)
       request
     }
-    val request = searchRequest(req, idempotent = false, timeout, retryStrategy)
+    val request = searchRequest(
+      req,
+      idempotent = false,
+      timeout,
+      retryStrategy,
+      indexDefinition.name,
+      indexPath(indexDefinition.name)
+    )
 
     core.send(request)
     val out = request.response.toScala
-      .transform(identity, transformer(indexDefinition.name))
     out.onComplete(_ => request.context.logicallyComplete())
     out.map(_ => ())
   }
@@ -115,13 +109,13 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): Future[Unit] = {
-    val request = searchRequest(HttpMethod.DELETE, indexPath(indexName), timeout, retryStrategy)
+    val request =
+      searchRequest(HttpMethod.DELETE, indexPath(indexName), timeout, retryStrategy, indexName)
 
     core.send(request)
     val out = request.response.toScala
     out.onComplete(_ => request.context.logicallyComplete())
     out
-      .transform(identity, transformer(indexName))
       .map(_ => ())
   }
 
@@ -136,20 +130,23 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
       timeout: Duration,
       retryStrategy: RetryStrategy
   ): GenericSearchRequest = {
-    searchRequest(HttpMethod.GET, indexPath(name), timeout, retryStrategy)
+    searchRequest(HttpMethod.GET, indexPath(name), timeout, retryStrategy, name)
   }
 
   private def searchRequest(
       method: HttpMethod,
       path: String,
       timeout: Duration,
-      retryStrategy: RetryStrategy
+      retryStrategy: RetryStrategy,
+      indexName: String
   ): GenericSearchRequest = {
     searchRequest(
       new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
       method == HttpMethod.GET,
       timeout,
-      retryStrategy
+      retryStrategy,
+      indexName,
+      path
     )
   }
 
@@ -157,7 +154,9 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
       httpRequest: => FullHttpRequest,
       idempotent: Boolean,
       timeout: Duration,
-      retryStrategy: RetryStrategy
+      retryStrategy: RetryStrategy,
+      indexName: String,
+      path: String
   ): GenericSearchRequest = {
     new GenericSearchRequest(
       timeout,
@@ -165,7 +164,9 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
       retryStrategy,
       () => httpRequest,
       idempotent,
-      null
+      null,
+      indexName,
+      path
     )
   }
 

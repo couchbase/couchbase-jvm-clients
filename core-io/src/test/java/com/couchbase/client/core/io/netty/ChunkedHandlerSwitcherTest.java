@@ -25,7 +25,9 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.netty.chunk.ChunkResponseParser;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
 import com.couchbase.client.core.msg.HttpRequest;
+import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.Request;
+import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.chunk.ChunkHeader;
 import com.couchbase.client.core.msg.chunk.ChunkRow;
 import com.couchbase.client.core.msg.chunk.ChunkTrailer;
@@ -196,7 +198,7 @@ class ChunkedHandlerSwitcherTest {
     }
 
     @Override
-    protected Exception failRequestWith(HttpResponseStatus status, String content) {
+    protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
       return new Exception(content);
     }
   }

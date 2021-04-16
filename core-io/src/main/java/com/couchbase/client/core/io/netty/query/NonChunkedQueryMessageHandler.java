@@ -20,6 +20,8 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseSt
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.netty.NonChunkedHttpMessageHandler;
+import com.couchbase.client.core.msg.NonChunkedHttpRequest;
+import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.service.ServiceType;
 
 class NonChunkedQueryMessageHandler extends NonChunkedHttpMessageHandler {
@@ -28,8 +30,9 @@ class NonChunkedQueryMessageHandler extends NonChunkedHttpMessageHandler {
   }
 
   @Override
-  protected Exception failRequestWith(final HttpResponseStatus status, final String content) {
+  protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
     // todo: this needs to be cleaned up with the management apis later
     return new CouchbaseException("Unknown query error: " + content);
   }
+
 }

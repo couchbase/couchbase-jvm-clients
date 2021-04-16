@@ -20,6 +20,10 @@ import com.couchbase.client.core.error.context.ErrorContext;
 
 public class IndexExistsException extends CouchbaseException {
 
+  public IndexExistsException(final String message, final ErrorContext errorContext) {
+    super(message, errorContext);
+  }
+
   public IndexExistsException(final ErrorContext ctx) {
     super("Index already exists", ctx);
   }

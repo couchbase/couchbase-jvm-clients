@@ -28,4 +28,12 @@ public class IndexNotFoundException extends CouchbaseException {
     super("Index not found", errorContext);
   }
 
+  private IndexNotFoundException(final String message, final ErrorContext errorContext) {
+    super(message, errorContext);
+  }
+
+  public static IndexNotFoundException withMessageAndErrorContext(final String message, final ErrorContext errorContext) {
+    return new IndexNotFoundException(message, errorContext);
+  }
+
 }

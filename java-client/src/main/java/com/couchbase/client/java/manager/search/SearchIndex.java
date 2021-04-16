@@ -99,6 +99,18 @@ public class SearchIndex {
     return this;
   }
 
+  /**
+   * Allows to unset the UUID from an index definition.
+   *
+   * This method is especially useful if you are creating an index definition from a index JSON blob and you want
+   * to create the index rather than modify it. If the index is not created and you leave the UUID in, the request
+   * will fail with an {@link com.couchbase.client.core.error.IndexNotFoundException}.
+   */
+  public SearchIndex unsetUuid() {
+    this.uuid = null;
+    return this;
+  }
+
   public String sourceName() {
     return sourceName;
   }

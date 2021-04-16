@@ -21,6 +21,8 @@ import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.error.ViewServiceException;
 import com.couchbase.client.core.io.netty.NonChunkedHttpMessageHandler;
+import com.couchbase.client.core.msg.NonChunkedHttpRequest;
+import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.service.ServiceType;
 
 class NonChunkedViewMessageHandler extends NonChunkedHttpMessageHandler {
@@ -30,7 +32,7 @@ class NonChunkedViewMessageHandler extends NonChunkedHttpMessageHandler {
   }
 
   @Override
-  protected Exception failRequestWith(final HttpResponseStatus status, final String content) {
+  protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
     return new ViewServiceException(content, new HttpStatusCodeException(status));
   }
 
