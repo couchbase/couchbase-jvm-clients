@@ -17,31 +17,16 @@
 package com.couchbase.client.java.manager.view;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValues;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DesignDocumentNotFoundException;
-import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.error.context.ReducedViewErrorContext;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.manager.GenericManagerResponse;
-import com.couchbase.client.core.msg.view.GenericViewRequest;
-import com.couchbase.client.core.msg.view.GenericViewResponse;
+import com.couchbase.client.core.manager.CoreViewIndexManager;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.CommonOptions;
-import com.couchbase.client.java.manager.ManagerSupport;
 import com.couchbase.client.java.view.DesignDocumentNamespace;
 
 import java.time.Duration;
@@ -50,55 +35,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.DELETE;
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.PUT;
-import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.util.CbStrings.removeStart;
-import static com.couchbase.client.core.util.CbThrowables.findCause;
-import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
-import static com.couchbase.client.java.view.DesignDocumentNamespace.DEVELOPMENT;
-import static com.couchbase.client.java.view.DesignDocumentNamespace.PRODUCTION;
-import static com.couchbase.client.java.view.DesignDocumentNamespace.requireUnqualified;
 import static com.couchbase.client.java.manager.view.DropDesignDocumentOptions.dropDesignDocumentOptions;
 import static com.couchbase.client.java.manager.view.GetAllDesignDocumentsOptions.getAllDesignDocumentsOptions;
 import static com.couchbase.client.java.manager.view.GetDesignDocumentOptions.getDesignDocumentOptions;
 import static com.couchbase.client.java.manager.view.PublishDesignDocumentOptions.publishDesignDocumentOptions;
 import static com.couchbase.client.java.manager.view.UpsertDesignDocumentOptions.upsertDesignDocumentOptions;
-import static java.nio.charset.StandardCharsets.UTF_8;
+import static com.couchbase.client.java.view.DesignDocumentNamespace.PRODUCTION;
 import static java.util.Objects.requireNonNull;
 
 public class AsyncViewIndexManager {
 
-  private final Core core;
+  private final CoreViewIndexManager coreManager;
   private final String bucket;
 
-  private class ConfigManager extends ManagerSupport {
-    public ConfigManager() {
-      super(core);
-    }
-
-    public CompletableFuture<GenericManagerResponse> sendRequest(HttpMethod method, String path,
-                                                                 CommonOptions<?>.BuiltCommonOptions options,
-                                                                 RequestSpan span) {
-      return super.sendRequest(method, path, options, span);
-    }
-  }
-
   public AsyncViewIndexManager(Core core, String bucket) {
-    this.core = requireNonNull(core);
+    coreManager = new CoreViewIndexManager(core, bucket);
     this.bucket = requireNonNull(bucket);
-  }
-
-  private String pathForDesignDocument(String name, DesignDocumentNamespace namespace) {
-    name = namespace.adjustName(requireUnqualified(name));
-    return "/" + urlEncode(bucket) + "/_design/" + urlEncode(name);
-  }
-
-  private String pathForAllDesignDocuments() {
-    return "/pools/default/buckets/" + urlEncode(bucket) + "/ddocs";
   }
 
   /**
@@ -122,33 +77,13 @@ public class AsyncViewIndexManager {
     notNull(options, "GetAllDesignDocumentsOptions", () -> new ReducedViewErrorContext(null, null, bucket));
 
     GetAllDesignDocumentsOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MV_GET_ALL_DD,
-      built.parentSpan().orElse(null)
-    );
-    span.setAttribute(TracingIdentifiers.ATTR_NAME, bucket);
-
-    return new ConfigManager().sendRequest(GET, pathForAllDesignDocuments(), built, span).thenApply(response -> {
-      // Unlike the other view management requests, this request goes through the config manager endpoint.
-      // That endpoint treats any complete HTTP response as a success, so it's up to us to check the status code.
-      if (response.status() != ResponseStatus.SUCCESS) {
-        throw new CouchbaseException("Failed to get all design documents; response status=" + response.status()
-          + "; response body=" + new String(response.content(), UTF_8));
-      }
-      return parseAllDesignDocuments(Mapper.decodeIntoTree(response.content()), namespace);
-    });
+    return coreManager.getAllDesignDocuments(namespace == PRODUCTION, timeout(built), retryStrategy(built), parentSpan(built))
+        .thenApply(AsyncViewIndexManager::parseAllDesignDocuments);
   }
 
-  private static List<DesignDocument> parseAllDesignDocuments(JsonNode node, DesignDocumentNamespace namespace) {
+  private static List<DesignDocument> parseAllDesignDocuments(Map<String, ObjectNode> ddocNameToJson) {
     List<DesignDocument> result = new ArrayList<>();
-    node.get("rows").forEach(row -> {
-      String metaId = row.path("doc").path("meta").path("id").asText();
-      String ddocName = removeStart(metaId, "_design/");
-      if (namespace.contains(ddocName)) {
-        JsonNode ddocDef = row.path("doc").path("json");
-        result.add(parseDesignDocument(ddocName, ddocDef));
-      }
-    });
+    ddocNameToJson.forEach((k, v) -> result.add(parseDesignDocument(k, v)));
     return result;
   }
 
@@ -177,19 +112,8 @@ public class AsyncViewIndexManager {
     notNull(options, "GetDesignDocumentOptions", () -> new ReducedViewErrorContext(name, null, bucket));
 
     GetDesignDocumentOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MV_GET_DD,
-      built.parentSpan().orElse(null)
-    );
-
-    return sendRequest(GET, pathForDesignDocument(name, namespace), built, span)
-        .exceptionally(t -> {
-          throw notFound(t)
-              ? DesignDocumentNotFoundException.forName(name, namespace.toString())
-              : new CouchbaseException("Failed to get design document [" + redactMeta(name) + "] from namespace " + namespace, t);
-        })
-        .thenApply(response ->
-            parseDesignDocument(name, Mapper.decodeIntoTree(response.content())));
+    return coreManager.getDesignDocument(name, namespace == PRODUCTION, timeout(built), retryStrategy(built), parentSpan(built))
+        .thenApply(responseBytes -> parseDesignDocument(name, Mapper.decodeIntoTree(responseBytes)));
   }
 
   private static DesignDocument parseDesignDocument(final String name, final JsonNode node) {
@@ -224,14 +148,8 @@ public class AsyncViewIndexManager {
     notNull(options, "UpsertDesignDocumentOptions", () -> new ReducedViewErrorContext(doc.name(), null, bucket));
 
     UpsertDesignDocumentOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MV_UPSERT_DD,
-      built.parentSpan().orElse(null)
-    );
-
-    final ObjectNode body = toJson(doc);
-    return sendJsonRequest(PUT, pathForDesignDocument(doc.name(), namespace), built, body, span)
-        .thenApply(response -> null);
+    byte[] docBytes = Mapper.encodeAsBytes(toJson(doc));
+    return coreManager.upsertDesignDocument(doc.name(), docBytes, namespace == PRODUCTION, timeout(built), retryStrategy(built), parentSpan(built));
   }
 
   /**
@@ -258,15 +176,7 @@ public class AsyncViewIndexManager {
     notNull(options, "PublishDesignDocumentOptions", () -> new ReducedViewErrorContext(name, null, bucket));
 
     PublishDesignDocumentOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MV_PUBLISH_DD, built.parentSpan().orElse(null));
-
-    return getDesignDocument(name, DEVELOPMENT, getDesignDocumentOptions().parentSpan(span))
-      .thenCompose(doc -> upsertDesignDocument(doc, PRODUCTION, upsertDesignDocumentOptions().parentSpan(span)))
-      .whenComplete((r, t) -> {
-        if (span != null) {
-          span.end();
-        }
-      });
+    return coreManager.publishDesignDocument(name, timeout(built), retryStrategy(built), parentSpan(built));
   }
 
   /**
@@ -295,33 +205,7 @@ public class AsyncViewIndexManager {
     notNull(options, "DropDesignDocumentOptions", () -> new ReducedViewErrorContext(name, null, bucket));
 
     DropDesignDocumentOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MV_DROP_DD,
-      built.parentSpan().orElse(null)
-    );
-
-    return sendRequest(DELETE, pathForDesignDocument(name, namespace), built, span)
-        .exceptionally(t -> {
-          if (notFound(t)) {
-            throw DesignDocumentNotFoundException.forName(name, namespace.toString());
-          } else {
-            throw new CouchbaseException(
-              "Failed to drop design document [" + redactMeta(name) + "] from namespace " + namespace,
-              t
-            );
-          }
-        })
-        .thenApply(response -> null);
-  }
-
-  private static boolean notFound(final Throwable t) {
-    return getHttpStatusCode(t) == HttpResponseStatus.NOT_FOUND.code();
-  }
-
-  private static int getHttpStatusCode(final Throwable t) {
-    return findCause(t, HttpStatusCodeException.class)
-        .map(HttpStatusCodeException::code)
-        .orElse(0);
+    return coreManager.dropDesignDocument(name, namespace == PRODUCTION, timeout(built), retryStrategy(built), parentSpan(built));
   }
 
   private static ObjectNode toJson(final DesignDocument doc) {
@@ -336,68 +220,15 @@ public class AsyncViewIndexManager {
     return root;
   }
 
-  private CompletableFuture<GenericViewResponse> sendRequest(final GenericViewRequest request) {
-    core.send(request);
-    return request.response();
-  }
-
-  private CompletableFuture<GenericViewResponse> sendRequest(final HttpMethod method, final String path,
-                                                             final CommonOptions<?>.BuiltCommonOptions options,
-                                                             final RequestSpan span) {
-    return sendRequest(new GenericViewRequest(timeout(options), core.context(), retryStrategy(options),
-        () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path), method == GET, bucket, span))
-      .whenComplete((r, t) -> {
-        if (span != null) {
-          span.end();
-        }
-      });
-  }
-
-  private CompletableFuture<GenericViewResponse> sendJsonRequest(final HttpMethod method, final String path,
-                                                                 final CommonOptions<?>.BuiltCommonOptions options,
-                                                                 final Object body,
-                                                                 final RequestSpan span) {
-    return sendRequest(new GenericViewRequest(timeout(options), core.context(), retryStrategy(options), () -> {
-      ByteBuf content = Unpooled.copiedBuffer(Mapper.encodeAsBytes(body));
-      DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content);
-      req.headers().add("Content-Type", HttpHeaderValues.APPLICATION_JSON);
-      req.headers().add("Content-Length", content.readableBytes());
-      return req;
-    }, method == GET, bucket, span))
-      .whenComplete((r, t) -> {
-        if (span != null) {
-          span.end();
-        }
-      });
-  }
-
-  /**
-   * Helper method to extract the timeout from the common options.
-   * <p>
-   * Even though most of the requests are dispatched to the view service, these are management operations so
-   * use the manager timeout.
-   *
-   * @param options the options to extract from.
-   * @return the extracted timeout.
-   */
   private Duration timeout(final CommonOptions<?>.BuiltCommonOptions options) {
-    return options.timeout().orElse(core.context().environment().timeoutConfig().managementTimeout());
+    return options.timeout().orElse(null); // let abstract manager supply default
   }
 
-  /**
-   * Helper method to extract the retry strategy from the common options.
-   *
-   * @param options the options to extract from.
-   * @return the extracted retry strategy.
-   */
   private RetryStrategy retryStrategy(final CommonOptions<?>.BuiltCommonOptions options) {
-    return options.retryStrategy().orElse(core.context().environment().retryStrategy());
+    return options.retryStrategy().orElse(null); // let abstract manager supply default
   }
 
-  private RequestSpan buildSpan(final String spanName, final RequestSpan parent) {
-    RequestSpan span = core.context().environment().requestTracer().requestSpan(spanName, parent);
-    span.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
-    return span;
+  private RequestSpan parentSpan(final CommonOptions<?>.BuiltCommonOptions options) {
+    return options.parentSpan().orElse(null);
   }
-
 }

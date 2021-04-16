@@ -14,10 +14,15 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.kotlin.view
+package com.couchbase.client.kotlin.manager
 
-public enum class DesignDocumentNamespace {
-    DEVELOPMENT,
-    PRODUCTION,
+import com.couchbase.client.core.logging.RedactableArgument.redactMeta
+
+public class View(
+    public val map: String,
+    public val reduce: String? = null,
+) {
+    override fun toString(): String {
+        return "View(map='${redactMeta(map)}', reduce=${redactMeta(reduce)})"
+    }
 }
-

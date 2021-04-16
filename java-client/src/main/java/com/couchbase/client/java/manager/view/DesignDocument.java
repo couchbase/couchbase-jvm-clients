@@ -25,7 +25,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.java.view.DesignDocumentNamespace.requireUnqualified;
+import static com.couchbase.client.core.manager.CoreViewIndexManager.requireUnqualifiedName;
 
 /**
  * A collection of named {@link View}s.
@@ -120,7 +120,7 @@ public class DesignDocument {
    * @return the design document, for method chaining.
    */
   public DesignDocument name(String name) {
-    this.name = requireUnqualified(name);
+    this.name = requireUnqualifiedName(name);
     return this;
   }
 

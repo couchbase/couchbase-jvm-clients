@@ -23,7 +23,9 @@ import com.couchbase.client.core.cnc.RequestTracer
 import com.couchbase.client.core.encryption.CryptoManager
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.core.env.PropertyLoader
+import com.couchbase.client.core.env.TimeoutConfig
 import com.couchbase.client.kotlin.Cluster
+import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JacksonJsonSerializer
@@ -34,6 +36,7 @@ import com.couchbase.client.kotlin.samples.createBuilderWithDefaultSettings
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentDslBuilder
 import com.couchbase.client.kotlin.internal.await
+import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.samples.preconfigureBuilderUsingDsl
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.fasterxml.jackson.module.kotlin.KotlinModule
@@ -225,6 +228,15 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
             return ClusterEnvironment(this)
         }
     }
+
+    internal fun CommonOptions.actualRetryStrategy() = retryStrategy ?: retryStrategy()
+    internal fun CommonOptions.actualSpan(name: String) = requestTracer().requestSpan(name, parentSpan)
+    internal fun CommonOptions.actualViewTimeout(): Duration = timeout ?: timeoutConfig().viewTimeout()
+    internal fun CommonOptions.actualManagementTimeout(): Duration = timeout ?: timeoutConfig().managementTimeout()
+    internal fun CommonOptions.actualQueryTimeout() = timeout ?: timeoutConfig().queryTimeout()
+    internal fun CommonOptions.actualKvTimeout(durability: Durability): Duration = timeout ?: timeoutConfig().kvTimeout(durability)
+    private fun TimeoutConfig.kvTimeout(durability: Durability): Duration =
+        if (durability.isPersistent()) kvDurableTimeout() else kvTimeout()
 }
 
 internal val Core.env : ClusterEnvironment

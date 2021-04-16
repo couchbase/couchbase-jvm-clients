@@ -34,6 +34,7 @@ import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.internal.toStringUtf8
+import com.couchbase.client.kotlin.manager.ViewIndexManager
 import com.couchbase.client.kotlin.samples.bufferedViewQuery
 import com.couchbase.client.kotlin.samples.streamingViewQuery
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace
@@ -64,6 +65,8 @@ public class Bucket internal constructor(
     internal val env = core.context().environment() as ClusterEnvironment
 
     private val scopeCache = ConcurrentHashMap<String, Scope>()
+
+    public val viewIndexes: ViewIndexManager = ViewIndexManager(this);
 
     /**
      * Returns the default collection in this bucket's default scope.
@@ -143,19 +146,21 @@ public class Bucket internal constructor(
         raw?.let { it.forEach { (key, value) -> params.set(key, value) } }
 
         return flow {
-            val request = ViewRequest(
-                common.actualViewTimeout(),
-                core.context(),
-                common.actualRetryStrategy(),
-                core.context().authenticator(),
-                this@Bucket.name,
-                designDocument,
-                viewName,
-                params.build(),
-                postBody.toOptional(),
-                namespace == DEVELOPMENT,
-                common.actualSpan(TracingIdentifiers.SPAN_REQUEST_VIEWS)
-            )
+            val request = with(env) {
+                ViewRequest(
+                    common.actualViewTimeout(),
+                    core.context(),
+                    common.actualRetryStrategy(),
+                    core.context().authenticator(),
+                    this@Bucket.name,
+                    designDocument,
+                    viewName,
+                    params.build(),
+                    postBody.toOptional(),
+                    namespace == DEVELOPMENT,
+                    common.actualSpan(TracingIdentifiers.SPAN_REQUEST_VIEWS)
+                )
+            }
             request.context().clientContext(common.clientContext)
 
             try {
@@ -200,9 +205,4 @@ public class Bucket internal constructor(
     public suspend fun config(timeout: Duration): BucketConfig =
         core.clusterConfig().bucketConfig(name)
             ?: BucketConfigUtil.waitForBucketConfig(core, name, timeout).asFlow().single()
-
-
-    internal fun CommonOptions.actualViewTimeout(): Duration = timeout ?: env.timeoutConfig().viewTimeout()
-    internal fun CommonOptions.actualRetryStrategy() = retryStrategy ?: env.retryStrategy()
-    internal fun CommonOptions.actualSpan(name: String) = env.requestTracer().requestSpan(name, parentSpan)
 }
