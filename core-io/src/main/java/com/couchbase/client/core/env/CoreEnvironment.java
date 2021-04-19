@@ -42,8 +42,11 @@ import reactor.core.scheduler.Schedulers;
 
 import java.net.URL;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -117,6 +120,7 @@ public class CoreEnvironment {
   private final Supplier<Scheduler> scheduler;
   private final OrphanReporter orphanReporter;
   private final long maxNumRequestsInRetry;
+  private final List<RequestCallback> requestCallbacks;
 
   public static CoreEnvironment create() {
     return builder().build();
@@ -184,6 +188,8 @@ public class CoreEnvironment {
     if (ioConfig.idleHttpConnectionTimeout().toMillis() > AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME.toMillis()) {
       eventBus.get().publish(new HighIdleHttpConnectionTimeoutConfiguredEvent());
     }
+
+    this.requestCallbacks = Collections.unmodifiableList(builder.requestCallbacks);
 
     checkInsecureTlsConfig();
   }
@@ -355,6 +361,11 @@ public class CoreEnvironment {
     return meter.get();
   }
 
+  @Stability.Internal
+  public List<RequestCallback> requestCallbacks() {
+    return requestCallbacks;
+  }
+
   /**
    * Returns the timer used to schedule timeouts and retries amongst other tasks.
    */
@@ -492,6 +503,7 @@ public class CoreEnvironment {
     input.put("retryStrategy", retryStrategy.getClass().getSimpleName());
     input.put("requestTracer", requestTracer.get().getClass().getSimpleName());
     input.put("meter", meter.get().getClass().getSimpleName());
+    input.put("numRequestCallbacks", requestCallbacks.size());
 
     return format.apply(input);
   }
@@ -518,6 +530,7 @@ public class CoreEnvironment {
     private Supplier<Meter> meter = null;
     private RetryStrategy retryStrategy = null;
     private long maxNumRequestsInRetry = DEFAULT_MAX_NUM_REQUESTS_IN_RETRY;
+    private final List<RequestCallback> requestCallbacks = new ArrayList<>();
 
     protected Builder() { }
 
@@ -821,6 +834,19 @@ public class CoreEnvironment {
     @Stability.Volatile
     public SELF meter(final Meter meter) {
       this.meter = new ExternalSupplier<>(notNull(meter, "Meter"));
+      return self();
+    }
+
+    /**
+     * Allows to configure callbacks across the lifetime of a request.
+     * <p>
+     * <strong>IMPORTANT:</strong> this is internal API and might change at any point in time.
+     * @param requestCallback the callback to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    @Stability.Internal
+    public SELF addRequestCallback(final RequestCallback requestCallback) {
+      this.requestCallbacks.add(notNull(requestCallback, "RequestCallback"));
       return self();
     }
 

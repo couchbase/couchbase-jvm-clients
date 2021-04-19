@@ -18,6 +18,7 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.callbacks.BeforeSendRequestCallback;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
@@ -71,16 +72,16 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
@@ -189,6 +190,8 @@ public class Core {
 
   private final Set<SeedNode> seedNodes;
 
+  private final List<BeforeSendRequestCallback> beforeSendRequestCallbacks;
+
   /**
    * Holds the response metrics per
    */
@@ -227,6 +230,13 @@ public class Core {
       currentConfig = c;
       reconfigure();
     });
+    this.beforeSendRequestCallbacks = environment
+      .requestCallbacks()
+      .stream()
+      .filter(c -> c instanceof BeforeSendRequestCallback)
+      .map(c -> (BeforeSendRequestCallback) c)
+      .collect(Collectors.toList());
+
     eventBus.publish(new CoreCreatedEvent(coreContext, environment, seedNodes));
   }
 
@@ -293,6 +303,9 @@ public class Core {
 
     if (registerForTimeout) {
       timer.register((Request<Response>) request);
+      for (BeforeSendRequestCallback cb : beforeSendRequestCallbacks) {
+        cb.beforeSend(request);
+      }
     }
 
     locator(request.serviceType()).dispatch(request, nodes, currentConfig, context());
