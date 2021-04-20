@@ -1,5 +1,5 @@
 # Couchbase JVM Clients
-
+ 
 [![license](https://img.shields.io/github/license/couchbase/couchbase-jvm-clients?color=brightgreen)](https://opensource.org/licenses/Apache-2.0)
 [![java-client](https://img.shields.io/maven-central/v/com.couchbase.client/java-client?color=brightgreen&label=java-client)](https://search.maven.org/artifact/com.couchbase.client/java-client)
 [![scala-client](https://img.shields.io/maven-central/v/com.couchbase.client/scala-client_2.12?color=brightgreen&label=scala-client)](https://search.maven.org/artifact/com.couchbase.client/scala-client_2.12)
