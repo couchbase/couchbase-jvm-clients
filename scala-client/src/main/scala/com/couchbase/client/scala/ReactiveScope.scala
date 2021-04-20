@@ -54,7 +54,7 @@ class ReactiveScope(async: AsyncScope, bucketName: String) {
     * This is a reactive API.  See [[Scope.async]] for an Future-based async version of this API, and
     * [[Scope]] for a blocking version.
     *
-    * The reason to use this Scope-based variant over [[ReactiveCluster.query]] is that it will automatically provide
+    * The reason to use this Scope-based variant over `ReactiveCluster.query` is that it will automatically provide
     * the "query_context" parameter to the query service, allowing queries to be specified on scopes and collections
     * without having to fully reference them in the query statement.
     *

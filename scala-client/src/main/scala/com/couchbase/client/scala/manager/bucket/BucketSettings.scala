@@ -75,7 +75,7 @@ object EjectionMethod {
 
   /** When ejecting an item, eject all data related to it including the id.
     *
-    * Only supported for buckets of type [[Couchbase]].
+    * Only supported for buckets of type [[BucketType.Couchbase]].
     */
   case object FullEviction extends EjectionMethod {
     override def alias: String = "fullEviction"
@@ -83,7 +83,7 @@ object EjectionMethod {
 
   /** When ejecting an item, only eject the value (body), leaving the id and other metadata.
     *
-    * Only supported for buckets of type [[Couchbase]].
+    * Only supported for buckets of type [[BucketType.Couchbase]].
     */
   case object ValueOnly extends EjectionMethod {
     override def alias: String = "valueOnly"
@@ -92,7 +92,7 @@ object EjectionMethod {
   /** Couchbase Server keeps all data until explicitly deleted, but will reject
     * any new data if you reach the quota (dedicated memory) you set for your bucket.
     *
-    * Only supported for buckets of type [[Ephemeral]].
+    * Only supported for buckets of type [[BucketType.Ephemeral]].
     */
   case object NoEviction extends EjectionMethod {
     override def alias: String = "noEviction"
@@ -101,7 +101,7 @@ object EjectionMethod {
   /** When the memory quota is reached, Couchbase Server ejects data that has
     * not been used recently.
     *
-    * Only supported for buckets of type [[Ephemeral]].
+    * Only supported for buckets of type [[BucketType.Ephemeral]].
     */
   case object NotRecentlyUsed extends EjectionMethod {
     override def alias: String = "nruEviction"
@@ -291,7 +291,7 @@ object BucketSettings {
     val numReplicas  = json.num("replicaNumber")
     val nodes        = json.arr("nodes")
     var isHealthy    = nodes.nonEmpty
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
     for (v <- nodes.values.asScala) {
       val j = v.asInstanceOf[JsonObject]
       if (j.str("status") != "healthy") {
@@ -300,11 +300,11 @@ object BucketSettings {
     }
     // Next two parameters only available post 5.X
     val maxTTL = Try(json.num("maxTTL")).toOption.getOrElse(0)
-    val compressionMode = Try('"' + json.str("compressionMode") + '"')
+    val compressionMode = Try("\"" + json.str("compressionMode") + "\"")
       .map(v => CouchbasePickler.read[CompressionMode](v))
       .getOrElse(CompressionMode.Off)
 
-    val minimumDurabilityLevel = Try('"' + json.str("durabilityMinLevel") + '"')
+    val minimumDurabilityLevel = Try("\"" + json.str("durabilityMinLevel") + "\"")
       .map(v => CouchbasePickler.read[Durability](v))
       .getOrElse(Durability.Disabled)
 
@@ -314,8 +314,8 @@ object BucketSettings {
       ramMB,
       numReplicas,
       Try(json.bool("replicaIndex")).toOption.getOrElse(false),
-      CouchbasePickler.read[BucketType]('"' + json.str("bucketType") + '"'),
-      CouchbasePickler.read[EjectionMethod]('"' + json.str("evictionPolicy") + '"'),
+      CouchbasePickler.read[BucketType]("\"" + json.str("bucketType") + "\""),
+      CouchbasePickler.read[EjectionMethod]("\"" + json.str("evictionPolicy") + "\""),
       maxTTL,
       compressionMode,
       minimumDurabilityLevel,
@@ -325,7 +325,7 @@ object BucketSettings {
 
   def parseSeqFrom(raw: Array[Byte]): Seq[BucketSettings] = {
     val jsonArr = JsonArray.fromJson(new String(raw, StandardCharsets.UTF_8)).get
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
     jsonArr.values.asScala.toSeq.map(v => {
       val j = v.asInstanceOf[JsonObject]
       parseFrom(j)
@@ -340,11 +340,13 @@ object BucketSettings {
         case Majority                   => "majority"
         case MajorityAndPersistToActive => "majorityAndPersistActive"
         case PersistToMajority          => "persistToMajority"
+        case _                          => throw new IllegalStateException("Unknown durability")
       }, {
         case "none"                     => Disabled
         case "majority"                 => Majority
         case "majorityAndPersistActive" => MajorityAndPersistToActive
         case "persistToMajority"        => PersistToMajority
+        case _                          => throw new IllegalStateException("Unknown durability")
       }
     )
 }

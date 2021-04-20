@@ -137,6 +137,7 @@ class EnvironmentSpec {
 
         assert(cluster.env.threadPool.isShutdown)
         assert(cluster.env.threadPool.isTerminated)
+      case _ => assert(false)
     }
   }
 
@@ -156,6 +157,7 @@ class EnvironmentSpec {
 
         // App should not shutdown an owned env, but make sure it's harmless
         cluster.env.shutdown()
+      case _ => assert(false)
     }
   }
 

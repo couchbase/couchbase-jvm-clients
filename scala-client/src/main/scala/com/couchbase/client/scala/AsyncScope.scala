@@ -75,7 +75,7 @@ class AsyncScope private[scala] (
     * This is asynchronous.  See [[Scope.reactive]] for a reactive streaming version of this API, and
     * [[Scope]] for a blocking version.
     *
-    * The reason to use this Scope-based variant over [[AsyncCluster.query]] is that it will automatically provide
+    * The reason to use this Scope-based variant over `AsyncCluster.query` is that it will automatically provide
     * the "query_context" parameter to the query service, allowing queries to be specified on scopes and collections
     * without having to fully reference them in the query statement.
     *

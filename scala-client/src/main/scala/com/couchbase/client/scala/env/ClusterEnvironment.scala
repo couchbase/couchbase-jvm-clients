@@ -20,11 +20,7 @@ import java.util.concurrent.{Executors, ThreadFactory}
 import com.couchbase.client.core
 import com.couchbase.client.core.annotation.Stability.{Uncommitted, Volatile}
 import com.couchbase.client.core.cnc.{EventBus, RequestTracer}
-import com.couchbase.client.core.env.{
-  ConnectionStringPropertyLoader,
-  CoreEnvironment,
-  PropertyLoader
-}
+import com.couchbase.client.core.env.{ConnectionStringPropertyLoader, PropertyLoader}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.codec.{JsonTranscoder, Transcoder}
 import com.couchbase.client.scala.util.DurationConversions._
@@ -73,7 +69,9 @@ object ClusterEnvironment {
       private[scala] val maxNumRequestsInRetry: Option[Int] = None,
       private[scala] val transcoder: Option[Transcoder] = None,
       private[scala] val propertyLoaders: Seq[PropertyLoader[
-        CoreEnvironment.Builder[SELF] forSome { type SELF <: CoreEnvironment.Builder[SELF] }
+        com.couchbase.client.core.env.CoreEnvironment.Builder[SELF] forSome {
+          type SELF <: com.couchbase.client.core.env.CoreEnvironment.Builder[SELF]
+        }
       ]] = Seq()
   ) {
 
@@ -205,7 +203,9 @@ object ClusterEnvironment {
     @Volatile
     def loaders(
         propertyLoaders: Seq[PropertyLoader[
-          CoreEnvironment.Builder[SELF] forSome { type SELF <: CoreEnvironment.Builder[SELF] }
+          com.couchbase.client.core.env.CoreEnvironment.Builder[SELF] forSome {
+            type SELF <: com.couchbase.client.core.env.CoreEnvironment.Builder[SELF]
+          }
         ]]
     ): ClusterEnvironment.Builder = {
       copy(propertyLoaders = propertyLoaders)

@@ -133,7 +133,7 @@ class ReactiveBucketManager(core: Core) {
         )
       );
     } else {
-      Success()
+      Success(())
     }
   }
 
@@ -180,6 +180,7 @@ class ReactiveBucketManager(core: Core) {
         case Majority                   => "majority"
         case MajorityAndPersistToActive => "majorityAndPersistActive"
         case PersistToMajority          => "persistToMajority"
+        case _                          => throw new IllegalStateException("Unknown durability")
       }
       .foreach(v => params.add("durabilityMinLevel", v))
 
