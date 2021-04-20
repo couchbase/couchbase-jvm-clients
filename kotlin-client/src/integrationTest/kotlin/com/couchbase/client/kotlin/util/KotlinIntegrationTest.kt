@@ -41,14 +41,15 @@ internal open class KotlinIntegrationTest : ClusterAwareIntegrationTest() {
     private val lazyCluster = lazy { connect() }
     protected val cluster by lazyCluster
 
-    protected val collection by lazy {
+    protected val bucket by lazy {
         runBlocking {
             cluster.bucket(config().bucketname())
                 // It should not take this long, but the Jenkins box...
                 .waitUntilReady(Duration.ofSeconds(30))
-                .defaultCollection()
         }
     }
+
+    protected val collection by lazy { bucket.defaultCollection() }
 
     private val nextIdCounter = AtomicLong()
     private val nextIdBase = "integration-test-${System.currentTimeMillis()}-${UUID.randomUUID()}-"
