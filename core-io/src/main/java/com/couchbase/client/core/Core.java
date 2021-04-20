@@ -17,10 +17,12 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.events.core.BucketClosedEvent;
+import com.couchbase.client.core.cnc.events.core.BucketOpenFailedEvent;
 import com.couchbase.client.core.cnc.events.core.BucketOpenInitiatedEvent;
 import com.couchbase.client.core.cnc.events.core.BucketOpenedEvent;
 import com.couchbase.client.core.cnc.events.core.CoreCreatedEvent;
@@ -41,6 +43,7 @@ import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -354,6 +357,8 @@ public class Core {
             } else if (throwable.getMessage().contains("NO_ACCESS")) {
               reason = InitGlobalConfigFailedEvent.Reason.NO_ACCESS;
             }
+          } else if (throwable instanceof AlreadyShutdownException) {
+            reason = InitGlobalConfigFailedEvent.Reason.SHUTDOWN;
           }
           eventBus.publish(new InitGlobalConfigFailedEvent(
             reason.severity(),
@@ -377,7 +382,21 @@ public class Core {
     long start = System.nanoTime();
     configurationProvider
       .openBucket(name)
-      .subscribe(v -> {}, t -> {}, () -> eventBus.publish(new BucketOpenedEvent(
+      .subscribe(
+        v -> {},
+        t -> {
+          Event.Severity severity = t instanceof AlreadyShutdownException
+            ? Event.Severity.DEBUG
+            : Event.Severity.WARN;
+          eventBus.publish(new BucketOpenFailedEvent(
+            name,
+            severity,
+            Duration.ofNanos(System.nanoTime() - start),
+            coreContext,
+            t
+          ));
+        },
+        () -> eventBus.publish(new BucketOpenedEvent(
           Duration.ofNanos(System.nanoTime() - start),
           coreContext,
           name
