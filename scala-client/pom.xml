@@ -324,6 +324,7 @@
                         <!--Required for Scala 2.11 build, this enables support for Java SAM.  This is on by default in-->
                         <!--Scala 2.12+ -->
                         <arg>-Xexperimental</arg>
+                        <arg>-language:postfixOps</arg>
                         <arg>-target:jvm-1.8</arg>
                         <arg>-deprecation</arg>
                         <arg>-feature</arg>

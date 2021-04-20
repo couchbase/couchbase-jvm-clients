@@ -326,7 +326,7 @@ object BucketSettings {
   def parseSeqFrom(raw: Array[Byte]): Seq[BucketSettings] = {
     val jsonArr = JsonArray.fromJson(new String(raw, StandardCharsets.UTF_8)).get
     import scala.collection.JavaConverters._
-    jsonArr.values.asScala.map(v => {
+    jsonArr.values.asScala.toSeq.map(v => {
       val j = v.asInstanceOf[JsonObject]
       parseFrom(j)
     })
