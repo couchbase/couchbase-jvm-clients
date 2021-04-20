@@ -436,10 +436,16 @@ public abstract class BaseEndpoint implements Endpoint {
    * @param input the input exception.
    * @return the trimmed exception.
    */
+  @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
   private Throwable trimNettyFromStackTrace(final Throwable input) {
+    if (input == null) {
+      return null;
+    }
+
     final List<StackTraceElement> elements = new LinkedList<>(Arrays.asList(input.getStackTrace()));
     elements.removeIf(next -> next.getClassName().startsWith("com.couchbase.client.core.deps.io.netty"));
     input.setStackTrace(elements.toArray(new StackTraceElement[] {}));
+    trimNettyFromStackTrace(input.getCause());
     return input;
   }
 
