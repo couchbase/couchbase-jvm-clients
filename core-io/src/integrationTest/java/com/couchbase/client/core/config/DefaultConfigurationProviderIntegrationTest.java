@@ -31,7 +31,6 @@ import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -150,73 +149,6 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     provider.shutdown().block();
 
     waitUntilCondition(() -> eventBus.publishedEvents().stream().anyMatch(e -> e instanceof EndpointConnectionFailedEvent));
-  }
-
-  /**
-   * Error should be propagated when no good seed node is given.
-   *
-   * <p>Note that the timeout will be provided by the upper level, but if none is provided then
-   * the natural timeout is dictated by the kv timeout + manager timeout as the maximum because
-   * it performs the kv fetch and then the manager fetch as a fallback.</p>
-   */
-  @Test
-  void propagateErrorFromInvalidSeedHostname() {
-    Set<SeedNode> seeds = new HashSet<>(Collections.singletonList(SeedNode.create("1.2.3.4")));
-
-    Duration connectTimeout = Duration.ofMillis(100);
-
-    SimpleEventBus eventBus = new SimpleEventBus(true);
-    environment = CoreEnvironment.builder()
-      .eventBus(eventBus)
-      .timeoutConfig(TimeoutConfig
-        .connectTimeout(connectTimeout)
-      )
-      .build();
-    core = Core.create(environment, authenticator(), seeds);
-
-    String bucketName = config().bucketname();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
-
-    long start = System.nanoTime();
-    assertThrows(ConfigException.class, () -> provider.openBucket(bucketName).block());
-    long end = System.nanoTime();
-
-    long actual = TimeUnit.NANOSECONDS.toMillis(end - start);
-    assertTrue(
-      actual >= connectTimeout.toMillis(),
-      "Expected >= " + connectTimeout.toMillis() + "ms, Actual: " + actual + "ms");
-    provider.shutdown().block();
-  }
-
-  /**
-   * Error should be propagated when the seed node is good but the port is not.
-   */
-  @Disabled
-  void propagateErrorFromInvalidSeedPort() {
-    TestNodeConfig cfg = config().firstNodeWith(Services.KV).get();
-    Set<SeedNode> seeds = new HashSet<>(Collections.singletonList(SeedNode.create(
-      cfg.hostname(),
-      Optional.of(9999),
-      Optional.of(9998)
-    )));
-
-    environment = CoreEnvironment.builder()
-      .timeoutConfig(TimeoutConfig
-        .kvTimeout(Duration.ofMillis(500))
-        .managementTimeout(Duration.ofMillis(500))
-      )
-      .build();
-    core = Core.create(environment, authenticator(), seeds);
-
-    String bucketName = config().bucketname();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
-
-    long start = System.nanoTime();
-    assertThrows(ConfigException.class, () -> provider.openBucket(bucketName).block());
-    long end = System.nanoTime();
-
-    assertTrue(TimeUnit.NANOSECONDS.toSeconds(end - start) >= 1);
-    provider.shutdown().block();
   }
 
   /**

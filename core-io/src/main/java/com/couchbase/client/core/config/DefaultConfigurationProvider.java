@@ -24,6 +24,7 @@ import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEve
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshSucceededEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
+import com.couchbase.client.core.cnc.events.config.GlobalConfigRetriedEvent;
 import com.couchbase.client.core.cnc.events.config.GlobalConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.IndividualGlobalConfigLoadFailedEvent;
 import com.couchbase.client.core.cnc.events.config.SeedNodesUpdatedEvent;
@@ -43,6 +44,8 @@ import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.SeedNodeOutdatedException;
+import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.json.Mapper;
@@ -231,23 +234,24 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             .retryWhen(
               Retry.from(companion -> companion.flatMap(rs -> {
                 final Throwable f = rs.failure();
-
-                if ((f instanceof ConfigException
-                  && f.getCause() instanceof RequestCanceledException
-                  && ((RequestCanceledException) f.getCause()).reason() == CancellationReason.TARGET_NODE_REMOVED)
-                  || f instanceof BucketNotFoundDuringLoadException
-                  || f instanceof BucketNotReadyDuringLoadException) {
-                  // For bucket not found wait a bit longer, retry the rest quickly
-                  Duration delay = f instanceof BucketNotFoundDuringLoadException
-                    || f instanceof BucketNotReadyDuringLoadException
-                    ? Duration.ofMillis(500)
-                    : Duration.ofMillis(1);
-                  eventBus.publish(new BucketOpenRetriedEvent(name, delay, core.context(), f));
-                  return Mono
-                    .just(rs.totalRetries())
-                    .delayElement(delay, core.context().environment().scheduler());
+                if (shutdown.get()) {
+                  return Mono.error(new AlreadyShutdownException());
                 }
-                return Mono.error(Exceptions.propagate(rs.failure()));
+                if (f instanceof UnsupportedConfigMechanismException) {
+                  return Mono.error(Exceptions.propagate(f));
+                }
+
+                boolean bucketNotFound = f instanceof BucketNotFoundDuringLoadException;
+                boolean bucketNotReady = f instanceof BucketNotReadyDuringLoadException;
+
+                // For bucket not found or not ready wait a bit longer, retry the rest quickly
+                Duration delay = bucketNotFound || bucketNotReady
+                  ? Duration.ofMillis(500)
+                  : Duration.ofMillis(1);
+                eventBus.publish(new BucketOpenRetriedEvent(name, delay, core.context(), f));
+                return Mono
+                  .just(rs.totalRetries())
+                  .delayElement(delay, core.context().environment().scheduler());
               })))
           )
           .take(1)
@@ -377,13 +381,21 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
                     seed.address()
                   )));
               })
-              .retryWhen(Retry.from(companion -> companion.map(rs -> {
-                if (rs.failure() instanceof ConfigException
-                  && rs.failure().getCause() instanceof RequestCanceledException
-                  && ((RequestCanceledException) rs.failure().getCause()).reason() == CancellationReason.TARGET_NODE_REMOVED) {
-                  return rs.totalRetries();
+              .retryWhen(Retry.from(companion -> companion.flatMap(rs -> {
+                Throwable f = rs.failure();
+
+                if (shutdown.get()) {
+                  return Mono.error(new AlreadyShutdownException());
                 }
-                throw Exceptions.propagate(rs.failure());
+                if (f instanceof UnsupportedConfigMechanismException) {
+                  return Mono.error(Exceptions.propagate(f));
+                }
+
+                Duration delay = Duration.ofMillis(1);
+                eventBus.publish(new GlobalConfigRetriedEvent(delay, core.context(), f));
+                return Mono
+                  .just(rs.totalRetries())
+                  .delayElement(delay, core.context().environment().scheduler());
               })))
               .onErrorResume(throwable -> {
                 if (hasErrored.compareAndSet(false, true)) {
