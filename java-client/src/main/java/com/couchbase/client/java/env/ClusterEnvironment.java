@@ -23,6 +23,7 @@ import com.couchbase.client.java.codec.DefaultJsonSerializer;
 import com.couchbase.client.java.codec.JacksonJsonSerializer;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.JsonTranscoder;
+import com.couchbase.client.java.codec.JsonValueSerializerWrapper;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.json.JsonObjectCrypto;
 
@@ -50,7 +51,9 @@ public class ClusterEnvironment extends CoreEnvironment {
 
   private ClusterEnvironment(Builder builder) {
     super(builder);
-    this.jsonSerializer = defaultIfNull(builder.jsonSerializer, () -> newDefaultSerializer(builder.cryptoManager));
+    this.jsonSerializer = builder.jsonSerializer != null
+        ? new JsonValueSerializerWrapper(builder.jsonSerializer)
+        : newDefaultSerializer(builder.cryptoManager);
     this.transcoder = defaultIfNull(builder.transcoder, () -> JsonTranscoder.create(jsonSerializer));
     this.cryptoManager = Optional.ofNullable(builder.cryptoManager);
   }
