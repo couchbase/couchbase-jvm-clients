@@ -20,6 +20,11 @@ import com.couchbase.client.core.Core
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE
+import com.couchbase.client.kotlin.analytics.AnalyticsFlowItem
+import com.couchbase.client.kotlin.analytics.AnalyticsParameters
+import com.couchbase.client.kotlin.analytics.AnalyticsPriority
+import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
+import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.internal.toOptional
@@ -44,6 +49,7 @@ public class Scope(
     private val collectionCache = ConcurrentHashMap<String, Collection>()
 
     private val queryExecutor = QueryExecutor(core, this)
+    private val analyticsExecutor = AnalyticsExecutor(core, this)
 
     /**
      * Opens a collection for this scope.
@@ -180,4 +186,32 @@ public class Scope(
         )
     }
 
+    public fun analyticsQuery(
+        statement: String,
+        common: CommonOptions = CommonOptions.Default,
+        parameters: AnalyticsParameters = AnalyticsParameters.None,
+
+        serializer: JsonSerializer? = null,
+
+        consistency: AnalyticsScanConsistency = AnalyticsScanConsistency.notBounded(),
+        readonly: Boolean = false,
+        priority: AnalyticsPriority = AnalyticsPriority.normal(),
+
+        clientContextId: String? = UUID.randomUUID().toString(),
+        raw: Map<String, Any?> = emptyMap(),
+
+        ): Flow<AnalyticsFlowItem> {
+
+        return analyticsExecutor.query(
+            statement,
+            common,
+            parameters,
+            serializer,
+            consistency,
+            readonly,
+            priority,
+            clientContextId,
+            raw
+        )
+    }
 }

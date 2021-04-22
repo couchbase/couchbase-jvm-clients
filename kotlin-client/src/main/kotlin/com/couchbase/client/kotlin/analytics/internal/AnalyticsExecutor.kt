@@ -14,26 +14,24 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.kotlin.query.internal
+package com.couchbase.client.kotlin.analytics.internal
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.cnc.TracingIdentifiers
-import com.couchbase.client.core.msg.query.QueryRequest
-import com.couchbase.client.core.msg.query.QueryRequest.queryContext
+import com.couchbase.client.core.msg.analytics.AnalyticsRequest
 import com.couchbase.client.core.util.Golang
 import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.Scope
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
+import com.couchbase.client.kotlin.analytics.AnalyticsFlowItem
+import com.couchbase.client.kotlin.analytics.AnalyticsMetadata
+import com.couchbase.client.kotlin.analytics.AnalyticsParameters
+import com.couchbase.client.kotlin.analytics.AnalyticsPriority
+import com.couchbase.client.kotlin.analytics.AnalyticsRow
+import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.env.env
 import com.couchbase.client.kotlin.logicallyComplete
-import com.couchbase.client.kotlin.query.QueryFlowItem
-import com.couchbase.client.kotlin.query.QueryMetadata
-import com.couchbase.client.kotlin.query.QueryParameters
-import com.couchbase.client.kotlin.query.QueryProfile
-import com.couchbase.client.kotlin.query.QueryRow
-import com.couchbase.client.kotlin.query.QueryScanConsistency
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
@@ -41,42 +39,30 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.asFlow
 
-internal class QueryExecutor(
+internal class AnalyticsExecutor(
     private val core: Core,
     private val scope: Scope? = null,
 ) {
     private val bucketName = scope?.bucket?.name
     private val scopeName = scope?.name
-    private val queryContext = scope?.let { queryContext(scope.bucket.name, scope.name) }
+    private val queryContext = scope?.let { AnalyticsRequest.queryContext(scope.bucket.name, scope.name) }
 
-    @OptIn(VolatileCouchbaseApi::class)
     fun query(
         statement: String,
         common: CommonOptions,
-        parameters: QueryParameters,
+        parameters: AnalyticsParameters,
 
         serializer: JsonSerializer?,
 
-        consistency: QueryScanConsistency,
+        consistency: AnalyticsScanConsistency,
         readonly: Boolean,
-        adhoc: Boolean,
-        flexIndex: Boolean,
-
-        metrics: Boolean,
-        @VolatileCouchbaseApi profile: QueryProfile,
-
-        maxParallelism: Int?,
-        scanCap: Int?,
-        pipelineBatch: Int?,
-        pipelineCap: Int?,
+        priority: AnalyticsPriority,
 
         clientContextId: String?,
         raw: Map<String, Any?>,
-    ): Flow<QueryFlowItem> {
+    ): Flow<AnalyticsFlowItem> {
 
-        if (!adhoc) TODO("adhoc=false not yet implemented")
-
-        val timeout = with(core.env) { common.actualQueryTimeout() }
+        val timeout = with(core.env) { common.actualAnalyticsTimeout() }
 
         // use interface type so less capable serializers don't freak out
         val queryJson: MutableMap<String, Any?> = HashMap<String, Any?>()
@@ -85,16 +71,8 @@ internal class QueryExecutor(
         queryJson["timeout"] = Golang.encodeDurationToMs(timeout)
 
         if (readonly) queryJson["readonly"] = true
-        if (flexIndex) queryJson["use_fts"] = true
-        if (!metrics) queryJson["metrics"] = false
-
-        if (profile !== QueryProfile.OFF) queryJson["profile"] = profile.toString()
 
         clientContextId?.let { queryJson["client_context_id"] = it }
-        maxParallelism?.let { queryJson["max_parallelism"] = it.toString() }
-        pipelineCap?.let { queryJson["pipeline_cap"] = it.toString() }
-        pipelineBatch?.let { queryJson["pipeline_batch"] = it.toString() }
-        scanCap?.let { queryJson["scan_cap"] = it.toString() }
 
         consistency.inject(queryJson)
         parameters.inject(queryJson)
@@ -108,16 +86,17 @@ internal class QueryExecutor(
 
         return flow {
             val request = with(core.env) {
-                QueryRequest(
-                    timeout,
+                AnalyticsRequest(
+                    common.actualAnalyticsTimeout(),
                     core.context(),
                     common.actualRetryStrategy(),
                     core.context().authenticator(),
-                    statement,
                     queryBytes,
+                    priority.wireValue,
                     readonly,
                     clientContextId,
-                    common.actualSpan(TracingIdentifiers.SPAN_REQUEST_QUERY),
+                    statement,
+                    common.actualSpan(TracingIdentifiers.SPAN_REQUEST_ANALYTICS),
                     bucketName,
                     scopeName,
                 )
@@ -130,10 +109,10 @@ internal class QueryExecutor(
                 val response = request.response().await()
 
                 emitAll(response.rows().asFlow()
-                    .map { QueryRow(it.data(), actualSerializer) })
+                    .map { AnalyticsRow(it.data(), actualSerializer) })
 
                 emitAll(response.trailer().asFlow()
-                    .map { QueryMetadata(response.header(), it) })
+                    .map { AnalyticsMetadata(response.header(), it) })
 
             } finally {
                 request.logicallyComplete()

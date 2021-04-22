@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.kotlin.query
+package com.couchbase.client.kotlin.analytics
 
 /**
  * Create instances using the [positional] or [named] factory methods.
  */
-public sealed class QueryParameters {
+public sealed class AnalyticsParameters {
 
     internal abstract fun inject(queryJson: MutableMap<String, Any?>)
 
-    public object None : QueryParameters() {
+    public object None : AnalyticsParameters() {
         override fun inject(queryJson: MutableMap<String, Any?>) {
         }
     }
 
     private class Named internal constructor(
         private val values: Map<String, Any?>,
-    ) : QueryParameters() {
+    ) : AnalyticsParameters() {
         override fun inject(queryJson: MutableMap<String, Any?>): Unit =
             values.forEach { (key, value) ->
                 queryJson[key.addPrefixIfAbsent("$")] = value
@@ -42,7 +42,7 @@ public sealed class QueryParameters {
 
     private class Positional internal constructor(
         private val values: List<Any?>,
-    ) : QueryParameters() {
+    ) : AnalyticsParameters() {
         override fun inject(queryJson: MutableMap<String, Any?>): Unit {
             if (values.isNotEmpty()) {
                 queryJson["args"] = values
@@ -51,8 +51,8 @@ public sealed class QueryParameters {
     }
 
     public companion object {
-        public fun positional(values: List<Any?>): QueryParameters = Positional(values)
-        public fun named(values: Map<String, Any?>): QueryParameters = Named(values)
-        public fun named(vararg values: Pair<String, Any?>): QueryParameters = Named(values.toMap())
+        public fun positional(values: List<Any?>): AnalyticsParameters = Positional(values)
+        public fun named(values: Map<String, Any?>): AnalyticsParameters = Named(values)
+        public fun named(vararg values: Pair<String, Any?>): AnalyticsParameters = Named(values.toMap())
     }
 }

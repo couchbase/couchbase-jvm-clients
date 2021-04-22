@@ -32,11 +32,11 @@ import com.couchbase.client.kotlin.codec.JacksonJsonSerializer
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.JsonTranscoder
 import com.couchbase.client.kotlin.codec.Transcoder
-import com.couchbase.client.kotlin.samples.createBuilderWithDefaultSettings
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentDslBuilder
 import com.couchbase.client.kotlin.internal.await
 import com.couchbase.client.kotlin.kv.Durability
+import com.couchbase.client.kotlin.samples.createBuilderWithDefaultSettings
 import com.couchbase.client.kotlin.samples.preconfigureBuilderUsingDsl
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.fasterxml.jackson.module.kotlin.KotlinModule
@@ -234,7 +234,9 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
     internal fun CommonOptions.actualViewTimeout(): Duration = timeout ?: timeoutConfig().viewTimeout()
     internal fun CommonOptions.actualManagementTimeout(): Duration = timeout ?: timeoutConfig().managementTimeout()
     internal fun CommonOptions.actualQueryTimeout() = timeout ?: timeoutConfig().queryTimeout()
-    internal fun CommonOptions.actualKvTimeout(durability: Durability): Duration = timeout ?: timeoutConfig().kvTimeout(durability)
+    internal fun CommonOptions.actualAnalyticsTimeout() = timeout ?: timeoutConfig().analyticsTimeout()
+    internal fun CommonOptions.actualKvTimeout(durability: Durability): Duration =
+        timeout ?: timeoutConfig().kvTimeout(durability)
     private fun TimeoutConfig.kvTimeout(durability: Durability): Duration =
         if (durability.isPersistent()) kvDurableTimeout() else kvTimeout()
 }

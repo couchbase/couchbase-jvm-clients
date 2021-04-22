@@ -30,6 +30,11 @@ import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASES
 import com.couchbase.client.core.util.ConnectionStringUtil
 import com.couchbase.client.kotlin.Cluster.Companion.connect
+import com.couchbase.client.kotlin.analytics.AnalyticsFlowItem
+import com.couchbase.client.kotlin.analytics.AnalyticsParameters
+import com.couchbase.client.kotlin.analytics.AnalyticsPriority
+import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
+import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.env.ClusterEnvironment
@@ -98,6 +103,7 @@ public class Cluster internal constructor(
     private val bucketCache = ConcurrentHashMap<String, Bucket>()
 
     private val queryExecutor = QueryExecutor(core)
+    private val analyticsExecutor = AnalyticsExecutor(core)
 
     init {
         core.initGlobalConfig()
@@ -250,6 +256,35 @@ public class Cluster internal constructor(
             pipelineCap,
             clientContextId,
             raw,
+        )
+    }
+
+    public fun analyticsQuery(
+        statement: String,
+        common: CommonOptions = CommonOptions.Default,
+        parameters: AnalyticsParameters = AnalyticsParameters.None,
+
+        serializer: JsonSerializer? = null,
+
+        consistency: AnalyticsScanConsistency = AnalyticsScanConsistency.notBounded(),
+        readonly: Boolean = false,
+        priority: AnalyticsPriority = AnalyticsPriority.normal(),
+
+        clientContextId: String? = UUID.randomUUID().toString(),
+        raw: Map<String, Any?> = emptyMap(),
+
+        ): Flow<AnalyticsFlowItem> {
+
+        return analyticsExecutor.query(
+            statement,
+            common,
+            parameters,
+            serializer,
+            consistency,
+            readonly,
+            priority,
+            clientContextId,
+            raw
         )
     }
 

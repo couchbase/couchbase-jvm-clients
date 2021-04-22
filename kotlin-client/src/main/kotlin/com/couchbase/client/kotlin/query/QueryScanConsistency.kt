@@ -67,12 +67,12 @@ public sealed class QueryScanConsistency(
             if (tokens.isEmpty()) NotBounded else ConsistentWith(tokens, scanWait)
     }
 
-    public object NotBounded : QueryScanConsistency(null, null)
+    private object NotBounded : QueryScanConsistency(null, null)
 
-    public class RequestPlus internal constructor(scanWait: Duration? = null) :
+    private class RequestPlus internal constructor(scanWait: Duration? = null) :
         QueryScanConsistency("request_plus", scanWait)
 
-    public class ConsistentWith internal constructor(
+    private class ConsistentWith internal constructor(
         private val tokens: MutationState,
         scanWait: Duration? = null,
     ) : QueryScanConsistency("at_plus", scanWait) {
