@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.search;
 
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +45,17 @@ class SearchOptionsTest {
     output = JsonObject.create();
     searchOptions().build().injectParams("idx", output);
     assertFalse(output.containsKey("score"));
+  }
+
+  /**
+   * Makes sure that the list of collection (when provided) are turned into their correct JSON
+   * payload.
+   */
+  @Test
+  void canProvideCollections() {
+    JsonObject output = JsonObject.create();
+    searchOptions().collections("a", "b").build().injectParams("idx", output);
+    assertEquals(output.getArray("collections"), JsonArray.from("a", "b"));
   }
 
 }

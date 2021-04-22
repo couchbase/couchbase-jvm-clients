@@ -36,19 +36,20 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 public class SearchOptions extends CommonOptions<SearchOptions> {
 
-  private Integer limit;
-  private Integer skip;
-  private Boolean explain;
+  private String[] collections;
   private SearchScanConsistency consistency;
-  private boolean disableScoring = false;
   private MutationState consistentWith;
-  private HighlightStyle highlightStyle;
-  private String[] highlightFields;
-  private JsonArray sort;
+  private boolean disableScoring = false;
+  private Boolean explain;
   private Map<String, SearchFacet> facets;
   private String[] fields;
-  private JsonSerializer serializer;
+  private String[] highlightFields;
+  private HighlightStyle highlightStyle;
+  private Integer limit;
   private Map<String, Object> raw;
+  private JsonSerializer serializer;
+  private Integer skip;
+  private JsonArray sort;
 
   public static SearchOptions searchOptions() {
     return new SearchOptions();
@@ -67,7 +68,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
    * Note that the value will be passed through a JSON encoder, so do not provide already encoded JSON as the value. If
    * you want to pass objects or arrays, you can use {@link JsonObject} and {@link JsonArray} respectively.
    *
-   * @param key the parameter name (key of the JSON property)  or empty.
+   * @param key   the parameter name (key of the JSON property)  or empty.
    * @param value the parameter value (value of the JSON property).
    * @return the same {@link QueryOptions} for chaining purposes.
    */
@@ -115,12 +116,12 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
 
   /**
    * Configures the highlighting of matches in the response.
-   *
+   * <p>
    * This drives the inclusion of the {@link SearchRow#fragments() fragments} in each {@link SearchRow hit}.
-   *
+   * <p>
    * Note that to be highlighted, the fields must be stored in the FTS index.
    *
-   * @param style the {@link HighlightStyle} to apply.
+   * @param style  the {@link HighlightStyle} to apply.
    * @param fields the optional fields on which to highlight. If none, all fields where there is a match are highlighted.
    * @return this SearchQuery for chaining.
    */
@@ -135,9 +136,9 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   /**
    * Configures the highlighting of matches in the response, for the specified fields and using the server's default
    * highlighting style.
-   *
+   * <p>
    * This drives the inclusion of the {@link SearchRow#fragments() fragments} in each {@link SearchRow hit}.
-   *
+   * <p>
    * Note that to be highlighted, the fields must be stored in the FTS index.
    *
    * @param fields the optional fields on which to highlight. If none, all fields where there is a match are highlighted.
@@ -150,9 +151,9 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   /**
    * Configures the highlighting of matches in the response for all fields, using the server's default highlighting
    * style.
-   *
+   * <p>
    * This drives the inclusion of the {@link SearchRow#fragments() fragments} in each {@link SearchRow hit}.
-   *
+   * <p>
    * Note that to be highlighted, the fields must be stored in the FTS index.
    *
    * @return this SearchQuery for chaining.
@@ -164,9 +165,9 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   /**
    * Configures the list of fields for which the whole value should be included in the response. If empty, no field
    * values are included.
-   *
+   * <p>
    * This drives the inclusion of the fields in each {@link SearchRow hit}.
-   *
+   * <p>
    * Note that to be highlighted, the fields must be stored in the FTS index.
    *
    * @param fields the fields to include.
@@ -175,6 +176,21 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   public SearchOptions fields(String... fields) {
     if (fields != null) {
       this.fields = fields;
+    }
+    return this;
+  }
+
+  /**
+   * Allows to limit the search query to a specific list of collection names.
+   * <p>
+   * NOTE: this is only supported with server 7.0 and later.
+   *
+   * @param collectionNames the names of the collections this query should be limited to.
+   * @return this SearchQuery for chaining.
+   */
+  public SearchOptions collections(String... collectionNames) {
+    if (collectionNames != null) {
+      this.collections = collectionNames;
     }
     return this;
   }
@@ -207,13 +223,13 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   /**
    * Configures the list of fields (including special fields) which are used for sorting purposes. If empty, the
    * default sorting (descending by score) is used by the server.
-   *
+   * <p>
    * The list of sort fields can include actual fields (like "firstname" but then they must be stored in the index,
    * configured in the server side mapping). Fields provided first are considered first and in a "tie" case the
    * next sort field is considered. So sorting by "firstname" and then "lastname" will first sort ascending by
    * the firstname and if the names are equal then sort ascending by lastname. Special fields like "_id" and "_score"
    * can also be used. If prefixed with "-" the sort order is set to descending.
-   *
+   * <p>
    * If no sort is provided, it is equal to sort("-_score"), since the server will sort it by score in descending
    * order.
    *
@@ -244,12 +260,12 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
 
   /**
    * Adds one {@link SearchFacet} to the query.
-   *
+   * <p>
    * This is an additive operation (the given facets are added to any facet previously requested),
    * but if an existing facet has the same name it will be replaced.
-   *
+   * <p>
    * This drives the inclusion of the facets in the {@link SearchResult}.
-   *
+   * <p>
    * Note that to be faceted, a field's value must be stored in the FTS index.
    *
    * @param facets the facets to add to the query.
@@ -282,7 +298,8 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
 
   public class Built extends BuiltCommonOptions {
 
-    Built() { }
+    Built() {
+    }
 
     public JsonSerializer serializer() {
       return serializer;
@@ -353,6 +370,10 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
       //if any control was set, inject it
       if (!control.isEmpty()) {
         queryJson.put("ctl", control);
+      }
+
+      if (collections != null && collections.length > 0) {
+        queryJson.put("collections", JsonArray.from((Object[]) collections));
       }
 
       if (raw != null) {

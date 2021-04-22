@@ -36,6 +36,7 @@ case class SearchOptions(
     private[scala] val highlightStyle: Option[HighlightStyle] = None,
     private[scala] val highlightFields: Option[Seq[String]] = None,
     private[scala] val fields: Option[Seq[String]] = None,
+    private[scala] val collections: Option[Seq[String]] = None,
     private[scala] val sort: Option[Seq[SearchSort]] = None,
     private[scala] val facets: Option[Map[String, SearchFacet]] = None,
     private[scala] val serverSideTimeout: Option[Duration] = None,
@@ -121,6 +122,17 @@ case class SearchOptions(
     */
   def fields(fields: Seq[String]): SearchOptions = {
     copy(fields = Some(fields))
+  }
+
+  /** Allows to limit the search query to a specific list of collection names.
+    *
+    * NOTE: this is only supported with server 7.0 and later.
+    *
+    * @param collectionNames the names of the collections this query should be limited to.
+    * @return this SearchOptions for chaining.
+    */
+  def collections(collectionNames: Seq[String]): SearchOptions = {
+    copy(fields = Some(collectionNames))
   }
 
   /** Configures the list of fields (including special fields) which are used for sorting purposes. If empty, the
@@ -243,6 +255,10 @@ case class SearchOptions(
     })
     fields.foreach(f => {
       if (f.nonEmpty) queryJson.put("fields", JsonArray(f: _*))
+    })
+
+    collections.foreach(c => {
+      if (c.nonEmpty) queryJson.put("collections", JsonArray(c: _*))
     })
 
     sort.foreach(sortParams => {
