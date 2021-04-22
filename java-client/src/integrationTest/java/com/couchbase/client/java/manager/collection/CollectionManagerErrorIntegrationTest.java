@@ -64,7 +64,6 @@ public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
   @IgnoreWhen(hasCapabilities = Capabilities.COLLECTIONS, clusterTypes = ClusterType.MOCKED)
   void failsIfCollectionsNotSupported() {
     assertThrows(FeatureNotAvailableException.class, () -> collections.getAllScopes());
-    assertThrows(FeatureNotAvailableException.class, () -> collections.getScope("foo"));
     assertThrows(FeatureNotAvailableException.class, () -> collections.createScope("foo"));
     assertThrows(FeatureNotAvailableException.class, () -> collections.dropScope("foo"));
     assertThrows(

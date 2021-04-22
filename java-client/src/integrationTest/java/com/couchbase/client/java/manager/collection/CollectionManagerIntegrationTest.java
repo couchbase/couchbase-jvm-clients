@@ -188,6 +188,22 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   /**
+   * This test tries to create a collection under a scope which does not exist.
+   */
+  @Test
+  void failCollectionOpIfScopeNotFound() {
+    assertThrows(
+      ScopeNotFoundException.class,
+      () -> collections.createCollection(CollectionSpec.create("jesse", "dude-where-is-my-scope"))
+    );
+
+    assertThrows(
+      ScopeNotFoundException.class,
+      () ->  collections.dropCollection(CollectionSpec.create("chester", "dude-where-is-my-scope"))
+    );
+  }
+
+  /**
    * Creates a random string in the right size for collection and scope names, which only support
    * up to 30 chars it seems.
    *
