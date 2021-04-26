@@ -27,19 +27,16 @@ import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.Transcoder
-import com.couchbase.client.kotlin.samples.configureManyThingsUsingDsl
-import com.couchbase.client.kotlin.samples.configureTlsUsingDsl
 import com.couchbase.client.kotlin.env.ClusterEnvironment
-import com.couchbase.client.kotlin.samples.preconfigureBuilderUsingDsl
 import reactor.core.scheduler.Scheduler
 import kotlin.properties.Delegates.observable
 
 /**
  * A lambda for the cluster environment configuration DSL.
  *
- * @sample configureTlsUsingDsl
- * @sample preconfigureBuilderUsingDsl
- * @sample configureManyThingsUsingDsl
+ * @sample com.couchbase.client.kotlin.samples.configureTlsUsingDsl
+ * @sample com.couchbase.client.kotlin.samples.preconfigureBuilderUsingDsl
+ * @sample com.couchbase.client.kotlin.samples.configureManyThingsUsingDsl
  */
 public typealias ClusterEnvironmentConfigBlock = ClusterEnvironmentDslBuilder.() -> Unit
 

@@ -24,6 +24,7 @@ import com.couchbase.client.kotlin.view.ViewSelection
 import com.couchbase.client.kotlin.view.execute
 
 internal suspend fun bufferedViewQuery(bucket: Bucket) {
+    // Buffered view query, for when results are known to fit in memory
     val result: ViewResult = bucket
         .viewQuery(
             designDocument = "myDesignDoc",
@@ -36,6 +37,7 @@ internal suspend fun bufferedViewQuery(bucket: Bucket) {
 }
 
 internal suspend fun streamingViewQuery(bucket: Bucket) {
+    // Streaming view query, for when results are large or unbounded
     val metadata: ViewMetadata = bucket
         .viewQuery(
             designDocument = "myDesignDoc",

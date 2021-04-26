@@ -25,6 +25,7 @@ import com.couchbase.client.kotlin.query.execute
 @Suppress("UNUSED_VARIABLE")
 @OptIn(VolatileCouchbaseApi::class)
 internal suspend fun singleValueQueryAnonymous(cluster: Cluster) {
+    // Single-value query with anonymous result
     val count = cluster
         .query("select count(*) from `travel-sample`")
         .execute()
@@ -34,6 +35,7 @@ internal suspend fun singleValueQueryAnonymous(cluster: Cluster) {
 @Suppress("UNUSED_VARIABLE")
 @OptIn(VolatileCouchbaseApi::class)
 internal suspend fun singleValueQueryNamed(cluster: Cluster) {
+    // Single-value query with named result
     val count = cluster
         .query("select count(*) as count from `travel-sample`")
         .execute()
@@ -42,6 +44,7 @@ internal suspend fun singleValueQueryNamed(cluster: Cluster) {
 
 @Suppress("UNUSED_VARIABLE")
 internal suspend fun bufferedQuery(cluster: Cluster) {
+    // Buffered query, for when results are known to fit in memory
     val result: QueryResult = cluster
         .query("select * from `travel-sample` limit 10")
         .execute()
@@ -51,6 +54,7 @@ internal suspend fun bufferedQuery(cluster: Cluster) {
 
 @Suppress("UNUSED_VARIABLE")
 internal suspend fun streamingQuery(cluster: Cluster) {
+    // Streaming query, for when result size is large or unbounded
     val metadata: QueryMetadata = cluster
         .query("select * from `travel-sample`")
         .execute { row -> println(row) }

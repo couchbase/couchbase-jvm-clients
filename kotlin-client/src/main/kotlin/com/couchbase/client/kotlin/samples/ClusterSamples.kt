@@ -32,6 +32,8 @@ import java.util.*
 
 @Suppress("UNUSED_VARIABLE")
 internal fun quickstart() {
+    // Quickstart
+
     // Assumes you have Couchbase running locally
     // and the "travel-sample" sample bucket loaded.
 
@@ -61,6 +63,7 @@ internal fun quickstart() {
 
 @Suppress("UNUSED_VARIABLE")
 internal fun configureTlsUsingDsl() {
+    // Configure TLS using DSL
     val cluster = Cluster.connect("localhost", "Administrator", "password") {
         security {
             enableTls = true
@@ -76,6 +79,8 @@ internal fun configureTlsUsingDsl() {
 
 @Suppress("UNUSED_VARIABLE")
 internal fun configureTlsUsingBuilder() {
+    // Configure TLS using builder
+
     // connect() has overloads that accept ClusterEnvironment.Builder
     // in case you don't want to use the cluster environment config DSL.
     val cluster = Cluster.connect(
@@ -95,6 +100,7 @@ internal fun configureTlsUsingBuilder() {
 
 @Suppress("UNUSED_VARIABLE")
 internal fun configureManyThingsUsingDsl() {
+    // Configure many things using DSL
     val cluster = Cluster.connect("localhost", "Administrator", "password") {
         transcoder = RawJsonTranscoder
 
@@ -140,6 +146,7 @@ internal fun configureManyThingsUsingDsl() {
 
 @Suppress("UNUSED_VARIABLE")
 internal fun preconfigureBuilderUsingDsl() {
+    // Preconfigure builder using DSL
     val builder = ClusterEnvironment.builder {
         retryStrategy = FailFastRetryStrategy.INSTANCE
         io {
@@ -150,5 +157,6 @@ internal fun preconfigureBuilderUsingDsl() {
 
 @Suppress("UNUSED_VARIABLE")
 internal fun createBuilderWithDefaultSettings() {
+    // Create builder with default settings
     val builder = ClusterEnvironment.builder()
 }

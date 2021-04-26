@@ -20,8 +20,6 @@ import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.typeRef
-import com.couchbase.client.kotlin.samples.singleValueQueryAnonymous
-import com.couchbase.client.kotlin.samples.singleValueQueryNamed
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 
@@ -47,8 +45,8 @@ public class QueryResult(
      * @throws IllegalArgumentException if there is more than one result row
      * @throws NoSuchElementException if there is no field with the given name
      *
-     * @sample singleValueQueryAnonymous
-     * @sample singleValueQueryNamed
+     * @sample com.couchbase.client.kotlin.samples.singleValueQueryAnonymous
+     * @sample com.couchbase.client.kotlin.samples.singleValueQueryNamed
      */
     @VolatileCouchbaseApi
     public inline fun <reified T> valueAs(name: String = "$1", serializer: JsonSerializer? = null): T {

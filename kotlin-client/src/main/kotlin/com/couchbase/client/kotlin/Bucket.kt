@@ -35,8 +35,6 @@ import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.internal.toStringUtf8
 import com.couchbase.client.kotlin.manager.ViewIndexManager
-import com.couchbase.client.kotlin.samples.bufferedViewQuery
-import com.couchbase.client.kotlin.samples.streamingViewQuery
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace.DEVELOPMENT
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace.PRODUCTION
@@ -94,8 +92,8 @@ public class Bucket internal constructor(
      *
      * @throws ViewNotFoundException if the view or design document is not found on the server.
      *
-     * @sample bufferedViewQuery
-     * @sample streamingViewQuery
+     * @sample com.couchbase.client.kotlin.samples.bufferedViewQuery
+     * @sample com.couchbase.client.kotlin.samples.streamingViewQuery
      */
     public fun viewQuery(
         designDocument: String,

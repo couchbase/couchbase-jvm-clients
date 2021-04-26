@@ -21,6 +21,7 @@
         <kotlin.version>1.4.32</kotlin.version>
         <kotlin.coroutines.version>1.4.3</kotlin.coroutines.version>
         <kotlin.code.style>official</kotlin.code.style>
+        <dokka.version>1.4.32</dokka.version>
     </properties>
 
 
@@ -214,10 +215,33 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.jetbrains.dokka</groupId>
+                <artifactId>dokka-maven-plugin</artifactId>
+                <version>${dokka.version}</version>
+                <executions>
+                    <execution>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>dokka</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <configuration>
-                    <links>
-                        <link>https://projectreactor.io/docs/core/release/api/</link>
-                    </links>
+                    <sourceDirectories>
+                        <dir>${project.basedir}/src/main/kotlin</dir>
+                    </sourceDirectories>
+                    <samples>
+                        <dir>${project.basedir}/src/main/kotlin</dir>
+                    </samples>
+                    <externalDocumentationLinks>
+                        <link>
+                            <!-- Root URL of the generated documentation to link with. The trailing slash is required! -->
+                            <url>https://docs.couchbase.com/sdk-api/couchbase-core-io/</url>
+                        </link>
+                    </externalDocumentationLinks>
                 </configuration>
             </plugin>
 

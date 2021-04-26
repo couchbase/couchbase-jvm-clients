@@ -69,8 +69,6 @@ import com.couchbase.client.kotlin.kv.internal.encodeInSpan
 import com.couchbase.client.kotlin.kv.internal.levelIfSynchronous
 import com.couchbase.client.kotlin.kv.internal.observe
 import com.couchbase.client.kotlin.kv.internal.subdocGet
-import com.couchbase.client.kotlin.samples.subdocLookup
-import com.couchbase.client.kotlin.samples.subdocLookupWithoutLambda
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
@@ -497,8 +495,8 @@ public class Collection internal constructor(
      *
      * @param block callback for processing the results, with [LookupInResult] as the receiver.
      *
-     * @sample subdocLookup
-     * @sample subdocLookupWithoutLambda
+     * @sample com.couchbase.client.kotlin.samples.subdocLookup
+     * @sample com.couchbase.client.kotlin.samples.subdocLookupWithoutLambda
      */
     public suspend inline fun <T, L : LookupInSpec> lookupIn(
         id: String,
@@ -514,8 +512,8 @@ public class Collection internal constructor(
     /**
      * Retrieves specific fields of a document.
      *
-     * @sample subdocLookup
-     * @sample subdocLookupWithoutLambda
+     * @sample com.couchbase.client.kotlin.samples.subdocLookup
+     * @sample com.couchbase.client.kotlin.samples.subdocLookupWithoutLambda
      */
     public suspend fun lookupIn(
         id: String,

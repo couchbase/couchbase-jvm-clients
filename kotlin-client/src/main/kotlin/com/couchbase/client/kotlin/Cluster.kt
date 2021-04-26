@@ -49,10 +49,6 @@ import com.couchbase.client.kotlin.query.QueryResult
 import com.couchbase.client.kotlin.query.QueryRow
 import com.couchbase.client.kotlin.query.QueryScanConsistency
 import com.couchbase.client.kotlin.query.internal.QueryExecutor
-import com.couchbase.client.kotlin.samples.bufferedQuery
-import com.couchbase.client.kotlin.samples.singleValueQueryAnonymous
-import com.couchbase.client.kotlin.samples.singleValueQueryNamed
-import com.couchbase.client.kotlin.samples.streamingQuery
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.future.await
 import java.time.Duration
@@ -85,9 +81,9 @@ import java.util.concurrent.ConcurrentHashMap
  * shut down the environment by calling [ClusterEnvironment.shutdownSuspend]
  * (or one of its "shutdown*" cousins) after disconnecting the clusters.
  *
- * @sample quickstart
- * @sample configureTlsUsingDsl
- * @sample configureTlsUsingBuilder
+ * @sample com.couchbase.client.kotlin.samples.quickstart
+ * @sample com.couchbase.client.kotlin.samples.configureTlsUsingDsl
+ * @sample com.couchbase.client.kotlin.samples.configureTlsUsingBuilder
  */
 public class Cluster internal constructor(
     environment: ClusterEnvironment,
@@ -208,10 +204,10 @@ public class Cluster internal constructor(
      * @param raw an "escape hatch" for passing arbitrary query options that
      * aren't otherwise exposed by this method.
      *
-     * @sample bufferedQuery
-     * @sample streamingQuery
-     * @sample singleValueQueryAnonymous
-     * @sample singleValueQueryNamed
+     * @sample com.couchbase.client.kotlin.samples.bufferedQuery
+     * @sample com.couchbase.client.kotlin.samples.streamingQuery
+     * @sample com.couchbase.client.kotlin.samples.singleValueQueryAnonymous
+     * @sample com.couchbase.client.kotlin.samples.singleValueQueryNamed
      */
     @OptIn(VolatileCouchbaseApi::class)
     public fun query(

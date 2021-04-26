@@ -36,8 +36,6 @@ import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentDslBuilder
 import com.couchbase.client.kotlin.internal.await
 import com.couchbase.client.kotlin.kv.Durability
-import com.couchbase.client.kotlin.samples.createBuilderWithDefaultSettings
-import com.couchbase.client.kotlin.samples.preconfigureBuilderUsingDsl
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jsonMapper
@@ -89,8 +87,8 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
          * @param configBlock an optional lambda for configuring the new
          * builder using cluster environment config DSL.
          *
-         * @sample createBuilderWithDefaultSettings
-         * @sample preconfigureBuilderUsingDsl
+         * @sample com.couchbase.client.kotlin.samples.createBuilderWithDefaultSettings
+         * @sample com.couchbase.client.kotlin.samples.preconfigureBuilderUsingDsl
          */
         public fun builder(configBlock: ClusterEnvironmentConfigBlock = {}): Builder {
             val builder = ClusterEnvironmentDslBuilder()

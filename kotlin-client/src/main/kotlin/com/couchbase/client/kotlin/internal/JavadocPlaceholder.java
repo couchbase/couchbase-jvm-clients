@@ -17,13 +17,11 @@
 package com.couchbase.client.kotlin.internal;
 
 /**
- * Quick and dirty way to generate the javadocs.jar required by Maven Central.
- * Please disregard.
- * <p>
- * TODO: Use Dokka to generate Javadocs from Kotlin source
- * once they have a working distribution on Maven Central.
+ * "JavadocPlaceholder" is just a quick and dirty way to generate the javadocs.jar
+ * required by Maven Central. Please disregard.
  *
- * @deprecated This is not the class you're looking for.
+ * @deprecated See <a target="_blank" href="https://docs.couchbase.com/sdk-api/couchbase-kotlin-client/">Kotlin client API documentation</a>
+ * (coming soon!) for the actual API documentation.
  */
 @Deprecated
 class JavadocPlaceholder {

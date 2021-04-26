@@ -20,7 +20,6 @@ import com.couchbase.client.core.msg.kv.SubdocCommandType
 import com.couchbase.client.core.msg.kv.SubdocGetRequest
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.kv.internal.LookupInMacro
-import com.couchbase.client.kotlin.samples.subdocLookup
 
 public class Subdoc internal constructor(
     public val path: String,
@@ -65,7 +64,7 @@ public class SubdocExists internal constructor(
 /**
  * Specifies which fields to retrieve when doing a subdoc lookup.
  *
- * @sample subdocLookup
+ * @sample com.couchbase.client.kotlin.samples.subdocLookup
  */
 public abstract class LookupInSpec {
     internal val commands = ArrayList<SubdocGetRequest.Command>()

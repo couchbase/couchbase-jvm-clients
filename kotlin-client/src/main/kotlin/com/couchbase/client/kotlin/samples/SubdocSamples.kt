@@ -20,6 +20,7 @@ import com.couchbase.client.kotlin.Collection
 import com.couchbase.client.kotlin.kv.LookupInSpec
 
 internal suspend fun subdocLookup(collection: Collection, documentId: String) {
+    // Subdoc lookup
     val spec = object : LookupInSpec() {
         val sku = get("sku")
         val hasPrice = exists("price")
@@ -36,6 +37,7 @@ internal suspend fun subdocLookup(collection: Collection, documentId: String) {
 }
 
 internal suspend fun subdocLookupWithoutLambda(collection: Collection, documentId: String) {
+    // Subdoc lookup without Lambda
     val spec = object : LookupInSpec() {
         val sku = get("sku")
         val hasPrice = exists("price")
