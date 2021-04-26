@@ -88,7 +88,7 @@ public abstract class AbstractRetry<T, S> implements Function<Flux<S>, Publisher
 			return new BackoffDelay(minBackoff, maxBackoff, jitteredBackoff);
 	}
 
-	Publisher<Long> retryMono(Duration delay) {
+	Mono<Long> retryMono(Duration delay) {
 		if (delay == Duration.ZERO)
 			return Mono.just(0L);
 		else if (backoffScheduler == null)

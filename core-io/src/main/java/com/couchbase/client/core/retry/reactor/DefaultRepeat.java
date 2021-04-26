@@ -18,12 +18,15 @@ package com.couchbase.client.core.retry.reactor;
 
 import com.couchbase.client.core.error.InvalidArgumentException;
 import org.reactivestreams.Publisher;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class DefaultRepeat<T> extends AbstractRetry<T, Long> implements Repeat<T> {
@@ -111,7 +114,7 @@ public class DefaultRepeat<T> extends AbstractRetry<T, Long> implements Repeat<T
 				.index()
 				.map(tuple -> repeatBackoff(tuple.getT2(), tuple.getT1() + 1L, timeoutInstant, context))
 				.takeWhile(backoff -> backoff != RETRY_EXHAUSTED)
-				.concatMap(backoff -> retryMono(backoff.delay));
+				.concatMap(backoff -> retryMono(backoff.delay).onErrorResume(Exceptions::isOverflow, throwable -> Mono.just(1L)));
 	}
 
 	BackoffDelay repeatBackoff(Long companionValue, Long iteration, Instant timeoutInstant, DefaultContext<T> context) {
