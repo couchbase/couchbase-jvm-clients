@@ -71,6 +71,7 @@ public class OrphanReporter {
   private final int sampleSize;
   private final EventBus eventBus;
   private final boolean enabled;
+  private final OrphanReporterConfig config;
 
   /**
    * Creates a new {@link OrphanReporter}.
@@ -88,6 +89,7 @@ public class OrphanReporter {
     this.emitIntervalNanos = config.emitInterval().toNanos();
     this.sampleSize = config.sampleSize();
     this.enabled = config.enabled();
+    this.config = config;
 
     // Spawn a thread only if the reporter is enabled.
     if (enabled) {
@@ -95,6 +97,13 @@ public class OrphanReporter {
       worker.setDaemon(true);
       worker.setName(ORPHAN_TREAD_PREFIX + ORPHAN_REPORTER_ID.incrementAndGet());
     }
+  }
+
+  /**
+   * Returns the currently active configuration.
+   */
+  public OrphanReporterConfig config() {
+    return config;
   }
 
   /**

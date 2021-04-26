@@ -67,6 +67,7 @@ public class ThresholdRequestTracer implements RequestTracer {
   private final EventBus eventBus;
   private final Thread worker;
 
+  private final ThresholdRequestTracerConfig config;
   private final long kvThreshold;
   private final long queryThreshold;
   private final long viewThreshold;
@@ -123,9 +124,17 @@ public class ThresholdRequestTracer implements RequestTracer {
     queryThreshold = config.queryThreshold().toNanos();
     sampleSize = config.sampleSize();
     emitIntervalNanos = config.emitInterval().toNanos();
+    this.config = config;
 
     worker = new Thread(new Worker());
     worker.setDaemon(true);
+  }
+
+  /**
+   * Returns the current configuration.
+   */
+  public ThresholdRequestTracerConfig config() {
+    return config;
   }
 
   @Override

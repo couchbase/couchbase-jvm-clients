@@ -388,6 +388,13 @@ public class CoreEnvironment {
   }
 
   /**
+   * Returns the maximum number of requests allowed in retry, before no more ops are allowed and canceled.
+   */
+  public long maxNumRequestsInRetry() {
+    return maxNumRequestsInRetry;
+  }
+
+  /**
    * Shuts down this Environment with the default disconnect timeout.
    *
    * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation

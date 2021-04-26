@@ -51,6 +51,7 @@ public class AggregatingMeter implements Meter {
   private final Map<NameAndTags, AggregatingValueRecorder> valueRecorders = new ConcurrentHashMap<>();
 
   private final long emitIntervalMs;
+  private final AggregatingMeterConfig config;
 
   public static AggregatingMeter create(EventBus eventBus, AggregatingMeterConfig config) {
     return new AggregatingMeter(config, eventBus);
@@ -59,9 +60,17 @@ public class AggregatingMeter implements Meter {
   private AggregatingMeter(AggregatingMeterConfig config, EventBus eventBus) {
     this.eventBus = eventBus;
     this.emitIntervalMs = config.emitInterval().toMillis();
+    this.config = config;
 
     worker = new Thread(new Worker());
     worker.setDaemon(true);
+  }
+
+  /**
+   * Returns the currently active configuration.
+   */
+  public AggregatingMeterConfig config() {
+    return config;
   }
 
   /**

@@ -373,6 +373,13 @@ public class IoEnvironment {
   }
 
   /**
+   * Returns the thread count per event loop.
+   */
+  public int eventLoopThreadCount() {
+    return eventLoopThreadCount;
+  }
+
+  /**
    * Instructs all the owned event loops to shut down.
    *
    * @param timeout the maximum amount of time to wait before returning back control.
