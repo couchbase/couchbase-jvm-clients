@@ -367,7 +367,8 @@ public class Collection internal constructor(
         transcoder: Transcoder? = null,
         durability: Durability = Durability.disabled(),
         expiry: Expiry = Expiry.None,
-    ): MutationResult = internalUpsert(id, content, typeRef(), common, transcoder, durability, expiry)
+        preserveExpiry: Boolean = false,
+    ): MutationResult = internalUpsert(id, content, typeRef(), common, transcoder, durability, expiry, preserveExpiry)
 
     @PublishedApi
     internal suspend fun <T> internalUpsert(
@@ -378,6 +379,7 @@ public class Collection internal constructor(
         transcoder: Transcoder?,
         durability: Durability,
         expiry: Expiry,
+        preserveExpiry: Boolean,
     ): MutationResult {
         val span = common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_UPSERT)
         val (encodedContent, encodingNanos) = encodeInSpan(transcoder, content, contentType, span)
@@ -386,6 +388,7 @@ public class Collection internal constructor(
             validateDocumentId(id),
             encodedContent.bytes,
             expiry.encode(),
+            preserveExpiry,
             encodedContent.flags,
             common.actualKvTimeout(durability),
             core.context(),
@@ -411,8 +414,9 @@ public class Collection internal constructor(
         transcoder: Transcoder? = null,
         durability: Durability = Durability.disabled(),
         expiry: Expiry = Expiry.None,
+        preserveExpiry: Boolean = false,
         cas: Long = 0,
-    ): MutationResult = internalReplace(id, content, typeRef(), common, transcoder, durability, expiry, cas)
+    ): MutationResult = internalReplace(id, content, typeRef(), common, transcoder, durability, expiry, preserveExpiry, cas)
 
     @PublishedApi
     internal suspend fun <T> internalReplace(
@@ -423,6 +427,7 @@ public class Collection internal constructor(
         transcoder: Transcoder?,
         durability: Durability,
         expiry: Expiry,
+        preserveExpiry: Boolean,
         cas: Long,
     ): MutationResult {
         val span = common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_REPLACE)
@@ -432,6 +437,7 @@ public class Collection internal constructor(
             validateDocumentId(id),
             encodedContent.bytes,
             expiry.encode(),
+            preserveExpiry,
             encodedContent.flags,
             common.actualKvTimeout(durability),
             cas,
@@ -560,6 +566,7 @@ public class Collection internal constructor(
         id: String,
         common: CommonOptions = CommonOptions.Default,
         expiry: Expiry = Expiry.none(),
+        preserveExpiry: Boolean = false,
         durability: Durability = Durability.disabled(),
         storeSemantics: StoreSemantics = StoreSemantics.replace(),
         serializer: JsonSerializer? = null,
@@ -581,6 +588,7 @@ public class Collection internal constructor(
             spec,
             common,
             expiry,
+            preserveExpiry,
             durability,
             storeSemantics,
             serializer,
@@ -594,6 +602,7 @@ public class Collection internal constructor(
         spec: MutateInSpec,
         common: CommonOptions = CommonOptions.Default,
         expiry: Expiry = Expiry.none(),
+        preserveExpiry: Boolean = false,
         durability: Durability = Durability.disabled(),
         storeSemantics: StoreSemantics = StoreSemantics.replace(),
         serializer: JsonSerializer? = null,
@@ -623,6 +632,7 @@ public class Collection internal constructor(
             createAsDeleted,
             encodedCommands.sortedBy { !it.xattr() }, // xattr commands must come first
             expiry.encode(),
+            preserveExpiry,
             (storeSemantics as? StoreSemantics.Replace)?.cas ?: 0L,
             durability.levelIfSynchronous(),
             common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN),

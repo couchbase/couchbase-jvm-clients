@@ -52,19 +52,6 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
   private final int flags;
   private final Optional<DurabilityLevel> syncReplicationType;
 
-
-  /**
-   * @deprecated Please use version that takes preserveExpiry
-   */
-  @Deprecated
-  public UpsertRequest(final String key, final byte[] content,
-                       final long expiration, final int flags, final Duration timeout,
-                       final CoreContext ctx, CollectionIdentifier collectionIdentifier,
-                       final RetryStrategy retryStrategy,
-                       final Optional<DurabilityLevel> syncReplicationType, final RequestSpan span) {
-    this(key, content, expiration, false, flags, timeout, ctx, collectionIdentifier, retryStrategy, syncReplicationType, span);
-  }
-
   public UpsertRequest(final String key, final byte[] content,
                        final long expiration, final boolean preserveExpiry, final int flags, final Duration timeout,
                        final CoreContext ctx, CollectionIdentifier collectionIdentifier,

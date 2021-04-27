@@ -52,18 +52,6 @@ public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> impleme
   private final long cas;
   private final Optional<DurabilityLevel> syncReplicationType;
 
-  /**
-   * @deprecated Please use version that takes preserveExpiry
-   */
-  @Deprecated
-  public ReplaceRequest(final String key, final byte[] content, final long expiration,
-                        final int flags, final Duration timeout,
-                        final long cas, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
-                        final RetryStrategy retryStrategy,
-                        final Optional<DurabilityLevel> syncReplicationType, final RequestSpan span) {
-    this(key, content, expiration, false, flags, timeout, cas, ctx, collectionIdentifier, retryStrategy, syncReplicationType, span);
-  }
-
   public ReplaceRequest(final String key, final byte[] content, final long expiration, final boolean preserveExpiry,
                         final int flags, final Duration timeout,
                         final long cas, final CoreContext ctx, CollectionIdentifier collectionIdentifier,

@@ -80,20 +80,6 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   private final Optional<DurabilityLevel> syncReplicationType;
   private final boolean createAsDeleted;
 
-  /**
-   * @deprecated Please use constructor that takes preserveExpiry
-   */
-  @Deprecated
-  public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
-                             final BucketConfig bucketConfig, final RetryStrategy retryStrategy, final String key,
-                             final boolean insertDocument, final boolean upsertDocument, final boolean accessDeleted,
-                             final boolean createAsDeleted,
-                             final List<Command> commands, long expiration,
-                             long cas,
-                             final Optional<DurabilityLevel> syncReplicationType, final RequestSpan span) {
-    this(timeout, ctx, collectionIdentifier, bucketConfig, retryStrategy, key, insertDocument, upsertDocument, accessDeleted, createAsDeleted, commands, expiration, false, cas, syncReplicationType, span);
-  }
-
   public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                              final BucketConfig bucketConfig, final RetryStrategy retryStrategy, final String key,
                              final boolean insertDocument, final boolean upsertDocument, final boolean accessDeleted,
