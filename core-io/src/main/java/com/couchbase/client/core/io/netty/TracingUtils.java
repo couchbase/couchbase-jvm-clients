@@ -19,6 +19,11 @@ package com.couchbase.client.core.io.netty;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
+import com.couchbase.client.core.msg.kv.KeyValueRequest;
+import com.couchbase.client.core.msg.kv.SyncDurabilityRequest;
 
 /**
  * Contains various utils to set attributes for tracing spans.
@@ -61,6 +66,26 @@ public class TracingUtils {
     }
     if (operationId != null) {
       span.attribute(TracingIdentifiers.ATTR_OPERATION_ID, operationId);
+    }
+  }
+
+  /**
+   * Sets attributes that are usefully duplicated across multiple spans.
+   */
+  public static void setCommonKVSpanAttributes(final RequestSpan span, final KeyValueRequest<Response> request) {
+    CollectionIdentifier collectionIdentifier = request.collectionIdentifier();
+    if (collectionIdentifier != null) {
+      span.attribute(TracingIdentifiers.ATTR_NAME, collectionIdentifier.bucket());
+      span.attribute(TracingIdentifiers.ATTR_SCOPE, collectionIdentifier.scope().orElse(CollectionIdentifier.DEFAULT_SCOPE));
+      span.attribute(TracingIdentifiers.ATTR_COLLECTION, collectionIdentifier.collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION));
+    }
+    span.attribute(TracingIdentifiers.ATTR_DOCUMENT_ID, new String(request.key()));
+    if (request instanceof SyncDurabilityRequest) {
+      SyncDurabilityRequest syncDurabilityRequest = (SyncDurabilityRequest) request;
+      if (syncDurabilityRequest.durabilityLevel() != null) {
+        span.attribute(TracingIdentifiers.ATTR_DURABILITY,
+                syncDurabilityRequest.durabilityLevel().map(Enum::name).orElse(DurabilityLevel.NONE.name()));
+      }
     }
   }
 

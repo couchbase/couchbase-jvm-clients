@@ -224,6 +224,8 @@ public class TracingIdentifiers {
 
   public static final String ATTR_SCOPE = "db.couchbase.scope";
 
+  public static final String ATTR_DOCUMENT_ID = "db.couchbase.document_id";
+
   public static final String METER_OPERATIONS = "db.couchbase.operations";
 
   public static final String ATTR_DURABILITY = "db.couchbase.durability";

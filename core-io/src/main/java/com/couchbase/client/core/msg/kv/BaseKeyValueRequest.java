@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.couchbase.client.core.io.netty.TracingUtils.setCommonKVSpanAttributes;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -103,11 +104,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
 
     if (span != null) {
       span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_KV);
-      if (collectionIdentifier != null) {
-        span.attribute(TracingIdentifiers.ATTR_NAME, collectionIdentifier.bucket());
-        span.attribute(TracingIdentifiers.ATTR_SCOPE, collectionIdentifier.scope().orElse(CollectionIdentifier.DEFAULT_SCOPE));
-        span.attribute(TracingIdentifiers.ATTR_COLLECTION, collectionIdentifier.collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION));
-      }
+      setCommonKVSpanAttributes(span, (KeyValueRequest<Response>) this);
     }
   }
 

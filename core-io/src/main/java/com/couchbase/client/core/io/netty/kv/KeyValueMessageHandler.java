@@ -69,6 +69,7 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
 import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchSpanAttributes;
+import static com.couchbase.client.core.io.netty.TracingUtils.setCommonKVSpanAttributes;
 import static com.couchbase.client.core.io.netty.TracingUtils.setNumericOperationId;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.AUTH;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.CONN_STATE_INVALIDATED;
@@ -239,6 +240,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
             null
           );
           setNumericOperationId(dispatchSpan, request.opaque());
+          setCommonKVSpanAttributes(dispatchSpan, request);
 
           writtenRequestDispatchSpans.put(opaque, dispatchSpan);
         }
