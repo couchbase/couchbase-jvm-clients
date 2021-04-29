@@ -72,6 +72,15 @@ public interface RequestSpan {
   void event(String name, Instant timestamp);
 
   /**
+   * Sets the status of the span, which is by default UNSET.
+   * <p>
+   * Note that, depending on the implementation, this might be a no-op.
+   *
+   * @param status the span's new status.
+   */
+  void status(StatusCode status);
+
+  /**
    * Completes this span.
    *
    * @param tracer the tracer with the help of which it will be completed.
@@ -86,4 +95,12 @@ public interface RequestSpan {
   @Stability.Internal
   void requestContext(RequestContext requestContext);
 
+  /**
+   * Provides an abstraction over underlying tracing status codes.
+   */
+  enum StatusCode {
+      UNSET,
+      OK,
+      ERROR;
+  }
 }

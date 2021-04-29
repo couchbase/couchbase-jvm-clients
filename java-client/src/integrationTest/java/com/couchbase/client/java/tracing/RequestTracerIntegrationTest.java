@@ -145,6 +145,10 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
     }
 
     @Override
+    public void status(StatusCode status) {
+    }
+
+    @Override
     public void requestContext(RequestContext requestContext) {
     }
 

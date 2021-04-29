@@ -87,6 +87,11 @@ public class OpenTracingRequestSpan implements RequestSpan {
   }
 
   @Override
+  public void status(StatusCode status) {
+    attribute("error", true);
+  }
+
+  @Override
   public void end() {
     try (Scope scope = this.tracer.activateSpan(span)) {
       span.finish();

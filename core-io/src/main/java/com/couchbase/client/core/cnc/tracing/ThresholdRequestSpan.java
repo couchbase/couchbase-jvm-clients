@@ -43,6 +43,9 @@ public class ThresholdRequestSpan implements RequestSpan {
   public void event(String name, Instant timestamp) { }
 
   @Override
+  public void status(StatusCode status) { }
+
+  @Override
   public void requestContext(RequestContext requestContext) {
     this.requestContext = requestContext;
   }

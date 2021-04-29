@@ -56,6 +56,10 @@ public class NoopRequestSpan implements RequestSpan {
   }
 
   @Override
+  public void status(StatusCode status) {
+  }
+
+  @Override
   public void end() {
   }
 

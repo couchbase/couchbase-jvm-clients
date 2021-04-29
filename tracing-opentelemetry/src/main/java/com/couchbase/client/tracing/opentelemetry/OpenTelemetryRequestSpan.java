@@ -19,7 +19,6 @@ package com.couchbase.client.tracing.opentelemetry;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.msg.RequestContext;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.context.Scope;
 
 import java.time.Instant;
 
@@ -74,6 +73,20 @@ public class OpenTelemetryRequestSpan implements RequestSpan {
   @Override
   public void event(String name, Instant timestamp) {
     span.addEvent(name, timestamp);
+  }
+
+  @Override
+  public void status(StatusCode status) {
+    io.opentelemetry.api.trace.StatusCode statusCode = io.opentelemetry.api.trace.StatusCode.UNSET;
+    switch (status) {
+      case OK:
+        statusCode = io.opentelemetry.api.trace.StatusCode.OK;
+        break;
+      case ERROR:
+        statusCode = io.opentelemetry.api.trace.StatusCode.ERROR;
+        break;
+    }
+    span.setStatus(statusCode);
   }
 
   @Override
