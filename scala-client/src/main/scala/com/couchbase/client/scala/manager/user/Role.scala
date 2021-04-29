@@ -113,8 +113,8 @@ object RoleAndDescription {
 
 /** Indicates why the user has a specific role.
   *
-  * If the type is “user” it means the role is assigned directly to the user. If the type is “group” it means the role
-  * is inherited from the group identified by the “name” field.
+  * If the type is "user" it means the role is assigned directly to the user. If the type is "group" it means the role
+  * is inherited from the group identified by the "name" field.
   *
   * @param typ  the type - "user" or "group"
   * @param name only present if the type is "group"

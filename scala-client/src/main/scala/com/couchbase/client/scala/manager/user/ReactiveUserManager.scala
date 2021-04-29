@@ -95,7 +95,7 @@ class ReactiveUserManager(private val core: Core) {
     ManagerUtil.checkStatus(response, action)
   }
 
-  // TODO check 'If the server response does not include an “origins” field for a role' logic
+  // TODO check 'If the server response does not include an "origins" field for a role' logic
   def getUser(
       username: String,
       domain: AuthDomain = AuthDomain.Local,
