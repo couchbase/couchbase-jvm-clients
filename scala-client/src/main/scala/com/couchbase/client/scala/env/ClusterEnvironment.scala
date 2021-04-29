@@ -19,7 +19,7 @@ package com.couchbase.client.scala.env
 import java.util.concurrent.{Executors, ThreadFactory}
 import com.couchbase.client.core
 import com.couchbase.client.core.annotation.Stability.{Uncommitted, Volatile}
-import com.couchbase.client.core.cnc.{EventBus, RequestTracer}
+import com.couchbase.client.core.cnc.{EventBus, Meter, RequestTracer}
 import com.couchbase.client.core.env.{ConnectionStringPropertyLoader, PropertyLoader}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.codec.{JsonTranscoder, Transcoder}
@@ -66,13 +66,16 @@ object ClusterEnvironment {
       private[scala] val scheduler: Option[Scheduler] = None,
       private[scala] val retryStrategy: Option[RetryStrategy] = None,
       private[scala] val requestTracer: Option[RequestTracer] = None,
+      private[scala] val meter: Option[Meter] = None,
       private[scala] val maxNumRequestsInRetry: Option[Int] = None,
       private[scala] val transcoder: Option[Transcoder] = None,
       private[scala] val propertyLoaders: Seq[PropertyLoader[
         com.couchbase.client.core.env.CoreEnvironment.Builder[SELF] forSome {
           type SELF <: com.couchbase.client.core.env.CoreEnvironment.Builder[SELF]
         }
-      ]] = Seq()
+      ]] = Seq(),
+      private[scala] val thresholdRequestTracerConfig: Option[ThresholdRequestTracerConfig] = None,
+      private[scala] val aggregatingMeterConfig: Option[AggregatingMeterConfig] = None
   ) {
 
     def build: Try[ClusterEnvironment] = Try(new ClusterEnvironment(this))
@@ -175,6 +178,15 @@ object ClusterEnvironment {
       copy(requestTracer = Some(requestTracer))
     }
 
+    /** Sets the default `Meter` to use for all operations.
+      *
+      * @return this, for chaining
+      */
+    @Volatile
+    def meter(meter: Meter): ClusterEnvironment.Builder = {
+      copy(meter = Some(meter))
+    }
+
     /** Customize the maximum number of requests allowed in the retry timer.
       *
       * If the limit is reached, each request that would be queued for retry is instead cancelled with a
@@ -211,6 +223,25 @@ object ClusterEnvironment {
       copy(propertyLoaders = propertyLoaders)
     }
 
+    /**
+      * Allows configuring the threshold request tracer.
+      *
+      * @return this, for chaining purposes.
+      */
+    def thresholdRequestTracerConfig(
+        config: ThresholdRequestTracerConfig
+    ): ClusterEnvironment.Builder = {
+      copy(thresholdRequestTracerConfig = Some(config))
+    }
+
+    /**
+      * Allows configuring the aggregating meter.
+      *
+      * @return this, for chaining purposes.
+      */
+    def aggregatingMeterConfig(config: AggregatingMeterConfig): ClusterEnvironment.Builder = {
+      copy(aggregatingMeterConfig = Some(config))
+    }
   }
 }
 
@@ -274,8 +305,13 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
   builder.scheduler.foreach(v => coreBuilder.scheduler(v))
   builder.retryStrategy.foreach(rs => coreBuilder.retryStrategy(rs))
   builder.requestTracer.foreach(v => coreBuilder.requestTracer(v))
+  builder.meter.foreach(v => coreBuilder.meter(v))
   builder.maxNumRequestsInRetry.foreach(v => coreBuilder.maxNumRequestsInRetry(v))
   builder.propertyLoaders.foreach(v => coreBuilder.load(v))
+  builder.thresholdRequestTracerConfig.foreach(
+    v => coreBuilder.thresholdRequestTracerConfig(v.toCore)
+  )
+  builder.aggregatingMeterConfig.foreach(v => coreBuilder.aggregatingMeterConfig(v.toCore))
 
   private[scala] val coreEnv = new CoreEnvironment(coreBuilder)
 
