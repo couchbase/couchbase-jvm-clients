@@ -27,9 +27,6 @@
       <excludes>
         <!-- don't want optional dependencies -->
         <exclude>com.fasterxml.jackson.core:*</exclude>
-
-        <!-- Maven tries to include this when building from the top-level POM. Don't want it. -->
-        <exclude>com.couchbase.client:core-io-deps</exclude>
       </excludes>
     </dependencySet>
   </dependencySets>

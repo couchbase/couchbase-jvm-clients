@@ -10,7 +10,8 @@
     </parent>
 
     <artifactId>java-examples</artifactId>
-    <version>1.2.0-SNAPSHOT</version>
+    <version>${java-examples.version}</version>
+    <!-- Does not need packaging bundle as the felix plugin does this <packaging>bundle</packaging> -->
 
     <name>Couchbase Java SDK Examples</name>
     <description>Examples for the Couchbase Java SDK</description>
@@ -19,6 +20,13 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>java-client</artifactId>
+            <version>${java-client.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.couchbase.client</groupId>
+            <artifactId>core-io</artifactId>
+            <version>${core-io.version}</version>
         </dependency>
 
         <dependency>
@@ -26,6 +34,86 @@
             <artifactId>log4j-slf4j-impl</artifactId>
             <version>${log4j-slf4j-impl.version}</version>
         </dependency>
+
+        <dependency> <!-- for BundleActivator code to verify working osgi bundle -->
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.core</artifactId>
+            <version>6.0.0</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <archive>
+      			<manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+                        <manifestEntries>
+                            <Build-Time>${maven.build.timestamp}</Build-Time>
+                            <Automatic-Module-Name>com.couchbase.client.java.examples</Automatic-Module-Name>
+                        </manifestEntries>
+                        <manifestSections>
+                            <manifestSection>
+                                <!-- the part after couchbase- needs to match with the agent title in the env -->
+                                <name>couchbase-java-examples</name>
+                                <manifestEntries>
+                                    <Impl-Version>${project.version}</Impl-Version>
+                                    <Impl-Git-Revision>${buildNumber}</Impl-Git-Revision>
+                                </manifestEntries>
+                            </manifestSection>
+                        </manifestSections>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <version>5.1.2</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                        <Bundle-Version>${project.version}</Bundle-Version>
+                        <Export-Package>
+                            com.couchbase.client.java.examples,
+                        </Export-Package>
+                        <Import-Package>
+                            org.osgi.framework,
+                            javax.security.cert,
+                            javax.naming,
+                            javax.security.sasl,
+                            javax.security.auth.*,
+                            javax.crypto,
+                            javax.crypto.*,
+                            reactor.core,
+                            reactor.core.*,
+                            reactor.util.*,
+                            org.reactivestreams.*,
+                            org.slf4j,
+                            org.slf4j.*,
+                            com.couchbase.client.java.*,
+ 			    com.couchbase.client.core.*,
+                        </Import-Package>
+                        <_exportcontents>*</_exportcontents>
+                        <Bundle-Activator>com.couchbase.client.java.examples.HelloOsgi</Bundle-Activator>
+                        <Private-Package>com.couchbase.client.java.examples</Private-Package>
+                    </instructions>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>bundle-manifest</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>manifest</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

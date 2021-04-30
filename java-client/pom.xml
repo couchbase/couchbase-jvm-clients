@@ -10,7 +10,8 @@
     </parent>
 
     <artifactId>java-client</artifactId>
-    <version>3.2.0-SNAPSHOT</version>
+    <version>${java-client.version}</version>
+    <!-- Does not need packaging bundle as the felix plugin does this <packaging>bundle</packaging> -->
 
     <name>Couchbase Java SDK</name>
     <description>The official Couchbase Java SDK</description>
@@ -20,6 +21,8 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>core-io</artifactId>
+            <version>${core-io.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- External, Optional Dependencies -->
@@ -147,6 +150,7 @@
                 <version>3.2.0</version>
                 <configuration>
                     <archive>
+			<manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
                         <manifestEntries>
                             <Build-Time>${maven.build.timestamp}</Build-Time>
                             <Automatic-Module-Name>com.couchbase.client.java</Automatic-Module-Name>
@@ -217,6 +221,47 @@
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <version>5.1.2</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                        <Bundle-Version>${project.version}</Bundle-Version>
+                        <Export-Package>
+                            com.couchbase.client.java.*,
+                        </Export-Package>
+                        <Import-Package>
+                            javax.naming,
+                            javax.security.cert,
+                            javax.security.sasl,
+                            javax.security.auth.*,
+                            javax.crypto,
+                            javax.crypto.spec,
+                            reactor.core,
+                            reactor.core.*,
+                            reactor.util.*,
+                            org.reactivestreams.*,
+                            org.slf4j,
+                            org.slf4j.*,
+                            com.couchbase.client.core.*,
+                        </Import-Package>
+                        <_exportcontents>*</_exportcontents>
+                    </instructions>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>bundle-manifest</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>manifest</goal>
                         </goals>
                     </execution>
                 </executions>

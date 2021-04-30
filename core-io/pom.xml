@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -10,14 +11,19 @@
     </parent>
 
     <artifactId>core-io</artifactId>
-    <version>2.2.0-SNAPSHOT</version>
+    <version>${core-io.version}</version>
 
+    <!-- Ideally, this would be like java-client and not use packaging-bundle -->
+    <!-- But I haven't figured out how to run the felix plugin *after* the shading has been done, then update the MANIFEST.MF -->
+    <packaging>bundle</packaging>
+    <!--
+     If java-example with osgi-feature gives the message below, it indicates that the indicated package is not exported (in the MANIFEST). 
+     Likely because the classes were not present when the manifest was created by the felix plugin.
+     Unable to resolve java-client/3.2.0.SNAPSHOT: missing requirement [java-client/3.2.0.SNAPSHOT] osgi.wiring.package; 
+     filter:="(osgi.wiring.package=com.couchbase.client.core.deps.com.fasterxml.jackson.annotation)"]]
+    -->
     <name>Couchbase JVM Core IO</name>
     <description>The official Couchbase JVM Core IO Library</description>
-
-    <properties>
-        <core-io-deps.version>1.2.0-SNAPSHOT</core-io-deps.version>
-    </properties>
 
     <dependencies>
         <!-- External, Required Dependencies -->
@@ -27,13 +33,27 @@
             <version>${reactor.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.reactivestreams</groupId>
+            <artifactId>reactive-streams</artifactId>
+            <version>${reactive-streams.version}</version>
+        </dependency>
+
         <!-- External, Optional Dependencies -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.31</version>
+            <version>${slf4j.version}</version>
             <optional>true</optional>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>${log4j-slf4j-impl.version}</version>
+            <optional>true</optional>
+        </dependency>
+
         <dependency>
             <groupId>io.projectreactor.tools</groupId>
             <artifactId>blockhound</artifactId>
@@ -45,6 +65,9 @@
             <groupId>com.couchbase.client</groupId>
             <artifactId>core-io-deps</artifactId>
             <version>${core-io-deps.version}</version>
+            <!-- adding scope-provided results in the MANIFEST/* files not being included in core-io.jar <scope>provided</scope> -->
+            <!-- removing scope-provided results in osgi-feature bundling believing that core-io-deps is a required module -->
+            <!-- and referencing it as a wrapped bundle: wrap:mvn:com.couchbase.client/core-io-deps/1.2.0-SNAPSHOT  -->
         </dependency>
 
         <!-- Test Dependencies -->
@@ -103,7 +126,8 @@
                         </goals>
                         <configuration>
                             <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
                                     <resources>
                                         <resource>META-INF/services/com.fasterxml.jackson.core.JsonFactory</resource>
                                         <resource>META-INF/services/com.fasterxml.jackson.core.ObjectCodec</resource>
@@ -180,7 +204,9 @@
                 <executions>
                     <execution>
                         <phase>validate</phase>
-                        <goals><goal>create</goal></goals>
+                        <goals>
+                            <goal>create</goal>
+                        </goals>
                     </execution>
                 </executions>
                 <configuration>
@@ -196,6 +222,9 @@
                 <version>3.2.0</version>
                 <configuration>
                     <archive>
+			<!-- the MANIFEST.MF does not exist until after the felix plugin runs, and felix plugin would have to run
+			 *after* this plugin to have the shaded classes for the Import/Exports -->
+                        <!-- <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile> -->
                         <manifestEntries>
                             <Build-Time>${maven.build.timestamp}</Build-Time>
                             <Automatic-Module-Name>com.couchbase.client.core</Automatic-Module-Name>
@@ -212,6 +241,51 @@
                         </manifestSections>
                     </archive>
                 </configuration>
+		<!-- this would be used when not using <packaging>bundle</> see java-client/pom.xml.  
+                <executions>
+                    <execution>
+                        <id>bundle-manifest</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+		-->
+            </plugin>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <version>5.1.2</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                        <Bundle-Version>${project.version}</Bundle-Version>
+                        <Export-Package>
+                            com.couchbase.client.*
+                        </Export-Package>
+                        <Import-Package>
+                            org.slf4j,
+                            org.slf4j.*,
+                            reactor.*,
+                            org.reactivestreams.*,
+                            com.google.protobuf;resolution:=optional,
+                            com.google.protobuf.nano;resolution:=optional
+                        </Import-Package>
+                        <_exportcontents>*</_exportcontents>
+                    </instructions>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>bundle-manifest</id>
+                        <!-- the bundle manifest needs to be create after everything is in the jar <phase>process-classes</phase> -->
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>manifest</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

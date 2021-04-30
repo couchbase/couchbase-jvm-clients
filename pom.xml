@@ -16,13 +16,23 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
+        <osgi-feature.version>1.2.0-SNAPSHOT</osgi-feature.version>
+        <java-examples.version>1.2.0-SNAPSHOT</java-examples.version>
+        <java-client.version>3.2.0-SNAPSHOT</java-client.version>
+        <core-io.version>2.2.0-SNAPSHOT</core-io.version>
+        <core-io-deps.version>1.2.0-SNAPSHOT</core-io-deps.version>
+
         <junit.version>5.7.2</junit.version>
         <assertj.version>3.14.0</assertj.version>
         <log4j-slf4j-impl.version>2.13.3</log4j-slf4j-impl.version>
         <jackson.version>2.12.3</jackson.version>
         <reactor.version>3.4.6</reactor.version>
+        <reactive-streams.version>1.0.3</reactive-streams.version>
         <blockhound.version>1.0.6.RELEASE</blockhound.version>
         <scala.couchbase.version>1.2.0-SNAPSHOT</scala.couchbase.version>
+        <log4j.version>1.2.17</log4j.version>
+        <slf4j.version>1.7.30</slf4j.version>
+        <karaf.version>4.1.3</karaf.version>
 
         <gpg.keyname></gpg.keyname>
         <gpg.passphrase></gpg.passphrase>
@@ -44,12 +54,12 @@
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>core-io</artifactId>
-                <version>2.2.0-SNAPSHOT</version>
+                <version>${core-io.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>java-client</artifactId>
-                <version>3.2.0-SNAPSHOT</version>
+                <version>${java-client.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
@@ -140,6 +150,7 @@
 
     <modules>
         <module>java-client</module>
+        <module>osgi-feature</module>
         <module>java-examples</module>
         <module>core-io</module>
         <module>scala-implicits</module>

@@ -49,7 +49,7 @@ public class LoggingEventConsumer implements Consumer<Event> {
   /**
    * Contains true if SLF4J is on the classpath, false otherwise.
    */
-  private static final boolean SLF4J_AVAILABLE = slf4JOnClasspath();
+  private static final boolean SLF4J_AVAILABLE = slf4JOnClasspath() && !implementationIsOPS4J();
 
   /**
    * Contains the selected loggers that should be used for logging.
@@ -207,6 +207,20 @@ public class LoggingEventConsumer implements Consumer<Event> {
     } catch (ClassNotFoundException e) {
       return false;
     }
+  }
+
+  /**
+   * Helper method to check if OPS4J is on the classpath.
+   */
+  private static boolean implementationIsOPS4J() {
+    if(!slf4JOnClasspath()){
+      return false;
+    }
+    Slf4JLogger l = new Slf4JLogger("test");
+    if (l.getImplementation().getClass().getName().equals("org.ops4j.pax.logging.slf4j.Slf4jLogger")) {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -564,6 +578,9 @@ public class LoggingEventConsumer implements Consumer<Event> {
       MDC.clear();
     }
 
+    public org.slf4j.Logger getImplementation() {
+      return logger;
+    }
   }
 
   static class JdkLogger implements Logger {
