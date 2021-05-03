@@ -91,6 +91,7 @@ public abstract class AbstractBucketConfig implements BucketConfig {
         result.put(ServiceType.KV, Collections.emptySet());
         result.put(ServiceType.SEARCH, Collections.emptySet());
         result.put(ServiceType.ANALYTICS, Collections.emptySet());
+        result.put(ServiceType.EVENTING, Collections.emptySet());
 
         if (input == null) {
             return result;
@@ -131,6 +132,9 @@ public abstract class AbstractBucketConfig implements BucketConfig {
                     break;
                 case "cbas":
                     result.put(ServiceType.ANALYTICS, filtered);
+                    break;
+                case "eventing":
+                    result.put(ServiceType.EVENTING, filtered);
                     break;
             }
         }

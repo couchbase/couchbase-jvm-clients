@@ -35,6 +35,7 @@ public class TimeoutConfig {
   public static final Duration DEFAULT_ANALYTICS_TIMEOUT = Duration.ofSeconds(75);
   public static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
   public static final Duration DEFAULT_DISCONNECT_TIMEOUT = Duration.ofSeconds(10);
+  public static final Duration DEFAULT_EVENTING_TIMEOUT = Duration.ofSeconds(75);
 
   private final Duration kvTimeout;
   private final Duration kvDurableTimeout;
@@ -45,6 +46,7 @@ public class TimeoutConfig {
   private final Duration analyticsTimeout;
   private final Duration connectTimeout;
   private final Duration disconnectTimeout;
+  private final Duration eventingTimeout;
 
   private TimeoutConfig(final Builder builder) {
     kvTimeout = Optional.ofNullable(builder.kvTimeout).orElse(DEFAULT_KV_TIMEOUT);
@@ -56,6 +58,7 @@ public class TimeoutConfig {
     analyticsTimeout = Optional.ofNullable(builder.analyticsTimeout).orElse(DEFAULT_ANALYTICS_TIMEOUT);
     connectTimeout = Optional.ofNullable(builder.connectTimeout).orElse(DEFAULT_CONNECT_TIMEOUT);
     disconnectTimeout = Optional.ofNullable(builder.disconnectTimeout).orElse(DEFAULT_DISCONNECT_TIMEOUT);
+    eventingTimeout = Optional.ofNullable(builder.eventingTimeout).orElse(DEFAULT_EVENTING_TIMEOUT);
   }
 
   public static Builder builder() {
@@ -104,6 +107,10 @@ public class TimeoutConfig {
     return builder().disconnectTimeout(disconnectTimeout);
   }
 
+  public static Builder eventingTimeout(Duration eventingTimeout) {
+    return builder().eventingTimeout(eventingTimeout);
+  }
+
 
   public Duration kvTimeout() {
     return kvTimeout;
@@ -142,6 +149,10 @@ public class TimeoutConfig {
     return analyticsTimeout;
   }
 
+  public Duration eventingTimeout() {
+    return eventingTimeout;
+  }
+
   /**
    * Returns this config as a map so it can be exported into i.e. JSON for display.
    */
@@ -158,6 +169,7 @@ public class TimeoutConfig {
     export.put("analyticsMs", analyticsTimeout.toMillis());
     export.put("connectMs", connectTimeout.toMillis());
     export.put("disconnectMs", disconnectTimeout.toMillis());
+    export.put("eventingMs", eventingTimeout.toMillis());
 
     return export;
   }
@@ -174,6 +186,7 @@ public class TimeoutConfig {
     private Duration analyticsTimeout = null;
     private Duration connectTimeout = null;
     private Duration disconnectTimeout = null;
+    private Duration eventingTimeout = null;
 
     public TimeoutConfig build() {
       return new TimeoutConfig(this);
@@ -284,6 +297,18 @@ public class TimeoutConfig {
      */
     public Builder disconnectTimeout(Duration disconnectTimeout) {
       this.disconnectTimeout = disconnectTimeout;
+      return this;
+    }
+
+    /**
+     * Sets the timeout to use for eventing operations.
+     *
+     * <p>The default is 75 seconds.</p>
+     *
+     * @return this, for chaining
+     */
+    public Builder eventingTimeout(Duration eventingTimeout) {
+      this.eventingTimeout = eventingTimeout;
       return this;
     }
 

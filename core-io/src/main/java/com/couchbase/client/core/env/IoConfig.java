@@ -52,6 +52,7 @@ public class IoConfig {
   private final CircuitBreakerConfig searchCircuitBreakerConfig;
   private final CircuitBreakerConfig analyticsCircuitBreakerConfig;
   private final CircuitBreakerConfig managerCircuitBreakerConfig;
+  private final CircuitBreakerConfig eventingCircuitBreakerConfig;
   private final Set<ServiceType> captureTraffic;
   private final NetworkResolution networkResolution;
   private final boolean dnsSrvEnabled;
@@ -74,6 +75,7 @@ public class IoConfig {
     searchCircuitBreakerConfig = builder.searchCircuitBreakerConfig.build();
     analyticsCircuitBreakerConfig = builder.analyticsCircuitBreakerConfig.build();
     managerCircuitBreakerConfig = builder.managerCircuitBreakerConfig.build();
+    eventingCircuitBreakerConfig = builder.eventingCircuitBreakerConfig.build();
     captureTraffic = Optional
       .ofNullable(builder.captureTraffic)
       .orElse(Collections.emptySet());
@@ -128,6 +130,10 @@ public class IoConfig {
 
   public static Builder managerCircuitBreakerConfig(CircuitBreakerConfig.Builder managerCircuitBreakerConfig) {
     return builder().managerCircuitBreakerConfig(managerCircuitBreakerConfig);
+  }
+
+  public static Builder eventingCircuitBreakerConfig(CircuitBreakerConfig.Builder eventingCircuitBreakerConfig) {
+    return builder().eventingCircuitBreakerConfig(eventingCircuitBreakerConfig);
   }
 
   /**
@@ -195,6 +201,10 @@ public class IoConfig {
 
   public CircuitBreakerConfig managerCircuitBreakerConfig() {
     return managerCircuitBreakerConfig;
+  }
+
+  public CircuitBreakerConfig eventingCircuitBreakerConfig() {
+    return eventingCircuitBreakerConfig;
   }
 
   public boolean mutationTokensEnabled() {
@@ -265,6 +275,7 @@ public class IoConfig {
     export.put("searchCircuitBreakerConfig", searchCircuitBreakerConfig.enabled() ? searchCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("analyticsCircuitBreakerConfig", analyticsCircuitBreakerConfig.enabled() ? analyticsCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("managerCircuitBreakerConfig", managerCircuitBreakerConfig.enabled() ? managerCircuitBreakerConfig.exportAsMap() : "disabled");
+    export.put("eventingCircuitBreakerConfig", eventingCircuitBreakerConfig.enabled() ? eventingCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("numKvConnections", numKvConnections);
     export.put("maxHttpConnections", maxHttpConnections);
     export.put("idleHttpConnectionTimeoutMs", idleHttpConnectionTimeout.toMillis());
@@ -282,6 +293,7 @@ public class IoConfig {
     private CircuitBreakerConfig.Builder searchCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
     private CircuitBreakerConfig.Builder analyticsCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
     private CircuitBreakerConfig.Builder managerCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
+    private CircuitBreakerConfig.Builder eventingCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
     private Set<ServiceType> captureTraffic;
     private NetworkResolution networkResolution = DEFAULT_NETWORK_RESOLUTION;
     private boolean dnsSrvEnabled = DEFAULT_DNS_SRV_ENABLED;
@@ -418,6 +430,20 @@ public class IoConfig {
 
     public CircuitBreakerConfig.Builder managerCircuitBreakerConfig() {
       return managerCircuitBreakerConfig;
+    }
+
+    /**
+     * Configures a {@link CircuitBreaker} to use for eventing operations.
+     *
+     * @return this, for chaining
+     */
+    public Builder eventingCircuitBreakerConfig(CircuitBreakerConfig.Builder eventingCircuitBreakerConfig) {
+      this.eventingCircuitBreakerConfig = eventingCircuitBreakerConfig;
+      return this;
+    }
+
+    public CircuitBreakerConfig.Builder eventingCircuitBreakerConfig() {
+      return eventingCircuitBreakerConfig;
     }
 
     /**

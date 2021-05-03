@@ -128,6 +128,12 @@ public class PortInfo {
             case "cbasSSL":
               sslPorts.put(ServiceType.ANALYTICS, port);
               break;
+            case "eventingAdminPort":
+              ports.put(ServiceType.EVENTING, port);
+              break;
+            case "eventingSSL":
+              sslPorts.put(ServiceType.EVENTING, port);
+              break;
           }
         }
     }

@@ -142,6 +142,9 @@ public class Core {
   private static final RoundRobinLocator VIEWS_LOCATOR =
     new ViewLocator();
 
+  private static final RoundRobinLocator EVENTING_LOCATOR =
+    new RoundRobinLocator(ServiceType.EVENTING);
+
   /**
    * Holds the current core context.
    */
@@ -853,6 +856,8 @@ public class Core {
         return SEARCH_LOCATOR;
       case VIEWS:
         return VIEWS_LOCATOR;
+      case EVENTING:
+        return EVENTING_LOCATOR;
       default:
         throw new IllegalStateException("Unsupported ServiceType: " + serviceType);
     }

@@ -139,7 +139,11 @@ public class HealthPinger {
       case KV: return pingKv(core, target, timeout, retry);
       case VIEWS: return pingViews(core, target, timeout, retry);
       case SEARCH: return pingSearch(core, target, timeout, retry);
-      case MANAGER: return Mono.empty(); // right now we are not pinging the cluster manager
+      case MANAGER:
+      case EVENTING:
+        // right now we are not pinging the cluster manager
+        // right now we are not pinging the eventing service
+        return Mono.empty();
       case ANALYTICS: return pingAnalytics(core, target, timeout, retry);
       default: return Mono.error(new IllegalStateException("Unknown service to ping, this is a bug!"));
     }

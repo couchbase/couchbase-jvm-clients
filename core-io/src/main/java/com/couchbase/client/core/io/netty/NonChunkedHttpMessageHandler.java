@@ -65,7 +65,7 @@ import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchS
 @ChannelHandler.Sharable
 public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler {
 
-  static final String IDENTIFIER = NonChunkedHttpMessageHandler.class.getSimpleName();
+  public static final String IDENTIFIER = NonChunkedHttpMessageHandler.class.getSimpleName();
   private static final String AGG_IDENTIFIER = HttpObjectAggregator.class.getSimpleName();
 
   private final EventBus eventBus;

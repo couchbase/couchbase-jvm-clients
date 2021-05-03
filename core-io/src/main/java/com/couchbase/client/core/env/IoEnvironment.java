@@ -23,7 +23,6 @@ import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollEventLoopGroup
 import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueue;
 import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import com.couchbase.client.core.deps.io.netty.util.concurrent.DefaultThreadFactory;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import reactor.core.publisher.Flux;
@@ -91,6 +90,7 @@ public class IoEnvironment {
   private final Supplier<EventLoopGroup> analyticsEventLoopGroup;
   private final Supplier<EventLoopGroup> searchEventLoopGroup;
   private final Supplier<EventLoopGroup> viewEventLoopGroup;
+  private final Supplier<EventLoopGroup> eventingEventLoopGroup;
 
   /**
    * Creates the {@link IoEnvironment} with default settings.
@@ -204,6 +204,22 @@ public class IoEnvironment {
   }
 
   /**
+
+   * Allows to specify a custom event loop group (I/O event loop thread pool) for the eventing service.
+   * <p>
+   * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+   * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+   * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+   * all the services and what effect a custom pool might have.
+   *
+   * @param eventLoopGroup the dedicated event loop group to use.
+   * @return this {@link Builder} for chaining purposes.
+   */
+  public static Builder eventingEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+    return builder().eventingEventLoopGroup(eventLoopGroup);
+  }
+
+  /**
    * Overrides the number of threads used per event loop.
    * <p>
    * If not manually overridden, a fair thread count is calculated, see {@link #fairThreadCount()} for more
@@ -250,6 +266,7 @@ public class IoEnvironment {
     eventLoopGroups.add(analyticsEventLoopGroup.get().getClass().getSimpleName());
     eventLoopGroups.add(searchEventLoopGroup.get().getClass().getSimpleName());
     eventLoopGroups.add(viewEventLoopGroup.get().getClass().getSimpleName());
+    eventLoopGroups.add(eventingEventLoopGroup.get().getClass().getSimpleName());
     export.put("eventLoopGroups", eventLoopGroups);
 
     return export;
@@ -263,7 +280,8 @@ public class IoEnvironment {
     if (builder.queryEventLoopGroup == null
       || builder.analyticsEventLoopGroup == null
       || builder.searchEventLoopGroup == null
-      || builder.viewEventLoopGroup == null) {
+      || builder.viewEventLoopGroup == null
+      || builder.eventingEventLoopGroup == null) {
       httpDefaultGroup = createEventLoopGroup(nativeIoEnabled, eventLoopThreadCount, "cb-io-http");
     }
 
@@ -296,6 +314,11 @@ public class IoEnvironment {
       ? httpDefaultGroup
       : builder.viewEventLoopGroup;
     sanityCheckEventLoop(viewEventLoopGroup);
+
+    eventingEventLoopGroup = builder.eventingEventLoopGroup == null
+      ? httpDefaultGroup
+      : builder.eventingEventLoopGroup;
+    sanityCheckEventLoop(eventingEventLoopGroup);
   }
 
   /**
@@ -364,6 +387,15 @@ public class IoEnvironment {
   }
 
   /**
+   * Returns the {@link EventLoopGroup} to be used for eventing traffic.
+   *
+   * @return the selected event loop group.
+   */
+  public Supplier<EventLoopGroup> eventingEventLoopGroup() {
+    return eventingEventLoopGroup;
+  }
+
+  /**
    * Returns true if native IO is enabled and can be used if supported.
    *
    * @return true if enabled.
@@ -392,7 +424,8 @@ public class IoEnvironment {
       shutdownGroup(queryEventLoopGroup, timeout),
       shutdownGroup(analyticsEventLoopGroup, timeout),
       shutdownGroup(searchEventLoopGroup, timeout),
-      shutdownGroup(viewEventLoopGroup, timeout)
+      shutdownGroup(viewEventLoopGroup, timeout),
+      shutdownGroup(eventingEventLoopGroup, timeout)
     ).then();
   }
 
@@ -472,6 +505,7 @@ public class IoEnvironment {
     private Supplier<EventLoopGroup> analyticsEventLoopGroup = null;
     private Supplier<EventLoopGroup> searchEventLoopGroup = null;
     private Supplier<EventLoopGroup> viewEventLoopGroup = null;
+    private Supplier<EventLoopGroup> eventingEventLoopGroup = null;
     private int eventLoopThreadCount = DEFAULT_EVENT_LOOP_THREAD_COUNT;
 
     /**
@@ -554,6 +588,22 @@ public class IoEnvironment {
      */
     public Builder searchEventLoopGroup(final EventLoopGroup eventLoopGroup) {
       this.searchEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
+      return this;
+    }
+
+    /**
+     * Allows to specify a custom event loop group (I/O event loop thread pool) for the eventing service.
+     * <p>
+     * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+     * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+     * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+     * all the services and what effect a custom pool might have.
+     *
+     * @param eventLoopGroup the dedicated event loop group to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public Builder eventingEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+      this.eventingEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
     }
 
