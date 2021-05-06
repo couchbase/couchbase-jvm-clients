@@ -42,7 +42,6 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
     private final Set<String> nodesWithPrimaryPartitions;
 
     private final boolean tainted;
-    private final long rev;
     private final boolean ephemeral;
 
     /**
@@ -70,13 +69,12 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
       @JsonProperty("clusterCapabilities") Map<String, Set<ClusterCapabilities>> clusterCapabilities,
       @JacksonInject("origin") String origin) {
         super(uuid, name, BucketNodeLocator.VBUCKET, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities,
-          origin, clusterCapabilities);
+          origin, clusterCapabilities, rev);
         this.partitionInfo = partitionInfo;
         this.tainted = partitionInfo.tainted();
         List<NodeInfo> extendedNodeInfos = this.nodes(); // includes ports for SSL services
         this.partitionHosts = buildPartitionHosts(extendedNodeInfos, partitionInfo);
         this.nodesWithPrimaryPartitions = buildNodesWithPrimaryPartitions(nodeInfos, partitionInfo.partitions());
-        this.rev = rev;
 
         // Use bucket capabilities to identify if couchapi is missing (then its ephemeral). If its null then
         // we are running an old version of couchbase which doesn't have ephemeral buckets at all.
@@ -110,12 +108,12 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
      * @return a ordered reference list for the partition hosts.
      */
     private static List<NodeInfo> buildPartitionHosts(List<NodeInfo> nodeInfos, PartitionInfo partitionInfo) {
-        List<NodeInfo> partitionHosts = new ArrayList<NodeInfo>();
+        List<NodeInfo> partitionHosts = new ArrayList<>();
         for (String rawHost : partitionInfo.partitionHosts()) {
             String convertedHost;
             int directPort;
             try {
-                String parts[] = rawHost.split(":");
+                String[] parts = rawHost.split(":");
                 String host = "";
                 String port = parts[parts.length - 1];
                 if (parts.length > 2) {
@@ -217,11 +215,6 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
     }
 
     @Override
-    public long rev() {
-        return rev;
-    }
-
-    @Override
     public BucketType type() {
         return BucketType.COUCHBASE;
     }
@@ -245,6 +238,6 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
             + ", nodes=" + redactSystem(nodes())
             + ", partitionInfo=" + partitionInfo
             + ", tainted=" + tainted
-            + ", rev=" + rev + '}';
+            + ", rev=" + rev() + '}';
     }
 }

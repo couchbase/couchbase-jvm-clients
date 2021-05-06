@@ -43,7 +43,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MemcachedBucketConfig extends AbstractBucketConfig {
 
-    private final long rev;
     private final TreeMap<Long, NodeInfo> ketamaNodes;
     private final MemcachedHashingStrategy hashingStrategy;
 
@@ -72,8 +71,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
             @JsonProperty("clusterCapabilities") Map<String, Set<ClusterCapabilities>> clusterCapabilities,
             @JacksonInject("origin") String origin) {
         super(uuid, name, BucketNodeLocator.KETAMA, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities,
-          origin, clusterCapabilities);
-        this.rev = rev;
+          origin, clusterCapabilities, rev);
         this.ketamaNodes = new TreeMap<>();
         this.hashingStrategy = StandardMemcachedHashingStrategy.INSTANCE;
         populateKetamaNodes();
@@ -82,11 +80,6 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
     @Override
     public boolean tainted() {
         return false;
-    }
-
-    @Override
-    public long rev() {
-        return rev;
     }
 
     @Override
@@ -173,7 +166,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
     public String toString() {
         return "MemcachedBucketConfig{" +
           "name='" + redactMeta(name()) + '\'' +
-          ", rev=" + rev +
+          ", rev=" + rev() +
           ", nodes=" + redactSystem(new HashSet<>(ketamaNodes.values()).toString()) +
           ", hash=" + hashingStrategy +
           '}';
@@ -184,13 +177,13 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MemcachedBucketConfig that = (MemcachedBucketConfig) o;
-        return rev == that.rev &&
+        return rev() == that.rev() &&
           Objects.equals(ketamaNodes, that.ketamaNodes) &&
           Objects.equals(hashingStrategy, that.hashingStrategy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(rev, ketamaNodes, hashingStrategy);
+        return Objects.hash(rev(), ketamaNodes, hashingStrategy);
     }
 }

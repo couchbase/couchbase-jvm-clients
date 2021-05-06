@@ -43,11 +43,13 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     private final Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities;
     private final String origin;
     private final List<PortInfo> portInfos;
+    private final long rev;
 
     protected AbstractBucketConfig(String uuid, String name, BucketNodeLocator locator, String uri, String streamingUri,
                                    List<NodeInfo> nodeInfos, List<PortInfo> portInfos,
                                    List<BucketCapabilities> bucketCapabilities, String origin,
-                                   Map<String, Set<ClusterCapabilities>> clusterCapabilities
+                                   Map<String, Set<ClusterCapabilities>> clusterCapabilities,
+                                   long rev
     ) {
         this.uuid = uuid;
         this.name = name;
@@ -57,6 +59,7 @@ public abstract class AbstractBucketConfig implements BucketConfig {
         this.bucketCapabilities = convertBucketCapabilities(bucketCapabilities);
         this.clusterCapabilities = convertClusterCapabilities(clusterCapabilities);
         this.origin = origin;
+        this.rev = rev;
         this.portInfos = portInfos == null ? Collections.emptyList() : portInfos;
         this.nodeInfo = portInfos == null ? nodeInfos : nodeInfoFromExtended(portInfos, nodeInfos);
         int es = 0;
@@ -217,6 +220,11 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     @Override
     public List<NodeInfo> nodes() {
         return nodeInfo;
+    }
+
+    @Override
+    public long rev() {
+        return rev;
     }
 
     @Override

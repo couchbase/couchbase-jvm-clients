@@ -66,17 +66,12 @@ class AbstractBucketConfigTest {
 
         SampleBucketConfig(List<NodeInfo> nodeInfos, List<PortInfo> portInfos) {
             super(UUID, NAME, LOCATOR, URI, STREAMING_URI, nodeInfos, portInfos, null,
-               "127.0.0.1", null);
+               "127.0.0.1", null, 0);
         }
 
         @Override
         public boolean tainted() {
             return false;
-        }
-
-        @Override
-        public long rev() {
-            return 0;
         }
 
         @Override
