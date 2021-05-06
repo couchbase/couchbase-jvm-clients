@@ -1,16 +1,17 @@
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.error.DocumentNotFoundException
-import com.couchbase.client.scala.kv._
-import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.test.{Capabilities, ClusterType, IgnoreWhen}
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.TestInstance.Lifecycle
-import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
-
 import java.time.Instant
 import java.time.temporal.ChronoUnit.{DAYS, SECONDS}
 import java.util.concurrent.TimeUnit
+
+import com.couchbase.client.core.error.{DocumentNotFoundException, InvalidArgumentException}
+import com.couchbase.client.scala.kv._
+import com.couchbase.client.scala.util.ScalaIntegrationTest
+import com.couchbase.client.test.{Capabilities, ClusterType, IgnoreWhen}
+import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows, assertTrue}
+import org.junit.jupiter.api.TestInstance.Lifecycle
+import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
+
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
@@ -271,17 +272,6 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
         docId,
         "foo",
         ReplaceOptions()
-          .expiry(NEAR_FUTURE_INSTANT.plus(5, DAYS))
-          .preserveExpiry(true)
-      )
-      .get
-    assertExpiry(docId, NEAR_FUTURE_INSTANT)
-
-    coll
-      .replace(
-        docId,
-        "foo",
-        ReplaceOptions()
           .preserveExpiry(true)
       )
       .get
@@ -289,6 +279,28 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
 
     coll.replace(docId, "foo").get
     assertNoExpiry(docId)
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.PRESERVE_EXPIRY))
+  def replace_throws_invalid_argument_for_bad_preserve_expiry: Unit = {
+    val docId = TestUtils.docId()
+
+    val e = assertThrows(
+      classOf[InvalidArgumentException],
+      () =>
+        coll
+          .replace(
+            docId,
+            "foo",
+            ReplaceOptions()
+              .expiry(NEAR_FUTURE_INSTANT.plus(5, DAYS))
+              .preserveExpiry(true)
+          )
+          .get
+    )
+
+    assertTrue(e.getMessage.contains("preserveExpiry"))
   }
 
   @Test
@@ -303,7 +315,6 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
         MutateInOptions()
           .document(StoreSemantics.Insert)
           .expiry(NEAR_FUTURE_INSTANT)
-          .preserveExpiry(true)
       )
       .get
     assertExpiry(docId, NEAR_FUTURE_INSTANT)
@@ -325,6 +336,7 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
         docId,
         Array(MutateInSpec.upsert("foo", "bar")),
         MutateInOptions()
+          .document(StoreSemantics.Replace)
           .preserveExpiry(true)
       )
       .get
@@ -332,6 +344,45 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
 
     coll.mutateIn(docId, Array(MutateInSpec.upsert("foo", "bar"))).get
     assertNoExpiry(docId)
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.PRESERVE_EXPIRY))
+  def mutate_in_throws_invalid_argument_for_bad_preserve_expiry(): Unit = {
+    val docId = TestUtils.docId()
+
+    //Insert with preserve expiry
+    val e1 = assertThrows(
+      classOf[InvalidArgumentException],
+      () =>
+        coll
+          .mutateIn(
+            docId,
+            Array(MutateInSpec.upsert("foo", "bar")),
+            MutateInOptions()
+              .document(StoreSemantics.Insert)
+              .preserveExpiry(true)
+          )
+          .get
+    )
+    assertTrue(e1.getMessage.contains("preserveExpiry"))
+
+    //Replace with expiry and preserve expiry
+    val e2 = assertThrows(
+      classOf[InvalidArgumentException],
+      () =>
+        coll
+          .mutateIn(
+            docId,
+            Array(MutateInSpec.upsert("foo", "bar")),
+            MutateInOptions()
+              .document(StoreSemantics.Replace)
+              .expiry(NEAR_FUTURE_INSTANT)
+              .preserveExpiry(true)
+          )
+          .get
+    )
+    assertTrue(e2.getMessage.contains("preserveExpiry"))
   }
 
   private def assertExpiry(docId: String, expectedExpiry: Instant): Unit = {
