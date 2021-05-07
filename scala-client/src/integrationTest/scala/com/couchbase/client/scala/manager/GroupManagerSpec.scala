@@ -29,6 +29,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   private val GroupA                   = "group-a"
   private val GroupB                   = "group-b"
   private val SecurityAdmin            = Role("security_admin")
+  private val SecurityAdminLocal       = Role("security_admin_local")
   private val ReadOnlyAdmin            = Role("ro_admin")
   private val BucketFullAccessWildcard = Role("bucket_full_access", Some("*"))
 
@@ -151,7 +152,18 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def create(): Unit = {
+  @IgnoreWhen(hasCapabilities = Array(Capabilities.COLLECTIONS))
+  def createPreCheshireCat(): Unit = {
+    create(SecurityAdmin)
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.COLLECTIONS))
+  def createPostCheshireCat(): Unit = {
+    create(SecurityAdminLocal)
+  }
+
+  def create(securityAdmin: Role): Unit = {
     val fakeLdapRef = "ou=Users"
     users
       .upsertGroup(
@@ -182,7 +194,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
       .upsertUser(
         User(Username)
           .password("password")
-          .roles(SecurityAdmin, BucketFullAccessWildcard)
+          .roles(securityAdmin, BucketFullAccessWildcard)
           .groups(GroupA, GroupB)
       )
       .get
@@ -191,14 +203,14 @@ class GroupManagerSpec extends ScalaIntegrationTest {
 
     var userMeta = users.getUser(Username, AuthDomain.Local).get
 
-    assertEquals(Set(SecurityAdmin, BucketFullAccessWildcard), userMeta.user.roles.toSet)
+    assertEquals(Set(securityAdmin, BucketFullAccessWildcard), userMeta.user.roles.toSet)
     assertEquals(
-      Set(SecurityAdmin, BucketFullAccessWildcard, ReadOnlyAdmin),
+      Set(securityAdmin, BucketFullAccessWildcard, ReadOnlyAdmin),
       userMeta.effectiveRoles.map(_.role).toSet
     )
 
     assert(userMeta.effectiveRoles.size == 3)
-    val r1 = userMeta.effectiveRoles.find(_.role.name == "security_admin").get
+    val r1 = userMeta.effectiveRoles.find(_.role.name == securityAdmin.name).get
     val r2 = userMeta.effectiveRoles.find(_.role.name == "ro_admin").get
     val r3 = userMeta.effectiveRoles.find(_.role.name == "bucket_full_access").get
 
@@ -213,8 +225,8 @@ class GroupManagerSpec extends ScalaIntegrationTest {
     assert(r3.origins.exists(v => v.typ == "user"))
     assert(r3.origins.exists(v => v.typ == "group" && v.name.contains("group-b")))
 
-    users.upsertGroup(users.getGroup(GroupA).get.roles(SecurityAdmin)).get
-    users.upsertGroup(users.getGroup(GroupB).get.roles(SecurityAdmin)).get
+    users.upsertGroup(users.getGroup(GroupA).get.roles(securityAdmin)).get
+    users.upsertGroup(users.getGroup(GroupB).get.roles(securityAdmin)).get
 
     Util.waitUntilCondition(() => {
       users.getGroup(GroupA) match {
@@ -231,7 +243,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
 
     userMeta = users.getUser(Username, AuthDomain.Local).get
     assertEquals(
-      Set(SecurityAdmin, BucketFullAccessWildcard),
+      Set(securityAdmin, BucketFullAccessWildcard),
       userMeta.effectiveRoles.map(_.role).toSet
     )
   }

@@ -56,6 +56,8 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
   private static final Role READ_ONLY_ADMIN = new Role("ro_admin");
   private static final Role BUCKET_FULL_ACCESS_WILDCARD = new Role("bucket_full_access", "*");
   private static final Role SECURITY_ADMIN = new Role("security_admin");
+  private static final Role SECURITY_ADMIN_LOCAL = new Role("security_admin_local");
+
 
   private static final String USERNAME = "integration-test-user";
   private static final String GROUP_A = "group-a";
@@ -156,7 +158,18 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  void create() {
+  @IgnoreWhen(hasCapabilities = COLLECTIONS)
+  void createPreCheshireCat() {
+    create(SECURITY_ADMIN);
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = COLLECTIONS)
+  void createPostCheshireCat() {
+    create(SECURITY_ADMIN_LOCAL);
+  }
+
+  void create(Role securityAdmin) {
     final String fakeLdapRef = "ou=Users";
     upsert(new Group(GROUP_A).description("a").roles(READ_ONLY_ADMIN).ldapGroupReference(fakeLdapRef));
     upsert(new Group(GROUP_B).description("b").roles(READ_ONLY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD));
@@ -172,28 +185,28 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
 
     upsert(new User(USERNAME)
         .password("password")
-        .roles(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD)
+        .roles(securityAdmin, BUCKET_FULL_ACCESS_WILDCARD)
         .groups(GROUP_A, GROUP_B));
 
     UserAndMetadata userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
 
-    assertEquals(setOf(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD), userMeta.user().roles());
-    assertEquals(setOf(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD, READ_ONLY_ADMIN), userMeta.effectiveRoles());
+    assertEquals(setOf(securityAdmin, BUCKET_FULL_ACCESS_WILDCARD), userMeta.user().roles());
+    assertEquals(setOf(securityAdmin, BUCKET_FULL_ACCESS_WILDCARD, READ_ONLY_ADMIN), userMeta.effectiveRoles());
 
     // xxx possibly flaky, depends on order of origins reported by server?
     checkRoleOrigins(userMeta,
-        "security_admin<-[user]",
+      securityAdmin.name() +"<-[user]",
         "ro_admin<-[group:group-a, group:group-b]",
         "bucket_full_access[*]<-[group:group-b, user]");
 
-    users.upsertGroup(users.getGroup(GROUP_A).roles(SECURITY_ADMIN));
-    users.upsertGroup(users.getGroup(GROUP_B).roles(SECURITY_ADMIN));
+    users.upsertGroup(users.getGroup(GROUP_A).roles(securityAdmin));
+    users.upsertGroup(users.getGroup(GROUP_B).roles(securityAdmin));
 
     Util.waitUntilCondition(() -> users.getGroup(GROUP_A).roles().size() == 1
               && users.getGroup(GROUP_B).roles().size() == 1);
 
     userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
-    assertEquals(setOf(SECURITY_ADMIN, BUCKET_FULL_ACCESS_WILDCARD), userMeta.effectiveRoles());
+    assertEquals(setOf(securityAdmin, BUCKET_FULL_ACCESS_WILDCARD), userMeta.effectiveRoles());
   }
 
   @Test
