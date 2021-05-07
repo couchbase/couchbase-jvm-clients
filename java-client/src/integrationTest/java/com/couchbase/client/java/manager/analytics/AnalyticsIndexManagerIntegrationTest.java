@@ -58,6 +58,7 @@ import static com.couchbase.client.java.manager.analytics.DropIndexAnalyticsOpti
 import static com.couchbase.client.test.Capabilities.ANALYTICS;
 import static com.couchbase.client.test.ClusterType.CAVES;
 import static com.couchbase.client.test.ClusterType.MOCKED;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -421,7 +422,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
       analytics.createDataset(dataset, bucket.name());
       analytics.connectLink();
 
-      assertEquals(singletonMap("Default", singletonMap("myDataset", 0L)), analytics.getPendingMutations());
+      waitUntilCondition(() -> singletonMap("Default", singletonMap("myDataset", 0L)).equals(analytics.getPendingMutations()), Duration.ofSeconds(20));
     } finally {
       analytics.disconnectLink();
     }
