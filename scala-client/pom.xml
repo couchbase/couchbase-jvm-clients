@@ -499,7 +499,7 @@
                         <configuration>
                             <resources>
                                 <resource>
-                                    <directory>>src/integrationTest/resources</directory>
+                                    <directory>src/integrationTest/resources</directory>
                                 </resource>
                             </resources>
                         </configuration>
