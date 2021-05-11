@@ -16,7 +16,9 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
@@ -24,6 +26,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -33,9 +37,11 @@ class KeyValueManyEndpointsTest extends JavaIntegrationTest {
   private ClusterEnvironment environment;
   private Collection collection;
 
+  private static int CONNS_TO_OPEN = 8;
+
   @BeforeEach
   void beforeEach() {
-    IoConfig.Builder ioConfig = IoConfig.numKvConnections(8);
+    IoConfig.Builder ioConfig = IoConfig.numKvConnections(CONNS_TO_OPEN);
     environment = environment().ioConfig(ioConfig).build();
     cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
     Bucket bucket = cluster.bucket(config().bucketname());
@@ -63,6 +69,25 @@ class KeyValueManyEndpointsTest extends JavaIntegrationTest {
       collection.upsert("id-" + i, "foobar");
       assertEquals("foobar", collection.get("id-" + i).contentAs(String.class));
     }
+  }
+
+  /**
+   * Even though we open more than one kv endpoint per config, we need to make sure that we only open one
+   * gcccp endpoint per node.
+   */
+  @Test
+  void onlyOpensOneGcccpPerNode() {
+    int bucket = 0;
+    int global = 0;
+    for (EndpointDiagnostics ed : cluster.diagnostics().endpoints().get(ServiceType.KV)) {
+      if (ed.namespace().isPresent()) {
+        bucket++;
+      } else {
+        global++;
+      }
+    }
+
+    assertEquals(CONNS_TO_OPEN, bucket / global);
   }
 
 }
