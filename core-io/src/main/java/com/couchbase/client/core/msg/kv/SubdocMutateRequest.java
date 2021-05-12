@@ -141,6 +141,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
     if (span != null) {
       span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN);
+      applyLevelOnSpan(syncReplicationType, span);
     }
   }
 

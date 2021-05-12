@@ -54,6 +54,7 @@ public class AppendRequest extends BaseKeyValueRequest<AppendResponse> implement
 
     if (span != null) {
       span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_APPEND);
+      applyLevelOnSpan(syncReplicationType, span);
     }
   }
 

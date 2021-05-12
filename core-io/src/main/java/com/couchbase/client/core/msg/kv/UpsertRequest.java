@@ -66,6 +66,7 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
 
     if (span != null) {
       span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_UPSERT);
+      applyLevelOnSpan(syncReplicationType, span);
     }
   }
 

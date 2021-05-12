@@ -18,6 +18,8 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.util.HostAndPort;
@@ -202,8 +204,11 @@ public class RequestContext extends CoreContext {
   @Stability.Internal
   public RequestContext logicallyComplete() {
     this.logicallyCompletedAt = System.nanoTime();
-    if (request.requestSpan() != null) {
-      request.requestSpan().end();
+
+    RequestSpan span = request.requestSpan();
+    if (span != null) {
+      span.attribute(TracingIdentifiers.ATTR_RETRIES, retryAttempts());
+      span.end();
     }
     if (lastDispatchedTo() != null) {
       core().responseMetric(request).recordValue(logicalRequestLatency());

@@ -62,6 +62,7 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> imp
 
     if (span != null) {
       span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_DECREMENT);
+      applyLevelOnSpan(syncReplicationType, span);
     }
   }
 

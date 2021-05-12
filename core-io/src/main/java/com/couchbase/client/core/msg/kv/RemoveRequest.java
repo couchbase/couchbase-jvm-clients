@@ -53,6 +53,7 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> implement
 
     if (span != null) {
       span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_REMOVE);
+      applyLevelOnSpan(syncReplicationType, span);
     }
   }
 

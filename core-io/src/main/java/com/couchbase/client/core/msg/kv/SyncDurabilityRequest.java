@@ -16,6 +16,9 @@
 
 package com.couchbase.client.core.msg.kv;
 
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
+
 import java.util.Optional;
 
 /**
@@ -27,5 +30,24 @@ public interface SyncDurabilityRequest {
    * Returns the durability level if present.
    */
   Optional<DurabilityLevel> durabilityLevel();
+
+  /**
+   * Helper method to apply the durability level if present to the request span.
+   *
+   * @param level the level to potentially apply.
+   * @param span the span on which it should be applied on.
+   */
+  default void applyLevelOnSpan(final Optional<DurabilityLevel> level, final RequestSpan span) {
+    if (level.isPresent() && span != null) {
+      switch (level.get()) {
+        case MAJORITY:
+          span.attribute(TracingIdentifiers.ATTR_DURABILITY, "majority");
+        case MAJORITY_AND_PERSIST_TO_ACTIVE:
+          span.attribute(TracingIdentifiers.ATTR_DURABILITY, "majority_and_persist_active");
+        case PERSIST_TO_MAJORITY:
+          span.attribute(TracingIdentifiers.ATTR_DURABILITY, "persist_majority");
+      }
+    }
+  }
 
 }

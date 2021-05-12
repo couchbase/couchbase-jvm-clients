@@ -72,6 +72,7 @@ public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> impleme
 
     if (span != null) {
       span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_REPLACE);
+      applyLevelOnSpan(syncReplicationType, span);
     }
   }
 

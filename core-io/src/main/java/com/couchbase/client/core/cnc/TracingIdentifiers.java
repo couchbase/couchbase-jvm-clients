@@ -216,5 +216,9 @@ public class TracingIdentifiers {
 
   public static final String METER_REQUESTS = "db.couchbase.requests";
 
+  public static final String ATTR_DURABILITY = "db.couchbase.durability";
+
+  public static final String ATTR_RETRIES = "db.couchbase.retries";
+
 
 }
