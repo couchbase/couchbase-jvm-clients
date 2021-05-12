@@ -130,12 +130,19 @@ public class AsyncBucketManager extends ManagerSupport {
       params.add("replicaNumber", settings.numReplicas());
     }
     params.add("flushEnabled", settings.flushEnabled() ? 1 : 0);
-    params.add("maxTTL", settings.maxExpiry().getSeconds());
+    long maxTTL = settings.maxExpiry().getSeconds();
+    // Do not send if it's been left at default, else will get an error on CE
+    if (maxTTL != 0) {
+      params.add("maxTTL", maxTTL);
+    }
     if (settings.evictionPolicy() != null) {
       // let server assign the default policy for this bucket type
       params.add("evictionPolicy", settings.evictionPolicy().alias());
     }
-    params.add("compressionMode", settings.compressionMode().alias());
+    // Do not send if it's been left at default, else will get an error on CE
+    if (settings.compressionMode() != CompressionMode.PASSIVE) {
+      params.add("compressionMode", settings.compressionMode().alias());
+    }
 
     if (settings.minimumDurabilityLevel() != DurabilityLevel.NONE) {
       params.add("durabilityMinLevel", settings.minimumDurabilityLevel().encodeForManagementApi());
