@@ -63,7 +63,7 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
     this.syncReplicationType = syncReplicationType;
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_INSERT);
+      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_INSERT);
     }
   }
 

@@ -48,7 +48,7 @@ public class ObserveViaSeqnoRequest extends BaseKeyValueRequest<ObserveViaSeqnoR
     this.vbucketUUID = vbucketUUID;
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_OBSERVE);
+      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_OBSERVE);
     }
   }
 

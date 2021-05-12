@@ -33,9 +33,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.IndexNotFoundException;
-import com.couchbase.client.core.error.context.SearchErrorContext;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.search.GenericSearchRequest;
 import com.couchbase.client.core.msg.search.GenericSearchResponse;
 import com.couchbase.client.java.json.JsonObject;
@@ -565,7 +563,7 @@ public class AsyncSearchIndexManager {
 
   private RequestSpan buildSpan(final String spanName, final RequestSpan parent) {
     RequestSpan span = core.context().environment().requestTracer().requestSpan(spanName, parent);
-    span.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
+    span.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
     return span;
   }
 

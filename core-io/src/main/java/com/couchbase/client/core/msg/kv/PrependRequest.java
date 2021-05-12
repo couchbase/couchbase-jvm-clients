@@ -53,7 +53,7 @@ public class PrependRequest extends BaseKeyValueRequest<PrependResponse> impleme
     this.syncReplicationType = syncReplicationType;
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_PREPEND);
+      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_PREPEND);
     }
   }
 

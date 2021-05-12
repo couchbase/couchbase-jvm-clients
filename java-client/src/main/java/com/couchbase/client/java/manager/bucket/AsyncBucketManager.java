@@ -99,7 +99,7 @@ public class AsyncBucketManager extends ManagerSupport {
     UpdateBucketOptions.Built builtOpts = options.build();
 
     RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MB_UPDATE_BUCKET, builtOpts.parentSpan().orElse(null), settings.name());
-    span.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
+    span.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     GetAllBucketOptions getAllBucketOptions = getAllBucketOptions();
     builtOpts.timeout().ifPresent(getAllBucketOptions::timeout);
@@ -229,7 +229,7 @@ public class AsyncBucketManager extends ManagerSupport {
   private RequestSpan buildSpan(final String spanName, final RequestSpan parent, final String bucketName) {
     RequestSpan span = environment().requestTracer().requestSpan(spanName, parent);
     if (bucketName != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_NAME, bucketName);
+      span.attribute(TracingIdentifiers.ATTR_NAME, bucketName);
     }
     return span;
   }

@@ -51,11 +51,11 @@ public class GenericViewRequest extends BaseRequest<GenericViewResponse>
     this.bucket = requireNonNull(bucket);
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_VIEWS);
-      span.setAttribute(TracingIdentifiers.ATTR_NAME, bucket);
+      span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_VIEWS);
+      span.attribute(TracingIdentifiers.ATTR_NAME, bucket);
 
       FullHttpRequest request = requestSupplier.get();
-      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, request.method().toString() + " " + request.uri());
+      span.attribute(TracingIdentifiers.ATTR_OPERATION, request.method().toString() + " " + request.uri());
     }
   }
 

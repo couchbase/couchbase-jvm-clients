@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
 public class SearchRequest extends BaseRequest<SearchResponse>
         implements HttpRequest<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer, SearchResponse> {
@@ -53,8 +52,8 @@ public class SearchRequest extends BaseRequest<SearchResponse>
         this.authenticator = authenticator;
 
         if (span != null) {
-            span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_SEARCH);
-            span.setAttribute(TracingIdentifiers.ATTR_OPERATION, indexName);
+            span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_SEARCH);
+            span.attribute(TracingIdentifiers.ATTR_OPERATION, indexName);
         }
     }
 

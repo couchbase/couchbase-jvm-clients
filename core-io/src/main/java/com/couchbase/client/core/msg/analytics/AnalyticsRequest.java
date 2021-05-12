@@ -75,13 +75,13 @@ public class AnalyticsRequest
     this.scope = scope;
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_ANALYTICS);
-      span.setAttribute(TracingIdentifiers.ATTR_STATEMENT, statement);
+      span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_ANALYTICS);
+      span.attribute(TracingIdentifiers.ATTR_STATEMENT, statement);
       if (bucket != null) {
-        span.setAttribute(TracingIdentifiers.ATTR_NAME, bucket);
+        span.attribute(TracingIdentifiers.ATTR_NAME, bucket);
       }
       if (scope != null) {
-        span.setAttribute(TracingIdentifiers.ATTR_SCOPE, scope);
+        span.attribute(TracingIdentifiers.ATTR_SCOPE, scope);
       }
     }
   }

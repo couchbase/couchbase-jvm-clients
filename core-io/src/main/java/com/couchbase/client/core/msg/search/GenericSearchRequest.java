@@ -56,10 +56,10 @@ public class GenericSearchRequest extends BaseRequest<GenericSearchResponse>
     this.path = path;
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_SEARCH);
+      span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_SEARCH);
 
       FullHttpRequest request = requestSupplier.get();
-      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, request.method().toString() + " " + request.uri());
+      span.attribute(TracingIdentifiers.ATTR_OPERATION, request.method().toString() + " " + request.uri());
     }
   }
 

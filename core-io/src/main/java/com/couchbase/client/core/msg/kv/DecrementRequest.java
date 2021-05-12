@@ -61,7 +61,7 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> imp
     this.syncReplicationType = syncReplicationType;
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_DECREMENT);
+      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_DECREMENT);
     }
   }
 

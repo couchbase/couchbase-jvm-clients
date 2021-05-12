@@ -46,10 +46,10 @@ public class GenericManagerRequest extends BaseManagerRequest<GenericManagerResp
     this.idempotent = idempotent;
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_MGMT);
+      span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_MGMT);
 
       FullHttpRequest request = requestSupplier.get();
-      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, request.method().toString() + " " + request.uri());
+      span.attribute(TracingIdentifiers.ATTR_OPERATION, request.method().toString() + " " + request.uri());
     }
   }
 

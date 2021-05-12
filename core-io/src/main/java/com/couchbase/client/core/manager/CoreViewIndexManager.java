@@ -115,7 +115,7 @@ public class CoreViewIndexManager {
   public CompletableFuture<Map<String, ObjectNode>> getAllDesignDocuments(boolean production,
                                                                           Duration timeout, RetryStrategy retry, RequestSpan parentSpan) {
     RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MV_GET_ALL_DD, parentSpan);
-    span.setAttribute(TracingIdentifiers.ATTR_NAME, bucket);
+    span.attribute(TracingIdentifiers.ATTR_NAME, bucket);
 
     return new ConfigManager().sendRequest(GET, pathForAllDesignDocuments(), resolve(timeout), resolve(retry), span).thenApply(response -> {
       // Unlike the other view management requests, this request goes through the config manager endpoint.
@@ -274,7 +274,7 @@ public class CoreViewIndexManager {
 
   private RequestSpan buildSpan(final String spanName, final RequestSpan parent) {
     RequestSpan span = core.context().environment().requestTracer().requestSpan(spanName, parent);
-    span.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
+    span.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
     return span;
   }
 

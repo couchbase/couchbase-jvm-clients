@@ -45,7 +45,7 @@ public class UnlockRequest extends BaseKeyValueRequest<UnlockResponse> {
     this.cas = cas;
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_UNLOCK);
+      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_UNLOCK);
     }
   }
 

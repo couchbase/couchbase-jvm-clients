@@ -38,7 +38,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
@@ -71,9 +70,9 @@ public class ViewRequest extends BaseRequest<ViewResponse>
     this.keysJson = requireNonNull(keysJson);
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_VIEWS);
-      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, "/" + design + "/" + view);
-      span.setAttribute(TracingIdentifiers.ATTR_NAME, bucket);
+      span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_VIEWS);
+      span.attribute(TracingIdentifiers.ATTR_OPERATION, "/" + design + "/" + view);
+      span.attribute(TracingIdentifiers.ATTR_NAME, bucket);
     }
   }
 

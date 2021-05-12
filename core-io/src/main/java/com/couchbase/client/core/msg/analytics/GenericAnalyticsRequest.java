@@ -47,10 +47,10 @@ public class GenericAnalyticsRequest extends BaseRequest<GenericAnalyticsRespons
     this.idempotent = idempotent;
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_ANALYTICS);
+      span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_ANALYTICS);
 
       FullHttpRequest request = requestSupplier.get();
-      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, request.method().toString() + " " + request.uri());
+      span.attribute(TracingIdentifiers.ATTR_OPERATION, request.method().toString() + " " + request.uri());
     }
   }
 

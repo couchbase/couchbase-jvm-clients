@@ -28,7 +28,6 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValu
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.Authenticator;
-import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -70,13 +69,13 @@ public class QueryRequest
     this.scope = scope;
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_QUERY);
-      span.setAttribute(TracingIdentifiers.ATTR_STATEMENT, statement);
+      span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_QUERY);
+      span.attribute(TracingIdentifiers.ATTR_STATEMENT, statement);
       if (bucket != null) {
-        span.setAttribute(TracingIdentifiers.ATTR_NAME, bucket);
+        span.attribute(TracingIdentifiers.ATTR_NAME, bucket);
       }
       if (scope != null) {
-        span.setAttribute(TracingIdentifiers.ATTR_SCOPE, scope);
+        span.attribute(TracingIdentifiers.ATTR_SCOPE, scope);
       }
     }
   }

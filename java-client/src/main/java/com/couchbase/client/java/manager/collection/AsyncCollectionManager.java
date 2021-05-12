@@ -390,13 +390,13 @@ public class AsyncCollectionManager extends ManagerSupport {
                                 final String scopeName, final String collectionName) {
     RequestSpan span = environment().requestTracer().requestSpan(spanName, parent);
     if (bucketName != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_NAME, bucketName);
+      span.attribute(TracingIdentifiers.ATTR_NAME, bucketName);
     }
     if (scopeName != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_SCOPE, scopeName);
+      span.attribute(TracingIdentifiers.ATTR_SCOPE, scopeName);
     }
     if (collectionName != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_COLLECTION, collectionName);
+      span.attribute(TracingIdentifiers.ATTR_COLLECTION, collectionName);
     }
     return span;
   }

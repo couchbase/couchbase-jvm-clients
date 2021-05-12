@@ -46,7 +46,7 @@ public class ReplicaGetRequest extends GetRequest {
     this.replica = replica;
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA);
+      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA);
     }
   }
 

@@ -102,11 +102,11 @@ public abstract class BaseKeyValueRequest<R extends Response>
     this.opaque = nextOpaque();
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_KV);
+      span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_KV);
       if (collectionIdentifier != null) {
-        span.setAttribute(TracingIdentifiers.ATTR_NAME, collectionIdentifier.bucket());
-        span.setAttribute(TracingIdentifiers.ATTR_SCOPE, collectionIdentifier.scope().orElse(CollectionIdentifier.DEFAULT_SCOPE));
-        span.setAttribute(TracingIdentifiers.ATTR_COLLECTION, collectionIdentifier.collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION));
+        span.attribute(TracingIdentifiers.ATTR_NAME, collectionIdentifier.bucket());
+        span.attribute(TracingIdentifiers.ATTR_SCOPE, collectionIdentifier.scope().orElse(CollectionIdentifier.DEFAULT_SCOPE));
+        span.attribute(TracingIdentifiers.ATTR_COLLECTION, collectionIdentifier.collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION));
       }
     }
   }

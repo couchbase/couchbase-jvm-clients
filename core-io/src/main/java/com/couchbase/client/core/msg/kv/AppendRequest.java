@@ -53,7 +53,7 @@ public class AppendRequest extends BaseKeyValueRequest<AppendResponse> implement
     this.syncReplicationType = syncReplicationType;
 
     if (span != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_APPEND);
+      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_APPEND);
     }
   }
 

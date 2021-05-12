@@ -39,7 +39,7 @@ public interface RequestSpan {
    * @param key the key of the attribute.
    * @param value the value of the attribute.
    */
-  void setAttribute(String key, String value);
+  void attribute(String key, String value);
 
   /**
    * Sets an attribute on the span, which is translated to the corresponding implementation specific tag.
@@ -49,7 +49,7 @@ public interface RequestSpan {
    * @param key the key of the attribute.
    * @param value the value of the attribute.
    */
-  void setAttribute(String key, boolean value);
+  void attribute(String key, boolean value);
 
   /**
    * Sets an attribute on the span, which is translated to the corresponding implementation specific tag.
@@ -59,7 +59,7 @@ public interface RequestSpan {
    * @param key the key of the attribute.
    * @param value the value of the attribute.
    */
-  void setAttribute(String key, long value);
+  void attribute(String key, long value);
 
   /**
    * Sets an event on the span, which is translated to the corresponding implementation specific event.
@@ -69,7 +69,7 @@ public interface RequestSpan {
    * @param name the name of the event
    * @param timestamp the timestamp when it happened.
    */
-  void addEvent(String name, Instant timestamp);
+  void event(String name, Instant timestamp);
 
   /**
    * Completes this span.

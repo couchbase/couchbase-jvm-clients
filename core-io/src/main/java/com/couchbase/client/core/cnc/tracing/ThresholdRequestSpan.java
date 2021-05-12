@@ -32,16 +32,16 @@ public class ThresholdRequestSpan implements RequestSpan {
   }
 
   @Override
-  public void setAttribute(String key, String value) { }
+  public void attribute(String key, String value) { }
 
   @Override
-  public void setAttribute(String key, boolean value) { }
+  public void attribute(String key, boolean value) { }
 
   @Override
-  public void setAttribute(String key, long value) { }
+  public void attribute(String key, long value) { }
 
   @Override
-  public void addEvent(String name, Instant timestamp) { }
+  public void event(String name, Instant timestamp) { }
 
   @Override
   public void requestContext(RequestContext requestContext) {

@@ -43,24 +43,24 @@ public class TracingUtils {
                                                      final String localHost, final int localPort,
                                                      final String remoteHost, final int remotePort,
                                                      final String operationId) {
-    span.setAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
-    span.setAttribute(TracingIdentifiers.ATTR_NET_TRANSPORT, TracingIdentifiers.ATTR_NET_TRANSPORT_TCP);
-    span.setAttribute(TracingIdentifiers.ATTR_LOCAL_ID, localId);
+    span.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
+    span.attribute(TracingIdentifiers.ATTR_NET_TRANSPORT, TracingIdentifiers.ATTR_NET_TRANSPORT_TCP);
+    span.attribute(TracingIdentifiers.ATTR_LOCAL_ID, localId);
 
     if (localHost != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_LOCAL_HOSTNAME, localHost);
+      span.attribute(TracingIdentifiers.ATTR_LOCAL_HOSTNAME, localHost);
     }
     if (localPort != 0) {
-      span.setAttribute(TracingIdentifiers.ATTR_LOCAL_PORT, localPort);
+      span.attribute(TracingIdentifiers.ATTR_LOCAL_PORT, localPort);
     }
     if (remoteHost != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_REMOTE_HOSTNAME, remoteHost);
+      span.attribute(TracingIdentifiers.ATTR_REMOTE_HOSTNAME, remoteHost);
     }
     if (remotePort != 0) {
-      span.setAttribute(TracingIdentifiers.ATTR_REMOTE_PORT, remotePort);
+      span.attribute(TracingIdentifiers.ATTR_REMOTE_PORT, remotePort);
     }
     if (operationId != null) {
-      span.setAttribute(TracingIdentifiers.ATTR_OPERATION_ID, operationId);
+      span.attribute(TracingIdentifiers.ATTR_OPERATION_ID, operationId);
     }
   }
 
@@ -71,7 +71,7 @@ public class TracingUtils {
    * @param operationId the numeric operation id.
    */
   public static void setNumericOperationId(final RequestSpan span, final long operationId) {
-    span.setAttribute(TracingIdentifiers.ATTR_OPERATION_ID, operationId);
+    span.attribute(TracingIdentifiers.ATTR_OPERATION_ID, operationId);
   }
 
   /**
@@ -82,7 +82,7 @@ public class TracingUtils {
    */
   public static void setServerDurationAttribute(final RequestSpan span, final long serverDuration) {
     if (serverDuration > 0) {
-      span.setAttribute(TracingIdentifiers.ATTR_SERVER_DURATION, serverDuration);
+      span.attribute(TracingIdentifiers.ATTR_SERVER_DURATION, serverDuration);
     }
   }
 
