@@ -549,6 +549,33 @@ pipeline {
             }
         }
 
+        stage('testing  (Linux, cbdyncluster 7.0-stable, Oracle JDK 8, CE)') {
+            agent { label 'sdkqe-centos7' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                // Temporary: there are known cbas crashes preventing this from passing currently, do not fail build
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer("7.0-stable", QUICK_TEST_MODE, ceMode = true) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
 
 
         // Commented for now as sdk-integration-test-win temporarily down
@@ -684,7 +711,8 @@ void createIntegrationTestPropertiesFile(String filename, String ip) {
 void testAgainstServer(String serverVersion,
                        boolean QUICK_TEST_MODE,
                        boolean includeAnalytics = true,
-                       boolean enableDevelopPreview = false) {
+                       boolean enableDevelopPreview = false,
+                       boolean ceMode = false) {
     def clusterId = null
     try {
         // For debugging
@@ -700,7 +728,9 @@ void testAgainstServer(String serverVersion,
         // shWithEcho("cbdyncluster rm -f 3d023261")
 
         // Allocate the cluster
-        clusterId = sh(script: "cbdyncluster allocate --num-nodes=3 --server-version=" + serverVersion, returnStdout: true).trim()
+        def script = "cbdyncluster allocate --num-nodes=3 ${ceMode ? ' --use-ce=true' : ''} --server-version=${serverVersion}"
+        echo "Running " + script
+        clusterId = sh(script: script, returnStdout: true).trim()
         echo "Got cluster ID $clusterId"
 
         // Find the cluster IP
