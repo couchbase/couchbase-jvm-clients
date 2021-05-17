@@ -27,6 +27,7 @@ public class ThresholdRequestTracerConfig {
 
   @Stability.Internal
   public static class Defaults {
+    public static final boolean DEFAULT_ENABLED = true;
     public static final Duration DEFAULT_EMIT_INTERVAL = Duration.ofSeconds(10);
     public static final int DEFAULT_QUEUE_LENGTH = 1024;
     public static final Duration DEFAULT_KV_THRESHOLD = Duration.ofMillis(500);
@@ -37,6 +38,7 @@ public class ThresholdRequestTracerConfig {
     public static final int DEFAULT_SAMPLE_SIZE = 10;
   }
 
+  private final boolean enabled;
   private final Duration emitInterval;
   private final int queueLength;
   private final int sampleSize;
@@ -54,6 +56,10 @@ public class ThresholdRequestTracerConfig {
     return builder().build();
   }
 
+  public static ThresholdRequestTracerConfig disabled() {
+    return enabled(false).build();
+  }
+
   ThresholdRequestTracerConfig(final Builder builder) {
     emitInterval = builder.emitInterval;
     queueLength = builder.queueLength;
@@ -63,6 +69,11 @@ public class ThresholdRequestTracerConfig {
     viewThreshold = builder.viewThreshold;
     searchThreshold = builder.searchThreshold;
     analyticsThreshold = builder.analyticsThreshold;
+    enabled = builder.enabled;
+  }
+
+  public static Builder enabled(final boolean enabled) {
+    return builder().enabled(enabled);
   }
 
   /**
@@ -146,6 +157,10 @@ public class ThresholdRequestTracerConfig {
     return builder().viewThreshold(viewThreshold);
   }
 
+  public boolean enabled() {
+    return enabled;
+  }
+
   public Duration emitInterval() {
     return emitInterval;
   }
@@ -185,6 +200,7 @@ public class ThresholdRequestTracerConfig {
   Map<String, Object> exportAsMap() {
     Map<String, Object> export = new LinkedHashMap<>();
 
+    export.put("enabled", enabled);
     export.put("emitIntervalMs", emitInterval.toMillis());
     export.put("sampleSize", sampleSize);
     export.put("queueLength", queueLength);
@@ -200,6 +216,7 @@ public class ThresholdRequestTracerConfig {
 
   public static class Builder {
 
+    private boolean enabled = AggregatingMeterConfig.Defaults.DEFAULT_ENABLED;
     private Duration emitInterval = Defaults.DEFAULT_EMIT_INTERVAL;
     private int queueLength = Defaults.DEFAULT_QUEUE_LENGTH;
     private int sampleSize = Defaults.DEFAULT_SAMPLE_SIZE;
@@ -208,6 +225,11 @@ public class ThresholdRequestTracerConfig {
     private Duration viewThreshold = Defaults.DEFAULT_VIEW_THRESHOLD;
     private Duration searchThreshold = Defaults.DEFAULT_SEARCH_THRESHOLD;
     private Duration analyticsThreshold = Defaults.DEFAULT_ANALYTICS_THRESHOLD;
+
+    public Builder enabled(final boolean enabled) {
+      this.enabled = enabled;
+      return this;
+    }
 
     /**
      * Allows to customize the emit interval

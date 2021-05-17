@@ -29,6 +29,7 @@ import com.couchbase.client.core.cnc.events.config.HighIdleHttpConnectionTimeout
 import com.couchbase.client.core.cnc.events.config.InsecureSecurityConfigDetectedEvent;
 import com.couchbase.client.core.cnc.metrics.AggregatingMeter;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
+import com.couchbase.client.core.cnc.tracing.NoopRequestTracer;
 import com.couchbase.client.core.cnc.tracing.ThresholdRequestTracer;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -164,8 +165,10 @@ public class CoreEnvironment {
     }
     eventBus.get().subscribe(LoggingEventConsumer.create(loggerConfig()));
 
-    this.requestTracer = Optional.ofNullable(builder.requestTracer).orElse(new OwnedSupplier<RequestTracer>(
-      ThresholdRequestTracer.create(eventBus.get(), thresholdRequestTracerConfig)
+    this.requestTracer = Optional.ofNullable(builder.requestTracer).orElse(new OwnedSupplier<>(
+      thresholdRequestTracerConfig.enabled()
+        ? ThresholdRequestTracer.create(eventBus.get(), thresholdRequestTracerConfig)
+        : NoopRequestTracer.INSTANCE
     ));
 
     if (requestTracer instanceof OwnedSupplier) {
@@ -175,7 +178,7 @@ public class CoreEnvironment {
     this.meter = Optional.ofNullable(builder.meter).orElse(new OwnedSupplier<>(
       aggregatingMeterConfig.enabled()
         ? AggregatingMeter.create(eventBus.get(), aggregatingMeterConfig)
-        : new NoopMeter()
+        : NoopMeter.INSTANCE
     ));
 
     if (meter instanceof OwnedSupplier) {

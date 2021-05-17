@@ -23,6 +23,11 @@ import com.couchbase.client.core.cnc.ValueRecorder;
 import java.util.Map;
 
 public class NoopMeter implements Meter {
+
+  public static final NoopMeter INSTANCE = new NoopMeter();
+
+  private NoopMeter() {}
+
   @Override
   public Counter counter(String name, Map<String, String> tags) {
     return new NoopCounter();
