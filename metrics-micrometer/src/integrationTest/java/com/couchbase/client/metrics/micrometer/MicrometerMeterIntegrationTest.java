@@ -25,14 +25,12 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
-import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import wiremock.org.checkerframework.checker.units.qual.A;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -94,7 +92,7 @@ class MicrometerMeterIntegrationTest extends ClusterAwareIntegrationTest {
       for (io.micrometer.core.instrument.Meter meter : meterRegistry.getMeters()) {
         if (meter instanceof DistributionSummary) {
           boolean sg = ((DistributionSummary) meter).count() >= numRequests
-            && meter.getId().getName().equals(TracingIdentifiers.METER_REQUESTS);
+            && meter.getId().getName().equals(TracingIdentifiers.METER_OPERATIONS);
           if (sg) {
             summaryGood.set(true);
           }

@@ -139,7 +139,7 @@ public class AggregatingMeter implements Meter {
 
     @SuppressWarnings("unchecked")
     private synchronized void dumpMetrics() {
-      Map<String,  Map<String, Object>> output = new HashMap<>();
+      Map<String,  Object> output = new HashMap<>();
 
       Map<String, Object> meta = new HashMap<>();
       meta.put("emit_interval_s", TimeUnit.MILLISECONDS.toSeconds(emitIntervalMs));
@@ -147,8 +147,9 @@ public class AggregatingMeter implements Meter {
 
       boolean wroteRow = false;
 
+      Map<String, Map<String, Object>> operations = new HashMap<>();
       for (Map.Entry<NameAndTags, AggregatingValueRecorder> entry : valueRecorders.entrySet()) {
-        if (!entry.getKey().name().equals(TracingIdentifiers.METER_REQUESTS)) {
+        if (!entry.getKey().name().equals(TracingIdentifiers.METER_OPERATIONS)) {
           continue;
         }
 
@@ -160,12 +161,12 @@ public class AggregatingMeter implements Meter {
         wroteRow = true;
 
         String service = avr.tags().get(TracingIdentifiers.ATTR_SERVICE);
-        String hostname = avr.tags().get(TracingIdentifiers.ATTR_REMOTE_HOSTNAME);
+        String operation = avr.tags().get(TracingIdentifiers.ATTR_OPERATION);
 
-        Map<String, Object> serviceMap = output.computeIfAbsent(service, k -> new HashMap<>());
-        Map<String, Object> hostMap = (Map<String, Object>) serviceMap.computeIfAbsent(hostname, k -> new HashMap<>());
+        Map<String, Object> serviceMap = operations.computeIfAbsent(service, k -> new HashMap<>());
+        Map<String, Object> operationMap = (Map<String, Object>) serviceMap.computeIfAbsent(operation, k -> new HashMap<>());
 
-        hostMap.put("total_count", histogram.getTotalCount());
+        operationMap.put("total_count", histogram.getTotalCount());
 
         Map<String, Object> percentiles = new LinkedHashMap<>();
         percentiles.put("50.0", histogram.getValueAtPercentile(50.0) / 1000.0);
@@ -174,8 +175,10 @@ public class AggregatingMeter implements Meter {
         percentiles.put("99.9", histogram.getValueAtPercentile(99.9) / 1000.0);
         percentiles.put("100.0", histogram.getMaxValue() / 1000.0);
 
-        hostMap.put("percentiles_us", percentiles);
+        operationMap.put("percentiles_us", percentiles);
       }
+
+      output.put("operations", operations);
 
       if (wroteRow) {
         eventBus.publish(new LatencyMetricsAggregatedEvent(Duration.ofMillis(emitIntervalMs), output));

@@ -486,9 +486,8 @@ public class Core {
     return responseMetrics.computeIfAbsent(new ResponseMetricIdentifier(request), key -> {
       Map<String, String> tags = new HashMap<>(4);
       tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceType.ident());
-      tags.put(TracingIdentifiers.ATTR_REMOTE_HOSTNAME, key.lastDispatchedTo.hostname());
       tags.put(TracingIdentifiers.ATTR_OPERATION, key.requestName);
-      return coreContext.environment().meter().valueRecorder(TracingIdentifiers.METER_REQUESTS, tags);
+      return coreContext.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, tags);
     });
   }
 
