@@ -35,8 +35,7 @@ public class AggregatingMeterConfig {
 
   @Stability.Internal
   public static class Defaults {
-    public static final boolean DEFAULT_ENABLED = false;
-
+    public static final boolean DEFAULT_ENABLED = true;
     public static final Duration DEFAULT_EMIT_INTERVAL = Duration.ofSeconds(600);
   }
 
