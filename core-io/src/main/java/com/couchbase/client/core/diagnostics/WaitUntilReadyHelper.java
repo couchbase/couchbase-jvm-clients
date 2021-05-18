@@ -19,8 +19,8 @@ package com.couchbase.client.core.diagnostics;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.events.core.WaitUntilReadyCompletedEvent;
 import com.couchbase.client.core.config.BucketConfig;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -31,19 +31,19 @@ import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.GenericManagerRequest;
-import com.couchbase.client.core.msg.manager.GenericManagerResponse;
 import com.couchbase.client.core.service.ServiceType;
-import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -68,6 +68,9 @@ public class WaitUntilReadyHelper {
       return f;
     }
 
+    final WaitUntilReadyState state = new WaitUntilReadyState();
+
+    state.transition(WaitUntilReadyStage.CONFIG_LOAD);
     return Flux
       .interval(Duration.ofMillis(10), core.context().environment().scheduler())
       .filter(i -> !(core.configurationProvider().bucketConfigLoadInProgress()
@@ -81,6 +84,7 @@ public class WaitUntilReadyHelper {
         // There could be a mismatch during rebalance or (more likely) when a bucket has just been
         // created.
         if (bucketName.isPresent()) {
+          state.transition(WaitUntilReadyStage.BUCKET_CONFIG_READY);
           BucketConfig bucketConfig = core.clusterConfig().bucketConfig(bucketName.get());
           long extNodes = bucketConfig.portInfos().stream().filter(p -> p.ports().containsKey(ServiceType.KV)).count();
           long visibleNodes = bucketConfig.nodes().stream().filter(n -> n.services().containsKey(ServiceType.KV)).count();
@@ -91,6 +95,7 @@ public class WaitUntilReadyHelper {
       })
       .flatMap(i -> {
         if (bucketName.isPresent()) {
+          state.transition(WaitUntilReadyStage.BUCKET_NODES_HEALTHY);
           // To avoid tmpfails on the bucket, we double check that all nodes from the nodes list are
           // in a healthy status - but for this we need to actually fetch the verbose config, since
           // the terse one doesn't have that status in it.
@@ -124,6 +129,7 @@ public class WaitUntilReadyHelper {
       })
       .take(1)
       .flatMap(aLong -> {
+        state.transition(WaitUntilReadyStage.PING);
         final Flux<ClusterState> diagnostics = Flux
           .interval(Duration.ofMillis(10), core.context().environment().scheduler())
           .map(i -> diagnosticsCurrentState(core))
@@ -140,13 +146,27 @@ public class WaitUntilReadyHelper {
             timeout,
             desiredState,
             bucketName,
-            core.diagnostics().collect(Collectors.groupingBy(EndpointDiagnostics::type))
+            core.diagnostics().collect(Collectors.groupingBy(EndpointDiagnostics::type)),
+            state
           );
           CancellationErrorContext errorContext = new CancellationErrorContext(waitUntilReadyContext);
           return Mono.error(new UnambiguousTimeoutException("WaitUntilReady timed out", errorContext));
         }),
         core.context().environment().scheduler()
       )
+      .doOnSuccess(unused -> {
+        state.transition(WaitUntilReadyStage.COMPLETE);
+        WaitUntilReadyContext waitUntilReadyContext = new WaitUntilReadyContext(
+          servicesToCheck(core, serviceTypes, bucketName),
+          timeout,
+          desiredState,
+          bucketName,
+          core.diagnostics().collect(Collectors.groupingBy(EndpointDiagnostics::type)),
+          state
+        );
+        core.context().environment().eventBus().publish(
+          new WaitUntilReadyCompletedEvent(waitUntilReadyContext));
+      })
       .toFuture();
   }
 
@@ -179,6 +199,80 @@ public class WaitUntilReadyHelper {
     return HealthPinger
       .ping(core, Optional.of(timeout), core.context().environment().retryStrategy(), serviceTypes, Optional.empty(), bucketName)
       .flux();
+  }
+
+  /**
+   * Encapsulates the state of where a wait until ready flow is in.
+   */
+  @Stability.Internal
+  public static class WaitUntilReadyState {
+
+    private final Map<WaitUntilReadyStage, Long> timings = new ConcurrentHashMap<>();
+    private final AtomicLong totalDuration = new AtomicLong();
+
+    private volatile WaitUntilReadyStage currentStage = WaitUntilReadyStage.INITIAL;
+    private volatile long currentStart = System.nanoTime();
+
+    void transition(final WaitUntilReadyStage next) {
+      long timing = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - currentStart);
+      if (currentStage != WaitUntilReadyStage.INITIAL) {
+        timings.put(currentStage, timing);
+      }
+      totalDuration.addAndGet(timing);
+      currentStage = next;
+      currentStart = System.nanoTime();
+    }
+
+    public Map<String, Object> export() {
+      Map<String, Object> toExport = new TreeMap<>();
+
+      toExport.put("current_stage", currentStage);
+      if (currentStage != WaitUntilReadyStage.COMPLETE) {
+        long currentMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - currentStart);
+        toExport.put("current_stage_since_ms", currentMs);
+        toExport.put("total_ms", totalDuration.get() + currentMs);
+      } else {
+        toExport.put("total_ms", totalDuration.get());
+      }
+      toExport.put("timings_ms", timings);
+
+      return toExport;
+    }
+
+    public long totalDuration() {
+      return totalDuration.get();
+    }
+
+  }
+
+  /**
+   * Describes the different stages of wait until ready.
+   */
+  private enum WaitUntilReadyStage {
+    /**
+     * Not started yet, initial stage.
+     */
+    INITIAL,
+    /**
+     * Waits until all global and bucket level configs are loaded.
+     */
+    CONFIG_LOAD,
+    /**
+     * Waits until the bucket config is ready and contains kv nodes.
+     */
+    BUCKET_CONFIG_READY,
+    /**
+     * Waits until all the nodes in a bucket config are healthy.
+     */
+    BUCKET_NODES_HEALTHY,
+    /**
+     * Performs ping operations and checks their return values.
+     */
+    PING,
+    /**
+     * Completed successfully.
+     */
+    COMPLETE,
   }
 
 }

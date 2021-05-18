@@ -34,19 +34,22 @@ public class WaitUntilReadyContext extends AbstractContext {
   private final ClusterState desiredState;
   private final Optional<String> bucketName;
   private final Map<ServiceType, List<EndpointDiagnostics>> diagnostics;
+  private final WaitUntilReadyHelper.WaitUntilReadyState state;
 
   public WaitUntilReadyContext(final Set<ServiceType> serviceTypes, final Duration timeout,
                                final ClusterState desiredState, final Optional<String> bucketName,
-                               final Map<ServiceType, List<EndpointDiagnostics>> diagnostics) {
+                               final Map<ServiceType, List<EndpointDiagnostics>> diagnostics,
+                               final WaitUntilReadyHelper.WaitUntilReadyState state) {
     this.diagnostics = diagnostics;
     this.serviceTypes = serviceTypes;
     this.timeout = timeout;
     this.desiredState = desiredState;
     this.bucketName = bucketName;
+    this.state = state;
   }
 
   @Override
-  public void injectExportableParams(Map<String, Object> input) {
+  public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
 
     input.put("desiredState", desiredState);
@@ -60,5 +63,6 @@ public class WaitUntilReadyContext extends AbstractContext {
       services.put(service.getKey().ident(), service.getValue().stream().map(EndpointDiagnostics::toMap).collect(Collectors.toList()));
     }
     input.put("services", services);
+    input.put("state", state.export());
   }
 }
