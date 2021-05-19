@@ -168,7 +168,6 @@ public class MutateInSpec {
         SubdocCommandType.ARRAY_PUSH_FIRST, path, xattr, values, typeRef(), arrayElementType = typeRef<T>()
     )
 
-
     public inline fun <reified T> arrayInsert(
         path: String, values: List<T>,
         xattr: Boolean = false,
@@ -183,26 +182,17 @@ public class MutateInSpec {
     )
 
     /**
-     * A value [arrayAddUnique] can add to an array.
+     * Adds the value to an array (creating the array if it doesn't already exist)
+     * or fail with [PathExistsException] if the array already contains the value.
+     *
+     * @param path Path to the array to modify or create
+     * @param value Value to add to the array if not already present
      */
-    @JvmInline
-    public value class Uniqueable internal constructor(
-        internal val value: Any?
-    ) {
-        override fun toString(): String {
-            return "UniqueArrayElement(value=$value)"
-        }
-
-        public companion object {
-            public fun of(value: Boolean?): Uniqueable = Uniqueable(value)
-            public fun of(value: String?): Uniqueable = Uniqueable(value)
-            public fun of(value: Int?): Uniqueable = Uniqueable(value)
-            public fun of(value: Long?): Uniqueable = Uniqueable(value)
-            public fun ofNull(): Uniqueable = Uniqueable(null)
-        }
-
-        internal fun encode(): Content = Content.json(Mapper.encodeAsBytes(value))
-    }
+    public fun arrayAddUnique(
+        path: String,
+        value: Boolean?,
+        xattr: Boolean = false,
+    ): Unit = doArrayAddUnique(path, value, xattr)
 
     /**
      * Adds the value to an array (creating the array if it doesn't already exist)
@@ -213,9 +203,47 @@ public class MutateInSpec {
      */
     public fun arrayAddUnique(
         path: String,
-        value: Uniqueable,
+        value: String?,
         xattr: Boolean = false,
-    ): Unit = addCommand(SubdocCommandType.ARRAY_ADD_UNIQUE, path, xattr, value.encode(), typeRef())
+    ): Unit = doArrayAddUnique(path, value, xattr)
+
+    /**
+     * Adds the value to an array (creating the array if it doesn't already exist)
+     * or fail with [PathExistsException] if the array already contains the value.
+     *
+     * @param path Path to the array to modify or create
+     * @param value Value to add to the array if not already present
+     */
+    public fun arrayAddUnique(
+        path: String,
+        value: Long?,
+        xattr: Boolean = false,
+    ): Unit = doArrayAddUnique(path, value, xattr)
+
+    /**
+     * Adds the value to an array (creating the array if it doesn't already exist)
+     * or fail with [PathExistsException] if the array already contains the value.
+     *
+     * @param path Path to the array to modify or create
+     * @param value Value to add to the array if not already present
+     */
+    public fun arrayAddUnique(
+        path: String,
+        value: Int?,
+        xattr: Boolean = false,
+    ): Unit = doArrayAddUnique(path, value, xattr)
+
+    private fun doArrayAddUnique(
+        path: String,
+        value: Any?,
+        xattr: Boolean,
+    ): Unit = addCommand(
+        SubdocCommandType.ARRAY_ADD_UNIQUE,
+        path,
+        xattr,
+        Content.json(Mapper.encodeAsBytes(value)),
+        typeRef()
+    )
 
     public fun incrementAndGet(
         path: String,

@@ -244,15 +244,19 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
     @Test
     fun `array insert unique does not exist`(): Unit = runBlocking {
         val updatedContent = checkSingleOpSuccess(mapOf("foo" to listOf("hello", "world"))) {
-            arrayAddUnique("foo", MutateInSpec.Uniqueable.of("cruel"))
+            arrayAddUnique("foo", "cruel")
+            arrayAddUnique("foo", Int.MAX_VALUE)
+            arrayAddUnique("foo", Long.MAX_VALUE)
+            arrayAddUnique("foo", true)
+            arrayAddUnique("foo", null as String?)
         }
-        assertEquals(listOf("hello", "world", "cruel"), updatedContent.getArray("foo"))
+        assertEquals(listOf("hello", "world", "cruel", Int.MAX_VALUE, Long.MAX_VALUE, true, null), updatedContent.getArray("foo"))
     }
 
     @Test
     fun `array insert unique does exist`(): Unit = runBlocking {
         checkSingleOpFailure<PathExistsException>(mapOf("foo" to listOf("hello", "world"))) {
-            arrayAddUnique("foo", MutateInSpec.Uniqueable.of("hello"))
+            arrayAddUnique("foo", "hello")
         }
     }
 
@@ -340,7 +344,7 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
     @Test
     fun `array insert unique does not exist xattr`(): Unit = runBlocking {
         val updatedContent = checkSingleOpSuccessXattr(mapOf("foo" to listOf("hello", "world"))) {
-            arrayAddUnique("x.foo", MutateInSpec.Uniqueable.of("cruel"), xattr = true)
+            arrayAddUnique("x.foo", "cruel", xattr = true)
         }
         assertEquals(listOf("hello", "world", "cruel"), updatedContent.getArray("foo"))
     }
@@ -348,7 +352,7 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
     @Test
     fun `array insert unique does exist xattr`(): Unit = runBlocking {
         checkSingleOpFailureXattr<PathExistsException>(mapOf("foo" to listOf("hello", "world"))) {
-            arrayAddUnique("x.foo", MutateInSpec.Uniqueable.of("hello"), xattr = true)
+            arrayAddUnique("x.foo", "hello", xattr = true)
         }
     }
 
