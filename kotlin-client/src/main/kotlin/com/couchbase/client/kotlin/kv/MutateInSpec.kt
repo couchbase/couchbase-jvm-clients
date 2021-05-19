@@ -185,7 +185,8 @@ public class MutateInSpec {
     /**
      * A value [arrayAddUnique] can add to an array.
      */
-    public inline class Uniqueable internal constructor(
+    @JvmInline
+    public value class Uniqueable internal constructor(
         internal val value: Any?
     ) {
         override fun toString(): String {

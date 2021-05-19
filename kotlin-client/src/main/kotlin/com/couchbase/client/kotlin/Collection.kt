@@ -73,7 +73,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.asFlow
-import kotlinx.coroutines.reactive.awaitSingleOrNull
+import kotlinx.coroutines.reactive.awaitFirstOrNull
 import java.time.Duration
 
 /**
@@ -245,7 +245,7 @@ public class Collection internal constructor(
             common.actualRetryStrategy(),
             common.clientContext,
             common.parentSpan,
-        ).awaitSingleOrNull() ?: return null
+        ).awaitFirstOrNull() ?: return null
 
         return GetReplicaResult(id, response, defaultTranscoder)
     }
