@@ -16,12 +16,15 @@
 package com.couchbase.client.scala.manager.view
 
 import java.nio.charset.StandardCharsets.UTF_8
-
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
-import com.couchbase.client.core.deps.io.netty.buffer.{ByteBuf, Unpooled}
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET
 import com.couchbase.client.core.deps.io.netty.handler.codec.http._
+import com.couchbase.client.core.endpoint.http.{
+  CoreCommonOptions,
+  CoreHttpPath,
+  CoreHttpRequest,
+  CoreHttpResponse
+}
 import com.couchbase.client.core.error.{
   CouchbaseException,
   DesignDocumentNotFoundException,
@@ -29,8 +32,7 @@ import com.couchbase.client.core.error.{
 }
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.logging.RedactableArgument.redactMeta
-import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.view.{GenericViewRequest, GenericViewResponse}
+import com.couchbase.client.core.msg.{RequestTarget, ResponseStatus}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode
 import com.couchbase.client.scala.manager.ManagerUtil
@@ -48,6 +50,7 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
   private val DefaultTimeout: Duration =
     core.context().environment().timeoutConfig().managementTimeout()
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
+  private val httpClient                          = core.httpClient(RequestTarget.views(bucket))
 
   def getDesignDocument(
       designDocName: String,
@@ -55,9 +58,10 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[DesignDocument] = {
+    val options = CoreCommonOptions.of(timeout, retryStrategy, null)
     pathForDesignDocument(designDocName, namespace) match {
       case Success(path) =>
-        sendRequest(HttpMethod.GET, path, timeout, retryStrategy)
+        sendRequest(httpClient.get(CoreHttpPath.path(path), options).build())
           .onErrorResume(err => SMono.raiseError(mapNotFoundError(err, designDocName, namespace)))
           .flatMap(response => {
             response.status match {
@@ -120,25 +124,14 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[Unit] = {
+    val options = CoreCommonOptions.of(timeout, retryStrategy, null)
     pathForDesignDocument(indexData.name, namespace) match {
       case Success(path) =>
         val body = toJson(indexData)
-        val request = new GenericViewRequest(
-          timeout,
-          core.context,
-          retryStrategy,
-          () => {
-            val content: ByteBuf = Unpooled.copiedBuffer(Mapper.encodeAsBytes(body))
-            val req =
-              new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, path, content)
-            req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_JSON)
-            req.headers.add("Content-Length", content.readableBytes)
-            req
-          },
-          false,
-          bucket,
-          null
-        )
+        val request = httpClient
+          .put(CoreHttpPath.path(path), options)
+          .json(Mapper.encodeAsBytes(body))
+          .build()
 
         SMono.defer(() => {
           core.send(request)
@@ -158,9 +151,10 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[Unit] = {
+    val options = CoreCommonOptions.of(timeout, retryStrategy, null)
     pathForDesignDocument(designDocName, namespace) match {
       case Success(path) =>
-        sendRequest(HttpMethod.DELETE, path, timeout, retryStrategy)
+        sendRequest(httpClient.delete(CoreHttpPath.path(path), options).build())
           .onErrorResume(err => SMono.raiseError(mapNotFoundError(err, designDocName, namespace)))
           .flatMap(response => {
             response.status match {
@@ -241,58 +235,13 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
     root
   }
 
-  private def sendRequest(request: GenericViewRequest): SMono[GenericViewResponse] = {
+  private def sendRequest(request: CoreHttpRequest): SMono[CoreHttpResponse] = {
     SMono.defer(() => {
       core.send(request)
       FutureConversions
         .wrap(request, request.response, propagateCancellation = true)
         .doOnTerminate(() => request.context().logicallyComplete())
     })
-  }
-
-  private def sendRequest(
-      method: HttpMethod,
-      path: String,
-      timeout: Duration,
-      retryStrategy: RetryStrategy
-  ): SMono[GenericViewResponse] = {
-    sendRequest(
-      new GenericViewRequest(
-        timeout,
-        core.context,
-        retryStrategy,
-        () => new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
-        method == GET,
-        bucket,
-        null
-      )
-    )
-  }
-
-  private def sendJsonRequest(
-      method: HttpMethod,
-      path: String,
-      timeout: Duration,
-      retryStrategy: RetryStrategy,
-      body: Any
-  ): SMono[GenericViewResponse] = {
-    sendRequest(
-      new GenericViewRequest(
-        timeout,
-        core.context,
-        retryStrategy,
-        () => {
-          val content = Unpooled.copiedBuffer(Mapper.encodeAsBytes(body))
-          val req     = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content)
-          req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_JSON)
-          req.headers.add("Content-Length", content.readableBytes)
-          req
-        },
-        method == GET,
-        bucket,
-        null
-      )
-    )
   }
 }
 

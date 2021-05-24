@@ -28,7 +28,6 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
-import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaSeqnoRequest;
@@ -40,6 +39,8 @@ import com.couchbase.client.core.retry.RetryReason;
 import java.util.List;
 import java.util.Optional;
 import java.util.zip.CRC32;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link Locator} responsible for locating the right node based on the partition of the
@@ -55,8 +56,8 @@ public class KeyValueLocator implements Locator {
   @Override
   public void dispatch(final Request<? extends Response> request, final List<Node> nodes,
                        final ClusterConfig config, final CoreContext ctx) {
-    if (request instanceof TargetedRequest) {
-      dispatchTargeted((TargetedRequest) request, nodes, ctx);
+    if (request.target() != null) {
+      dispatchTargeted(request, nodes, ctx);
     } else {
       KeyValueRequest r = (KeyValueRequest) request;
       String bucket = r.bucket();
@@ -82,15 +83,15 @@ public class KeyValueLocator implements Locator {
     }
   }
 
-  @SuppressWarnings({ "unchecked" })
-  private static void dispatchTargeted(final TargetedRequest request, final List<Node> nodes,
+  private static void dispatchTargeted(final Request<?> request, final List<Node> nodes,
                                        final CoreContext ctx) {
+    NodeIdentifier target = requireNonNull(request.target());
     for (Node node : nodes) {
       if (node.state() == NodeState.CONNECTED || node.state() == NodeState.DEGRADED) {
-        if (!request.target().equals(node.identifier())) {
+        if (!target.equals(node.identifier())) {
           continue;
         }
-        node.send((Request<?>) request);
+        node.send(request);
         return;
       }
     }
@@ -110,16 +111,17 @@ public class KeyValueLocator implements Locator {
    * @param nodes the nodes list to check against.
    * @param ctx the core context.
    */
-  private static void handleTargetNotAvailable(final TargetedRequest request, final List<Node> nodes,
+  private static void handleTargetNotAvailable(final Request<?> request, final List<Node> nodes,
                                                final CoreContext ctx) {
+    NodeIdentifier target = requireNonNull(request.target());
     for (Node node : nodes) {
-      if (request.target().equals(node.identifier())) {
-        RetryOrchestrator.maybeRetry(ctx, (Request<?>) request, RetryReason.NODE_NOT_AVAILABLE);
+      if (target.equals(node.identifier())) {
+        RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NODE_NOT_AVAILABLE);
         return;
       }
     }
 
-    ((Request<?>) request).cancel(CancellationReason.TARGET_NODE_REMOVED);
+    request.cancel(CancellationReason.TARGET_NODE_REMOVED);
   }
 
   private static void couchbaseBucket(final KeyValueRequest<?> request, final List<Node> nodes,

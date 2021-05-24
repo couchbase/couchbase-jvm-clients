@@ -23,7 +23,6 @@ import com.couchbase.client.core.config.MemcachedBucketConfig;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
-import com.couchbase.client.core.msg.ScopedRequest;
 import com.couchbase.client.core.service.ServiceType;
 
 /**
@@ -37,8 +36,8 @@ public class ViewLocator extends RoundRobinLocator {
 
   @Override
   protected boolean checkServiceNotAvailable(Request<? extends Response> request, final ClusterConfig config) {
-    if (request instanceof ScopedRequest) {
-      String bucket = ((ScopedRequest) request).bucket();
+    String bucket = request.bucket();
+    if (bucket != null) {
       BucketConfig bucketConfig = config.bucketConfig(bucket);
       if (bucketConfig instanceof MemcachedBucketConfig) {
         request.fail(new FeatureNotAvailableException("Memcached buckets do not support view queries"));
@@ -64,10 +63,13 @@ public class ViewLocator extends RoundRobinLocator {
   @Override
   protected boolean nodeCanBeUsed(final Node node, final Request<? extends Response> request,
                                   final ClusterConfig config) {
-    if (request instanceof ScopedRequest
-      && config.bucketConfig(((ScopedRequest) request).bucket()) instanceof CouchbaseBucketConfig) {
-        return ((CouchbaseBucketConfig) config.bucketConfig(((ScopedRequest) request).bucket()))
-          .hasPrimaryPartitionsOnNode(node.identifier().address());
+    String bucket = request.bucket();
+    if (bucket != null) {
+      BucketConfig bucketConfig = config.bucketConfig(bucket);
+      if (bucketConfig instanceof CouchbaseBucketConfig) {
+        return ((CouchbaseBucketConfig) bucketConfig)
+            .hasPrimaryPartitionsOnNode(node.identifier().address());
+      }
     }
     return false;
   }

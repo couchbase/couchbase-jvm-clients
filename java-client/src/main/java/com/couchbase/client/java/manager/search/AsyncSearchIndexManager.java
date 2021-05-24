@@ -17,37 +17,28 @@
 package com.couchbase.client.java.manager.search;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValues;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
-import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.endpoint.http.CoreHttpClient;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.msg.search.GenericSearchRequest;
-import com.couchbase.client.core.msg.search.GenericSearchResponse;
+import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.java.json.JsonObject;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
 import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -63,6 +54,7 @@ import static com.couchbase.client.java.manager.search.PauseIngestSearchIndexOpt
 import static com.couchbase.client.java.manager.search.ResumeIngestSearchIndexOptions.resumeIngestSearchIndexOptions;
 import static com.couchbase.client.java.manager.search.UnfreezePlanSearchIndexOptions.unfreezePlanSearchIndexOptions;
 import static com.couchbase.client.java.manager.search.UpsertSearchIndexOptions.upsertSearchIndexOptions;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * The {@link AsyncSearchIndexManager} allows to manage search index structures in a couchbase cluster.
@@ -72,11 +64,11 @@ import static com.couchbase.client.java.manager.search.UpsertSearchIndexOptions.
 public class AsyncSearchIndexManager {
 
   private final Core core;
-  private final CoreEnvironment environment;
+  private final CoreHttpClient searchHttpClient;
 
   public AsyncSearchIndexManager(final Core core) {
     this.core = core;
-    this.environment = core.context().environment();
+    this.searchHttpClient = core.httpClient(RequestTarget.search());
   }
 
   private static String indexesPath() {
@@ -138,23 +130,17 @@ public class AsyncSearchIndexManager {
   public CompletableFuture<SearchIndex> getIndex(final String name, GetSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
 
-    GetSearchIndexOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MS_GET_INDEX,
-      built.parentSpan().orElse(null)
+    RequestSpan span = CbTracing.newSpan(
+        core.context(),
+        TracingIdentifiers.SPAN_REQUEST_MS_GET_INDEX,
+        options.build().parentSpan().orElse(null)
     );
 
-    return getAllIndexes(getAllSearchIndexesOptions().parentSpan(span)).thenApply(indexes -> {
-      Optional<SearchIndex> found = indexes.stream().filter(i -> i.name().equals(name)).findFirst();
-      if (found.isPresent()) {
-        return found.get();
-      }
-      throw new IndexNotFoundException(name);
-    }).whenComplete((r, t) -> {
-      if (span != null) {
-        span.end();
-      }
-    });
+    return getAllIndexes(getAllSearchIndexesOptions().parentSpan(span))
+      .thenApply(indexes -> indexes.stream()
+        .filter(i -> i.name().equals(name))
+        .findFirst().orElseThrow(() -> new IndexNotFoundException(name)))
+      .whenComplete((r, t) -> span.end());
   }
 
   /**
@@ -172,21 +158,18 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} with all index definitions once complete.
    */
   public CompletableFuture<List<SearchIndex>> getAllIndexes(final GetAllSearchIndexesOptions options) {
-    GetAllSearchIndexesOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MS_GET_ALL_INDEXES,
-      built.parentSpan().orElse(null)
-    );
-
-    return sendRequest(HttpMethod.GET, indexesPath(), span, null).thenApply(response -> {
-      JsonNode rootNode = Mapper.decodeIntoTree(response.content());
-      JsonNode indexDefs = rootNode.get("indexDefs").get("indexDefs");
-      Map<String, SearchIndex> indexes = Mapper.convertValue(
-        indexDefs,
-        new TypeReference<Map<String, SearchIndex>>() {}
-      );
-      return new ArrayList<>(indexes.values());
-    });
+    return searchHttpClient.get(path(indexesPath()), options.build())
+      .trace(TracingIdentifiers.SPAN_REQUEST_MS_GET_ALL_INDEXES)
+      .exec(core)
+      .thenApply(response -> {
+        JsonNode rootNode = Mapper.decodeIntoTree(response.content());
+        JsonNode indexDefs = rootNode.get("indexDefs").get("indexDefs");
+        Map<String, SearchIndex> indexes = Mapper.convertValue(
+          indexDefs,
+          new TypeReference<Map<String, SearchIndex>>() {}
+        );
+        return new ArrayList<>(indexes.values());
+      });
   }
 
   /**
@@ -208,13 +191,9 @@ public class AsyncSearchIndexManager {
   public CompletableFuture<Long> getIndexedDocumentsCount(final String name, final GetIndexedSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
 
-    GetIndexedSearchIndexOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MS_GET_IDX_DOC_COUNT,
-      built.parentSpan().orElse(null)
-    );
-
-    return sendRequest(HttpMethod.GET, indexCountPath(name), span, name)
+    return searchHttpClient.get(path(indexCountPath(name)), options.build())
+      .trace(TracingIdentifiers.SPAN_REQUEST_MS_GET_IDX_DOC_COUNT)
+      .exec(core)
       .thenApply(response -> {
         JsonNode rootNode = Mapper.decodeIntoTree(response.content());
         return rootNode.get("count").asLong();
@@ -240,25 +219,12 @@ public class AsyncSearchIndexManager {
   public CompletableFuture<Void> upsertIndex(final SearchIndex index, final UpsertSearchIndexOptions options) {
     notNull(index, "Search Index");
 
-    UpsertSearchIndexOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MS_UPSERT_INDEX,
-      built.parentSpan().orElse(null)
-    );
-
-    return sendRequest(() -> {
-      ByteBuf payload = Unpooled.wrappedBuffer(index.toJson().getBytes(StandardCharsets.UTF_8));
-      DefaultFullHttpRequest request = new DefaultFullHttpRequest(
-        HttpVersion.HTTP_1_1,
-        HttpMethod.PUT,
-        indexPath(index.name()),
-        payload
-      );
-      request.headers().set(HttpHeaderNames.CACHE_CONTROL, "no-cache");
-      request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-      request.headers().set(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes());
-      return request;
-    }, false, span, index.name(), indexPath(index.name())).thenApply(response -> null);
+    return searchHttpClient.put(path(indexPath(index.name())), options.build())
+      .trace(TracingIdentifiers.SPAN_REQUEST_MS_UPSERT_INDEX)
+      .json(index.toJson().getBytes(UTF_8))
+      .header(HttpHeaderNames.CACHE_CONTROL, "no-cache")
+      .exec(core)
+      .thenApply(response -> null);
   }
 
   /**
@@ -280,13 +246,9 @@ public class AsyncSearchIndexManager {
   public CompletableFuture<Void> dropIndex(final String name, final DropSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
 
-    DropSearchIndexOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MS_DROP_INDEX,
-      built.parentSpan().orElse(null)
-    );
-
-    return sendRequest(HttpMethod.DELETE, indexPath(name), span, name)
+    return searchHttpClient.delete(path(indexPath(name)), options.build())
+      .trace(TracingIdentifiers.SPAN_REQUEST_MS_DROP_INDEX)
+      .exec(core)
       .thenApply(response -> null);
   }
 
@@ -313,24 +275,10 @@ public class AsyncSearchIndexManager {
     notNullOrEmpty(name, "Search Index Name");
     notNull(document, "Document");
 
-    AnalyzeDocumentOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MS_ANALYZE_DOCUMENT,
-      built.parentSpan().orElse(null)
-    );
-
-    return sendRequest(() -> {
-      ByteBuf content = Unpooled.wrappedBuffer(Mapper.encodeAsBytes(document.toMap()));
-      FullHttpRequest request = new DefaultFullHttpRequest(
-        HttpVersion.HTTP_1_1,
-        HttpMethod.POST,
-        analyzeDocumentPath(name),
-        content
-      );
-      request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-      request.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
-      return request;
-    }, true, span, name, analyzeDocumentPath(name))
+    return searchHttpClient.post(path(analyzeDocumentPath(name)), options.build())
+      .trace(TracingIdentifiers.SPAN_REQUEST_MS_ANALYZE_DOCUMENT)
+      .json(Mapper.encodeAsBytes(document.toMap()))
+      .exec(core)
       .exceptionally(throwable -> {
         if (throwable.getMessage().contains("Page not found")) {
           throw new FeatureNotAvailableException("Document analysis is not available on this server version!");
@@ -369,13 +317,9 @@ public class AsyncSearchIndexManager {
   public CompletableFuture<Void> pauseIngest(final String name, final PauseIngestSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
 
-    PauseIngestSearchIndexOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MS_PAUSE_INGEST,
-      built.parentSpan().orElse(null)
-    );
-
-    return sendRequest(HttpMethod.POST, pauseIngestPath(name), span, name)
+    return searchHttpClient.post(path(pauseIngestPath(name)), options.build())
+      .trace(TracingIdentifiers.SPAN_REQUEST_MS_PAUSE_INGEST)
+      .exec(core)
       .thenApply(response -> null);
   }
 
@@ -398,13 +342,9 @@ public class AsyncSearchIndexManager {
   public CompletableFuture<Void> resumeIngest(final String name, final ResumeIngestSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
 
-    ResumeIngestSearchIndexOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MS_RESUME_INGEST,
-      built.parentSpan().orElse(null)
-    );
-
-    return sendRequest(HttpMethod.POST, resumeIngestPath(name), span, name)
+    return searchHttpClient.post(path(resumeIngestPath(name)), options.build())
+      .trace(TracingIdentifiers.SPAN_REQUEST_MS_RESUME_INGEST)
+      .exec(core)
       .thenApply(response -> null);
   }
 
@@ -427,13 +367,9 @@ public class AsyncSearchIndexManager {
   public CompletableFuture<Void> allowQuerying(final String name, final AllowQueryingSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
 
-    AllowQueryingSearchIndexOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MS_ALLOW_QUERYING,
-      built.parentSpan().orElse(null)
-    );
-
-    return sendRequest(HttpMethod.POST, allowQueryingPath(name), span, name)
+    return searchHttpClient.post(path(allowQueryingPath(name)), options.build())
+      .trace(TracingIdentifiers.SPAN_REQUEST_MS_ALLOW_QUERYING)
+      .exec(core)
       .thenApply(response -> null);
   }
 
@@ -456,13 +392,9 @@ public class AsyncSearchIndexManager {
   public CompletableFuture<Void> disallowQuerying(final String name, final DisallowQueryingSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
 
-    DisallowQueryingSearchIndexOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MS_DISALLOW_QUERYING,
-      built.parentSpan().orElse(null)
-    );
-
-    return sendRequest(HttpMethod.POST, disallowQueryingPath(name), span, name)
+    return searchHttpClient.post(path(disallowQueryingPath(name)), options.build())
+      .trace(TracingIdentifiers.SPAN_REQUEST_MS_DISALLOW_QUERYING)
+      .exec(core)
       .thenApply(response -> null);
   }
 
@@ -485,13 +417,9 @@ public class AsyncSearchIndexManager {
   public CompletableFuture<Void> freezePlan(final String name, final FreezePlanSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
 
-    FreezePlanSearchIndexOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MS_FREEZE_PLAN,
-      built.parentSpan().orElse(null)
-    );
-
-    return sendRequest(HttpMethod.POST, freezePlanPath(name), span, name)
+    return searchHttpClient.post(path(freezePlanPath(name)), options.build())
+      .trace(TracingIdentifiers.SPAN_REQUEST_MS_FREEZE_PLAN)
+      .exec(core)
       .thenApply(response -> null);
   }
 
@@ -514,57 +442,10 @@ public class AsyncSearchIndexManager {
   public CompletableFuture<Void> unfreezePlan(final String name, final UnfreezePlanSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
 
-    UnfreezePlanSearchIndexOptions.Built built = options.build();
-    RequestSpan span = buildSpan(
-      TracingIdentifiers.SPAN_REQUEST_MS_UNFREEZE_PLAN,
-      built.parentSpan().orElse(null)
-    );
-
-    return sendRequest(HttpMethod.POST, unfreezePlanPath(name), span, name)
+    return searchHttpClient.post(path(unfreezePlanPath(name)), options.build())
+      .trace(TracingIdentifiers.SPAN_REQUEST_MS_UNFREEZE_PLAN)
+      .exec(core)
       .thenApply(response -> null);
-  }
-
-  private CompletableFuture<GenericSearchResponse> sendRequest(final HttpMethod method, final String path,
-                                                               final RequestSpan span, final String indexName) {
-    return sendRequest(
-      () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
-      method == HttpMethod.GET,
-      span,
-      indexName,
-      path
-    );
-  }
-
-  private CompletableFuture<GenericSearchResponse> sendRequest(final Supplier<FullHttpRequest> httpRequest,
-                                                               boolean idempotent, RequestSpan span,
-                                                               final String indexName, final String path) {
-    GenericSearchRequest request = new GenericSearchRequest(
-      environment.timeoutConfig().managementTimeout(),
-      core.context(),
-      environment.retryStrategy(),
-      httpRequest,
-      idempotent,
-      span,
-      indexName,
-      path
-    );
-
-    return sendRequest(request).whenComplete((r, t) -> {
-      if (span != null) {
-        span.end();
-      }
-    });
-  }
-
-  private CompletableFuture<GenericSearchResponse> sendRequest(final GenericSearchRequest request) {
-    core.send(request);
-    return request.response();
-  }
-
-  private RequestSpan buildSpan(final String spanName, final RequestSpan parent) {
-    RequestSpan span = core.context().environment().requestTracer().requestSpan(spanName, parent);
-    span.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
-    return span;
   }
 
 }

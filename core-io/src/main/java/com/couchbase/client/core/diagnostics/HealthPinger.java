@@ -23,16 +23,14 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.config.PortInfo;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.RequestContext;
-import com.couchbase.client.core.msg.analytics.AnalyticsPingRequest;
+import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.kv.KvPingRequest;
 import com.couchbase.client.core.msg.kv.KvPingResponse;
-import com.couchbase.client.core.msg.query.QueryPingRequest;
-import com.couchbase.client.core.msg.search.SearchPingRequest;
-import com.couchbase.client.core.msg.view.ViewPingRequest;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
@@ -41,11 +39,13 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
+import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 
 /**
  * The {@link HealthPinger} allows to "ping" individual services with real operations for their health.
@@ -68,9 +68,9 @@ public class HealthPinger {
   public static Mono<PingResult> ping(final Core core, final Optional<Duration> timeout, final RetryStrategy retryStrategy,
                                 final Set<ServiceType> serviceTypes, final Optional<String> reportId, final Optional<String> bucketName) {
     return Mono.defer(() -> {
-      Set<PingTarget> targets = extractPingTargets(core.clusterConfig(), bucketName);
-      if (serviceTypes != null && !serviceTypes.isEmpty()) {
-        targets = targets.stream().filter(t -> serviceTypes.contains(t.serviceType)).collect(Collectors.toSet());
+      Set<RequestTarget> targets = extractPingTargets(core.clusterConfig(), bucketName);
+      if (!isNullOrEmpty(serviceTypes)) {
+        targets = targets.stream().filter(t -> serviceTypes.contains(t.serviceType())).collect(Collectors.toSet());
       }
 
       return pingTargets(core, targets, timeout, retryStrategy).collectList().map(reports -> new PingResult(
@@ -82,8 +82,8 @@ public class HealthPinger {
   }
 
   @Stability.Internal
-  static Set<PingTarget> extractPingTargets(final ClusterConfig clusterConfig, final Optional<String> bucketName) {
-    final Set<PingTarget> targets = new HashSet<>();
+  static Set<RequestTarget> extractPingTargets(final ClusterConfig clusterConfig, final Optional<String> bucketName) {
+    final Set<RequestTarget> targets = new HashSet<>();
 
     if (!bucketName.isPresent()) {
       if (clusterConfig.globalConfig() != null) {
@@ -93,7 +93,7 @@ public class HealthPinger {
               // do not check bucket-level resources from a global level (null bucket name will not work)
               continue;
             }
-            targets.add(new PingTarget(serviceType, portInfo.identifier(), null));
+            targets.add(new RequestTarget(serviceType, portInfo.identifier(), null));
           }
         }
       }
@@ -104,7 +104,7 @@ public class HealthPinger {
               // do not check bucket-level resources from a global level (null bucket name will not work)
               continue;
             }
-            targets.add(new PingTarget(serviceType, nodeInfo.identifier(), null));
+            targets.add(new RequestTarget(serviceType, nodeInfo.identifier(), null));
           }
         }
       }
@@ -114,9 +114,9 @@ public class HealthPinger {
         for (NodeInfo nodeInfo : bucketConfig.nodes()) {
           for (ServiceType serviceType : nodeInfo.services().keySet()) {
             if (serviceType != ServiceType.VIEWS && serviceType != ServiceType.KV) {
-              targets.add(new PingTarget(serviceType, nodeInfo.identifier(), null));
+              targets.add(new RequestTarget(serviceType, nodeInfo.identifier(), null));
             } else {
-              targets.add(new PingTarget(serviceType, nodeInfo.identifier(), bucketName.get()));
+              targets.add(new RequestTarget(serviceType, nodeInfo.identifier(), bucketName.get()));
             }
           }
         }
@@ -126,25 +126,25 @@ public class HealthPinger {
     return targets;
   }
 
-  private static Flux<EndpointPingReport> pingTargets(final Core core, final Set<PingTarget> targets,
+  private static Flux<EndpointPingReport> pingTargets(final Core core, final Set<RequestTarget> targets,
                                                       final Optional<Duration> timeout, final RetryStrategy retryStrategy) {
-    return Flux.fromIterable(targets).flatMap(target -> pingTarget(core, target, timeout, retryStrategy));
+    final CoreCommonOptions options = CoreCommonOptions.of(timeout.orElse(null), retryStrategy, null);
+    return Flux.fromIterable(targets).flatMap(target -> pingTarget(core, target, options));
   }
 
-  private static Mono<EndpointPingReport> pingTarget(final Core core, final PingTarget target,
-                                                     final Optional<Duration> timeout, final RetryStrategy retryStrategy) {
-    final RetryStrategy retry = retryStrategy == null ? core.context().environment().retryStrategy() : retryStrategy;
-    switch (target.serviceType) {
-      case QUERY: return pingQuery(core, target, timeout, retry);
-      case KV: return pingKv(core, target, timeout, retry);
-      case VIEWS: return pingViews(core, target, timeout, retry);
-      case SEARCH: return pingSearch(core, target, timeout, retry);
+  private static Mono<EndpointPingReport> pingTarget(final Core core, final RequestTarget target,
+                                                     final CoreCommonOptions options) {
+    switch (target.serviceType()) {
+      case QUERY: return pingHttpEndpoint(core, target, options, "/admin/ping");
+      case KV: return pingKv(core, target, options);
+      case VIEWS: return pingHttpEndpoint(core, target, options, "/");
+      case SEARCH: return pingHttpEndpoint(core, target, options, "/api/ping");
       case MANAGER:
       case EVENTING:
         // right now we are not pinging the cluster manager
         // right now we are not pinging the eventing service
         return Mono.empty();
-      case ANALYTICS: return pingAnalytics(core, target, timeout, retry);
+      case ANALYTICS: return pingHttpEndpoint(core, target, options, "/admin/ping");
       default: return Mono.error(new IllegalStateException("Unknown service to ping, this is a bug!"));
     }
   }
@@ -194,13 +194,12 @@ public class HealthPinger {
     );
   }
 
-  private static Mono<EndpointPingReport> pingKv(final Core core, final PingTarget target,
-                                                 final Optional<Duration> userTimeout,
-                                                 final RetryStrategy retryStrategy) {
+  private static Mono<EndpointPingReport> pingKv(final Core core, final RequestTarget target,
+                                                 final CoreCommonOptions options) {
     return Mono.defer(() -> {
-      Duration timeout = userTimeout.orElse(core.context().environment().timeoutConfig().kvTimeout());
-      CollectionIdentifier collectionIdentifier = CollectionIdentifier.fromDefault(target.bucketName);
-      KvPingRequest request = new KvPingRequest(timeout, core.context(), retryStrategy, collectionIdentifier, target.nodeIdentifier);
+      Duration timeout = options.timeout().orElse(core.context().environment().timeoutConfig().kvTimeout());
+      CollectionIdentifier collectionIdentifier = CollectionIdentifier.fromDefault(target.bucketName());
+      KvPingRequest request = new KvPingRequest(timeout, core.context(), options.retryStrategy().orElse(null), collectionIdentifier, target.nodeIdentifier());
       core.send(request);
       return Reactor
         .wrap(request, request.response(), true)
@@ -209,20 +208,19 @@ public class HealthPinger {
           return assembleSuccessReport(
             request.context(),
             ((KvPingResponse) response).channelId(),
-            Optional.ofNullable(target.bucketName)
+            Optional.ofNullable(target.bucketName())
           );
         }).onErrorResume(throwable -> {
           request.context().logicallyComplete();
-          return Mono.just(assembleFailureReport(throwable, request.context(), Optional.ofNullable(target.bucketName)));
+          return Mono.just(assembleFailureReport(throwable, request.context(), Optional.ofNullable(target.bucketName())));
         });
     });
   }
 
-  private static Mono<EndpointPingReport> pingQuery(final Core core, final PingTarget target, final Optional<Duration> userTimeout,
-                                      final RetryStrategy retryStrategy) {
+  private static Mono<EndpointPingReport> pingHttpEndpoint(final Core core, final RequestTarget target,
+                                                           final CoreCommonOptions options, final String path) {
     return Mono.defer(() -> {
-      Duration timeout = userTimeout.orElse(core.context().environment().timeoutConfig().queryTimeout());
-      QueryPingRequest request = new QueryPingRequest(timeout, core.context(), retryStrategy, target.nodeIdentifier);
+      CoreHttpRequest request = core.httpClient(target).get(path(path), options).build();
       core.send(request);
       return Reactor
         .wrap(request, request.response(), true)
@@ -239,121 +237,4 @@ public class HealthPinger {
         });
     });
   }
-
-  private static Mono<EndpointPingReport> pingAnalytics(final Core core, final PingTarget target, final Optional<Duration> userTimeout,
-                                          final RetryStrategy retryStrategy) {
-    return Mono.defer(() -> {
-      Duration timeout = userTimeout.orElse(core.context().environment().timeoutConfig().analyticsTimeout());
-      AnalyticsPingRequest request = new AnalyticsPingRequest(timeout, core.context(), retryStrategy, target.nodeIdentifier);
-      core.send(request);
-      return Reactor
-        .wrap(request, request.response(), true)
-        .map(response -> {
-          request.context().logicallyComplete();
-          return assembleSuccessReport(
-            request.context(),
-            response.channelId(),
-            Optional.empty()
-          );
-        }).onErrorResume(throwable -> {
-          request.context().logicallyComplete();
-          return Mono.just(assembleFailureReport(throwable, request.context(), Optional.empty()));
-        });
-    });
-  }
-
-  private static Mono<EndpointPingReport> pingViews(final Core core, final PingTarget target, final Optional<Duration> userTimeout,
-                                          final RetryStrategy retryStrategy) {
-    return Mono.defer(() -> {
-      Duration timeout = userTimeout.orElse(core.context().environment().timeoutConfig().viewTimeout());
-      ViewPingRequest request = new ViewPingRequest(timeout, core.context(), retryStrategy, target.bucketName, target.nodeIdentifier);
-      core.send(request);
-      return Reactor
-        .wrap(request, request.response(), true)
-        .map(response -> {
-          request.context().logicallyComplete();
-          return assembleSuccessReport(
-            request.context(),
-            response.channelId(),
-            Optional.ofNullable(target.bucketName)
-          );
-        }).onErrorResume(throwable -> {
-          request.context().logicallyComplete();
-          return Mono.just(assembleFailureReport(throwable, request.context(), Optional.ofNullable(target.bucketName)));
-        });
-    });
-  }
-
-  private static Mono<EndpointPingReport> pingSearch(final Core core, final PingTarget target, final Optional<Duration> userTimeout,
-                                       final RetryStrategy retryStrategy) {
-    return Mono.defer(() -> {
-      Duration timeout = userTimeout.orElse(core.context().environment().timeoutConfig().searchTimeout());
-      SearchPingRequest request = new SearchPingRequest(timeout, core.context(), retryStrategy, target.nodeIdentifier);
-      core.send(request);
-      return Reactor
-        .wrap(request, request.response(), true)
-        .map(response -> {
-          request.context().logicallyComplete();
-          return assembleSuccessReport(
-            request.context(),
-            response.channelId(),
-            Optional.empty()
-          );
-        }).onErrorResume(throwable -> {
-          request.context().logicallyComplete();
-          return Mono.just(assembleFailureReport(throwable, request.context(), Optional.empty()));
-        });
-    });
-  }
-
-  @Stability.Internal
-  public static class PingTarget {
-
-    private final ServiceType serviceType;
-    private final NodeIdentifier nodeIdentifier;
-    private final String bucketName;
-
-    PingTarget(final ServiceType serviceType, final NodeIdentifier nodeIdentifier, final String bucketName) {
-      this.serviceType = serviceType;
-      this.nodeIdentifier = nodeIdentifier;
-      this.bucketName = bucketName;
-    }
-
-    public ServiceType serviceType() {
-      return serviceType;
-    }
-
-    public NodeIdentifier nodeIdentifier() {
-      return nodeIdentifier;
-    }
-
-    public String bucketName() {
-      return bucketName;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-      PingTarget that = (PingTarget) o;
-      return serviceType == that.serviceType &&
-        Objects.equals(nodeIdentifier, that.nodeIdentifier) &&
-        Objects.equals(bucketName, that.bucketName);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(serviceType, nodeIdentifier, bucketName);
-    }
-
-    @Override
-    public String toString() {
-      return "PingTarget{" +
-        "serviceType=" + serviceType +
-        ", nodeIdentifier=" + nodeIdentifier +
-        ", bucketName='" + bucketName + '\'' +
-        '}';
-    }
-  }
-
 }

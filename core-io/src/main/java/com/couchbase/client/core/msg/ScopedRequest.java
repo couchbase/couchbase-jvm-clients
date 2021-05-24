@@ -16,8 +16,10 @@
 
 package com.couchbase.client.core.msg;
 
+/**
+ * @deprecated The "bucket" method is now part of the Request interface,
+ * so ScopedRequest is no longer needed.
+ */
+@Deprecated
 public interface ScopedRequest {
-
-  String bucket();
-
 }

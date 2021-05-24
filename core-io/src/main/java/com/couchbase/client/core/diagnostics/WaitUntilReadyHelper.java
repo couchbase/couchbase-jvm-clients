@@ -29,6 +29,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.GenericManagerRequest;
 import com.couchbase.client.core.service.ServiceType;
@@ -46,6 +47,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+
+import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 
 /**
  * Helper class to perform the "wait until ready" logic.
@@ -172,12 +175,12 @@ public class WaitUntilReadyHelper {
 
   private static Set<ServiceType> servicesToCheck(final Core core, final Set<ServiceType> serviceTypes,
                                                   final Optional<String> bucketName) {
-    return serviceTypes != null && !serviceTypes.isEmpty()
+    return !isNullOrEmpty(serviceTypes)
       ? serviceTypes
       : HealthPinger
       .extractPingTargets(core.clusterConfig(), bucketName)
       .stream()
-      .map(HealthPinger.PingTarget::serviceType)
+      .map(RequestTarget::serviceType)
       .collect(Collectors.toSet());
   }
 

@@ -35,10 +35,10 @@ public class ViewIndexManager internal constructor(internal val bucket: Bucket) 
     public suspend fun getAllDesignDocuments(
         namespace: DesignDocumentNamespace,
         common: CommonOptions = CommonOptions.Default,
-    ): List<DesignDocument> = with(common) {
+    ): List<DesignDocument> {
         val ddocNameToJson = coreManager.getAllDesignDocuments(
             namespace == PRODUCTION,
-            timeout, retryStrategy, parentSpan,
+            common.toCore(),
         ).await()
         return parseAllDesignDocuments(ddocNameToJson)
     }
@@ -54,10 +54,10 @@ public class ViewIndexManager internal constructor(internal val bucket: Bucket) 
         name: String,
         namespace: DesignDocumentNamespace,
         common: CommonOptions = CommonOptions.Default,
-    ): DesignDocument = with(common) {
+    ): DesignDocument {
         val responseBytes = coreManager.getDesignDocument(
             name, namespace == PRODUCTION,
-            timeout, retryStrategy, parentSpan,
+            common.toCore(),
         ).await()
         return parseDesignDocument(name, Mapper.decodeIntoTree(responseBytes) as ObjectNode)
     }
@@ -66,20 +66,20 @@ public class ViewIndexManager internal constructor(internal val bucket: Bucket) 
         doc: DesignDocument,
         namespace: DesignDocumentNamespace,
         common: CommonOptions = CommonOptions.Default,
-    ): Unit = with(common) {
+    ): Unit {
         coreManager.upsertDesignDocument(
             doc.name, toJson(doc), namespace == PRODUCTION,
-            timeout, retryStrategy, parentSpan,
+            common.toCore(),
         ).await()
     }
 
     public suspend fun publishDesignDocument(
         name: String,
         common: CommonOptions = CommonOptions.Default,
-    ): Unit = with(common) {
+    ): Unit {
         coreManager.publishDesignDocument(
             name,
-            timeout, retryStrategy, parentSpan,
+            common.toCore(),
         ).await()
     }
 
@@ -87,10 +87,10 @@ public class ViewIndexManager internal constructor(internal val bucket: Bucket) 
         name: String,
         namespace: DesignDocumentNamespace,
         common: CommonOptions = CommonOptions.Default,
-    ): Unit = with(common) {
+    ): Unit {
         coreManager.dropDesignDocument(
             name, namespace == PRODUCTION,
-            timeout, retryStrategy, parentSpan,
+            common.toCore(),
         ).await()
     }
 
@@ -108,7 +108,7 @@ public class ViewIndexManager internal constructor(internal val bucket: Bucket) 
 
     private fun parseAllDesignDocuments(ddocNameToJson: Map<String, ObjectNode>): List<DesignDocument> {
         val result = ArrayList<DesignDocument>()
-        ddocNameToJson.forEach { ddocName, json -> result.add(parseDesignDocument(ddocName, json)) }
+        ddocNameToJson.forEach { (ddocName, json) -> result.add(parseDesignDocument(ddocName, json)) }
         return result;
     }
 

@@ -32,7 +32,6 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
-import com.couchbase.client.core.msg.ScopedRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.AnalyticsService;
@@ -358,7 +357,7 @@ public class Node implements Stateful<NodeState> {
   public <R extends Request<? extends Response>> void send(final R request) {
     String bucket;
     if (request.serviceType().scope() == ServiceScope.BUCKET) {
-      bucket = ((ScopedRequest) request).bucket();
+      bucket = request.bucket();
       if (bucket == null) {
         // no bucket name present so this is a kv request that is not attached
         // to a specific bucket

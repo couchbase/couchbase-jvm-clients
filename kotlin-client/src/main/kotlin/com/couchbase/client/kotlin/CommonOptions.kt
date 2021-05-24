@@ -17,6 +17,7 @@
 package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.cnc.RequestSpan
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.retry.RetryStrategy
 import java.time.Duration
 
@@ -31,5 +32,10 @@ public class CommonOptions(
 ) {
     public companion object {
         public val Default: CommonOptions = CommonOptions()
+
+        private val CoreDefault: CoreCommonOptions = CoreCommonOptions.of(null, null, null)
     }
+
+    internal fun toCore(): CoreCommonOptions =
+        if (this === Default) CoreDefault else CoreCommonOptions.of(timeout, retryStrategy, parentSpan)
 }

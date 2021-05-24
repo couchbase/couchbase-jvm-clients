@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 
@@ -126,6 +127,18 @@ public interface Request<R extends Response> {
    * @return the service type for this request.
    */
   ServiceType serviceType();
+
+  /**
+   * Returns the name of the bucket this request is scoped to, or null if not scoped to a bucket.
+   * @return (nullable)
+   */
+  default String bucket() { return null; }
+
+  /**
+   * Returns the node that should service this request, or null to let the service locator decide.
+   * @return (nullable)
+   */
+  default NodeIdentifier target() { return null; }
 
   /**
    * Returns contextual information for each individual service.

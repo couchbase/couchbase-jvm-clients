@@ -17,7 +17,6 @@
 package com.couchbase.client.java.manager.view;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
@@ -25,11 +24,8 @@ import com.couchbase.client.core.error.DesignDocumentNotFoundException;
 import com.couchbase.client.core.error.context.ReducedViewErrorContext;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.manager.CoreViewIndexManager;
-import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.view.DesignDocumentNamespace;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -76,8 +72,7 @@ public class AsyncViewIndexManager {
     notNull(namespace, "DesignDocumentNamespace", () -> new ReducedViewErrorContext(null, null, bucket));
     notNull(options, "GetAllDesignDocumentsOptions", () -> new ReducedViewErrorContext(null, null, bucket));
 
-    GetAllDesignDocumentsOptions.Built built = options.build();
-    return coreManager.getAllDesignDocuments(namespace == PRODUCTION, timeout(built), retryStrategy(built), parentSpan(built))
+    return coreManager.getAllDesignDocuments(namespace == PRODUCTION, options.build())
         .thenApply(AsyncViewIndexManager::parseAllDesignDocuments);
   }
 
@@ -111,8 +106,7 @@ public class AsyncViewIndexManager {
     notNull(namespace, "DesignDocumentNamespace", () -> new ReducedViewErrorContext(name, null, bucket));
     notNull(options, "GetDesignDocumentOptions", () -> new ReducedViewErrorContext(name, null, bucket));
 
-    GetDesignDocumentOptions.Built built = options.build();
-    return coreManager.getDesignDocument(name, namespace == PRODUCTION, timeout(built), retryStrategy(built), parentSpan(built))
+    return coreManager.getDesignDocument(name, namespace == PRODUCTION, options.build())
         .thenApply(responseBytes -> parseDesignDocument(name, Mapper.decodeIntoTree(responseBytes)));
   }
 
@@ -147,9 +141,8 @@ public class AsyncViewIndexManager {
     notNull(namespace, "DesignDocumentNamespace", () -> new ReducedViewErrorContext(doc.name(), null, bucket));
     notNull(options, "UpsertDesignDocumentOptions", () -> new ReducedViewErrorContext(doc.name(), null, bucket));
 
-    UpsertDesignDocumentOptions.Built built = options.build();
     byte[] docBytes = Mapper.encodeAsBytes(toJson(doc));
-    return coreManager.upsertDesignDocument(doc.name(), docBytes, namespace == PRODUCTION, timeout(built), retryStrategy(built), parentSpan(built));
+    return coreManager.upsertDesignDocument(doc.name(), docBytes, namespace == PRODUCTION, options.build());
   }
 
   /**
@@ -175,8 +168,7 @@ public class AsyncViewIndexManager {
     notNullOrEmpty(name, "Name", () -> new ReducedViewErrorContext(null, null, bucket));
     notNull(options, "PublishDesignDocumentOptions", () -> new ReducedViewErrorContext(name, null, bucket));
 
-    PublishDesignDocumentOptions.Built built = options.build();
-    return coreManager.publishDesignDocument(name, timeout(built), retryStrategy(built), parentSpan(built));
+    return coreManager.publishDesignDocument(name, options.build());
   }
 
   /**
@@ -204,8 +196,7 @@ public class AsyncViewIndexManager {
     notNull(namespace, "DesignDocumentNamespace", () -> new ReducedViewErrorContext(name, null, bucket));
     notNull(options, "DropDesignDocumentOptions", () -> new ReducedViewErrorContext(name, null, bucket));
 
-    DropDesignDocumentOptions.Built built = options.build();
-    return coreManager.dropDesignDocument(name, namespace == PRODUCTION, timeout(built), retryStrategy(built), parentSpan(built));
+    return coreManager.dropDesignDocument(name, namespace == PRODUCTION, options.build());
   }
 
   private static ObjectNode toJson(final DesignDocument doc) {
@@ -218,17 +209,5 @@ public class AsyncViewIndexManager {
       views.set(k, viewNode);
     });
     return root;
-  }
-
-  private Duration timeout(final CommonOptions<?>.BuiltCommonOptions options) {
-    return options.timeout().orElse(null); // let abstract manager supply default
-  }
-
-  private RetryStrategy retryStrategy(final CommonOptions<?>.BuiltCommonOptions options) {
-    return options.retryStrategy().orElse(null); // let abstract manager supply default
-  }
-
-  private RequestSpan parentSpan(final CommonOptions<?>.BuiltCommonOptions options) {
-    return options.parentSpan().orElse(null);
   }
 }

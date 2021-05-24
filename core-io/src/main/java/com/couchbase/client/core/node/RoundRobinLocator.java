@@ -23,12 +23,11 @@ import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.config.PortInfo;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.core.error.context.GenericRequestErrorContext;
 import com.couchbase.client.core.error.ServiceNotAvailableException;
+import com.couchbase.client.core.error.context.GenericRequestErrorContext;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
-import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
@@ -37,6 +36,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link Locator} which implements node selection on a round-robin basis.
@@ -75,7 +76,7 @@ public class RoundRobinLocator implements Locator {
       return;
     }
 
-    boolean isTargeted = request instanceof TargetedRequest;
+    boolean isTargeted = request.target() != null;
 
     if (!isTargeted && !config.hasClusterOrBucketConfig()) {
       boolean globalLoadInProgress =  ctx.core().configurationProvider().globalConfigLoadInProgress();
@@ -163,13 +164,13 @@ public class RoundRobinLocator implements Locator {
   private void dispatchTargeted(final Request<? extends Response> request, final List<Node> nodes,
                                 final CoreContext ctx) {
     for (Node n : nodes) {
-      if (n.identifier().equals(((TargetedRequest) request).target())) {
+      if (n.identifier().equals(request.target())) {
         n.send(request);
         return;
       }
     }
 
-    handleTargetNotAvailable((TargetedRequest) request, nodes, ctx);
+    handleTargetNotAvailable(request, nodes, ctx);
   }
 
   /**
@@ -184,16 +185,17 @@ public class RoundRobinLocator implements Locator {
    * @param nodes the nodes list to check against.
    * @param ctx the core context.
    */
-  private static void handleTargetNotAvailable(final TargetedRequest request, final List<Node> nodes,
+  private static void handleTargetNotAvailable(final Request<?> request, final List<Node> nodes,
                                                final CoreContext ctx) {
+    NodeIdentifier target = requireNonNull(request.target());
     for (Node node : nodes) {
-      if (request.target().equals(node.identifier())) {
-        RetryOrchestrator.maybeRetry(ctx, (Request<?>) request, RetryReason.NODE_NOT_AVAILABLE);
+      if (target.equals(node.identifier())) {
+        RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NODE_NOT_AVAILABLE);
         return;
       }
     }
 
-    ((Request<?>) request).cancel(CancellationReason.TARGET_NODE_REMOVED);
+    request.cancel(CancellationReason.TARGET_NODE_REMOVED);
   }
 
   private void dispatchUntargeted(final Request<? extends Response> request, final List<Node> nodes,

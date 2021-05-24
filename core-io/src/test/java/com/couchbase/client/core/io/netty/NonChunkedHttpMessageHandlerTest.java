@@ -17,7 +17,6 @@
 package com.couchbase.client.core.io.netty;
 
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
@@ -27,12 +26,15 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseSt
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.endpoint.http.CoreHttpPath;
+import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
+import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.view.GenericViewRequest;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.AfterAll;
@@ -124,15 +126,13 @@ class NonChunkedHttpMessageHandlerTest {
     );
     channel.pipeline().fireChannelActive();
 
-    GenericViewRequest request = new GenericViewRequest(
-      Duration.ofSeconds(1),
+    CoreHttpRequest request = CoreHttpRequest.builder(
+      CoreCommonOptions.of(Duration.ofSeconds(1), BestEffortRetryStrategy.INSTANCE, null),
       endpoint.context(),
-      BestEffortRetryStrategy.INSTANCE,
-      () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"),
-      true,
-      "bucket",
-      null
-    );
+      HttpMethod.GET,
+      CoreHttpPath.path("/"),
+      RequestTarget.views("bucket")
+    ).build();
     channel.writeAndFlush(request);
 
     FullHttpRequest written = channel.readOutbound();

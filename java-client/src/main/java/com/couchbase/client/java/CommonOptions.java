@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
@@ -117,7 +118,7 @@ public abstract class CommonOptions<SELF extends CommonOptions<SELF>> {
   }
 
   @Stability.Internal
-  public abstract class BuiltCommonOptions {
+  public abstract class BuiltCommonOptions implements CoreCommonOptions {
 
     /**
      * Returns the custom retry strategy if provided.

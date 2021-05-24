@@ -21,6 +21,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpObjectAggr
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.netty.chunk.ChunkResponseParser;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
@@ -32,7 +33,6 @@ import com.couchbase.client.core.msg.chunk.ChunkHeader;
 import com.couchbase.client.core.msg.chunk.ChunkRow;
 import com.couchbase.client.core.msg.chunk.ChunkTrailer;
 import com.couchbase.client.core.msg.chunk.ChunkedResponse;
-import com.couchbase.client.core.msg.search.GenericSearchRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
@@ -42,7 +42,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -99,7 +99,7 @@ class ChunkedHandlerSwitcherTest {
   @Test
   void switchesToNonChunkIfNeeded() {
     assertChunkedInPipeline(channel);
-    GenericSearchRequest upsertRequest = mock(GenericSearchRequest.class);
+    CoreHttpRequest upsertRequest = mock(CoreHttpRequest.class);
     when(upsertRequest.retryStrategy()).thenReturn(FailFastRetryStrategy.INSTANCE);
     channel.write(upsertRequest);
     assertNonChunkedInPipeline(channel);
@@ -113,7 +113,7 @@ class ChunkedHandlerSwitcherTest {
     assertChunkedInPipeline(channel);
 
     for (int i = 0; i < 2; i++) {
-      GenericSearchRequest genericSearchRequest = mock(GenericSearchRequest.class);
+      CoreHttpRequest genericSearchRequest = mock(CoreHttpRequest.class);
       when(genericSearchRequest.retryStrategy()).thenReturn(FailFastRetryStrategy.INSTANCE);
       channel.write(genericSearchRequest);
       assertNonChunkedInPipeline(channel);

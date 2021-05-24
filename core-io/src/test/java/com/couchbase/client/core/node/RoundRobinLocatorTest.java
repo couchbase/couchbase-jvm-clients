@@ -162,7 +162,7 @@ class RoundRobinLocatorTest {
     Locator locator = new RoundRobinLocator(ServiceType.QUERY);
 
     Request<?> request = mock(BucketConfigRequest.class);
-    when(((TargetedRequest) request).target()).thenReturn(new NodeIdentifier("hostb", 8091));
+    when(request.target()).thenReturn(new NodeIdentifier("hostb", 8091));
 
     Node node = mock(Node.class);
     when(node.state()).thenReturn(NodeState.CONNECTED);

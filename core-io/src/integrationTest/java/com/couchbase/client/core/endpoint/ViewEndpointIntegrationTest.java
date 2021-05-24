@@ -17,14 +17,15 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.endpoint.http.CoreHttpPath;
+import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
+import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.view.GenericViewRequest;
-import com.couchbase.client.core.msg.view.GenericViewResponse;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CoreIntegrationTest;
@@ -92,18 +93,16 @@ class ViewEndpointIntegrationTest extends CoreIntegrationTest {
     endpoint.connect();
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
-    GenericViewRequest request = new GenericViewRequest(
-      Duration.ofSeconds(5),
-      serviceContext,
-      env.retryStrategy(),
-      () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"),
-      true,
-      config().bucketname(),
-      null
-    );
+    CoreHttpRequest request = CoreHttpRequest.builder(
+        CoreCommonOptions.of(Duration.ofSeconds(5), null, null),
+        serviceContext,
+        HttpMethod.GET,
+        CoreHttpPath.path("/"),
+        RequestTarget.views(config().bucketname())
+    ).build();
     endpoint.send(request);
 
-    GenericViewResponse response = request.response().get();
+    CoreHttpResponse response = request.response().get();
     assertEquals(ResponseStatus.SUCCESS, response.status());
     assertNotNull(response.content());
     assertTrue(response.content().length > 0);

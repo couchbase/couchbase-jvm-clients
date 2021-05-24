@@ -17,8 +17,8 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.callbacks.BeforeSendRequestCallback;
+import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
@@ -41,6 +41,7 @@ import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
 import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
+import com.couchbase.client.core.endpoint.http.CoreHttpClient;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
@@ -53,6 +54,7 @@ import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
@@ -319,6 +321,14 @@ public class Core {
    */
   public CoreContext context() {
     return coreContext;
+  }
+
+  /**
+   * Returns a client for issuing HTTP requests to servers in the cluster.
+   */
+  @Stability.Internal
+  public CoreHttpClient httpClient(RequestTarget target) {
+    return new CoreHttpClient(this, target);
   }
 
   @Stability.Internal

@@ -248,6 +248,8 @@ class KeyValueLocatorTest {
     Locator locator = new KeyValueLocator();
 
     Request<?> request = mock(CarrierBucketConfigRequest.class);
+    when(request.target()).thenReturn(new NodeIdentifier("localhost", 8091));
+
     locator.dispatch(request, Collections.emptyList(), null, null);
 
     verify(request, times(1)).cancel(CancellationReason.TARGET_NODE_REMOVED);
@@ -258,7 +260,7 @@ class KeyValueLocatorTest {
     Locator locator = new KeyValueLocator();
 
     Request<?> request = mock(CarrierBucketConfigRequest.class);
-    when(((TargetedRequest) request).target()).thenReturn(new NodeIdentifier("hostb", 8091));
+    when(request.target()).thenReturn(new NodeIdentifier("hostb", 8091));
 
     Node node = mock(Node.class);
     when(node.state()).thenReturn(NodeState.CONNECTED);

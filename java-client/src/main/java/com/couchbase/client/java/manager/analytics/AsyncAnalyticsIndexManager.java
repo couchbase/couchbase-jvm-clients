@@ -21,10 +21,9 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.core.endpoint.http.CoreHttpClient;
+import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.error.AnalyticsException;
 import com.couchbase.client.core.error.DataverseExistsException;
 import com.couchbase.client.core.error.DataverseNotFoundException;
@@ -32,15 +31,11 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.msg.analytics.GenericAnalyticsRequest;
-import com.couchbase.client.core.msg.analytics.GenericAnalyticsResponse;
-import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -50,6 +45,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.util.CbThrowables.findCause;
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
@@ -73,6 +69,7 @@ public class AsyncAnalyticsIndexManager {
 
   private final AsyncCluster cluster;
   private final Core core;
+  private final CoreHttpClient httpClient;
 
   private static final String DEFAULT_DATAVERSE = "Default";
   private static final String DEFAULT_LINK = "Local";
@@ -80,6 +77,7 @@ public class AsyncAnalyticsIndexManager {
   public AsyncAnalyticsIndexManager(AsyncCluster cluster) {
     this.cluster = requireNonNull(cluster);
     this.core = cluster.core();
+    this.httpClient = core.httpClient(RequestTarget.analytics());
   }
 
   public CompletableFuture<Void> createDataverse(String dataverseName) {
@@ -301,42 +299,15 @@ public class AsyncAnalyticsIndexManager {
   }
 
   public CompletableFuture<Map<String, Map<String, Long>>> getPendingMutations(final GetPendingMutationsAnalyticsOptions options) {
-    return sendRequest(HttpMethod.GET, "/analytics/node/agg/stats/remaining", options.build(), TracingIdentifiers.SPAN_REQUEST_MA_GET_PENDING_MUTATIONS)
+    return httpClient.get(path("/analytics/node/agg/stats/remaining"), options.build())
+        .trace(TracingIdentifiers.SPAN_REQUEST_MA_GET_PENDING_MUTATIONS)
+        .exec(core)
         .exceptionally(t -> {
           throw translateException(t);
         })
         .thenApply(response ->
           Mapper.decodeInto(response.content(), new TypeReference<Map<String, Map<String, Long>> >() {
         }));
-  }
-
-  private CompletableFuture<GenericAnalyticsResponse> sendRequest(final HttpMethod method, final String path,
-                                                                  final CommonOptions<?>.BuiltCommonOptions options,
-                                                                  final String spanName) {
-    final RequestSpan span = core
-      .context()
-      .environment()
-      .requestTracer()
-      .requestSpan(spanName, options.parentSpan().orElse(null));
-
-    return sendRequest(new GenericAnalyticsRequest(timeout(options), core.context(), retryStrategy(options),
-        () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path), method == HttpMethod.GET, span))
-      .whenComplete((r, t) -> span.end());
-  }
-
-  private CompletableFuture<GenericAnalyticsResponse> sendRequest(GenericAnalyticsRequest request) {
-    core.send(request);
-    return request.response();
-  }
-
-  private Duration timeout(CommonOptions<?>.BuiltCommonOptions options) {
-    // Even though most of the requests are dispatched to the analytics service,
-    // these are management operations so use the manager timeout.
-    return options.timeout().orElse(core.context().environment().timeoutConfig().managementTimeout());
-  }
-
-  private RetryStrategy retryStrategy(CommonOptions<?>.BuiltCommonOptions options) {
-    return options.retryStrategy().orElse(core.context().environment().retryStrategy());
   }
 
   private CompletableFuture<AnalyticsResult> exec(String statement, CommonOptions<?>.BuiltCommonOptions options, String spanName) {
