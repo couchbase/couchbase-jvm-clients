@@ -26,11 +26,18 @@ import java.util.Map;
  */
 public class MultiObserveViaCasResponse extends BaseResponse {
 
+  private final MultiObserveViaCasRequest request;
   private final Map<byte[], ObserveViaCasResponse.ObserveStatus> observed;
 
-  public MultiObserveViaCasResponse(ResponseStatus status, Map<byte[], ObserveViaCasResponse.ObserveStatus> observed) {
+  public MultiObserveViaCasResponse(final MultiObserveViaCasRequest request, final ResponseStatus status,
+                                    final Map<byte[], ObserveViaCasResponse.ObserveStatus> observed) {
     super(status);
     this.observed = observed;
+    this.request = request;
+  }
+
+  public MultiObserveViaCasRequest request() {
+    return request;
   }
 
   public Map<byte[], ObserveViaCasResponse.ObserveStatus> observed() {

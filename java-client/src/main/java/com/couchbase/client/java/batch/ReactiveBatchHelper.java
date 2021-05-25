@@ -30,6 +30,7 @@ import com.couchbase.client.core.msg.kv.ObserveViaCasResponse;
 import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.java.Collection;
+import com.couchbase.client.java.cnc.evnts.BatchHelperExistsCompletedEvent;
 import com.couchbase.client.java.kv.GetResult;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -39,6 +40,7 @@ import reactor.util.function.Tuples;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -94,13 +96,20 @@ public class ReactiveBatchHelper {
     return Flux.defer(() -> existsBytes(collection, ids).map(i -> new String(i, StandardCharsets.UTF_8)));
   }
 
+  /**
+   * Performs the bulk logic of fetching a config and splitting up the observe requests.
+   *
+   * @param collection the collection on which the query should be performed.
+   * @param ids the list of ids which should be checked.
+   * @return a flux of all
+   */
   private static Flux<byte[]> existsBytes(final Collection collection, final java.util.Collection<String> ids) {
     final Core core = collection.core();
     final CoreEnvironment env = core.context().environment();
 
     BucketConfig config = core.clusterConfig().bucketConfig(collection.bucketName());
 
-    if (config == null) {
+    if (core.configurationProvider().bucketConfigLoadInProgress() || config == null) {
       // We might not have a config yet if bootstrap is still in progress, wait 100ms
       // and then try again. In a steady state this should not happen.
       return Mono
@@ -108,22 +117,16 @@ public class ReactiveBatchHelper {
        .flatMapMany(ign -> existsBytes(collection, ids));
     }
 
+    long start = System.nanoTime();
     if (!(config instanceof CouchbaseBucketConfig)) {
       throw new IllegalStateException("Only couchbase (and ephemeral) buckets are supported at this point!");
     }
-    Map<NodeIdentifier, Map<byte[], Short>> data = new HashMap<>(config.nodes().size());
+
+    Map<NodeIdentifier, Map<byte[], Short>> nodeEntries = new HashMap<>(config.nodes().size());
     for (NodeInfo node : config.nodes()) {
-      data.put(node.identifier(), new HashMap<>(ids.size() / config.nodes().size()));
+      nodeEntries.put(node.identifier(), new HashMap<>(ids.size() / config.nodes().size()));
     }
     CouchbaseBucketConfig cbc = (CouchbaseBucketConfig) config;
-
-    for (String id : ids) {
-      byte[] encodedId = id.getBytes(StandardCharsets.UTF_8);
-      int partitionId = KeyValueLocator.partitionForKey(encodedId, cbc.numberOfPartitions());
-      int nodeId = cbc.nodeIndexForActive(partitionId, false);
-      NodeInfo nodeInfo = cbc.nodeAtIndex(nodeId);
-      data.get(nodeInfo.identifier()).put(encodedId, (short) partitionId);
-    }
 
     CollectionIdentifier ci = new CollectionIdentifier(
       collection.bucketName(),
@@ -131,8 +134,18 @@ public class ReactiveBatchHelper {
       Optional.of(collection.name())
     );
 
-    List<Mono<MultiObserveViaCasResponse>> requests = new ArrayList<>();
-    for (Map.Entry<NodeIdentifier, Map<byte[], Short>> node : data.entrySet()) {
+    for (String id : ids) {
+      byte[] encodedId = id.getBytes(StandardCharsets.UTF_8);
+      int partitionId = KeyValueLocator.partitionForKey(encodedId, cbc.numberOfPartitions());
+      int nodeId = cbc.nodeIndexForActive(partitionId, false);
+      NodeInfo nodeInfo = cbc.nodeAtIndex(nodeId);
+      nodeEntries.get(nodeInfo.identifier()).put(encodedId, (short) partitionId);
+    }
+
+    List<Mono<MultiObserveViaCasResponse>> responses = new ArrayList<>(nodeEntries.size());
+    List<MultiObserveViaCasRequest> requests = new ArrayList<>(nodeEntries.size());
+
+    for (Map.Entry<NodeIdentifier, Map<byte[], Short>> node : nodeEntries.entrySet()) {
       MultiObserveViaCasRequest request = new MultiObserveViaCasRequest(
         env.timeoutConfig().kvTimeout(),
         core.context(),
@@ -142,14 +155,22 @@ public class ReactiveBatchHelper {
         node.getValue(),
         PMGET_PREDICATE
       );
-
       core.send(request);
-      requests.add(Reactor.wrap(request, request.response(), true));
+      requests.add(request);
+      responses.add(Reactor.wrap(request, request.response(), true));
     }
 
     return Flux
-      .merge(requests)
-      .flatMap(response -> Flux.fromIterable(response.observed().keySet()));
+      .merge(responses)
+      .flatMap(response -> Flux.fromIterable(response.observed().keySet()))
+      .onErrorMap(throwable -> {
+        BatchErrorContext ctx = new BatchErrorContext(Collections.unmodifiableList(requests));
+        return new BatchHelperFailureException("Failed to perform BatchHelper bulk operation", throwable, ctx);
+      })
+      .doOnComplete(() -> core.context().environment().eventBus().publish(new BatchHelperExistsCompletedEvent(
+          Duration.ofNanos(System.nanoTime() - start),
+          new BatchErrorContext(Collections.unmodifiableList(requests))
+      )));
   }
 
 }

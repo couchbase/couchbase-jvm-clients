@@ -30,7 +30,6 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.UnsignedLEB128;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -116,7 +115,7 @@ public class MultiObserveViaCasRequest
       }
     }
 
-    return new MultiObserveViaCasResponse(status, observed);
+    return new MultiObserveViaCasResponse(this, status, observed);
   }
 
   @Override
@@ -132,6 +131,14 @@ public class MultiObserveViaCasRequest
   @Override
   public String name() {
     return "multi_observe_via_cas";
+  }
+
+  @Override
+  public Map<String, Object> serviceContext() {
+    final Map<String, Object> parentCtx = super.serviceContext();
+    parentCtx.put("target", target.address());
+    parentCtx.put("numKeys", keys.size());
+    return parentCtx;
   }
 
 }
