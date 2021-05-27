@@ -44,7 +44,6 @@ import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.SeedNodeOutdatedException;
-import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
@@ -64,8 +63,6 @@ import reactor.core.publisher.ReplayProcessor;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -75,7 +72,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -434,7 +430,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           core.context(),
           ConfigIgnoredEvent.Reason.PARSE_FAILURE,
           Optional.of(ex),
-          Optional.of(ctx.config())
+          Optional.of(ctx.config()),
+          Optional.of(ctx.bucketName())
         ));
       }
     } else {
@@ -442,7 +439,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         core.context(),
         ConfigIgnoredEvent.Reason.ALREADY_SHUTDOWN,
         Optional.empty(),
-        Optional.of(ctx.config())
+        Optional.of(ctx.config()),
+        Optional.of(ctx.bucketName())
       ));
     }
   }
@@ -458,7 +456,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           core.context(),
           ConfigIgnoredEvent.Reason.PARSE_FAILURE,
           Optional.of(ex),
-          Optional.of(ctx.config())
+          Optional.of(ctx.config()),
+          Optional.empty()
         ));
       }
     } else {
@@ -466,7 +465,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         core.context(),
         ConfigIgnoredEvent.Reason.ALREADY_SHUTDOWN,
         Optional.empty(),
-        Optional.of(ctx.config())
+        Optional.of(ctx.config()),
+        Optional.empty()
       ));
     }
   }
@@ -626,12 +626,13 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     final String name = newConfig.name();
     final BucketConfig oldConfig = currentConfig.bucketConfig(name);
 
-    if (newConfig.rev() > 0 && oldConfig != null && newConfig.rev() <= oldConfig.rev()) {
+    if (oldConfig != null && configIsOlderOrSame(oldConfig.revEpoch(), newConfig.revEpoch(), oldConfig.rev(), newConfig.rev())) {
       eventBus.publish(new ConfigIgnoredEvent(
         core.context(),
         ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
         Optional.empty(),
-        Optional.empty()
+        Optional.empty(),
+        Optional.of(newConfig.name())
       ));
       return;
     }
@@ -659,10 +660,11 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private void checkAndApplyConfig(final GlobalConfig newConfig) {
     final GlobalConfig oldConfig = currentConfig.globalConfig();
 
-    if (newConfig.rev() > 0 && oldConfig != null && newConfig.rev() <= oldConfig.rev()) {
+    if (oldConfig != null && configIsOlderOrSame(oldConfig.revEpoch(), newConfig.revEpoch(), oldConfig.rev(), newConfig.rev())) {
       eventBus.publish(new ConfigIgnoredEvent(
         core.context(),
         ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
+        Optional.empty(),
         Optional.empty(),
         Optional.empty()
       ));
@@ -674,6 +676,29 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     checkAlternateAddress();
     updateSeedNodeList();
     pushConfig();
+  }
+
+  /**
+   * Helper method to check if a bucket or global config is older or the same (and can be ignored).
+   *
+   * @param oldRevEpoch the rev epoch from the old config, might be 0.
+   * @param newRevEpoch the rev epoch of the new config, might be 0.
+   * @param oldRev the rev of the old config, might be 0 but likely not unless with super old servers.
+   * @param newRev the rev of the new config, might be 0 but likely not unless with super old servers.
+   * @return true of old or same and safe to be ignored.
+   */
+  private boolean configIsOlderOrSame(long oldRevEpoch, long newRevEpoch, long oldRev, long newRev) {
+    if (newRevEpoch < oldRevEpoch) {
+      // The new rev epoch is definitely older, so ignore right away.
+      return true;
+    } else if (newRevEpoch > oldRevEpoch) {
+      // The new rev epoch is definitely newer, so we definitely need that config.
+      return false;
+    }
+
+    // Now we know that the epochs are the same (could be 0 as well, so not present), we ned to compare
+    // the revs themselves to figure out if it is newer or older.
+    return newRev > 0 && newRev <= oldRev;
   }
 
   /**

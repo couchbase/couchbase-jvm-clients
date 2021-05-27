@@ -39,6 +39,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvFileSource;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
@@ -432,6 +436,71 @@ class DefaultConfigurationProviderTest {
       }
     }
     assertTrue(found);
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "config_lower_rev_no_epoch,1,0,config_higher_rev_no_epoch,2,0",
+    "config_lower_rev_no_epoch,1,0,config_lower_rev_higher_epoch,1,2",
+    "config_lower_rev_lower_epoch,1,1,config_lower_rev_higher_epoch,1,2",
+    "config_higher_rev_lower_epoch,2,1,config_lower_rev_higher_epoch,1,2",
+  })
+  void applyBucketConfigWithRevOrEpoch(String oldConfigFile, long oldRev, long oldEpoch,
+                                       String newConfigFile, long newRev, long newEpoch) {
+    Core core = mock(Core.class);
+    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
+    String bucket = "travel-sample";
+
+    String config = readResource(
+      oldConfigFile + ".json",
+      DefaultConfigurationProviderTest.class
+    );
+    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, ORIGIN));
+
+    assertEquals(oldRev, provider.config().bucketConfig(bucket).rev());
+    assertEquals(oldEpoch, provider.config().bucketConfig(bucket).revEpoch());
+
+    String newConfig = readResource(
+      newConfigFile + ".json",
+      DefaultConfigurationProviderTest.class
+    );
+    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, newConfig, ORIGIN));
+
+    assertEquals(newRev, provider.config().bucketConfig(bucket).rev());
+    assertEquals(newEpoch, provider.config().bucketConfig(bucket).revEpoch());
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "config_higher_rev_no_epoch,2,0,config_lower_rev_no_epoch",
+    "config_lower_rev_lower_epoch,1,1,config_higher_rev_no_epoch",
+    "config_higher_rev_lower_epoch,2,1,config_lower_rev_lower_epoch",
+    "config_lower_rev_higher_epoch,1,2,config_higher_rev_lower_epoch",
+  })
+  void ignoresBucketConfigWithOlderRevOrEpoch(String oldConfigFile, long oldRev, long oldEpoch, String newConfigFile) {
+    Core core = mock(Core.class);
+    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
+    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
+    String bucket = "travel-sample";
+
+    String config = readResource(
+      oldConfigFile + ".json",
+      DefaultConfigurationProviderTest.class
+    );
+    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, ORIGIN));
+
+    assertEquals(oldRev, provider.config().bucketConfig(bucket).rev());
+    assertEquals(oldEpoch, provider.config().bucketConfig(bucket).revEpoch());
+
+    String newConfig = readResource(
+      newConfigFile + ".json",
+      DefaultConfigurationProviderTest.class
+    );
+    provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, newConfig, ORIGIN));
+
+    assertEquals(oldRev, provider.config().bucketConfig(bucket).rev());
+    assertEquals(oldEpoch, provider.config().bucketConfig(bucket).revEpoch());
   }
 
   private static Set<SeedNode> getSeedNodesFromConfig(ConfigurationProvider provider) {

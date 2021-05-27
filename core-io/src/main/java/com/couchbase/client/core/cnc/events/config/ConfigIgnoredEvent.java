@@ -27,13 +27,16 @@ public class ConfigIgnoredEvent extends AbstractEvent {
   private final Optional<String> config;
   private final Reason reason;
   private final Optional<Exception> cause;
+  private final Optional<String> bucketName;
 
   public ConfigIgnoredEvent(final Context context, final Reason reason,
-                            final Optional<Exception> cause, final Optional<String> config) {
+                            final Optional<Exception> cause, final Optional<String> config,
+                            final Optional<String> bucketName) {
     super(reason.severity(), Category.CONFIG, Duration.ZERO, context);
     this.reason = reason;
     this.cause = cause;
     this.config = config;
+    this.bucketName = bucketName;
   }
 
   public Reason reason() {
@@ -51,7 +54,7 @@ public class ConfigIgnoredEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    String msg = "The proposed configuration was ignored because of: " + reason();
+    String msg = "The proposed configuration (" + bucketName.orElse("<global>") + ") was ignored because of: " + reason();
     if (reason == Reason.PARSE_FAILURE && config.isPresent()) {
       msg += "; Config: " + config.get();
     }

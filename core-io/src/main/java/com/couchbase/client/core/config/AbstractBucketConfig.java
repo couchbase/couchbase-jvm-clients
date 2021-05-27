@@ -44,12 +44,13 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     private final String origin;
     private final List<PortInfo> portInfos;
     private final long rev;
+    private final long revEpoch;
 
     protected AbstractBucketConfig(String uuid, String name, BucketNodeLocator locator, String uri, String streamingUri,
                                    List<NodeInfo> nodeInfos, List<PortInfo> portInfos,
                                    List<BucketCapabilities> bucketCapabilities, String origin,
                                    Map<String, Set<ClusterCapabilities>> clusterCapabilities,
-                                   long rev
+                                   long rev, long revEpoch
     ) {
         this.uuid = uuid;
         this.name = name;
@@ -60,6 +61,7 @@ public abstract class AbstractBucketConfig implements BucketConfig {
         this.clusterCapabilities = convertClusterCapabilities(clusterCapabilities);
         this.origin = origin;
         this.rev = rev;
+        this.revEpoch = revEpoch;
         this.portInfos = portInfos == null ? Collections.emptyList() : portInfos;
         this.nodeInfo = portInfos == null ? nodeInfos : nodeInfoFromExtended(portInfos, nodeInfos);
         int es = 0;
@@ -229,6 +231,11 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     @Override
     public long rev() {
         return rev;
+    }
+
+    @Override
+    public long revEpoch() {
+        return revEpoch;
     }
 
     @Override

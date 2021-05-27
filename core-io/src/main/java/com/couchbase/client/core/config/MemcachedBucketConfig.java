@@ -61,6 +61,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
     public MemcachedBucketConfig(
             @JacksonInject("env") CoreEnvironment env,
             @JsonProperty("rev") long rev,
+            @JsonProperty("revEpoch") long revEpoch,
             @JsonProperty("uuid") String uuid,
             @JsonProperty("name") String name,
             @JsonProperty("uri") String uri,
@@ -71,7 +72,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
             @JsonProperty("clusterCapabilities") Map<String, Set<ClusterCapabilities>> clusterCapabilities,
             @JacksonInject("origin") String origin) {
         super(uuid, name, BucketNodeLocator.KETAMA, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities,
-          origin, clusterCapabilities, rev);
+          origin, clusterCapabilities, rev, revEpoch);
         this.ketamaNodes = new TreeMap<>();
         this.hashingStrategy = StandardMemcachedHashingStrategy.INSTANCE;
         populateKetamaNodes();
@@ -167,6 +168,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
         return "MemcachedBucketConfig{" +
           "name='" + redactMeta(name()) + '\'' +
           ", rev=" + rev() +
+          ", revEpoch=" + revEpoch() +
           ", nodes=" + redactSystem(new HashSet<>(ketamaNodes.values()).toString()) +
           ", hash=" + hashingStrategy +
           '}';

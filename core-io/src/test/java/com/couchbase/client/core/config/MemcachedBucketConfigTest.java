@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.config;
 
-import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.service.ServiceType;
@@ -35,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
 
 /**
  * Verifies the functionality of {@link MemcachedBucketConfigTest} through the
@@ -58,6 +56,7 @@ class MemcachedBucketConfigTest {
     void shouldOnlyUseDataNodesForKetama() {
         MemcachedBucketConfig config = readConfig("memcached_mixed_sherlock.json");
 
+        assertEquals(0, config.revEpoch());
         assertEquals(4, config.nodes().size());
         for (Map.Entry<Long, NodeInfo> node : config.ketamaNodes().entrySet()) {
             String hostname = node.getValue().hostname();
@@ -120,6 +119,7 @@ class MemcachedBucketConfigTest {
     void shouldOnlyTakeNodesArrayIntoAccount() {
         MemcachedBucketConfig config = readConfig("memcached_during_rebalance.json");
 
+        assertEquals(0, config.revEpoch());
         List<String> mustContain = Arrays.asList(
             "10.0.0.1",
             "10.0.0.2",

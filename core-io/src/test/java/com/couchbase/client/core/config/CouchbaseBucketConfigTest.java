@@ -46,6 +46,7 @@ class CouchbaseBucketConfigTest {
         assertEquals(BucketNodeLocator.VBUCKET, config.locator());
         assertFalse(config.ephemeral());
         assertTrue(config.nodes().get(0).alternateAddresses().isEmpty());
+        assertEquals(0, config.revEpoch());
     }
 
     @Test
@@ -186,6 +187,7 @@ class CouchbaseBucketConfigTest {
     void shouldIncludeExternalIfPresent() {
         CouchbaseBucketConfig config = readConfig("config_with_external.json");
 
+        assertEquals(0, config.revEpoch());
         List<NodeInfo> nodes = config.nodes();
         assertEquals(3, nodes.size());
         for (NodeInfo node : nodes) {

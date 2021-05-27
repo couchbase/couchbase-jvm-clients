@@ -97,6 +97,16 @@ public interface BucketConfig {
   long rev();
 
   /**
+   * This field serves to enable the server to provide higher-level guidance with regards to configuration priority.
+   * <p>
+   * This will be used during manual failovers to ensure that even if the minority side of the cluster is being
+   * selected, that consumers can keep the correct configurations.
+   * <p>
+   * If revEpoch is not included in the config, it is set to 0 (it starts with 1 on configs that have it).
+   */
+  long revEpoch();
+
+  /**
    * The bucket type.
    *
    * @return the bucket type.

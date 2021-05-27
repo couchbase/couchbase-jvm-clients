@@ -58,6 +58,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
     @JsonCreator
     public CouchbaseBucketConfig(
       @JsonProperty("rev") long rev,
+      @JsonProperty("revEpoch") long revEpoch,
       @JsonProperty("uuid") String uuid,
       @JsonProperty("name") String name,
       @JsonProperty("uri") String uri,
@@ -69,7 +70,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
       @JsonProperty("clusterCapabilities") Map<String, Set<ClusterCapabilities>> clusterCapabilities,
       @JacksonInject("origin") String origin) {
         super(uuid, name, BucketNodeLocator.VBUCKET, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities,
-          origin, clusterCapabilities, rev);
+          origin, clusterCapabilities, rev, revEpoch);
         this.partitionInfo = partitionInfo;
         this.tainted = partitionInfo.tainted();
         List<NodeInfo> extendedNodeInfos = this.nodes(); // includes ports for SSL services
@@ -238,6 +239,8 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
             + ", nodes=" + redactSystem(nodes())
             + ", partitionInfo=" + partitionInfo
             + ", tainted=" + tainted
-            + ", rev=" + rev() + '}';
+            + ", rev=" + rev()
+            + ", revEpoch=" + revEpoch()
+            + '}';
     }
 }
