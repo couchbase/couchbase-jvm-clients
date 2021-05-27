@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
@@ -51,6 +52,7 @@ import static com.couchbase.client.java.manager.analytics.CreateDatasetAnalytics
 import static com.couchbase.client.java.manager.analytics.DropDatasetAnalyticsOptions.dropDatasetAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.DropIndexAnalyticsOptions.dropIndexAnalyticsOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -60,249 +62,244 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies the basic functionality of analytics queries in an end-to-end fashion.
  */
 @IgnoreWhen(
-	missesCapabilities = {Capabilities.ANALYTICS, Capabilities.COLLECTIONS},
-	clusterTypes = ClusterType.CAVES
+  missesCapabilities = {Capabilities.ANALYTICS, Capabilities.COLLECTIONS},
+  clusterTypes = ClusterType.CAVES
 )
 class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
 
-	private static Cluster cluster;
+  private static Cluster cluster;
 
-	private static final String dataverse = "myDataverse";
-	private static final String dataset = "myDataset";
-	private static final String index = "myIndex";
-	private static String scopeName = "myScope" + randomString();
-	private static String collectionName = "myCollection" + randomString();
+  private static final String dataverse = "myDataverse";
+  private static final String dataset = "myDataset";
+  private static final String index = "myIndex";
+  private static String scopeName = "myScope" + randomString();
+  private static String collectionName = "myCollection" + randomString();
+  private static String delimitedDataverseName;
 
-	private static CollectionManager collectionManager;
-	private static AnalyticsIndexManager analytics;
-	private static Bucket bucket;
 
-	/**
-	 * Holds sample content for simple assertions.
-	 */
-	private static final JsonObject FOO_CONTENT = JsonObject.create().put("foo", "bar");
-	private static final JsonObject DEFAULT_CONTENT = JsonObject.create().put("some", "stuff");
+  private static CollectionManager collectionManager;
+  private static AnalyticsIndexManager analytics;
+  private static Bucket bucket;
 
-	@BeforeAll
-	static void setup() {
-		cluster = Cluster.connect(seedNodes(), clusterOptions());
-		bucket = cluster.bucket(config().bucketname());
-		analytics = cluster.analyticsIndexes();
-		collectionManager = bucket.collections();
-		bucket.waitUntilReady(Duration.ofSeconds(5));
-		waitForService(bucket, ServiceType.ANALYTICS);
+  /**
+   * Holds sample content for simple assertions.
+   */
+  private static final JsonObject FOO_CONTENT = JsonObject.create().put("foo", "bar");
+  private static final JsonObject DEFAULT_CONTENT = JsonObject.create().put("some", "stuff");
 
-		collectionManager.createScope(scopeName);
-		CollectionSpec collSpec = CollectionSpec.create(collectionName, scopeName);
-		collectionManager.createCollection(collSpec);
-		waitUntilCondition(() -> collectionExists(collectionManager, collSpec));
+  @BeforeAll
+  static void setup() {
+    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    bucket = cluster.bucket(config().bucketname());
+    analytics = cluster.analyticsIndexes();
+    collectionManager = bucket.collections();
+    bucket.waitUntilReady(Duration.ofSeconds(5));
+    waitForService(bucket, ServiceType.ANALYTICS);
 
-		waitForQueryIndexerToHaveBucket(cluster, config().bucketname());
+    collectionManager.createScope(scopeName);
+    CollectionSpec collSpec = CollectionSpec.create(collectionName, scopeName);
+    collectionManager.createCollection(collSpec);
+    waitUntilCondition(() -> collectionExists(collectionManager, collSpec));
 
-		// this inserts two documents in bucket.scope.collection and creates a primary index.
-		// then inserts one document in bucket._default._default and creates a primary index.
+    waitForQueryIndexerToHaveBucket(cluster, config().bucketname());
 
-		cluster.query("insert into `" + config().bucketname() + "`.`" + scopeName + "`.`" + collectionName + "` (key, value ) values ( '123',  { \"test\" : \"hello\" })");
-		insertDoc(bucket.scope(scopeName).collection(collectionName), FOO_CONTENT);
-		cluster.query("create primary index on `" + config().bucketname() + "`.`" + scopeName + "`.`" + collectionName + "`");
-		insertDoc(bucket.defaultCollection(), DEFAULT_CONTENT);
-		cluster.query("create primary index on `" + config().bucketname() + "`.`" + "_default" + "`." + "_default");
-	}
+    // this inserts two documents in bucket.scope.collection and creates a primary index.
+    // then inserts one document in bucket._default._default and creates a primary index.
 
-	@BeforeEach
-	void reset() {
-		final Set<String> builtIns = setOf("Default", "Metadata");
+    cluster.query("insert into `" + config().bucketname() + "`.`" + scopeName + "`.`" + collectionName + "` (key, value ) values ( '123',  { \"test\" : \"hello\" })");
+    insertDoc(bucket.scope(scopeName).collection(collectionName), FOO_CONTENT);
+    cluster.query("create primary index on `" + config().bucketname() + "`.`" + scopeName + "`.`" + collectionName + "`");
+    insertDoc(bucket.defaultCollection(), DEFAULT_CONTENT);
+    try {
+      cluster.query("create primary index on `" + config().bucketname() + "`.`" + "_default" + "`." + "_default");
+    } catch (IndexExistsException e) {
+      //Primary index is already created, ignore
+    }
 
-		getAllDataverseNames().stream()
-				.filter(name -> !builtIns.contains(name))
-				.forEach(name -> disconnectLocalLink(name));
+    delimitedDataverseName = "`" + config().bucketname() + "`.`" + scopeName + "`";
+  }
 
-		getAllDataverseNames().stream()
-				.filter(name -> !builtIns.contains(name))
-				.forEach(name -> dropDataverse(name));
+  @BeforeEach
+  void reset() {
+    final Set<String> builtIns = setOf("Default", "Metadata");
 
-		// clean up the Default dataverse
-		dropAllDatasets();
-		dropAllIndexes();
-		analytics.disconnectLink();
-	}
+    getAllDataverseNames().stream()
+      .filter(name -> !builtIns.contains(name))
+      .forEach(name -> {
+        disconnectLocalLink(name);
+      });
 
-	private Set<String> getAllDataverseNames() {
-		return analytics.getAllDataverses().stream()
-				.map(AnalyticsDataverse::name)
-				.collect(Collectors.toSet());
-	}
+    getAllDataverseNames().stream()
+      .filter(name -> !builtIns.contains(name))
+      .forEach(name -> {
+        dropDataverse(name);
+      });
 
-	private void disconnectLocalLink(String dvName) {
-		DisconnectLinkAnalyticsOptions opts = DisconnectLinkAnalyticsOptions.disconnectLinkAnalyticsOptions()
-				.dataverseName(dvName)
-				.linkName("Local");
-		analytics.disconnectLink(opts);
-	}
+    // clean up the Default dataverse
+    dropAllDatasets();
+    dropAllIndexes();
+    analytics.disconnectLink();
+  }
 
-	private void dropAllDatasets() {
-		analytics.getAllDatasets().forEach(ds ->
-				dropDataset(ds.name(), dropDatasetAnalyticsOptions()
-						.dataverseName(ds.dataverseName())));
-	}
+  private Set<String> getAllDataverseNames() {
+    return analytics.getAllDataverses().stream()
+      .map(AnalyticsDataverse::name)
+      .collect(Collectors.toSet());
+  }
 
-	private void dropDataset(String name, DropDatasetAnalyticsOptions dataversOpts) {
-			analytics.dropDataset(name, dataversOpts);
-	}
+  private void disconnectLocalLink(String dvName) {
+    DisconnectLinkAnalyticsOptions opts = DisconnectLinkAnalyticsOptions.disconnectLinkAnalyticsOptions()
+      .dataverseName(dvName)
+      .linkName("Local");
+    analytics.disconnectLink(opts);
+  }
 
-	private void dropDataverse(String name) {
-			analytics.dropDataverse(name);
-	}
+  private void dropAllDatasets() {
+    analytics.getAllDatasets().forEach(ds ->
+      dropDataset(ds.name(), dropDatasetAnalyticsOptions()
+        .dataverseName(ds.dataverseName())));
+  }
 
-	private void dropAllIndexes() {
-		analytics.getAllIndexes().forEach(idx ->
-				analytics.dropIndex(idx.name(), idx.datasetName(), dropIndexAnalyticsOptions()
-						.dataverseName(idx.dataverseName())));
-	}
+  private void dropDataset(String name, DropDatasetAnalyticsOptions dataversOpts) {
+    analytics.dropDataset(name, dataversOpts);
+  }
 
-	private static boolean collectionExists(CollectionManager mgr, CollectionSpec spec) {
-		try {
-			List<ScopeSpec> scopeList = mgr.getAllScopes();
-			ScopeSpec scope = null;
-			for (ScopeSpec sc : scopeList) {
-				if (spec.scopeName().equals(sc.name())) {
-					scope = sc;
-					break;
-				}
-			}
-			return scope.collections().contains(spec);
-		} catch (ScopeNotFoundException e) {
-			return false;
-		}
-	}
+  private void dropDataverse(String name) {
+    analytics.dropDataverse(name);
+  }
 
-	private static boolean dataverseExists(Cluster cluster, String dataverse) {
-		try {
-			dataverse = dataverse.replace(".", "@.");
-			AnalyticsResult result = cluster.analyticsQuery("SELECT DataverseName FROM Metadata.`Dataverse` where DataverseName=\"" + dataverse + "\"");
-			return result.rowsAsObject().size() != 0;
-		} catch (ScopeNotFoundException e) {
-			return false;
-		}
-	}
+  private void dropAllIndexes() {
+    analytics.getAllIndexes().forEach(idx ->
+      analytics.dropIndex(idx.name(), idx.datasetName(), dropIndexAnalyticsOptions()
+        .dataverseName(idx.dataverseName())));
+  }
 
-	@AfterAll
-	static void tearDown() {
-		cluster.disconnect();
-	}
+  private static boolean collectionExists(CollectionManager mgr, CollectionSpec spec) {
+    try {
+      ScopeSpec scope = mgr.getScope(spec.scopeName());
+      return scope.collections().contains(spec);
+    } catch (ScopeNotFoundException e) {
+      return false;
+    }
+  }
 
-	@Test
-	void createDataset() {
-		analytics.createDataset(dataset, bucket.name()); // default
+  private static boolean dataverseExists(Cluster cluster, String dataverse) {
+    try {
+      AnalyticsResult result = cluster.analyticsQuery("SELECT DataverseName FROM Metadata.`Dataverse` where DataverseName=\"" + dataverse + "\"");
+      return result.rowsAsObject().size() != 0;
+    } catch (ScopeNotFoundException e) {
+      return false;
+    }
+  }
 
-		analytics.createDataverse(dataverse);
-		analytics.createDataset(dataset, bucket.name(),
-				createDatasetAnalyticsOptions()
-						.dataverseName(dataverse));
+  @AfterAll
+  static void tearDown() {
+    cluster.disconnect();
+  }
 
-		Set<String> actual = analytics.getAllDatasets().stream()
-				.map(ds -> ds.dataverseName() + "::" + ds.name())
-				.collect(Collectors.toSet());
-		assertEquals(setOf("Default::" + dataset, dataverse + "::" + dataset), actual);
-	}
+  @Test
+  void createDataset() {
+    analytics.createDataset(dataset, bucket.name()); // default
 
-	@Test
-	void performsDataverseQuery() {
-		analytics.createDataset(dataset, bucket.name()); // default
-		analytics.createDataverse(dataverse);
-		analytics.createDataset(dataset, bucket.name(),
-				createDatasetAnalyticsOptions()
-						.dataverseName(dataverse));
+    analytics.createDataverse(dataverse);
+    analytics.createDataset(dataset, bucket.name(),
+      createDatasetAnalyticsOptions()
+        .dataverseName(dataverse));
 
-		// REQUEST_PLUS makes query hang
-		// AnalyticsOptions opts = AnalyticsOptions.analyticsOptions().scanConsistency(AnalyticsScanConsistency.REQUEST_PLUS).timeout(Duration.ofSeconds(300));
+    Set<String> actual = analytics.getAllDatasets().stream()
+      .map(ds -> ds.dataverseName() + "::" + ds.name())
+      .collect(Collectors.toSet());
+    assertEquals(setOf("Default::" + dataset, dataverse + "::" + dataset), actual);
+  }
 
-		AnalyticsResult result = cluster.analyticsQuery("SELECT * FROM " + dataverse + "." + dataset + " where " + dataset + ".test= \"hello\"");
+  @Test
+  void performsDataverseQuery() {
+    analytics.createDataset(dataset, bucket.name()); // default
+    analytics.createDataverse(dataverse);
+    analytics.createDataset(dataset, bucket.name(),
+      createDatasetAnalyticsOptions()
+        .dataverseName(dataverse));
 
-		List<JsonObject> rows = result.rowsAs(JsonObject.class);
-		assertFalse(!rows.isEmpty());
+    // REQUEST_PLUS makes query hang
+    // AnalyticsOptions opts = AnalyticsOptions.analyticsOptions().scanConsistency(AnalyticsScanConsistency.REQUEST_PLUS).timeout(Duration.ofSeconds(300));
 
-		AnalyticsMetaData meta = result.metaData();
-		assertFalse(meta.clientContextId().isEmpty());
-		assertTrue(meta.signature().isPresent());
-		assertFalse(meta.requestId().isEmpty());
-		assertEquals(AnalyticsStatus.SUCCESS, meta.status());
+    AnalyticsResult result = cluster.analyticsQuery("SELECT * FROM " + dataverse + "." + dataset + " where " + dataset + ".test= \"hello\"");
 
-		assertFalse(meta.metrics().elapsedTime().isZero());
-		assertFalse(meta.metrics().executionTime().isZero());
-		assertEquals(rows.size(), meta.metrics().resultCount());
-		// assertEquals(rows.size(), meta.metrics().processedObjects()); // fails
-		// assertTrue(meta.metrics().resultSize() > 0); // fails
-		assertTrue(meta.warnings().isEmpty());
-		// assertEquals(1, meta.metrics().errorCount()); //fails
-	}
+    List<JsonObject> rows = result.rowsAs(JsonObject.class);
+    assertFalse(!rows.isEmpty());
 
-	@Test
-	void performsDataverseCollectionQuery() {
-		// the dataverse name for query_context must be bucketname.scopename
-		String dataverseName = config().bucketname() + "." + scopeName;
-		analytics.createDataverse(dataverseName);
-		waitUntilCondition(() -> dataverseExists(cluster, dataverseName), Duration.ofSeconds(60), Duration.ofSeconds(1));
+    AnalyticsMetaData meta = result.metaData();
+    assertFalse(meta.clientContextId().isEmpty());
+    assertTrue(meta.signature().isPresent());
+    assertFalse(meta.requestId().isEmpty());
+    assertEquals(AnalyticsStatus.SUCCESS, meta.status());
 
-		cluster.analyticsQuery("CREATE ANALYTICS COLLECTION `" + dataverseName + "`.`" + collectionName + "` ON `" + config().bucketname() + "`.`" + scopeName + "`.`" + collectionName + "`");
-		CollectionSpec collSpec = CollectionSpec.create(collectionName, scopeName);
-		waitUntilCondition(() -> collectionExists(collectionManager, collSpec), Duration.ofSeconds(60), Duration.ofSeconds(1));
+    assertFalse(meta.metrics().elapsedTime().isZero());
+    assertFalse(meta.metrics().executionTime().isZero());
+    assertEquals(rows.size(), meta.metrics().resultCount());
+    // assertEquals(rows.size(), meta.metrics().processedObjects()); // fails
+    // assertTrue(meta.metrics().resultSize() > 0); // fails
+    assertTrue(meta.warnings().isEmpty());
+    // assertEquals(1, meta.metrics().errorCount()); //fails
+  }
 
-		// REQUEST_PLUS makes query hang
-		// AnalyticsOptions opts = AnalyticsOptions.analyticsOptions().scanConsistency(AnalyticsScanConsistency.REQUEST_PLUS);
+  @Test
+  void performsDataverseCollectionQuery() {
+    cluster.analyticsQuery("ALTER COLLECTION `" + bucket.name() + "`.`" + scopeName + "`.`" + collectionName + "` ENABLE ANALYTICS");
 
-		//AnalyticsOptions opts = AnalyticsOptions.analyticsOptions();
-		Scope scope = cluster.bucket(config().bucketname()).scope(scopeName);
-		AnalyticsResult result = scope.analyticsQuery("SELECT * FROM `" + dataverseName + "`.`" + collectionName + "` where `" + collectionName + "`.foo= \"bar\"");
+    // REQUEST_PLUS makes query hang
+    // AnalyticsOptions opts = AnalyticsOptions.analyticsOptions().scanConsistency(AnalyticsScanConsistency.REQUEST_PLUS);
 
-		List<JsonObject> rows = result.rowsAs(JsonObject.class);
-		assertFalse(rows.isEmpty());
-	}
+    //Ensure doc ingested by analytics
+    waitUntilCondition(() -> singletonMap(delimitedDataverseName, singletonMap(collectionName, 0L)).equals(analytics.getPendingMutations()));
 
-	@Test
-	void performsDataverseCollectionQueryWithQueryContext() {
-		// the dataverse name for query_context must be bucketname.scopename
-		String dataverseName = config().bucketname() + "." + scopeName;
-		analytics.createDataverse(dataverseName);
-		waitUntilCondition(() -> dataverseExists(cluster, dataverseName));
+    Scope scope = cluster.bucket(config().bucketname()).scope(scopeName);
+    AnalyticsResult result = scope.analyticsQuery("SELECT * FROM `" + bucket.name() + "`.`" + scopeName + "`.`" + collectionName + "` WHERE `" + collectionName + "`.foo=\"bar\"");
 
-		cluster.analyticsQuery("CREATE ANALYTICS COLLECTION `" + dataverseName + "`.`" + collectionName + "` ON `" + config().bucketname() + "`.`" + scopeName + "`.`" + collectionName + "`");
-		CollectionSpec collSpec = CollectionSpec.create(collectionName, scopeName);
-		waitUntilCondition(() -> collectionExists(collectionManager, collSpec), Duration.ofSeconds(60), Duration.ofSeconds(1));
+    List<JsonObject> rows = result.rowsAs(JsonObject.class);
+    assertFalse(rows.isEmpty());
+  }
 
-		//AnalyticsOptions opts = AnalyticsOptions.analyticsOptions();
-		Scope scope = cluster.bucket(config().bucketname()).scope(scopeName);
-		AnalyticsResult result = scope.analyticsQuery("SELECT * FROM `" + collectionName + "` where `" + collectionName + "`.foo= \"bar\"");
+  @Test
+  void performsDataverseCollectionQueryWithQueryContext() {
+    cluster.analyticsQuery("ALTER COLLECTION `" + bucket.name() + "`.`" + scopeName + "`.`" + collectionName + "` ENABLE ANALYTICS");
 
-		List<JsonObject> rows = result.rowsAs(JsonObject.class);
-		assertFalse(rows.isEmpty());
-	}
+    //Ensure doc ingested by analytics
+    waitUntilCondition(() -> singletonMap(delimitedDataverseName, singletonMap(collectionName, 0L)).equals(analytics.getPendingMutations()));
 
-	@Test
-	void failsOnError() {
-		assertThrows(ParsingFailureException.class, () -> cluster.analyticsQuery("SELECT 1="));
-	}
+    //AnalyticsOptions opts = AnalyticsOptions.analyticsOptions();
+    Scope scope = cluster.bucket(config().bucketname()).scope(scopeName);
+    AnalyticsResult result = scope.analyticsQuery("SELECT * FROM `" + collectionName + "` where `" + collectionName + "`.foo= \"bar\"");
 
-	@Test
-	void canSetCustomContextId() {
-		String contextId = "mycontextid";
-		AnalyticsResult result = cluster.analyticsQuery(
-				"SELECT DataverseName FROM Metadata.`Dataverse`",
-				analyticsOptions().clientContextId(contextId)
-		);
-		assertEquals(result.metaData().clientContextId(), contextId);
-	}
+    List<JsonObject> rows = result.rowsAs(JsonObject.class);
+    assertFalse(rows.isEmpty());
+  }
 
-	private static String randomString() {
-		return UUID.randomUUID().toString().substring(0, 10);
-	}
+  @Test
+  void failsOnError() {
+    assertThrows(ParsingFailureException.class, () -> cluster.analyticsQuery("SELECT 1="));
+  }
 
-	/**
-	 * Inserts a document into the collection and returns the ID of it. It inserts {@link #FOO_CONTENT}.
-	 */
-	public static String insertDoc(Collection collection, JsonObject content) {
-		String id = UUID.randomUUID().toString();
-		collection.insert(id, content);
-		return id;
-	}
+  @Test
+  void canSetCustomContextId() {
+    String contextId = "mycontextid";
+    AnalyticsResult result = cluster.analyticsQuery(
+      "SELECT DataverseName FROM Metadata.`Dataverse`",
+      analyticsOptions().clientContextId(contextId)
+    );
+    assertEquals(result.metaData().clientContextId(), contextId);
+  }
+
+  private static String randomString() {
+    return UUID.randomUUID().toString().substring(0, 10);
+  }
+
+  /**
+   * Inserts a document into the collection and returns the ID of it. It inserts {@link #FOO_CONTENT}.
+   */
+  public static String insertDoc(Collection collection, JsonObject content) {
+    String id = UUID.randomUUID().toString();
+    collection.insert(id, content);
+    return id;
+  }
 }
