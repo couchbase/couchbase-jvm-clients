@@ -92,7 +92,7 @@ public class AsyncAnalyticsIndexManager {
 
     final CreateDataverseAnalyticsOptions.Built builtOpts = options.build();
 
-    String statement = "CREATE DATAVERSE " + quote(dataverseName);
+    String statement = "CREATE DATAVERSE " + quoteDataverse(dataverseName);
     if (builtOpts.ignoreIfExists()) {
       statement += " IF NOT EXISTS";
     }
@@ -133,7 +133,7 @@ public class AsyncAnalyticsIndexManager {
 
     final DropDataverseAnalyticsOptions.Built builtOpts = options.build();
 
-    String statement = "DROP DATAVERSE " + quote(dataverseName);
+    String statement = "DROP DATAVERSE " + quoteDataverse(dataverseName);
     if (builtOpts.ignoreIfNotExists()) {
       statement += " IF EXISTS";
     }
@@ -159,7 +159,7 @@ public class AsyncAnalyticsIndexManager {
       statement += "IF NOT EXISTS ";
     }
 
-    statement += quote(dataverseName, datasetName) + " ON " + quote(bucketName);
+    statement += quoteDataverse(dataverseName, datasetName) + " ON " + quote(bucketName);
 
     if (condition != null) {
       statement += " WHERE " + condition;
@@ -179,7 +179,7 @@ public class AsyncAnalyticsIndexManager {
     final DropDatasetAnalyticsOptions.Built builtOpts = options.build();
     final String dataverseName = builtOpts.dataverseName().orElse(DEFAULT_DATAVERSE);
 
-    String statement = "DROP DATASET " + quote(dataverseName, datasetName);
+    String statement = "DROP DATASET " + quoteDataverse(dataverseName, datasetName);
     if (builtOpts.ignoreIfNotExists()) {
       statement += " IF EXISTS";
     }
@@ -219,7 +219,7 @@ public class AsyncAnalyticsIndexManager {
       statement += " IF NOT EXISTS";
     }
 
-    statement += " ON " + quote(dataverseName, datasetName) + " " + formatIndexFields(fields);
+    statement += " ON " + quoteDataverse(dataverseName, datasetName) + " " + formatIndexFields(fields);
 
     return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_CREATE_INDEX)
         .thenApply(result -> null);
@@ -253,7 +253,7 @@ public class AsyncAnalyticsIndexManager {
     final DropIndexAnalyticsOptions.Built builtOpts = options.build();
     final String dataverseName = builtOpts.dataverseName().orElse(DEFAULT_DATAVERSE);
 
-    String statement = "DROP INDEX " + quote(dataverseName, datasetName, indexName);
+    String statement = "DROP INDEX " + quoteDataverse(dataverseName, datasetName, indexName);
     if (builtOpts.ignoreIfNotExists()) {
       statement += " IF EXISTS";
     }
@@ -268,7 +268,7 @@ public class AsyncAnalyticsIndexManager {
 
   public CompletableFuture<Void> connectLink(ConnectLinkAnalyticsOptions options) {
     final ConnectLinkAnalyticsOptions.Built builtOpts = options.build();
-    String statement = "CONNECT LINK " + quote(
+    String statement = "CONNECT LINK " + quoteDataverse(
         builtOpts.dataverseName().orElse(DEFAULT_DATAVERSE),
         builtOpts.linkName().orElse(DEFAULT_LINK));
 
@@ -286,7 +286,7 @@ public class AsyncAnalyticsIndexManager {
 
   public CompletableFuture<Void> disconnectLink(DisconnectLinkAnalyticsOptions options) {
     final DisconnectLinkAnalyticsOptions.Built builtOpts = options.build();
-    String statement = "DISCONNECT LINK " + quote(
+    String statement = "DISCONNECT LINK " + quoteDataverse(
         builtOpts.dataverseName().orElse(DEFAULT_DATAVERSE),
         builtOpts.linkName().orElse(DEFAULT_LINK));
 
@@ -367,14 +367,20 @@ public class AsyncAnalyticsIndexManager {
   }
 
   /**
-   * Quote a list of components and return them .-separated as a string.
+   * Quotes a list of components starting with a dataverse name,
+   * and returns them .-separated as a string.
    *
-   * @param components the components to be quoted.
+   * @param dataverseName dataverse name; slashes are interpreted as component delimiters
+   * @param otherComponents the components to be quoted.
    * @return the fully quoted string (from the individual components).
    * @throws InvalidArgumentException if an individual component already contains backticks.
    */
-  private static String quote(final String... components) {
-    return Arrays.stream(components)
+  static String quoteDataverse(String dataverseName, String... otherComponents) {
+    List<String> components = new ArrayList<>();
+    components.addAll(Arrays.asList(dataverseName.split("/", -1)));
+    components.addAll(Arrays.asList(otherComponents));
+
+    return components.stream()
         .map(AsyncAnalyticsIndexManager::quote)
         .collect(Collectors.joining("."));
   }
