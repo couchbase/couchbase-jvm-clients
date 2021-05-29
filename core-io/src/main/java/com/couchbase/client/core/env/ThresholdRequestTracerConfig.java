@@ -216,7 +216,7 @@ public class ThresholdRequestTracerConfig {
 
   public static class Builder {
 
-    private boolean enabled = AggregatingMeterConfig.Defaults.DEFAULT_ENABLED;
+    private boolean enabled = LoggingMeterConfig.Defaults.DEFAULT_ENABLED;
     private Duration emitInterval = Defaults.DEFAULT_EMIT_INTERVAL;
     private int queueLength = Defaults.DEFAULT_QUEUE_LENGTH;
     private int sampleSize = Defaults.DEFAULT_SAMPLE_SIZE;

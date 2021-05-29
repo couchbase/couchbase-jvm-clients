@@ -75,7 +75,7 @@ object ClusterEnvironment {
         }
       ]] = Seq(),
       private[scala] val thresholdRequestTracerConfig: Option[ThresholdRequestTracerConfig] = None,
-      private[scala] val aggregatingMeterConfig: Option[AggregatingMeterConfig] = None
+      private[scala] val loggingMeterConfig: Option[LoggingMeterConfig] = None
   ) {
 
     def build: Try[ClusterEnvironment] = Try(new ClusterEnvironment(this))
@@ -235,12 +235,12 @@ object ClusterEnvironment {
     }
 
     /**
-      * Allows configuring the aggregating meter.
+      * Allows configuring the logging meter.
       *
       * @return this, for chaining purposes.
       */
-    def aggregatingMeterConfig(config: AggregatingMeterConfig): ClusterEnvironment.Builder = {
-      copy(aggregatingMeterConfig = Some(config))
+    def loggingMeterConfig(config: LoggingMeterConfig): ClusterEnvironment.Builder = {
+      copy(loggingMeterConfig = Some(config))
     }
   }
 }
@@ -311,7 +311,7 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
   builder.thresholdRequestTracerConfig.foreach(
     v => coreBuilder.thresholdRequestTracerConfig(v.toCore)
   )
-  builder.aggregatingMeterConfig.foreach(v => coreBuilder.aggregatingMeterConfig(v.toCore))
+  builder.loggingMeterConfig.foreach(v => coreBuilder.loggingMeterConfig(v.toCore))
 
   private[scala] val coreEnv = new CoreEnvironment(coreBuilder)
 

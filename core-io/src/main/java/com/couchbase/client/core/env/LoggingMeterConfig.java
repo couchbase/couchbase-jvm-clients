@@ -17,7 +17,7 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.metrics.AggregatingMeter;
+import com.couchbase.client.core.cnc.metrics.LoggingMeter;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
 import java.time.Duration;
@@ -25,13 +25,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Allows to configure the {@link AggregatingMeter}.
+ * Allows to configure the {@link LoggingMeter}.
  * <p>
  * Note: the metrics implementation is considered volatile, and so is this configuration. It is subject to
  * change at any time.
  */
 @Stability.Volatile
-public class AggregatingMeterConfig {
+public class LoggingMeterConfig {
 
   @Stability.Internal
   public static class Defaults {
@@ -46,15 +46,15 @@ public class AggregatingMeterConfig {
     return new Builder();
   }
 
-  public static AggregatingMeterConfig create() {
+  public static LoggingMeterConfig create() {
     return builder().build();
   }
 
-  public static AggregatingMeterConfig disabled() {
+  public static LoggingMeterConfig disabled() {
     return enabled(false).build();
   }
 
-  AggregatingMeterConfig(final Builder builder) {
+  LoggingMeterConfig(final Builder builder) {
     emitInterval = builder.emitInterval;
     enabled = builder.enabled;
   }
@@ -116,8 +116,8 @@ public class AggregatingMeterConfig {
       return this;
     }
 
-    public AggregatingMeterConfig build() {
-      return new AggregatingMeterConfig(this);
+    public LoggingMeterConfig build() {
+      return new LoggingMeterConfig(this);
     }
   }
 }

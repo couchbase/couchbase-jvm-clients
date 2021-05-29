@@ -16,25 +16,25 @@
 
 package com.couchbase.client.kotlin.env.dsl
 
-import com.couchbase.client.core.env.AggregatingMeterConfig
-import com.couchbase.client.core.env.AggregatingMeterConfig.Defaults.DEFAULT_EMIT_INTERVAL
-import com.couchbase.client.core.env.AggregatingMeterConfig.Defaults.DEFAULT_ENABLED
+import com.couchbase.client.core.env.LoggingMeterConfig
+import com.couchbase.client.core.env.LoggingMeterConfig.Defaults.DEFAULT_EMIT_INTERVAL
+import com.couchbase.client.core.env.LoggingMeterConfig.Defaults.DEFAULT_ENABLED
 import java.time.Duration
 import kotlin.properties.Delegates.observable
 
 /**
- * DSL counterpart to [AggregatingMeterConfig.Builder].
+ * DSL counterpart to [LoggingMeterConfig.Builder].
  */
 @ClusterEnvironmentDslMarker
-public class AggregatingMeterConfigDslBuilder(private val wrapped: AggregatingMeterConfig.Builder) {
+public class LoggingMeterConfigDslBuilder(private val wrapped: LoggingMeterConfig.Builder) {
     /**
-     * @see AggregatingMeterConfig.Builder.emitInterval
+     * @see LoggingMeterConfig.Builder.emitInterval
      */
     public var emitInterval: Duration
             by observable(DEFAULT_EMIT_INTERVAL) { _, _, it -> wrapped.emitInterval(it) }
 
     /**
-     * @see AggregatingMeterConfig.Builder.enabled
+     * @see LoggingMeterConfig.Builder.enabled
      */
     public var enabled: Boolean
             by observable(DEFAULT_ENABLED) { _, _, it -> wrapped.enabled(it) }

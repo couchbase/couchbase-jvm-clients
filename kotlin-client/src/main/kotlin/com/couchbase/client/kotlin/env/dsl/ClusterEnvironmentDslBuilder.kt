@@ -110,9 +110,9 @@ public class ClusterEnvironmentDslBuilder {
         thresholdRequestTracerConfigDslBuilder.initializer()
     }
 
-    private var aggregatingMeterConfigDslBuilder = AggregatingMeterConfigDslBuilder(wrapped.aggregatingMeterConfig())
-    public fun aggregatingMeter(initializer: AggregatingMeterConfigDslBuilder.() -> Unit) {
-        aggregatingMeterConfigDslBuilder.initializer()
+    private var loggingMeterConfigDslBuilder = LoggingMeterConfigDslBuilder(wrapped.loggingMeterConfig())
+    public fun loggingMeter(initializer: LoggingMeterConfigDslBuilder.() -> Unit) {
+        loggingMeterConfigDslBuilder.initializer()
     }
 
     /**

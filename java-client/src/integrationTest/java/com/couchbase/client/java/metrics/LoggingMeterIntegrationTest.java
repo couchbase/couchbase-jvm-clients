@@ -19,7 +19,7 @@ package com.couchbase.client.java.metrics;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.metrics.LatencyMetricsAggregatedEvent;
-import com.couchbase.client.core.env.AggregatingMeterConfig;
+import com.couchbase.client.core.env.LoggingMeterConfig;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class AggregatingMeterIntegrationTest extends JavaIntegrationTest {
+class LoggingMeterIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;
   static private Collection collection;
@@ -50,7 +50,7 @@ class AggregatingMeterIntegrationTest extends JavaIntegrationTest {
   static void beforeAll() {
     eventBus = new SimpleEventBus(false);
     environment = environment()
-      .aggregatingMeterConfig(AggregatingMeterConfig.enabled(true).emitInterval(Duration.ofSeconds(2)))
+      .loggingMeterConfig(LoggingMeterConfig.enabled(true).emitInterval(Duration.ofSeconds(2)))
       .eventBus(eventBus)
       .build();
     cluster = Cluster.connect(

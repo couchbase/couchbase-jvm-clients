@@ -24,7 +24,7 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.events.metrics.LatencyMetricsAggregatedEvent;
 import com.couchbase.client.core.deps.org.HdrHistogram.Histogram;
-import com.couchbase.client.core.env.AggregatingMeterConfig;
+import com.couchbase.client.core.env.LoggingMeterConfig;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * The default metrics implementation which aggregates latency information and emits it at a regular interval.
  */
 @Stability.Volatile
-public class AggregatingMeter implements Meter {
+public class LoggingMeter implements Meter {
 
   private static final AtomicInteger METER_ID = new AtomicInteger();
 
@@ -51,13 +51,13 @@ public class AggregatingMeter implements Meter {
   private final Map<NameAndTags, AggregatingValueRecorder> valueRecorders = new ConcurrentHashMap<>();
 
   private final long emitIntervalMs;
-  private final AggregatingMeterConfig config;
+  private final LoggingMeterConfig config;
 
-  public static AggregatingMeter create(EventBus eventBus, AggregatingMeterConfig config) {
-    return new AggregatingMeter(config, eventBus);
+  public static LoggingMeter create(EventBus eventBus, LoggingMeterConfig config) {
+    return new LoggingMeter(config, eventBus);
   }
 
-  private AggregatingMeter(AggregatingMeterConfig config, EventBus eventBus) {
+  private LoggingMeter(LoggingMeterConfig config, EventBus eventBus) {
     this.eventBus = eventBus;
     this.emitIntervalMs = config.emitInterval().toMillis();
     this.config = config;
@@ -69,7 +69,7 @@ public class AggregatingMeter implements Meter {
   /**
    * Returns the currently active configuration.
    */
-  public AggregatingMeterConfig config() {
+  public LoggingMeterConfig config() {
     return config;
   }
 

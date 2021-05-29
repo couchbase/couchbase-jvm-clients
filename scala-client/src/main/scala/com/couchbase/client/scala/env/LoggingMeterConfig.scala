@@ -5,12 +5,12 @@ import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.duration.Duration
 
-/** Allows customizing the `AggregatingMeter`.
+/** Allows customizing the `LoggingMeter`.
   */
-case class AggregatingMeterConfig(
+case class LoggingMeterConfig(
     private[scala] val emitInterval: Duration =
-      core.env.AggregatingMeterConfig.Defaults.DEFAULT_EMIT_INTERVAL,
-    private[scala] val enabled: Boolean = core.env.AggregatingMeterConfig.Defaults.DEFAULT_ENABLED
+      core.env.LoggingMeterConfig.Defaults.DEFAULT_EMIT_INTERVAL,
+    private[scala] val enabled: Boolean = core.env.LoggingMeterConfig.Defaults.DEFAULT_ENABLED
 ) {
 
   /** Customize the emit interval.
@@ -19,7 +19,7 @@ case class AggregatingMeterConfig(
     *
     * @return this, for chaining
     */
-  def emitInterval(value: Duration): AggregatingMeterConfig = {
+  def emitInterval(value: Duration): LoggingMeterConfig = {
     copy(emitInterval = value)
   }
 
@@ -27,12 +27,12 @@ case class AggregatingMeterConfig(
     *
     * @return this, for chaining
     */
-  def enabled(value: Boolean): AggregatingMeterConfig = {
+  def enabled(value: Boolean): LoggingMeterConfig = {
     copy(enabled = value)
   }
 
   private[scala] def toCore = {
-    val builder = com.couchbase.client.core.env.AggregatingMeterConfig.builder()
+    val builder = com.couchbase.client.core.env.LoggingMeterConfig.builder()
 
     builder.emitInterval(emitInterval)
     builder.enabled(enabled)
