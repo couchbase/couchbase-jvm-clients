@@ -21,8 +21,6 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.msg.RequestTarget;
 
-import java.util.Objects;
-
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.DELETE;
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.POST;
@@ -40,22 +38,22 @@ public class CoreHttpClient {
   }
 
   public CoreHttpRequest.Builder get(CoreHttpPath path, CoreCommonOptions options) {
-    return newRequest(options, GET, path);
+    return newRequest(GET, path, options);
   }
 
   public CoreHttpRequest.Builder put(CoreHttpPath path, CoreCommonOptions options) {
-    return newRequest(options, PUT, path);
+    return newRequest(PUT, path, options);
   }
 
   public CoreHttpRequest.Builder post(CoreHttpPath path, CoreCommonOptions options) {
-    return newRequest(options, POST, path);
+    return newRequest(POST, path, options);
   }
 
   public CoreHttpRequest.Builder delete(CoreHttpPath path, CoreCommonOptions options) {
-    return newRequest(options, DELETE, path);
+    return newRequest(DELETE, path, options);
   }
 
-  private CoreHttpRequest.Builder newRequest(CoreCommonOptions options, HttpMethod method, CoreHttpPath path) {
+  public CoreHttpRequest.Builder newRequest(HttpMethod method, CoreHttpPath path, CoreCommonOptions options) {
     return new CoreHttpRequest.Builder(options, core.context(), target, method, path);
   }
 }

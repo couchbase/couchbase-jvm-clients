@@ -18,49 +18,50 @@ package com.couchbase.client.java.manager.analytics;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
-import com.couchbase.client.core.msg.RequestTarget;
-import com.couchbase.client.core.error.AnalyticsException;
 import com.couchbase.client.core.error.DataverseExistsException;
 import com.couchbase.client.core.error.DataverseNotFoundException;
-import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.manager.CoreAnalyticsLinkManager;
+import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
+import com.couchbase.client.java.manager.analytics.link.AnalyticsLink;
+import com.couchbase.client.java.manager.analytics.link.AnalyticsLinkType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.core.util.CbThrowables.findCause;
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
 import static com.couchbase.client.java.manager.analytics.ConnectLinkAnalyticsOptions.connectLinkAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.CreateDatasetAnalyticsOptions.createDatasetAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.CreateDataverseAnalyticsOptions.createDataverseAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.CreateIndexAnalyticsOptions.createIndexAnalyticsOptions;
+import static com.couchbase.client.java.manager.analytics.CreateLinkAnalyticsOptions.createLinkAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.DisconnectLinkAnalyticsOptions.disconnectLinkAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.DropDatasetAnalyticsOptions.dropDatasetAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.DropDataverseAnalyticsOptions.dropDataverseAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.DropIndexAnalyticsOptions.dropIndexAnalyticsOptions;
+import static com.couchbase.client.java.manager.analytics.DropLinkAnalyticsOptions.dropLinkAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.GetAllDatasetsAnalyticsOptions.getAllDatasetsAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.GetAllDataversesAnalyticsOptions.getAllDataversesAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.GetAllIndexesAnalyticsOptions.getAllIndexesAnalyticsOptions;
+import static com.couchbase.client.java.manager.analytics.GetAllLinksAnalyticsOptions.getAllLinksAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.GetPendingMutationsAnalyticsOptions.getPendingMutationsAnalyticsOptions;
+import static com.couchbase.client.java.manager.analytics.ReplaceLinkAnalyticsOptions.replaceLinkAnalyticsOptions;
 import static java.util.Collections.singletonMap;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
@@ -70,6 +71,7 @@ public class AsyncAnalyticsIndexManager {
   private final AsyncCluster cluster;
   private final Core core;
   private final CoreHttpClient httpClient;
+  private final CoreAnalyticsLinkManager linkManager;
 
   private static final String DEFAULT_DATAVERSE = "Default";
   private static final String DEFAULT_LINK = "Local";
@@ -78,6 +80,7 @@ public class AsyncAnalyticsIndexManager {
     this.cluster = requireNonNull(cluster);
     this.core = cluster.core();
     this.httpClient = core.httpClient(RequestTarget.analytics());
+    this.linkManager = new CoreAnalyticsLinkManager(core);
   }
 
   public CompletableFuture<Void> createDataverse(String dataverseName) {
@@ -302,26 +305,56 @@ public class AsyncAnalyticsIndexManager {
     return httpClient.get(path("/analytics/node/agg/stats/remaining"), options.build())
         .trace(TracingIdentifiers.SPAN_REQUEST_MA_GET_PENDING_MUTATIONS)
         .exec(core)
-        .exceptionally(t -> {
-          throw translateException(t);
-        })
         .thenApply(response ->
           Mapper.decodeInto(response.content(), new TypeReference<Map<String, Map<String, Long>> >() {
         }));
   }
 
-  private CompletableFuture<AnalyticsResult> exec(String statement, CommonOptions<?>.BuiltCommonOptions options, String spanName) {
-    final AnalyticsOptions analyticsOptions = toAnalyticsOptions(options);
+  public CompletableFuture<Void> createLink(AnalyticsLink link) {
+    return createLink(link, createLinkAnalyticsOptions());
+  }
 
-    RequestSpan parent = cluster.environment().requestTracer().requestSpan(spanName, options.parentSpan().orElse(null));
-    parent.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
-    analyticsOptions.parentSpan(parent);
+  public CompletableFuture<Void> createLink(AnalyticsLink link, CreateLinkAnalyticsOptions options) {
+    return linkManager.createLink(link.toMap(), options.build());
+  }
+
+  public CompletableFuture<Void> replaceLink(AnalyticsLink link) {
+    return replaceLink(link, replaceLinkAnalyticsOptions());
+  }
+
+  public CompletableFuture<Void> replaceLink(AnalyticsLink link, ReplaceLinkAnalyticsOptions options) {
+    return linkManager.replaceLink(link.toMap(), options.build());
+  }
+
+  public CompletableFuture<Void> dropLink(String linkName, String dataverse) {
+    return dropLink(linkName, dataverse, dropLinkAnalyticsOptions());
+  }
+
+  public CompletableFuture<Void> dropLink(String linkName, String dataverse, DropLinkAnalyticsOptions options) {
+    return linkManager.dropLink(linkName, dataverse, options.build());
+  }
+
+  public CompletableFuture<List<AnalyticsLink>> getAllLinks() {
+    return getAllLinks(getAllLinksAnalyticsOptions());
+  }
+
+  public CompletableFuture<List<AnalyticsLink>> getAllLinks(GetAllLinksAnalyticsOptions options) {
+    GetAllLinksAnalyticsOptions.Built opts = options.build();
+    String dataverseName = opts.dataverseName().orElse(null);
+    String linkType = opts.linkType().map(AnalyticsLinkType::wireName).orElse(null);
+    return linkManager.getAllLinks(dataverseName, linkType, opts)
+        .thenApply(responseBytes ->
+            Mapper.decodeInto(responseBytes, new TypeReference<List<AnalyticsLink>>() {
+            }));
+  }
+
+  private CompletableFuture<AnalyticsResult> exec(String statement, CommonOptions<?>.BuiltCommonOptions options, String spanName) {
+    RequestSpan parent = CbTracing.newSpan(cluster.environment().requestTracer(), spanName, options.parentSpan().orElse(null));
+    final AnalyticsOptions analyticsOptions = toAnalyticsOptions(options)
+        .parentSpan(parent);
 
     return cluster
       .analyticsQuery(statement, analyticsOptions)
-      .exceptionally(t -> {
-        throw translateException(t);
-      })
       .whenComplete((r, t) -> parent.end());
   }
 
@@ -331,25 +364,6 @@ public class AsyncAnalyticsIndexManager {
     options.retryStrategy().ifPresent(result::retryStrategy);
     result.clientContext(options.clientContext());
     return result;
-  }
-
-  private static final Map<Integer, Function<AnalyticsException, ? extends AnalyticsException>> errorMap = new HashMap<>();
-
-  private RuntimeException translateException(Throwable t) {
-    final HttpStatusCodeException httpException = findCause(t, HttpStatusCodeException.class).orElse(null);
-    if (httpException != null && httpException.code() == HttpResponseStatus.NOT_FOUND.code()) {
-      return new FeatureNotAvailableException(t);
-    }
-
-    if (t instanceof AnalyticsException) {
-      final AnalyticsException e = ((AnalyticsException) t);
-      for (Integer code : errorMap.keySet()) {
-        if (e.hasErrorCode(code)) {
-          return errorMap.get(code).apply(e);
-        }
-      }
-    }
-    return (t instanceof RuntimeException) ? (RuntimeException) t : new RuntimeException(t);
   }
 
   /**

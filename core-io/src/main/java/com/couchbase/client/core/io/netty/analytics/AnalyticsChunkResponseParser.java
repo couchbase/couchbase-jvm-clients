@@ -16,10 +16,7 @@
 
 package com.couchbase.client.core.io.netty.analytics;
 
-import com.couchbase.client.core.error.context.AnalyticsErrorContext;
-import com.couchbase.client.core.error.IndexExistsException;
-import com.couchbase.client.core.error.IndexNotFoundException;
-import com.couchbase.client.core.error.LinkNotFoundException;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CompilationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -28,12 +25,18 @@ import com.couchbase.client.core.error.DatasetNotFoundException;
 import com.couchbase.client.core.error.DataverseExistsException;
 import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
+import com.couchbase.client.core.error.IndexExistsException;
+import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.InternalServerFailureException;
 import com.couchbase.client.core.error.JobQueueFullException;
+import com.couchbase.client.core.error.LinkExistsException;
+import com.couchbase.client.core.error.LinkNotFoundException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.TemporaryFailureException;
+import com.couchbase.client.core.error.context.AnalyticsErrorContext;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
+import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
@@ -81,7 +84,7 @@ public class AnalyticsChunkResponseParser
     .doOnValue("/metrics", v -> metrics = v.readBytes())
     .doOnValue("/errors", v -> {
       errors = v.readBytes();
-      failRows(errorsToThrowable(errors));
+      failRows(errorsToThrowable(errors, requestContext()));
     })
     .doOnValue("/warnings", v -> warnings = v.readBytes());
 
@@ -99,16 +102,20 @@ public class AnalyticsChunkResponseParser
 
   @Override
   public Optional<CouchbaseException> error() {
-    return Optional.ofNullable(errors).map(this::errorsToThrowable);
+    return Optional.ofNullable(errors).map(e -> errorsToThrowable(e, requestContext()));
   }
 
-  private CouchbaseException errorsToThrowable(final byte[] bytes) {
+  @Stability.Internal
+  static CouchbaseException errorsToThrowable(final byte[] bytes, RequestContext ctx) {
     final List<ErrorCodeAndMessage> errors = bytes.length == 0
       ? Collections.emptyList()
-      : ErrorCodeAndMessage.fromJsonArray(bytes);
-    AnalyticsErrorContext errorContext = new AnalyticsErrorContext(requestContext(), errors);
+      : ErrorCodeAndMessage.from(bytes);
+    AnalyticsErrorContext errorContext = new AnalyticsErrorContext(ctx, errors);
     if (errors.size() >= 1) {
-      int code = errors.get(0).code();
+      ErrorCodeAndMessage error = errors.get(0);
+      // Analytics error code reference:
+      //   https://docs.couchbase.com/server/current/analytics/error-codes.html
+      int code = error.code();
       if (code >= 25000 && code < 26000) {
         return new InternalServerFailureException(errorContext);
       } else if (code >= 20000 && code < 21000) {
@@ -121,6 +128,8 @@ public class AnalyticsChunkResponseParser
         return new ParsingFailureException(errorContext);
       } else if (code == 24006) {
         return new LinkNotFoundException(errorContext);
+      } else if (code == 24055) {
+        return new LinkExistsException(errorContext);
       } else if (code == 24040) {
         return new DatasetExistsException(errorContext);
       } else if (code == 24044 || code == 24045 || code == 24025) {
@@ -135,6 +144,8 @@ public class AnalyticsChunkResponseParser
         return new IndexExistsException(errorContext);
       } else if (code > 24000 && code < 25000) {
         return new CompilationFailureException(errorContext);
+      } else {
+        return new CouchbaseException("Unknown analytics error: " + error, errorContext);
       }
     }
     return new CouchbaseException("Unknown analytics error", errorContext);

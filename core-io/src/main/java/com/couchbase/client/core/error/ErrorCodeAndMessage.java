@@ -20,11 +20,14 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.json.Mapper;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbStrings.nullToEmpty;
@@ -73,11 +76,61 @@ public class ErrorCodeAndMessage {
 
   @Stability.Internal
   public static List<ErrorCodeAndMessage> fromJsonArray(byte[] jsonArray) {
-    try {
-      return unmodifiableList(Mapper.decodeInto(jsonArray, new TypeReference<List<ErrorCodeAndMessage>>() {
-      }));
-    } catch (Exception e) {
-      return listOf(new ErrorCodeAndMessage(0, "Failed to decode errors: " + new String(jsonArray, UTF_8)));
+    return from(jsonArray);
+  }
+
+  private static final Pattern plaintextErrorPattern = Pattern.compile("(?<errorCode>\\d+):(?<message>.+)");
+
+  private static List<ErrorCodeAndMessage> fromPlaintext(byte[] errorBytes) {
+    String error = new String(errorBytes, UTF_8).trim();
+    error = translateLegacyAnalyticsErrorCodes(error);
+
+    Matcher m = plaintextErrorPattern.matcher(error);
+    if (m.matches()) {
+      return listOf(new ErrorCodeAndMessage(Integer.parseInt(m.group("errorCode")), m.group("message")));
     }
+    return listOf(new ErrorCodeAndMessage(0, "Failed to decode error: " + error));
+  }
+
+  private static String translateLegacyAnalyticsErrorCodes(String error) {
+    // Before 7.0 the analytics service returned non-numeric error codes
+    // in link management API responses. Let's translate the ones we care about!
+
+    if (error.startsWith("CBAS") || error.startsWith("ASX")) {
+      return error
+          .replace("CBAS0026", "24055") // link already exists
+          .replace("CBAS0027", "24006") // link not found
+          .replace("ASX1063", "24034") // dataverse not found
+
+          // 24001 is arbitrary... just needs to be in the 24xxx range and not mapped to another exception type
+          .replace("CBAS0062", "24001") // invalid argument (missing parameter)
+          .replace("CBAS0063", "24001") // invalid argument (unexpected parameter)
+          ;
+    }
+    return error;
+  }
+
+  @Stability.Internal
+  public static List<ErrorCodeAndMessage> from(byte[] content) {
+    JsonNode node;
+    try {
+      node = Mapper.decodeIntoTree(content);
+    } catch (Exception notJson) {
+      return fromPlaintext(content);
+    }
+
+    try {
+      if (node.isArray()) {
+        return unmodifiableList(Mapper.convertValue(node, new TypeReference<List<ErrorCodeAndMessage>>() {
+        }));
+      }
+      if (node.isObject()) {
+        return listOf(Mapper.convertValue(node, ErrorCodeAndMessage.class));
+      }
+    } catch (Exception malformed) {
+      // fall through
+    }
+
+    return listOf(new ErrorCodeAndMessage(0, "Failed to decode errors: " + new String(content, UTF_8)));
   }
 }

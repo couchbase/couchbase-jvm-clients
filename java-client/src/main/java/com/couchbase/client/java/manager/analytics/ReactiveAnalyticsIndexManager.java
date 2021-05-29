@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DataverseExistsException;
 import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.java.AsyncCluster;
+import com.couchbase.client.java.manager.analytics.link.AnalyticsLink;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -145,5 +146,37 @@ public class ReactiveAnalyticsIndexManager {
 
   public Mono<Map<String, Map<String, Long>>> getPendingMutations(final GetPendingMutationsAnalyticsOptions options) {
     return toMono(() -> async.getPendingMutations(options));
+  }
+
+  public Mono<Void> createLink(AnalyticsLink link) {
+    return toMono(() -> async.createLink(link));
+  }
+
+  public Mono<Void> createLink(AnalyticsLink link, CreateLinkAnalyticsOptions options) {
+    return toMono(() -> async.createLink(link, options));
+  }
+
+  public Mono<Void> replaceLink(AnalyticsLink link) {
+    return toMono(() -> async.replaceLink(link));
+  }
+
+  public Mono<Void> replaceLink(AnalyticsLink link, ReplaceLinkAnalyticsOptions options) {
+    return toMono(() -> async.replaceLink(link, options));
+  }
+
+  public Mono<Void> dropLink(String linkName, String dataverse) {
+    return toMono(() -> async.dropLink(linkName, dataverse));
+  }
+
+  public Mono<Void> dropLink(String linkName, String dataverse, DropLinkAnalyticsOptions options) {
+    return toMono(() -> async.dropLink(linkName, dataverse, options));
+  }
+
+  public Flux<AnalyticsLink> getAllLinks() {
+    return toFlux(async::getAllLinks);
+  }
+
+  public Flux<AnalyticsLink> getAllLinks(GetAllLinksAnalyticsOptions options) {
+    return toFlux(() -> async.getAllLinks(options));
   }
 }

@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DataverseExistsException;
 import com.couchbase.client.core.error.DataverseNotFoundException;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.manager.analytics.link.AnalyticsLink;
 
 import java.util.List;
 import java.util.Map;
@@ -153,5 +154,37 @@ public class AnalyticsIndexManager {
 
   public Map<String, Map<String, Long>> getPendingMutations(final GetPendingMutationsAnalyticsOptions options) {
     return block(async.getPendingMutations(options));
+  }
+
+  public void createLink(AnalyticsLink link) {
+    block(async.createLink(link));
+  }
+
+  public void createLink(AnalyticsLink link, CreateLinkAnalyticsOptions options) {
+    block(async.createLink(link, options));
+  }
+
+  public void replaceLink(AnalyticsLink link) {
+    block(async.replaceLink(link));
+  }
+
+  public void replaceLink(AnalyticsLink link, ReplaceLinkAnalyticsOptions options) {
+    block(async.replaceLink(link, options));
+  }
+
+  public void dropLink(String linkName, String dataverse) {
+    block(async.dropLink(linkName, dataverse));
+  }
+
+  public void dropLink(String linkName, String dataverse, DropLinkAnalyticsOptions options) {
+    block(async.dropLink(linkName, dataverse, options));
+  }
+
+  public List<AnalyticsLink> getAllLinks() {
+    return block(async.getAllLinks());
+  }
+
+  public List<AnalyticsLink> getAllLinks(GetAllLinksAnalyticsOptions options) {
+    return block(async.getAllLinks(options));
   }
 }

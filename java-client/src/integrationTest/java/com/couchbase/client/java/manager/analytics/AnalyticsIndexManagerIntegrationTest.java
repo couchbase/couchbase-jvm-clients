@@ -17,24 +17,30 @@
 package com.couchbase.client.java.manager.analytics;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
-import com.couchbase.client.core.error.IndexExistsException;
-import com.couchbase.client.core.error.IndexNotFoundException;
-import com.couchbase.client.core.error.LinkNotFoundException;
 import com.couchbase.client.core.error.DatasetExistsException;
 import com.couchbase.client.core.error.DatasetNotFoundException;
 import com.couchbase.client.core.error.DataverseExistsException;
 import com.couchbase.client.core.error.DataverseNotFoundException;
+import com.couchbase.client.core.error.IndexExistsException;
+import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.LinkExistsException;
+import com.couchbase.client.core.error.LinkNotFoundException;
+import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.manager.analytics.link.AnalyticsLink;
+import com.couchbase.client.java.manager.analytics.link.AnalyticsLinkType;
+import com.couchbase.client.java.manager.analytics.link.S3ExternalAnalyticsLink;
 import com.couchbase.client.java.util.JavaIntegrationTest;
-import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -52,16 +58,20 @@ import static com.couchbase.client.java.manager.analytics.ConnectLinkAnalyticsOp
 import static com.couchbase.client.java.manager.analytics.CreateDatasetAnalyticsOptions.createDatasetAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.CreateDataverseAnalyticsOptions.createDataverseAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.CreateIndexAnalyticsOptions.createIndexAnalyticsOptions;
+import static com.couchbase.client.java.manager.analytics.DisconnectLinkAnalyticsOptions.disconnectLinkAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.DropDatasetAnalyticsOptions.dropDatasetAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.DropDataverseAnalyticsOptions.dropDataverseAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.DropIndexAnalyticsOptions.dropIndexAnalyticsOptions;
+import static com.couchbase.client.java.manager.analytics.GetAllLinksAnalyticsOptions.getAllLinksAnalyticsOptions;
 import static com.couchbase.client.test.Capabilities.ANALYTICS;
 import static com.couchbase.client.test.ClusterType.CAVES;
 import static com.couchbase.client.test.ClusterType.MOCKED;
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -70,7 +80,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   private static final String dataset = "myDataset";
-  private static final String dataverse = "myDataverse";
+  private static final String dataverse = "integration-test-dataverse";
+  private static final String absentDataverse = "absentDataverse";
   private static final String index = "myIndex";
 
   private static Cluster cluster;
@@ -82,7 +93,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
     bucket = cluster.bucket(config().bucketname());
     analytics = cluster.analyticsIndexes();
-    bucket.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(Duration.ofSeconds(10));
     waitForService(bucket, ServiceType.ANALYTICS);
   }
 
@@ -109,11 +120,32 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
     assertEquals(builtIns, getAllDataverseNames());
 
     analytics.disconnectLink();
+
+    recreateDataverse(dataverse);
+  }
+
+  void recreateDataverse(String dataverse) {
+    try {
+      analytics.dropDataverse(dataverse, dropDataverseAnalyticsOptions().ignoreIfNotExists(true));
+      analytics.createDataverse(dataverse);
+    } catch (ParsingFailureException e) {
+      if (dataverse.contains("/")) {
+        Assumptions.assumeFalse(true, "Skipping test because server does not support slash in dataverse name");
+      }
+      throw e;
+    }
+  }
+
+  @AfterEach
+  void cleanup() {
+    disconnectLocalLink(dataverse);
+    analytics.dropDataverse(dataverse, dropDataverseAnalyticsOptions()
+        .ignoreIfNotExists(true));
   }
 
   private void disconnectLocalLink(String dvName) {
     try {
-      DisconnectLinkAnalyticsOptions opts = DisconnectLinkAnalyticsOptions.disconnectLinkAnalyticsOptions()
+      DisconnectLinkAnalyticsOptions opts = disconnectLinkAnalyticsOptions()
           .dataverseName(dvName)
           .linkName("Local");
       analytics.disconnectLink(opts);
@@ -139,44 +171,38 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
             .dataverseName(idx.dataverseName())));
   }
 
-  private static final String name = "integration-test-dataverse";
-
   @Test
   void createDataverse() {
-    analytics.createDataverse(name);
-    assertDataverseExists(name);
+    assertDataverseExists(dataverse);
   }
 
   @Test
   void createDataverseFailsIfAlreadyExists() {
-    analytics.createDataverse(name);
-
-    assertThrows(DataverseExistsException.class, () -> analytics.createDataverse(name));
+    assertThrows(DataverseExistsException.class, () -> analytics.createDataverse(dataverse));
   }
 
   @Test
   void createDataverseCanIgoreIfExists() {
-    analytics.createDataverse(name);
-    analytics.createDataverse(name, createDataverseAnalyticsOptions().ignoreIfExists(true));
+    analytics.createDataverse(dataverse, createDataverseAnalyticsOptions().ignoreIfExists(true));
   }
 
   @Test
   void dropDataverse() {
-    analytics.createDataverse(name);
-    assertDataverseExists(name);
-
-    analytics.dropDataverse(name);
-    assertDataverseDoesNotExist(name);
+    assertDataverseExists(dataverse);
+    analytics.dropDataverse(dataverse);
+    assertDataverseDoesNotExist(dataverse);
   }
 
   @Test
   void dropDataverseFailsIfAbsent() {
-    assertThrows(DataverseNotFoundException.class, () -> analytics.dropDataverse(name));
+    assertDataverseDoesNotExist(absentDataverse);
+    assertThrows(DataverseNotFoundException.class, () -> analytics.dropDataverse(absentDataverse));
   }
 
   @Test
   void dropDataverseCanIgnoreIfAbsent() {
-    analytics.dropDataverse(name, dropDataverseAnalyticsOptions().ignoreIfNotExists(true));
+    assertDataverseDoesNotExist(absentDataverse);
+    analytics.dropDataverse(absentDataverse, dropDataverseAnalyticsOptions().ignoreIfNotExists(true));
   }
 
   private void assertDataverseExists(String name) {
@@ -191,15 +217,14 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
   void createDataset() {
     analytics.createDataset("foo", bucket.name());
 
-    analytics.createDataverse("myDataverse");
     analytics.createDataset("foo", bucket.name(),
         createDatasetAnalyticsOptions()
-            .dataverseName("myDataverse"));
+            .dataverseName(dataverse));
 
     Set<String> actual = analytics.getAllDatasets().stream()
         .map(ds -> ds.dataverseName() + "::" + ds.name())
         .collect(Collectors.toSet());
-    assertEquals(setOf("Default::foo", "myDataverse::foo"), actual);
+    assertEquals(setOf("Default::foo", dataverse + "::foo"), actual);
   }
 
   @Test
@@ -250,7 +275,6 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
   void createIndex() {
     analytics.createDataset(dataset, bucket.name());
 
-    analytics.createDataverse(dataverse);
     analytics.createDataset(dataset, bucket.name(),
         createDatasetAnalyticsOptions()
             .dataverseName(dataverse));
@@ -315,7 +339,6 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
     analytics.createDataset(dataset, bucket.name());
 
-    analytics.createDataverse(dataverse);
     analytics.createDataset(dataset, bucket.name(),
         createDatasetAnalyticsOptions()
             .dataverseName(dataverse));
@@ -329,7 +352,6 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
   @Test
   void dropIndexCanIgnoreNotFound() {
     analytics.createDataset(dataset, bucket.name());
-    analytics.createDataverse(dataverse);
     analytics.createDataset(dataset, bucket.name(),
         createDatasetAnalyticsOptions()
             .dataverseName(dataverse));
@@ -348,7 +370,6 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
   void createIndexFailsIfAlreadyExists() {
     analytics.createDataset(dataset, bucket.name());
 
-    analytics.createDataverse(dataverse);
     analytics.createDataset(dataset, bucket.name(),
         createDatasetAnalyticsOptions()
             .dataverseName(dataverse));
@@ -399,7 +420,6 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
     try {
       analytics.connectLink();
 
-      analytics.createDataverse(dataverse);
       analytics.connectLink(
           connectLinkAnalyticsOptions()
               .dataverseName(dataverse));
@@ -409,7 +429,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
               .force(true));
 
     } finally {
-      // since the dataverse itself isn't deleted as part of cleanup...
+      // since the default dataverse itself isn't deleted as part of cleanup...
       analytics.disconnectLink();
     }
   }
@@ -422,9 +442,179 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
       analytics.createDataset(dataset, bucket.name());
       analytics.connectLink();
 
-      waitUntilCondition(() -> singletonMap("Default", singletonMap("myDataset", 0L)).equals(analytics.getPendingMutations()), Duration.ofSeconds(20));
+      waitUntilCondition(() -> singletonMap("Default", singletonMap(dataset, 0L)).equals(analytics.getPendingMutations()), Duration.ofSeconds(20));
     } finally {
       analytics.disconnectLink();
     }
+  }
+
+  @Test
+  void createS3RemoteLink() {
+    assumeCanManageLinks();
+
+    String linkName = "myS3Link";
+    analytics.createLink(newS3Link(linkName, dataverse));
+
+    List<AnalyticsLink> links = analytics.getAllLinks(getAllLinksAnalyticsOptions().dataverseName(dataverse));
+    assertEquals(1, links.size());
+    assertEquals(AnalyticsLinkType.S3_EXTERNAL, links.get(0).type());
+    S3ExternalAnalyticsLink link = (S3ExternalAnalyticsLink) links.get(0);
+    assertEquals(linkName, link.name());
+    assertEquals(dataverse, link.dataverse());
+    assertEquals("accessKeyId", link.accessKeyId());
+    assertEquals("region", link.region());
+    assertEquals("serviceEndpoint", link.serviceEndpoint());
+
+    assertNull(link.secretAccessKey());
+    assertNull(link.sessionToken());
+  }
+
+  @Test
+  void createLinkFailsIfRequiredPropertyIsMissing() {
+    assumeCanManageLinks();
+
+    assertThrows(InvalidArgumentException.class, () ->
+        analytics.createLink(new S3ExternalAnalyticsLink("myS3Link", dataverse)));
+  }
+
+  @Test
+  void createLinkFailsIfAlreadyExists() {
+    assumeCanManageLinks();
+
+    String linkName = "myS3Link";
+    analytics.createLink(newS3Link(linkName, dataverse));
+
+    assertThrows(LinkExistsException.class, () ->
+        analytics.createLink(newS3Link(linkName, dataverse)));
+  }
+
+  @Test
+  void createRemoteLinkFailsIfDataverseNotFound() {
+    assumeCanManageLinks();
+
+    assertThrows(DataverseNotFoundException.class, () ->
+        analytics.createLink(newS3Link("myS3Link", absentDataverse)));
+  }
+
+  private void assumeCanManageLinks() {
+    try {
+      analytics.getAllLinks();
+    } catch (Exception e) {
+      Assumptions.assumeTrue(false, "Skipping because 'getAllLinks' failed; assuming this means link management API is not present.");
+    }
+  }
+
+  @Test
+  void getAllLinksCanFilterByLinkType() {
+    assumeCanManageLinks();
+
+    analytics.createLink(newS3Link("myS3Link", dataverse));
+
+    List<AnalyticsLink> links = analytics.getAllLinks(getAllLinksAnalyticsOptions()
+        .dataverseName(dataverse)
+        .linkType(AnalyticsLinkType.COUCHBASE_REMOTE));
+    assertEquals(emptyList(), links);
+  }
+
+  @Test
+  void getAllLinksCanFilterByDataverse() {
+    assumeCanManageLinks();
+
+    String otherDataverse = "other-" + dataverse;
+    recreateDataverse(otherDataverse);
+
+    try {
+      analytics.createLink(newS3Link("myS3Link", dataverse));
+
+      List<AnalyticsLink> links = analytics.getAllLinks(getAllLinksAnalyticsOptions()
+          .dataverseName(otherDataverse));
+      assertEquals(emptyList(), links);
+
+    } finally {
+      analytics.dropDataverse(otherDataverse);
+    }
+  }
+
+  @Test
+  void dropLinkFailsIfLinkIsNotFound() {
+    assumeCanManageLinks();
+
+    assertThrows(LinkNotFoundException.class, () ->
+        analytics.dropLink("this-link-does-not-exist", dataverse));
+  }
+
+  @Test
+  void dropLinkFailsIfDataverseIsNotFound() {
+    assumeCanManageLinks();
+
+    assertThrows(DataverseNotFoundException.class, () ->
+        analytics.dropLink("this-link-does-not-exist", absentDataverse));
+  }
+
+  @Test
+  void dropLink() {
+    assumeCanManageLinks();
+
+    String linkName = "myS3Link";
+    analytics.createLink(newS3Link(linkName, dataverse));
+    assertEquals(1, analytics.getAllLinks(getAllLinksAnalyticsOptions().dataverseName(dataverse)).size());
+    analytics.dropLink(linkName, dataverse);
+    assertEquals(emptyList(), analytics.getAllLinks(getAllLinksAnalyticsOptions().dataverseName(dataverse)));
+  }
+
+  @Test
+  void replaceRemoteLink() {
+    assumeCanManageLinks();
+
+    S3ExternalAnalyticsLink s3 = newS3Link("myS3Link", dataverse);
+    analytics.createLink(s3);
+    s3.accessKeyId("newAccessKeyId");
+    analytics.replaceLink(s3);
+
+    S3ExternalAnalyticsLink fromServer = (S3ExternalAnalyticsLink) analytics.getAllLinks(getAllLinksAnalyticsOptions()
+        .dataverseName(dataverse)
+    ).get(0);
+
+    assertEquals("newAccessKeyId", fromServer.accessKeyId());
+  }
+
+  @Test
+  void replaceRemoteLinkFailsIfAbsent() {
+    assumeCanManageLinks();
+
+    assertThrows(LinkNotFoundException.class, () -> analytics.replaceLink(newS3Link("myS3Link", dataverse)));
+  }
+
+  @Test
+  void canManageLinksInDataverseWithScope() {
+    assumeCanManageLinks();
+
+    String scopedDataverse = dataverse + "/foo";
+    recreateDataverse(scopedDataverse);
+    try {
+      String linkName = "myS3Link";
+      analytics.createLink(newS3Link(linkName, scopedDataverse));
+      analytics.replaceLink(newS3Link(linkName, scopedDataverse));
+      List<AnalyticsLink> links = analytics.getAllLinks(getAllLinksAnalyticsOptions().dataverseName(scopedDataverse));
+      assertEquals(scopedDataverse, links.get(0).dataverse());
+      analytics.dropLink(linkName, scopedDataverse);
+      assertEquals(emptyList(), analytics.getAllLinks(getAllLinksAnalyticsOptions().dataverseName(scopedDataverse)));
+
+    } finally {
+      analytics.dropDataverse(scopedDataverse);
+    }
+  }
+
+  /**
+   * Returns a fully-populated S3 link
+   */
+  private static S3ExternalAnalyticsLink newS3Link(String name, String dataverse) {
+    return new S3ExternalAnalyticsLink(name, dataverse)
+        .accessKeyId("accessKeyId")
+        .secretAccessKey("secretAccessKey")
+        .region("region")
+        .serviceEndpoint("serviceEndpoint")
+        //.sessionToken("sessionToken") // Only supported by server 7.0 and later
+        ;
   }
 }

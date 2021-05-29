@@ -134,6 +134,11 @@ public class TracingIdentifiers {
   public static final String SPAN_REQUEST_MA_GET_ALL_INDEXES = "manager_analytics_get_all_indexes";
   public static final String SPAN_REQUEST_MA_GET_ALL_DATAVERSES = "manager_analytics_get_all_dataverses";
   public static final String SPAN_REQUEST_MA_GET_PENDING_MUTATIONS = "manager_analytics_get_pending_mutations";
+  public static final String SPAN_REQUEST_MA_GET_ALL_LINKS = "manager_analytics_get_all_links";
+  public static final String SPAN_REQUEST_MA_CREATE_LINK = "manager_analytics_create_link";
+  public static final String SPAN_REQUEST_MA_REPLACE_LINK = "manager_analytics_replace_link";
+  public static final String SPAN_REQUEST_MA_DROP_LINK = "manager_analytics_drop_link";
+
 
   public static final String SPAN_REQUEST_MQ_BUILD_DEFERRED_INDEXES = "manager_query_build_deferred_indexes";
   public static final String SPAN_REQUEST_MQ_CREATE_INDEX = "manager_query_create_index";

@@ -18,9 +18,6 @@ package com.couchbase.client.core.io.netty.analytics;
 
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
-import com.couchbase.client.core.error.AnalyticsException;
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.io.netty.NonChunkedHttpMessageHandler;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.Response;
@@ -35,8 +32,6 @@ class NonChunkedAnalyticsMessageHandler extends NonChunkedHttpMessageHandler {
 
   @Override
   protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
-    // todo: this needs to be cleaned up with the management APIs later
-    return new CouchbaseException("Unknown analytics error: " + content);
+   return AnalyticsChunkResponseParser.errorsToThrowable(content.getBytes(UTF_8), request.context());
   }
-
 }
