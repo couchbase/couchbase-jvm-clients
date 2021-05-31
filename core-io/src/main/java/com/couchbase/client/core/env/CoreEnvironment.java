@@ -30,7 +30,7 @@ import com.couchbase.client.core.cnc.events.config.InsecureSecurityConfigDetecte
 import com.couchbase.client.core.cnc.metrics.LoggingMeter;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
 import com.couchbase.client.core.cnc.tracing.NoopRequestTracer;
-import com.couchbase.client.core.cnc.tracing.ThresholdRequestTracer;
+import com.couchbase.client.core.cnc.tracing.ThresholdLoggingTracer;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -112,7 +112,7 @@ public class CoreEnvironment {
   private final SecurityConfig securityConfig;
   private final TimeoutConfig timeoutConfig;
   private final OrphanReporterConfig orphanReporterConfig;
-  private final ThresholdRequestTracerConfig thresholdRequestTracerConfig;
+  private final ThresholdLoggingTracerConfig thresholdLoggingTracerConfig;
   private final LoggingMeterConfig loggingMeterConfig;
   private final Supplier<RequestTracer> requestTracer;
   private final Supplier<Meter> meter;
@@ -157,7 +157,7 @@ public class CoreEnvironment {
     this.retryStrategy = Optional.ofNullable(builder.retryStrategy).orElse(DEFAULT_RETRY_STRATEGY);
     this.loggerConfig = builder.loggerConfig.build();
     this.orphanReporterConfig = builder.orphanReporterConfig.build();
-    this.thresholdRequestTracerConfig = builder.thresholdRequestTracerConfig.build();
+    this.thresholdLoggingTracerConfig = builder.thresholdLoggingTracerConfig.build();
     this.loggingMeterConfig = builder.loggingMeterConfig.build();
 
     if (eventBus instanceof OwnedSupplier) {
@@ -166,8 +166,8 @@ public class CoreEnvironment {
     eventBus.get().subscribe(LoggingEventConsumer.create(loggerConfig()));
 
     this.requestTracer = Optional.ofNullable(builder.requestTracer).orElse(new OwnedSupplier<>(
-      thresholdRequestTracerConfig.enabled()
-        ? ThresholdRequestTracer.create(eventBus.get(), thresholdRequestTracerConfig)
+      thresholdLoggingTracerConfig.enabled()
+        ? ThresholdLoggingTracer.create(eventBus.get(), thresholdLoggingTracerConfig)
         : NoopRequestTracer.INSTANCE
     ));
 
@@ -507,7 +507,7 @@ public class CoreEnvironment {
     input.put("timeoutConfig", timeoutConfig.exportAsMap());
     input.put("loggerConfig", loggerConfig.exportAsMap());
     input.put("orphanReporterConfig", orphanReporterConfig.exportAsMap());
-    input.put("thresholdRequestTracerConfig", thresholdRequestTracerConfig.exportAsMap());
+    input.put("thresholdLoggingTracerConfig", thresholdLoggingTracerConfig.exportAsMap());
     input.put("loggingMeterConfig", loggingMeterConfig.exportAsMap());
 
     input.put("retryStrategy", retryStrategy.getClass().getSimpleName());
@@ -532,7 +532,7 @@ public class CoreEnvironment {
     private TimeoutConfig.Builder timeoutConfig = TimeoutConfig.builder();
     private LoggerConfig.Builder loggerConfig = LoggerConfig.builder();
     private OrphanReporterConfig.Builder orphanReporterConfig = OrphanReporterConfig.builder();
-    private ThresholdRequestTracerConfig.Builder thresholdRequestTracerConfig = ThresholdRequestTracerConfig.builder();
+    private ThresholdLoggingTracerConfig.Builder thresholdLoggingTracerConfig = ThresholdLoggingTracerConfig.builder();
     private LoggingMeterConfig.Builder loggingMeterConfig = LoggingMeterConfig.builder();
     private Supplier<EventBus> eventBus = null;
     private Supplier<Scheduler> scheduler = null;
@@ -674,14 +674,33 @@ public class CoreEnvironment {
      *
      * @param thresholdRequestTracerConfig the configuration which should be used.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated use the {@link #thresholdLoggingTracerConfig(ThresholdLoggingTracerConfig.Builder)} instead.
      */
+    @Deprecated
     public SELF thresholdRequestTracerConfig(final ThresholdRequestTracerConfig.Builder thresholdRequestTracerConfig) {
-      this.thresholdRequestTracerConfig = notNull(thresholdRequestTracerConfig, "ThresholdRequestTracerConfig");
+      this.thresholdLoggingTracerConfig = notNull(thresholdRequestTracerConfig, "ThresholdRequestTracerConfig")
+        .toNewBuillder();
       return self();
     }
 
+    @Deprecated
     public ThresholdRequestTracerConfig.Builder thresholdRequestTracerConfig() {
-      return thresholdRequestTracerConfig;
+      return ThresholdRequestTracerConfig.Builder.fromNewBuilder(thresholdLoggingTracerConfig);
+    }
+
+    /**
+     * Allows to customize the threshold request tracer configuration.
+     *
+     * @param thresholdLoggingTracerConfig the configuration which should be used.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public SELF thresholdLoggingTracerConfig(final ThresholdLoggingTracerConfig.Builder thresholdLoggingTracerConfig) {
+      this.thresholdLoggingTracerConfig = notNull(thresholdLoggingTracerConfig, "ThresholdLoggingTracerConfig");
+      return self();
+    }
+
+    public ThresholdLoggingTracerConfig.Builder thresholdLoggingTracerConfig() {
+      return thresholdLoggingTracerConfig;
     }
 
     /**

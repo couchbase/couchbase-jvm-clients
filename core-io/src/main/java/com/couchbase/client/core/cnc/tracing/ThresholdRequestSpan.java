@@ -17,7 +17,6 @@
 package com.couchbase.client.core.cnc.tracing;
 
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.msg.RequestContext;
 
 import java.time.Instant;
@@ -25,9 +24,9 @@ import java.time.Instant;
 public class ThresholdRequestSpan implements RequestSpan {
 
   private volatile RequestContext requestContext;
-  private final ThresholdRequestTracer tracer;
+  private final ThresholdLoggingTracer tracer;
 
-  ThresholdRequestSpan(final ThresholdRequestTracer tracer) {
+  ThresholdRequestSpan(final ThresholdLoggingTracer tracer) {
     this.tracer = tracer;
   }
 

@@ -22,7 +22,7 @@ import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.tracing.OverThresholdRequestsRecordedEvent;
 import com.couchbase.client.core.deps.org.jctools.queues.MpscArrayQueue;
-import com.couchbase.client.core.env.ThresholdRequestTracerConfig;
+import com.couchbase.client.core.env.ThresholdLoggingTracerConfig;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
@@ -46,7 +46,7 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
  * The default tracing implementation, which tracks the top N slowest requests per service and dumps them at
  * configurable intervals.
  */
-public class ThresholdRequestTracer implements RequestTracer {
+public class ThresholdLoggingTracer implements RequestTracer {
 
   private static final AtomicInteger REQUEST_TRACER_ID = new AtomicInteger();
 
@@ -67,7 +67,7 @@ public class ThresholdRequestTracer implements RequestTracer {
   private final EventBus eventBus;
   private final Thread worker;
 
-  private final ThresholdRequestTracerConfig config;
+  private final ThresholdLoggingTracerConfig config;
   private final long kvThreshold;
   private final long queryThreshold;
   private final long viewThreshold;
@@ -81,7 +81,7 @@ public class ThresholdRequestTracer implements RequestTracer {
    *
    * @param eventBus the event bus where the final events will be emitted into.
    * @return the builder to customize.
-   * @deprecated please use {@link #create(EventBus, ThresholdRequestTracerConfig)} instead.
+   * @deprecated please use {@link #create(EventBus, ThresholdLoggingTracerConfig)} instead.
    */
   public static Builder builder(final EventBus eventBus) {
     return new Builder(eventBus);
@@ -93,8 +93,8 @@ public class ThresholdRequestTracer implements RequestTracer {
    * @param eventBus the event bus where the final events will be emitted into.
    * @return the created tracer ready to be used.
    */
-  public static ThresholdRequestTracer create(final EventBus eventBus) {
-    return create(eventBus, ThresholdRequestTracerConfig.create());
+  public static ThresholdLoggingTracer create(final EventBus eventBus) {
+    return create(eventBus, ThresholdLoggingTracerConfig.create());
   }
 
   /**
@@ -104,8 +104,8 @@ public class ThresholdRequestTracer implements RequestTracer {
    * @param config the config that should be used.
    * @return the created tracer ready to be used.
    */
-  public static ThresholdRequestTracer create(final EventBus eventBus, ThresholdRequestTracerConfig config) {
-    return new ThresholdRequestTracer(eventBus, config);
+  public static ThresholdLoggingTracer create(final EventBus eventBus, ThresholdLoggingTracerConfig config) {
+    return new ThresholdLoggingTracer(eventBus, config);
   }
 
   /**
@@ -114,7 +114,7 @@ public class ThresholdRequestTracer implements RequestTracer {
    * @param eventBus the event bus that should be used.
    * @param config the tracer config from where to extract the values.
    */
-  private ThresholdRequestTracer(final EventBus eventBus, ThresholdRequestTracerConfig config) {
+  private ThresholdLoggingTracer(final EventBus eventBus, ThresholdLoggingTracerConfig config) {
     this.eventBus = eventBus;
     this.overThresholdQueue = new MpscArrayQueue<>(config.queueLength());
     kvThreshold = config.kvThreshold().toNanos();
@@ -133,7 +133,7 @@ public class ThresholdRequestTracer implements RequestTracer {
   /**
    * Returns the current configuration.
    */
-  public ThresholdRequestTracerConfig config() {
+  public ThresholdLoggingTracerConfig config() {
     return config;
   }
 
@@ -543,20 +543,20 @@ public class ThresholdRequestTracer implements RequestTracer {
   }
 
   /**
-   * The builder used to configure the {@link ThresholdRequestTracer}.
+   * The builder used to configure the {@link ThresholdLoggingTracer}.
    */
   public static class Builder {
 
     private final EventBus eventBus;
 
-    private final ThresholdRequestTracerConfig.Builder config = ThresholdRequestTracerConfig.builder();
+    private final ThresholdLoggingTracerConfig.Builder config = ThresholdLoggingTracerConfig.builder();
 
     Builder(final EventBus eventBus) {
       this.eventBus = eventBus;
     }
 
-    public ThresholdRequestTracer build() {
-      return new ThresholdRequestTracer(eventBus, config.build());
+    public ThresholdLoggingTracer build() {
+      return new ThresholdLoggingTracer(eventBus, config.build());
     }
 
     /**

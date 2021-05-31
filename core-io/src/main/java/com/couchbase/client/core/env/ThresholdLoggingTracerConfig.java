@@ -23,11 +23,7 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Please use the (similar) {@link ThresholdLoggingTracerConfig} instead.
- */
-@Deprecated
-public class ThresholdRequestTracerConfig {
+public class ThresholdLoggingTracerConfig {
 
   @Stability.Internal
   public static class Defaults {
@@ -56,15 +52,15 @@ public class ThresholdRequestTracerConfig {
     return new Builder();
   }
 
-  public static ThresholdRequestTracerConfig create() {
+  public static ThresholdLoggingTracerConfig create() {
     return builder().build();
   }
 
-  public static ThresholdRequestTracerConfig disabled() {
+  public static ThresholdLoggingTracerConfig disabled() {
     return enabled(false).build();
   }
 
-  ThresholdRequestTracerConfig(final Builder builder) {
+  ThresholdLoggingTracerConfig(final Builder builder) {
     emitInterval = builder.emitInterval;
     queueLength = builder.queueLength;
     sampleSize = builder.sampleSize;
@@ -218,7 +214,6 @@ public class ThresholdRequestTracerConfig {
     return export;
   }
 
-  @Deprecated
   public static class Builder {
 
     private boolean enabled = LoggingMeterConfig.Defaults.DEFAULT_ENABLED;
@@ -329,44 +324,8 @@ public class ThresholdRequestTracerConfig {
       return this;
     }
 
-    /**
-     * Converts this deprecated builder into its non-deprecated version.
-     *
-     * @return the new, not deprecated builder.
-     */
-    @Stability.Internal
-    public ThresholdLoggingTracerConfig.Builder toNewBuillder() {
-      return ThresholdLoggingTracerConfig
-        .builder()
-        .analyticsThreshold(analyticsThreshold)
-        .emitInterval(emitInterval)
-        .enabled(enabled)
-        .kvThreshold(kvThreshold)
-        .queryThreshold(queryThreshold)
-        .queueLength(queueLength)
-        .sampleSize(sampleSize)
-        .searchThreshold(searchThreshold)
-        .viewThreshold(viewThreshold);
-    }
-
-    public ThresholdRequestTracerConfig build() {
-      return new ThresholdRequestTracerConfig(this);
-    }
-
-    @Stability.Internal
-    public static Builder fromNewBuilder(final ThresholdLoggingTracerConfig.Builder newBuilder) {
-      ThresholdLoggingTracerConfig built = newBuilder.build();
-
-      return builder()
-        .analyticsThreshold(built.analyticsThreshold())
-        .emitInterval(built.emitInterval())
-        .enabled(built.enabled())
-        .kvThreshold(built.kvThreshold())
-        .queryThreshold(built.queryThreshold())
-        .queueLength(built.queueLength())
-        .sampleSize(built.sampleSize())
-        .searchThreshold(built.searchThreshold())
-        .viewThreshold(built.viewThreshold());
+    public ThresholdLoggingTracerConfig build() {
+      return new ThresholdLoggingTracerConfig(this);
     }
 
   }
