@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.tracing.OverThresholdRequestsRecordedEvent;
 import com.couchbase.client.core.deps.org.jctools.queues.MpscArrayQueue;
 import com.couchbase.client.core.env.ThresholdLoggingTracerConfig;
+import com.couchbase.client.core.error.TracerException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
@@ -139,7 +140,11 @@ public class ThresholdLoggingTracer implements RequestTracer {
 
   @Override
   public RequestSpan requestSpan(final String name, final RequestSpan parent) {
-    return new ThresholdRequestSpan(this);
+    try {
+      return new ThresholdRequestSpan(this);
+    } catch (Exception ex) {
+      throw new TracerException("Failed to create ThresholdRequestSpan", ex);
+    }
   }
 
   /**
@@ -148,13 +153,17 @@ public class ThresholdLoggingTracer implements RequestTracer {
    * @param span the finished internal span from the toplevel request.
    */
   void finish(final ThresholdRequestSpan span) {
-    if (span.requestContext() != null) {
-      final Request<?> request = span.requestContext().request();
-      if (isOverThreshold(request)) {
-        if (!overThresholdQueue.offer(request)) {
-          // TODO: what to do if dropped because queue full? raise event?
+    try {
+      if (span.requestContext() != null) {
+        final Request<?> request = span.requestContext().request();
+        if (isOverThreshold(request)) {
+          if (!overThresholdQueue.offer(request)) {
+            // TODO: what to do if dropped because queue full? raise event?
+          }
         }
       }
+    } catch (Exception ex) {
+      throw new TracerException("Failed to finish ThresholdRequestSpan", ex);
     }
   }
 

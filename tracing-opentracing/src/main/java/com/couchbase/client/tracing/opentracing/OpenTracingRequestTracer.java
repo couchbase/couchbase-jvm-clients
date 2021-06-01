@@ -18,6 +18,7 @@ package com.couchbase.client.tracing.opentracing;
 
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.error.TracerException;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import reactor.core.publisher.Mono;
@@ -64,13 +65,17 @@ public class OpenTracingRequestTracer implements RequestTracer {
 
   @Override
   public RequestSpan requestSpan(final String operationName, final RequestSpan parent) {
-    Tracer.SpanBuilder builder = tracer.buildSpan(operationName);
-    if (parent != null) {
-      builder.asChildOf(castSpan(parent));
+    try {
+      Tracer.SpanBuilder builder = tracer.buildSpan(operationName);
+      if (parent != null) {
+        builder.asChildOf(castSpan(parent));
+      }
+      Span span = builder.start();
+      tracer.activateSpan(span).close();
+      return OpenTracingRequestSpan.wrap(tracer, span);
+    } catch (Exception ex) {
+      throw new TracerException("Failed to create OpenTracingRequestSpan", ex);
     }
-    Span span = builder.start();
-    tracer.activateSpan(span).close();
-    return OpenTracingRequestSpan.wrap(tracer, span);
   }
 
   /**

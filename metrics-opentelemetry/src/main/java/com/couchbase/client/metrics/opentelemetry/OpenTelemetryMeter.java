@@ -16,11 +16,13 @@
 
 package com.couchbase.client.metrics.opentelemetry;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Counter;
 import com.couchbase.client.core.cnc.Meter;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.metrics.NameAndTags;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.MeterException;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.LongValueRecorder;
 import io.opentelemetry.api.metrics.MeterProvider;
@@ -35,6 +37,7 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
+@Stability.Volatile
 public class OpenTelemetryMeter implements Meter {
 
   public static final String INSTRUMENTATION_NAME = "com.couchbase.client.jvm";
@@ -68,7 +71,8 @@ public class OpenTelemetryMeter implements Meter {
   private final Map<NameAndTags, OpenTelemetryCounter> counters = new ConcurrentHashMap<>();
   private final Map<NameAndTags, OpenTelemetryValueRecorder> valueRecorders = new ConcurrentHashMap<>();
 
-  public static OpenTelemetryMeter wrap(MeterProvider meterProvider) {
+  @Stability.Volatile
+  public static OpenTelemetryMeter wrap(final MeterProvider meterProvider) {
     return new OpenTelemetryMeter(meterProvider);
   }
 
@@ -87,26 +91,34 @@ public class OpenTelemetryMeter implements Meter {
 
   @Override
   public Counter counter(final String name, final Map<String, String> tags) {
-    return counters.computeIfAbsent(new NameAndTags(name, tags), key -> {
-      LongCounter counter = otMeter.longCounterBuilder(name).build();
-      final LabelsBuilder builder = Labels.builder();
-      for (Map.Entry<String, String> tag : tags.entrySet()) {
-        builder.put(tag.getKey(), tag.getValue());
-      }
-      return new OpenTelemetryCounter(counter.bind(builder.build()));
-    });
+    try {
+      return counters.computeIfAbsent(new NameAndTags(name, tags), key -> {
+        LongCounter counter = otMeter.longCounterBuilder(name).build();
+        final LabelsBuilder builder = Labels.builder();
+        for (Map.Entry<String, String> tag : tags.entrySet()) {
+          builder.put(tag.getKey(), tag.getValue());
+        }
+        return new OpenTelemetryCounter(counter.bind(builder.build()));
+      });
+    } catch (Exception ex) {
+      throw new MeterException("Failed to create/access Counter", ex);
+    }
   }
 
   @Override
   public ValueRecorder valueRecorder(final String name, final Map<String, String> tags) {
-    return valueRecorders.computeIfAbsent(new NameAndTags(name, tags), key -> {
-      LongValueRecorder vc =  otMeter.longValueRecorderBuilder(name).build();
-      final LabelsBuilder builder = Labels.builder();
-      for (Map.Entry<String, String> tag : tags.entrySet()) {
-        builder.put(tag.getKey(), tag.getValue());
-      }
-      return new OpenTelemetryValueRecorder(vc.bind(builder.build()));
-    });
+    try {
+      return valueRecorders.computeIfAbsent(new NameAndTags(name, tags), key -> {
+        LongValueRecorder vc =  otMeter.longValueRecorderBuilder(name).build();
+        final LabelsBuilder builder = Labels.builder();
+        for (Map.Entry<String, String> tag : tags.entrySet()) {
+          builder.put(tag.getKey(), tag.getValue());
+        }
+        return new OpenTelemetryValueRecorder(vc.bind(builder.build()));
+      });
+    } catch (Exception ex) {
+      throw new MeterException("Failed to create/access ValueRecorder", ex);
+    }
   }
 
 }

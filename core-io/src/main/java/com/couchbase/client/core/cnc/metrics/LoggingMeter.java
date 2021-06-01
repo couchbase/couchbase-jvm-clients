@@ -25,6 +25,7 @@ import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.events.metrics.LatencyMetricsAggregatedEvent;
 import com.couchbase.client.core.deps.org.HdrHistogram.Histogram;
 import com.couchbase.client.core.env.LoggingMeterConfig;
+import com.couchbase.client.core.error.MeterException;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -88,10 +89,14 @@ public class LoggingMeter implements Meter {
 
   @Override
   public synchronized ValueRecorder valueRecorder(String name, Map<String, String> tags) {
-    return valueRecorders.computeIfAbsent(
-      new NameAndTags(name, tags),
-      key -> new AggregatingValueRecorder(name, tags)
-    );
+    try {
+      return valueRecorders.computeIfAbsent(
+        new NameAndTags(name, tags),
+        key -> new AggregatingValueRecorder(name, tags)
+      );
+    } catch (Exception ex) {
+      throw new MeterException("Failed to create/access ValueRecorder", ex);
+    }
   }
 
   @Override

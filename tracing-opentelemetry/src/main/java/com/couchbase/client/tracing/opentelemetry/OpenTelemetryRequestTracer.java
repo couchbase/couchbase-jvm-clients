@@ -19,6 +19,7 @@ package com.couchbase.client.tracing.opentelemetry;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.TracerException;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
@@ -130,13 +131,17 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
 
   @Override
   public RequestSpan requestSpan(String operationName, RequestSpan parent) {
-    SpanBuilder spanBuilder = tracer.spanBuilder(operationName);
-    Context parentContext = Context.current();
-    if (parent != null) {
-      parentContext = parentContext.with(castSpan(parent));
+    try {
+      SpanBuilder spanBuilder = tracer.spanBuilder(operationName);
+      Context parentContext = Context.current();
+      if (parent != null) {
+        parentContext = parentContext.with(castSpan(parent));
+      }
+      Span span = spanBuilder.setParent(parentContext).startSpan();
+      return OpenTelemetryRequestSpan.wrap(span);
+    } catch (Exception ex) {
+      throw new TracerException("Failed to create OpenTelemetryRequestSpan", ex);
     }
-    Span span = spanBuilder.setParent(parentContext).startSpan();
-    return OpenTelemetryRequestSpan.wrap(span);
   }
 
   @Override

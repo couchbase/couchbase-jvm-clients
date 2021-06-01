@@ -20,6 +20,7 @@ import com.couchbase.client.core.cnc.Counter;
 import com.couchbase.client.core.cnc.Meter;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.metrics.NameAndTags;
+import com.couchbase.client.core.error.MeterException;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 
@@ -47,18 +48,26 @@ public class MicrometerMeter implements Meter {
 
   @Override
   public Counter counter(final String name, final Map<String, String> tags) {
-    return counters.computeIfAbsent(
-      new NameAndTags(name, tags),
-      key -> new MicrometerCounter(meterRegistry.counter(name, convertTags(tags)))
-    );
+    try {
+      return counters.computeIfAbsent(
+        new NameAndTags(name, tags),
+        key -> new MicrometerCounter(meterRegistry.counter(name, convertTags(tags)))
+      );
+    } catch (Exception ex) {
+      throw new MeterException("Failed to create/access Counter", ex);
+    }
   }
 
   @Override
   public ValueRecorder valueRecorder(final String name, final Map<String, String> tags) {
-    return valueRecorders.computeIfAbsent(
-      new NameAndTags(name, tags),
-      key -> new MicrometerValueRecorder(meterRegistry.summary(name, convertTags(tags)))
-    );
+    try {
+      return valueRecorders.computeIfAbsent(
+        new NameAndTags(name, tags),
+        key -> new MicrometerValueRecorder(meterRegistry.summary(name, convertTags(tags)))
+      );
+    } catch (Exception ex) {
+      throw new MeterException("Failed to create/access ValueRecorder", ex);
+    }
   }
 
   /**
