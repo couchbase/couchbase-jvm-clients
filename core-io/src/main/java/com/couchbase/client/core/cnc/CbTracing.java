@@ -41,12 +41,34 @@ public class CbTracing {
 
   /**
    * Returns a new span with the `db.system` attribute set to `couchbase`.
+   *
    * @param parent (nullable)
    */
   public static RequestSpan newSpan(RequestTracer tracer, String spanName, RequestSpan parent) {
     RequestSpan span = tracer.requestSpan(spanName, parent);
     span.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
     return span;
+  }
+
+  /**
+   * @param span (nullable)
+   * @param attributes (nullable)
+   */
+  public static void setAttributes(RequestSpan span, Map<String, ?> attributes) {
+    if (span == null || attributes == null) {
+      return;
+    }
+    attributes.forEach((k, v) -> {
+      if (v instanceof String) {
+        span.attribute(k, (String) v);
+      } else if (v instanceof Integer || v instanceof Long) {
+        span.attribute(k, ((Number) v).longValue());
+      } else if (v instanceof Boolean) {
+        span.attribute(k, (Boolean) v);
+      } else {
+        span.attribute(k, String.valueOf(v));
+      }
+    });
   }
 
   private static final Map<ServiceType, String> serviceTypeToTracingId;

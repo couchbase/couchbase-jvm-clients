@@ -247,7 +247,7 @@ class ReactiveAnalyticsIndexManager(cluster: ReactiveCluster) {
 
         val err = findCause(t, classOf[HttpStatusCodeException]).asScala match {
           case Some(httpException) =>
-            if (httpException.code == HttpResponseStatus.NOT_FOUND.code) {
+            if (httpException.httpStatusCode == HttpResponseStatus.NOT_FOUND.code) {
               Some(new FeatureNotAvailableException(t))
             } else None
           case _ => None

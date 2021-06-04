@@ -18,29 +18,17 @@ package com.couchbase.client.java.manager.bucket;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.core.error.BucketExistsException;
-import com.couchbase.client.core.error.BucketNotFoundException;
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.manager.CoreBucketManager;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.core.util.UrlQueryStringBuilder;
-import com.couchbase.client.java.manager.ManagerSupport;
-import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.DELETE;
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.POST;
-import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
+import static com.couchbase.client.core.util.CbCollections.transformValues;
 import static com.couchbase.client.java.manager.bucket.BucketType.MEMCACHED;
 import static com.couchbase.client.java.manager.bucket.CreateBucketOptions.createBucketOptions;
 import static com.couchbase.client.java.manager.bucket.DropBucketOptions.dropBucketOptions;
@@ -50,195 +38,103 @@ import static com.couchbase.client.java.manager.bucket.GetBucketOptions.getBucke
 import static com.couchbase.client.java.manager.bucket.UpdateBucketOptions.updateBucketOptions;
 
 @Stability.Volatile
-public class AsyncBucketManager extends ManagerSupport {
+public class AsyncBucketManager {
+  private final CoreBucketManager coreBucketManager;
 
-  public AsyncBucketManager(final Core core) {
-    super(core);
+  public AsyncBucketManager(Core core) {
+    this.coreBucketManager = new CoreBucketManager(core);
   }
 
-  private static String pathForBuckets() {
-    return "/pools/default/buckets/";
-  }
-
-  private static String pathForBucket(final String bucketName) {
-    return pathForBuckets() + urlEncode(bucketName);
-  }
-
-  private static String pathForBucketFlush(final String bucketName) {
-    return "/pools/default/buckets/" + urlEncode(bucketName) + "/controller/doFlush";
-  }
-
-  public CompletableFuture<Void> createBucket(final BucketSettings settings) {
+  public CompletableFuture<Void> createBucket(BucketSettings settings) {
     return createBucket(settings, createBucketOptions());
   }
 
-  public CompletableFuture<Void> createBucket(final BucketSettings settings, final CreateBucketOptions options) {
-    CreateBucketOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MB_CREATE_BUCKET, built.parentSpan().orElse(null), settings.name());
-
-    return sendRequest(POST, pathForBuckets(), convertSettingsToParams(settings, false), built, span).thenApply(response -> {
-      if (response.status() == ResponseStatus.INVALID_ARGS && response.content() != null) {
-        String content = new String(response.content(), StandardCharsets.UTF_8);
-        if (content.contains("Bucket with given name already exists")) {
-          throw BucketExistsException.forBucket(settings.name());
-        }
-        else {
-          throw new CouchbaseException(content);
-        }
-      }
-      checkStatus(response, "create bucket [" + redactMeta(settings) + "]", settings.name());
-      return null;
-    });
+  public CompletableFuture<Void> createBucket(BucketSettings settings, CreateBucketOptions options) {
+    return coreBucketManager.createBucket(toMap(settings), options.build());
   }
 
-  public CompletableFuture<Void> updateBucket(final BucketSettings settings) {
+  public CompletableFuture<Void> updateBucket(BucketSettings settings) {
     return updateBucket(settings, updateBucketOptions());
   }
 
-  public CompletableFuture<Void> updateBucket(final BucketSettings settings, final UpdateBucketOptions options) {
-    UpdateBucketOptions.Built builtOpts = options.build();
-
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MB_UPDATE_BUCKET, builtOpts.parentSpan().orElse(null), settings.name());
-    span.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
-
-    GetAllBucketOptions getAllBucketOptions = getAllBucketOptions();
-    builtOpts.timeout().ifPresent(getAllBucketOptions::timeout);
-    builtOpts.retryStrategy().ifPresent(getAllBucketOptions::retryStrategy);
-    getAllBucketOptions.parentSpan(span);
-
-    return Mono
-      .fromFuture(() -> getAllBuckets(getAllBucketOptions))
-      .map(buckets -> buckets.containsKey(settings.name()))
-      .flatMap(bucketExists -> {
-        if (!bucketExists) {
-          return Mono.error(BucketNotFoundException.forBucket(settings.name()));
-        }
-        return Mono.fromFuture(sendRequest(POST, pathForBucket(settings.name()), convertSettingsToParams(settings, true), builtOpts, span).thenApply(response -> {
-          checkStatus(response, "update bucket [" + redactMeta(settings) + "]", settings.name());
-          return null;
-        }));
-      })
-      .then()
-      .toFuture();
+  public CompletableFuture<Void> updateBucket(BucketSettings settings, UpdateBucketOptions options) {
+    return coreBucketManager.updateBucket(toMap(settings), options.build());
   }
 
-  private UrlQueryStringBuilder convertSettingsToParams(final BucketSettings settings, boolean update) {
-    UrlQueryStringBuilder params = UrlQueryStringBuilder.createForUrlSafeNames();
-
-    params.add("ramQuotaMB", settings.ramQuotaMB());
-    if (settings.bucketType() != MEMCACHED) {
-      params.add("replicaNumber", settings.numReplicas());
-    }
-    params.add("flushEnabled", settings.flushEnabled() ? 1 : 0);
-    long maxTTL = settings.maxExpiry().getSeconds();
-    // Do not send if it's been left at default, else will get an error on CE
-    if (maxTTL != 0) {
-      params.add("maxTTL", maxTTL);
-    }
-    if (settings.evictionPolicy() != null) {
-      // let server assign the default policy for this bucket type
-      params.add("evictionPolicy", settings.evictionPolicy().alias());
-    }
-    // Do not send if it's been left at default, else will get an error on CE
-    if (settings.compressionMode() != CompressionMode.PASSIVE) {
-      params.add("compressionMode", settings.compressionMode().alias());
-    }
-
-    if (settings.minimumDurabilityLevel() != DurabilityLevel.NONE) {
-      params.add("durabilityMinLevel", settings.minimumDurabilityLevel().encodeForManagementApi());
-    }
-
-    // The following values must not be changed on update
-    if (!update) {
-      params.add("name", settings.name());
-      params.add("bucketType", settings.bucketType().alias());
-      params.add("conflictResolutionType", settings.conflictResolutionType().alias());
-      if (settings.bucketType() != BucketType.EPHEMERAL) {
-        params.add("replicaIndex", settings.replicaIndexes() ? 1 : 0);
-      }
-    }
-
-    return params;
-  }
-
-  public CompletableFuture<Void> dropBucket(final String bucketName) {
+  public CompletableFuture<Void> dropBucket(String bucketName) {
     return dropBucket(bucketName, dropBucketOptions());
   }
 
-  public CompletableFuture<Void> dropBucket(final String bucketName, final DropBucketOptions options) {
-    DropBucketOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MB_DROP_BUCKET, built.parentSpan().orElse(null), bucketName);
-
-    return sendRequest(DELETE, pathForBucket(bucketName), built, span).thenApply(response -> {
-      if (response.status() == ResponseStatus.NOT_FOUND) {
-        throw BucketNotFoundException.forBucket(bucketName);
-      }
-      checkStatus(response, "drop bucket [" + redactMeta(bucketName) + "]", bucketName);
-      return null;
-    });
+  public CompletableFuture<Void> dropBucket(String bucketName, DropBucketOptions options) {
+    return coreBucketManager.dropBucket(bucketName, options.build());
   }
 
-  public CompletableFuture<BucketSettings> getBucket(final String bucketName) {
+  public CompletableFuture<BucketSettings> getBucket(String bucketName) {
     return getBucket(bucketName, getBucketOptions());
   }
 
-  public CompletableFuture<BucketSettings> getBucket(final String bucketName, final GetBucketOptions options) {
-    GetBucketOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MB_GET_BUCKET, built.parentSpan().orElse(null), bucketName);
+  public CompletableFuture<BucketSettings> getBucket(String bucketName, GetBucketOptions options) {
+    return coreBucketManager.getBucket(bucketName, options.build())
+        .thenApply(parseBucketSettings());
+  }
 
-    return sendRequest(GET, pathForBucket(bucketName), built, span).thenApply(response -> {
-      if (response.status() == ResponseStatus.NOT_FOUND) {
-        throw BucketNotFoundException.forBucket(bucketName);
-      }
-      checkStatus(response, "get bucket [" + redactMeta(bucketName) + "]", bucketName);
-      JsonNode tree = Mapper.decodeIntoTree(response.content());
+  private static Function<byte[], BucketSettings> parseBucketSettings() {
+    return bucketBytes -> {
+      JsonNode tree = Mapper.decodeIntoTree(bucketBytes);
       return BucketSettings.create(tree);
-    });
+    };
   }
 
   public CompletableFuture<Map<String, BucketSettings>> getAllBuckets() {
     return getAllBuckets(getAllBucketOptions());
   }
 
-  public CompletableFuture<Map<String, BucketSettings>> getAllBuckets(final GetAllBucketOptions options) {
-    GetAllBucketOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MB_GET_ALL_BUCKETS, built.parentSpan().orElse(null), null);
-
-    return sendRequest(GET, pathForBuckets(), built, span).thenApply(response -> {
-      checkStatus(response, "get all buckets", null);
-      JsonNode tree = Mapper.decodeIntoTree(response.content());
-      Map<String, BucketSettings> out = new HashMap<>();
-      for (final JsonNode bucket : tree) {
-        BucketSettings b = BucketSettings.create(bucket);
-        out.put(b.name(), b);
-      }
-      return out;
-    });
+  public CompletableFuture<Map<String, BucketSettings>> getAllBuckets(GetAllBucketOptions options) {
+    return coreBucketManager.getAllBuckets(options.build())
+        .thenApply(bucketNameToBytes -> transformValues(bucketNameToBytes, parseBucketSettings()));
   }
 
-  public CompletableFuture<Void> flushBucket(final String bucketName) {
+  public CompletableFuture<Void> flushBucket(String bucketName) {
     return flushBucket(bucketName, flushBucketOptions());
   }
 
-  public CompletableFuture<Void> flushBucket(final String bucketName, final FlushBucketOptions options) {
-    FlushBucketOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MB_FLUSH_BUCKET, built.parentSpan().orElse(null), bucketName);
-
-    return sendRequest(POST, pathForBucketFlush(bucketName), options.build(), span).thenApply(response -> {
-      if (response.status() == ResponseStatus.NOT_FOUND) {
-        throw BucketNotFoundException.forBucket(bucketName);
-      }
-      checkStatus(response, "flush bucket [" + redactMeta(bucketName) + "]", bucketName);
-      return null;
-    });
+  public CompletableFuture<Void> flushBucket(String bucketName, FlushBucketOptions options) {
+    return coreBucketManager.flushBucket(bucketName, options.build());
   }
 
-  private RequestSpan buildSpan(final String spanName, final RequestSpan parent, final String bucketName) {
-    RequestSpan span = environment().requestTracer().requestSpan(spanName, parent);
-    if (bucketName != null) {
-      span.attribute(TracingIdentifiers.ATTR_NAME, bucketName);
+  private Map<String, String> toMap(BucketSettings settings) {
+    Map<String, String> params = new HashMap<>();
+
+    params.put("ramQuotaMB", String.valueOf(settings.ramQuotaMB()));
+    if (settings.bucketType() != MEMCACHED) {
+      params.put("replicaNumber", String.valueOf(settings.numReplicas()));
     }
-    return span;
-  }
+    params.put("flushEnabled", String.valueOf(settings.flushEnabled() ? 1 : 0));
+    long maxTTL = settings.maxExpiry().getSeconds();
+    // Do not send if it's been left at default, else will get an error on CE
+    if (maxTTL != 0) {
+      params.put("maxTTL", String.valueOf(maxTTL));
+    }
+    if (settings.evictionPolicy() != null) {
+      // let server assign the default policy for this bucket type
+      params.put("evictionPolicy", settings.evictionPolicy().alias());
+    }
+    // Do not send if it's been left at default, else will get an error on CE
+    if (settings.compressionMode() != CompressionMode.PASSIVE) {
+      params.put("compressionMode", settings.compressionMode().alias());
+    }
 
+    if (settings.minimumDurabilityLevel() != DurabilityLevel.NONE) {
+      params.put("durabilityMinLevel", settings.minimumDurabilityLevel().encodeForManagementApi());
+    }
+
+    params.put("name", settings.name());
+    params.put("bucketType", settings.bucketType().alias());
+    params.put("conflictResolutionType", settings.conflictResolutionType().alias());
+    if (settings.bucketType() != BucketType.EPHEMERAL) {
+      params.put("replicaIndex", String.valueOf(settings.replicaIndexes() ? 1 : 0));
+    }
+
+    return params;
+  }
 }

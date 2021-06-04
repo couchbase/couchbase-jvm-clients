@@ -34,6 +34,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseSt
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
 import com.couchbase.client.core.io.netty.kv.ChannelAttributes;
@@ -124,7 +125,9 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
    * @param content the raw full content body of the response if not successful.
    * @return the exception with which the request will be failed.
    */
-  protected abstract Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request);
+  protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
+    throw new HttpStatusCodeException(status, content, request);
+  }
 
   /**
    * Writes a given request and encodes it.

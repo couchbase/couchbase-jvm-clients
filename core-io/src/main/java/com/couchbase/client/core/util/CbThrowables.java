@@ -17,6 +17,7 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.CouchbaseException;
 
 import java.util.Optional;
 
@@ -71,5 +72,16 @@ public class CbThrowables {
     if (clazz.isInstance(t)) {
       throw clazz.cast(t);
     }
+  }
+
+  /**
+   * Throws the given throwable if it is unchecked, otherwise throws
+   * a new CouchbaseException with the given exception as a cause.
+   *
+   * @return this function always throws an exception, and never returns a value
+   */
+  public static RuntimeException propagate(Throwable t) {
+    throwIfUnchecked(t);
+    throw new CouchbaseException(t.getMessage(), t);
   }
 }

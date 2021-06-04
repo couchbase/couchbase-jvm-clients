@@ -33,7 +33,7 @@ class NonChunkedViewMessageHandler extends NonChunkedHttpMessageHandler {
 
   @Override
   protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
-    return new ViewServiceException(content, new HttpStatusCodeException(status));
+    return new ViewServiceException(content, new HttpStatusCodeException(status, content, request));
   }
 
 }

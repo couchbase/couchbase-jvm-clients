@@ -23,7 +23,6 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
@@ -36,24 +35,19 @@ import com.couchbase.client.core.error.context.ReducedViewErrorContext;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.retry.RetryStrategy;
 
-import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;
 import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbStrings.removeStart;
-import static com.couchbase.client.core.util.CbThrowables.findCause;
 import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
@@ -69,20 +63,16 @@ public class CoreViewIndexManager {
     return name;
   }
 
-  private class ConfigManager extends AbstractManagerSupport {
-    public ConfigManager() {
-      super(CoreViewIndexManager.this.core);
-    }
-  }
-
   protected final Core core;
   private final String bucket;
   protected final CoreHttpClient viewService;
+  protected final CoreHttpClient managerService;
 
   public CoreViewIndexManager(Core core, String bucket) {
     this.core = requireNonNull(core);
     this.bucket = requireNonNull(bucket);
     this.viewService = core.httpClient(RequestTarget.views(bucket));
+    this.managerService = core.httpClient(RequestTarget.manager());
   }
 
   private static String adjustName(String name, boolean production) {
@@ -108,22 +98,12 @@ public class CoreViewIndexManager {
    * JSON structure is same as returned by {@link #getDesignDocument}.
    */
   public CompletableFuture<Map<String, ObjectNode>> getAllDesignDocuments(boolean production, CoreCommonOptions options) {
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MV_GET_ALL_DD, options.parentSpan());
-    span.attribute(TracingIdentifiers.ATTR_NAME, bucket);
-
-    Duration timeout = options.timeout().orElse(core.context().environment().timeoutConfig().managementTimeout());
-    RetryStrategy retryStrategy = options.retryStrategy().orElse(null);
-    return new ConfigManager().sendRequest(GET, pathForAllDesignDocuments(), timeout, retryStrategy, span).thenApply(response -> {
-      // Unlike the other view management requests, this request goes through the config manager endpoint.
-      // That endpoint treats any complete HTTP response as a success, so it's up to us to check the status code.
-      if (response.status() != ResponseStatus.SUCCESS) {
-        throw new CouchbaseException(
-            "Failed to get all design documents" +
-                "; response status=" + response.status() +
-                "; response body=" + new String(response.content(), UTF_8));
-      }
-      return parseAllDesignDocuments(Mapper.decodeIntoTree(response.content()), production);
-    });
+    // Unlike the other view management requests, this request goes through the config manager endpoint.
+    return managerService.get(path(pathForAllDesignDocuments()), options)
+        .trace(TracingIdentifiers.SPAN_REQUEST_MV_GET_ALL_DD)
+        .traceBucket(bucket)
+        .exec(core)
+        .thenApply(response -> parseAllDesignDocuments(Mapper.decodeIntoTree(response.content()), production));
   }
 
   private static Map<String, ObjectNode> parseAllDesignDocuments(JsonNode node, boolean production) {
@@ -229,13 +209,7 @@ public class CoreViewIndexManager {
   }
 
   private static boolean notFound(Throwable t) {
-    return getHttpStatusCode(t) == HttpResponseStatus.NOT_FOUND.code();
-  }
-
-  private static int getHttpStatusCode(Throwable t) {
-    return findCause(t, HttpStatusCodeException.class)
-        .map(HttpStatusCodeException::code)
-        .orElse(0);
+    return HttpStatusCodeException.couchbaseResponseStatus(t) == ResponseStatus.NOT_FOUND;
   }
 
   private RequestSpan buildSpan(String spanName, Optional<RequestSpan> parent) {

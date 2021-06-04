@@ -15,11 +15,11 @@
  */
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.io.netty.manager.ManagerMessageHandler;
-import com.couchbase.client.core.service.ServiceContext;
-import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpClientCodec;
+import com.couchbase.client.core.io.netty.manager.ManagerHandlerSwitcher;
+import com.couchbase.client.core.service.ServiceContext;
+import com.couchbase.client.core.service.ServiceType;
 
 public class ManagerEndpoint extends BaseEndpoint {
 
@@ -44,7 +44,7 @@ public class ManagerEndpoint extends BaseEndpoint {
     @Override
     public void init(BaseEndpoint endpoint, ChannelPipeline pipeline) {
       pipeline.addLast(new HttpClientCodec());
-      pipeline.addLast(new ManagerMessageHandler(endpoint, endpointContext));
+      pipeline.addLast(ManagerHandlerSwitcher.SWITCHER_IDENTIFIER, new ManagerHandlerSwitcher(endpoint, endpointContext));
     }
   }
 }

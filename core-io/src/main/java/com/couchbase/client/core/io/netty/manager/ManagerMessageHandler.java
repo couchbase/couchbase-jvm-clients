@@ -24,6 +24,7 @@ import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
@@ -58,6 +59,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @since 1.0.0
  */
+@ChannelHandler.Sharable // not really, but required for handler switching
 public class ManagerMessageHandler extends ChannelDuplexHandler {
 
   private final CoreContext coreContext;

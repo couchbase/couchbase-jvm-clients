@@ -17,26 +17,29 @@
 package com.couchbase.client.java.manager.user;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
+import com.couchbase.client.core.endpoint.http.CoreHttpClient;
+import com.couchbase.client.core.endpoint.http.CoreHttpPath;
+import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
 import com.couchbase.client.core.error.GroupNotFoundException;
 import com.couchbase.client.core.error.UserNotFoundException;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
-import com.couchbase.client.java.manager.ManagerSupport;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.DELETE;
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.PUT;
-import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
-import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
+import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
+import static com.couchbase.client.core.endpoint.http.CoreHttpRequest.Builder.newForm;
+import static com.couchbase.client.core.error.HttpStatusCodeException.couchbaseResponseStatus;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.core.util.CbThrowables.propagate;
 import static com.couchbase.client.java.manager.user.DropGroupOptions.dropGroupOptions;
 import static com.couchbase.client.java.manager.user.DropUserOptions.dropUserOptions;
 import static com.couchbase.client.java.manager.user.GetAllGroupsOptions.getAllGroupsOptions;
@@ -47,31 +50,40 @@ import static com.couchbase.client.java.manager.user.GetUserOptions.getUserOptio
 import static com.couchbase.client.java.manager.user.UpsertGroupOptions.upsertGroupOptions;
 import static com.couchbase.client.java.manager.user.UpsertUserOptions.upsertUserOptions;
 
-public class AsyncUserManager extends ManagerSupport {
+public class AsyncUserManager {
   // https://docs.couchbase.com/server/5.5/rest-api/rbac.html
 
+  private final Core core;
+  private final CoreHttpClient httpClient;
+
   public AsyncUserManager(Core core) {
-    super(core);
+    this.core = core;
+    this.httpClient = core.httpClient(RequestTarget.manager());
   }
 
-  private static String pathForUsers() {
-    return "/settings/rbac/users";
+  private static CoreHttpPath pathForUsers() {
+    return path("/settings/rbac/users");
   }
 
-  private static String pathForRoles() {
-    return "/settings/rbac/roles";
+  private static CoreHttpPath pathForRoles() {
+    return path("/settings/rbac/roles");
   }
 
-  private static String pathForUser(AuthDomain domain, String username) {
-    return pathForUsers() + "/" + urlEncode(domain.alias()) + "/" + urlEncode(username);
+  private static CoreHttpPath pathForUser(AuthDomain domain, String username) {
+    return path("/settings/rbac/users/{domain}/{username}", mapOf(
+        "username", username,
+        "domain", domain.alias()
+    ));
   }
 
-  private static String pathForGroups() {
-    return "/settings/rbac/groups";
+  private static CoreHttpPath pathForGroups() {
+    return path("/settings/rbac/groups");
   }
 
-  private static String pathForGroup(String name) {
-    return pathForGroups() + "/" + urlEncode(name);
+  private static CoreHttpPath pathForGroup(String groupName) {
+    return path("/settings/rbac/groups/{groupName}", mapOf(
+        "groupName", groupName
+    ));
   }
 
   public CompletableFuture<UserAndMetadata> getUser(AuthDomain domain, String username) {
@@ -79,16 +91,11 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<UserAndMetadata> getUser(AuthDomain domain, String username, GetUserOptions options) {
-    GetUserOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_GET_USER, built.parentSpan().orElse(null));
-
-    return sendRequest(GET, pathForUser(domain, username), built, span).thenApply(response -> {
-      if (response.status() == ResponseStatus.NOT_FOUND) {
-        throw UserNotFoundException.forUser(domain.alias(), username);
-      }
-      checkStatus(response, "get " + domain + " user [" + redactUser(username) + "]", username);
-      return Mapper.decodeInto(response.content(), UserAndMetadata.class);
-    });
+    return httpClient.get(pathForUser(domain, username), options.build())
+        .trace(TracingIdentifiers.SPAN_REQUEST_MU_GET_USER)
+        .exec(core)
+        .exceptionally(translateNotFound(() -> UserNotFoundException.forUser(domain.alias(), username)))
+        .thenApply(response -> Mapper.decodeInto(response.content(), UserAndMetadata.class));
   }
 
   public CompletableFuture<List<UserAndMetadata>> getAllUsers() {
@@ -96,14 +103,11 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<List<UserAndMetadata>> getAllUsers(GetAllUsersOptions options) {
-    GetAllUsersOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_GET_ALL_USERS, built.parentSpan().orElse(null));
-
-    return sendRequest(GET, pathForUsers(), built, span).thenApply(response -> {
-      checkStatus(response, "get all users", null);
-      return Mapper.decodeInto(response.content(), new TypeReference<List<UserAndMetadata>>() {
-      });
-    });
+    return httpClient.get(pathForUsers(), options.build())
+        .trace(TracingIdentifiers.SPAN_REQUEST_MU_GET_ALL_USERS)
+        .exec(core)
+        .thenApply(response -> Mapper.decodeInto(response.content(), new TypeReference<List<UserAndMetadata>>() {
+        }));
   }
 
   public CompletableFuture<List<RoleAndDescription>> getRoles() {
@@ -111,14 +115,11 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<List<RoleAndDescription>> getRoles(GetRolesOptions options) {
-    GetRolesOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_GET_ROLES, built.parentSpan().orElse(null));
-
-    return sendRequest(GET, pathForRoles(), built, span).thenApply(response -> {
-      checkStatus(response, "get all roles", null);
-      return Mapper.decodeInto(response.content(), new TypeReference<List<RoleAndDescription>>() {
-      });
-    });
+    return httpClient.get(pathForRoles(), options.build())
+        .trace(TracingIdentifiers.SPAN_REQUEST_MU_GET_ROLES)
+        .exec(core)
+        .thenApply(response -> Mapper.decodeInto(response.content(), new TypeReference<List<RoleAndDescription>>() {
+        }));
   }
 
   public CompletableFuture<Void> upsertUser(User user) {
@@ -126,12 +127,8 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> upsertUser(User user, UpsertUserOptions options) {
-    UpsertUserOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_UPSERT_USER, built.parentSpan().orElse(null));
-
-    final String username = user.username();
-
-    final UrlQueryStringBuilder params = UrlQueryStringBuilder.createForUrlSafeNames()
+    String username = user.username();
+    UrlQueryStringBuilder params = newForm()
         .add("name", user.displayName())
         .add("roles", user.roles().stream()
             .map(Role::format)
@@ -146,10 +143,11 @@ public class AsyncUserManager extends ManagerSupport {
     // Password is required when creating user, but optional when updating existing user.
     user.password().ifPresent(pwd -> params.add("password", pwd));
 
-    return sendRequest(PUT, pathForUser(AuthDomain.LOCAL, username), params, built, span).thenApply(response -> {
-      checkStatus(response, "create user [" + redactUser(username) + "]", username);
-      return null;
-    });
+    return httpClient.put(pathForUser(AuthDomain.LOCAL, username), options.build())
+        .trace(TracingIdentifiers.SPAN_REQUEST_MU_UPSERT_USER)
+        .form(params)
+        .exec(core)
+        .thenApply(response -> null);
   }
 
   public CompletableFuture<Void> dropUser(String username) {
@@ -157,18 +155,13 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> dropUser(String username, DropUserOptions options) {
-    DropUserOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_DROP_USER, built.parentSpan().orElse(null));
+    AuthDomain domain = AuthDomain.LOCAL;
 
-    final AuthDomain domain = AuthDomain.LOCAL;
-
-    return sendRequest(DELETE, pathForUser(domain, username), built, span).thenApply(response -> {
-      if (response.status() == ResponseStatus.NOT_FOUND) {
-        throw UserNotFoundException.forUser(domain.alias(), username);
-      }
-      checkStatus(response, "drop user [" + redactUser(username) + "]", username);
-      return null;
-    });
+    return httpClient.delete(pathForUser(domain, username), options.build())
+        .trace(TracingIdentifiers.SPAN_REQUEST_MU_DROP_USER)
+        .exec(core)
+        .exceptionally(translateNotFound(() -> UserNotFoundException.forUser(domain.alias(), username)))
+        .thenApply(response -> null);
   }
 
   public CompletableFuture<Group> getGroup(String groupName) {
@@ -176,16 +169,11 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<Group> getGroup(String groupName, GetGroupOptions options) {
-    GetGroupOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_GET_GROUP, built.parentSpan().orElse(null));
-
-    return sendRequest(GET, pathForGroup(groupName), built, span).thenApply(response -> {
-      if (response.status() == ResponseStatus.NOT_FOUND) {
-        throw GroupNotFoundException.forGroup(groupName);
-      }
-      checkStatus(response, "get group [" + redactMeta(groupName) + "]", groupName);
-      return Mapper.decodeInto(response.content(), Group.class);
-    });
+    return httpClient.get(pathForGroup(groupName), options.build())
+        .trace(TracingIdentifiers.SPAN_REQUEST_MU_GET_GROUP)
+        .exec(core)
+        .exceptionally(translateNotFound(() -> GroupNotFoundException.forGroup(groupName)))
+        .thenApply(response -> Mapper.decodeInto(response.content(), Group.class));
   }
 
   public CompletableFuture<List<Group>> getAllGroups() {
@@ -193,14 +181,11 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<List<Group>> getAllGroups(GetAllGroupsOptions options) {
-    GetAllGroupsOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_GET_ALL_GROUPS, built.parentSpan().orElse(null));
-
-    return sendRequest(GET, pathForGroups(), built, span).thenApply(response -> {
-      checkStatus(response, "get all groups", null);
-      return Mapper.decodeInto(response.content(), new TypeReference<List<Group>>() {
-      });
-    });
+    return httpClient.get(pathForGroups(), options.build())
+        .trace(TracingIdentifiers.SPAN_REQUEST_MU_GET_ALL_GROUPS)
+        .exec(core)
+        .thenApply(response -> Mapper.decodeInto(response.content(), new TypeReference<List<Group>>() {
+        }));
   }
 
   public CompletableFuture<Void> upsertGroup(Group group) {
@@ -208,20 +193,18 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> upsertGroup(Group group, UpsertGroupOptions options) {
-    UpsertGroupOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_UPSERT_GROUP, built.parentSpan().orElse(null));
-
-    final UrlQueryStringBuilder params = UrlQueryStringBuilder.createForUrlSafeNames()
+    UrlQueryStringBuilder params = newForm()
         .add("description", group.description())
         .add("ldap_group_ref", group.ldapGroupReference().orElse(""))
         .add("roles", group.roles().stream()
             .map(Role::format)
             .collect(Collectors.joining(",")));
 
-    return sendRequest(PUT, pathForGroup(group.name()), params, built, span).thenApply(response -> {
-      checkStatus(response, "create group [" + redactMeta(group.name()) + "]", group.name());
-      return null;
-    });
+    return httpClient.put(pathForGroup(group.name()), options.build())
+        .trace(TracingIdentifiers.SPAN_REQUEST_MU_UPSERT_GROUP)
+        .form(params)
+        .exec(core)
+        .thenApply(response -> null);
   }
 
   public CompletableFuture<Void> dropGroup(String groupName) {
@@ -229,22 +212,18 @@ public class AsyncUserManager extends ManagerSupport {
   }
 
   public CompletableFuture<Void> dropGroup(String groupName, DropGroupOptions options) {
-    DropGroupOptions.Built built = options.build();
-    RequestSpan span = buildSpan(TracingIdentifiers.SPAN_REQUEST_MU_DROP_GROUP, built.parentSpan().orElse(null));
-
-    return sendRequest(DELETE, pathForGroup(groupName), built, span).thenApply(response -> {
-      if (response.status() == ResponseStatus.NOT_FOUND) {
-        throw GroupNotFoundException.forGroup(groupName);
-      }
-      checkStatus(response, "drop group [" + redactMeta(groupName) + "]", groupName);
-      return null;
-    });
+    return httpClient.delete(pathForGroup(groupName), options.build())
+        .trace(TracingIdentifiers.SPAN_REQUEST_MU_DROP_GROUP)
+        .exec(core)
+        .exceptionally(translateNotFound(() -> GroupNotFoundException.forGroup(groupName)))
+        .thenApply(response -> null);
   }
 
-  private RequestSpan buildSpan(final String spanName, final RequestSpan parent) {
-    RequestSpan span = environment().requestTracer().requestSpan(spanName, parent);
-    span.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
-    return span;
+  private static Function<Throwable, CoreHttpResponse> translateNotFound(Supplier<? extends RuntimeException> exceptionSupplier) {
+    return t -> {
+      throw couchbaseResponseStatus(t) == ResponseStatus.NOT_FOUND
+          ? exceptionSupplier.get()
+          : propagate(t);
+    };
   }
-
 }

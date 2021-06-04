@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty;
 
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelInboundHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
 import com.couchbase.client.core.msg.Request;
@@ -39,7 +40,7 @@ public class ChunkedHandlerSwitcher extends ChannelDuplexHandler {
   public static final String SWITCHER_IDENTIFIER = ChunkedHandlerSwitcher.class.getSimpleName();
   private static final String CHUNKED_IDENTIFIER = ChunkedMessageHandler.class.getSimpleName();
 
-  private final ChunkedMessageHandler chunkedHandler;
+  private final ChannelInboundHandler chunkedHandler;
   private final NonChunkedHttpMessageHandler nonChunkedHandler;
   private final Class<? extends Request> chunkedClass;
 
@@ -52,7 +53,7 @@ public class ChunkedHandlerSwitcher extends ChannelDuplexHandler {
    * @param nonChunkedHandler the handler which handles all the other msgs.
    * @param chunkedClass the class of request representing the chunked request.
    */
-  protected ChunkedHandlerSwitcher(final ChunkedMessageHandler chunkedHandler,
+  protected ChunkedHandlerSwitcher(final ChannelInboundHandler chunkedHandler,
                                    final NonChunkedHttpMessageHandler nonChunkedHandler,
                                    final Class<? extends Request> chunkedClass) {
     this.chunkedHandler = chunkedHandler;
@@ -65,7 +66,7 @@ public class ChunkedHandlerSwitcher extends ChannelDuplexHandler {
    * likely needed one upfront (and the most perf critical one).
    */
   @Override
-  public void channelActive(final ChannelHandlerContext ctx) {
+  public void channelActive(final ChannelHandlerContext ctx) throws Exception {
     activateChunkedHandler(ctx);
   }
 
@@ -96,7 +97,7 @@ public class ChunkedHandlerSwitcher extends ChannelDuplexHandler {
    *
    * @param ctx the channel handler context.
    */
-  private void activateChunkedHandler(final ChannelHandlerContext ctx) {
+  private void activateChunkedHandler(final ChannelHandlerContext ctx) throws Exception {
     ctx.pipeline().addBefore(SWITCHER_IDENTIFIER, CHUNKED_IDENTIFIER, chunkedHandler);
     chunkedHandler.channelActive(ctx);
     chunkedHandlerActive = true;

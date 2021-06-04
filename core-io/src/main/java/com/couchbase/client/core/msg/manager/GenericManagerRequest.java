@@ -29,6 +29,15 @@ import java.util.function.Supplier;
 import static com.couchbase.client.core.io.netty.HttpProtocol.decodeStatus;
 import static java.util.Objects.requireNonNull;
 
+/**
+ * @deprecated in favor of issuing manager requests using
+ * {@link com.couchbase.client.core.endpoint.http.CoreHttpClient}.
+ * CAVEAT: the core HTTP client throws an exception if the response's
+ * HTTP status code indicates failure. This is in contrast to
+ * GenericManagerRequest, whose response completes "successfully"
+ * regardless of HTTP status code.
+ */
+@Deprecated
 public class GenericManagerRequest extends BaseManagerRequest<GenericManagerResponse> {
 
   private final Supplier<FullHttpRequest> requestSupplier;
@@ -36,7 +45,7 @@ public class GenericManagerRequest extends BaseManagerRequest<GenericManagerResp
 
   public GenericManagerRequest(CoreContext ctx, Supplier<FullHttpRequest> requestSupplier, boolean idempotent, RequestSpan span) {
     this(ctx.environment().timeoutConfig().managementTimeout(), ctx, ctx.environment().retryStrategy(), requestSupplier,
-      idempotent, span);
+        idempotent, span);
   }
 
   public GenericManagerRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,

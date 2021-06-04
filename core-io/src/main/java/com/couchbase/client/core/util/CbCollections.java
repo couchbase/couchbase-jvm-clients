@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -34,6 +35,7 @@ import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toMap;
 
 @Stability.Internal
 public class CbCollections {
@@ -198,5 +200,11 @@ public class CbCollections {
     if (map.put(key, value) != null) {
       throw InvalidArgumentException.fromMessage("Duplicate key: " + key);
     }
+  }
+
+  public static <K, V1, V2> Map<K, V2> transformValues(Map<K, V1> map, Function<V1, V2> transformer) {
+    return map.entrySet()
+        .stream()
+        .collect(toMap(Map.Entry::getKey, entry -> transformer.apply(entry.getValue())));
   }
 }

@@ -46,6 +46,7 @@ import com.couchbase.client.core.util.UrlQueryStringBuilder;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
@@ -186,6 +187,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
 
     private HttpHeaders headers = EmptyHttpHeaders.INSTANCE;
     private String spanName; // nullable
+    private Map<String, Object> spanAttributes; // nullable
     private Boolean idempotent; // nullable
 
     public Builder(CoreCommonOptions options, CoreContext coreContext, RequestTarget target, HttpMethod method, CoreHttpPath path) {
@@ -210,6 +212,26 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     public Builder trace(String spanName) {
       this.spanName = spanName;
       return this;
+    }
+
+    public Builder traceAttr(String attributeName, Object attributeValue) {
+      if (this.spanAttributes == null) {
+        this.spanAttributes = new HashMap<>();
+      }
+      spanAttributes.put(attributeName, requireNonNull(attributeValue));
+      return this;
+    }
+
+    public Builder traceBucket(String bucketName) {
+      return traceAttr(TracingIdentifiers.ATTR_NAME, bucketName);
+    }
+
+    public Builder traceScope(String scopeName) {
+      return traceAttr(TracingIdentifiers.ATTR_SCOPE, scopeName);
+    }
+
+    public Builder traceCollection(String collectionName) {
+      return traceAttr(TracingIdentifiers.ATTR_COLLECTION, collectionName);
     }
 
     public Builder header(CharSequence name, Object value) {
@@ -249,6 +271,12 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
 
     public CoreHttpRequest build() {
       RequestSpan span = spanName == null ? null : CbTracing.newSpan(coreContext.environment().requestTracer(), spanName, options.parentSpan().orElse(null));
+
+      if (span != null && target.bucketName() != null) {
+        span.attribute(TracingIdentifiers.ATTR_NAME, target.bucketName());
+      }
+
+      CbTracing.setAttributes(span, spanAttributes);
       return new CoreHttpRequest(
           this,
           span,
