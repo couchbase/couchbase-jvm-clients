@@ -302,7 +302,7 @@ public class IoEnvironment {
 
     analyticsEventLoopGroup = builder.analyticsEventLoopGroup == null
       ? httpDefaultGroup
-      : builder.queryEventLoopGroup;
+      : builder.analyticsEventLoopGroup;
     sanityCheckEventLoop(analyticsEventLoopGroup);
 
     searchEventLoopGroup = builder.searchEventLoopGroup == null
