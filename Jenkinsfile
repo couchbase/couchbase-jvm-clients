@@ -4,10 +4,10 @@
 // - Can do it with scripted pipeline, but anything inside a node {} block won't trigger the post block, so can't gather junit results
 // So, for now, everything is hard-coded.  It's unlikely to change often.
 // TODO: stashing the junit file after its generated and unstashing it in post, may work
-def PLATFORMS = ["ubuntu16"]
+def PLATFORMS = ["ubuntu16", "ubuntu20"]
 def DEFAULT_PLATFORM = PLATFORMS[0]
 def platform = DEFAULT_PLATFORM
-def LINUX_AGENTS = 'centos6||centos7||ubuntu16||ubuntu14'
+def LINUX_AGENTS = 'centos6||centos7||ubuntu16||ubuntu14||ubuntu20'
 def QUICK_TEST_MODE = false // enable to support quicker development iteration
 
 // Java versions available through cbdeps are on
@@ -566,7 +566,7 @@ pipeline {
                     unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
                     dir('couchbase-jvm-clients') {
-                        script { testAgainstServer("7.0-stable", QUICK_TEST_MODE, ceMode = true) }
+                        script { testAgainstServer("7.0-stable", QUICK_TEST_MODE, false, false, true) }
                     }
                 }
             }
