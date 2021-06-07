@@ -224,7 +224,7 @@ public class ThresholdLoggingTracer implements RequestTracer {
     );
 
     private final boolean newOutputFormat = Boolean.parseBoolean(
-      System.getProperty("com.couchbase.thresholdRequestTracerNewOutputFormat", "false")
+      System.getProperty("com.couchbase.thresholdRequestTracerNewOutputFormat", "true")
     );
 
     /**

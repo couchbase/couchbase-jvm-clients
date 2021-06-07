@@ -170,7 +170,7 @@ public class OrphanReporter {
     );
 
     private final boolean newOutputFormat = Boolean.parseBoolean(
-      System.getProperty("com.couchbase.orphanReporterNewOutputFormat", "false")
+      System.getProperty("com.couchbase.orphanReporterNewOutputFormat", "true")
     );
 
     /**
