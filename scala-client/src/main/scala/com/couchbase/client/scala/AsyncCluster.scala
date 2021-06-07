@@ -92,7 +92,8 @@ class AsyncCluster(
   private[scala] lazy val reactiveUserManager   = new ReactiveUserManager(core)
   private[scala] lazy val reactiveBucketManager = new ReactiveBucketManager(core)
   private[scala] lazy val reactiveAnalyticsIndexManager = new ReactiveAnalyticsIndexManager(
-    new ReactiveCluster(this)
+    new ReactiveCluster(this),
+    analyticsIndexes
   )
   private[scala] val EmptyNamedParameters      = Map.empty[String, Any]
   private[scala] val EmptyPositionalParameters = Seq.empty[Any]
@@ -112,7 +113,9 @@ class AsyncCluster(
   lazy val searchIndexes = new AsyncSearchIndexManager(this)
 
   @Stability.Volatile
-  lazy val analyticsIndexes = new AsyncAnalyticsIndexManager(reactiveAnalyticsIndexManager)
+  lazy val analyticsIndexes: AsyncAnalyticsIndexManager = new AsyncAnalyticsIndexManager(
+    reactiveAnalyticsIndexManager
+  )
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *

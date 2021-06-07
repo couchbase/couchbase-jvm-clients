@@ -30,4 +30,3 @@ object ViewOrdering {
     private[scala] def encoded: String = "true"
   }
 }
-

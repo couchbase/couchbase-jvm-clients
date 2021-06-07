@@ -107,4 +107,3 @@ case class RemoveOptions(
     copy(retryStrategy = Some(value))
   }
 }
-

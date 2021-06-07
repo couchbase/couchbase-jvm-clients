@@ -88,7 +88,7 @@ class ReactiveCluster(val async: AsyncCluster) {
   lazy val searchIndexes = new ReactiveSearchIndexManager(async.searchIndexes)
 
   @Stability.Volatile
-  lazy val analyticsIndexes = new ReactiveAnalyticsIndexManager(this)
+  lazy val analyticsIndexes = new ReactiveAnalyticsIndexManager(this, async.analyticsIndexes)
 
   /** Performs a N1QL query against the cluster.
     *

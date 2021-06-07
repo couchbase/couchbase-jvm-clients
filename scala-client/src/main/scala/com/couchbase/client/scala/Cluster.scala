@@ -83,7 +83,8 @@ class Cluster private[scala] (
   lazy val searchIndexes = new SearchIndexManager(async.searchIndexes)
 
   @Stability.Volatile
-  lazy val analyticsIndexes = new AnalyticsIndexManager(reactive.analyticsIndexes)
+  lazy val analyticsIndexes =
+    new AnalyticsIndexManager(async.analyticsIndexes, reactive.analyticsIndexes)
 
   /** The environment used to create this cluster */
   def env: ClusterEnvironment = _env

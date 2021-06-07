@@ -21,7 +21,6 @@ import ujson.ParseException
   */
 object CouchbasePickler extends upickle.AttributeTagged {
   // upickle writes Options as [] and ["value"] by default, which isn't that useful
-  // IntelliJ complains about this, but the compiler is fine
   override implicit def OptionWriter[T: Writer]: Writer[Option[T]] =
     implicitly[Writer[T]].comap[Option[T]] {
       case None    => null.asInstanceOf[T]

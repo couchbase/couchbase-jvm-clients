@@ -27,5 +27,3 @@ case class DiagnosticsOptions(reportId: Option[String] = None) {
     copy(reportId = Some(value))
   }
 }
-
-
