@@ -146,6 +146,12 @@ public class ReactiveBatchHelper {
     List<MultiObserveViaCasRequest> requests = new ArrayList<>(nodeEntries.size());
 
     for (Map.Entry<NodeIdentifier, Map<byte[], Short>> node : nodeEntries.entrySet()) {
+      if (node.getValue().isEmpty()) {
+        // We need to make sure to only send requests to the nodes which 1) have the kv
+        // service enabled and 2) have keys that we need to fetch
+        continue;
+      }
+
       MultiObserveViaCasRequest request = new MultiObserveViaCasRequest(
         env.timeoutConfig().kvTimeout(),
         core.context(),
