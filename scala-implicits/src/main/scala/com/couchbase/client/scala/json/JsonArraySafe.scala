@@ -217,7 +217,7 @@ object JsonArraySafe {
     *         (JsonArraySafe)`
     */
   def fromJson(json: String): Try[JsonArraySafe] = {
-    Try(JsonArraySafe(JsonArray.fromJson(json)))
+    JsonArray.fromJson(json).map(v => new JsonArraySafe(v))
   }
 
   /** Constructs a `JsonArraySafe` from the supplied values.
