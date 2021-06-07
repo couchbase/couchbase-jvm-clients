@@ -25,6 +25,7 @@ import java.util.Optional;
 public class GetAllLinksAnalyticsOptions extends CommonOptions<GetAllLinksAnalyticsOptions> {
   private Optional<String> dataverseName = Optional.empty();
   private Optional<AnalyticsLinkType> linkType = Optional.empty();
+  private Optional<String> name = Optional.empty();
 
   private GetAllLinksAnalyticsOptions() {
   }
@@ -42,6 +43,19 @@ public class GetAllLinksAnalyticsOptions extends CommonOptions<GetAllLinksAnalyt
   }
 
   /**
+   * Only get the link with this name.
+   * <p>
+   * Requires specifying {@link #dataverseName(String)}.
+   * <p>
+   * If there is no link with this name in the specified dataverse,
+   * the result is an empty list.
+   */
+  public GetAllLinksAnalyticsOptions name(String linkName) {
+    this.name = Optional.ofNullable(linkName);
+    return this;
+  }
+
+  /**
    * Only get links of this type.
    */
   public GetAllLinksAnalyticsOptions linkType(AnalyticsLinkType linkType) {
@@ -55,10 +69,15 @@ public class GetAllLinksAnalyticsOptions extends CommonOptions<GetAllLinksAnalyt
   }
 
   public class Built extends BuiltCommonOptions {
-    Built() { }
+    Built() {
+    }
 
     public Optional<String> dataverseName() {
       return dataverseName;
+    }
+
+    public Optional<String> name() {
+      return name;
     }
 
     public Optional<AnalyticsLinkType> linkType() {

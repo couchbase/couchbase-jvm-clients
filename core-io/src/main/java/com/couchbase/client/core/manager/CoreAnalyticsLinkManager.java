@@ -116,23 +116,26 @@ public class CoreAnalyticsLinkManager {
   /**
    * @param dataverseName (nullable)
    * @param linkType (nullable)
+   * @param linkName (nullable) if present, dataverseName must also be present
    */
-  public CompletableFuture<byte[]> getAllLinks(String dataverseName, String linkType, CoreCommonOptions options) {
-    UrlQueryStringBuilder queryString = newQueryString();
-    if (linkType != null) {
-      queryString.set("type", linkType);
+  public CompletableFuture<byte[]> getAllLinks(String dataverseName, String linkType, String linkName, CoreCommonOptions options) {
+    if (linkName != null && dataverseName == null) {
+      throw InvalidArgumentException.fromMessage("When link name is specified, must also specify dataverse");
     }
 
-    CoreHttpPath path;
-    if (dataverseName == null) {
-      path = path("/analytics/link");
-    } else {
-      if (dataverseName.contains("/")) {
-        path = path("/analytics/link/{dataverse}", mapOf("dataverse", dataverseName));
-      } else {
-        path = path("/analytics/link");
-        queryString.set("dataverse", dataverseName);
+    UrlQueryStringBuilder queryString = newQueryString()
+        .setIfNotNull("type", linkType);
+
+    CoreHttpPath path = path("/analytics/link");
+    if (dataverseName != null && dataverseName.contains("/")) {
+      path = path.plus("/{dataverse}", mapOf("dataverse", dataverseName));
+      if (linkName != null) {
+        path = path.plus("/{linkName}", mapOf("linkName", linkName));
       }
+    } else {
+      queryString
+          .setIfNotNull("dataverse", dataverseName)
+          .setIfNotNull("name", linkName);
     }
 
     return httpClient.get(path, options)

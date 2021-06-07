@@ -342,7 +342,8 @@ public class AsyncAnalyticsIndexManager {
     GetAllLinksAnalyticsOptions.Built opts = options.build();
     String dataverseName = opts.dataverseName().orElse(null);
     String linkType = opts.linkType().map(AnalyticsLinkType::wireName).orElse(null);
-    return linkManager.getAllLinks(dataverseName, linkType, opts)
+    String linkName = opts.name().orElse(null);
+    return linkManager.getAllLinks(dataverseName, linkType, linkName, opts)
         .thenApply(responseBytes ->
             Mapper.decodeInto(responseBytes, new TypeReference<List<AnalyticsLink>>() {
             }));

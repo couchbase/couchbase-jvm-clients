@@ -62,6 +62,13 @@ public class UrlQueryStringBuilder {
     return this;
   }
 
+  public UrlQueryStringBuilder setIfNotNull(String name, String value) {
+    if (value != null) {
+      setSafeValue(name, urlEncode(value));
+    }
+    return this;
+  }
+
   public UrlQueryStringBuilder set(String name, int value) {
     return setSafeValue(name, String.valueOf(value));
   }
@@ -81,6 +88,13 @@ public class UrlQueryStringBuilder {
 
   public UrlQueryStringBuilder add(String name, String value) {
     return addSafeValue(name, urlEncode(value));
+  }
+
+  public UrlQueryStringBuilder addIfNotNull(String name, String value) {
+    if (value != null) {
+      addSafeValue(name, urlEncode(value));
+    }
+    return this;
   }
 
   public UrlQueryStringBuilder add(String name, int value) {

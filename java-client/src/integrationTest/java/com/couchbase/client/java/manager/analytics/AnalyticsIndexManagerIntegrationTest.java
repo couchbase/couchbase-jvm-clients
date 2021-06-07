@@ -68,6 +68,7 @@ import static com.couchbase.client.test.ClusterType.CAVES;
 import static com.couchbase.client.test.ClusterType.MOCKED;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -510,29 +511,72 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
     analytics.createLink(newS3Link("myS3Link", dataverse));
 
-    List<AnalyticsLink> links = analytics.getAllLinks(getAllLinksAnalyticsOptions()
+    assertFoundLinks(emptySet(), analytics.getAllLinks(getAllLinksAnalyticsOptions()
         .dataverseName(dataverse)
-        .linkType(AnalyticsLinkType.COUCHBASE_REMOTE));
-    assertEquals(emptyList(), links);
+        .linkType(AnalyticsLinkType.COUCHBASE_REMOTE)));
+
+    assertFoundLinks(setOf("myS3Link:" + dataverse), analytics.getAllLinks(getAllLinksAnalyticsOptions()
+        .dataverseName(dataverse)
+        .linkType(AnalyticsLinkType.S3_EXTERNAL)));
   }
 
   @Test
-  void getAllLinksCanFilterByDataverse() {
+  void getAllLinksCanFilterByNameAndDataverse() {
     assumeCanManageLinks();
 
-    String otherDataverse = "other-" + dataverse;
-    recreateDataverse(otherDataverse);
+    String scopedDataverse = dataverse + "/foo";
+    recreateDataverse(scopedDataverse);
 
     try {
       analytics.createLink(newS3Link("myS3Link", dataverse));
+      analytics.createLink(newS3Link("myOtherS3Link", dataverse));
+      analytics.createLink(newS3Link("myS3Link", scopedDataverse));
+      analytics.createLink(newS3Link("myOtherS3Link", scopedDataverse));
 
-      List<AnalyticsLink> links = analytics.getAllLinks(getAllLinksAnalyticsOptions()
-          .dataverseName(otherDataverse));
-      assertEquals(emptyList(), links);
+      assertThrows(InvalidArgumentException.class, () -> analytics.getAllLinks(getAllLinksAnalyticsOptions()
+          .name("myS3Link")));
+
+      assertFoundLinks(setOf(
+          "myS3Link:" + dataverse,
+          "myOtherS3Link:" + dataverse,
+          "myS3Link:" + scopedDataverse,
+          "myOtherS3Link:" + scopedDataverse
+      ), analytics.getAllLinks());
+
+      assertFoundLinks(setOf(
+          "myS3Link:" + scopedDataverse,
+          "myOtherS3Link:" + scopedDataverse
+      ), analytics.getAllLinks(getAllLinksAnalyticsOptions()
+          .dataverseName(scopedDataverse)));
+
+      assertFoundLinks(setOf(
+          "myS3Link:" + dataverse,
+          "myOtherS3Link:" + dataverse
+      ), analytics.getAllLinks(getAllLinksAnalyticsOptions()
+          .dataverseName(dataverse)));
+
+      assertFoundLinks(setOf(
+          "myS3Link:" + dataverse
+      ), analytics.getAllLinks(getAllLinksAnalyticsOptions()
+          .name("myS3Link")
+          .dataverseName(dataverse)));
+
+      assertFoundLinks(setOf(
+          "myS3Link:" + scopedDataverse
+      ), analytics.getAllLinks(getAllLinksAnalyticsOptions()
+          .name("myS3Link")
+          .dataverseName(scopedDataverse)));
 
     } finally {
-      analytics.dropDataverse(otherDataverse);
+      analytics.dropDataverse(scopedDataverse);
     }
+  }
+
+  private static void assertFoundLinks(Set<String> expectedLinkIds, List<AnalyticsLink> actualLinks) {
+    Set<String> actualLinkIds = actualLinks.stream()
+        .map(link -> link.name() + ":" + link.dataverse())
+        .collect(Collectors.toSet());
+    assertEquals(expectedLinkIds, actualLinkIds);
   }
 
   @Test
@@ -595,10 +639,14 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
       String linkName = "myS3Link";
       analytics.createLink(newS3Link(linkName, scopedDataverse));
       analytics.replaceLink(newS3Link(linkName, scopedDataverse));
-      List<AnalyticsLink> links = analytics.getAllLinks(getAllLinksAnalyticsOptions().dataverseName(scopedDataverse));
-      assertEquals(scopedDataverse, links.get(0).dataverse());
+      assertFoundLinks(setOf("myS3Link:" + scopedDataverse), analytics.getAllLinks(getAllLinksAnalyticsOptions()
+          .dataverseName(scopedDataverse)
+          .name(linkName)));
+
       analytics.dropLink(linkName, scopedDataverse);
-      assertEquals(emptyList(), analytics.getAllLinks(getAllLinksAnalyticsOptions().dataverseName(scopedDataverse)));
+      assertFoundLinks(emptySet(), analytics.getAllLinks(getAllLinksAnalyticsOptions()
+          .dataverseName(scopedDataverse)
+          .name(linkName)));
 
     } finally {
       analytics.dropDataverse(scopedDataverse);

@@ -55,6 +55,19 @@ class CoreHttpPathTest {
   }
 
   @Test
+  void plus() {
+    CoreHttpPath path = path("/foo/{color}", mapOf("color", "red"))
+        .plus("/{flavor}", mapOf("flavor", "strawberry"));
+
+    assertEquals("/foo/red/strawberry", path.format());
+    assertEquals("/foo/{color}/{flavor}", path.getTemplate());
+    assertEquals(mapOf(
+        "color", "red",
+        "flavor", "strawberry"
+    ), path.getParams());
+  }
+
+  @Test
   void replacementValuesAreUrlEncoded() {
     CoreHttpPath path = path("/{x}", mapOf("x", "foo /bar"));
     assertEquals("/foo%20%2Fbar", path.format());
@@ -76,5 +89,12 @@ class CoreHttpPathTest {
 
     assertThrows(IllegalArgumentException.class, () ->
         path("/foo/{color}/{flavor}", mapOf("x", "y")));
+  }
+
+  @Test
+  void complainsAboutAddingDuplicateParameter() {
+    CoreHttpPath base = path("/{foo}", mapOf("foo", "bar"));
+    assertThrows(IllegalArgumentException.class, () ->
+        base.plus("/{foo}", mapOf("foo", "bar")));
   }
 }

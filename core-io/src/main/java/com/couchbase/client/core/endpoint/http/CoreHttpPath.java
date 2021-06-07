@@ -18,7 +18,10 @@ package com.couchbase.client.core.endpoint.http;
 
 import com.couchbase.client.core.annotation.Stability;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
 import static java.util.Collections.emptyMap;
@@ -59,6 +62,36 @@ public class CoreHttpPath {
 
   public String format() {
     return formatted;
+  }
+
+  /**
+   * Returns a new path built by appending the given subpath to this path.
+   */
+  public CoreHttpPath plus(String subpath) {
+    return plus(path(subpath));
+  }
+
+  /**
+   * Returns a new path built by appending the given subpath template
+   * and parameters to this path.
+   */
+  public CoreHttpPath plus(String subpathTemplate, Map<String, String> subpathParams) {
+    return plus(path(subpathTemplate, subpathParams));
+  }
+
+  /**
+   * Returns a new path built by appending the given subpath to this path.
+   */
+  public CoreHttpPath plus(CoreHttpPath subpath) {
+    Set<String> commonParams = new HashSet<>(this.params.keySet());
+    commonParams.retainAll(subpath.params.keySet());
+    if (!commonParams.isEmpty()) {
+      throw new IllegalArgumentException("Subpath must not have parameter names in common with base path, but found: " + commonParams);
+    }
+
+    Map<String, String> mergedParams = new HashMap<>(this.params);
+    mergedParams.putAll(subpath.params);
+    return new CoreHttpPath(this.template + subpath.template, mergedParams);
   }
 
   @Override
