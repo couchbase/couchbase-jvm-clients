@@ -236,10 +236,14 @@ public class KeyValueLocator implements Locator {
       if (level.isPresent()
         && level.get() != DurabilityLevel.NONE
         && !config.bucketCapabilities().contains(BucketCapabilities.DURABLE_WRITE)) {
-        request.fail(new FeatureNotAvailableException("Synchronous Durability is not available for memcache buckets"));
+        request.fail(new FeatureNotAvailableException("Synchronous Durability is not available for memcached buckets"));
         return false;
       }
+    } else if (!request.collectionIdentifier().isDefault()) {
+      request.fail(FeatureNotAvailableException.collectionsForMemcached());
+      return false;
     }
+
     return true;
   }
 

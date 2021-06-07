@@ -45,4 +45,9 @@ public class FeatureNotAvailableException extends CouchbaseException {
     return new FeatureNotAvailableException("The cluster does not support collections and scopes.");
   }
 
+  public static FeatureNotAvailableException collectionsForMemcached() {
+    return new FeatureNotAvailableException("Non-Default collections are not supported for memcached buckets.");
+
+  }
+
 }

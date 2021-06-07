@@ -28,6 +28,8 @@ import com.couchbase.client.core.cnc.events.io.NotMyVbucketReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseStatusReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
+import com.couchbase.client.core.config.ConfigurationProvider;
+import com.couchbase.client.core.config.MemcachedBucketConfig;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
@@ -42,6 +44,7 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.IoContext;
@@ -244,8 +247,11 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
         writtenRequests.remove(opaque);
         if (err instanceof CollectionNotFoundException) {
           if (channelContext.collectionsEnabled()) {
-            if (ioContext.core().configurationProvider().collectionRefreshInProgress(request.collectionIdentifier())) {
+            ConfigurationProvider cp = ioContext.core().configurationProvider();
+            if (cp.collectionRefreshInProgress(request.collectionIdentifier())) {
               RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.COLLECTION_MAP_REFRESH_IN_PROGRESS);
+            } else if (cp.config().bucketConfig(request.bucket()) instanceof MemcachedBucketConfig) {
+              request.fail(FeatureNotAvailableException.collectionsForMemcached());
             } else {
               handleOutdatedCollection(request, RetryReason.COLLECTION_NOT_FOUND);
             }
