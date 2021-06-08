@@ -133,6 +133,9 @@ public class KeyValueBucketRefresher implements BucketRefresher {
 
     pollRegistration = Flux
       .interval(pollerInterval(), core.context().environment().scheduler())
+      // Proposing a new config should be quick, but just in case it gets held up we do
+      // not want to terminate the refresher and just drop the ticks and keep going.
+      .onBackpressureDrop()
       .filter(v -> !registrations.isEmpty())
       .flatMap(ignored -> Flux
         .fromIterable(registrations.keySet())

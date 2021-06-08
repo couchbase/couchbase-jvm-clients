@@ -76,6 +76,11 @@ public class WaitUntilReadyHelper {
     state.transition(WaitUntilReadyStage.CONFIG_LOAD);
     return Flux
       .interval(Duration.ofMillis(10), core.context().environment().scheduler())
+      // There is a good chance that downstream demand is lower (taking longer than
+      // the 10ms of the interval signal). We can just drop the ticks that we don't need,
+      // since the interval acts like a "pacemaker" here and keeps us going with new tries
+      // until the wait until ready completes or times out.
+      .onBackpressureDrop()
       .filter(i -> !(core.configurationProvider().bucketConfigLoadInProgress()
         || core.configurationProvider().globalConfigLoadInProgress()
         || (bucketName.isPresent() && core.configurationProvider().collectionRefreshInProgress())
@@ -135,6 +140,10 @@ public class WaitUntilReadyHelper {
         state.transition(WaitUntilReadyStage.PING);
         final Flux<ClusterState> diagnostics = Flux
           .interval(Duration.ofMillis(10), core.context().environment().scheduler())
+          // Diagnostics are in-memory and should be quicker than 10ms, but just in case
+          // make sure that slower downstream does not terminate the diagnostics interval
+          // pacemaker.
+          .onBackpressureDrop()
           .map(i -> diagnosticsCurrentState(core))
           .takeUntil(s -> s == desiredState);
 

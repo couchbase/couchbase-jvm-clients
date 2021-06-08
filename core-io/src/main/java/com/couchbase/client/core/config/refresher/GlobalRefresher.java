@@ -100,6 +100,9 @@ public class GlobalRefresher {
 
     pollRegistration = Flux
       .interval(POLLER_INTERVAL, core.context().environment().scheduler())
+      // Proposing a new config should be quick, but just in case it gets held up we do
+      // not want to terminate the refresher and just drop the ticks and keep going.
+      .onBackpressureDrop()
       .filter(v -> started)
       .flatMap(ign -> attemptUpdateGlobalConfig(filterEligibleNodes()))
       .subscribe(provider::proposeGlobalConfig);
