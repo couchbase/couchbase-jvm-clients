@@ -265,8 +265,18 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  void updateShouldFailIfNotPresent() {
-    assertThrows(BucketNotFoundException.class, () -> buckets.updateBucket(BucketSettings.create("foobar")));
+  void updateShouldFailIfAbsent() {
+    assertThrows(BucketNotFoundException.class, () -> buckets.updateBucket(BucketSettings.create("does-not-exist")));
+  }
+
+  @Test
+  void getShouldFailIfAbsent() {
+    assertThrows(BucketNotFoundException.class, () -> buckets.getBucket("does-not-exist"));
+  }
+
+  @Test
+  void dropShouldFailIfAbsent() {
+    assertThrows(BucketNotFoundException.class, () -> buckets.dropBucket("does-not-exist"));
   }
 
   @Test
