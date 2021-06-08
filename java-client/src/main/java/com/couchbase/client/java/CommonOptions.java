@@ -111,7 +111,6 @@ public abstract class CommonOptions<SELF extends CommonOptions<SELF>> {
    * @param parentSpan the parent span for this request.
    * @return this options builder for chaining purposes.
    */
-  @Stability.Volatile
   public SELF parentSpan(final RequestSpan parentSpan) {
     this.parentSpan = Optional.ofNullable(parentSpan);
     return self();

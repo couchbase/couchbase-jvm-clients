@@ -119,7 +119,6 @@ public class ReactiveBucket {
    * @param name the name of the scope.
    * @return the {@link ReactiveScope} once opened.
    */
-  @Stability.Volatile
   public ReactiveScope scope(final String name) {
     return scopeCache.computeIfAbsent(name, n -> new ReactiveScope(asyncBucket.scope(n)));
   }
@@ -129,7 +128,6 @@ public class ReactiveBucket {
    *
    * @return the {@link ReactiveScope} once opened.
    */
-  @Stability.Volatile
   public ReactiveScope defaultScope() {
     return scopeCache.computeIfAbsent(
       CollectionIdentifier.DEFAULT_SCOPE,
@@ -159,7 +157,6 @@ public class ReactiveBucket {
    *
    * @return the opened named {@link ReactiveCollection}.
    */
-  @Stability.Volatile
   public ReactiveCollection collection(final String collectionName) {
     return defaultScope().collection(collectionName);
   }

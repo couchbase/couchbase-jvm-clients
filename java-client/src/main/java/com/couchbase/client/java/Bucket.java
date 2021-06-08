@@ -127,7 +127,6 @@ public class Bucket {
    * @param name the name of the scope.
    * @return the {@link Scope} once opened.
    */
-  @Stability.Volatile
   public Scope scope(final String name) {
     return scopeCache.computeIfAbsent(name, n -> new Scope(asyncBucket.scope(n)));
   }
@@ -137,7 +136,6 @@ public class Bucket {
    *
    * @return the {@link Scope} once opened.
    */
-  @Stability.Volatile
   public Scope defaultScope() {
     return scopeCache.computeIfAbsent(
       CollectionIdentifier.DEFAULT_SCOPE,
@@ -167,7 +165,6 @@ public class Bucket {
    *
    * @return the opened named {@link Collection}.
    */
-  @Stability.Volatile
   public Collection collection(final String collectionName) {
     return defaultScope().collection(collectionName);
   }

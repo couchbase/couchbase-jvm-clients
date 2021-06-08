@@ -168,7 +168,6 @@ public class AsyncScope {
    * @param collectionName the collection name.
    * @return the requested collection if successful.
    */
-  @Stability.Volatile
   public AsyncCollection collection(final String collectionName) {
     boolean defaultScopeAndCollection = collectionName.equals(CollectionIdentifier.DEFAULT_COLLECTION)
         && scopeName.equals(CollectionIdentifier.DEFAULT_SCOPE);
@@ -201,7 +200,6 @@ public class AsyncScope {
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Volatile
   public CompletableFuture<QueryResult> query(final String statement) {
     return query(statement, DEFAULT_QUERY_OPTIONS);
   }
@@ -213,7 +211,6 @@ public class AsyncScope {
    * @param options the custom options for this query.
    * @return the {@link QueryResult} once the response arrives successfully.
    */
-  @Stability.Volatile
   public CompletableFuture<QueryResult> query(final String statement, final QueryOptions options) {
     notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
@@ -258,7 +255,6 @@ public class AsyncScope {
    * @param statement the Analytics query statement as a raw string.
    * @return the {@link AnalyticsResult} once the response arrives successfully.
    */
-  @Stability.Volatile
   public CompletableFuture<AnalyticsResult> analyticsQuery(final String statement) {
     return analyticsQuery(statement, DEFAULT_ANALYTICS_OPTIONS);
   }
@@ -270,7 +266,6 @@ public class AsyncScope {
    * @param options the custom options for this analytics query.
    * @return the {@link AnalyticsResult} once the response arrives successfully.
    */
-  @Stability.Volatile
   public CompletableFuture<AnalyticsResult> analyticsQuery(final String statement, final AnalyticsOptions options) {
     notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
     AnalyticsOptions.Built opts = options.build();
@@ -307,6 +302,5 @@ public class AsyncScope {
     request.context().clientContext(opts.clientContext());
     return request;
   }
-
 
 }

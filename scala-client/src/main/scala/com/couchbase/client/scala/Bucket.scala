@@ -61,10 +61,8 @@ class Bucket private[scala] (val async: AsyncBucket) {
   /** Provides a reactive version of this API. */
   lazy val reactive: ReactiveBucket = new ReactiveBucket(async)
 
-  @Stability.Volatile
   lazy val collections = new CollectionManager(reactive.collections)
 
-  @Stability.Volatile
   lazy val viewIndexes = new ViewIndexManager(reactive.viewIndexes)
 
   /** Opens a Couchbase collection resource on the default scope.
@@ -72,7 +70,6 @@ class Bucket private[scala] (val async: AsyncBucket) {
     * @param collectionName the name of the collection
     * @return a created collection resource
     */
-  @Stability.Volatile
   def collection(collectionName: String): Collection = {
     scope(DefaultResources.DefaultScope).collection(collectionName)
   }
@@ -86,13 +83,11 @@ class Bucket private[scala] (val async: AsyncBucket) {
     *
     * @param scopeName the name of the scope
     */
-  @Stability.Volatile
   def scope(scopeName: String): Scope = {
     new Scope(async.scope(scopeName), async.name)
   }
 
   /** Opens and returns the default Couchbase scope. */
-  @Stability.Volatile
   def defaultScope: Scope = {
     scope(DefaultResources.DefaultScope)
   }

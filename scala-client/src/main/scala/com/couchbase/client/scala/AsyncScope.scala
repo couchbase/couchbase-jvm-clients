@@ -38,7 +38,6 @@ import scala.concurrent.{ExecutionContext, Future}
   * @author Graham Pople
   * @since 1.0.0
   */
-@Volatile
 class AsyncScope private[scala] (
     scopeName: String,
     bucketName: String,
@@ -85,7 +84,6 @@ class AsyncScope private[scala] (
     * @return a `Future` containing a `Success(QueryResult)` (which includes any returned rows) if successful, else a
     *         `Failure`
     */
-  @Volatile
   def query(statement: String, options: QueryOptions = QueryOptions()): Future[QueryResult] = {
     queryHandler.queryAsync(statement, options, environment, Some(bucketName), Some(scopeName))
   }

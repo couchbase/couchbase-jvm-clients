@@ -42,7 +42,6 @@ import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
  *
  * @since 3.0.0
  */
-@Stability.Volatile
 public class Scope {
 
   /**
@@ -136,7 +135,6 @@ public class Scope {
    * @param collectionName the collection name.
    * @return the requested collection if successful.
    */
-  @Stability.Volatile
   public Collection collection(final String collectionName) {
     return collectionCache.computeIfAbsent(collectionName, n -> new Collection(asyncScope.collection(n)));
   }
@@ -149,7 +147,6 @@ public class Scope {
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Volatile
   public QueryResult query(final String statement) {
     return query(statement, DEFAULT_QUERY_OPTIONS);
   }
@@ -163,7 +160,6 @@ public class Scope {
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Volatile
   public QueryResult query(final String statement, final QueryOptions options) {
     return block(async().query(statement, options));
   }
@@ -176,7 +172,6 @@ public class Scope {
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Volatile
   public AnalyticsResult analyticsQuery(final String statement) {
     return analyticsQuery(statement, DEFAULT_ANALYTICS_OPTIONS);
   }
@@ -190,7 +185,6 @@ public class Scope {
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Volatile
   public AnalyticsResult analyticsQuery(final String statement, final AnalyticsOptions options) {
     return block(async().analyticsQuery(statement, options));
   }

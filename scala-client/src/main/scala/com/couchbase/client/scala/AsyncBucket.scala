@@ -52,23 +52,19 @@ class AsyncBucket private[scala] (
   private[scala] implicit val ec: ExecutionContext = environment.ec
   val reactive                                     = new ReactiveBucket(this)
 
-  @Stability.Volatile
   lazy val collections = new AsyncCollectionManager(reactive.collections)
 
-  @Stability.Volatile
   lazy val viewIndexes = new AsyncViewIndexManager(reactive.viewIndexes)
 
   /** Opens and returns a Couchbase scope resource.
     *
     * @param scopeName the name of the scope
     */
-  @Stability.Volatile
   def scope(scopeName: String): AsyncScope = {
     new AsyncScope(scopeName, name, core, environment)
   }
 
   /** Opens and returns the default Couchbase scope. */
-  @Stability.Volatile
   def defaultScope: AsyncScope = {
     scope(DefaultResources.DefaultScope)
   }
@@ -84,7 +80,6 @@ class AsyncBucket private[scala] (
     *
     * @return a created collection resource
     */
-  @Stability.Volatile
   def collection(collectionName: String): AsyncCollection = {
     scope(DefaultResources.DefaultScope).collection(collectionName)
   }

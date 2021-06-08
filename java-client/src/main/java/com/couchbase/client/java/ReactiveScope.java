@@ -124,7 +124,6 @@ public class ReactiveScope {
    * @param collectionName the collection name.
    * @return the requested collection if successful.
    */
-  @Stability.Volatile
   public ReactiveCollection collection(final String collectionName) {
     return collectionCache.computeIfAbsent(collectionName, n -> new ReactiveCollection(asyncScope.collection(n)));
   }
@@ -135,7 +134,6 @@ public class ReactiveScope {
    * @param statement the N1QL query statement as a raw string.
    * @return the {@link ReactiveQueryResult} once the response arrives successfully.
    */
-  @Stability.Volatile
   public Mono<ReactiveQueryResult> query(final String statement) {
     return this.query(statement, DEFAULT_QUERY_OPTIONS);
   }
@@ -147,7 +145,6 @@ public class ReactiveScope {
    * @param options the custom options for this query.
    * @return the {@link ReactiveQueryResult} once the response arrives successfully.
    */
-  @Stability.Volatile
   public Mono<ReactiveQueryResult> query(final String statement, final QueryOptions options) {
     notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
@@ -164,7 +161,6 @@ public class ReactiveScope {
    * @param statement the Analytics query statement as a raw string.
    * @return the {@link ReactiveAnalyticsResult} once the response arrives successfully.
    */
-  @Stability.Volatile
   public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement) {
     return analyticsQuery(statement, DEFAULT_ANALYTICS_OPTIONS);
   }
@@ -177,7 +173,6 @@ public class ReactiveScope {
    * @param options the custom options for this analytics query.
    * @return the {@link ReactiveAnalyticsResult} once the response arrives successfully.
    */
-  @Stability.Volatile
   public Mono<ReactiveAnalyticsResult> analyticsQuery(final String statement, final AnalyticsOptions options) {
     notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
     AnalyticsOptions.Built opts = options.build();

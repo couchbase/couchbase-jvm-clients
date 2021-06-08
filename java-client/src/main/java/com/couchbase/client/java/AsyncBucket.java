@@ -137,7 +137,6 @@ public class AsyncBucket {
    * @param name the name of the scope.
    * @return the {@link AsyncScope} once opened.
    */
-  @Stability.Volatile
   public AsyncScope scope(final String name) {
     return maybeCreateAsyncScope(name);
   }
@@ -147,7 +146,6 @@ public class AsyncBucket {
    *
    * @return the {@link AsyncScope} once opened.
    */
-  @Stability.Volatile
   public AsyncScope defaultScope() {
     return maybeCreateAsyncScope(CollectionIdentifier.DEFAULT_SCOPE);
   }
@@ -184,7 +182,6 @@ public class AsyncBucket {
    *
    * @return the opened named {@link AsyncCollection}.
    */
-  @Stability.Volatile
   public AsyncCollection collection(final String collectionName) {
     return defaultScope().collection(collectionName);
   }

@@ -34,7 +34,6 @@ import scala.util.Try
   * @author Graham Pople
   * @since 1.0.0
   */
-@Volatile
 class Scope private[scala] (val async: AsyncScope, bucketName: String) {
   private[scala] implicit val ec: ExecutionContext = async.ec
 
@@ -68,7 +67,6 @@ class Scope private[scala] (val async: AsyncScope, bucketName: String) {
     *
     * @return a `QueryResult`
     */
-  @Volatile
   def query(statement: String, options: QueryOptions = QueryOptions()): Try[QueryResult] = {
     AsyncUtils.block(async.query(statement, options))
   }

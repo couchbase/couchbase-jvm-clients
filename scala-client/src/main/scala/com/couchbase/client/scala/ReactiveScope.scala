@@ -32,7 +32,6 @@ import scala.concurrent.{ExecutionContext, Future}
   * @author Graham Pople
   * @since 1.0.0
   */
-@Volatile
 class ReactiveScope(async: AsyncScope, bucketName: String) {
   private[scala] implicit val ec: ExecutionContext = async.ec
 
@@ -63,7 +62,6 @@ class ReactiveScope(async: AsyncScope, bucketName: String) {
     *
     * @return a `ReactiveQueryResult`
     */
-  @Volatile
   def query(
       statement: String,
       options: QueryOptions = QueryOptions()
