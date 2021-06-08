@@ -28,6 +28,8 @@ import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{Capabilities, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
+import com.couchbase.client.core.error.InvalidArgumentException
+import com.couchbase.client.scala.manager.analytics.ReactiveAnalyticsIndexManager.quoteDataverse
 
 import scala.util.{Failure, Success}
 
@@ -304,5 +306,17 @@ class AnalyticsLinkManagerSpec extends ScalaIntegrationTest {
       case Failure(e: DataverseNotFoundException) =>
       case _                                      => assert(false)
     }
+  }
+
+  @Test
+  def canQuoteCompoundDataverseNames() {
+    assert("`foo`" == quoteDataverse("foo").get)
+    assert("`foo`.`bar`.`zot`" == quoteDataverse("foo/bar/zot").get)
+    assert("`foo`.`bar`.`zot`" == quoteDataverse("foo/bar", "zot").get)
+  }
+
+  @Test
+  def convertsSlashesOnlyinDataverseName() {
+    assert("`foo`.`bar/zot`" == quoteDataverse("foo", "bar/zot").get)
   }
 }

@@ -25,6 +25,11 @@ import com.couchbase.client.core.util.CbThrowables.findCause
 import com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode
 import com.couchbase.client.scala.ReactiveCluster
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, ReactiveAnalyticsResult}
+import com.couchbase.client.scala.manager.analytics.ReactiveAnalyticsIndexManager.{
+  DefaultDataverse,
+  quote,
+  quoteDataverse
+}
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.RowTraversalUtil
 import reactor.core.scala.publisher.{SFlux, SMono}
@@ -34,10 +39,33 @@ import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
 object ReactiveAnalyticsIndexManager {
+  val DefaultDataverse = "Default"
+
   private[scala] def pathForLinks = "/analytics/link/"
 
   private[scala] def pathForLink(scopeName: String, linkName: String) =
     pathForLinks + urlEncode(scopeName.replace('.', '/')) + "/" + urlEncode(linkName)
+
+  private def quote(s: String): Try[String] = {
+    if (s.contains("`")) {
+      Failure(new IllegalArgumentException(s"Value [${redactMeta(s)}] may not contain backticks."))
+    } else {
+      Success("`" + s + "`")
+    }
+  }
+
+  /** SCBC-231 - Handle compound dataverse names.
+    */
+  private[scala] def quoteDataverse(
+      dataverseName: String,
+      otherComponents: String*
+  ): Try[String] = {
+    val t1: Iterator[Try[String]] = (dataverseName.split("/", -1) ++ otherComponents)
+      .map(v => quote(v))
+      .toIterator
+    val t2: Try[Seq[String]] = RowTraversalUtil.traverse(t1)
+    t2.map(v => v.mkString("."))
+  }
 }
 
 class ReactiveAnalyticsIndexManager(
@@ -53,7 +81,7 @@ class ReactiveAnalyticsIndexManager(
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[Unit] = {
-    quote(dataverseName) match {
+    quoteDataverse(dataverseName) match {
       case Success(quoted) =>
         val statement: String = {
           val sb = new StringBuilder("CREATE DATAVERSE " + quoted)
@@ -74,7 +102,7 @@ class ReactiveAnalyticsIndexManager(
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[Unit] = {
-    quote(dataverseName) match {
+    quoteDataverse(dataverseName) match {
       case Success(quoted) =>
         val statement = {
           val out = "DROP DATAVERSE " + quoted
@@ -98,7 +126,7 @@ class ReactiveAnalyticsIndexManager(
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[Unit] = {
     val statement: Try[String] = for {
-      quoted1 <- quoteMulti(dataverseName, Some(datasetName))
+      quoted1 <- quoteDataverse(dataverseName.getOrElse(DefaultDataverse), datasetName)
       quoted2 <- quote(bucketName)
       statement <- {
         val statement = {
@@ -130,7 +158,7 @@ class ReactiveAnalyticsIndexManager(
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[Unit] = {
-    quoteMulti(dataverseName, Some(datasetName)) match {
+    quoteDataverse(dataverseName.getOrElse(DefaultDataverse), datasetName) match {
       case Success(quoted) =>
         val statement = {
           val out = "DROP DATASET " + quoted
@@ -164,7 +192,7 @@ class ReactiveAnalyticsIndexManager(
   ): SMono[Unit] = {
     val statement: Try[String] = for {
       quoted1 <- quote(indexName)
-      quoted2 <- quoteMulti(dataverseName, Some(datasetName))
+      quoted2 <- quoteDataverse(dataverseName.getOrElse(DefaultDataverse), datasetName)
       statement <- {
         val out = "CREATE INDEX " + quoted1
         val next =
@@ -202,7 +230,7 @@ class ReactiveAnalyticsIndexManager(
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[Unit] = {
-    quoteMulti(dataverseName, Some(datasetName), Some(indexName)) match {
+    quoteDataverse(dataverseName.getOrElse(DefaultDataverse), datasetName, indexName) match {
       case Success(quoted) =>
         val statement = {
           val out = "DROP INDEX " + quoted
@@ -223,24 +251,6 @@ class ReactiveAnalyticsIndexManager(
     cluster
       .analyticsQuery("SELECT d.* FROM Metadata.`Dataset` d WHERE d.DataverseName <> \"Metadata\"")
       .flatMapMany(result => result.rowsAs[AnalyticsIndex])
-  }
-
-  private def quote(s: String): Try[String] = {
-    if (s.contains("`")) {
-      Failure(new IllegalArgumentException(s"Value [${redactMeta(s)}] may not contain backticks."))
-    } else {
-      Success("`" + s + "`")
-    }
-  }
-
-  private def quoteMulti(s: Option[String]*): Try[String] = {
-    val quoted: Seq[Try[String]] = s
-      .filter(_.isDefined)
-      .map(v => quote(v.get))
-
-    RowTraversalUtil
-      .traverse(quoted.iterator)
-      .map(_.mkString("."))
   }
 
   private def exec(
