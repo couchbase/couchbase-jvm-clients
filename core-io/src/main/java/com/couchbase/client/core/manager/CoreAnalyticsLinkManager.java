@@ -118,7 +118,7 @@ public class CoreAnalyticsLinkManager {
    * @param linkType (nullable)
    * @param linkName (nullable) if present, dataverseName must also be present
    */
-  public CompletableFuture<byte[]> getAllLinks(String dataverseName, String linkType, String linkName, CoreCommonOptions options) {
+  public CompletableFuture<byte[]> getLinks(String dataverseName, String linkType, String linkName, CoreCommonOptions options) {
     if (linkName != null && dataverseName == null) {
       throw InvalidArgumentException.fromMessage("When link name is specified, must also specify dataverse");
     }

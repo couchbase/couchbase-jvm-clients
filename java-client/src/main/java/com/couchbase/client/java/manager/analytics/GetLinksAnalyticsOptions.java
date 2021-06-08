@@ -22,22 +22,22 @@ import com.couchbase.client.java.manager.analytics.link.AnalyticsLinkType;
 
 import java.util.Optional;
 
-public class GetAllLinksAnalyticsOptions extends CommonOptions<GetAllLinksAnalyticsOptions> {
+public class GetLinksAnalyticsOptions extends CommonOptions<GetLinksAnalyticsOptions> {
   private Optional<String> dataverseName = Optional.empty();
   private Optional<AnalyticsLinkType> linkType = Optional.empty();
   private Optional<String> name = Optional.empty();
 
-  private GetAllLinksAnalyticsOptions() {
+  private GetLinksAnalyticsOptions() {
   }
 
-  public static GetAllLinksAnalyticsOptions getAllLinksAnalyticsOptions() {
-    return new GetAllLinksAnalyticsOptions();
+  public static GetLinksAnalyticsOptions getLinksAnalyticsOptions() {
+    return new GetLinksAnalyticsOptions();
   }
 
   /**
    * Only get links in this dataverse.
    */
-  public GetAllLinksAnalyticsOptions dataverseName(String dataverseName) {
+  public GetLinksAnalyticsOptions dataverseName(String dataverseName) {
     this.dataverseName = Optional.ofNullable(dataverseName);
     return this;
   }
@@ -50,7 +50,7 @@ public class GetAllLinksAnalyticsOptions extends CommonOptions<GetAllLinksAnalyt
    * If there is no link with this name in the specified dataverse,
    * the result is an empty list.
    */
-  public GetAllLinksAnalyticsOptions name(String linkName) {
+  public GetLinksAnalyticsOptions name(String linkName) {
     this.name = Optional.ofNullable(linkName);
     return this;
   }
@@ -58,7 +58,7 @@ public class GetAllLinksAnalyticsOptions extends CommonOptions<GetAllLinksAnalyt
   /**
    * Only get links of this type.
    */
-  public GetAllLinksAnalyticsOptions linkType(AnalyticsLinkType linkType) {
+  public GetLinksAnalyticsOptions linkType(AnalyticsLinkType linkType) {
     this.linkType = Optional.ofNullable(linkType);
     return this;
   }

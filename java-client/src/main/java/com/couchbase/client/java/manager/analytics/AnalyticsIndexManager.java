@@ -180,11 +180,11 @@ public class AnalyticsIndexManager {
     block(async.dropLink(linkName, dataverse, options));
   }
 
-  public List<AnalyticsLink> getAllLinks() {
-    return block(async.getAllLinks());
+  public List<AnalyticsLink> getLinks() {
+    return block(async.getLinks());
   }
 
-  public List<AnalyticsLink> getAllLinks(GetAllLinksAnalyticsOptions options) {
-    return block(async.getAllLinks(options));
+  public List<AnalyticsLink> getLinks(GetLinksAnalyticsOptions options) {
+    return block(async.getLinks(options));
   }
 }

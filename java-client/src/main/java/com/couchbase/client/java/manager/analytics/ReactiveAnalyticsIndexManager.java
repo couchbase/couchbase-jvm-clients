@@ -172,11 +172,11 @@ public class ReactiveAnalyticsIndexManager {
     return toMono(() -> async.dropLink(linkName, dataverse, options));
   }
 
-  public Flux<AnalyticsLink> getAllLinks() {
-    return toFlux(async::getAllLinks);
+  public Flux<AnalyticsLink> getLinks() {
+    return toFlux(async::getLinks);
   }
 
-  public Flux<AnalyticsLink> getAllLinks(GetAllLinksAnalyticsOptions options) {
-    return toFlux(() -> async.getAllLinks(options));
+  public Flux<AnalyticsLink> getLinks(GetLinksAnalyticsOptions options) {
+    return toFlux(() -> async.getLinks(options));
   }
 }

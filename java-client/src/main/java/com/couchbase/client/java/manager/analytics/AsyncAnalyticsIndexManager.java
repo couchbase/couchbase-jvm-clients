@@ -59,7 +59,7 @@ import static com.couchbase.client.java.manager.analytics.DropLinkAnalyticsOptio
 import static com.couchbase.client.java.manager.analytics.GetAllDatasetsAnalyticsOptions.getAllDatasetsAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.GetAllDataversesAnalyticsOptions.getAllDataversesAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.GetAllIndexesAnalyticsOptions.getAllIndexesAnalyticsOptions;
-import static com.couchbase.client.java.manager.analytics.GetAllLinksAnalyticsOptions.getAllLinksAnalyticsOptions;
+import static com.couchbase.client.java.manager.analytics.GetLinksAnalyticsOptions.getLinksAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.GetPendingMutationsAnalyticsOptions.getPendingMutationsAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.ReplaceLinkAnalyticsOptions.replaceLinkAnalyticsOptions;
 import static java.util.Collections.singletonMap;
@@ -334,16 +334,16 @@ public class AsyncAnalyticsIndexManager {
     return linkManager.dropLink(linkName, dataverse, options.build());
   }
 
-  public CompletableFuture<List<AnalyticsLink>> getAllLinks() {
-    return getAllLinks(getAllLinksAnalyticsOptions());
+  public CompletableFuture<List<AnalyticsLink>> getLinks() {
+    return getLinks(getLinksAnalyticsOptions());
   }
 
-  public CompletableFuture<List<AnalyticsLink>> getAllLinks(GetAllLinksAnalyticsOptions options) {
-    GetAllLinksAnalyticsOptions.Built opts = options.build();
+  public CompletableFuture<List<AnalyticsLink>> getLinks(GetLinksAnalyticsOptions options) {
+    GetLinksAnalyticsOptions.Built opts = options.build();
     String dataverseName = opts.dataverseName().orElse(null);
     String linkType = opts.linkType().map(AnalyticsLinkType::wireName).orElse(null);
     String linkName = opts.name().orElse(null);
-    return linkManager.getAllLinks(dataverseName, linkType, linkName, opts)
+    return linkManager.getLinks(dataverseName, linkType, linkName, opts)
         .thenApply(responseBytes ->
             Mapper.decodeInto(responseBytes, new TypeReference<List<AnalyticsLink>>() {
             }));
