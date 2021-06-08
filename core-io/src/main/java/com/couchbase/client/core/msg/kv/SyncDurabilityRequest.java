@@ -42,10 +42,13 @@ public interface SyncDurabilityRequest {
       switch (level.get()) {
         case MAJORITY:
           span.attribute(TracingIdentifiers.ATTR_DURABILITY, "majority");
+          break;
         case MAJORITY_AND_PERSIST_TO_ACTIVE:
           span.attribute(TracingIdentifiers.ATTR_DURABILITY, "majority_and_persist_active");
+          break;
         case PERSIST_TO_MAJORITY:
           span.attribute(TracingIdentifiers.ATTR_DURABILITY, "persist_majority");
+          break;
       }
     }
   }

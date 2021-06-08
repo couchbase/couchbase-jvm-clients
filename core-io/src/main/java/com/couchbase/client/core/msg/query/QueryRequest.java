@@ -36,6 +36,7 @@ import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import java.util.TreeMap;
@@ -162,7 +163,7 @@ public class QueryRequest
   @Override
   public String toString() {
     return "QueryRequest{" +
-      "query=" + redactUser(new String(query)) +
+      "query=" + redactUser(new String(query, StandardCharsets.UTF_8)) +
       ", statement='" + redactUser(statement) + '\'' +
       ", idempotent=" + idempotent +
       ", contextId='" + contextId + '\'' +
