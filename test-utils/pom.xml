@@ -27,7 +27,7 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
-            <version>1.14.3</version>
+            <version>1.15.3</version>
         </dependency>
         <dependency>
             <groupId>io.projectreactor.tools</groupId>
@@ -46,12 +46,12 @@
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
-            <version>4.0.3</version>
+            <version>4.1.0</version>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
-            <version>4.1.63.Final</version>
+            <version>4.1.65.Final</version>
         </dependency>
     </dependencies>
 

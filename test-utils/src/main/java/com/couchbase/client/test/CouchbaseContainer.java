@@ -17,13 +17,13 @@
 package com.couchbase.client.test;
 
 import com.github.dockerjava.api.command.ExecCreateCmdResponse;
-import com.github.dockerjava.core.command.ExecStartResultCallback;
 import org.apache.commons.compress.utils.Sets;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.SocatContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 import org.testcontainers.images.builder.Transferable;
+import org.testcontainers.shaded.com.github.dockerjava.core.command.ExecStartResultCallback;
 import org.testcontainers.shaded.org.apache.commons.io.IOUtils;
 import org.testcontainers.utility.Base58;
 import org.testcontainers.utility.ThrowingFunction;
