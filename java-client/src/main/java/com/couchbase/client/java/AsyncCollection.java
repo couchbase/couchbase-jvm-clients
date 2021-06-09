@@ -471,7 +471,7 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH, opts.parentSpan().orElse(null));
-    long encodedExpiry = expiry.encode(environment.eventBus());
+    long encodedExpiry = expiry.encode();
     GetAndTouchRequest request = new GetAndTouchRequest(
       id, timeout, coreContext, collectionIdentifier, retryStrategy, encodedExpiry, span
     );
@@ -690,7 +690,7 @@ public class AsyncCollection {
     }
     long end = System.nanoTime();
 
-    long expiry = opts.expiry().encode(environment.eventBus());
+    long expiry = opts.expiry().encode();
     InsertRequest request = new InsertRequest(id, encoded.encoded(), expiry, encoded.flags(),
       timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context()
@@ -756,7 +756,7 @@ public class AsyncCollection {
     }
     long end = System.nanoTime();
 
-    long expiry = opts.expiry().encode(environment.eventBus());
+    long expiry = opts.expiry().encode();
     final UpsertRequest request = new UpsertRequest(id, encoded.encoded(), expiry, opts.preserveExpiry(), encoded.flags(),
       timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context()
@@ -822,7 +822,7 @@ public class AsyncCollection {
     }
     long end = System.nanoTime();
 
-    long expiry = opts.expiry().encode(environment.eventBus());
+    long expiry = opts.expiry().encode();
     ReplaceRequest request = new ReplaceRequest(id, encoded.encoded(), expiry, opts.preserveExpiry(), encoded.flags(),
       timeout, opts.cas(), coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
     request.context()
@@ -872,7 +872,7 @@ public class AsyncCollection {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_TOUCH, opts.parentSpan().orElse(null));
-    long encodedExpiry = expiry.encode(environment.eventBus());
+    long encodedExpiry = expiry.encode();
     TouchRequest request = new TouchRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
         encodedExpiry, span);
     request.context().clientContext(opts.clientContext());
@@ -1086,7 +1086,7 @@ public class AsyncCollection {
       // xattrs come first
       commands.sort(Comparator.comparing(v -> !v.xattr()));
 
-      long expiry = opts.expiry().encode(environment.eventBus());
+      long expiry = opts.expiry().encode();
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, bucketConfig, retryStrategy, id,
           opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT,
           opts.accessDeleted(), opts.createAsDeleted(), commands, expiry, opts.preserveExpiry(), opts.cas(),

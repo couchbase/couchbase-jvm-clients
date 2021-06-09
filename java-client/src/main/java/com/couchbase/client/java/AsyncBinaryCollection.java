@@ -203,7 +203,7 @@ public class AsyncBinaryCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_INCREMENT, opts.parentSpan().orElse(null));
 
-    long expiry = opts.expiry().encode(environment.eventBus());
+    long expiry = opts.expiry().encode();
     IncrementRequest request = new IncrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
       opts.delta(), opts.initial(), expiry, opts.durabilityLevel(), span);
     request.context().clientContext(opts.clientContext());
@@ -245,7 +245,7 @@ public class AsyncBinaryCollection {
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
     RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_DECREMENT, opts.parentSpan().orElse(null));
 
-    long expiry = opts.expiry().encode(environment.eventBus());
+    long expiry = opts.expiry().encode();
     DecrementRequest request = new DecrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
       opts.delta(), opts.initial(), expiry, opts.durabilityLevel(), span);
     request.context().clientContext(opts.clientContext());
