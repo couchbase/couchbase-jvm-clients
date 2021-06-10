@@ -54,6 +54,7 @@ import com.couchbase.client.kotlin.codec.TypeRef
 import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.internal.toOptional
+import com.couchbase.client.kotlin.kv.Counter
 import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.kv.ExistsResult
 import com.couchbase.client.kotlin.kv.Expiry
@@ -69,6 +70,8 @@ import com.couchbase.client.kotlin.kv.internal.encodeInSpan
 import com.couchbase.client.kotlin.kv.internal.levelIfSynchronous
 import com.couchbase.client.kotlin.kv.internal.observe
 import com.couchbase.client.kotlin.kv.internal.subdocGet
+import com.couchbase.client.kotlin.samples.counterGenerateDocumentIds
+import com.couchbase.client.kotlin.samples.counterRateLimiting
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
@@ -91,6 +94,13 @@ public class Collection internal constructor(
 
     internal val defaultJsonSerializer: JsonSerializer = env.jsonSerializer
     internal val defaultTranscoder: Transcoder = env.transcoder
+
+    /**
+     * Provides access to operations that apply only to binary documents.
+     *
+     * This is also where the counter increment and decrement operations live.
+     */
+    public val binary: BinaryCollection = BinaryCollection(this)
 
     private fun TimeoutConfig.kvTimeout(durability: Durability): Duration =
         if (durability.isPersistent()) kvDurableTimeout() else kvTimeout()
@@ -664,6 +674,25 @@ public class Collection internal constructor(
         }
     }
 
+    /**
+     * Returns a counter backed by a document on the server.
+     *
+     * @param documentId the ID of the document to hold the counter value
+     * @param expiry how long the counter document should exist before the counter is reset.
+     * The expiry param is ignored if the counter document already exists.
+     * @param durability durability requirements for counter operations
+     *
+     * @sample counterRateLimiting
+     * @sample counterGenerateDocumentIds
+     */
+    @VolatileCouchbaseApi
+    public fun counter(
+        documentId: String,
+        common: CommonOptions = CommonOptions.Default,
+        durability: Durability = Durability.disabled(),
+        expiry: Expiry = Expiry.none()
+    ): Counter = Counter(this, documentId, common, durability, expiry)
+
     internal suspend inline fun <RESPONSE : Response, RESULT> exec(
         request: KeyValueRequest<RESPONSE>,
         common: CommonOptions,
@@ -687,7 +716,7 @@ public class Collection internal constructor(
 
 internal fun <R : Response> Request<R>.logicallyComplete() = context().logicallyComplete()
 
-private fun validateDocumentId(id: String): String {
+internal fun validateDocumentId(id: String): String {
     require(id.isNotEmpty()) { "Document ID must not be empty." }
     return id
 }
