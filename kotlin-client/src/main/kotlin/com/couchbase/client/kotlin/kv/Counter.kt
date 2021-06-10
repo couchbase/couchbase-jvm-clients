@@ -21,6 +21,7 @@ import com.couchbase.client.kotlin.Collection
 import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
+import kotlin.math.absoluteValue
 
 /**
  * A counter backed by a document on Couchbase Server.
@@ -95,8 +96,6 @@ public class Counter internal constructor(
 // calculates absolute value of a Long, returning the result as an unsigned long
 // to handle that pesky edge condition at Long.MIN_VALUE
 private fun absUnsigned(value: Long): ULong {
-    if (value >= 0) return value.toULong()
-
-    return if (value > Long.MIN_VALUE) (-value).toULong()
-    else (value + 1).unaryMinus().toULong() + 1u
+    return if (value == Long.MIN_VALUE) Long.MAX_VALUE.toULong() + 1u
+    else value.absoluteValue.toULong()
 }
