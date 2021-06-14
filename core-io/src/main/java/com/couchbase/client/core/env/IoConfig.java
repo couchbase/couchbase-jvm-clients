@@ -19,6 +19,9 @@ package com.couchbase.client.core.env;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.CircuitBreaker;
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
+import com.couchbase.client.core.node.MemcachedHashingStrategy;
+import com.couchbase.client.core.node.Sdk2CompatibleMemcachedHashingStrategy;
+import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.AbstractPooledEndpointServiceConfig;
 import com.couchbase.client.core.service.ServiceType;
 
@@ -30,6 +33,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 public class IoConfig {
 
@@ -43,6 +48,7 @@ public class IoConfig {
   public static final int DEFAULT_MAX_HTTP_CONNECTIONS = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS;
   public static final Duration DEFAULT_IDLE_HTTP_CONNECTION_TIMEOUT = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME;
   public static final Duration DEFAULT_CONFIG_IDLE_REDIAL_TIMEOUT = Duration.ofMinutes(5);
+  public static final MemcachedHashingStrategy DEFAULT_MEMCACHED_HASHING_STRATEGY = StandardMemcachedHashingStrategy.INSTANCE;
 
   private final boolean mutationTokensEnabled;
   private final Duration configPollInterval;
@@ -62,6 +68,7 @@ public class IoConfig {
   private final int maxHttpConnections;
   private final Duration idleHttpConnectionTimeout;
   private final Duration configIdleRedialTimeout;
+  private final MemcachedHashingStrategy memcachedHashingStrategy;
 
   private IoConfig(Builder builder) {
     mutationTokensEnabled = builder.mutationTokensEnabled;
@@ -86,6 +93,7 @@ public class IoConfig {
     maxHttpConnections = builder.maxHttpConnections;
     idleHttpConnectionTimeout = builder.idleHttpConnectionTimeout;
     configIdleRedialTimeout = builder.configIdleRedialTimeout;
+    memcachedHashingStrategy = builder.memcachedHashingStrategy;
   }
 
   public static IoConfig create() {
@@ -179,6 +187,22 @@ public class IoConfig {
     return builder().configIdleRedialTimeout(configIdleRedialTimeout);
   }
 
+  /**
+   * Allows to customize the hashing strategy for memcached buckets.
+   * <p>
+   * Usually the {@link MemcachedHashingStrategy} should only be customized if i.e. the SDK is upgraded from
+   * Java SDK 2 and the documents in the bucket must be preserved. In this case, the
+   * {@link Sdk2CompatibleMemcachedHashingStrategy} must be chosen. If it is used though, keep in mind that it is
+   * not compatible with other SDKs, so we always recommend to use the default {@link StandardMemcachedHashingStrategy}
+   * by default.
+   *
+   * @param memcachedHashingStrategy the strategy to use.
+   * @return this {@link Builder} for chaining purposes.
+   */
+  public static Builder memcachedHashingStrategy(MemcachedHashingStrategy memcachedHashingStrategy) {
+    return builder().memcachedHashingStrategy(memcachedHashingStrategy);
+  }
+
   public CircuitBreakerConfig kvCircuitBreakerConfig() {
     return kvCircuitBreakerConfig;
   }
@@ -256,6 +280,10 @@ public class IoConfig {
     return configIdleRedialTimeout;
   }
 
+  public MemcachedHashingStrategy memcachedHashingStrategy() {
+    return memcachedHashingStrategy;
+  }
+
   /**
    * Returns this config as a map so it can be exported into i.e. JSON for display.
    */
@@ -280,6 +308,7 @@ public class IoConfig {
     export.put("maxHttpConnections", maxHttpConnections);
     export.put("idleHttpConnectionTimeoutMs", idleHttpConnectionTimeout.toMillis());
     export.put("configIdleRedialTimeoutMs", configIdleRedialTimeout.toMillis());
+    export.put("memcachedHashingStrategy", memcachedHashingStrategy.getClass().getSimpleName());
     return export;
   }
 
@@ -303,6 +332,7 @@ public class IoConfig {
     private int maxHttpConnections = DEFAULT_MAX_HTTP_CONNECTIONS;
     private Duration idleHttpConnectionTimeout = DEFAULT_IDLE_HTTP_CONNECTION_TIMEOUT;
     private Duration configIdleRedialTimeout = DEFAULT_CONFIG_IDLE_REDIAL_TIMEOUT;
+    private MemcachedHashingStrategy memcachedHashingStrategy = DEFAULT_MEMCACHED_HASHING_STRATEGY;
 
     public IoConfig build() {
       return new IoConfig(this);
@@ -488,5 +518,23 @@ public class IoConfig {
       this.configIdleRedialTimeout = configIdleRedialTimeout;
       return this;
     }
+
+    /**
+     * Allows to customize the hashing strategy for memcached buckets.
+     * <p>
+     * Usually the {@link MemcachedHashingStrategy} should only be customized if i.e. the SDK is upgraded from
+     * Java SDK 2 and the documents in the bucket must be preserved. In this case, the
+     * {@link Sdk2CompatibleMemcachedHashingStrategy} must be chosen. If it is used though, keep in mind that it is
+     * not compatible with other SDKs, so we always recommend to use the default {@link StandardMemcachedHashingStrategy}
+     * by default.
+     *
+     * @param memcachedHashingStrategy the strategy to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public Builder memcachedHashingStrategy(final MemcachedHashingStrategy memcachedHashingStrategy) {
+      this.memcachedHashingStrategy = notNull(memcachedHashingStrategy, "MemcachedHashingStrategy");
+      return this;
+    }
+
   }
 }
