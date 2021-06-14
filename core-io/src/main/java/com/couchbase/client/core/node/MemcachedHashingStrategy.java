@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.core.node;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.config.NodeInfo;
 
 /**
@@ -22,6 +23,7 @@ import com.couchbase.client.core.config.NodeInfo;
  *
  * @since 2.3.6
  */
+@Stability.Internal
 public interface MemcachedHashingStrategy {
 
     /**

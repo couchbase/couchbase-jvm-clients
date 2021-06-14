@@ -74,7 +74,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
         super(uuid, name, BucketNodeLocator.KETAMA, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities,
           origin, clusterCapabilities, rev, revEpoch);
         this.ketamaNodes = new TreeMap<>();
-        this.hashingStrategy = StandardMemcachedHashingStrategy.INSTANCE;
+        this.hashingStrategy = env.ioConfig().memcachedHashingStrategy();
         populateKetamaNodes();
     }
 
