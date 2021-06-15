@@ -60,10 +60,10 @@ object ReactiveAnalyticsIndexManager {
       dataverseName: String,
       otherComponents: String*
   ): Try[String] = {
-    val t1: Iterator[Try[String]] = (dataverseName.split("/", -1) ++ otherComponents)
+    val t1 = (dataverseName.split("/", -1) ++ otherComponents)
       .map(v => quote(v))
       .toIterator
-    val t2: Try[Seq[String]] = RowTraversalUtil.traverse(t1)
+    val t2 = RowTraversalUtil.traverse(t1)
     t2.map(v => v.mkString("."))
   }
 }
