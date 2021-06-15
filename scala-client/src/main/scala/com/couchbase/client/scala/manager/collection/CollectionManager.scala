@@ -55,7 +55,7 @@ class CollectionManager(reactive: ReactiveCollectionManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Try[Seq[ScopeSpec]] = {
-    Try(reactive.getAllScopes(timeout, retryStrategy).collectSeq.block())
+    Try(reactive.getAllScopes(timeout, retryStrategy).collectSeq().block())
   }
 
   def createCollection(

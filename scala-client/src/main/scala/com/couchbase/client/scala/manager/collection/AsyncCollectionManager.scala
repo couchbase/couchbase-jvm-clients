@@ -55,7 +55,7 @@ class AsyncCollectionManager(reactive: ReactiveCollectionManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Seq[ScopeSpec]] = {
-    reactive.getAllScopes(timeout, retryStrategy).collectSeq.toFuture
+    reactive.getAllScopes(timeout, retryStrategy).collectSeq().toFuture
   }
 
   def createCollection(
