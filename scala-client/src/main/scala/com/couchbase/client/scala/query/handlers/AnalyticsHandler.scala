@@ -19,15 +19,30 @@ package com.couchbase.client.scala.query.handlers
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest
 import com.couchbase.client.scala.HandlerBasicParams
-import com.couchbase.client.scala.analytics.AnalyticsOptions
+import com.couchbase.client.scala.analytics.{
+  AnalyticsMetaData,
+  AnalyticsMetrics,
+  AnalyticsOptions,
+  AnalyticsResult,
+  AnalyticsStatus,
+  AnalyticsWarning,
+  ReactiveAnalyticsResult
+}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.transformers.JacksonTransformers
-import com.couchbase.client.scala.util.{DurationConversions, Validate}
+import com.couchbase.client.scala.util.{DurationConversions, FutureConversions, Validate}
+import reactor.core.scala.publisher.SMono
 
+import scala.concurrent.Future
 import scala.concurrent.duration.Duration
-import scala.util.Try
+import scala.util.{Success, Try}
+import scala.compat.java8.OptionConverters._
+import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.jdk.CollectionConverters._
 
 /**
   * Handles requests and responses for Analytics operations.
@@ -65,6 +80,10 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
       val params = options.encode()
       params.put("statement", statement)
 
+      if (bucket.isDefined && scope.isDefined) {
+        params.put("query_context", AnalyticsRequest.queryContext(bucket.get, scope.get))
+      }
+
       Try(JacksonTransformers.MAPPER.writeValueAsString(params)).map(queryStr => {
         val queryBytes = queryStr.getBytes(CharsetUtil.UTF_8)
 
@@ -89,5 +108,93 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
         )
       })
     }
+  }
+
+  def queryAsync(
+      request: AnalyticsRequest
+  )(implicit ec: ExecutionContext): Future[AnalyticsResult] = {
+    hp.core.send(request)
+
+    val ret: Future[AnalyticsResult] = FutureConversions
+      .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+      .flatMap(
+        response =>
+          FutureConversions
+            .javaFluxToScalaFlux(response.rows())
+            .collectSeq()
+            .flatMap(
+              rows =>
+                FutureConversions
+                  .javaMonoToScalaMono(response.trailer())
+                  .map(trailer => {
+                    val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
+                      .map(
+                        warnings =>
+                          ErrorCodeAndMessage
+                            .fromJsonArray(warnings)
+                            .asScala
+                            .map(codeAndMessage => AnalyticsWarning(codeAndMessage))
+                      )
+                      .getOrElse(Seq.empty)
+
+                    AnalyticsResult(
+                      rows,
+                      AnalyticsMetaData(
+                        response.header().requestId(),
+                        response.header().clientContextId().orElse(""),
+                        response.header().signature.asScala,
+                        AnalyticsMetrics.fromBytes(trailer.metrics),
+                        warnings,
+                        AnalyticsStatus.from(trailer.status)
+                      )
+                    )
+                  })
+            )
+      )
+      .toFuture
+
+    ret.onComplete(_ => request.context.logicallyComplete())
+    ret
+  }
+
+  def queryReactive(request: AnalyticsRequest): SMono[ReactiveAnalyticsResult] = {
+    SMono.defer(() => {
+      hp.core.send(request)
+
+      FutureConversions
+        .javaCFToScalaMono(request, request.response(), false)
+        .map(response => {
+          val meta: SMono[AnalyticsMetaData] = FutureConversions
+            .javaMonoToScalaMono(response.trailer())
+            .map(trailer => {
+              val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
+                .map(
+                  warnings =>
+                    ErrorCodeAndMessage
+                      .fromJsonArray(warnings)
+                      .asScala
+                      .map(codeAndMessage => AnalyticsWarning(codeAndMessage))
+                )
+                .getOrElse(Seq.empty)
+
+              AnalyticsMetaData(
+                response.header().requestId(),
+                response.header().clientContextId().orElse(""),
+                response.header().signature.asScala,
+                AnalyticsMetrics.fromBytes(trailer.metrics()),
+                warnings,
+                AnalyticsStatus.from(trailer.status)
+              )
+            })
+            .doOnTerminate(() => request.context().logicallyComplete())
+
+          val rows = FutureConversions.javaFluxToScalaFlux(response.rows())
+
+          ReactiveAnalyticsResult(
+            rows,
+            meta
+          )
+        })
+    })
   }
 }

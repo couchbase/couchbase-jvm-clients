@@ -155,47 +155,8 @@ class ReactiveCluster(val async: AsyncCluster) {
       options: AnalyticsOptions
   ): SMono[ReactiveAnalyticsResult] = {
     async.analyticsHandler.request(statement, options, async.core, async.env, None, None) match {
-      case Success(request) =>
-        SMono.defer(() => {
-          async.core.send(request)
-
-          FutureConversions
-            .javaCFToScalaMono(request, request.response(), false)
-            .map(response => {
-              val meta: SMono[AnalyticsMetaData] = FutureConversions
-                .javaMonoToScalaMono(response.trailer())
-                .map(trailer => {
-                  val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
-                    .map(
-                      warnings =>
-                        ErrorCodeAndMessage
-                          .fromJsonArray(warnings)
-                          .asScala
-                          .map(codeAndMessage => AnalyticsWarning(codeAndMessage))
-                    )
-                    .getOrElse(Seq.empty)
-
-                  AnalyticsMetaData(
-                    response.header().requestId(),
-                    response.header().clientContextId().orElse(""),
-                    response.header().signature.asScala,
-                    AnalyticsMetrics.fromBytes(trailer.metrics()),
-                    warnings,
-                    AnalyticsStatus.from(trailer.status)
-                  )
-                })
-                .doOnTerminate(() => request.context().logicallyComplete())
-
-              val rows = FutureConversions.javaFluxToScalaFlux(response.rows())
-
-              ReactiveAnalyticsResult(
-                rows,
-                meta
-              )
-            })
-        })
-
-      case Failure(err) => SMono.raiseError(err)
+      case Success(request) => async.analyticsHandler.queryReactive(request)
+      case Failure(err)     => SMono.raiseError(err)
     }
   }
 

@@ -167,3 +167,7 @@ case class AnalyticsOptions(
     out
   }
 }
+
+object AnalyticsOptions {
+  private[scala] val Default = AnalyticsOptions()
+}

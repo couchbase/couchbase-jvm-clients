@@ -17,12 +17,13 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult, ReactiveQueryResult}
 import com.couchbase.client.scala.util.AsyncUtils
 import reactor.core.scala.publisher.SMono
 
-import scala.concurrent.ExecutionContext
-import scala.util.Try
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 /** Represents a Couchbase scope resource.
   *
@@ -56,7 +57,7 @@ class Scope private[scala] (val async: AsyncScope, bucketName: String) {
   /** Performs a N1QL query against the cluster.
     *
     * This is a blocking API.  See [[Scope.async]] for an Future-based async version of this API, and
-    * [[Scope.reactive]] for a reactive version.
+    * [[Scope.reactive]] for a reactive version.  The reactive version includes backpressure-aware row streaming.
     *
     * The reason to use this Scope-based variant over `Cluster.query` is that it will automatically provide
     * the "query_context" parameter to the query service, allowing queries to be specified on scopes and collections
@@ -69,5 +70,27 @@ class Scope private[scala] (val async: AsyncScope, bucketName: String) {
     */
   def query(statement: String, options: QueryOptions = QueryOptions()): Try[QueryResult] = {
     AsyncUtils.block(async.query(statement, options))
+  }
+
+  /** Performs an Analytics query against the cluster.
+    *
+    * This is a blocking API.  See [[Scope.async]] for an Future-based async version of this API, and
+    * [[Scope.reactive]] for a reactive version.  The reactive version includes backpressure-aware row streaming.
+    *
+    * The reason to use this Scope-based variant over `Cluster.analyticsQuery` is that it will automatically provide
+    * the "query_context" parameter to the query service, allowing queries to be performed on collections
+    * without having to fully specify their bucket and scope names in the query statement.
+    *
+    * @param statement the Analytics query to execute
+    * @param options   any query options - see [[com.couchbase.client.scala.analytics.AnalyticsOptions]] for documentation
+    *
+    * @return a `Try` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  def analyticsQuery(
+      statement: String,
+      options: AnalyticsOptions = AnalyticsOptions.Default
+  ): Try[AnalyticsResult] = {
+    AsyncUtils.block(async.analyticsQuery(statement, options))
   }
 }

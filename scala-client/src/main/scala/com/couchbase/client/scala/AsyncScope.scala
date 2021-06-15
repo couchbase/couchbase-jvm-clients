@@ -18,12 +18,14 @@ package com.couchbase.client.scala
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.io.CollectionIdentifier
+import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.query.handlers.QueryHandler
+import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler}
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
 
 import java.util.Optional
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 /** Represents a Couchbase scope resource.
   *
@@ -47,6 +49,7 @@ class AsyncScope private[scala] (
   private[scala] implicit val ec: ExecutionContext = environment.ec
   private[scala] val hp                            = HandlerBasicParams(core, environment)
   private[scala] val queryHandler                  = new QueryHandler(hp)
+  private[scala] val analyticsHandler              = new AnalyticsHandler(hp)
 
   /** The name of this scope. */
   def name = scopeName
@@ -72,11 +75,11 @@ class AsyncScope private[scala] (
   /** Performs a N1QL query against the cluster.
     *
     * This is asynchronous.  See [[Scope.reactive]] for a reactive streaming version of this API, and
-    * [[Scope]] for a blocking version.
+    * [[Scope]] for a blocking version.  The reactive version includes backpressure-aware row streaming.
     *
     * The reason to use this Scope-based variant over `AsyncCluster.query` is that it will automatically provide
-    * the "query_context" parameter to the query service, allowing queries to be specified on scopes and collections
-    * without having to fully reference them in the query statement.
+    * the "query_context" parameter to the query service, allowing queries to be performed on collections
+    * without having to fully specify their bucket and scope names in the query statement.
     *
     * @param statement the N1QL statement to execute
     * @param options   any query options - see [[com.couchbase.client.scala.query.QueryOptions]] for documentation
@@ -87,4 +90,38 @@ class AsyncScope private[scala] (
   def query(statement: String, options: QueryOptions = QueryOptions()): Future[QueryResult] = {
     queryHandler.queryAsync(statement, options, environment, Some(bucketName), Some(scopeName))
   }
+
+  /** Performs an Analytics query against the cluster.
+    *
+    * This is asynchronous.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster]] for a blocking version.  The reactive version includes backpressure-aware row streaming.
+    *
+    * The reason to use this Scope-based variant over `AsyncCluster.analyticsQuery` is that it will automatically provide
+    * the "query_context" parameter to the query service, allowing queries to be performed on collections
+    * without having to fully specify their bucket and scope names in the query statement.
+    *
+    * @param statement the Analytics query to execute
+    * @param options   any query options - see [[com.couchbase.client.scala.analytics.AnalyticsOptions]] for documentation
+    *
+    * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  def analyticsQuery(
+      statement: String,
+      options: AnalyticsOptions = AnalyticsOptions.Default
+  ): Future[AnalyticsResult] = {
+
+    analyticsHandler.request(
+      statement,
+      options,
+      core,
+      environment,
+      Some(bucketName),
+      Some(scopeName)
+    ) match {
+      case Success(request) => analyticsHandler.queryAsync(request)
+      case Failure(err)     => Future.failed(err)
+    }
+  }
+
 }

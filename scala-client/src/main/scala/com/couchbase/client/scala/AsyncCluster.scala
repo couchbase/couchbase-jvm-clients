@@ -189,51 +189,8 @@ class AsyncCluster(
   ): Future[AnalyticsResult] = {
 
     analyticsHandler.request(statement, options, core, environment, None, None) match {
-      case Success(request) =>
-        core.send(request)
-
-        val ret: Future[AnalyticsResult] = FutureConversions
-          .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-          .flatMap(
-            response =>
-              FutureConversions
-                .javaFluxToScalaFlux(response.rows())
-                .collectSeq()
-                .flatMap(
-                  rows =>
-                    FutureConversions
-                      .javaMonoToScalaMono(response.trailer())
-                      .map(trailer => {
-                        val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
-                          .map(
-                            warnings =>
-                              ErrorCodeAndMessage
-                                .fromJsonArray(warnings)
-                                .asScala
-                                .map(codeAndMessage => AnalyticsWarning(codeAndMessage))
-                          )
-                          .getOrElse(Seq.empty)
-
-                        AnalyticsResult(
-                          rows,
-                          AnalyticsMetaData(
-                            response.header().requestId(),
-                            response.header().clientContextId().orElse(""),
-                            response.header().signature.asScala,
-                            AnalyticsMetrics.fromBytes(trailer.metrics),
-                            warnings,
-                            AnalyticsStatus.from(trailer.status)
-                          )
-                        )
-                      })
-                )
-          )
-          .toFuture
-
-        ret.onComplete(_ => request.context.logicallyComplete())
-        ret
-
-      case Failure(err) => Future.failed(err)
+      case Success(request) => analyticsHandler.queryAsync(request)
+      case Failure(err)     => Future.failed(err)
     }
   }
 
