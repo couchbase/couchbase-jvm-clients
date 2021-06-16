@@ -70,8 +70,6 @@ import com.couchbase.client.kotlin.kv.internal.encodeInSpan
 import com.couchbase.client.kotlin.kv.internal.levelIfSynchronous
 import com.couchbase.client.kotlin.kv.internal.observe
 import com.couchbase.client.kotlin.kv.internal.subdocGet
-import com.couchbase.client.kotlin.samples.counterGenerateDocumentIds
-import com.couchbase.client.kotlin.samples.counterRateLimiting
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
@@ -682,8 +680,8 @@ public class Collection internal constructor(
      * The expiry param is ignored if the counter document already exists.
      * @param durability durability requirements for counter operations
      *
-     * @sample counterRateLimiting
-     * @sample counterGenerateDocumentIds
+     * @sample com.couchbase.client.kotlin.samples.counterRateLimiting
+     * @sample com.couchbase.client.kotlin.samples.counterGenerateDocumentIds
      */
     @VolatileCouchbaseApi
     public fun counter(

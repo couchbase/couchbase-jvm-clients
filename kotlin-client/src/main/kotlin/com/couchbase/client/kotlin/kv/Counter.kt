@@ -86,7 +86,13 @@ public class Counter internal constructor(
      * Sets the value of the counter.
      */
     public suspend fun set(value: ULong): MutationResult =
-        collection.upsert(documentId, Content.string(value.toString()), common, expiry = expiry)
+        collection.upsert(
+            id = documentId,
+            content = Content.string(value.toString()),
+            common = common,
+            expiry = expiry,
+            durability = durability,
+        )
 
     override fun toString(): String {
         return "Counter(collection=$collection, documentId='$documentId')"
