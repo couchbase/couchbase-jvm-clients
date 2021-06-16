@@ -162,7 +162,14 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
 
 	private static boolean collectionExists(CollectionManager mgr, CollectionSpec spec) {
 		try {
-			ScopeSpec scope = mgr.getScope(spec.scopeName());
+			List<ScopeSpec> scopeList = mgr.getAllScopes();
+			ScopeSpec scope = null;
+			for (ScopeSpec sc : scopeList) {
+				if (spec.scopeName().equals(sc.name())) {
+					scope = sc;
+					break;
+				}
+			}
 			return scope.collections().contains(spec);
 		} catch (ScopeNotFoundException e) {
 			return false;

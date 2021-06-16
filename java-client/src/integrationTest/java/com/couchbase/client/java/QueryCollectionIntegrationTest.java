@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -97,14 +98,22 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
     collectionManager.createScope(SCOPE_NAME);
 
     waitUntilCondition(() -> scopeExists(collectionManager, SCOPE_NAME));
-    ScopeSpec found = collectionManager.getScope(SCOPE_NAME);
-    assertEquals(scopeSpec, found);
+    List<ScopeSpec> scopeList = collectionManager.getAllScopes();
+    ScopeSpec scope = null;
+    for (ScopeSpec sc : scopeList) {
+      if (SCOPE_NAME.equals(sc.name())) {
+        scope = sc;
+        break;
+      }
+    }
+
+    assertEquals(scopeSpec, scope);
 
     collectionManager.createCollection(collSpec);
     waitUntilCondition(() -> collectionExists(collectionManager, collSpec));
 
-    assertNotEquals(scopeSpec, collectionManager.getScope(SCOPE_NAME));
-    assertTrue(collectionManager.getScope(SCOPE_NAME).collections().contains(collSpec));
+    assertNotEquals(scopeSpec, scope);
+    assertTrue(scope.collections().contains(collSpec));
 
     waitForQueryIndexerToHaveBucket(cluster, COLLECTION_NAME);
 
@@ -120,7 +129,14 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
 
   private static boolean collectionExists(CollectionManager mgr, CollectionSpec spec) {
     try {
-      ScopeSpec scope = mgr.getScope(spec.scopeName());
+      List<ScopeSpec> scopeList = mgr.getAllScopes();
+      ScopeSpec scope = null;
+      for (ScopeSpec sc : scopeList) {
+        if (spec.scopeName().equals(sc.name())) {
+          scope = sc;
+          break;
+        }
+      }
       return scope.collections().contains(spec);
     } catch (ScopeNotFoundException e) {
       return false;
@@ -129,8 +145,17 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
 
   private static boolean scopeExists(CollectionManager mgr, String scopeName) {
     try {
-      mgr.getScope(scopeName);
-      return true;
+      boolean scopeExists = false;
+      List<ScopeSpec> scopeList = mgr.getAllScopes();
+      ScopeSpec scope = null;
+      for (ScopeSpec sc : scopeList) {
+        if (scopeName.equals(sc.name())) {
+          scope = sc;
+          scopeExists = true;
+          break;
+        }
+      }
+      return scopeExists;
     } catch (ScopeNotFoundException e) {
       return false;
     }

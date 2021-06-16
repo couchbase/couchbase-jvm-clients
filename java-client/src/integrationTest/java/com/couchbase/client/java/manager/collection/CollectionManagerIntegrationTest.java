@@ -34,6 +34,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -67,26 +68,31 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void shouldCreateScopeAndCollection() {
-    String scope = randomString();
+    String scopeName = randomString();
     String collection = randomString();
-    CollectionSpec collSpec = CollectionSpec.create(collection, scope);
-    ScopeSpec scopeSpec = ScopeSpec.create(scope);
+    CollectionSpec collSpec = CollectionSpec.create(collection, scopeName);
+    ScopeSpec scopeSpec = ScopeSpec.create(scopeName);
 
     assertFalse(collectionExists(collSpec));
     assertThrows(ScopeNotFoundException.class, () -> collections.createCollection(collSpec));
-    assertThrows(ScopeNotFoundException.class, () -> collections.getScope(scope));
 
-    collections.createScope(scope);
+    //assertThrows(ScopeNotFoundException.class, () -> collections.getAllScopes().contains(scope));
 
-    waitUntilCondition(() -> scopeExists(scope));
-    ScopeSpec found = collections.getScope(scope);
-    assertEquals(scopeSpec, found);
+    collections.createScope(scopeName);
 
+    waitUntilCondition(() -> scopeExists(scopeName));
+    List<ScopeSpec> scopeList = collections.getAllScopes();
+    ScopeSpec scope = null;
+    for (ScopeSpec sc : scopeList) {
+      if (scope.equals(sc.name())) {
+        scope = sc;
+        break;
+      }
+    }
+    assertEquals(scopeSpec, scope);
     collections.createCollection(collSpec);
     waitUntilCondition(() -> collectionExists(collSpec));
-
-    assertNotEquals(scopeSpec, collections.getScope(scope));
-    assertTrue(collections.getScope(scope).collections().contains(collSpec));
+    assertTrue(scope.collections().contains(collSpec));
   }
 
   @Test
@@ -177,13 +183,22 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     ScopeSpec scopeSpec = ScopeSpec.create(scopeName);
     collections.createScope(scopeName);
     waitUntilCondition(() -> scopeExists(scopeName));
-    ScopeSpec found = collections.getScope(scopeName);
-    assertEquals(scopeSpec, found);
+
+    List<ScopeSpec> scopeList = collections.getAllScopes();
+    ScopeSpec scope = null;
+    for (ScopeSpec sc : scopeList) {
+      if (scopeName.equals(sc.name())) {
+        scope = sc;
+        break;
+      }
+    }
+
+    assertEquals(scopeSpec, scope);
     for (int i = 0; i < collectionsPerScope; i++) {
       CollectionSpec collectionSpec = CollectionSpec.create(String.valueOf(collectionsPerScope + i), scopeName);
       collections.createCollection(collectionSpec);
       waitUntilCondition(() -> collectionExists(collectionSpec));
-      assertTrue(collections.getScope(scopeName).collections().contains(collectionSpec));
+      assertTrue(scope.collections().contains(collectionSpec));
     }
   }
 
@@ -215,7 +230,15 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 
   private boolean collectionExists(CollectionSpec spec) {
     try {
-      ScopeSpec scope = collections.getScope(spec.scopeName());
+      String scopeName = spec.scopeName();
+      List<ScopeSpec> scopeList = collections.getAllScopes();
+      ScopeSpec scope = null;
+      for (ScopeSpec sc : scopeList) {
+        if (scopeName.equals(sc.name())) {
+          scope = sc;
+          break;
+        }
+      }
       return scope.collections().contains(spec);
     } catch (ScopeNotFoundException e) {
       return false;
@@ -224,8 +247,16 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 
   private boolean scopeExists(String scopeName) {
     try {
-      collections.getScope(scopeName);
-      return true;
+      boolean scopeExists = false;
+      List<ScopeSpec> scopeList = collections.getAllScopes();
+      ScopeSpec scope = null;
+      for (ScopeSpec sc : scopeList) {
+        if (scopeName.equals(sc.name())) {
+          scope = sc;
+          scopeExists = true;
+        }
+      }
+      return scopeExists;
     } catch (ScopeNotFoundException e) {
       return false;
     }
