@@ -21,7 +21,10 @@ import com.couchbase.client.core.error.*;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.manager.collection.CollectionManager;
 import com.couchbase.client.java.manager.collection.CollectionSpec;
 import com.couchbase.client.java.manager.collection.ScopeSpec;
@@ -198,6 +201,26 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
       }
     }
     assertTrue(hasDoc);
+  }
+
+  //Test for MB-46876
+  @Test
+  void consistentWith() {
+    String id = UUID.randomUUID().toString();
+    Scope scope = cluster.bucket(config().bucketname()).scope(SCOPE_NAME);
+    Collection collection = scope.collection(COLLECTION_NAME);
+    MutationResult mr = collection.insert(id, FOO_CONTENT);
+
+    QueryOptions options = queryOptions()
+      .consistentWith(MutationState.from(mr.mutationToken().get()))
+      .parameters(JsonArray.from(id));
+    QueryResult result = scope.query(
+      "select * from `" + COLLECTION_NAME + "` where meta().id=$1",
+      options
+    );
+    List<JsonObject> rows = result.rowsAs(JsonObject.class);
+    assertEquals(1, rows.size());
+    assertEquals(FOO_CONTENT, rows.get(0));
   }
 
   /**
