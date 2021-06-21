@@ -86,7 +86,7 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
    * The duration must be less than 50 years. For expiry further in the
    * future, use {@link #expiry(Instant)}.
    *
-   * @param expiry the duration after which the document will expire.
+   * @param expiry the duration after which the document will expire (zero duration means never expire).
    * @return this options class for chaining purposes.
    */
   public IncrementOptions expiry(final Duration expiry) {
@@ -97,7 +97,7 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
   /**
    * Sets the expiry for the document. By default the document will never expire.
    *
-   * @param expiry the point in time when the document will expire.
+   * @param expiry the point in time when the document will expire (epoch second zero means never expire).
    * @return this options class for chaining purposes.
    */
   public IncrementOptions expiry(final Instant expiry) {

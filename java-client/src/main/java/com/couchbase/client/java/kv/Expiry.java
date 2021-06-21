@@ -64,18 +64,23 @@ public class Expiry {
   }
 
   /**
-   * @throws InvalidArgumentException if the Duration is less than 1 second or greater than 18,250 days (~50 years)
+   * @throws InvalidArgumentException if the Duration is non-zero and less than 1 second, or greater than 18,250 days (~50 years)
    */
   public static Expiry relative(Duration expiry) {
     requireNonNull(expiry);
+
+    // Perhaps not ideal, but there's code in the wild that depends on this behavior.
+    // This is also consistent with how Instant.EPOCH (zero) means "no expiry".
+    if (expiry.isZero()) {
+      return none();
+    }
 
     long seconds = expiry.getSeconds();
 
     if (seconds <= 0) {
       throw InvalidArgumentException.fromMessage(
           "When specifying expiry as a Duration," +
-              " it must be at least 1 second, but got " + expiry + "." +
-              " If you want to explicitly disable expiration, use Instant.EPOCH instead." +
+              " it must be either zero (to explicitly disable expiration) or at least 1 second, but got " + expiry + "." +
               " If for some reason you want the document to expire immediately," +
               " use Instant.ofEpochSecond(DAYS.toSeconds(31))");
     }

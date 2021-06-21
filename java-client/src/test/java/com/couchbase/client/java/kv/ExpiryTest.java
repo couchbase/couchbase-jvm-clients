@@ -71,10 +71,17 @@ class ExpiryTest {
   }
 
   @Test
-  void durationsMustBeBetweenOneSecondAndFiftyYears() {
+  void zeroDurationMeansNoExpiry() {
+    assertEquals(0L, Expiry.relative(Duration.ZERO).encode());
+  }
+
+  @Test
+  void nonZeroDurationsMustBeBetweenOneSecondAndFiftyYears() {
     // almost certainly a programming error
-    assertInvalid(Duration.ZERO);
     assertInvalid(Duration.ofSeconds(-1));
+
+    // would get rounded down to zero (which means no expiry)
+    assertInvalid(Duration.ofMillis(1));
 
     // we're calling this invalid due to the history of JCBC-1645
     assertInvalid(Duration.ofDays(365 * 50).plusSeconds(1));
