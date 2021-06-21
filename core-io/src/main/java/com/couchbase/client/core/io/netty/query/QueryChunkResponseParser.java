@@ -145,7 +145,7 @@ public class QueryChunkResponseParser
         return new CasMismatchException(errorContext);
       } else if (code == 12009) {
         return new DmlFailureException(errorContext);
-      } else if (code >= 10000 && code < 11000) {
+      } else if ((code >= 10000 && code < 11000) || code == 13014) {
         return new AuthenticationFailureException("Could not authenticate query", errorContext, null);
       } else if ((code >= 12000 && code < 13000) || (code >= 14000 && code < 15000)) {
         return new IndexFailureException(errorContext);
