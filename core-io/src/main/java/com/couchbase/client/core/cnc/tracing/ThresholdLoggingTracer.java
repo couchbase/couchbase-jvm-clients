@@ -62,6 +62,7 @@ public class ThresholdLoggingTracer implements RequestTracer {
   private static final String KEY_LAST_LOCAL_SOCKET = "last_local_socket";
   private static final String KEY_LAST_REMOTE_SOCKET = "last_remote_socket";
   private static final String KEY_LAST_LOCAL_ID = "last_local_id";
+  private static final String KEY_TIMEOUT = "timeout_ms";
 
   private final AtomicBoolean running = new AtomicBoolean(false);
   private final Queue<Request<?>> overThresholdQueue;
@@ -457,6 +458,8 @@ public class ThresholdLoggingTracer implements RequestTracer {
         if (totalServerDuration > 0) {
           entry.put(KEY_TOTAL_SERVER_MICROS, totalServerDuration);
         }
+
+        entry.put(KEY_TIMEOUT, request.timeout().toMillis());
 
         top.add(entry);
       }
