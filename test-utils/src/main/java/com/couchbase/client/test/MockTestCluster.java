@@ -28,7 +28,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -112,7 +111,7 @@ public class MockTestCluster extends TestCluster {
       EnumSet.of(Capabilities.VIEWS), // mock only has a limited set of capabilities we can utilize,
       // No way to get this from mock, and version checking is (currently) only used in a handful of scenarios that the
       // mock will not run anyway.  May need to revisit if that changes.
-      new ClusterVersion(0, 0, 0)
+      new ClusterVersion(0, 0, 0, false)
     );
   }
 

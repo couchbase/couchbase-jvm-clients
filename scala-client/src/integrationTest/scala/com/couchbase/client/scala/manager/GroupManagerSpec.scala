@@ -18,7 +18,7 @@ import scala.util.{Failure, Success}
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(
   clusterTypes = Array(ClusterType.MOCKED),
-  missesCapabilities = Array(Capabilities.USER_GROUPS)
+  missesCapabilities = Array(Capabilities.USER_GROUPS, Capabilities.ENTERPRISE_EDITION)
 )
 class GroupManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster   = _

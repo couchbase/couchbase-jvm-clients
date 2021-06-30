@@ -50,6 +50,7 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.java.manager.user.AuthDomain.LOCAL;
 import static com.couchbase.client.test.Capabilities.COLLECTIONS;
+import static com.couchbase.client.test.Capabilities.ENTERPRISE_EDITION;
 import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -150,7 +151,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(missesCapabilities = COLLECTIONS)
+  @IgnoreWhen(missesCapabilities = {COLLECTIONS, ENTERPRISE_EDITION})// No RBAC support for CE
   void canAssignCollectionsAwareRoles() {
     String bucket = config().bucketname();
     assertCanCreateWithRole(new Role("data_reader", bucket));

@@ -21,11 +21,13 @@ public class ClusterVersion {
     private final int majorVersion;
     private final int minorVersion;
     private final int patchVersion;
+    private final boolean communityEdition;
 
-    public ClusterVersion(int majorVersion, int minorVersion, int patchVersion) {
+    public ClusterVersion(int majorVersion, int minorVersion, int patchVersion, boolean communityEdition) {
         this.majorVersion = majorVersion;
         this.minorVersion = minorVersion;
         this.patchVersion = patchVersion;
+        this.communityEdition = communityEdition;
     }
 
     public int majorVersion() {
@@ -48,8 +50,9 @@ public class ClusterVersion {
         int majorVersion = Integer.parseInt(splits[0]);
         int minorVersion = Integer.parseInt(splits[1]);
         int patchVersion = Integer.parseInt(splits[2].split("-")[0]);
+        boolean communityEdition = version.contains("community");
 
-        return new ClusterVersion(majorVersion, minorVersion, patchVersion);
+        return new ClusterVersion(majorVersion, minorVersion, patchVersion, communityEdition);
     }
 
     public boolean isGreaterThan(ClusterVersion other) {
@@ -79,5 +82,9 @@ public class ClusterVersion {
     @Override
     public int hashCode() {
         return Objects.hash(majorVersion, minorVersion, patchVersion);
+    }
+
+    public boolean isCommunityEdition() {
+        return communityEdition;
     }
 }

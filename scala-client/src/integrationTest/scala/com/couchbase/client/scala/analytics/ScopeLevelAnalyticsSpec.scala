@@ -32,7 +32,7 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(missesCapabilities = Array(Capabilities.QUERY, Capabilities.COLLECTIONS))
+@IgnoreWhen(missesCapabilities = Array(Capabilities.ANALYTICS, Capabilities.COLLECTIONS))
 class ScopeLevelAnalyticsSpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster                     = _

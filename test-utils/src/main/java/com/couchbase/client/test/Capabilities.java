@@ -63,5 +63,9 @@ public enum Capabilities {
   /**
    * The cluster can modify a document without changing its expiry.
    */
-  PRESERVE_EXPIRY
+  PRESERVE_EXPIRY,
+  /**
+   * The cluster is using the enterprise edition version
+   */
+  ENTERPRISE_EDITION
 }

@@ -190,7 +190,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     return (int) serverMap.get("numReplicas");
   }
 
-  protected Set<Capabilities> capabilitiesFromRaw(final String config) {
+  protected Set<Capabilities> capabilitiesFromRaw(final String config, boolean communityEdition) {
     Set<Capabilities> capabilities = new HashSet<>();
     Map<String, Object> decoded;
     try {
@@ -234,6 +234,9 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       // note: 6.6 and later
       capabilities.add(Capabilities.CREATE_AS_DELETED);
       capabilities.add(Capabilities.BUCKET_MINIMUM_DURABILITY);
+    }
+    if (!communityEdition) {
+      capabilities.add(Capabilities.ENTERPRISE_EDITION);
     }
     return capabilities;
   }

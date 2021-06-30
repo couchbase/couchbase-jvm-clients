@@ -192,7 +192,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
     )
   }
 
-  @IgnoreWhen(missesCapabilities = Array(Capabilities.COLLECTIONS))
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.COLLECTIONS, Capabilities.ENTERPRISE_EDITION))
   @Test
   def canAssignCollectionsAwareRoles(): Unit = {
     val bucket = config.bucketname()

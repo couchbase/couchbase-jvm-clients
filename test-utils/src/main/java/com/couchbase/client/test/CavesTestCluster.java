@@ -163,7 +163,7 @@ public class CavesTestCluster extends TestCluster {
       nodesFromRaw(mgmtSockets.get(0).hostname, raw),
       replicasFromRaw(raw),
       Optional.empty(),
-      capabilitiesFromRaw(raw),
+      capabilitiesFromRaw(raw, clusterVersion.isCommunityEdition()),
       clusterVersion
     );
   }
