@@ -875,12 +875,10 @@ public class Core {
   private static class ResponseMetricIdentifier {
 
     private final ServiceType serviceType;
-    private final HostAndPort lastDispatchedTo;
     private final String requestName;
 
     ResponseMetricIdentifier(final Request<?> request) {
       this.serviceType = request.serviceType();
-      this.lastDispatchedTo = request.context().lastDispatchedTo();
       this.requestName = request.name();
     }
 
@@ -889,14 +887,12 @@ public class Core {
       if (this == o) return true;
       if (o == null || getClass() != o.getClass()) return false;
       ResponseMetricIdentifier that = (ResponseMetricIdentifier) o;
-      return serviceType == that.serviceType &&
-        Objects.equals(lastDispatchedTo, that.lastDispatchedTo) &&
-        Objects.equals(requestName, that.requestName);
+      return serviceType == that.serviceType && Objects.equals(requestName, that.requestName);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(serviceType, lastDispatchedTo, requestName);
+      return Objects.hash(serviceType, requestName);
     }
   }
 

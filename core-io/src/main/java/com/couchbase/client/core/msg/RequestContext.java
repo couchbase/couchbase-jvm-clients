@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.metrics.NoopMeter;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.util.HostAndPort;
@@ -210,9 +211,11 @@ public class RequestContext extends CoreContext {
       span.attribute(TracingIdentifiers.ATTR_RETRIES, retryAttempts());
       span.end();
     }
-    if (lastDispatchedTo() != null) {
+
+    if (!(environment().meter() instanceof NoopMeter)) {
       core().responseMetric(request).recordValue(logicalRequestLatency());
     }
+
     return this;
   }
 
