@@ -42,6 +42,7 @@ public class NodeInfo {
     private final Map<ServiceType, Integer> directServices;
     private final Map<ServiceType, Integer> sslServices;
     private final Map<String, AlternateAddress> alternateAddresses;
+    private final NodeIdentifier nodeIdentifier;
     private int configPort;
 
 
@@ -72,6 +73,7 @@ public class NodeInfo {
         }
         this.directServices = parseDirectServices(viewUri, ports);
         this.sslServices = new HashMap<>();
+        this.nodeIdentifier = new NodeIdentifier(this.hostname, directServices.get(ServiceType.MANAGER));
     }
 
     /**
@@ -93,6 +95,7 @@ public class NodeInfo {
         this.alternateAddresses = alternateAddresses == null
             ? Collections.emptyMap()
             : alternateAddresses;
+        this.nodeIdentifier = new NodeIdentifier(this.hostname, directServices.get(ServiceType.MANAGER));
     }
 
     public String hostname() {
@@ -100,7 +103,7 @@ public class NodeInfo {
     }
 
     public NodeIdentifier identifier() {
-        return new NodeIdentifier(hostname, directServices.get(ServiceType.MANAGER));
+        return nodeIdentifier;
     }
 
     public Map<ServiceType, Integer> services() {
@@ -116,7 +119,7 @@ public class NodeInfo {
     }
 
     private Map<ServiceType, Integer> parseDirectServices(final String viewUri, final Map<String, Integer> input) {
-        Map<ServiceType, Integer> services = new HashMap<ServiceType, Integer>();
+        Map<ServiceType, Integer> services = new HashMap<>();
         for (Map.Entry<String, Integer> entry : input.entrySet()) {
             String type = entry.getKey();
             Integer port = entry.getValue();
@@ -167,6 +170,7 @@ public class NodeInfo {
             ", securePorts=" + sslServices +
             ", aa=" + alternateAddresses +
             ", configPort=" + configPort +
+            ", nodeIdentifier=" + nodeIdentifier +
             '}';
     }
 }
