@@ -45,6 +45,14 @@ class LoggingEventConsumerTest {
   @BeforeEach
   void setup() {
     logger = mock(LoggingEventConsumer.Logger.class);
+
+    // Enable all log levels by default
+    when(logger.isTraceEnabled()).thenReturn(true);
+    when(logger.isDebugEnabled()).thenReturn(true);
+    when(logger.isInfoEnabled()).thenReturn(true);
+    when(logger.isWarnEnabled()).thenReturn(true);
+    when(logger.isErrorEnabled()).thenReturn(true);
+
     loggingEventConsumer = LoggingEventConsumer.create(LoggerConfig.customLogger(logger).build());
   }
 

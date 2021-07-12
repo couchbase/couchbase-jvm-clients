@@ -93,7 +93,19 @@ public class LoggingEventConsumer implements Consumer<Event> {
 
   @Override
   public void accept(final Event event) {
-    if (event.severity() == Event.Severity.TRACING) {
+    Event.Severity severity = event.severity();
+
+    if (severity == Event.Severity.TRACING) {
+      return;
+    }
+
+    Logger logger = loggers.get(event.category());
+    if (logger == null) {
+      logger = createLogger(event.category());
+      loggers.put(event.category(), logger);
+    }
+
+    if (!mustLogEvent(severity, logger)) {
       return;
     }
 
@@ -120,19 +132,13 @@ public class LoggingEventConsumer implements Consumer<Event> {
 
     String logLine = logLineBuilder.toString();
 
-    Logger logger = loggers.get(event.category());
-    if (logger == null) {
-      logger = createLogger(event.category());
-      loggers.put(event.category(), logger);
-    }
-
     boolean diagnosticContext = loggerConfig.diagnosticContextEnabled() && event.context() instanceof RequestContext;
 
     if (diagnosticContext) {
       logger.attachContext(((RequestContext) event.context()).clientContext());
     }
 
-    switch (event.severity()) {
+    switch (severity) {
       case VERBOSE:
         if (event.cause() != null) {
           logger.trace(logLine, event.cause());
@@ -172,6 +178,30 @@ public class LoggingEventConsumer implements Consumer<Event> {
 
     if (diagnosticContext) {
       logger.clearContext();
+    }
+  }
+
+  /**
+   * Helper method to check if an event must be logged based on the severity.
+   *
+   * @param severity the severity of the event.
+   * @param logger the logger to check if specific log levels are enabled.
+   * @return true if the event must be logged, false otherwise.
+   */
+  private static boolean mustLogEvent(final Event.Severity severity, final Logger logger) {
+    switch(severity) {
+      case VERBOSE:
+        return logger.isTraceEnabled();
+      case DEBUG:
+        return logger.isDebugEnabled();
+      case INFO:
+        return logger.isInfoEnabled();
+      case WARN:
+        return logger.isWarnEnabled();
+      case ERROR:
+        return logger.isErrorEnabled();
+      default:
+        return true;
     }
   }
 
