@@ -41,6 +41,11 @@ public class FeatureNotAvailableException extends CouchbaseException {
       "is used, at least one bucket needs to be opened to dispatch this " + serviceType.ident() + " request!");
   }
 
+  public static FeatureNotAvailableException scopeLevelQuery(final ServiceType serviceType) {
+    return new FeatureNotAvailableException("Scope-Level queries for the " + serviceType + " service are not supported" +
+      "on the connected cluster (Only supported with Couchbase Server 7.0 and later).");
+  }
+
   public static FeatureNotAvailableException collections() {
     return new FeatureNotAvailableException("The cluster does not support collections and scopes.");
   }

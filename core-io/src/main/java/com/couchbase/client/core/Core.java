@@ -56,6 +56,7 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.node.AnalyticsLocator;
 import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
 import com.couchbase.client.core.node.Node;
@@ -130,7 +131,7 @@ public class Core {
    * Locates the right node for the analytics service.
    */
   private static final RoundRobinLocator ANALYTICS_LOCATOR =
-    new RoundRobinLocator(ServiceType.ANALYTICS);
+    new AnalyticsLocator();
 
   /**
    * Locates the right node for the search service.

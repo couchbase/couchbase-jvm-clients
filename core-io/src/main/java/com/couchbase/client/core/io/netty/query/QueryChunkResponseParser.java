@@ -21,6 +21,7 @@ import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DmlFailureException;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.InternalServerFailureException;
 import com.couchbase.client.core.error.ParsingFailureException;
@@ -34,6 +35,7 @@ import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
+import com.couchbase.client.core.service.ServiceType;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -149,6 +151,8 @@ public class QueryChunkResponseParser
         return new AuthenticationFailureException("Could not authenticate query", errorContext, null);
       } else if ((code >= 12000 && code < 13000) || (code >= 14000 && code < 15000)) {
         return new IndexFailureException(errorContext);
+      } else if (code == 1065 && message.contains("query_context")) {
+        return FeatureNotAvailableException.scopeLevelQuery(ServiceType.QUERY);
       }
     }
     return new CouchbaseException("Unknown query error", errorContext);
