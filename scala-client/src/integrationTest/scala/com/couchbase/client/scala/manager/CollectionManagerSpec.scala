@@ -17,9 +17,9 @@ package com.couchbase.client.scala.manager
 
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-
 import com.couchbase.client.core.error.{
   CollectionExistsException,
+  CollectionNotFoundException,
   ScopeExistsException,
   ScopeNotFoundException
 }
@@ -139,6 +139,27 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     assert(!collections.collectionExists(collSpec).get)
 
     collections.createCollection(collSpec).get
+  }
+
+  @Test
+  def dropCollection_shouldFailWhen_collectionDoesNotExist(): Unit = {
+    val scope = randomString
+    collections.createScope(scope).get
+
+    val result = collections.dropCollection(CollectionSpec("does_not_exist", scope))
+    result match {
+      case Failure(_: CollectionNotFoundException) =>
+      case _                                       => assert(false, s"unexpected $result")
+    }
+  }
+
+  @Test
+  def dropScope_shouldFailWhen_scopeDoesNotExist(): Unit = {
+    val result = collections.dropScope("does_not_exist")
+    result match {
+      case Failure(_: ScopeNotFoundException) =>
+      case _                                  => assert(false, s"unexpected $result")
+    }
   }
 
   /**

@@ -226,7 +226,7 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
               "scope_not_found"
             )) {
           Failure(new ScopeNotFoundException(scopeName))
-        } else if (error.matches(".*Collection.+not found.*")) {
+        } else if (error.matches(".*Collection.+not found.*") || error.contains("scope_not_found")) {
           Failure(new CollectionNotFoundException(collectionName))
         } else if (error.contains("Not found.") || error.contains("Requested resource not found.")) {
           Failure(FeatureNotAvailableException.collections())
