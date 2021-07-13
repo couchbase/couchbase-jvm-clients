@@ -18,6 +18,10 @@ package com.couchbase.client.core.cnc;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.tracing.NoopRequestSpan;
+import com.couchbase.client.core.cnc.tracing.NoopRequestTracer;
+import com.couchbase.client.core.cnc.tracing.ThresholdLoggingTracer;
+import com.couchbase.client.core.cnc.tracing.ThresholdRequestSpan;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.util.EnumMap;
@@ -29,6 +33,28 @@ import static java.util.Collections.unmodifiableMap;
 public class CbTracing {
   private CbTracing() {
     throw new AssertionError("not instantiable");
+  }
+
+  /**
+   * Returns true if the tracer is an internal one (noop or threshold) so that particular
+   * optimizations can be applied.
+   *
+   * @param tracer the tracer to check.
+   * @return true if internal, false otherwise.
+   */
+  public static boolean isInternalTracer(final RequestTracer tracer) {
+    return tracer instanceof NoopRequestTracer || tracer instanceof ThresholdLoggingTracer;
+  }
+
+  /**
+   * Returns true if the span is an internal one (noop or threshold) so that particular
+   * optimizations can be applied.
+   *
+   * @param span the span to check.
+   * @return true if internal, false otherwise.
+   */
+  public static boolean isInternalSpan(final RequestSpan span) {
+    return span instanceof NoopRequestSpan || span instanceof ThresholdRequestSpan;
   }
 
   /**

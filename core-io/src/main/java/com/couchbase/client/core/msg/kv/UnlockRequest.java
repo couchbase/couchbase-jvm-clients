@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
@@ -44,7 +45,7 @@ public class UnlockRequest extends BaseKeyValueRequest<UnlockResponse> {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.cas = cas;
 
-    if (span != null) {
+    if (span != null && !CbTracing.isInternalSpan(span)) {
       span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_UNLOCK);
     }
   }

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -102,7 +103,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
     this.collectionIdentifier = collectionIdentifier;
     this.opaque = nextOpaque();
 
-    if (span != null) {
+    if (span != null && !CbTracing.isInternalSpan(span)) {
       span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_KV);
       setCommonKVSpanAttributes(span, (KeyValueRequest<Response>) this);
     }

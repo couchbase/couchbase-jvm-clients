@@ -96,7 +96,6 @@ public class CoreBucketManager {
 
     RequestSpan span = CbTracing.newSpan(core.context(), TracingIdentifiers.SPAN_REQUEST_MB_UPDATE_BUCKET, options.parentSpan().orElse(null));
     span.attribute(TracingIdentifiers.ATTR_NAME, bucketName);
-
     CoreCommonOptions getAllBucketOptions = options.withParentSpan(span);
 
     return Mono

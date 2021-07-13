@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.search;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -51,7 +52,7 @@ public class SearchRequest extends BaseRequest<SearchResponse>
         this.content = content;
         this.authenticator = authenticator;
 
-        if (span != null) {
+        if (span != null && !CbTracing.isInternalSpan(span)) {
             span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_SEARCH);
             span.attribute(TracingIdentifiers.ATTR_OPERATION, indexName);
         }

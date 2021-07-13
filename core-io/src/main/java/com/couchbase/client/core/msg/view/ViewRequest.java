@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.view;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -69,7 +70,7 @@ public class ViewRequest extends BaseRequest<ViewResponse>
     this.query = requireNonNull(query);
     this.keysJson = requireNonNull(keysJson);
 
-    if (span != null) {
+    if (span != null && !CbTracing.isInternalSpan(span)) {
       span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_VIEWS);
       span.attribute(TracingIdentifiers.ATTR_OPERATION, "/" + design + "/" + view);
       span.attribute(TracingIdentifiers.ATTR_NAME, bucket);

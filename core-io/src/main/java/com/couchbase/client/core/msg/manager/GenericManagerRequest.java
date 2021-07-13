@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.manager;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
@@ -54,7 +55,7 @@ public class GenericManagerRequest extends BaseManagerRequest<GenericManagerResp
     this.requestSupplier = requireNonNull(requestSupplier);
     this.idempotent = idempotent;
 
-    if (span != null) {
+    if (span != null && !CbTracing.isInternalSpan(span)) {
       span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_MGMT);
 
       FullHttpRequest request = requestSupplier.get();

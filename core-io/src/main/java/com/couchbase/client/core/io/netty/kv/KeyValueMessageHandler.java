@@ -17,8 +17,10 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.CollectionOutdatedHandledEvent;
@@ -145,6 +147,11 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   private ErrorMap errorMap;
 
   /**
+   * Knows if the tracer is an internal or external one for optimizations.
+   */
+  private final boolean isInternalTracer;
+
+  /**
    * Creates a new {@link KeyValueMessageHandler}.
    *
    * @param endpointContext the parent core context.
@@ -159,6 +166,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     this.compressionConfig = endpointContext.environment().compressionConfig();
     this.eventBus = endpointContext.environment().eventBus();
     this.bucketName = bucketName;
+    this.isInternalTracer = CbTracing.isInternalTracer(endpointContext.environment().requestTracer());
   }
 
   /**
@@ -225,22 +233,22 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
         ctx.write(request.encode(ctx.alloc(), opaque, channelContext), promise);
         writtenRequestDispatchTimings.put(opaque, (Long) System.nanoTime());
         if (request.requestSpan() != null) {
-          RequestSpan dispatchSpan = endpointContext
-            .environment()
-            .requestTracer()
-            .requestSpan(TracingIdentifiers.SPAN_DISPATCH, request.requestSpan());
+          RequestTracer tracer = endpointContext.environment().requestTracer();
+          RequestSpan dispatchSpan = tracer.requestSpan(TracingIdentifiers.SPAN_DISPATCH, request.requestSpan());
 
-          setCommonDispatchSpanAttributes(
-            dispatchSpan,
-            ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).get(),
-            ioContext.localHostname(),
-            ioContext.localPort(),
-            endpoint.remoteHostname(),
-            endpoint.remotePort(),
-            null
-          );
-          setNumericOperationId(dispatchSpan, request.opaque());
-          setCommonKVSpanAttributes(dispatchSpan, request);
+          if (!isInternalTracer) {
+            setCommonDispatchSpanAttributes(
+              dispatchSpan,
+              ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).get(),
+              ioContext.localHostname(),
+              ioContext.localPort(),
+              endpoint.remoteHostname(),
+              endpoint.remotePort(),
+              null
+            );
+            setNumericOperationId(dispatchSpan, request.opaque());
+            setCommonKVSpanAttributes(dispatchSpan, request);
+          }
 
           writtenRequestDispatchSpans.put(opaque, dispatchSpan);
         }
@@ -321,7 +329,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
     RequestSpan dispatchSpan = writtenRequestDispatchSpans.remove(opaque);
     if (dispatchSpan != null) {
-      TracingUtils.setServerDurationAttribute(dispatchSpan, serverTime);
+      if (!isInternalTracer) {
+        TracingUtils.setServerDurationAttribute(dispatchSpan, serverTime);
+      }
       dispatchSpan.end();
     }
 

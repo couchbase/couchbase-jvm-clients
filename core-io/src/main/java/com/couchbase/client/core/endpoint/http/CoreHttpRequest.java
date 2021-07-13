@@ -88,7 +88,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     this.headers = builder.headers;
     this.idempotent = defaultIfNull(builder.idempotent, method == GET);
 
-    if (span != null) {
+    if (span != null && !CbTracing.isInternalSpan(span)) {
       span.attribute(TracingIdentifiers.ATTR_SERVICE, CbTracing.getTracingId(target.serviceType()));
       span.attribute(TracingIdentifiers.ATTR_OPERATION, builder.method + " " + builder.path.format());
     }
@@ -272,11 +272,13 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     public CoreHttpRequest build() {
       RequestSpan span = spanName == null ? null : CbTracing.newSpan(coreContext.environment().requestTracer(), spanName, options.parentSpan().orElse(null));
 
-      if (span != null && target.bucketName() != null) {
-        span.attribute(TracingIdentifiers.ATTR_NAME, target.bucketName());
+      if (span != null && !CbTracing.isInternalSpan(span)) {
+        if (target.bucketName() != null) {
+          span.attribute(TracingIdentifiers.ATTR_NAME, target.bucketName());
+        }
+        CbTracing.setAttributes(span, spanAttributes);
       }
 
-      CbTracing.setAttributes(span, spanAttributes);
       return new CoreHttpRequest(
           this,
           span,

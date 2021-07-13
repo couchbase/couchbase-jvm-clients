@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.error.AmbiguousTimeoutException;
@@ -130,7 +131,7 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
     this.ctx = new RequestContext(ctx, this);
     this.retryStrategy = retryStrategy == null ? ctx.environment().retryStrategy() : retryStrategy;
 
-    if (requestSpan != null) {
+    if (requestSpan != null && !CbTracing.isInternalSpan(requestSpan)) {
       requestSpan.requestContext(this.ctx);
       requestSpan.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
     }

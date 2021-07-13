@@ -16,8 +16,10 @@
 
 package com.couchbase.client.core.io.netty;
 
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
@@ -157,20 +159,20 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
         encoded.headers().set(HttpHeaderNames.USER_AGENT, endpointContext.environment().userAgent().formattedLong());
         dispatchTimingStart = System.nanoTime();
         if (currentRequest.requestSpan() != null) {
-          currentDispatchSpan = endpointContext
-            .environment()
-            .requestTracer()
-            .requestSpan(TracingIdentifiers.SPAN_DISPATCH, currentRequest.requestSpan());
+          RequestTracer tracer = endpointContext.environment().requestTracer();
+          currentDispatchSpan = tracer.requestSpan(TracingIdentifiers.SPAN_DISPATCH, currentRequest.requestSpan());
 
-          setCommonDispatchSpanAttributes(
-            currentDispatchSpan,
-            ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).get(),
-            ioContext.localHostname(),
-            ioContext.localPort(),
-            endpoint.remoteHostname(),
-            endpoint.remotePort(),
-            currentRequest.operationId()
-          );
+          if (!CbTracing.isInternalTracer(tracer)) {
+            setCommonDispatchSpanAttributes(
+              currentDispatchSpan,
+              ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).get(),
+              ioContext.localHostname(),
+              ioContext.localPort(),
+              endpoint.remoteHostname(),
+              endpoint.remotePort(),
+              currentRequest.operationId()
+            );
+          }
         }
         ctx.write(encoded, promise);
       } catch (Throwable t) {
