@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.analytics.AnalyticsMetaData;
@@ -90,6 +91,18 @@ class AnalyticsIntegrationTest extends JavaIntegrationTest {
     @Test
     void failsOnError() {
         assertThrows(ParsingFailureException.class, () -> cluster.analyticsQuery("SELECT 1="));
+    }
+
+
+    /**
+     * We need to make sure that if a scope-level analytics query is performed on an older cluster a proper exception
+     * is thrown and not an "unknown query error".
+     */
+    @Test
+    @IgnoreWhen(hasCapabilities = Capabilities.COLLECTIONS)
+    void failsIfScopeLevelIsNotAvailable() {
+        Scope scope = cluster.bucket(config().bucketname()).scope("myscope");
+        assertThrows(FeatureNotAvailableException.class, () ->  scope.analyticsQuery("select * from mycollection"));
     }
 
     @Test

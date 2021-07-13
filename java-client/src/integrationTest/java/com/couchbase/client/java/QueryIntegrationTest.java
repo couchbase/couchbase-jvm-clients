@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.context.QueryErrorContext;
 import com.couchbase.client.core.service.ServiceType;
@@ -412,6 +413,17 @@ class QueryIntegrationTest extends JavaIntegrationTest {
             assertEquals(1, rows.size());
             assertEquals(FOO_CONTENT, rows.get(0));
         }
+    }
+
+    /**
+     * We need to make sure that if a scope-level query is performed on an older cluster a proper exception
+     * is thrown and not an "unknown query error".
+     */
+    @Test
+    @IgnoreWhen(hasCapabilities = Capabilities.COLLECTIONS)
+    void failsIfScopeLevelIsNotAvailable() {
+        Scope scope = cluster.bucket(bucketName).scope("myscope");
+        assertThrows(FeatureNotAvailableException.class, () ->  scope.query("select * from mycollection"));
     }
 
     /**

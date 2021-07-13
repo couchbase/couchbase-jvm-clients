@@ -157,6 +157,14 @@ public class AnalyticsRequest
     return ctx;
   }
 
+  public String bucket() {
+    return bucket;
+  }
+
+  public String scope() {
+    return scope;
+  }
+
   @Override
   public String name() {
     return "analytics";
