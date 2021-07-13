@@ -47,7 +47,7 @@ class ScopeLevelQuerySpec extends ScalaIntegrationTest {
 
     println("Creating scope and waiting for it to exist")
 
-    bucket.collections.createScope(ScopeName)
+    bucket.collections.createScope(ScopeName).get
     Util.waitUntilCondition(() => {
       val result = bucket.collections.scopeExists(ScopeName)
       result.isSuccess && result.get
