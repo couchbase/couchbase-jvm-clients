@@ -50,7 +50,7 @@ import java.util.function.Predicate;
 /**
  * This helper class provides methods that make performing batch operations easy and comfortable.
  */
-@Stability.Volatile
+@Stability.Uncommitted
 public class ReactiveBatchHelper {
 
   private static final Predicate<ObserveViaCasResponse.ObserveStatus> PMGET_PREDICATE = s ->
@@ -69,7 +69,7 @@ public class ReactiveBatchHelper {
    * @param ids the document IDs to fetch.
    * @return a Map of the document IDs as the key and the result (if found).
    */
-  @Stability.Volatile
+  @Stability.Uncommitted
   public static Mono<Map<String, GetResult>> getIfExists(final Collection collection,
                                                          final java.util.Collection<String> ids) {
     return  Mono.defer(() -> existsBytes(collection, ids)
@@ -91,7 +91,7 @@ public class ReactiveBatchHelper {
    * @param ids the document IDs to check.
    * @return a flux of all the ids that are found.
    */
-  @Stability.Volatile
+  @Stability.Uncommitted
   public static Flux<String> exists(final Collection collection, final java.util.Collection<String> ids) {
     return Flux.defer(() -> existsBytes(collection, ids).map(i -> new String(i, StandardCharsets.UTF_8)));
   }

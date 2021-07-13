@@ -26,7 +26,7 @@ import java.util.Map;
 /**
  * This helper class provides methods that make performing batch operations easy and comfortable.
  */
-@Stability.Volatile
+@Stability.Uncommitted
 public class BatchHelper {
 
   private BatchHelper() {}
@@ -43,7 +43,7 @@ public class BatchHelper {
    * @param ids the document IDs to fetch.
    * @return a Map of the document IDs as the key and the result (if found).
    */
-  @Stability.Volatile
+  @Stability.Uncommitted
   public static Map<String, GetResult> getIfExists(final Collection collection,
                                                    final java.util.Collection<String> ids) {
     return ReactiveBatchHelper.getIfExists(collection, ids).block();
@@ -60,7 +60,7 @@ public class BatchHelper {
    * @param ids the document IDs to check.
    * @return a list of all the ids that are found.
    */
-  @Stability.Volatile
+  @Stability.Uncommitted
   public static List<String> exists(final Collection collection, final java.util.Collection<String> ids) {
     return ReactiveBatchHelper.exists(collection, ids).collectList().block();
   }
