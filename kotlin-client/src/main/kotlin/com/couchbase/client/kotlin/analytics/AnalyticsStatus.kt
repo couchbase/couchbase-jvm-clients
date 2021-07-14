@@ -16,8 +16,6 @@
 
 package com.couchbase.client.kotlin.analytics
 
-import java.util.*
-
 public enum class AnalyticsStatus {
     RUNNING,
     SUCCESS,
@@ -34,7 +32,7 @@ public enum class AnalyticsStatus {
     public companion object {
         public fun from(wireName: String): AnalyticsStatus {
             return try {
-                valueOf(wireName.toUpperCase(Locale.ROOT))
+                valueOf(wireName.uppercase())
             } catch (ex: Exception) {
                 UNKNOWN
             }

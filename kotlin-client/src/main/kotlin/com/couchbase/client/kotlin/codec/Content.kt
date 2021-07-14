@@ -63,7 +63,7 @@ public class Content(public val bytes: ByteArray, public val flags: Int) {
             hasCommonFormat(flags, CodecFlags.STRING_COMMON_FLAGS) -> "string"
 
             // sample bucket documents look like this
-            flags == 0 && bytes.isNotEmpty() && bytes[0].toChar() == '{' -> "json?"
+            flags == 0 && bytes.isNotEmpty() && bytes[0].toInt().toChar() == '{' -> "json?"
 
             else -> "?"
         }
@@ -76,7 +76,7 @@ public class Content(public val bytes: ByteArray, public val flags: Int) {
 
         val printable = hasCommonFormat(flags, CodecFlags.JSON_COMMON_FLAGS)
                 || hasCommonFormat(flags, CodecFlags.STRING_COMMON_FLAGS)
-                || flags == 0 && bytes[0].toChar() == '{'
+                || flags == 0 && bytes[0].toInt().toChar() == '{'
         return if (printable) {
             bytes.toStringUtf8()
         } else {

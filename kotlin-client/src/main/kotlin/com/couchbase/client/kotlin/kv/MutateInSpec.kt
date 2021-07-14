@@ -274,7 +274,7 @@ private fun <T> serializeArrayFragment(
         @Suppress("UNCHECKED_CAST")
         serializer.serialize(it as T, elementType)
     }
-    .join(delimiter = byteArrayOf(','.toByte()))
+    .join(delimiter = byteArrayOf(','.code.toByte()))
 
 private fun List<ByteArray>.join(delimiter: ByteArray = byteArrayOf()): ByteArray {
     val resultSize = map { it.size }.sum() + delimiter.size * (size - 1)

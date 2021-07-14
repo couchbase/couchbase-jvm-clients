@@ -16,8 +16,6 @@
 
 package com.couchbase.client.kotlin.query
 
-import java.util.*
-
 public enum class QueryStatus {
     RUNNING,
     SUCCESS,
@@ -34,7 +32,7 @@ public enum class QueryStatus {
     public companion object {
         public fun from(wireName: String): QueryStatus {
             return try {
-                valueOf(wireName.toUpperCase(Locale.ROOT))
+                valueOf(wireName.uppercase())
             } catch (ex: Exception) {
                 UNKNOWN
             }

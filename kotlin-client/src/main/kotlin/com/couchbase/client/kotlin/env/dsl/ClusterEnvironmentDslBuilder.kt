@@ -103,11 +103,11 @@ public class ClusterEnvironmentDslBuilder {
         orphanReporterConfigDslBuilder.initializer()
     }
 
-    private var thresholdRequestTracerConfigDslBuilder =
-        ThresholdRequestTracerConfigDslBuilder(wrapped.thresholdRequestTracerConfig())
+    private var thresholdLoggingTracerConfigDslBuilder =
+        ThresholdLoggingTracerConfigDslBuilder(wrapped.thresholdLoggingTracerConfig())
 
-    public fun thresholdRequestTracer(initializer: ThresholdRequestTracerConfigDslBuilder.() -> Unit) {
-        thresholdRequestTracerConfigDslBuilder.initializer()
+    public fun thresholdLoggingTracer(initializer: ThresholdLoggingTracerConfigDslBuilder.() -> Unit) {
+        thresholdLoggingTracerConfigDslBuilder.initializer()
     }
 
     private var loggingMeterConfigDslBuilder = LoggingMeterConfigDslBuilder(wrapped.loggingMeterConfig())
