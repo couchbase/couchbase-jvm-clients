@@ -22,7 +22,6 @@
             <groupId>com.couchbase.client</groupId>
             <artifactId>core-io</artifactId>
             <version>${core-io.version}</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- External, Optional Dependencies -->
