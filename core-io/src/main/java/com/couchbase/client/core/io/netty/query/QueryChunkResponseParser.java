@@ -27,6 +27,8 @@ import com.couchbase.client.core.error.InternalServerFailureException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.PlanningFailureException;
 import com.couchbase.client.core.error.PreparedStatementFailureException;
+import com.couchbase.client.core.error.UnambiguousTimeoutException;
+import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.error.context.QueryErrorContext;
 import com.couchbase.client.core.error.IndexFailureException;
 import com.couchbase.client.core.error.IndexNotFoundException;
@@ -153,6 +155,14 @@ public class QueryChunkResponseParser
         return new IndexFailureException(errorContext);
       } else if (code == 1065 && message.contains("query_context")) {
         return FeatureNotAvailableException.scopeLevelQuery(ServiceType.QUERY);
+      } else if (code == 1080) {
+        // This can happen when the server starts streaming responses - at this point our timeout is already
+        // canceled. But then the streaming takes longer than the configured timeout, in which case the query
+        // engine will proactively send us a timeout and we need to convert it.
+        return new UnambiguousTimeoutException(
+          "Query timed out while streaming/receiving rows",
+          new CancellationErrorContext(errorContext)
+        );
       }
     }
     return new CouchbaseException("Unknown query error", errorContext);

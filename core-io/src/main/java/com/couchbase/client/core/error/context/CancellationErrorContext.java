@@ -31,17 +31,17 @@ import java.util.Map;
 public class CancellationErrorContext extends ErrorContext {
 
   private final RequestContext requestContext;
-  private final WaitUntilReadyContext waitUntilReadyContext;
+  private final AbstractContext context;
 
   public CancellationErrorContext(RequestContext requestContext) {
     super(null);
     this.requestContext = requestContext;
-    this.waitUntilReadyContext = null;
+    this.context = null;
   }
 
-  public CancellationErrorContext(WaitUntilReadyContext waitUntilReadyContext) {
+  public CancellationErrorContext(AbstractContext context) {
     super(null);
-    this.waitUntilReadyContext = waitUntilReadyContext;
+    this.context = context;
     this.requestContext = null;
   }
 
@@ -51,8 +51,8 @@ public class CancellationErrorContext extends ErrorContext {
     if (requestContext != null) {
       requestContext.injectExportableParams(input);
     }
-    if (waitUntilReadyContext != null) {
-      waitUntilReadyContext.injectExportableParams(input);
+    if (context != null) {
+      context.injectExportableParams(input);
     }
   }
 
@@ -67,6 +67,7 @@ public class CancellationErrorContext extends ErrorContext {
    * Returns the wait until ready context if present.
    */
   public WaitUntilReadyContext getWaitUntilReadyContext() {
-    return waitUntilReadyContext;
+    return (WaitUntilReadyContext) context;
   }
+
 }
