@@ -10,7 +10,7 @@
         <version>1.11.0</version>
     </parent>
 
-    <artifactId>couchbase-kotlin-client</artifactId>
+    <artifactId>kotlin-client</artifactId>
     <version>1.0.0-dp.1</version>
 
     <name>Couchbase Kotlin SDK</name>
