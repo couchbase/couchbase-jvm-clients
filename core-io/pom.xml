@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.couchbase.client</groupId>
         <artifactId>couchbase-jvm-clients</artifactId>
-        <version>1.11.0-SNAPSHOT</version>
+        <version>1.11.0</version>
     </parent>
 
     <artifactId>core-io</artifactId>
@@ -67,7 +67,7 @@
             <version>${core-io-deps.version}</version>
             <!-- adding scope-provided results in the MANIFEST/* files not being included in core-io.jar <scope>provided</scope> -->
             <!-- removing scope-provided results in osgi-feature bundling believing that core-io-deps is a required module -->
-            <!-- and referencing it as a wrapped bundle: wrap:mvn:com.couchbase.client/core-io-deps/1.2.0-SNAPSHOT  -->
+            <!-- and referencing it as a wrapped bundle: wrap:mvn:com.couchbase.client/core-io-deps/1.2.0  -->
         </dependency>
 
         <!-- Test Dependencies -->
