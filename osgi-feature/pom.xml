@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>osgi-feature</artifactId>
-    <version>${osgi-feature.version}</version>
+    <version>1.2.0</version>
     <packaging>pom</packaging>
 
     <name>Couchbase Java SDK OSGI Feature</name>

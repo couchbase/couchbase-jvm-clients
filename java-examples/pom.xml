@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>java-examples</artifactId>
-    <version>${java-examples.version}</version>
+    <version>1.2.0</version>
     <!-- Does not need packaging bundle as the felix plugin does this <packaging>bundle</packaging> -->
 
     <name>Couchbase Java SDK Examples</name>
