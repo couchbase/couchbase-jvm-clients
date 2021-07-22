@@ -23,13 +23,42 @@ import java.time.Duration;
 
 public class WaitUntilReadyCompletedEvent extends AbstractEvent {
 
-  public WaitUntilReadyCompletedEvent(final Context context) {
-    super(Severity.DEBUG, Category.CORE, Duration.ZERO, context);
+  private final Reason reason;
+
+  public WaitUntilReadyCompletedEvent(final Context context, final Reason reason) {
+    super(reason.severity, Category.CORE, Duration.ZERO, context);
+    this.reason = reason;
   }
 
   @Override
   public String description() {
-    return "WaitUntilReady completed.";
+    if (reason == Reason.SUCCESS) {
+      return "WaitUntilReady completed successfully.";
+    } else if (reason == Reason.CLUSTER_LEVEL_NOT_SUPPORTED) {
+      return "Cluster-Level WaitUntilReady completed without action, because it was run against a Couchbase Server " +
+        "version which does not support it (only supported with 6.5 and later). Please execute " +
+        "WaitUntilReady at the bucket level and open at least one bucket to perform your operations.";
+    } else {
+      return "WaitUntilReady completed.";
+    }
+  }
+
+  public enum Reason {
+    /**
+     * Wait until ready has been used at the cluster level against a server which
+     * does not support global configurations (only supported with  6.5 and later).
+     */
+    CLUSTER_LEVEL_NOT_SUPPORTED(Severity.INFO),
+    /**
+     * Wait until ready completed successfully.
+     */
+    SUCCESS(Severity.DEBUG);
+
+    private final Severity severity;
+
+    Reason(final Severity severity) {
+      this.severity = severity;
+    }
   }
 
 }
