@@ -45,6 +45,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -60,17 +61,6 @@ public class WaitUntilReadyHelper {
   public static CompletableFuture<Void> waitUntilReady(final Core core, final Set<ServiceType> serviceTypes,
                                                        final Duration timeout, final ClusterState desiredState,
                                                        final Optional<String> bucketName) {
-    boolean hasChance = core.clusterConfig().hasClusterOrBucketConfig()
-      || core.configurationProvider().globalConfigLoadInProgress()
-      || core.configurationProvider().bucketConfigLoadInProgress();
-    if (!hasChance) {
-      CompletableFuture<Void> f = new CompletableFuture<>();
-      f.completeExceptionally(
-        new IllegalStateException("Against pre 6.5 clusters at least a bucket needs to be opened!")
-      );
-      return f;
-    }
-
     final WaitUntilReadyState state = new WaitUntilReadyState();
 
     state.transition(WaitUntilReadyStage.CONFIG_LOAD);
@@ -137,6 +127,30 @@ public class WaitUntilReadyHelper {
       })
       .take(1)
       .flatMap(aLong -> {
+        // There could be a scenario where a user calls waitUntilReady on the cluster object despite
+        // running a server cluster pre 6.5 (which does not support cluster-level config). Per definition,
+        // we cannot make progress. So we let WaitUntilReady complete (so a user can move on to open a bucket)
+        // but we'll print a warning to make sure we clarify the situation.
+        //
+        // Note that an explicit decision has been made to not fail fast and let it pass through because individual
+        // operations will fail anyways if no further bucket is being opened and there is just nothing to "wait for"
+        // to being ready at this point. Bucket level wait until ready is the way to go there.
+        if (!bucketName.isPresent() && !core.clusterConfig().hasClusterOrBucketConfig()) {
+          state.transition(WaitUntilReadyStage.COMPLETE);
+          WaitUntilReadyContext waitUntilReadyContext = new WaitUntilReadyContext(
+            servicesToCheck(core, serviceTypes, bucketName),
+            timeout,
+            desiredState,
+            bucketName,
+            core.diagnostics().collect(Collectors.groupingBy(EndpointDiagnostics::type)),
+            state
+          );
+          core.context().environment().eventBus().publish(new WaitUntilReadyCompletedEvent(
+            waitUntilReadyContext, WaitUntilReadyCompletedEvent.Reason.CLUSTER_LEVEL_NOT_SUPPORTED
+          ));
+          return Flux.empty();
+        }
+
         state.transition(WaitUntilReadyStage.PING);
         final Flux<ClusterState> diagnostics = Flux
           .interval(Duration.ofMillis(10), core.context().environment().scheduler())
@@ -177,7 +191,7 @@ public class WaitUntilReadyHelper {
           state
         );
         core.context().environment().eventBus().publish(
-          new WaitUntilReadyCompletedEvent(waitUntilReadyContext));
+          new WaitUntilReadyCompletedEvent(waitUntilReadyContext, WaitUntilReadyCompletedEvent.Reason.SUCCESS));
       })
       .toFuture();
   }
