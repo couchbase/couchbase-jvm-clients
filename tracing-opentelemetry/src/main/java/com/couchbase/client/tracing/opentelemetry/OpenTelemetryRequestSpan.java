@@ -58,7 +58,9 @@ public class OpenTelemetryRequestSpan implements RequestSpan {
 
   @Override
   public void attribute(String key, String value) {
-    span.setAttribute(key, value);
+    if (value != null) {
+      span.setAttribute(key, value);
+    }
   }
 
   @Override
