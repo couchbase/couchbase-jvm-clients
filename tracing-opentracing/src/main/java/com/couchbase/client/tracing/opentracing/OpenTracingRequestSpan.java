@@ -68,7 +68,9 @@ public class OpenTracingRequestSpan implements RequestSpan {
 
   @Override
   public void attribute(String key, String value) {
-    span.setTag(key, value);
+    if (value != null) {
+      span.setTag(key, value);
+    }
   }
 
   @Override
