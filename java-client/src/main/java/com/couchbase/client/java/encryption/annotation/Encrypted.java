@@ -29,6 +29,8 @@ import java.lang.annotation.Target;
 /**
  * Indicates the annotated field should be encrypted during serialization
  * and decrypted during deserialization.
+ * <p>
+ * May be used as a meta-annotation.
  *
  * @see com.couchbase.client.java.encryption.databind.jackson.EncryptionModule
  * @see com.couchbase.client.java.encryption.databind.jackson.repackaged.RepackagedEncryptionModule
@@ -44,4 +46,32 @@ public @interface Encrypted {
    * May be omitted if the crypto manager has a default encrypter.
    */
   String encrypter() default CryptoManager.DEFAULT_ENCRYPTER_ALIAS;
+
+  /**
+   * Controls deserialization behavior when the provided field value
+   * is not encrypted.
+   * <p>
+   * Defaults to {@link Migration#NONE}.
+   *
+   * @since 3.2.1
+   */
+  @Stability.Volatile
+  Migration migration() default Migration.NONE;
+
+  @Stability.Volatile
+  enum Migration {
+    /**
+     * During deserialization, accept an unencrypted value if an encrypted value is not present.
+     * This enables seamless migration when adding encryption to an existing field.
+     * The drawback is that it removes any guarantee the field was written by someone
+     * in possession of the secret key, since encryption implies authentication.
+     */
+    FROM_UNENCRYPTED,
+
+    /**
+     * During deserialization, when an unencrypted value is encountered it will either be ignored
+     * or cause data binding to fail (depending on other deserialization settings).
+     */
+    NONE,
+  }
 }

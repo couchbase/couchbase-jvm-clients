@@ -33,9 +33,9 @@ public class EncryptionModuleTest extends AbstractEncryptionModuleTest {
   }
 
   @Override
-  protected <T extends MaximHolder> void doCheck(Class<T> pojoClass, String json, Consumer<T> pojoValidator) throws Exception {
-    T pojo = cryptoMapper.readValue(json, pojoClass);
+  protected <T extends MaximHolder> void doCheck(Class<T> pojoClass, String inputJson, String expectedOutputJson, Consumer<T> pojoValidator) throws Exception {
+    T pojo = cryptoMapper.readValue(inputJson, pojoClass);
     pojoValidator.accept(pojo);
-    assertEquals(cryptoMapper.readTree(json), cryptoMapper.convertValue(pojo, JsonNode.class));
+    assertEquals(cryptoMapper.readTree(expectedOutputJson), cryptoMapper.convertValue(pojo, JsonNode.class));
   }
 }

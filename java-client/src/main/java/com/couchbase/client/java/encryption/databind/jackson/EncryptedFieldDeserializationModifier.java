@@ -59,7 +59,11 @@ public class EncryptedFieldDeserializationModifier extends BeanDeserializerModif
 
         // Avoid ConcurrentModificationException by processing these in a separate pass
         modified.add(newProp);
-        unmangledNames.add(prop.getFullName());
+
+        if (annotation.migration() != Encrypted.Migration.FROM_UNENCRYPTED) {
+          // mark the unmangled name for removal
+          unmangledNames.add(prop.getFullName());
+        }
       }
     });
 

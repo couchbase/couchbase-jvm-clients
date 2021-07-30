@@ -11,18 +11,25 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.function.Consumer;
 
+import static com.couchbase.client.java.encryption.annotation.Encrypted.Migration.FROM_UNENCRYPTED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class AbstractEncryptionModuleTest {
 
-  protected static final String json = "{\n" +
+  protected static final String jsonPlaintext = "{\n" +
+      "  \"maxim\": \"The enemy knows the system.\"\n" +
+      "}\n";
+
+  protected static final String jsonEncrypted = "{\n" +
       "  \"encrypted$maxim\": {\n" +
       "    \"alg\": \"FAKE\",\n" +
       "    \"ciphertext\": \"IlRoZSBlbmVteSBrbm93cyB0aGUgc3lzdGVtLiI=\"\n" +
       "  }\n" +
       "}\n";
 
-  protected static final String jsonWithUnencrypted = "{\n" +
+  protected static final String jsonMixed = "{\n" +
       "  \"greeting\":\"hello\",\n" +
       "  \"encrypted$maxim\": {\n" +
       "    \"alg\": \"FAKE\",\n" +
@@ -44,21 +51,44 @@ public abstract class AbstractEncryptionModuleTest {
       AnnotatedGetterMeta.class,
       AnnotatedSetterMeta.class,
       AnnotatedGetterImmutableMeta.class,
+      AnnotatedGetterWithMigrationFromUnencrypted.class,
   })
   <T extends MaximHolder> void canSerializeAndDeserialize(Class<T> pojoClass) throws Exception {
     // delegate to subclass to use either standard or repackaged Jackson
-    doCheck(pojoClass, json, pojo -> assertEquals("The enemy knows the system.", pojo.getMaxim()));
+    doCheck(pojoClass, jsonEncrypted, pojo -> assertEquals("The enemy knows the system.", pojo.getMaxim()));
   }
 
   @Test
   void worksIfThereAreNonSensitiveFields() throws Exception {
-    doCheck(AlsoHasNonSensitiveFields.class, jsonWithUnencrypted, pojo -> {
+    doCheck(AlsoHasNonSensitiveFields.class, jsonMixed, pojo -> {
       assertEquals("The enemy knows the system.", pojo.getMaxim());
       assertEquals("hello", pojo.getGreeting());
     });
   }
 
-  protected abstract <T extends MaximHolder> void doCheck(Class<T> pojoClass, String json, Consumer<T> pojoValidator) throws Exception;
+  @Test
+  void worksWhenMigratingFromUnencrypted() throws Exception {
+    doCheck(AnnotatedGetterWithMigrationFromUnencrypted.class, jsonPlaintext, jsonEncrypted, pojo -> {
+      assertEquals("The enemy knows the system.", pojo.getMaxim());
+    });
+  }
+
+  @Test
+  void failsOnUnencryptedFieldWithoutMigration() throws Exception {
+    Exception e = assertThrows(Exception.class, () ->
+        doCheck(AnnotatedGetter.class, jsonPlaintext, pojo -> {
+        }));
+    if (!e.getMessage().contains("Unrecognized field \"maxim\"")) {
+      fail("unexpected exception message: " + e);
+    }
+  }
+
+  protected <T extends MaximHolder> void doCheck(Class<T> pojoClass, String inputJson, Consumer<T> pojoValidator) throws Exception {
+    // expected output is same as input
+    doCheck(pojoClass, inputJson, inputJson, pojoValidator);
+  }
+
+  protected abstract <T extends MaximHolder> void doCheck(Class<T> pojoClass, String inputJson, String expectedOutputJson, Consumer<T> pojoValidator) throws Exception;
 
   protected interface MaximHolder {
     String getMaxim();
@@ -213,4 +243,17 @@ public abstract class AbstractEncryptionModuleTest {
     }
   }
 
+  protected static class AnnotatedGetterWithMigrationFromUnencrypted implements MaximHolder {
+    private String maxim;
+
+    @Encrypted(migration = FROM_UNENCRYPTED)
+    public String getMaxim() {
+      return maxim;
+    }
+
+    @SuppressWarnings("unused")
+    public void setMaxim(String maxim) {
+      this.maxim = maxim;
+    }
+  }
 }
