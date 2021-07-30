@@ -26,7 +26,7 @@ public class LoggerConfig {
 
   @Stability.Internal
   public static class Defaults {
-    public static final boolean DEFAULT_FALLBACK_TO_CONSOLE = true;
+    public static final boolean DEFAULT_FALLBACK_TO_CONSOLE = false;
     public static final boolean DEFAULT_DISABLE_SLF4J = false;
     public static final String DEFAULT_LOGGER_NAME = "CouchbaseLogger";
     public static final boolean DEFAULT_DIAGNOSTIC_CONTEXT_ENABLED = false;
