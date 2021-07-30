@@ -83,7 +83,7 @@ public class LoggingEventConsumer implements Consumer<Event> {
     } else if (SLF4J_AVAILABLE && !loggerConfig.disableSlf4J()) {
       logger = new Slf4JLogger(name);
     } else if (loggerConfig.fallbackToConsole()) {
-      logger = new ConsoleLogger(name);
+      logger = new ConsoleLogger(name, loggerConfig.consoleLogLevel());
     } else {
       logger = new JdkLogger(name);
     }
@@ -733,11 +733,22 @@ public class LoggingEventConsumer implements Consumer<Event> {
     private final String name;
     private final PrintStream err;
     private final PrintStream log;
+    private final boolean traceEnabled;
+    private final boolean debugEnabled;
+    private final boolean infoEnabled;
+    private final boolean warnEnabled;
+    private final boolean errorEnabled;
 
-    ConsoleLogger(String name) {
+    ConsoleLogger(String name, Level logLevel) {
       this.name = name;
       this.log = System.out;
       this.err = System.err;
+
+      traceEnabled = logLevel.intValue() <= Level.FINEST.intValue();
+      debugEnabled = logLevel.intValue() <= Level.FINE.intValue();
+      infoEnabled = logLevel.intValue() <= Level.INFO.intValue();
+      warnEnabled = logLevel.intValue() <= Level.WARNING.intValue();
+      errorEnabled = logLevel.intValue() <= Level.SEVERE.intValue();
     }
 
     @Override
@@ -747,7 +758,7 @@ public class LoggingEventConsumer implements Consumer<Event> {
 
     @Override
     public boolean isTraceEnabled() {
-      return true;
+      return traceEnabled;
     }
 
     @Override
@@ -769,7 +780,7 @@ public class LoggingEventConsumer implements Consumer<Event> {
 
     @Override
     public boolean isDebugEnabled() {
-      return true;
+      return debugEnabled;
     }
 
     @Override
@@ -791,7 +802,7 @@ public class LoggingEventConsumer implements Consumer<Event> {
 
     @Override
     public boolean isInfoEnabled() {
-      return true;
+      return infoEnabled;
     }
 
     @Override
@@ -813,7 +824,7 @@ public class LoggingEventConsumer implements Consumer<Event> {
 
     @Override
     public boolean isWarnEnabled() {
-      return true;
+      return warnEnabled;
     }
 
     @Override
@@ -835,7 +846,7 @@ public class LoggingEventConsumer implements Consumer<Event> {
 
     @Override
     public boolean isErrorEnabled() {
-      return true;
+      return errorEnabled;
     }
 
     @Override

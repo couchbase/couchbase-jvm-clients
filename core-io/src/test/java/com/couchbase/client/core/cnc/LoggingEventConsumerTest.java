@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.cnc;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -33,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
 
 /**
  * Verifies the functionality of the {@link LoggingEventConsumer}.
@@ -145,6 +148,17 @@ class LoggingEventConsumerTest {
     event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofSeconds(11), null);
     loggingEventConsumer.accept(event);
     verify(logger, times(1)).info("[com.couchbase.io][MyEvent][11s]");
+  }
+
+  @Test
+  void verifyConsoleLoggerLogLevelEnablement() {
+    LoggingEventConsumer.ConsoleLogger logger = new LoggingEventConsumer.ConsoleLogger("logger", Level.INFO);
+
+    assertFalse(logger.isTraceEnabled());
+    assertFalse(logger.isDebugEnabled());
+    assertTrue(logger.isInfoEnabled());
+    assertTrue(logger.isWarnEnabled());
+    assertTrue(logger.isErrorEnabled());
   }
 
   static class MyEvent extends AbstractEvent {

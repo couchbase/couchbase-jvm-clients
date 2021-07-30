@@ -18,10 +18,8 @@ package com.couchbase.client.kotlin.env.dsl
 
 import com.couchbase.client.core.cnc.LoggingEventConsumer
 import com.couchbase.client.core.env.LoggerConfig
-import com.couchbase.client.core.env.LoggerConfig.Defaults.DEFAULT_DIAGNOSTIC_CONTEXT_ENABLED
-import com.couchbase.client.core.env.LoggerConfig.Defaults.DEFAULT_DISABLE_SLF4J
-import com.couchbase.client.core.env.LoggerConfig.Defaults.DEFAULT_FALLBACK_TO_CONSOLE
-import com.couchbase.client.core.env.LoggerConfig.Defaults.DEFAULT_LOGGER_NAME
+import com.couchbase.client.core.env.LoggerConfig.Defaults.*
+import java.util.logging.Level
 import kotlin.properties.Delegates.observable
 
 /**
@@ -39,6 +37,11 @@ public class LoggerConfigDslBuilder(private val wrapped: LoggerConfig.Builder) {
     public var fallbackToConsole: Boolean
             by observable(DEFAULT_FALLBACK_TO_CONSOLE) { _, _, it -> wrapped.fallbackToConsole(it) }
 
+    /**
+     * @see LoggerConfig.Builder.consoleLogLevel
+     */
+    public var consoleLogLevel: Level
+            by observable(DEFAULT_CONSOLE_LOG_LEVEL) { _, _, it -> wrapped.consoleLogLevel(it) }
     /**
      * @see LoggerConfig.Builder.disableSlf4J
      */
