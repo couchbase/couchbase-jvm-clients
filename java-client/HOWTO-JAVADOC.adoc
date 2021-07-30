@@ -3,22 +3,18 @@
 [abstract]
 A brief guide for style and content.
 
-== Language
-
-All Javadoc is written in English.
-
 == Guiding principles
 
-A Javadoc comment is written in such a way that it is rendered correctly in a web browser.
+Javadoc comments should render correctly in a web browser.
 
-Excessive formatting is avoided.
-A balance is struck between readable comments in the source code and nicely rendered Javadoc reference material.
+Avoid excessive markup.
+Strike a balance between readable comments in the source code and nicely rendered Javadoc reference material.
 
 
 == Initial sentence
 
-The first sentence of a Javadoc comment briefly summarizes the behavior/purpose of the class, method, or field.
-It is written in the third person, as if it began with "This class/method/field".
+The first sentence of a Javadoc comment should briefly summarize the behavior/purpose of the class, method, or field.
+Write it in the third person, as if it began with "This class/method/field".
 
 .Example:
 ```java
@@ -29,7 +25,7 @@ It is written in the third person, as if it began with "This class/method/field"
 
 == Paragraphs
 
-Standalone `<p>` tags are used to separate paragraphs.
+Use standalone `<p>` tags to separate paragraphs.
 
 .Example:
 ```java
@@ -44,25 +40,25 @@ Standalone `<p>` tags are used to separate paragraphs.
 
 === link
 
-The `{@link}` inline tag is used the first time a linkable program element is referenced in a Javadoc comment.
-Subsequent references are not linked, and are instead marked up with the `{@code}` inline tag.
-Common classes such as boxed primitives, `String`, `List`, `Set`, `Map`, etc. are not linked.
+Use the `{@link}` inline tag the first time a linkable program element is referenced in a Javadoc comment.
+Don't link subsequent references; instead, mark them with the `{@code}` inline tag.
+Don't link common classes such as boxed primitives, `String`, `List`, `Set`, `Map`, etc.
 
 
 === code
 
-The `{@code}` inline tag is used to mark up literal phrases, except for the simple literals `true`, `false`, and `null` which are not marked up.
+Use the `{@code}` inline tag to mark up literal phrases, except for the simple literals `true`, `false`, and `null` which should not be marked up.
 
 
 === inheritDoc
 
-The `{@inheritDoc}` inline tag is used only if additional documentation is present.
-It never appears as the sole content of a Javadoc comment.
+Use the `{@inheritDoc}` inline tag only if additional documentation is present.
+It should never be the sole content of a Javadoc comment.
 
 
 == Code samples
 
-Multi-line code samples and other pre-formatted texts such as ASCII-art tables are enclosed in `<pre>` & `</pre>` tag pairs.
+Enclose multi-line code samples and other pre-formatted texts (such as ASCII-art tables) in `<pre>` & `</pre>` tag pairs.
 
 .Example:
 ```java
@@ -77,8 +73,8 @@ Multi-line code samples and other pre-formatted texts such as ASCII-art tables a
 
 == Lists
 
-Lists are expressed using `<ol>` or `<ul>` tag pairs.
-Closing `<li`> tags are omitted.
+Express lists using `<ol>` or `<ul>` tag pairs.
+Omit closing `<li`> tags.
 
 .Example:
 ```java
@@ -92,8 +88,8 @@ Closing `<li`> tags are omitted.
 
 == Asynchronous exceptions
 
-Javadoc for methods returning `CompletableFuture`, `Flux`, and `Mono` uses the `@throws` tag for each exception expected to be thrown asynchronously.
-The description of an asynchronous exception is prefixed with "(async) ".
+For methods returning `CompletableFuture`, `Flux`, or `Mono`, use the `@throws` tag for each exception expected to be thrown asynchronously.
+Prefix the description of an asynchronous exception with "(async) ".
 
 .Example:
 ```java
@@ -108,7 +104,7 @@ The description of an asynchronous exception is prefixed with "(async) ".
 
 == Nullability
 
-If `null` is a valid value for a parameter or return value, this is indicated by prefixing the description with "(nullable) ".
+If null is a valid value for a parameter or return value, indicate this by prefixing the description with "(nullable) ".
 The description should include a statement of how a null parameter is interpreted, or under what circumstances null is returned.
 
 .Example:
