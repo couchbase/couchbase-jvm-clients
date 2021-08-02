@@ -33,7 +33,7 @@ import scala.util.{Failure, Success, Try}
   * JsonDeserializer for many T are provided 'out-of-the-box', but if you need to create one for a currently unsupported
   * type then this is very simple.  Check out the JsonDeserializers in this file for examples.
   */
-trait JsonDeserializer[T] {
+trait JsonDeserializer[T] extends Serializable {
 
   /** Decodes an Array[Byte] into a `T`.
     *

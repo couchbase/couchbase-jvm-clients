@@ -55,7 +55,7 @@ object Codec {
 /** A Codec conveniently combines an [[com.couchbase.client.scala.codec.JsonSerializer]] and
   * [[JsonDeserializer]] so that they can be created by [[com.couchbase.client.scala.implicits.Codec.codec]] on the same line.
   */
-trait CodecWrapper[-A, B] extends JsonSerializer[A] with JsonDeserializer[B]
+trait CodecWrapper[-A, B] extends JsonSerializer[A] with JsonDeserializer[B] with Serializable
 trait Codec[A]            extends CodecWrapper[A, A]
 
 private[scala] object CodecImplicits {

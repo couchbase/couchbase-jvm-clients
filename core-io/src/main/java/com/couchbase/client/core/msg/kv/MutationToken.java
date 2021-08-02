@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.core.msg.kv;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
@@ -24,7 +25,9 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
  *
  * @since 1.2.0
  */
-public class MutationToken {
+public class MutationToken implements Serializable {
+
+  private static final long serialVersionUID = 1014945571442656640L;
 
   private final short partitionID;
   private final long partitionUUID;

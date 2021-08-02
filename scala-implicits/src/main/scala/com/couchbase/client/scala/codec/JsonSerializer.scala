@@ -28,7 +28,7 @@ import scala.util.Try
   * JsonSerializer for many T are provided 'out-of-the-box', but if you need to create one for a currently unsupported
   * type then this is very simple.  Check out the JsonSerializers in this file for examples.
   */
-trait JsonSerializer[-T] {
+trait JsonSerializer[-T] extends Serializable {
 
   /** Encodes a `T` into an Array[Byte].
     *

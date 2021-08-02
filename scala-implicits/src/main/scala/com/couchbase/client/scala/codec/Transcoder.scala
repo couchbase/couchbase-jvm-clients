@@ -21,7 +21,7 @@ import scala.util.Try
 
 case class EncodedValue(encoded: Array[Byte], flags: Int)
 
-sealed trait Transcoder
+sealed trait Transcoder extends Serializable
 
 trait TranscoderWithoutSerializer extends Transcoder {
   def encode[T](value: T): Try[EncodedValue]
