@@ -27,17 +27,15 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the basic interaction between the {@link KeyValueEndpoint} and a
@@ -96,7 +94,7 @@ class KeyValueEndpointIntegrationTest extends CoreIntegrationTest {
     endpoint.connect();
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
-    NoopRequest request = new NoopRequest(Duration.ofSeconds(2), serviceContext, null,
+    NoopRequest request = new NoopRequest(kvTimeout, serviceContext, null,
       CollectionIdentifier.fromDefault(config().bucketname())
     );
     assertTrue(request.id() > 0);

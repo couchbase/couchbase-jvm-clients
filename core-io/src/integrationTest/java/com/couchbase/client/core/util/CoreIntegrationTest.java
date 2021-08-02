@@ -16,7 +16,10 @@
 
 package com.couchbase.client.core.util;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
+import com.couchbase.client.core.diagnostics.ClusterState;
+import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
@@ -25,8 +28,11 @@ import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
 import org.junit.jupiter.api.Timeout;
 
+import java.time.Duration;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -41,6 +47,23 @@ public class CoreIntegrationTest extends ClusterAwareIntegrationTest {
   static {
     // Make sure that every core integration test records and spits out buffer leaks.
     ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+  }
+
+  protected static final Duration kvTimeout = Duration.ofSeconds(5);
+  protected static final Duration managementTimeout = Duration.ofSeconds(5);
+
+  protected static void waitUntilReady(Core core) {
+    try {
+      WaitUntilReadyHelper.waitUntilReady(
+              core,
+              Collections.emptySet(),
+              Duration.ofSeconds(15),
+              ClusterState.ONLINE,
+              Optional.of(config().bucketname()))
+          .get();
+    } catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**

@@ -165,8 +165,8 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     environment = CoreEnvironment.builder()
       .timeoutConfig(TimeoutConfig
-        .kvTimeout(Duration.ofSeconds(1))
-        .managementTimeout(Duration.ofSeconds(1))
+        .kvTimeout(kvTimeout)
+        .managementTimeout(managementTimeout)
       )
       .build();
     core = Core.create(environment, authenticator(), seeds);

@@ -18,8 +18,10 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.SeedNode;
@@ -33,13 +35,10 @@ import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
-import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import com.couchbase.client.core.cnc.SimpleEventBus;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.TrustManagerFactory;
 import java.security.KeyStore;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -49,10 +48,10 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -185,13 +184,13 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), Optional.empty(), null);
+      kvTimeout, core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), Optional.empty(), null);
     core.send(insertRequest);
 
     InsertResponse insertResponse = insertRequest.response().get();
     assertTrue(insertResponse.status().success());
 
-    GetRequest getRequest = new GetRequest(id, Duration.ofSeconds(1),
+    GetRequest getRequest = new GetRequest(id, kvTimeout,
       core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), null);
     core.send(getRequest);
 

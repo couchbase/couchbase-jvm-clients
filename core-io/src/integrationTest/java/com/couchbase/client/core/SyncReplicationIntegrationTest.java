@@ -23,19 +23,16 @@ import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.msg.kv.UpsertResponse;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Capabilities;
-import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * These integration tests verify synchronous replication capabilities against
@@ -53,6 +50,7 @@ class SyncReplicationIntegrationTest extends CoreIntegrationTest {
     env = environment().build();
     core = Core.create(env, authenticator(), seedNodes());
     core.openBucket(config().bucketname());
+    waitUntilReady(core);
   }
 
   @AfterEach
@@ -76,7 +74,7 @@ class SyncReplicationIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, content, 0, false, 0,
-      Duration.ofSeconds(2), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(),
+      kvTimeout, core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(),
       Optional.of(DurabilityLevel.MAJORITY), null);
     core.send(upsertRequest);
 

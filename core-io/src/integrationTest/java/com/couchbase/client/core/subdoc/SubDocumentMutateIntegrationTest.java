@@ -18,24 +18,19 @@ package com.couchbase.client.core.subdoc;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.error.subdoc.*;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.kv.*;
+import com.couchbase.client.core.msg.kv.InsertRequest;
+import com.couchbase.client.core.msg.kv.InsertResponse;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class SubDocumentMutateIntegrationTest extends CoreIntegrationTest {
 
@@ -59,7 +54,7 @@ class SubDocumentMutateIntegrationTest extends CoreIntegrationTest {
     byte[] content = in.getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
-            Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(),
+            kvTimeout, core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(),
       Optional.empty(), null);
     core.send(insertRequest);
 

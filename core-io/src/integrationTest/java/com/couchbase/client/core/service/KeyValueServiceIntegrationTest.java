@@ -18,7 +18,6 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
@@ -29,12 +28,11 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class KeyValueServiceIntegrationTest extends CoreIntegrationTest {
 
@@ -77,7 +75,7 @@ class KeyValueServiceIntegrationTest extends CoreIntegrationTest {
     service.connect();
     waitUntilCondition(() -> service.state() == ServiceState.CONNECTED);
 
-    NoopRequest request = new NoopRequest(Duration.ofSeconds(2), core.context(), null, CollectionIdentifier.fromDefault(config().bucketname()));
+    NoopRequest request = new NoopRequest(kvTimeout, core.context(), null, CollectionIdentifier.fromDefault(config().bucketname()));
     assertTrue(request.id() > 0);
     service.send(request);
 

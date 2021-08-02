@@ -58,6 +58,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     env = environment().build();
     core = Core.create(env, authenticator(), seedNodes());
     core.openBucket(config().bucketname());
+    waitUntilReady(core);
   }
 
   @AfterAll
@@ -75,14 +76,14 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), CollectionIdentifier.fromDefault(config().bucketname()),
+      kvTimeout, core.context(), CollectionIdentifier.fromDefault(config().bucketname()),
       env.retryStrategy(), Optional.empty(), null);
     core.send(insertRequest);
 
     InsertResponse insertResponse = insertRequest.response().get();
     assertTrue(insertResponse.status().success());
 
-    GetRequest getRequest = new GetRequest(id, Duration.ofSeconds(1), core.context(),
+    GetRequest getRequest = new GetRequest(id, kvTimeout, core.context(),
       CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), null);
     core.send(getRequest);
 
@@ -98,7 +99,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     String id = UUID.randomUUID().toString();
     byte[] content = "hello, world".getBytes(UTF_8);
 
-    InsertRequest insertRequest = new InsertRequest(id, content, 0, 0, Duration.ofSeconds(1),
+    InsertRequest insertRequest = new InsertRequest(id, content, 0, 0, kvTimeout,
       core.context(), CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(),
       Optional.of(DurabilityLevel.MAJORITY), null);
     core.send(insertRequest);
@@ -132,7 +133,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     final boolean preserveExpiry = true;
 
     Throwable t = assertThrows(InvalidArgumentException.class, () -> new ReplaceRequest(
-        "foo", content, expiry, preserveExpiry, 0, Duration.ofSeconds(5), 0, core.context(),
+        "foo", content, expiry, preserveExpiry, 0, kvTimeout, 0, core.context(),
         CollectionIdentifier.fromDefault(config().bucketname()),
         env.retryStrategy(), Optional.empty(), null));
 
@@ -150,7 +151,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
         new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "foo", "\"bar\"".getBytes(UTF_8), true, false, false, 0)
     );
 
-    Throwable t = assertThrows(InvalidArgumentException.class, () -> new SubdocMutateRequest(Duration.ofSeconds(1),
+    Throwable t = assertThrows(InvalidArgumentException.class, () -> new SubdocMutateRequest(kvTimeout,
         core.context(), CollectionIdentifier.fromDefault(config().bucketname()), null, env.retryStrategy(), "foo",
         insert, upsert, false, false, commands, expiry, preserveExpiry, 0, Optional.empty(), null));
 
@@ -164,7 +165,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
-      Duration.ofSeconds(5), core.context(), new CollectionIdentifier(
+      kvTimeout, core.context(), new CollectionIdentifier(
         config().bucketname(),
         Optional.of(CollectionIdentifier.DEFAULT_SCOPE),
         Optional.of("my_collection_name")
@@ -176,7 +177,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     assertTrue(exception.getCause() instanceof FeatureNotAvailableException);
 
     InsertRequest insertRequest2 = new InsertRequest(id, content, 0, 0,
-      Duration.ofSeconds(5), core.context(), new CollectionIdentifier(
+      kvTimeout, core.context(), new CollectionIdentifier(
       config().bucketname(),
       Optional.of("my_custom_scope"),
       Optional.of(CollectionIdentifier.DEFAULT_COLLECTION)

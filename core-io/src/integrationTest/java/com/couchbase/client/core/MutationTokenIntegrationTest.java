@@ -19,13 +19,31 @@ package com.couchbase.client.core;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.msg.kv.*;
+import com.couchbase.client.core.msg.kv.AppendRequest;
+import com.couchbase.client.core.msg.kv.AppendResponse;
+import com.couchbase.client.core.msg.kv.DecrementRequest;
+import com.couchbase.client.core.msg.kv.DecrementResponse;
+import com.couchbase.client.core.msg.kv.IncrementRequest;
+import com.couchbase.client.core.msg.kv.IncrementResponse;
+import com.couchbase.client.core.msg.kv.InsertRequest;
+import com.couchbase.client.core.msg.kv.InsertResponse;
+import com.couchbase.client.core.msg.kv.MutationToken;
+import com.couchbase.client.core.msg.kv.PrependRequest;
+import com.couchbase.client.core.msg.kv.PrependResponse;
+import com.couchbase.client.core.msg.kv.RemoveRequest;
+import com.couchbase.client.core.msg.kv.RemoveResponse;
+import com.couchbase.client.core.msg.kv.ReplaceRequest;
+import com.couchbase.client.core.msg.kv.ReplaceResponse;
+import com.couchbase.client.core.msg.kv.SubdocCommandType;
+import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
+import com.couchbase.client.core.msg.kv.SubdocMutateResponse;
+import com.couchbase.client.core.msg.kv.UpsertRequest;
+import com.couchbase.client.core.msg.kv.UpsertResponse;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -47,6 +65,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     core = Core.create(env, authenticator(), seedNodes());
     core.openBucket(config().bucketname());
     collectionIdentifier = CollectionIdentifier.fromDefault(config().bucketname());
+    waitUntilReady(core);
   }
 
   @AfterAll
@@ -61,14 +80,14 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, content,
-      0, false, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
+      0, false, 0, kvTimeout, core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty(), null);
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
     assertTrue(upsertResponse.status().success());
     assertMutationToken(upsertResponse.mutationToken());
 
-    AppendRequest appendRequest = new AppendRequest(Duration.ofSeconds(1), core.context(),
+    AppendRequest appendRequest = new AppendRequest(kvTimeout, core.context(),
       collectionIdentifier, env.retryStrategy(), id,
       ", world".getBytes(UTF_8), upsertResponse.cas(), Optional.empty(), null);
     core.send(appendRequest);
@@ -84,14 +103,14 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, content,
-      0, false, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
+      0, false, 0, kvTimeout, core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty(), null);
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
     assertTrue(upsertResponse.status().success());
     assertMutationToken(upsertResponse.mutationToken());
 
-    PrependRequest prependRequest = new PrependRequest(Duration.ofSeconds(1), core.context(),
+    PrependRequest prependRequest = new PrependRequest(kvTimeout, core.context(),
       collectionIdentifier, env.retryStrategy(), id,
       ", world".getBytes(UTF_8), upsertResponse.cas(), Optional.empty(), null);
     core.send(prependRequest);
@@ -107,7 +126,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "{}".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, content,
-      0, false, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
+      0, false, 0, kvTimeout, core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty(), null);
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
@@ -124,7 +143,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
             false,
             0)
     );
-    SubdocMutateRequest subdocMutateRequest = new SubdocMutateRequest(Duration.ofSeconds(1),
+    SubdocMutateRequest subdocMutateRequest = new SubdocMutateRequest(kvTimeout,
       core.context(), collectionIdentifier, null, env.retryStrategy(), id,
       false, false, false, false, commands, 0, false, 0, Optional.empty(), null);
     core.send(subdocMutateRequest);
@@ -140,7 +159,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, content,
-      0, false, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
+      0, false, 0, kvTimeout, core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty(), null);
     core.send(upsertRequest);
 
@@ -155,7 +174,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, content,
-      0, false, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
+      0, false, 0, kvTimeout, core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty(), null);
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
@@ -163,7 +182,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     assertMutationToken(upsertResponse.mutationToken());
 
     ReplaceRequest replaceRequest = new ReplaceRequest(id, content,
-      0, false, 0, Duration.ofSeconds(1), upsertResponse.cas(), core.context(),
+      0, false, 0, kvTimeout, upsertResponse.cas(), core.context(),
       collectionIdentifier, env.retryStrategy(), Optional.empty(), null);
     core.send(replaceRequest);
 
@@ -178,7 +197,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(UTF_8);
 
     UpsertRequest upsertRequest = new UpsertRequest(id, content,
-      0, false, 0, Duration.ofSeconds(1), core.context(), collectionIdentifier,
+      0, false, 0, kvTimeout, core.context(), collectionIdentifier,
       env.retryStrategy(), Optional.empty(), null);
     core.send(upsertRequest);
     UpsertResponse upsertResponse = upsertRequest.response().get();
@@ -186,7 +205,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     assertMutationToken(upsertResponse.mutationToken());
 
     RemoveRequest removeRequest = new RemoveRequest(id, upsertResponse.cas(),
-      Duration.ofSeconds(1), core.context(), collectionIdentifier, env.retryStrategy(), Optional.empty(), null);
+      kvTimeout, core.context(), collectionIdentifier, env.retryStrategy(), Optional.empty(), null);
     core.send(removeRequest);
 
     RemoveResponse removeResponse = removeRequest.response().get();
@@ -200,7 +219,7 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "hello, world".getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), collectionIdentifier, env.retryStrategy(), Optional.empty(), null);
+      kvTimeout, core.context(), collectionIdentifier, env.retryStrategy(), Optional.empty(), null);
     core.send(insertRequest);
 
     InsertResponse insertResponse = insertRequest.response().get();
@@ -214,14 +233,14 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "1".getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), collectionIdentifier, env.retryStrategy(), Optional.empty(), null);
+      kvTimeout, core.context(), collectionIdentifier, env.retryStrategy(), Optional.empty(), null);
     core.send(insertRequest);
 
     InsertResponse insertResponse = insertRequest.response().get();
     assertTrue(insertResponse.status().success());
     assertMutationToken(insertResponse.mutationToken());
 
-    IncrementRequest incrementRequest = new IncrementRequest(Duration.ofSeconds(1), core.context(), collectionIdentifier,
+    IncrementRequest incrementRequest = new IncrementRequest(kvTimeout, core.context(), collectionIdentifier,
       env.retryStrategy(), id, 1, Optional.empty(), 0, Optional.empty(), null);
     core.send(incrementRequest);
 
@@ -236,14 +255,14 @@ class MutationTokenIntegrationTest extends CoreIntegrationTest {
     byte[] content = "10".getBytes(UTF_8);
 
     InsertRequest insertRequest = new InsertRequest(id, content, 0, 0,
-      Duration.ofSeconds(1), core.context(), collectionIdentifier, env.retryStrategy(), Optional.empty(), null);
+      kvTimeout, core.context(), collectionIdentifier, env.retryStrategy(), Optional.empty(), null);
     core.send(insertRequest);
 
     InsertResponse insertResponse = insertRequest.response().get();
     assertTrue(insertResponse.status().success());
     assertMutationToken(insertResponse.mutationToken());
 
-    DecrementRequest decrementRequest = new DecrementRequest(Duration.ofSeconds(1), core.context(), collectionIdentifier,
+    DecrementRequest decrementRequest = new DecrementRequest(kvTimeout, core.context(), collectionIdentifier,
       env.retryStrategy(), id, 1, Optional.empty(), 0, Optional.empty(), null);
     core.send(decrementRequest);
 
