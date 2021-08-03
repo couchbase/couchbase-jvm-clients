@@ -50,6 +50,7 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.manager.analytics.AsyncAnalyticsIndexManager;
 import com.couchbase.client.java.manager.bucket.AsyncBucketManager;
+import com.couchbase.client.java.manager.eventing.AsyncEventingFunctionManager;
 import com.couchbase.client.java.manager.query.AsyncQueryIndexManager;
 import com.couchbase.client.java.manager.search.AsyncSearchIndexManager;
 import com.couchbase.client.java.manager.user.AsyncUserManager;
@@ -134,6 +135,8 @@ public class AsyncCluster {
   private final AsyncQueryIndexManager queryIndexManager;
 
   private final AsyncAnalyticsIndexManager analyticsIndexManager;
+
+  private final AsyncEventingFunctionManager eventingFunctionManager;
 
   private final Authenticator authenticator;
 
@@ -244,6 +247,7 @@ public class AsyncCluster {
     this.bucketManager = new AsyncBucketManager(core);
     this.queryIndexManager = new AsyncQueryIndexManager(this);
     this.analyticsIndexManager = new AsyncAnalyticsIndexManager(this);
+    this.eventingFunctionManager = new AsyncEventingFunctionManager(core);
     this.authenticator = authenticator;
 
     core.initGlobalConfig();
@@ -299,6 +303,14 @@ public class AsyncCluster {
    */
   public AsyncSearchIndexManager searchIndexes() {
     return searchIndexManager;
+  }
+
+  /**
+   * Provides access to the eventing function management services.
+   */
+  @Stability.Uncommitted
+  public AsyncEventingFunctionManager eventingFunctions() {
+    return eventingFunctionManager;
   }
 
   /**

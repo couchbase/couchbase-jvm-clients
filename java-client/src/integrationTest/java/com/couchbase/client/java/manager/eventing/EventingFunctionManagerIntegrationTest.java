@@ -1,0 +1,252 @@
+/*
+ * Copyright 2021 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.couchbase.client.java.manager.eventing;
+
+import com.couchbase.client.core.error.*;
+import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.Collection;
+import com.couchbase.client.java.manager.collection.CollectionSpec;
+import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.Capabilities;
+import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.IgnoreWhen;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.opentest4j.AssertionFailedError;
+
+import java.time.Duration;
+import java.util.UUID;
+
+import static com.couchbase.client.test.Util.waitUntilCondition;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES }, missesCapabilities = Capabilities.COLLECTIONS)
+public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest {
+
+  private static Cluster cluster;
+  private static Collection sourceCollection;
+  private static Collection metaCollection;
+  private static EventingFunctionManager functions;
+
+  @BeforeAll
+  static void setup() {
+    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    functions = cluster.eventingFunctions();
+    cluster.waitUntilReady(Duration.ofSeconds(5));
+
+    Bucket bucket = cluster.bucket(config().bucketname());
+
+    bucket.collections().createScope("eventing");
+    bucket.collections().createCollection(CollectionSpec.create("source", "eventing"));
+    bucket.collections().createCollection(CollectionSpec.create("meta", "eventing"));
+
+    sourceCollection = bucket.scope("eventing").collection("source");
+    metaCollection = bucket.scope("eventing").collection("meta");
+
+    waitUntilCondition(() -> bucket.collections().getAllScopes().stream().anyMatch(s -> {
+        if (s.name().equals("eventing")) {
+          boolean sourceFound = false;
+          boolean metaFound = false;
+          for (CollectionSpec c : s.collections()) {
+            if (c.name().equals("source")) {
+              sourceFound = true;
+            } else if (c.name().equals("meta")) {
+              metaFound = true;
+            }
+          }
+          return sourceFound && metaFound;
+        }
+        return false;
+      }));
+  }
+
+  @AfterAll
+  static void tearDown() {
+    cluster.disconnect();
+  }
+
+  @Test
+  void upsertGetAndDropFunction() {
+    String funcName = UUID.randomUUID().toString();
+    EventingFunction function = new EventingFunction(
+      funcName,
+      "function OnUpdate(doc, meta) {}",
+      EventingFunctionKeyspace.create(sourceCollection.bucketName(), sourceCollection.scopeName(), sourceCollection.name()),
+      EventingFunctionKeyspace.create(metaCollection.bucketName(), metaCollection.scopeName(), metaCollection.name())
+    );
+    functions.upsertFunction(function);
+
+    EventingFunction read = functions.getFunction(funcName);
+    assertEquals("function OnUpdate(doc, meta) {}", read.code());
+    assertTrue(functions.getAllFunctions().stream().anyMatch(f -> f.name().equals(funcName)));
+
+    functions.dropFunction(funcName);
+    assertTrue(functions.getAllFunctions().stream().noneMatch(f -> f.name().equals(funcName)));
+  }
+
+  @Test
+  void failsWithUnknownFunctionName() {
+    String funcName = UUID.randomUUID().toString();
+
+    assertThrows(EventingFunctionNotFoundException.class, () -> functions.getFunction(funcName));
+    assertThrows(EventingFunctionNotFoundException.class, () -> functions.deployFunction(funcName));
+    assertThrows(EventingFunctionNotFoundException.class, () -> functions.pauseFunction(funcName));
+
+    // see MB-47840 on why those are not EventingFunctionNotFoundException
+    try {
+      assertThrows(EventingFunctionNotDeployedException.class, () -> functions.dropFunction(funcName));
+      assertThrows(EventingFunctionNotDeployedException.class, () -> functions.undeployFunction(funcName));
+      assertThrows(EventingFunctionNotDeployedException.class, () -> functions.resumeFunction(funcName));
+    } catch (AssertionFailedError err) {
+      if (err.getCause() instanceof EventingFunctionNotFoundException) {
+        assertThrows(EventingFunctionNotFoundException.class, () -> functions.dropFunction(funcName));
+        assertThrows(EventingFunctionNotFoundException.class, () -> functions.undeployFunction(funcName));
+        assertThrows(EventingFunctionNotFoundException.class, () -> functions.resumeFunction(funcName));
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  @Test
+  void failsIfCodeIsInvalid() {
+    String funcName = UUID.randomUUID().toString();
+    EventingFunction function = new EventingFunction(
+      funcName,
+      "someInvalidFunc",
+      EventingFunctionKeyspace.create(sourceCollection.bucketName(), sourceCollection.scopeName(), sourceCollection.name()),
+      EventingFunctionKeyspace.create(metaCollection.bucketName(), metaCollection.scopeName(), metaCollection.name())
+    );
+    assertThrows(EventingFunctionCompilationFailureException.class, () -> functions.upsertFunction(function));
+  }
+
+  @Test
+  void failsIfCollectionNotFound() {
+    String funcName = UUID.randomUUID().toString();
+    EventingFunction function = new EventingFunction(
+      funcName,
+      "function OnUpdate(doc, meta) {}",
+      EventingFunctionKeyspace.create(sourceCollection.bucketName(), sourceCollection.scopeName(), sourceCollection.name()),
+      EventingFunctionKeyspace.create(metaCollection.bucketName(), metaCollection.scopeName(), "noIdeaWhatThisIs")
+    );
+    assertThrows(CollectionNotFoundException.class, () -> functions.upsertFunction(function));
+  }
+
+  @Test
+  void failsIfSourceAndMetaSame() {
+    String funcName = UUID.randomUUID().toString();
+    EventingFunction function = new EventingFunction(
+      funcName,
+      "function OnUpdate(doc, meta) {}",
+      EventingFunctionKeyspace.create(sourceCollection.bucketName(), sourceCollection.scopeName(), sourceCollection.name()),
+      EventingFunctionKeyspace.create(sourceCollection.bucketName(), sourceCollection.scopeName(), sourceCollection.name())
+    );
+    assertThrows(EventingFunctionIdenticalKeyspaceException.class, () -> functions.upsertFunction(function));
+  }
+
+  @Test
+  void failsIfBucketDoesNotExist() {
+    String funcName = UUID.randomUUID().toString();
+    EventingFunction function = new EventingFunction(
+            funcName,
+            "function OnUpdate(doc, meta) {}",
+            EventingFunctionKeyspace.create("foo", sourceCollection.scopeName(), sourceCollection.name()),
+            EventingFunctionKeyspace.create("bar", sourceCollection.scopeName(), sourceCollection.name())
+    );
+    assertThrows(BucketNotFoundException.class, () -> functions.upsertFunction(function));
+  }
+
+  @Test
+  void deploysAndUndeploysFunction() {
+    String funcName = UUID.randomUUID().toString();
+    EventingFunction function = new EventingFunction(
+      funcName,
+      "function OnUpdate(doc, meta) {}",
+      EventingFunctionKeyspace.create(sourceCollection.bucketName(), sourceCollection.scopeName(), sourceCollection.name()),
+      EventingFunctionKeyspace.create(metaCollection.bucketName(), metaCollection.scopeName(), metaCollection.name())
+    );
+    functions.upsertFunction(function);
+
+    EventingFunction read = functions.getFunction(funcName);
+    assertEquals(EventingFunctionDeploymentStatus.UNDEPLOYED, read.settings().deploymentStatus());
+
+    assertThrows(EventingFunctionNotDeployedException.class, () -> functions.undeployFunction(funcName));
+    functions.deployFunction(funcName);
+
+    waitUntilCondition(() -> isState(funcName, EventingFunctionStatus.DEPLOYED));
+
+    read = functions.getFunction(funcName);
+    assertEquals(EventingFunctionDeploymentStatus.DEPLOYED, read.settings().deploymentStatus());
+
+    functions.undeployFunction(funcName);
+
+    waitUntilCondition(() -> isState(funcName, EventingFunctionStatus.UNDEPLOYED));
+
+    read = functions.getFunction(funcName);
+    assertEquals(EventingFunctionDeploymentStatus.UNDEPLOYED, read.settings().deploymentStatus());
+
+    functions.dropFunction(funcName);
+  }
+
+  @Test
+  void pausesAndResumesFunction() {
+    String funcName = UUID.randomUUID().toString();
+    EventingFunction function = new EventingFunction(
+      funcName,
+      "function OnUpdate(doc, meta) {}",
+      EventingFunctionKeyspace.create(sourceCollection.bucketName(), sourceCollection.scopeName(), sourceCollection.name()),
+      EventingFunctionKeyspace.create(metaCollection.bucketName(), metaCollection.scopeName(), metaCollection.name())
+    );
+    functions.upsertFunction(function);
+
+    EventingFunction read = functions.getFunction(funcName);
+    assertEquals(EventingFunctionProcessingStatus.PAUSED, read.settings().processingStatus());
+
+    assertThrows(EventingFunctionNotBootstrappedException.class, () -> functions.pauseFunction(funcName));
+    assertThrows(EventingFunctionNotDeployedException.class, () -> functions.resumeFunction(funcName));
+
+    functions.deployFunction(funcName);
+
+    waitUntilCondition(() -> isState(funcName, EventingFunctionStatus.DEPLOYED));
+
+    read = functions.getFunction(funcName);
+    assertEquals(EventingFunctionProcessingStatus.RUNNING, read.settings().processingStatus());
+
+    functions.pauseFunction(funcName);
+
+    waitUntilCondition(() -> isState(funcName, EventingFunctionStatus.PAUSED));
+
+    read = functions.getFunction(funcName);
+    assertEquals(EventingFunctionProcessingStatus.PAUSED, read.settings().processingStatus());
+
+    functions.undeployFunction(funcName);
+
+    waitUntilCondition(() -> isState(funcName, EventingFunctionStatus.UNDEPLOYED));
+    functions.dropFunction(funcName);
+  }
+
+  private boolean isState(String funcName, EventingFunctionStatus status) {
+    return functions.functionsStatus().functions().stream().anyMatch(state ->
+            state.name().equals(funcName) && state.status() == status
+    );
+  }
+
+}

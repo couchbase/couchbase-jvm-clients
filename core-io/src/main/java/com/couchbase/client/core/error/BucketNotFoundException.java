@@ -17,8 +17,10 @@
 package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
@@ -26,9 +28,17 @@ public class BucketNotFoundException extends CouchbaseException {
 
   private final String bucketName;
 
-  BucketNotFoundException(final String bucketName) {
-    super("Bucket [" + redactMeta(bucketName) + "] not found.");
+  public BucketNotFoundException(String bucketName) {
+    this(bucketName, null);
+  }
+
+  public BucketNotFoundException(String bucketName, ErrorContext errorContext) {
+    super("Bucket" + formatCollection(bucketName) + " not found.", errorContext);
     this.bucketName = requireNonNull(bucketName);
+  }
+
+  private static String formatCollection(String collectionName) {
+    return isNullOrEmpty(collectionName) ? "" : " [" + redactMeta(collectionName) + "]";
   }
 
   public static BucketNotFoundException forBucket(final String bucketName) {

@@ -190,6 +190,16 @@ public class TracingIdentifiers {
   public static final String SPAN_REQUEST_MV_PUBLISH_DD = "manager_views_publish_design_document";
   public static final String SPAN_REQUEST_MV_UPSERT_DD = "manager_views_upsert_design_document";
 
+  public static final String SPAN_REQUEST_ME_UPSERT = "manager_eventing_upsert_function";
+  public static final String SPAN_REQUEST_ME_GET = "manager_eventing_get_function";
+  public static final String SPAN_REQUEST_ME_DROP = "manager_eventing_drop_function";
+  public static final String SPAN_REQUEST_ME_DEPLOY = "manager_eventing_deploy_function";
+  public static final String SPAN_REQUEST_ME_GET_ALL = "manager_eventing_get_all_functions";
+  public static final String SPAN_REQUEST_ME_PAUSE = "manager_eventing_pause_function";
+  public static final String SPAN_REQUEST_ME_RESUME = "manager_eventing_resume_function";
+  public static final String SPAN_REQUEST_ME_UNDEPLOY = "manager_eventing_undeploy_function";
+  public static final String SPAN_REQUEST_ME_STATUS = "manager_eventing_functions_status";
+
   public static final String ATTR_SYSTEM = "db.system";
 
   public static final String ATTR_NAME = "db.name";

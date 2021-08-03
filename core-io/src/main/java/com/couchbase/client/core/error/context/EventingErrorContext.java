@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 
+import java.util.Collections;
 import java.util.Map;
 
 @Stability.Uncommitted
@@ -27,11 +28,14 @@ public class EventingErrorContext extends ErrorContext {
 
   private final RequestContext requestContext;
   private final int httpStatus;
+  private final Map<String, Object> responseProperties;
 
-  public EventingErrorContext(final ResponseStatus responseStatus, final RequestContext requestContext, final int httpStatus) {
+  public EventingErrorContext(final ResponseStatus responseStatus, final RequestContext requestContext, final int httpStatus,
+                              final Map<String, Object> responseProperties) {
     super(responseStatus);
     this.requestContext = requestContext;
     this.httpStatus = httpStatus;
+    this.responseProperties = responseProperties;
   }
 
   public RequestContext requestContext() {
@@ -42,6 +46,10 @@ public class EventingErrorContext extends ErrorContext {
     return httpStatus;
   }
 
+  public Map<String, Object> responseProperties() {
+    return responseProperties == null ? Collections.emptyMap() : responseProperties;
+  }
+
   @Override
   public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
@@ -49,6 +57,9 @@ public class EventingErrorContext extends ErrorContext {
       requestContext.injectExportableParams(input);
     }
     input.put("httpStatus", httpStatus);
+    if (responseProperties != null) {
+      input.put("eventing", responseProperties);
+    }
   }
 
 }

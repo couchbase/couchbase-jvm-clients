@@ -35,6 +35,7 @@ import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.analytics.AnalyticsIndexManager;
 import com.couchbase.client.java.manager.bucket.BucketManager;
+import com.couchbase.client.java.manager.eventing.EventingFunctionManager;
 import com.couchbase.client.java.manager.query.QueryIndexManager;
 import com.couchbase.client.java.manager.search.SearchIndexManager;
 import com.couchbase.client.java.manager.user.UserManager;
@@ -137,6 +138,11 @@ public class Cluster {
    * Allows to manage analytics indexes.
    */
   private final AnalyticsIndexManager analyticsIndexManager;
+
+  /**
+   * Allows to manage eventing functions.
+   */
+  private final EventingFunctionManager eventingFunctionManager;
 
   /**
    * Stores already opened buckets for reuse.
@@ -296,6 +302,7 @@ public class Cluster {
     this.bucketManager = new BucketManager(asyncCluster.buckets());
     this.queryIndexManager = new QueryIndexManager(asyncCluster.queryIndexes());
     this.analyticsIndexManager = new AnalyticsIndexManager(this);
+    this.eventingFunctionManager = new EventingFunctionManager(asyncCluster.eventingFunctions());
   }
 
   /**
@@ -359,6 +366,14 @@ public class Cluster {
    */
   public SearchIndexManager searchIndexes() {
     return searchIndexManager;
+  }
+
+  /**
+   * Provides access to the eventing function management services.
+   */
+  @Stability.Uncommitted
+  public EventingFunctionManager eventingFunctions() {
+    return eventingFunctionManager;
   }
 
   /**

@@ -38,6 +38,7 @@ import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.analytics.ReactiveAnalyticsIndexManager;
 import com.couchbase.client.java.manager.bucket.ReactiveBucketManager;
+import com.couchbase.client.java.manager.eventing.ReactiveEventingFunctionManager;
 import com.couchbase.client.java.manager.query.AsyncQueryIndexManager;
 import com.couchbase.client.java.manager.query.ReactiveQueryIndexManager;
 import com.couchbase.client.java.manager.search.ReactiveSearchIndexManager;
@@ -224,6 +225,14 @@ public class ReactiveCluster {
    */
   public ReactiveQueryIndexManager queryIndexes() {
     return new ReactiveQueryIndexManager(new AsyncQueryIndexManager(async()));
+  }
+
+  /**
+   * Provides access to the eventing function management services.
+   */
+  @Stability.Uncommitted
+  public ReactiveEventingFunctionManager eventingFunctions() {
+    return new ReactiveEventingFunctionManager(async().eventingFunctions());
   }
 
   /**

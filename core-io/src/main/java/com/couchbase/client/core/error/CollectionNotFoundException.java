@@ -17,17 +17,29 @@
 package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.context.ErrorContext;
+import com.couchbase.client.core.util.CbStrings;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
 public class CollectionNotFoundException extends CouchbaseException {
+
   private final String collectionName;
 
   public CollectionNotFoundException(String collectionName) {
-    super("Collection [" + redactMeta(collectionName) + "] not found.");
+    this(collectionName, null);
+  }
+
+  public CollectionNotFoundException(String collectionName, ErrorContext errorContext) {
+    super("Collection" + formatCollection(collectionName) + " not found.", errorContext);
     this.collectionName = requireNonNull(collectionName);
+  }
+
+  private static String formatCollection(String collectionName) {
+    return isNullOrEmpty(collectionName) ? "" : " [" + redactMeta(collectionName) + "]";
   }
 
   public static CollectionNotFoundException forCollection(String collectionName) {
