@@ -25,7 +25,7 @@ def CORRETTO_11 = "11.0.5.10.1"   // available versions: https://docs.aws.amazon
 EMAILS = ['graham.pople@couchbase.com', 'michael.nitschinger@couchbase.com', 'david.kelly@couchbase.com', 'david.nault@couchbase.com']
 
 pipeline {
-    agent { label 'master' }
+    agent none
 
     options {
         // Safety check, prevent the script running forever
