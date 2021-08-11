@@ -7,11 +7,11 @@
     <parent>
         <groupId>com.couchbase.client</groupId>
         <artifactId>couchbase-jvm-clients</artifactId>
-        <version>1.10.8</version>
+        <version>1.10.7</version>
     </parent>
 
     <artifactId>scala-examples</artifactId>
-    <version>1.1.8</version>
+    <version>1.1.7</version>
 
     <name>Couchbase Scala SDK Examples</name>
     <description>Examples for the Couchbase Scala SDK</description>
