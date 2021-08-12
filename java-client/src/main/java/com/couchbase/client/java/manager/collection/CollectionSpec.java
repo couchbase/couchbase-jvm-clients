@@ -17,6 +17,7 @@
 package com.couchbase.client.java.manager.collection;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.io.CollectionIdentifier;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -59,6 +60,16 @@ public class CollectionSpec {
   }
 
   /**
+   * Creates a new {@link CollectionSpec} using the default scope.
+   *
+   * @param name the name of the collection.
+   * @return the created {@link CollectionSpec}.
+   */
+  public static CollectionSpec create(String name) {
+    return create(name, CollectionIdentifier.DEFAULT_SCOPE);
+  }
+
+  /**
    * Creates a new {@link CollectionSpec} with default properties.
    *
    * @param name the name of the collection.
@@ -67,6 +78,18 @@ public class CollectionSpec {
    */
   public static CollectionSpec create(final String name, final String scopeName) {
     return new CollectionSpec(name, scopeName, Duration.ZERO);
+  }
+
+  /**
+   * Creates a new {@link CollectionSpec} with a custom max expiry on the default scope.
+   *
+   * @param name the name of the collection.
+   * @param maxExpiry the maximum expiry (ttl) to use for this collection.
+   * @return the created {@link CollectionSpec}.
+   */
+  @Stability.Volatile
+  public static CollectionSpec create(final String name, final Duration maxExpiry) {
+    return create(name, CollectionIdentifier.DEFAULT_SCOPE, maxExpiry);
   }
 
   /**
