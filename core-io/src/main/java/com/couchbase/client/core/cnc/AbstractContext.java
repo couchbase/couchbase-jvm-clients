@@ -16,7 +16,9 @@
 
 package com.couchbase.client.core.cnc;
 
-import java.util.HashMap;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
+import com.couchbase.client.core.json.Mapper;
+
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -36,14 +38,20 @@ public abstract class AbstractContext implements Context {
    *
    * @param input pass exportable params in here.
    */
-  public void injectExportableParams(final Map<String, Object> input) {
-  }
+  public void injectExportableParams(final Map<String, Object> input) {}
 
   @Override
   public String exportAsString(final ExportFormat format) {
     Map<String, Object> input = new TreeMap<>();
     injectExportableParams(input);
     return format.apply(input);
+  }
+
+  @Override
+  public Map<String, Object> exportAsMap() {
+    // Note: we round-trip to JSON as an easy way to "deep copy" the context and as a result
+    // avoid situations where a user modifies it by accident.
+    return Mapper.decodeInto(exportAsString(ExportFormat.JSON), new TypeReference<Map<String, Object>>() {});
   }
 
   @Override

@@ -38,6 +38,13 @@ public interface Context {
   String exportAsString(final ExportFormat format);
 
   /**
+   * Export this context into a generic map.
+   *
+   * @return the exported format in a generic map representation.
+   */
+  Map<String, Object> exportAsMap();
+
+  /**
    * The format into which the context can be exported.
    */
   @FunctionalInterface
