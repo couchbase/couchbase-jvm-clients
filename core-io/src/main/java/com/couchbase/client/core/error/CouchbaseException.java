@@ -65,8 +65,8 @@ public class CouchbaseException extends RuntimeException {
   }
 
   @Override
-  public String toString() {
-    final String output = super.toString();
+  public final String getMessage() {
+    final String output = super.getMessage();
     return ctx != null ? output + " " + ctx.exportAsString(Context.ExportFormat.JSON) : output;
   }
 
