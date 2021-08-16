@@ -47,17 +47,16 @@ trait JsonDeserializer[T] {
   */
 object JsonDeserializer {
 
-  /** `JsonDeserializer` for `Array[Byte]`.
-    *
-    * As required by the RFC, the default deserializer for String should deserialize the data as JSON.
+  /** `JsonDeserializer` for `Array[Byte]`, which passes through the data unchanged.
     */
   implicit object BytesConvert extends JsonDeserializer[Array[Byte]] {
     override def deserialize(bytes: Array[Byte]): Try[Array[Byte]] = Try(bytes)
   }
 
-  /** `JsonDeserializer` for `String`.
+  /** `JsonDeserializer` for `String`, which deserializes the data as JSON.
     *
-    * As required by the RFC, the default deserializer for Array[Byte] should pass through the data unchanged.
+    *  Consider using `Passthrough.StringConvert` - e.g. `result.contentAs[String](Passthrough.StringConvert)` - to get
+    *  the data unchanged as a String.
     */
   implicit object StringConvert extends JsonDeserializer[String] {
     override def deserialize(bytes: Array[Byte]): Try[String] = {
