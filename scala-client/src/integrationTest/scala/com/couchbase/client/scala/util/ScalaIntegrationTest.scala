@@ -68,7 +68,7 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
     strings.mkString(",")
   }
 
-  private def seedNodes =
+  protected def seedNodes =
     config.nodes.asScala
       .map((cfg: TestNodeConfig) => {
         val kvPort   = Some(cfg.ports.get(Services.KV).toInt)

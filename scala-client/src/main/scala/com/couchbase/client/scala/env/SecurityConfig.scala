@@ -54,26 +54,57 @@ case class SecurityConfig(
     builder
   }
 
+  /** Enables TLS for all client/server communication (disabled by default).
+   *
+   * @return this for chaining purposes.
+   */
   def enableTls(value: Boolean): SecurityConfig = {
     copy(tlsEnabled = Some(value))
   }
 
+  /** Enables/disables native TLS (enabled by default).
+   *
+   * @return this for chaining purposes.
+   */
   def enableNativeTls(value: Boolean): SecurityConfig = {
     copy(nativeTlsEnabled = Some(value))
   }
 
+  /** Enables or disable hostname verification (enabled by default).
+   *
+   * Note that disabling hostname verification will cause the TLS connection to not verify that the hostname/ip
+   * is actually part of the certificate and as a result not detect certain kinds of attacks. Only disable if
+   * you understand the impact and risks!
+   *
+   * @return this for chaining purposes.
+   */
   def enableHostnameVerification(value: Boolean): SecurityConfig = {
     copy(enableHostnameVerification = Some(value))
   }
 
+  /** Loads the given list of X.509 certificates into the trust store.
+   *
+   * @return this for chaining purposes.
+   */
   def trustCertificates(values: Seq[X509Certificate]): SecurityConfig = {
     copy(trustCertificates = Some(values))
   }
 
+  /** Provide a trust manager factory directly for maximum flexibility.
+   *
+   * While providing the most flexibility, most users will find the other overloads more convenient, like passing
+   * in a [[trustStore]] directly or via filepath [[trustStore(Path, String, Optional)]].
+   *
+   * @return this for chaining purposes.
+   */
   def trustManagerFactory(value: TrustManagerFactory): SecurityConfig = {
     copy(trustManagerFactory = Some(value))
   }
 
+  /** Loads a X.509 trust certificate from the given path and uses it.
+   *
+   * @return this for chaining purposes.
+   */
   def trustCertificate(value: Path): SecurityConfig = {
     copy(trustCertificate = Some(value))
   }
@@ -90,6 +121,16 @@ case class SecurityConfig(
     copy(trustStoreFile = Some(TrustStoreFile(trustStorePath, trustStorePassword, trustStoreType)))
   }
 
+  /** Customize the list of ciphers that is negotiated with the cluster.
+   *
+   * Note that this method is considered advanced API, please only customize the cipher list if you know what
+   * you are doing (for example if you want to shrink the cipher list down to a very specific subset for security
+   * or compliance reasons).
+   *
+   * If no custom ciphers are configured, the default set will be used.
+   *
+   * @return this for chaining purposes.
+   */
   def ciphers(value: Seq[String]): SecurityConfig = {
     copy(ciphers = Some(value))
   }
