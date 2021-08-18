@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.kotlin.manager
+package com.couchbase.client.kotlin.manager.view
 
 import com.couchbase.client.core.manager.CoreViewIndexManager
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi

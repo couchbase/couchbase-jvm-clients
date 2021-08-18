@@ -34,7 +34,7 @@ import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.internal.toStringUtf8
-import com.couchbase.client.kotlin.manager.ViewIndexManager
+import com.couchbase.client.kotlin.manager.view.ViewIndexManager
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace.DEVELOPMENT
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace.PRODUCTION

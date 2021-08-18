@@ -17,9 +17,9 @@
 package com.couchbase.client.kotlin
 
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
-import com.couchbase.client.kotlin.manager.DesignDocument
-import com.couchbase.client.kotlin.manager.View
-import com.couchbase.client.kotlin.manager.ViewIndexManager
+import com.couchbase.client.kotlin.manager.view.DesignDocument
+import com.couchbase.client.kotlin.manager.view.View
+import com.couchbase.client.kotlin.manager.view.ViewIndexManager
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace.PRODUCTION
