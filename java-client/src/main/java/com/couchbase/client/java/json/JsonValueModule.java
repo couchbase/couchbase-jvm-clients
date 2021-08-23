@@ -96,7 +96,7 @@ public class JsonValueModule extends SimpleModule {
     }
 
     Object decodeValue(final JsonParser parser) throws IOException {
-      final JsonToken current = parser.currentToken();
+      final JsonToken current = currentToken(parser);
       switch (current) {
         case START_OBJECT:
           return decodeObject(parser);
@@ -137,8 +137,17 @@ public class JsonValueModule extends SimpleModule {
   }
 
   private static void expectCurrentToken(final JsonParser parser, JsonToken expected) throws IOException {
-    if (parser.currentToken() != expected) {
-      throw new IOException("Expected " + expected + " but got " + parser.currentToken());
+    if (currentToken(parser) != expected) {
+      throw new IOException("Expected " + expected + " but got " + currentToken(parser));
     }
   }
+
+  private static JsonToken currentToken(JsonParser parser) {
+    // For compatibility with ancient versions of Jackson 2 provided by the user,
+    // call getCurrentToken() instead of currentToken().
+    // Only relevant in the non-Repackaged flavor of this class, but for consistency
+    // do the same thing in both flavors.
+    return parser.getCurrentToken();
+  }
+
 }
