@@ -116,6 +116,17 @@ public class LookupInResult {
     return serializer.deserialize(target, getFieldAtIndex(index).value());
   }
 
+  /**
+   * Returns the raw JSON bytes of the content at the given index.
+   *
+   * @param index the index of the subdoc value to retrieve.
+   * @return the JSON content as a byte array
+   */
+  @Stability.Uncommitted
+  public byte[] contentAsBytes(int index) {
+    return getFieldAtIndex(index).value();
+  }
+
   private SubDocumentField getFieldAtIndex(int index) {
     if (index >= 0 && index < encoded.length) {
       SubDocumentField value = encoded[index];

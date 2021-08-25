@@ -39,7 +39,7 @@ public class LookupInResult(
     // for accessing field values.
     public val SubdocExists.value: Boolean get() = exists(spec, index)
     public val SubdocCount.value: Int get() = content(this).toStringUtf8().toInt()
-    public val Subdoc.content: ByteArray get() = content(this)
+    public val Subdoc.contentAsBytes: ByteArray get() = content(this)
     public inline fun <reified T> Subdoc.contentAs(serializer: JsonSerializer? = null): T
         = internalContentAs(this, typeRef(), serializer)
 

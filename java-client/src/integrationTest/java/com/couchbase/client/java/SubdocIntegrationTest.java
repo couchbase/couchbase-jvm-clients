@@ -40,6 +40,7 @@ import java.util.Collections;
 import java.util.UUID;
 
 import static com.couchbase.client.java.kv.LookupInSpec.get;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SubdocIntegrationTest extends JavaIntegrationTest {
@@ -98,6 +99,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     );
     assertEquals(JsonObject.create(), result.contentAsObject(0));
     assertEquals(JsonArray.create(), result.contentAsArray(1));
+    assertArrayEquals("{}".getBytes(UTF_8), result.contentAsBytes(0));
     assertTrue(result.exists(0));
     assertTrue(result.exists(1));
     assertTrue(result.cas() != 0);

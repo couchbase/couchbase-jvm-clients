@@ -27,7 +27,7 @@ public class Subdoc internal constructor(
     internal val spec: LookupInSpec,
     internal val index: Int,
 ) {
-    public fun content(result: LookupInResult): ByteArray = with(result) { content }
+    public fun contentAsBytes(result: LookupInResult): ByteArray = with(result) { contentAsBytes }
     public inline fun <reified T> contentAs(result: LookupInResult): T = with(result) { contentAs() }
 
     override fun toString(): String {

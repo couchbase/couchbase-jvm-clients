@@ -57,11 +57,11 @@ internal suspend fun Collection.subdocGet(
 
     lookupIn(id, spec, common) {
         with(spec) {
-            val content = wholeDoc?.content
+            val content = wholeDoc?.contentAsBytes
                 ?: ProjectionsApplier.reconstructDocument(
                     // build map of path -> content for all existing paths
                     projections.mapNotNull {
-                        runCatching { it.path to it.content }
+                        runCatching { it.path to it.contentAsBytes }
                             .recover { t -> if (meansPathIsAbsent(t)) null else throw t }
                             .getOrThrow()
                     }.toMap()
@@ -71,7 +71,7 @@ internal suspend fun Collection.subdocGet(
                 cas,
                 content,
                 flagsSpec?.contentAs<Int>() ?: CodecFlags.JSON_COMPAT_FLAGS,
-                parseExpiry(expiry?.content),
+                parseExpiry(expiry?.contentAsBytes),
             )
         }
     }

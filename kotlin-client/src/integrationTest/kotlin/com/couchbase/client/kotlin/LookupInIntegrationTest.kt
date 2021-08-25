@@ -176,7 +176,7 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
                 val foo = get("foo")
             }
             collection.lookupIn(id, spec) {
-                assertThrows<DocumentTooDeepException> { spec.foo.content }
+                assertThrows<DocumentTooDeepException> { spec.foo.contentAsBytes }
             }
         }
 
@@ -188,7 +188,7 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
             val spec = object : LookupInSpec() {
                 val doc = get("")
             }
-            collection.lookupIn(id, spec) { assertEquals("xyzzy", spec.doc.content.toStringUtf8()) }
+            collection.lookupIn(id, spec) { assertEquals("xyzzy", spec.doc.contentAsBytes.toStringUtf8()) }
         }
     }
 
