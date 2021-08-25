@@ -30,7 +30,6 @@ import java.util.Map;
  * Note: the metrics implementation is considered volatile, and so is this configuration. It is subject to
  * change at any time.
  */
-@Stability.Volatile
 public class LoggingMeterConfig {
 
   @Stability.Internal
@@ -81,7 +80,6 @@ public class LoggingMeterConfig {
     return enabled;
   }
 
-  @Stability.Volatile
   Map<String, Object> exportAsMap() {
     Map<String, Object> export = new LinkedHashMap<>();
 

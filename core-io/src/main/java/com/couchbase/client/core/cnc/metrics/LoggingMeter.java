@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.cnc.metrics;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Counter;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.Meter;
@@ -40,7 +39,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * The default metrics implementation which aggregates latency information and emits it at a regular interval.
  */
-@Stability.Volatile
 public class LoggingMeter implements Meter {
 
   private static final AtomicInteger METER_ID = new AtomicInteger();
