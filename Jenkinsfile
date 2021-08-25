@@ -549,6 +549,34 @@ pipeline {
             }
         }
 
+        stage('testing  (Linux, cbdyncluster 7.1-stable, Oracle JDK 8)') {
+            agent { label 'sdkqe-centos7' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                // Temporary: there are known cbas crashes preventing this from passing currently, do not fail build
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer("7.1-stable", QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
         stage('testing  (Linux, cbdyncluster 7.0-stable, Oracle JDK 8, CE)') {
             agent { label 'sdkqe-centos7' }
             environment {
