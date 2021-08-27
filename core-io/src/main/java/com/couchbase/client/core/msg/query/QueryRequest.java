@@ -17,9 +17,12 @@
 package com.couchbase.client.core.msg.query;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -29,6 +32,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValu
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -41,6 +45,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
@@ -159,6 +164,79 @@ public class QueryRequest
       ctx.put("scope", redactMeta(scope));
     }
     return ctx;
+  }
+
+  /**
+   * Returns a new request that creates a prepared statement using this request as a template.
+   */
+  @Stability.Internal
+  public QueryRequest toPrepareRequest(boolean autoExecute, RequestTracer requestTracer) {
+    String newStatement = "PREPARE " + statement();
+
+    byte[] newQuery = transformQuery(query -> {
+      query.put("statement", newStatement);
+
+      if (autoExecute) {
+        query.put("auto_execute", true);
+      } else {
+        // Keep only the fields required for preparation.
+        // Discard things like arguments, scan vectors, etc.
+        query.retain("statement", "timeout", "client_context_id", "query_context");
+      }
+    });
+
+    RequestSpan newSpan = requestTracer.requestSpan("prepare", requestSpan());
+
+    boolean newIdempotent = !autoExecute || idempotent();
+
+    return copy(newStatement, newQuery, newIdempotent, newSpan);
+  }
+
+  /**
+   * Returns a copy of this request tailored to execute a prepared statement.
+   *
+   * @param preparedStatementName name of the prepared statement
+   * @param encodedPlan (nullable) query plan, or null if enhanced prepared statements are enabled.
+   */
+  @Stability.Internal
+  public QueryRequest toExecuteRequest(String preparedStatementName, String encodedPlan, RequestTracer requestTracer) {
+    byte[] newQuery = transformQuery(query -> {
+      query.remove("statement");
+      query.put("prepared", preparedStatementName);
+      if (encodedPlan != null) {
+        query.put("encoded_plan", encodedPlan);
+      }
+    });
+
+    RequestSpan newSpan = requestTracer.requestSpan("execute", requestSpan());
+
+    return copy(statement(), newQuery, idempotent(), newSpan);
+  }
+
+  private QueryRequest copy(String newStatement, byte[] newQuery, boolean newIdempotent, RequestSpan newSpan) {
+    return new QueryRequest(
+        timeout(),
+        context(),
+        retryStrategy(),
+        credentials(),
+        newStatement,
+        newQuery,
+        newIdempotent,
+        operationId(),
+        newSpan,
+        bucket(),
+        scope()
+    );
+  }
+
+  private byte[] transformQuery(Consumer<ObjectNode> editor) {
+    return editObject(query, editor);
+  }
+
+  private static byte[] editObject(byte[] jsonObject, Consumer<ObjectNode> editor) {
+    ObjectNode node = (ObjectNode) Mapper.decodeIntoTree(jsonObject);
+    editor.accept(node);
+    return Mapper.encodeAsBytes(node);
   }
 
   @Override
