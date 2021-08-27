@@ -18,6 +18,8 @@ package com.couchbase.client.java.manager.eventing;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 public class EventingFunctionBucketBinding {
 
@@ -25,37 +27,30 @@ public class EventingFunctionBucketBinding {
   private EventingFunctionKeyspace name;
   private EventingFunctionBucketAccess access;
 
-  public EventingFunctionBucketBinding(String alias, EventingFunctionKeyspace name, EventingFunctionBucketAccess access) {
-    this.alias = alias;
-    this.name = name;
-    this.access = access;
+  public static EventingFunctionBucketBinding createReadOnly(String alias, EventingFunctionKeyspace name) {
+    return new EventingFunctionBucketBinding(alias, name, EventingFunctionBucketAccess.READ_ONLY);
+  }
+
+  public static EventingFunctionBucketBinding createReadWrite(String alias, EventingFunctionKeyspace name) {
+    return new EventingFunctionBucketBinding(alias, name, EventingFunctionBucketAccess.READ_WRITE);
+  }
+
+  private EventingFunctionBucketBinding(String alias, EventingFunctionKeyspace name, EventingFunctionBucketAccess access) {
+    this.alias = notNullOrEmpty(alias, "Alias");
+    this.name = notNull(name, "Name");
+    this.access = notNull(access, "Access");
   }
 
   public String alias() {
     return alias;
   }
 
-  public EventingFunctionBucketBinding alias(String alias) {
-    this.alias = alias;
-    return this;
-  }
-
   public EventingFunctionKeyspace name() {
     return name;
   }
 
-  public EventingFunctionBucketBinding name(EventingFunctionKeyspace name) {
-    this.name = name;
-    return this;
-  }
-
   public EventingFunctionBucketAccess access() {
     return access;
-  }
-
-  public EventingFunctionBucketBinding access(EventingFunctionBucketAccess access) {
-    this.access = access;
-    return this;
   }
 
   @Override

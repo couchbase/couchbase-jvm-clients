@@ -306,23 +306,26 @@ public class AsyncEventingFunctionManager {
     String functionInstanceId = func.has("function_instance_id") ? func.get("function_instance_id").asText() : null;
     int handlerUuid = func.has("handleruuid") ? func.get("handleruuid").asInt() : 0;
 
-    EventingFunction toReturn = new EventingFunction(
-      func.get("appname").asText(),
-      func.get("appcode").asText(),
-      EventingFunctionKeyspace.create(depcfg.get("source_bucket").asText(), depcfg.get("source_scope").asText(), depcfg.get("source_collection").asText()),
-      EventingFunctionKeyspace.create(depcfg.get("metadata_bucket").asText(), depcfg.get("metadata_scope").asText(), depcfg.get("metadata_collection").asText()),
-      handlerUuid,
-      functionInstanceId,
-      version
-    );
+    EventingFunction.Builder toReturn = EventingFunction
+      .builder(
+        func.get("appname").asText(),
+        func.get("appcode").asText(),
+        EventingFunctionKeyspace.create(depcfg.get("source_bucket").asText(), depcfg.get("source_scope").asText(), depcfg.get("source_collection").asText()),
+        EventingFunctionKeyspace.create(depcfg.get("metadata_bucket").asText(), depcfg.get("metadata_scope").asText(), depcfg.get("metadata_collection").asText())
+      )
+      .handlerUuid(handlerUuid)
+      .functionInstanceId(functionInstanceId)
+      .version(version);
+
+    EventingFunctionSettings.Builder settingsBuilder = EventingFunctionSettings.builder();
 
     if (settings.has("deployment_status")) {
-      toReturn.settings().deploymentStatus(settings.get("deployment_status").asBoolean()
+      settingsBuilder.deploymentStatus(settings.get("deployment_status").asBoolean()
         ? EventingFunctionDeploymentStatus.DEPLOYED
         : EventingFunctionDeploymentStatus.UNDEPLOYED);
     }
     if (settings.has("processing_status")) {
-      toReturn.settings().processingStatus(settings.get("processing_status").asBoolean()
+      settingsBuilder.processingStatus(settings.get("processing_status").asBoolean()
         ? EventingFunctionProcessingStatus.RUNNING
         : EventingFunctionProcessingStatus.PAUSED);
     }
@@ -332,82 +335,82 @@ public class AsyncEventingFunctionManager {
     }
 
     if (settings.has("cpp_worker_thread_count")) {
-      toReturn.settings().cppWorkerThreadCount(settings.get("cpp_worker_thread_count").asLong());
+      settingsBuilder.cppWorkerThreadCount(settings.get("cpp_worker_thread_count").asLong());
     }
     if (settings.has("dcp_stream_boundary")) {
-      toReturn.settings().dcpStreamBoundary(settings.get("dcp_stream_boundary").asText());
+      settingsBuilder.dcpStreamBoundary(settings.get("dcp_stream_boundary").asText());
     }
     if (settings.has("description")) {
-      toReturn.settings().description(settings.get("description").asText());
+      settingsBuilder.description(settings.get("description").asText());
     }
     if (settings.has("log_level")) {
-      toReturn.settings().logLevel(settings.get("log_level").asText());
+      settingsBuilder.logLevel(settings.get("log_level").asText());
     }
     if (settings.has("language_compatibility")) {
-      toReturn.settings().languageCompatibility(settings.get("language_compatibility").asText());
+      settingsBuilder.languageCompatibility(settings.get("language_compatibility").asText());
     }
     if (settings.has("lcb_inst_capacity")) {
-      toReturn.settings().lcbInstCapacity(settings.get("lcb_inst_capacity").asLong());
+      settingsBuilder.lcbInstCapacity(settings.get("lcb_inst_capacity").asLong());
     }
     if (settings.has("lcb_retry_count")) {
-      toReturn.settings().lcbRetryCount(settings.get("lcb_retry_count").asLong());
+      settingsBuilder.lcbRetryCount(settings.get("lcb_retry_count").asLong());
     }
     if (settings.has("num_timer_partitions")) {
-      toReturn.settings().numTimerPartitions(settings.get("num_timer_partitions").asLong());
+      settingsBuilder.numTimerPartitions(settings.get("num_timer_partitions").asLong());
     }
     if (settings.has("sock_batch_size")) {
-      toReturn.settings().sockBatchSize(settings.get("sock_batch_size").asLong());
+      settingsBuilder.sockBatchSize(settings.get("sock_batch_size").asLong());
     }
     if (settings.has("tick_duration")) {
-      toReturn.settings().tickDuration(Duration.ofMillis(settings.get("tick_duration").asLong()));
+      settingsBuilder.tickDuration(Duration.ofMillis(settings.get("tick_duration").asLong()));
     }
     if (settings.has("timer_context_size")) {
-      toReturn.settings().timerContextSize(settings.get("timer_context_size").asLong());
+      settingsBuilder.timerContextSize(settings.get("timer_context_size").asLong());
     }
     if (settings.has("bucket_cache_size")) {
-      toReturn.settings().bucketCacheSize(settings.get("bucket_cache_size").asLong());
+      settingsBuilder.bucketCacheSize(settings.get("bucket_cache_size").asLong());
     }
     if (settings.has("bucket_cache_age")) {
-      toReturn.settings().bucketCacheAge(settings.get("bucket_cache_age").asLong());
+      settingsBuilder.bucketCacheAge(settings.get("bucket_cache_age").asLong());
     }
     if (settings.has("curl_max_allowed_resp_size")) {
-      toReturn.settings().curlMaxAllowedRespSize(settings.get("curl_max_allowed_resp_size").asLong());
+      settingsBuilder.curlMaxAllowedRespSize(settings.get("curl_max_allowed_resp_size").asLong());
     }
     if (settings.has("worker_count")) {
-      toReturn.settings().workerCount(settings.get("worker_count").asLong());
+      settingsBuilder.workerCount(settings.get("worker_count").asLong());
     }
     if (settings.has("app_log_max_size")) {
-      toReturn.settings().appLogMaxSize(settings.get("app_log_max_size").asLong());
+      settingsBuilder.appLogMaxSize(settings.get("app_log_max_size").asLong());
     }
     if (settings.has("app_log_max_files")) {
-      toReturn.settings().appLogMaxFiles(settings.get("app_log_max_files").asLong());
+      settingsBuilder.appLogMaxFiles(settings.get("app_log_max_files").asLong());
     }
     if (settings.has("checkpoint_interval")) {
-      toReturn.settings().checkpointInterval(Duration.ofSeconds(settings.get("checkpoint_interval").asLong()));
+      settingsBuilder.checkpointInterval(Duration.ofSeconds(settings.get("checkpoint_interval").asLong()));
     }
     if (settings.has("execution_timeout")) {
-      toReturn.settings().executionTimeout(Duration.ofSeconds(settings.get("execution_timeout").asLong()));
+      settingsBuilder.executionTimeout(Duration.ofSeconds(settings.get("execution_timeout").asLong()));
     }
     if (settings.has("lcb_timeout")) {
-      toReturn.settings().lcbTimeout(Duration.ofSeconds(settings.get("lcb_timeout").asLong()));
+      settingsBuilder.lcbTimeout(Duration.ofSeconds(settings.get("lcb_timeout").asLong()));
     }
     if (settings.has("user_prefix")) {
-      toReturn.settings().userPrefix(settings.get("user_prefix").asText());
+      settingsBuilder.userPrefix(settings.get("user_prefix").asText());
     }
     if (settings.has("app_log_dir")) {
-      toReturn.settings().appLogDir(settings.get("app_log_dir").asText());
+      settingsBuilder.appLogDir(settings.get("app_log_dir").asText());
     }
     if (settings.has("n1ql_prepare_all")) {
-      toReturn.settings().queryPrepareAll(settings.get("n1ql_prepare_all").asBoolean());
+      settingsBuilder.queryPrepareAll(settings.get("n1ql_prepare_all").asBoolean());
     }
     if (settings.has("enable_applog_rotation")) {
-      toReturn.settings().enableAppLogRotation(settings.get("enable_applog_rotation").asBoolean());
+      settingsBuilder.enableAppLogRotation(settings.get("enable_applog_rotation").asBoolean());
     }
     if (settings.has("n1ql_consistency")) {
       if ("request".equals(settings.get("n1ql_consistency").asText())) {
-        toReturn.settings().queryConsistency(QueryScanConsistency.REQUEST_PLUS);
+        settingsBuilder.queryConsistency(QueryScanConsistency.REQUEST_PLUS);
       } else {
-        toReturn.settings().queryConsistency(QueryScanConsistency.NOT_BOUNDED);
+        settingsBuilder.queryConsistency(QueryScanConsistency.NOT_BOUNDED);
       }
     }
     if (settings.has("handler_headers")) {
@@ -415,33 +418,37 @@ public class AsyncEventingFunctionManager {
       for (JsonNode entry : settings.get("handler_headers")) {
         headers.add(entry.asText());
       }
-      toReturn.settings().handlerHeaders(headers);
+      settingsBuilder.handlerHeaders(headers);
     }
     if (settings.has("handler_footers")) {
       List<String> footers = new ArrayList<>();
       for (JsonNode entry : settings.get("handler_footers")) {
         footers.add(entry.asText());
       }
-      toReturn.settings().handlerFooters(footers);
+      settingsBuilder.handlerFooters(footers);
     }
 
     if (depcfg.has("buckets")) {
       List<EventingFunctionBucketBinding> bucketBindings = new ArrayList<>();
       for (JsonNode buckets : depcfg.get("buckets")) {
-        bucketBindings.add(new EventingFunctionBucketBinding(
-          buckets.get("alias").asText(),
-          EventingFunctionKeyspace.create(buckets.get("bucket_name").asText(), buckets.get("scope_name").asText(), buckets.get("collection_name").asText()),
-          "rw".equals(buckets.get("access").asText())
-            ? EventingFunctionBucketAccess.READ_WRITE
-            : EventingFunctionBucketAccess.READ_ONLY
-        ));
+        String alias = buckets.get("alias").asText();
+        EventingFunctionKeyspace keyspace = EventingFunctionKeyspace.create(
+          buckets.get("bucket_name").asText(),
+          buckets.get("scope_name").asText(),
+          buckets.get("collection_name").asText()
+        );
+        if ("rw".equals(buckets.get("access").asText())) {
+          bucketBindings.add(EventingFunctionBucketBinding.createReadWrite(alias, keyspace));
+        } else {
+          bucketBindings.add(EventingFunctionBucketBinding.createReadOnly(alias, keyspace));
+        }
       }
       toReturn.bucketBindings(bucketBindings);
     }
     if (depcfg.has("constants")) {
       List<EventingFunctionConstantBinding> constantBindings = new ArrayList<>();
       for (JsonNode constants : depcfg.get("constants")) {
-        constantBindings.add(new EventingFunctionConstantBinding(
+        constantBindings.add(EventingFunctionConstantBinding.create(
           constants.get("value").asText(),
           constants.get("literal").asText()
         ));
@@ -451,7 +458,7 @@ public class AsyncEventingFunctionManager {
     if (depcfg.has("curl")) {
       List<EventingFunctionUrlBinding> urlBindings = new ArrayList<>();
       for (JsonNode url : depcfg.get("curl")) {
-        EventingFunctionUrlBinding binding = new EventingFunctionUrlBinding(
+        EventingFunctionUrlBinding.Builder binding = EventingFunctionUrlBinding.builder(
           url.get("hostname").asText(),
           url.get("value").asText()
         );
@@ -483,12 +490,12 @@ public class AsyncEventingFunctionManager {
               break;
           }
         }
-        urlBindings.add(binding);
+        urlBindings.add(binding.build());
       }
       toReturn.urlBindings(urlBindings);
     }
 
-    return toReturn;
+    return toReturn.settings(settingsBuilder.build()).build();
   }
 
   private static List<EventingFunction> decodeFunctions(final byte[] encoded) {

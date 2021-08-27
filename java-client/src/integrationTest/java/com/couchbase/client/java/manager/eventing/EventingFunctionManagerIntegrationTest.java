@@ -86,7 +86,7 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
   @Test
   void upsertGetAndDropFunction() {
     String funcName = UUID.randomUUID().toString();
-    EventingFunction function = new EventingFunction(
+    EventingFunction function = EventingFunction.create(
       funcName,
       "function OnUpdate(doc, meta) {}",
       EventingFunctionKeyspace.create(sourceCollection.bucketName(), sourceCollection.scopeName(), sourceCollection.name()),
@@ -129,7 +129,7 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
   @Test
   void failsIfCodeIsInvalid() {
     String funcName = UUID.randomUUID().toString();
-    EventingFunction function = new EventingFunction(
+    EventingFunction function = EventingFunction.create(
       funcName,
       "someInvalidFunc",
       EventingFunctionKeyspace.create(sourceCollection.bucketName(), sourceCollection.scopeName(), sourceCollection.name()),
@@ -141,7 +141,7 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
   @Test
   void failsIfCollectionNotFound() {
     String funcName = UUID.randomUUID().toString();
-    EventingFunction function = new EventingFunction(
+    EventingFunction function = EventingFunction.create(
       funcName,
       "function OnUpdate(doc, meta) {}",
       EventingFunctionKeyspace.create(sourceCollection.bucketName(), sourceCollection.scopeName(), sourceCollection.name()),
@@ -153,7 +153,7 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
   @Test
   void failsIfSourceAndMetaSame() {
     String funcName = UUID.randomUUID().toString();
-    EventingFunction function = new EventingFunction(
+    EventingFunction function = EventingFunction.create(
       funcName,
       "function OnUpdate(doc, meta) {}",
       EventingFunctionKeyspace.create(sourceCollection.bucketName(), sourceCollection.scopeName(), sourceCollection.name()),
@@ -165,7 +165,7 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
   @Test
   void failsIfBucketDoesNotExist() {
     String funcName = UUID.randomUUID().toString();
-    EventingFunction function = new EventingFunction(
+    EventingFunction function = EventingFunction.create(
             funcName,
             "function OnUpdate(doc, meta) {}",
             EventingFunctionKeyspace.create("foo", sourceCollection.scopeName(), sourceCollection.name()),
@@ -177,7 +177,7 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
   @Test
   void deploysAndUndeploysFunction() {
     String funcName = UUID.randomUUID().toString();
-    EventingFunction function = new EventingFunction(
+    EventingFunction function = EventingFunction.create(
       funcName,
       "function OnUpdate(doc, meta) {}",
       EventingFunctionKeyspace.create(sourceCollection.bucketName(), sourceCollection.scopeName(), sourceCollection.name()),
@@ -209,7 +209,7 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
   @Test
   void pausesAndResumesFunction() {
     String funcName = UUID.randomUUID().toString();
-    EventingFunction function = new EventingFunction(
+    EventingFunction function = EventingFunction.create(
       funcName,
       "function OnUpdate(doc, meta) {}",
       EventingFunctionKeyspace.create(sourceCollection.bucketName(), sourceCollection.scopeName(), sourceCollection.name()),

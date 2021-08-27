@@ -17,63 +17,53 @@
 package com.couchbase.client.java.manager.eventing;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 public class EventingFunctionUrlBinding {
-  private String hostname;
-  private String alias;
-  private boolean allowCookies;
-  private boolean validateSslCertificates;
-  private EventingFunctionUrlAuth auth;
 
-  public EventingFunctionUrlBinding(String hostname, String alias) {
-    this.hostname = hostname;
-    this.alias = alias;
+  private final String hostname;
+  private final String alias;
+  private final boolean allowCookies;
+  private final boolean validateSslCertificates;
+  private final EventingFunctionUrlAuth auth;
+
+  public static EventingFunctionUrlBinding create(String hostname, String alias) {
+    return builder(hostname, alias).build();
+  }
+
+  public static Builder builder(String hostname, String alias) {
+    return new Builder(hostname, alias);
+  }
+
+  private EventingFunctionUrlBinding(Builder builder) {
+    this.hostname = builder.hostname;
+    this.alias = builder.alias;
+    this.allowCookies = builder.allowCookies;
+    this.validateSslCertificates = builder.validateSslCertificates;
+    this.auth = builder.auth;
   }
 
   public String hostname() {
     return hostname;
   }
 
-  public EventingFunctionUrlBinding hostname(String hostname) {
-    this.hostname = hostname;
-    return this;
-  }
-
   public String alias() {
     return alias;
-  }
-
-  public EventingFunctionUrlBinding alias(String alias) {
-    this.alias = alias;
-    return this;
   }
 
   public boolean allowCookies() {
     return allowCookies;
   }
 
-  public EventingFunctionUrlBinding allowCookies(boolean allowCookies) {
-    this.allowCookies = allowCookies;
-    return this;
-  }
-
   public boolean validateSslCertificates() {
     return validateSslCertificates;
-  }
-
-  public EventingFunctionUrlBinding validateSslCertificates(boolean validateSslCertificates) {
-    this.validateSslCertificates = validateSslCertificates;
-    return this;
   }
 
   public EventingFunctionUrlAuth auth() {
     return auth;
   }
 
-  public EventingFunctionUrlBinding auth(EventingFunctionUrlAuth auth) {
-    this.auth = auth;
-    return this;
-  }
 
   @Override
   public String toString() {
@@ -84,5 +74,38 @@ public class EventingFunctionUrlBinding {
       ", validateSslCertificates=" + validateSslCertificates +
       ", auth=" + auth +
       '}';
+  }
+
+  public static class Builder {
+    private final String hostname;
+    private final String alias;
+
+    private boolean allowCookies;
+    private boolean validateSslCertificates;
+    private EventingFunctionUrlAuth auth = EventingFunctionUrlAuth.noAuth();
+
+    private Builder(String hostname, String alias) {
+      this.hostname = notNullOrEmpty(hostname, "Hostname");
+      this.alias = notNullOrEmpty(alias, "Alias");
+    }
+
+    public Builder allowCookies(boolean allowCookies) {
+      this.allowCookies = allowCookies;
+      return this;
+    }
+
+    public Builder validateSslCertificates(boolean validateSslCertificates) {
+      this.validateSslCertificates = validateSslCertificates;
+      return this;
+    }
+
+    public Builder auth(EventingFunctionUrlAuth auth) {
+      this.auth = notNull(auth, "EventingFunctionUrlAuth");
+      return this;
+    }
+
+    public EventingFunctionUrlBinding build() {
+      return new EventingFunctionUrlBinding(this);
+    }
   }
 }

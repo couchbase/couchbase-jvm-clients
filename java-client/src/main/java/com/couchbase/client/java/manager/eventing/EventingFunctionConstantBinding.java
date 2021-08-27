@@ -18,15 +18,20 @@ package com.couchbase.client.java.manager.eventing;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 public class EventingFunctionConstantBinding {
 
-  private String alias;
-  private String literal;
+  private final String alias;
+  private final String literal;
 
-  public EventingFunctionConstantBinding(final String alias, final String literal) {
-    this.alias = alias;
-    this.literal = literal;
+  public static EventingFunctionConstantBinding create(final String alias, final String literal) {
+    return new EventingFunctionConstantBinding(alias, literal);
+  }
+
+  private EventingFunctionConstantBinding(final String alias, final String literal) {
+    this.alias = notNullOrEmpty(alias, "Alias");
+    this.literal = notNullOrEmpty(literal, "Literal");
   }
 
   public String alias() {
@@ -35,16 +40,6 @@ public class EventingFunctionConstantBinding {
 
   public String literal() {
     return literal;
-  }
-
-  public EventingFunctionConstantBinding alias(String alias) {
-    this.alias = alias;
-    return this;
-  }
-
-  public EventingFunctionConstantBinding literal(String literal) {
-    this.literal = literal;
-    return this;
   }
 
   @Override

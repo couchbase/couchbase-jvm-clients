@@ -26,7 +26,6 @@ public abstract class EventingFunctionUrlAuth {
         return new EventingFunctionUrlAuthBasic(username, password);
     }
 
-
     public static EventingFunctionUrlAuthDigest digestAuth(String username, String password) {
         return new EventingFunctionUrlAuthDigest(username, password);
     }
