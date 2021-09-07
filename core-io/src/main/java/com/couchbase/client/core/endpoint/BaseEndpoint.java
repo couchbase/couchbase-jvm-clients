@@ -71,6 +71,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -367,6 +368,9 @@ public abstract class BaseEndpoint implements Endpoint {
           Duration duration = ex instanceof TimeoutException
             ? endpointContext.environment().timeoutConfig().connectTimeout()
             : Duration.ofNanos(System.nanoTime() - attemptStart.get());
+
+          ex = annotateConnectException(ex);
+
           endpointContext.environment().eventBus().publish(new EndpointConnectionFailedEvent(
             severity,
             duration,
@@ -424,6 +428,30 @@ public abstract class BaseEndpoint implements Endpoint {
             error)
         )
       );
+  }
+
+  /**
+   * Helper method to annotate a ConnectionException with more information in the message body.
+   *
+   * Recent Couchbase Server versions allow forcing TLS connections, so they won't even listen on non-TLS
+   * ports. To improve the user experience, a little more information should be printed with the message
+   * of a ConnectException.
+   *
+   * @param ex the throwable to annotate, if a ConnectException
+   * @return either the throwable unchanged, or the ConnectException annotated.
+   */
+  private static Throwable annotateConnectException(final Throwable ex) {
+    if (!(ex instanceof ConnectException)) {
+      return ex;
+    }
+
+    return new ConnectException(ex.getMessage() + " - Check server ports and cluster encryption setting.") {
+      @Override
+      public synchronized Throwable fillInStackTrace() {
+        // We don't want a verbose stack trace in the output.
+        return this;
+      }
+    };
   }
 
   /**
