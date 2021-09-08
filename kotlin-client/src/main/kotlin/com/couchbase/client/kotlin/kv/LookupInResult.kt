@@ -40,6 +40,7 @@ public class LookupInResult(
     public val SubdocExists.value: Boolean get() = exists(spec, index)
     public val SubdocCount.value: Int get() = content(this).toStringUtf8().toInt()
     public val Subdoc.contentAsBytes: ByteArray get() = content(this)
+    public val Subdoc.exists: Boolean get() = exists(spec, index)
     public inline fun <reified T> Subdoc.contentAs(serializer: JsonSerializer? = null): T
         = internalContentAs(this, typeRef(), serializer)
 
@@ -53,7 +54,7 @@ public class LookupInResult(
         checkIndex(index, 0 until size)
         val field = fields[index]
 
-        field.error().map {
+        field.error().ifPresent {
             // In these cases, can't tell if the path exists
             if (it is PathTooDeepException) throw it
             if (it is DocumentTooDeepException) throw it
@@ -66,7 +67,7 @@ public class LookupInResult(
     internal operator fun get(index: Int): SubDocumentField {
         checkIndex(index, 0 until size)
         val field = fields[index]
-        field.error().map { throw it }
+        field.error().ifPresent { throw it }
         return field
     }
 

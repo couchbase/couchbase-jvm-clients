@@ -98,10 +98,13 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
 
             val spec = object : LookupInSpec() {
                 val fooExists = exists("foo")
+                val foo = get("foo")
             }
             collection.lookupIn(id, spec) {
                 assertTrue(spec.fooExists.value)
                 assertTrue(spec.fooExists.get(this))
+                assertTrue(spec.foo.exists)
+                assertTrue(spec.foo.exists(this))
             }
         }
 
@@ -111,11 +114,14 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
             collection.upsert(id, mapOf("foo" to "bar"))
 
             val spec = object : LookupInSpec() {
-                val nope = exists("nope")
+                val nopeExists = exists("nope")
+                val nope = get("nope")
             }
             collection.lookupIn(id, spec) {
-                assertFalse(spec.nope.value)
-                assertFalse(spec.nope.get(this))
+                assertFalse(spec.nopeExists.value)
+                assertFalse(spec.nopeExists.get(this))
+                assertFalse(spec.nope.exists)
+                assertFalse(spec.nope.exists(this))
             }
         }
 
@@ -126,10 +132,13 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
 
             val spec = object : LookupInSpec() {
                 val fooExists = exists("foo")
+                val foo = get("foo")
             }
             collection.lookupIn(id, spec) {
                 assertThrows<DocumentTooDeepException> { spec.fooExists.value }
                 assertThrows<DocumentTooDeepException> { spec.fooExists.get(this) }
+                assertThrows<DocumentTooDeepException> { spec.foo.exists }
+                assertThrows<DocumentTooDeepException> { spec.foo.exists(this) }
             }
         }
     }
