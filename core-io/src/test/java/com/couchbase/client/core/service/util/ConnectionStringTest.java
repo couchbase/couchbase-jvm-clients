@@ -17,10 +17,12 @@
 package com.couchbase.client.core.service.util;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.util.ConnectionString;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -225,6 +227,28 @@ class ConnectionStringTest {
     assertEquals(ConnectionString.PortType.KV, parsed.hosts().get(1).portType().get());
 
     assertTrue(parsed.params().isEmpty());
+  }
+
+  @Test
+  void isValidDnsSrv() {
+    assertFalse(ConnectionString.create("couchbase://foo,bar").isValidDnsSrv());
+    assertFalse(ConnectionString.create("couchbase://").isValidDnsSrv());
+    assertFalse(ConnectionString.create("").isValidDnsSrv());
+    assertTrue(ConnectionString.create("foo").isValidDnsSrv());
+    assertTrue(ConnectionString.create("couchbase://foo").isValidDnsSrv());
+  }
+
+  @Test
+  void gracefullyHandlesInvalidScheme() {
+    assertThrows(InvalidArgumentException.class, () -> ConnectionString.create("foo://"));
+    assertThrows(InvalidArgumentException.class, () -> ConnectionString.create("://"));
+  }
+
+  @Test
+  void acceptsMixedCaseSchemes() {
+    assertEquals(ConnectionString.Scheme.COUCHBASE, ConnectionString.create("COUCHBASE://").scheme());
+    assertEquals(ConnectionString.Scheme.COUCHBASE, ConnectionString.create("cOuChBaSe://").scheme());
+    assertEquals(ConnectionString.Scheme.COUCHBASES, ConnectionString.create("cOuChBaSeS://").scheme());
   }
 
 }

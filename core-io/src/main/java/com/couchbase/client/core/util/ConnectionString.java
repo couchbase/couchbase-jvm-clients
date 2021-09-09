@@ -23,6 +23,7 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -74,12 +75,15 @@ public class ConnectionString {
     }
 
     static Scheme parseScheme(final String input) {
-        if (input.startsWith("couchbase://")) {
+        String lowerCasedInput = input.toLowerCase(Locale.ROOT);
+
+        if (lowerCasedInput.startsWith("couchbase://")) {
             return Scheme.COUCHBASE;
-        } else if (input.startsWith("couchbases://")) {
+        } else if (lowerCasedInput.startsWith("couchbases://")) {
             return Scheme.COUCHBASES;
         } else {
-            throw new CouchbaseException("Could not parse Scheme of connection string: " + input);
+            throw InvalidArgumentException.fromMessage("Could not parse ConnectionString scheme \"" + input
+              + "\". Supported are couchbase:// and couchbases://");
         }
     }
 
@@ -205,7 +209,7 @@ public class ConnectionString {
             return false;
         }
 
-        if (hosts.size() > 1) {
+        if (hosts.size() != 1) {
             return false;
         }
 
