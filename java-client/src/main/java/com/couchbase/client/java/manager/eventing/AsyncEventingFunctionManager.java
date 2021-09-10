@@ -423,7 +423,7 @@ public class AsyncEventingFunctionManager {
         map.put("alias", c.alias());
         map.put("hostname", c.hostname());
         map.put("allow_cookies", c.allowCookies());
-        map.put("validate_ssl_certificates", c.validateSslCertificates());
+        map.put("validate_ssl_certificate", c.validateSslCertificate());
         if (c.auth() instanceof EventingFunctionUrlNoAuth) {
           map.put("auth_type", "no-auth");
         } else if (c.auth() instanceof EventingFunctionUrlAuthBasic) {
@@ -755,7 +755,7 @@ public class AsyncEventingFunctionManager {
           binding.allowCookies(url.get("allow_cookies").asBoolean());
         }
         if (url.has("validate_ssl_certificate")) {
-          binding.validateSslCertificates(url.get("validate_ssl_certificate").asBoolean());
+          binding.validateSslCertificate(url.get("validate_ssl_certificate").asBoolean());
         }
         if (url.has("auth_type")) {
           switch(url.get("auth_type").asText()) {

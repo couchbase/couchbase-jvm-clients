@@ -28,7 +28,7 @@ public class EventingFunctionUrlBinding {
   private final String hostname;
   private final String alias;
   private final boolean allowCookies;
-  private final boolean validateSslCertificates;
+  private final boolean validateSslCertificate;
   private final EventingFunctionUrlAuth auth;
 
   /**
@@ -59,7 +59,7 @@ public class EventingFunctionUrlBinding {
     this.hostname = builder.hostname;
     this.alias = builder.alias;
     this.allowCookies = builder.allowCookies;
-    this.validateSslCertificates = builder.validateSslCertificates;
+    this.validateSslCertificate = builder.validateSslCertificate;
     this.auth = builder.auth;
   }
 
@@ -85,10 +85,10 @@ public class EventingFunctionUrlBinding {
   }
 
   /**
-   * Returns true if TLS certificates should be validated.
+   * Returns true if the TLS certificate should be validated.
    */
-  public boolean validateSslCertificates() {
-    return validateSslCertificates;
+  public boolean validateSslCertificate() {
+    return validateSslCertificate;
   }
 
   /**
@@ -105,7 +105,7 @@ public class EventingFunctionUrlBinding {
       "hostname='" + redactMeta(hostname) + '\'' +
       ", alias='" + redactMeta(alias) + '\'' +
       ", allowCookies=" + allowCookies +
-      ", validateSslCertificates=" + validateSslCertificates +
+      ", validateSslCertificate=" + validateSslCertificate +
       ", auth=" + auth +
       '}';
   }
@@ -119,7 +119,7 @@ public class EventingFunctionUrlBinding {
     private final String alias;
 
     private boolean allowCookies;
-    private boolean validateSslCertificates;
+    private boolean validateSslCertificate;
     private EventingFunctionUrlAuth auth = EventingFunctionUrlAuth.noAuth();
 
     private Builder(String hostname, String alias) {
@@ -139,13 +139,13 @@ public class EventingFunctionUrlBinding {
     }
 
     /**
-     * Set to true if SSL/TLS certificates should be validated.
+     * Set to true if the SSL/TLS certificate should be validated.
      *
-     * @param validateSslCertificates true if certs should be validated.
+     * @param validateSslCertificate true if the cert should be validated.
      * @return this {@link Builder} for chaining purposes.
      */
-    public Builder validateSslCertificates(boolean validateSslCertificates) {
-      this.validateSslCertificates = validateSslCertificates;
+    public Builder validateSslCertificate(boolean validateSslCertificate) {
+      this.validateSslCertificate = validateSslCertificate;
       return this;
     }
 
