@@ -16,6 +16,7 @@
 package com.couchbase.client.java.manager.eventing;
 
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.java.Collection;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -44,6 +45,10 @@ public class EventingFunctionKeyspace {
 
   public static EventingFunctionKeyspace create(final String bucket, final String scope, final String collection) {
     return new EventingFunctionKeyspace(bucket, scope, collection);
+  }
+
+  public static EventingFunctionKeyspace create(Collection collection) {
+    return new EventingFunctionKeyspace(collection.bucketName(), collection.scopeName(), collection.name());
   }
 
   public String bucket() {
