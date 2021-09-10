@@ -91,11 +91,12 @@ object Collection {
 class Collection(
     /** Provides access to an async version of this API. */
     val async: AsyncCollection,
-    bucketName: String
+    val bucketName: String
 ) {
   private[scala] implicit val ec: ExecutionContext = async.ec
 
-  def name: String = async.name
+  def name: String      = async.name
+  def scopeName: String = async.scopeName
 
   /** Provides access to a reactive-programming version of this API. */
   val reactive = new ReactiveCollection(async)

@@ -70,8 +70,8 @@ private[scala] case class HandlerBasicParams(core: Core, env: ClusterEnvironment
   * */
 class AsyncCollection(
     val name: String,
-    bucketName: String,
-    scopeName: String,
+    val bucketName: String,
+    val scopeName: String,
     val core: Core,
     val environment: ClusterEnvironment
 ) {

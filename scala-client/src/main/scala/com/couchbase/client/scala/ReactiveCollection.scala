@@ -50,7 +50,9 @@ class ReactiveCollection(async: AsyncCollection) {
 
   import com.couchbase.client.scala.util.DurationConversions._
 
-  def name: String = async.name
+  def name: String       = async.name
+  def bucketName: String = async.bucketName
+  def scopeName: String  = async.scopeName
 
   /** Inserts a full document into this collection, if it does not exist already.
     *
