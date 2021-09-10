@@ -17,7 +17,6 @@ package com.couchbase.client.scala
 
 import java.util.{Optional, UUID}
 import java.util.stream.Collectors
-
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics._
@@ -99,20 +98,13 @@ class AsyncCluster(
   private[scala] val EmptyPositionalParameters = Seq.empty[Any]
 
   /** The AsyncBucketManager provides access to creating and getting buckets. */
-  @Stability.Volatile
   lazy val buckets = new AsyncBucketManager(reactiveBucketManager)
 
   /** The AsyncUserManager provides programmatic access to and creation of users and groups. */
-  @Stability.Volatile
   lazy val users = new AsyncUserManager(reactiveUserManager)
 
-  @Stability.Volatile
-  lazy val queryIndexes = new AsyncQueryIndexManager(this)
-
-  @Stability.Volatile
+  lazy val queryIndexes  = new AsyncQueryIndexManager(this)
   lazy val searchIndexes = new AsyncSearchIndexManager(this)
-
-  @Stability.Volatile
   lazy val analyticsIndexes: AsyncAnalyticsIndexManager = new AsyncAnalyticsIndexManager(
     reactiveAnalyticsIndexManager
   )

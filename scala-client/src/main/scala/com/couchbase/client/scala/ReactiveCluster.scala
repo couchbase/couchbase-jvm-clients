@@ -17,7 +17,6 @@
 package com.couchbase.client.scala
 
 import java.util.UUID
-
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics.{DiagnosticsResult, PingResult}
 import com.couchbase.client.core.env.PasswordAuthenticator
@@ -73,21 +72,15 @@ class ReactiveCluster(val async: AsyncCluster) {
   val env: ClusterEnvironment = async.env
 
   /** The ReactiveUserManager provides programmatic access to and creation of users and groups. */
-  @Stability.Volatile
   lazy val users = new ReactiveUserManager(async.core)
 
   /** The ReactiveBucketManager provides access to creating and getting buckets. */
-  @Stability.Volatile
   lazy val buckets = new ReactiveBucketManager(async.core)
 
   /** The ReactiveQueryIndexManager provides access to creating and managing query indexes. */
-  @Stability.Volatile
   lazy val queryIndexes = new ReactiveQueryIndexManager(async.queryIndexes, this)
 
-  @Stability.Volatile
-  lazy val searchIndexes = new ReactiveSearchIndexManager(async.searchIndexes)
-
-  @Stability.Volatile
+  lazy val searchIndexes    = new ReactiveSearchIndexManager(async.searchIndexes)
   lazy val analyticsIndexes = new ReactiveAnalyticsIndexManager(this, async.analyticsIndexes)
 
   /** Performs a N1QL query against the cluster.

@@ -17,7 +17,6 @@
 package com.couchbase.client.scala
 
 import java.util.UUID
-
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.{Authenticator, PasswordAuthenticator}
@@ -69,20 +68,13 @@ class Cluster private[scala] (
   lazy val reactive = new ReactiveCluster(async)
 
   /** The UserManager provides programmatic access to and creation of users and groups. */
-  @Stability.Volatile
   lazy val users = new UserManager(async.users, reactive.users)
 
   /** The BucketManager provides access to creating and getting buckets. */
-  @Stability.Volatile
   lazy val buckets = new BucketManager(async.buckets)
 
-  @Stability.Volatile
-  lazy val queryIndexes = new QueryIndexManager(async.queryIndexes)
-
-  @Stability.Volatile
+  lazy val queryIndexes  = new QueryIndexManager(async.queryIndexes)
   lazy val searchIndexes = new SearchIndexManager(async.searchIndexes)
-
-  @Stability.Volatile
   lazy val analyticsIndexes =
     new AnalyticsIndexManager(async.analyticsIndexes, reactive.analyticsIndexes)
 
