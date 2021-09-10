@@ -2,8 +2,8 @@ package com.couchbase.client.scala.json
 
 import scala.util.{Success, Try}
 import java.util
-
-import com.couchbase.client.core.error.DecodingFailureException
+import com.couchbase.client.core.error.{DecodingFailureException, InvalidArgumentException}
+import com.couchbase.client.scala.transformers.JacksonTransformersSafe
 
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -202,7 +202,7 @@ case class JsonArraySafe(private[scala] val a: JsonArray) {
     *
     * Will not throw as long as only supported types have been put into this.
     */
-  override def toString: String = super.toString
+  override def toString: String = JacksonTransformersSafe.MAPPER.writeValueAsString(this)
 }
 
 /** Methods to construct a `JsonArraySafe`. */
@@ -213,11 +213,36 @@ object JsonArraySafe {
 
   /** Constructs a `JsonArraySafe` from a String representing valid JSON.
     *
+    * Note that the operation is not performed recursively.  That is, any JSON objects or arrays inside the nested JSON
+    * will be in the form `JsonObject` and `JsonArray`, rather than their *Safe equivalents.  See [[fromJsonSafe()]]
+    * for a version that does that.  This method is deprecated for this reason.
+
     * @return `Failure(IllegalArgumentException)` if the String contains invalid JSON, otherwise `Success
     *         (JsonArraySafe)`
     */
+  @deprecated("Deprecated - please see fromJsonSafe")
   def fromJson(json: String): Try[JsonArraySafe] = {
     JsonArray.fromJson(json).map(v => new JsonArraySafe(v))
+  }
+
+  /** Constructs a `JsonArraySafe` from a String representing valid JSON.
+    *
+    * Any JSON objects and arrays recursively inside the JSON will be represented as `JsonObjectSafe` and `JsonArraySafe`
+    *
+    * @return `Failure(IllegalArgumentException)` if the String contains invalid JSON, else `Success(JsonObjectSafe)`
+    */
+  def fromJsonSafe(json: String): Try[JsonArraySafe] = {
+    try {
+      Success(JacksonTransformersSafe.stringToJsonArraySafe(json))
+    } catch {
+      case NonFatal(err) => throw new InvalidArgumentException("Failed to decode json", err, null)
+    }
+  }
+
+  /** Constructs a `JsonArraySafe` from the supplied values.
+    */
+  def fromSeq(in: Seq[Any]): JsonArraySafe = {
+    JsonArraySafe(JsonArray.fromSeq(in))
   }
 
   /** Constructs a `JsonArraySafe` from the supplied values.

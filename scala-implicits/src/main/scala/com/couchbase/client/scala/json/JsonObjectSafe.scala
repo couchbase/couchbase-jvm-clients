@@ -16,8 +16,12 @@
 
 package com.couchbase.client.scala.json
 
+import com.couchbase.client.core.error.InvalidArgumentException
+import com.couchbase.client.scala.transformers.{JacksonTransformers, JacksonTransformersSafe}
+
 import scala.collection.{Map => CMap, Set => CSet}
 import scala.language.dynamics
+import scala.util.control.NonFatal
 import scala.util.{Success, Try}
 
 /** A 'safe' alternative interface for [[JsonObject]] that does all operations with Try rather than throwing
@@ -216,7 +220,7 @@ case class JsonObjectSafe(private[scala] val o: JsonObject) {
     Try(o.toString)
   }
 
-  override def toString: String = o.toString
+  override def toString: String = JacksonTransformersSafe.MAPPER.writeValueAsString(this)
 }
 
 /** Methods to construct a `JsonObjectSafe`. */
@@ -224,10 +228,29 @@ object JsonObjectSafe {
 
   /** Constructs a `JsonObjectSafe` from a String representing valid JSON ("""{"foo":"bar"}""").
     *
+    * Note that the operation is not performed recursively.  That is, any JSON objects or arrays inside the nested JSON
+    * will be in the form `JsonObject` and `JsonArray`, rather than their *Safe equivalents.  See [[fromJsonSafe()]]
+    * for a version that does that.  This method is deprecated for this reason.
+    *
     * @return `Failure(IllegalArgumentException)` if the String contains invalid JSON, else `Success(JsonObjectSafe)`
     */
+  @deprecated("Deprecated - please see fromJsonSafe")
   def fromJson(json: String): Try[JsonObjectSafe] = {
     Try(JsonObject.fromJson(json)).map(JsonObjectSafe(_))
+  }
+
+  /** Constructs a `JsonObjectSafe` from a String representing valid JSON ("""{"foo":"bar"}""").
+    *
+    * Any JSON objects and arrays recursively inside the JSON will be represented as `JsonObjectSafe` and `JsonArraySafe`
+    *
+    * @return `Failure(IllegalArgumentException)` if the String contains invalid JSON, else `Success(JsonObjectSafe)`
+    */
+  def fromJsonSafe(json: String): Try[JsonObjectSafe] = {
+    try {
+      Success(JacksonTransformersSafe.stringToJsonObjectSafe(json))
+    } catch {
+      case NonFatal(err) => throw new InvalidArgumentException("Failed to decode json", err, null)
+    }
   }
 
   /** Constructs an empty `JsonObject`. */

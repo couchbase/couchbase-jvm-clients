@@ -1,7 +1,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.scala.codec.Conversions
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.json.{JsonArraySafe, JsonObject, JsonObjectSafe}
 import org.junit.jupiter.api.{Assertions, Test}
 
 class JsonObjectSpec {
@@ -76,5 +76,45 @@ class JsonObjectSpec {
     Assertions.assertThrows(classOf[RuntimeException], () => (j.bool("hello")))
     Assertions.assertThrows(classOf[RuntimeException], () => (j.obj("hello")))
     assert(j.toString == r)
+  }
+
+  @Test
+  def safe(): Unit = {
+    val raw     = """[
+                | {
+                |  "appcode": "function OnUpdate(doc, meta) {}",
+                |  "depcfg": {
+                |   "source_bucket": "48844de0-56dd-4617-8d41-fb3131af6f63",
+                |   "source_scope": "eventing",
+                |   "source_collection": "source",
+                |   "metadata_bucket": "48844de0-56dd-4617-8d41-fb3131af6f63",
+                |   "metadata_scope": "eventing",
+                |   "metadata_collection": "meta"
+                |  },
+                |  "version": "evt-7.0.1-6102-ee",
+                |  "enforce_schema": false,
+                |  "handleruuid": 217056801,
+                |  "function_instance_id": "Kfqan",
+                |  "appname": "04f87425-6d4e-4ad5-a0cc-741d76e9d146",
+                |  "settings": {
+                |   "cpp_worker_thread_count": 5,
+                |   "dcp_stream_boundary": "from_now",
+                |   "deployment_status": false,
+                |   "description": "desc",
+                |   "execution_timeout": 5,
+                |   "language_compatibility": "6.0.0",
+                |   "lcb_inst_capacity": 6,
+                |   "lcb_retry_count": 7,
+                |   "log_level": "DEBUG",
+                |   "n1ql_consistency": "none",
+                |   "processing_status": false
+                |  }
+                | }
+                |]
+                |""".stripMargin
+    val json    = JsonArraySafe.fromJsonSafe(raw).get
+    val str     = json.toString
+    val jsonNew = JsonArraySafe.fromJsonSafe(str).get
+    assert(json == jsonNew)
   }
 }

@@ -235,6 +235,18 @@ object JsonArray {
   }
 
   /** Constructs a `JsonArray` from the supplied values.
+    */
+  def fromSeq(in: Seq[Any]): JsonArray = {
+    val lst = new util.ArrayList[Any](in.size)
+    // Iterators benchmarked as much faster than foreach
+    val it = in.iterator
+    while (it.hasNext) {
+      lst.add(it.next())
+    }
+    new JsonArray(lst)
+  }
+
+  /** Constructs a `JsonArray` from the supplied values.
     *
     * Performance note: benchmarking indicates it's much faster to do `JsonArray.create.put(x).put(y)`
     * than `JsonArray(x, y)`
