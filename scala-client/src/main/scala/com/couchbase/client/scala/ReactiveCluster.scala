@@ -34,6 +34,7 @@ import com.couchbase.client.scala.diagnostics.{
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.manager.analytics.ReactiveAnalyticsIndexManager
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
+import com.couchbase.client.scala.manager.eventing.ReactiveEventingFunctionManager
 import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
 import com.couchbase.client.scala.manager.search.ReactiveSearchIndexManager
 import com.couchbase.client.scala.manager.user.ReactiveUserManager
@@ -82,6 +83,9 @@ class ReactiveCluster(val async: AsyncCluster) {
 
   lazy val searchIndexes    = new ReactiveSearchIndexManager(async.searchIndexes)
   lazy val analyticsIndexes = new ReactiveAnalyticsIndexManager(this, async.analyticsIndexes)
+
+  @Stability.Uncommitted
+  lazy val eventingFunctions = new ReactiveEventingFunctionManager(async.eventingFunctions)
 
   /** Performs a N1QL query against the cluster.
     *

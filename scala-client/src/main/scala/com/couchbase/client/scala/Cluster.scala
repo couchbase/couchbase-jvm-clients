@@ -30,6 +30,7 @@ import com.couchbase.client.scala.diagnostics.{
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.manager.analytics.AnalyticsIndexManager
 import com.couchbase.client.scala.manager.bucket.BucketManager
+import com.couchbase.client.scala.manager.eventing.EventingFunctionManager
 import com.couchbase.client.scala.manager.query.QueryIndexManager
 import com.couchbase.client.scala.manager.search.SearchIndexManager
 import com.couchbase.client.scala.manager.user.UserManager
@@ -77,6 +78,9 @@ class Cluster private[scala] (
   lazy val searchIndexes = new SearchIndexManager(async.searchIndexes)
   lazy val analyticsIndexes =
     new AnalyticsIndexManager(async.analyticsIndexes, reactive.analyticsIndexes)
+
+  @Stability.Uncommitted
+  lazy val eventingFunctions = new EventingFunctionManager(async.eventingFunctions)
 
   /** The environment used to create this cluster */
   def env: ClusterEnvironment = _env

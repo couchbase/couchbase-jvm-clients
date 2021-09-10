@@ -37,6 +37,7 @@ import com.couchbase.client.scala.manager.analytics.{
   ReactiveAnalyticsIndexManager
 }
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, ReactiveBucketManager}
+import com.couchbase.client.scala.manager.eventing.AsyncEventingFunctionManager
 import com.couchbase.client.scala.manager.query.AsyncQueryIndexManager
 import com.couchbase.client.scala.manager.search.AsyncSearchIndexManager
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager}
@@ -108,6 +109,9 @@ class AsyncCluster(
   lazy val analyticsIndexes: AsyncAnalyticsIndexManager = new AsyncAnalyticsIndexManager(
     reactiveAnalyticsIndexManager
   )
+
+  @Stability.Uncommitted
+  lazy val eventingFunctions = new AsyncEventingFunctionManager(env, core)
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *
