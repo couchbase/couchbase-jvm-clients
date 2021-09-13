@@ -119,6 +119,9 @@ public class LookupInResult {
   /**
    * Returns the raw JSON bytes of the content at the given index.
    *
+   * Note that if the field is a string then it will be surrounded by quotation marks, as this is the raw response from
+   * the server.  E.g. "foo" will return a 5-byte array.
+   *
    * @param index the index of the subdoc value to retrieve.
    * @return the JSON content as a byte array
    */

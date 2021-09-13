@@ -1,7 +1,6 @@
 package com.couchbase.client.scala.subdoc
 
 import java.util.concurrent.TimeUnit
-
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.{DecodingFailureException, InvalidArgumentException}
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
@@ -14,15 +13,11 @@ import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
-import com.couchbase.client.test.{
-  Capabilities,
-  ClusterAwareIntegrationTest,
-  ClusterType,
-  IgnoreWhen
-}
+import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
+import java.nio.charset.StandardCharsets
 import concurrent.duration._
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
@@ -68,6 +63,10 @@ class SubdocGetSpec extends ScalaIntegrationTest {
         assert(result.cas != 0)
         assert(result.cas == insertResult.cas)
         assert(result.contentAs[String](0).get == "bar")
+        // Yes, contentAsBytes will contain the quotation marks if a string has been fetched, which isn't too useful
+        // (It's return from server and normally is run through Jackson, which removes them.)  But contentAsBytes
+        // is more likely to be used with binary data or similar.
+        assert(result.contentAsBytes(0).get sameElements "\"bar\"".getBytes(StandardCharsets.UTF_8))
         assert(result.contentAs[Int](1).get == 22)
         assert(result.expiry.isEmpty)
       case Failure(err) => assert(false, s"unexpected error $err")

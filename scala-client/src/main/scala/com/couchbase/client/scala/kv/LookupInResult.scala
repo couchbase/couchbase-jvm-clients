@@ -1,15 +1,12 @@
 package com.couchbase.client.scala.kv
 
+import com.couchbase.client.core.annotation.Stability
+
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext
-import com.couchbase.client.core.msg.kv.{
-  SubDocumentField,
-  SubDocumentOpResponseStatus,
-  SubdocCommandType
-}
+import com.couchbase.client.core.msg.kv.{SubDocumentField, SubDocumentOpResponseStatus, SubdocCommandType}
 import com.couchbase.client.scala.codec.{JsonDeserializer, Transcoder}
 
 import scala.compat.java8.OptionConverters._
@@ -95,6 +92,17 @@ case class LookupInResult(
       }
     }
   }
+
+  /** Returns the raw JSON bytes of the content at the given index.
+    *
+    * Note that if the field is a string then it will be surrounded by quotation marks, as this is the raw response from
+    * the server.  E.g. "foo" will return a 5-byte array.
+    *
+    * @param index the index of the subdoc value to retrieve.
+    * @return the JSON content as a byte array
+    */
+  @Stability.Uncommitted
+  def contentAsBytes(index: Int): Try[Array[Byte]] = contentAs[Array[Byte]](index)
 
   /** Returns whether content has successfully been returned for a particular `LookupInSpec`.
     *
