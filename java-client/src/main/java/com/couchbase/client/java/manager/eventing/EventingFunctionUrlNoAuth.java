@@ -16,10 +16,16 @@
 
 package com.couchbase.client.java.manager.eventing;
 
+/**
+ * No authentication for a URL binding is used.
+ * <p>
+ * Created through {@link EventingFunctionUrlAuth#noAuth()}.
+ */
 public class EventingFunctionUrlNoAuth extends EventingFunctionUrlAuth {
 
   @Override
   public String toString() {
     return "EventingFunctionUrlNoAuth";
   }
+
 }

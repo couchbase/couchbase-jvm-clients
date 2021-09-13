@@ -18,20 +18,46 @@ package com.couchbase.client.java.manager.eventing;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 
+/**
+ * Uses HTTP Basic authentication for the URL binding.
+ * <p>
+ * Created through {@link EventingFunctionUrlAuth#basicAuth(String, String)}.
+ */
 public class EventingFunctionUrlAuthBasic extends EventingFunctionUrlAuth {
 
+  /**
+   * The username to use.
+   */
   private final String username;
+
+  /**
+   * The password to use.
+   */
   private final String password;
 
-  public EventingFunctionUrlAuthBasic(String username, String password) {
+  /**
+   * Creates a new {@link EventingFunctionUrlAuthBasic} instance.
+   * <p>
+   * Created through {@link EventingFunctionUrlAuth#basicAuth(String, String)}.
+   *
+   * @param username the username.
+   * @param password the password.
+   */
+  EventingFunctionUrlAuthBasic(final String username, final String password) {
     this.username = username;
     this.password = password;
   }
 
+  /**
+   * The username that is used for basic auth.
+   */
   public String username() {
     return username;
   }
 
+  /**
+   * The password that is used for basic auth - not set if returned from the server for security reasons.
+   */
   public String password() {
     return password;
   }

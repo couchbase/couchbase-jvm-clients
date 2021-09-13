@@ -18,10 +18,18 @@ package com.couchbase.client.java.manager.eventing;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
+/**
+ * Allows to customize the behavior of the eventing function get operation.
+ */
 public class GetFunctionOptions extends CommonOptions<GetFunctionOptions> {
   private GetFunctionOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static GetFunctionOptions getFunctionOptions() {
     return new GetFunctionOptions();
   }

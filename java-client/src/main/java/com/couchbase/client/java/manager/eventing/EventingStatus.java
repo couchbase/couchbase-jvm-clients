@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.manager.eventing;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
@@ -23,6 +24,10 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonPrope
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Contains the status of all eventing functions stored on the server.
+ */
+@Stability.Uncommitted
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class EventingStatus {
 
@@ -30,17 +35,29 @@ public class EventingStatus {
   private final List<EventingFunctionState> functions;
 
   @JsonCreator
-  public EventingStatus(
+  @Stability.Internal
+  EventingStatus(
     @JsonProperty("num_eventing_nodes") long numEventingNodes,
-    @JsonProperty("apps") List<EventingFunctionState> functions) {
+    @JsonProperty("apps") List<EventingFunctionState> functions
+  ) {
     this.numEventingNodes = numEventingNodes;
     this.functions = functions;
   }
 
+  /**
+   * Returns the number of eventing nodes participating.
+   *
+   * @return the number of eventing nodes.
+   */
   public long numEventingNodes() {
     return numEventingNodes;
   }
 
+  /**
+   * State information for each individual eventing function.
+   *
+   * @return a (potentially empty) list of eventing function states.
+   */
   public List<EventingFunctionState> functions() {
     return functions;
   }
@@ -65,5 +82,6 @@ public class EventingStatus {
   public int hashCode() {
     return Objects.hash(numEventingNodes, functions);
   }
+
 }
 

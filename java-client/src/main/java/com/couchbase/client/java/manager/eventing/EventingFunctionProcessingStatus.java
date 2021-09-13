@@ -16,10 +16,22 @@
 
 package com.couchbase.client.java.manager.eventing;
 
+/**
+ * The processing status of the eventing function.
+ */
 public enum EventingFunctionProcessingStatus {
+  /**
+   * The function is currently running.
+   */
   RUNNING,
+  /**
+   * The function is currently paused.
+   */
   PAUSED;
 
+  /**
+   * Returns true if the function is currently running.
+   */
   public boolean isRunning() {
     return this == RUNNING;
   }

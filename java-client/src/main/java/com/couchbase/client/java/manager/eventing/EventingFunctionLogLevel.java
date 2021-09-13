@@ -13,19 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.couchbase.client.java.manager.eventing;
 
 /**
- * The bucket access policy for the bucket binding.
+ * Specifies the log level used when logging out of the eventing function.
  */
-public enum EventingFunctionBucketAccess {
+public enum EventingFunctionLogLevel {
   /**
-   * Read-only access.
+   * DEBUG-Level or higher will be logged.
    */
-  READ_ONLY,
+  DEBUG,
   /**
-   * Read and write access.
+   * TRACE-Level or higher will be logged.
    */
-  READ_WRITE
+  TRACE,
+  /**
+   * INFO-Level or higher will be logged.
+   */
+  INFO,
+  /**
+   * ERROR-Level or higher will be logged.
+   */
+  ERROR,
+  /**
+   * WARNING-Level or higher will be logged.
+   */
+  WARNING
 }

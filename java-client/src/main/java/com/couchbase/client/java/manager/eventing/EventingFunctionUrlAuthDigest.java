@@ -18,20 +18,46 @@ package com.couchbase.client.java.manager.eventing;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 
+/**
+ * Uses HTTP Digest authentication for the URL binding.
+ * <p>
+ * Created through {@link EventingFunctionUrlAuth#digestAuth(String, String)}.
+ */
 public class EventingFunctionUrlAuthDigest extends EventingFunctionUrlAuth {
 
+  /**
+   * The username to use.
+   */
   private final String username;
+
+  /**
+   * The password to use.
+   */
   private final String password;
 
-  public EventingFunctionUrlAuthDigest(String username, String password) {
+  /**
+   * Creates a new {@link EventingFunctionUrlAuthDigest} instance.
+   * <p>
+   * Created through {@link EventingFunctionUrlAuth#digestAuth(String, String)}.
+   *
+   * @param username the username.
+   * @param password the password.
+   */
+  EventingFunctionUrlAuthDigest(final String username, final String password) {
     this.username = username;
     this.password = password;
   }
 
+  /**
+   * The username that is used for digest auth.
+   */
   public String username() {
     return username;
   }
 
+  /**
+   * The password that is used for digest auth - not set if returned from the server for security reasons.
+   */
   public String password() {
     return password;
   }

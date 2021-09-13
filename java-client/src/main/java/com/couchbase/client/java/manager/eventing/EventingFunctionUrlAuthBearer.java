@@ -16,14 +16,34 @@
 
 package com.couchbase.client.java.manager.eventing;
 
+/**
+ * Uses Bearer authentication for the URL binding.
+ * <p>
+ * Created through {@link EventingFunctionUrlAuth#bearerAuth(String)}.
+ */
 public class EventingFunctionUrlAuthBearer extends EventingFunctionUrlAuth {
 
+  /**
+   * The bearer key to use.
+   */
   private final String key;
 
-  public EventingFunctionUrlAuthBearer(String key) {
+  /**
+   * Creates a new {@link EventingFunctionUrlAuthBearer} instance.
+   * <p>
+   * Created through {@link EventingFunctionUrlAuth#bearerAuth(String)}.
+   *
+   * @param key the key.
+   */
+  EventingFunctionUrlAuthBearer(String key) {
     this.key = key;
   }
 
+  /**
+   * The key used for bearer auth - not set if returned from the server for security reasons.
+   *
+   * @return the key if set.
+   */
   public String key() {
     return key;
   }

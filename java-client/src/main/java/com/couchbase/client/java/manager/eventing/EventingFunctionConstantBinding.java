@@ -20,11 +20,21 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
+/**
+ * Represents a constant binding of an eventing function.
+ */
 public class EventingFunctionConstantBinding {
 
   private final String alias;
   private final String literal;
 
+  /**
+   * Creates a new {@link EventingFunctionConstantBinding}.
+   *
+   * @param alias the alias for the constant binding.
+   * @param literal the literal of the constant binding (the constant itself).
+   * @return a new instance of the {@link EventingFunctionConstantBinding}.
+   */
   public static EventingFunctionConstantBinding create(final String alias, final String literal) {
     return new EventingFunctionConstantBinding(alias, literal);
   }
@@ -34,10 +44,16 @@ public class EventingFunctionConstantBinding {
     this.literal = notNullOrEmpty(literal, "Literal");
   }
 
+  /**
+   * The alias for the eventing function.
+   */
   public String alias() {
     return alias;
   }
 
+  /**
+   * The literal for the eventing function.
+   */
   public String literal() {
     return literal;
   }
@@ -49,4 +65,5 @@ public class EventingFunctionConstantBinding {
       ", literal='" + redactUser(literal) + '\'' +
       '}';
   }
+
 }

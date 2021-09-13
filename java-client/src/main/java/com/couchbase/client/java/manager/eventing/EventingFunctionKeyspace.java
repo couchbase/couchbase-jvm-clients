@@ -35,30 +35,66 @@ public class EventingFunctionKeyspace {
     this.collection = collection == null || collection.isEmpty() ? CollectionIdentifier.DEFAULT_COLLECTION : collection;
   }
 
+  /**
+   * Creates a keyspace with a bucket name and default scope and default collection.
+   *
+   * @param bucket the name of the bucket.
+   * @return the created keyspace for the eventing function.
+   */
   public static EventingFunctionKeyspace create(final String bucket) {
     return new EventingFunctionKeyspace(bucket, null, null);
   }
 
+  /**
+   * Creates a keyspace with a bucket name, collection name and default scope.
+   *
+   * @param bucket the name of the bucket.
+   * @param collection the name of the collection.
+   * @return the created keyspace for the eventing function.
+   */
   public static EventingFunctionKeyspace create(final String bucket, final String collection) {
     return new EventingFunctionKeyspace(bucket, null, collection);
   }
 
+  /**
+   * Creates a keyspace with bucket name, scope name and collection name.
+   *
+   * @param bucket the name of the bucket.
+   * @param scope the name of the scope.
+   * @param collection the name of the collection.
+   * @return the created keyspace for the eventing function.
+   */
   public static EventingFunctionKeyspace create(final String bucket, final String scope, final String collection) {
     return new EventingFunctionKeyspace(bucket, scope, collection);
   }
 
+  /**
+   * Creates a keyspace by extracting bucket, scope and collection from the collection instance.
+   *
+   * @param collection the collection from where to extract the properties.
+   * @return the created keyspace for the eventing function.
+   */
   public static EventingFunctionKeyspace create(Collection collection) {
     return new EventingFunctionKeyspace(collection.bucketName(), collection.scopeName(), collection.name());
   }
 
+  /**
+   * The name of the bucket.
+   */
   public String bucket() {
     return bucket;
   }
 
+  /**
+   * The name of the scope.
+   */
   public String scope() {
     return scope;
   }
 
+  /**
+   * The name of the collection.
+   */
   public String collection() {
     return collection;
   }

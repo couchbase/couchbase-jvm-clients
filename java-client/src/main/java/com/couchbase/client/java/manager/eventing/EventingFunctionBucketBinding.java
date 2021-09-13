@@ -21,34 +21,61 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
+/**
+ * Represents a bucket binding of an eventing function.
+ */
 public class EventingFunctionBucketBinding {
 
-  private String alias;
-  private EventingFunctionKeyspace name;
-  private EventingFunctionBucketAccess access;
+  private final String alias;
+  private final EventingFunctionKeyspace keyspace;
+  private final EventingFunctionBucketAccess access;
 
-  public static EventingFunctionBucketBinding createReadOnly(String alias, EventingFunctionKeyspace name) {
-    return new EventingFunctionBucketBinding(alias, name, EventingFunctionBucketAccess.READ_ONLY);
+  /**
+   * Creates a read-only bucket binding.
+   *
+   * @param alias the alias for the bucket binding.
+   * @param keyspace the keyspace to which the binding points to.
+   * @return a created {@link EventingFunctionBucketBinding}.
+   */
+  public static EventingFunctionBucketBinding createReadOnly(String alias, EventingFunctionKeyspace keyspace) {
+    return new EventingFunctionBucketBinding(alias, keyspace, EventingFunctionBucketAccess.READ_ONLY);
   }
 
-  public static EventingFunctionBucketBinding createReadWrite(String alias, EventingFunctionKeyspace name) {
-    return new EventingFunctionBucketBinding(alias, name, EventingFunctionBucketAccess.READ_WRITE);
+  /**
+   * Creates a read-write bucket binding.
+   *
+   * @param alias the alias for the bucket binding.
+   * @param keyspace the keyspace to which the binding points to.
+   * @return a created {@link EventingFunctionBucketBinding}.
+   */
+  public static EventingFunctionBucketBinding createReadWrite(String alias, EventingFunctionKeyspace keyspace) {
+    return new EventingFunctionBucketBinding(alias, keyspace, EventingFunctionBucketAccess.READ_WRITE);
   }
 
-  private EventingFunctionBucketBinding(String alias, EventingFunctionKeyspace name, EventingFunctionBucketAccess access) {
+  private EventingFunctionBucketBinding(String alias, EventingFunctionKeyspace keyspace,
+                                        EventingFunctionBucketAccess access) {
     this.alias = notNullOrEmpty(alias, "Alias");
-    this.name = notNull(name, "Name");
+    this.keyspace = notNull(keyspace, "Keyspace");
     this.access = notNull(access, "Access");
   }
 
+  /**
+   * Returns the alias for the bucket binding.
+   */
   public String alias() {
     return alias;
   }
 
-  public EventingFunctionKeyspace name() {
-    return name;
+  /**
+   * Returns the keyspace triple this bucket is accessing.
+   */
+  public EventingFunctionKeyspace keyspace() {
+    return keyspace;
   }
 
+  /**
+   * Returns the bucket access policy for the bucket binding.
+   */
   public EventingFunctionBucketAccess access() {
     return access;
   }
@@ -57,7 +84,7 @@ public class EventingFunctionBucketBinding {
   public String toString() {
     return "EventingFunctionBucketBinding{" +
       "alias='" + redactMeta(alias) + '\'' +
-      ", name=" + redactUser(name) +
+      ", keyspace=" + redactUser(keyspace) +
       ", access=" + access +
       '}';
   }

@@ -16,10 +16,22 @@
 
 package com.couchbase.client.java.manager.eventing;
 
+/**
+ * The deployment status of the eventing function.
+ */
 public enum EventingFunctionDeploymentStatus {
+  /**
+   * The function is currently deployed.
+   */
   DEPLOYED,
+  /**
+   * The function is currently undeployed.
+   */
   UNDEPLOYED;
 
+  /**
+   * Returns true if the function is currently deployed.
+   */
   public boolean isDeployed() {
     return this == DEPLOYED;
   }

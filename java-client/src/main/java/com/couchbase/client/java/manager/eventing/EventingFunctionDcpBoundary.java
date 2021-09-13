@@ -17,15 +17,26 @@
 package com.couchbase.client.java.manager.eventing;
 
 /**
- * The bucket access policy for the bucket binding.
+ * Describes from where in the DCP stream the function should start.
  */
-public enum EventingFunctionBucketAccess {
+public enum EventingFunctionDcpBoundary {
   /**
-   * Read-only access.
+   * Fetch all data, including historical.
    */
-  READ_ONLY,
+  EVERYTHING {
+    @Override
+    public String toString() {
+      return "everything";
+    }
+  },
   /**
-   * Read and write access.
+   * Start the stream from now, not including historical data.
    */
-  READ_WRITE
+  FROM_NOW {
+    @Override
+    public String toString() {
+      return "from_now";
+    }
+  }
+
 }

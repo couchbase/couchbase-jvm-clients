@@ -18,10 +18,18 @@ package com.couchbase.client.java.manager.eventing;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
+/**
+ * Allows to customize the behavior of the eventing functions status operation.
+ */
 public class FunctionsStatusOptions extends CommonOptions<FunctionsStatusOptions> {
   private FunctionsStatusOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static FunctionsStatusOptions functionsStatusOptions() {
     return new FunctionsStatusOptions();
   }

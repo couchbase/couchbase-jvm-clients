@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.manager.eventing;
 
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -31,7 +32,8 @@ public class EventingFunctionState {
   private final EventingFunctionDeploymentStatus deploymentStatus;
   private final EventingFunctionProcessingStatus processingStatus;
 
-  public EventingFunctionState(
+  @JsonCreator
+  EventingFunctionState(
     @JsonProperty("name") String name,
     @JsonProperty("composite_status") EventingFunctionStatus status,
     @JsonProperty("num_bootstrapping_nodes") long numBootstrappingNodes,
@@ -43,30 +45,52 @@ public class EventingFunctionState {
     this.status = status;
     this.numBootstrappingNodes = numBootstrappingNodes;
     this.numDeployedNodes = numDeployedNodes;
-    this.deploymentStatus = deploymentStatus ? EventingFunctionDeploymentStatus.DEPLOYED : EventingFunctionDeploymentStatus.UNDEPLOYED;
-    this.processingStatus = processingStatus ? EventingFunctionProcessingStatus.RUNNING : EventingFunctionProcessingStatus.PAUSED;
+    this.deploymentStatus = deploymentStatus
+      ? EventingFunctionDeploymentStatus.DEPLOYED
+      : EventingFunctionDeploymentStatus.UNDEPLOYED;
+    this.processingStatus = processingStatus
+      ? EventingFunctionProcessingStatus.RUNNING
+      : EventingFunctionProcessingStatus.PAUSED;
   }
 
+  /**
+   * The name of the eventing function.
+   */
   public String name() {
     return name;
   }
 
+  /**
+   * The status the function is currently in (including transitional states).
+   */
   public EventingFunctionStatus status() {
     return status;
   }
 
+  /**
+   * The number of nodes which are currently bootstrapping.
+   */
   public long numBootstrappingNodes() {
     return numBootstrappingNodes;
   }
 
+  /**
+   * The number of deployed nodes.
+   */
   public long numDeployedNodes() {
     return numDeployedNodes;
   }
 
+  /**
+   * The current deployment status.
+   */
   public EventingFunctionDeploymentStatus deploymentStatus() {
     return deploymentStatus;
   }
 
+  /**
+   * The current processing status.
+   */
   public EventingFunctionProcessingStatus processingStatus() {
     return processingStatus;
   }

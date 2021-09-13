@@ -18,10 +18,18 @@ package com.couchbase.client.java.manager.eventing;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
+/**
+ * Allows to customize the behavior of the eventing functions drop operation.
+ */
 public class DropFunctionOptions extends CommonOptions<DropFunctionOptions> {
   private DropFunctionOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static DropFunctionOptions dropFunctionOptions() {
     return new DropFunctionOptions();
   }

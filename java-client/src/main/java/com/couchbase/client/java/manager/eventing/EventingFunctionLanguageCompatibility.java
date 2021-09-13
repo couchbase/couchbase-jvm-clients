@@ -15,32 +15,35 @@
  */
 package com.couchbase.client.java.manager.eventing;
 
-import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
-
 /**
- * Allows to customize the behavior of the eventing function undeploy operation.
+ * Defines the function language compatibility level.
  */
-public class UndeployFunctionOptions extends CommonOptions<UndeployFunctionOptions> {
-  private UndeployFunctionOptions() {
-  }
-
+public enum EventingFunctionLanguageCompatibility {
   /**
-   * Creates a new instance with default values.
-   *
-   * @return the instantiated default options.
+   * Uses Server 6.0.0 language compat level.
    */
-  public static UndeployFunctionOptions undeployFunctionOptions() {
-    return new UndeployFunctionOptions();
+  VERSION_6_0_0 {
+    @Override
+    public String toString() {
+      return "6.0.0";
+    }
+  },
+  /**
+   * Uses Server 6.5.0 language compat level.
+   */
+  VERSION_6_5_0 {
+    @Override
+    public String toString() {
+      return "6.5.0";
+    }
+  },
+  /**
+   * Uses Server 6.6.2 language compat level.
+   */
+  VERSION_6_6_2 {
+    @Override
+    public String toString() {
+      return "6.6.2";
+    }
   }
-
-  @Stability.Internal
-  public Built build() {
-    return new Built();
-  }
-
-  public class Built extends BuiltCommonOptions {
-    Built() { }
-  }
-
 }

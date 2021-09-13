@@ -19,8 +19,18 @@ package com.couchbase.client.java.manager.eventing;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.error.BucketNotFoundException;
+import com.couchbase.client.core.error.CollectionNotFoundException;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.EventingFunctionCompilationFailureException;
+import com.couchbase.client.core.error.EventingFunctionDeployedException;
+import com.couchbase.client.core.error.EventingFunctionIdenticalKeyspaceException;
+import com.couchbase.client.core.error.EventingFunctionNotBootstrappedException;
+import com.couchbase.client.core.error.EventingFunctionNotDeployedException;
+import com.couchbase.client.core.error.EventingFunctionNotFoundException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.manager.CoreEventingFunctionManager;
+import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.query.QueryScanConsistency;
 
 import java.time.Duration;
@@ -34,92 +44,343 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.java.manager.eventing.GetAllFunctionsOptions.getAllFunctionsOptions;
 
+/**
+ * Performs management operations on {@link EventingFunction EventingFunctions}.
+ */
 @Stability.Uncommitted
 public class AsyncEventingFunctionManager {
 
+  /**
+   * References the core-io eventing function manager which abstracts common I/O functionality.
+   */
   private final CoreEventingFunctionManager coreManager;
 
+  /**
+   * Creates a new {@link AsyncEventingFunctionManager}.
+   * <p>
+   * This API is not intended to be called by the user directly, use {@link AsyncCluster#eventingFunctions()}
+   * instead.
+   *
+   * @param core the internal core reference.
+   */
+  @Stability.Internal
   public AsyncEventingFunctionManager(final Core core) {
     this.coreManager = new CoreEventingFunctionManager(core);
   }
 
+  /**
+   * Inserts or replaces a {@link EventingFunction}.
+   * <p>
+   * The eventing management API defines that if a function is stored which name does not exist yet,
+   * it will be inserted. If the name already exists, the function will be replaced with its new equivalent and
+   * the properties changed.
+   * <p>
+   * Operations which change the runtime-state of a function (i.e. deploy / undeploy / pause / resume) should not
+   * be modified through this method, but rather by using those methods directly (i.e. {@link #deployFunction(String)}).
+   *
+   * @param function the function to be inserted or replaced.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws EventingFunctionCompilationFailureException (async) if the function body cannot be compiled.
+   * @throws CollectionNotFoundException (async) if the specified collection or scope does not exist.
+   * @throws BucketNotFoundException (async) if the specified bucket does not exist.
+   * @throws EventingFunctionIdenticalKeyspaceException (async) if the source and metadata keyspace are the same.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<Void> upsertFunction(final EventingFunction function) {
     return upsertFunction(function, UpsertFunctionOptions.upsertFunctionOptions());
   }
 
+  /**
+   * Inserts or replaces a {@link EventingFunction} with custom options.
+   * <p>
+   * The eventing management API defines that if a function is stored which name does not exist yet,
+   * it will be inserted. If the name already exists, the function will be replaced with its new equivalent and
+   * the properties changed.
+   * <p>
+   * Operations which change the runtime-state of a function (i.e. deploy / undeploy / pause / resume) should not
+   * be modified through this method, but rather by using those methods directly (i.e. {@link #deployFunction(String)}).
+   *
+   * @param function the function to be inserted or replaced.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws EventingFunctionCompilationFailureException (async) if the function body cannot be compiled.
+   * @throws CollectionNotFoundException (async) if the specified collection or scope does not exist.
+   * @throws BucketNotFoundException (async) if the specified bucket does not exist.
+   * @throws EventingFunctionIdenticalKeyspaceException (async) if the source and metadata keyspace are the same.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<Void> upsertFunction(final EventingFunction function, final UpsertFunctionOptions options) {
     return coreManager.upsertFunction(function.name(), encodeFunction(function), options.build());
   }
 
+  /**
+   * Retrieves a {@link EventingFunction} by its name.
+   *
+   * @param name the name of the function to retrieve.
+   * @return a {@link CompletableFuture} completing with the eventing function found or failed with an error.
+   * @throws EventingFunctionNotFoundException (async) if the function is not found on the server.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<EventingFunction> getFunction(final String name) {
     return getFunction(name, GetFunctionOptions.getFunctionOptions());
   }
 
+  /**
+   * Retrieves a {@link EventingFunction} by its name with custom options.
+   *
+   * @param name the name of the function to retrieve.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing with the eventing function found or failed with an error.
+   * @throws EventingFunctionNotFoundException (async) if the function is not found on the server.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<EventingFunction> getFunction(final String name, final GetFunctionOptions options) {
     return coreManager
       .getFunction(name, options.build())
       .thenApply(AsyncEventingFunctionManager::decodeFunction);
   }
 
-  public CompletableFuture<Void> dropFunction(final String name) {
-    return dropFunction(name, DropFunctionOptions.dropFunctionOptions());
-  }
-
-  public CompletableFuture<Void> dropFunction(final String name, final DropFunctionOptions options) {
-    return coreManager.dropFunction(name, options.build());
-  }
-
-  public CompletableFuture<Void> deployFunction(final String name) {
-    return deployFunction(name, DeployFunctionOptions.deployFunctionOptions());
-  }
-
-  public CompletableFuture<Void> deployFunction(final String name, final DeployFunctionOptions options) {
-    return coreManager.deployFunction(name, options.build());
-  }
-
+  /**
+   * Retrieves all {@link EventingFunction EventingFunctions} currently stored on the server.
+   * <p>
+   * If no functions are found, an empty list is returned.
+   *
+   * @return a {@link CompletableFuture} completing with all eventing functions found or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<List<EventingFunction>> getAllFunctions() {
     return getAllFunctions(getAllFunctionsOptions());
   }
+
+  /**
+   * Retrieves all {@link EventingFunction EventingFunctions} currently stored on the server with custom options.
+   * <p>
+   * If no functions are found, an empty list is returned.
+   *
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing with all eventing functions found or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<List<EventingFunction>> getAllFunctions(final GetAllFunctionsOptions options) {
     return coreManager
       .getAllFunctions(options.build())
       .thenApply(AsyncEventingFunctionManager::decodeFunctions);
   }
 
-  public CompletableFuture<Void> pauseFunction(final String name) {
-    return pauseFunction(name, PauseFunctionOptions.pauseFunctionOptions());
+  /**
+   * Removes a {@link EventingFunction} by its name if it exists.
+   * <p>
+   * Note that due to a bug on the server, depending on which version is used, both a
+   * {@link EventingFunctionNotFoundException} or a {@link EventingFunctionNotDeployedException} can be thrown if
+   * a function does not exist.
+   *
+   * @param name the name of the function to drop.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws EventingFunctionNotFoundException (async) if the function is not found on the server.
+   * @throws EventingFunctionNotDeployedException (async) if the function is not found on the server (see above).
+   * @throws EventingFunctionDeployedException (async) if the function is currently deployed (undeploy first).
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> dropFunction(final String name) {
+    return dropFunction(name, DropFunctionOptions.dropFunctionOptions());
   }
 
-  public CompletableFuture<Void> pauseFunction(final String name, final PauseFunctionOptions options) {
-    return coreManager.pauseFunction(name, options.build());
+  /**
+   * Removes a {@link EventingFunction} by its name if it exists with custom options.
+   * <p>
+   * Note that due to a bug on the server, depending on which version is used, both a
+   * {@link EventingFunctionNotFoundException} or a {@link EventingFunctionNotDeployedException} can be thrown if
+   * a function does not exist.
+   *
+   * @param name the name of the function to drop.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws EventingFunctionNotFoundException (async) if the function is not found on the server.
+   * @throws EventingFunctionNotDeployedException (async) if the function is not found on the server (see above).
+   * @throws EventingFunctionDeployedException (async) if the function is currently deployed (undeploy first).
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> dropFunction(final String name, final DropFunctionOptions options) {
+    return coreManager.dropFunction(name, options.build());
   }
 
-  public CompletableFuture<Void> resumeFunction(final String name) {
-    return resumeFunction(name, ResumeFunctionOptions.resumeFunctionOptions());
+  /**
+   * Deploys an {@link EventingFunction} identified by its name.
+   * <p>
+   * Calling this method effectively moves the function from state {@link EventingFunctionDeploymentStatus#UNDEPLOYED}
+   * to state {@link EventingFunctionDeploymentStatus#DEPLOYED}.
+   *
+   * @param name the name of the function to deploy.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws EventingFunctionNotFoundException (async) if the function is not found on the server.
+   * @throws EventingFunctionNotBootstrappedException (async) if the function is not bootstrapped yet (after creating it).
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> deployFunction(final String name) {
+    return deployFunction(name, DeployFunctionOptions.deployFunctionOptions());
   }
 
-  public CompletableFuture<Void> resumeFunction(final String name, final ResumeFunctionOptions options) {
-    return coreManager.resumeFunction(name, options.build());
+  /**
+   * Deploys an {@link EventingFunction} identified by its name with custom options.
+   * <p>
+   * Calling this method effectively moves the function from state {@link EventingFunctionDeploymentStatus#UNDEPLOYED}
+   * to state {@link EventingFunctionDeploymentStatus#DEPLOYED}.
+   *
+   * @param name the name of the function to deploy.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws EventingFunctionNotFoundException (async) if the function is not found on the server.
+   * @throws EventingFunctionNotBootstrappedException (async) if the function is not bootstrapped yet (after creating it).
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> deployFunction(final String name, final DeployFunctionOptions options) {
+    return coreManager.deployFunction(name, options.build());
   }
 
+  /**
+   * Undeploys an {@link EventingFunction} identified by its name.
+   * <p>
+   * Calling this method effectively moves the function from state {@link EventingFunctionDeploymentStatus#DEPLOYED}
+   * to state {@link EventingFunctionDeploymentStatus#UNDEPLOYED}.
+   * <p>
+   * Note that due to a bug on the server, depending on which version is used, both a
+   * {@link EventingFunctionNotFoundException} or a {@link EventingFunctionNotDeployedException} can be thrown if
+   * a function does not exist.
+   *
+   * @param name the name of the function to undeploy.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws EventingFunctionNotFoundException (async) if the function is not found on the server.
+   * @throws EventingFunctionNotDeployedException (async) if the function is not found on the server (see above).
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<Void> undeployFunction(final String name) {
     return undeployFunction(name, UndeployFunctionOptions.undeployFunctionOptions());
   }
 
+  /**
+   * Undeploys an {@link EventingFunction} identified by its name with custom options.
+   * <p>
+   * Calling this method effectively moves the function from state {@link EventingFunctionDeploymentStatus#DEPLOYED}
+   * to state {@link EventingFunctionDeploymentStatus#UNDEPLOYED}.
+   * <p>
+   * Note that due to a bug on the server, depending on which version is used, both a
+   * {@link EventingFunctionNotFoundException} or a {@link EventingFunctionNotDeployedException} can be thrown if
+   * a function does not exist.
+   *
+   * @param name the name of the function to undeploy.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws EventingFunctionNotFoundException (async) if the function is not found on the server.
+   * @throws EventingFunctionNotDeployedException (async) if the function is not found on the server (see above).
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<Void> undeployFunction(final String name, final UndeployFunctionOptions options) {
     return coreManager.undeployFunction(name, options.build());
   }
 
+  /**
+   * Pauses an {@link EventingFunction} identified by its name.
+   * <p>
+   * Calling this method effectively moves the function from state {@link EventingFunctionProcessingStatus#RUNNING}
+   * to state {@link EventingFunctionProcessingStatus#PAUSED}.
+   *
+   * @param name the name of the function to pause.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws EventingFunctionNotFoundException (async) if the function is not found on the server.
+   * @throws EventingFunctionNotBootstrappedException (async) if the function is not bootstrapped yet (after creating it).
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> pauseFunction(final String name) {
+    return pauseFunction(name, PauseFunctionOptions.pauseFunctionOptions());
+  }
+
+  /**
+   * Pauses an {@link EventingFunction} identified by its name with custom options.
+   * <p>
+   * Calling this method effectively moves the function from state {@link EventingFunctionProcessingStatus#RUNNING}
+   * to state {@link EventingFunctionProcessingStatus#PAUSED}.
+   *
+   * @param name the name of the function to pause.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws EventingFunctionNotFoundException (async) if the function is not found on the server.
+   * @throws EventingFunctionNotBootstrappedException (async) if the function is not bootstrapped yet (after creating it).
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> pauseFunction(final String name, final PauseFunctionOptions options) {
+    return coreManager.pauseFunction(name, options.build());
+  }
+
+  /**
+   * Resumes an {@link EventingFunction} identified by its name.
+   * <p>
+   * Calling this method effectively moves the function from state {@link EventingFunctionProcessingStatus#PAUSED}
+   * to state {@link EventingFunctionProcessingStatus#RUNNING}.
+   * <p>
+   * Note that due to a bug on the server, depending on which version is used, both a
+   * {@link EventingFunctionNotFoundException} or a {@link EventingFunctionNotDeployedException} can be thrown if
+   * a function does not exist.
+   *
+   * @param name the name of the function to resume.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws EventingFunctionNotFoundException (async) if the function is not found on the server.
+   * @throws EventingFunctionNotDeployedException (async) if the function is not found on the server (see above).
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> resumeFunction(final String name) {
+    return resumeFunction(name, ResumeFunctionOptions.resumeFunctionOptions());
+  }
+
+  /**
+   * Resumes an {@link EventingFunction} identified by its name with custom options.
+   * <p>
+   * Calling this method effectively moves the function from state {@link EventingFunctionProcessingStatus#PAUSED}
+   * to state {@link EventingFunctionProcessingStatus#RUNNING}.
+   * <p>
+   * Note that due to a bug on the server, depending on which version is used, both a
+   * {@link EventingFunctionNotFoundException} or a {@link EventingFunctionNotDeployedException} can be thrown if
+   * a function does not exist.
+   *
+   * @param name the name of the function to resume.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws EventingFunctionNotFoundException (async) if the function is not found on the server.
+   * @throws EventingFunctionNotDeployedException (async) if the function is not found on the server (see above).
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> resumeFunction(final String name, final ResumeFunctionOptions options) {
+    return coreManager.resumeFunction(name, options.build());
+  }
+
+  /**
+   * Retrieves helpful status information about all functions currently created on the cluster.
+   *
+   * @return a {@link CompletableFuture} completing with the eventing status or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<EventingStatus> functionsStatus() {
     return functionsStatus(FunctionsStatusOptions.functionsStatusOptions());
   }
 
+  /**
+   * Retrieves helpful status information about all functions currently created on the cluster with custom options.
+   *
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing with the eventing status or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<EventingStatus> functionsStatus(final FunctionsStatusOptions options) {
     return coreManager
       .functionsStatus(options.build())
       .thenApply(bytes -> Mapper.decodeInto(bytes, EventingStatus.class));
   }
 
+  /**
+   * Encodes a {@link EventingFunction} into its JSON representation the server accepts.
+   *
+   * @param function the function to encode.
+   * @return the encoded JSON payload.
+   */
   private static byte[] encodeFunction(final EventingFunction function) {
     Map<String, Object> func = new HashMap<>();
 
@@ -184,9 +445,9 @@ public class AsyncEventingFunctionManager {
       List<Map<String, Object>> buckets = function.bucketBindings().stream().map(c -> {
         Map<String, Object> map = new HashMap<>();
         map.put("alias", c.alias());
-        map.put("bucket_name", c.name().bucket());
-        map.put("scope_name", c.name().scope());
-        map.put("collection_name", c.name().collection());
+        map.put("bucket_name", c.keyspace().bucket());
+        map.put("scope_name", c.keyspace().scope());
+        map.put("collection_name", c.keyspace().collection());
         if (c.access() != null) {
           map.put("access", c.access() == EventingFunctionBucketAccess.READ_ONLY ? "r" : "rw");
         }
@@ -212,16 +473,16 @@ public class AsyncEventingFunctionManager {
       settings.put("cpp_worker_thread_count", efs.cppWorkerThreadCount());
     }
     if (efs.dcpStreamBoundary() != null) {
-      settings.put("dcp_stream_boundary", efs.dcpStreamBoundary());
+      settings.put("dcp_stream_boundary", efs.dcpStreamBoundary().toString());
     }
     if (efs.description() != null) {
       settings.put("description", efs.description());
     }
     if (efs.logLevel() != null) {
-      settings.put("log_level", efs.logLevel());
+      settings.put("log_level", efs.logLevel().toString());
     }
     if (efs.languageCompatibility() != null) {
-      settings.put("language_compatibility", efs.languageCompatibility());
+      settings.put("language_compatibility", efs.languageCompatibility().toString());
     }
     if (efs.executionTimeout() != null) {
       settings.put("execution_timeout", efs.executionTimeout().getSeconds());
@@ -297,6 +558,12 @@ public class AsyncEventingFunctionManager {
     return Mapper.encodeAsBytes(func);
   }
 
+  /**
+   * Decodes a single {@link EventingFunction} from its raw encoded JSON representation.
+   *
+   * @param encoded the encoded JSON format.
+   * @return an instantiated {@link EventingFunction}.
+   */
   private static EventingFunction decodeFunction(final byte[] encoded) {
     JsonNode func = Mapper.decodeIntoTree(encoded);
     JsonNode depcfg = func.get("depcfg");
@@ -338,16 +605,38 @@ public class AsyncEventingFunctionManager {
       settingsBuilder.cppWorkerThreadCount(settings.get("cpp_worker_thread_count").asLong());
     }
     if (settings.has("dcp_stream_boundary")) {
-      settingsBuilder.dcpStreamBoundary(settings.get("dcp_stream_boundary").asText());
+      String boundary = settings.get("dcp_stream_boundary").asText();
+
+      settingsBuilder.dcpStreamBoundary(boundary.equals(EventingFunctionDcpBoundary.EVERYTHING.toString())
+        ? EventingFunctionDcpBoundary.EVERYTHING
+        : EventingFunctionDcpBoundary.FROM_NOW);
     }
     if (settings.has("description")) {
       settingsBuilder.description(settings.get("description").asText());
     }
     if (settings.has("log_level")) {
-      settingsBuilder.logLevel(settings.get("log_level").asText());
+      String logLevel = settings.get("log_level").asText();
+      if (logLevel.equals(EventingFunctionLogLevel.DEBUG.toString())) {
+        settingsBuilder.logLevel(EventingFunctionLogLevel.DEBUG);
+      } else if (logLevel.equals(EventingFunctionLogLevel.TRACE.toString())) {
+        settingsBuilder.logLevel(EventingFunctionLogLevel.TRACE);
+      } else if (logLevel.equals(EventingFunctionLogLevel.INFO.toString())) {
+        settingsBuilder.logLevel(EventingFunctionLogLevel.INFO);
+      } else if (logLevel.equals(EventingFunctionLogLevel.ERROR.toString())) {
+        settingsBuilder.logLevel(EventingFunctionLogLevel.ERROR);
+      } else if (logLevel.equals(EventingFunctionLogLevel.WARNING.toString())) {
+        settingsBuilder.logLevel(EventingFunctionLogLevel.WARNING);
+      }
     }
     if (settings.has("language_compatibility")) {
-      settingsBuilder.languageCompatibility(settings.get("language_compatibility").asText());
+      String compat = settings.get("language_compatibility").asText();
+      if (compat.equals(EventingFunctionLanguageCompatibility.VERSION_6_0_0.toString())) {
+        settingsBuilder.languageCompatibility(EventingFunctionLanguageCompatibility.VERSION_6_0_0);
+      } else if (compat.equals(EventingFunctionLanguageCompatibility.VERSION_6_5_0.toString())) {
+        settingsBuilder.languageCompatibility(EventingFunctionLanguageCompatibility.VERSION_6_5_0);
+      } else if (compat.equals(EventingFunctionLanguageCompatibility.VERSION_6_6_2.toString())) {
+        settingsBuilder.languageCompatibility(EventingFunctionLanguageCompatibility.VERSION_6_6_2);
+      }
     }
     if (settings.has("lcb_inst_capacity")) {
       settingsBuilder.lcbInstCapacity(settings.get("lcb_inst_capacity").asLong());
@@ -498,6 +787,13 @@ public class AsyncEventingFunctionManager {
     return toReturn.settings(settingsBuilder.build()).build();
   }
 
+  /**
+   * Decodes the encoded JSON representation of 0 or more functions into a list of
+   * {@link EventingFunction EventingFunctions}.
+   *
+   * @param encoded the encoded JSON.
+   * @return a (potentially empty) list of eventing functions after decoding.
+   */
   private static List<EventingFunction> decodeFunctions(final byte[] encoded) {
     JsonNode encodedFunctions = Mapper.decodeIntoTree(encoded);
 
