@@ -37,11 +37,6 @@
         </dependency>
         <dependency>
             <groupId>com.couchbase.client</groupId>
-            <artifactId>scala-client_${scala.compat.version}</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.couchbase.client</groupId>
             <artifactId>test-utils</artifactId>
             <scope>test</scope>
         </dependency>
