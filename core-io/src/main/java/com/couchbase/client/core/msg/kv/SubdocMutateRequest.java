@@ -68,6 +68,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   private static final byte SUBDOC_DOC_FLAG_ADD = (byte) 0x02;
   public static final byte SUBDOC_DOC_FLAG_ACCESS_DELETED = (byte) 0x04;
   public static final byte SUBDOC_DOC_FLAG_CREATE_AS_DELETED = (byte) 0x08;
+  private static final byte SUBDOC_DOC_FLAG_REVIVE = (byte) 0x10;
 
   public static final int SUBDOC_MAX_FIELDS = 16;
 
@@ -82,8 +83,8 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
   public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                              final BucketConfig bucketConfig, final RetryStrategy retryStrategy, final String key,
-                             final boolean insertDocument, final boolean upsertDocument, final boolean accessDeleted,
-                             final boolean createAsDeleted,
+                             final boolean insertDocument, final boolean upsertDocument, final boolean reviveDocument,
+                             final boolean accessDeleted, final boolean createAsDeleted,
                              final List<Command> commands, long expiration,
                              boolean preserveExpiry,
                              long cas,
@@ -120,6 +121,10 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
     if (insertDocument) {
       flags |= SUBDOC_DOC_FLAG_ADD;
+    }
+
+    if (reviveDocument) {
+      flags |= SUBDOC_DOC_FLAG_REVIVE;
     }
 
     if (accessDeleted) {

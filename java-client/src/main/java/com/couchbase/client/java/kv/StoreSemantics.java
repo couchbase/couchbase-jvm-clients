@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
+
 /**
  * Describes how the outer document store semantics on subdoc should act.
  */
@@ -31,5 +33,11 @@ public enum StoreSemantics {
   /**
    * Create the document, fail if it exists.
    */
-  INSERT
+  INSERT,
+
+  /**
+   * Convert from a tombstone to a document.
+   */
+  @Stability.Internal
+  REVIVE
 }

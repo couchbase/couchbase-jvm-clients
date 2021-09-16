@@ -36,6 +36,7 @@ import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.StoreSemantics;
+import com.couchbase.client.java.kv.ReplaceBodyWithXattr;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
@@ -877,5 +878,59 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
               upsert("c", "d")
               ),
               mutateInOptions().storeSemantics(StoreSemantics.UPSERT).expiry(Duration.ofSeconds(60 * 60 * 24)));
+    }
+
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REPLACE_BODY_WITH_XATTR})
+    @Test
+    void replaceBodyWithXattrSimulatingTransactionalInsert() {
+        String docId = docId();
+
+        JsonObject body = JsonObject.create().put("foo", "bar");
+
+        MutateInResult mr = coll.mutateIn(docId, Arrays.asList(
+                        MutateInSpec.upsert("txn", JsonObject.create()
+                                .put("stgd", body)
+                                .put("baz", "qux")).xattr().createPath()),
+                MutateInOptions.mutateInOptions()
+                        .createAsDeleted(true)
+                        .accessDeleted(true)
+                        .storeSemantics(StoreSemantics.INSERT));
+
+        coll.mutateIn(docId, Arrays.asList(
+                        new ReplaceBodyWithXattr("txn.stgd"),
+                        MutateInSpec.remove("txn").xattr()),
+                MutateInOptions.mutateInOptions()
+                        .accessDeleted(true)
+                        .storeSemantics(StoreSemantics.REVIVE));
+
+        GetResult gr = coll.get(docId);
+
+        assertEquals(gr.contentAsObject(), body);
+    }
+
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REPLACE_BODY_WITH_XATTR})
+    @Test
+    void replaceBodyWithXattrSimulatingTransactionalReplace() {
+        String docId = docId();
+
+        JsonObject body = JsonObject.create().put("foo", "bar");
+
+        coll.upsert(docId, JsonObject.create());
+
+        MutateInResult mr = coll.mutateIn(docId, Arrays.asList(
+                        MutateInSpec.upsert("txn", JsonObject.create()
+                                .put("stgd", body)
+                                .put("baz", "qux")).xattr().createPath()),
+                MutateInOptions.mutateInOptions().accessDeleted(true));
+
+        coll.mutateIn(docId, Arrays.asList(
+                        new ReplaceBodyWithXattr("txn.stgd"),
+                        MutateInSpec.remove("txn").xattr()),
+                MutateInOptions.mutateInOptions()
+                        .cas(mr.cas()));
+
+        GetResult gr = coll.get(docId);
+
+        assertEquals(gr.contentAsObject(), body);
     }
 }

@@ -247,6 +247,9 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     if (!communityEdition) {
       capabilities.add(Capabilities.ENTERPRISE_EDITION);
     }
+    if (bucketCapabilities.contains("subdoc.ReplaceBodyWithXattr")) {
+      capabilities.add(Capabilities.SUBDOC_REPLACE_BODY_WITH_XATTR);
+    }
     return capabilities;
   }
 

@@ -71,5 +71,9 @@ public enum Capabilities {
   /**
    * The cluster is using the enterprise edition version
    */
-  ENTERPRISE_EDITION
+  ENTERPRISE_EDITION,
+  /**
+   * The cluster supports a Sub-Document instruction to replace a document's body with an xattr
+   */
+  SUBDOC_REPLACE_BODY_WITH_XATTR
 }

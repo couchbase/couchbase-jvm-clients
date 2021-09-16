@@ -1089,6 +1089,7 @@ public class AsyncCollection {
       long expiry = opts.expiry().encode();
       SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, bucketConfig, retryStrategy, id,
           opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT,
+              opts.storeSemantics() == StoreSemantics.REVIVE,
           opts.accessDeleted(), opts.createAsDeleted(), commands, expiry, opts.preserveExpiry(), opts.cas(),
           opts.durabilityLevel(), span
         );

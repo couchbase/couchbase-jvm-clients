@@ -636,6 +636,7 @@ public class Collection internal constructor(
             id,
             storeSemantics == StoreSemantics.Insert,
             storeSemantics == StoreSemantics.Upsert,
+            false,
             accessDeleted,
             createAsDeleted,
             encodedCommands.sortedBy { !it.xattr() }, // xattr commands must come first

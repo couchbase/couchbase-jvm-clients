@@ -40,7 +40,8 @@ public enum BucketCapabilities {
     SNAPPY("snappy"),
     COLLECTIONS("collections"),
     DURABLE_WRITE("durableWrite"),
-    CREATE_AS_DELETED("tombstonedUserXAttrs");
+    CREATE_AS_DELETED("tombstonedUserXAttrs"),
+    SUBDOC_REPLACE_BODY_WITH_XATTR("subdoc.ReplaceBodyWithXattr");
 
     private final String raw;
 

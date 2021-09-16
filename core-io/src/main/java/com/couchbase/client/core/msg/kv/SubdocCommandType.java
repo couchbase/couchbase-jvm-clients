@@ -29,6 +29,7 @@ public enum SubdocCommandType {
   ARRAY_INSERT((byte) 0xcd),
   DELETE((byte) 0xc9),
   DELETE_DOC((byte) 0x04),
+  REPLACE_BODY_WITH_XATTR((byte) 0xd3),
 
   // lookupIn
   GET((byte) 0xc5),
