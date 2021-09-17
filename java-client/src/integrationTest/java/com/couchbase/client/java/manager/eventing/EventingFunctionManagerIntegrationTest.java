@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES }, missesCapabilities = Capabilities.COLLECTIONS)
+@IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES }, missesCapabilities = {Capabilities.COLLECTIONS, Capabilities.EVENTING})
 public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

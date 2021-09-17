@@ -27,5 +27,7 @@ public enum Services {
   SEARCH,
   SEARCH_TLS,
   VIEW,
-  VIEW_TLS
+  VIEW_TLS,
+  EVENTING,
+  EVENTING_TLS
 }

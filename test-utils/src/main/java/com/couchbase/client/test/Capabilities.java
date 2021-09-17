@@ -37,6 +37,10 @@ public enum Capabilities {
    */
   SEARCH,
   /**
+   * This cluster is able to handle Eventing functions.
+   */
+  EVENTING,
+  /**
    * This cluster is able to give us a config without opening a bucket.
    */
   GLOBAL_CONFIG,

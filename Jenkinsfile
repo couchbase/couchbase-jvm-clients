@@ -463,8 +463,6 @@ pipeline {
 //            }
 //        }
 
-        //Pre-release server tests
-
         stage('testing  (Linux, cbdyncluster 6.6-stable, Oracle JDK 8)') {
             agent { label 'sdkqe-centos7' }
             environment {
@@ -538,7 +536,7 @@ pipeline {
                     unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
                     dir('couchbase-jvm-clients') {
-                        script { testAgainstServer("7.0-stable", QUICK_TEST_MODE) }
+                        script { testAgainstServer("7.0-stable", QUICK_TEST_MODE, true, true) }
                     }
                 }
             }
@@ -566,7 +564,7 @@ pipeline {
                     unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
                     dir('couchbase-jvm-clients') {
-                        script { testAgainstServer("7.1-stable", QUICK_TEST_MODE) }
+                        script { testAgainstServer("7.1-stable", QUICK_TEST_MODE, true, true) }
                     }
                 }
             }
@@ -594,7 +592,7 @@ pipeline {
                     unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
                     dir('couchbase-jvm-clients') {
-                        script { testAgainstServer("7.0-stable", QUICK_TEST_MODE, false, false, true) }
+                        script { testAgainstServer("7.0-stable", QUICK_TEST_MODE, false, false, false, true) }
                     }
                 }
             }
@@ -739,6 +737,7 @@ void createIntegrationTestPropertiesFile(String filename, String ip) {
 void testAgainstServer(String serverVersion,
                        boolean QUICK_TEST_MODE,
                        boolean includeAnalytics = true,
+                       boolean includeEventing = false,
                        boolean enableDevelopPreview = false,
                        boolean ceMode = false) {
     def clusterId = null
@@ -773,12 +772,8 @@ void testAgainstServer(String serverVersion,
 
         // Create the cluster
         if (!QUICK_TEST_MODE) {
-            if (includeAnalytics) {
-                shWithEcho("cbdyncluster --node kv,index,n1ql,fts,cbas --node kv --node kv --bucket default setup $clusterId")
-            }
-            else {
-                shWithEcho("cbdyncluster --node kv,index,n1ql,fts --node kv --node kv --bucket default setup $clusterId")
-            }
+            def services = "kv,index,n1ql,fts${includeAnalytics ? ',cbas' : ''}${includeEventing ? ',eventing' : ''}"
+            shWithEcho("cbdyncluster --node $services --node kv --node kv --bucket default setup $clusterId")
         } else {
             // During development, this is faster (less tests)
             shWithEcho("cbdyncluster --node kv --node kv --node kv --bucket default setup $clusterId")
