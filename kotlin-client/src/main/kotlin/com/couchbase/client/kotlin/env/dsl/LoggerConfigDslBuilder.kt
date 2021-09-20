@@ -49,12 +49,6 @@ public class LoggerConfigDslBuilder(private val wrapped: LoggerConfig.Builder) {
             by observable(DEFAULT_DISABLE_SLF4J) { _, _, it -> wrapped.disableSlf4J(it) }
 
     /**
-     * @see LoggerConfig.Builder.loggerName
-     */
-    public val loggerName: String
-            by observable(DEFAULT_LOGGER_NAME) { _, _, it -> wrapped.loggerName(it) }
-
-    /**
      * @see LoggerConfig.Builder.enableDiagnosticContext
      */
     public val enableDiagnosticContext: Boolean
