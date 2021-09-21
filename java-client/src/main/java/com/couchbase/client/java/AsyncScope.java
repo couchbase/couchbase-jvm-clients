@@ -244,7 +244,7 @@ public class AsyncScope {
         options.parentSpan().orElse(null));
 
     QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(),
-        statement, queryBytes, options.readonly(), clientContextId, span, bucketName, scopeName);
+        statement, queryBytes, options.readonly(), clientContextId, span, bucketName, scopeName, null);
     request.context().clientContext(options.clientContext());
     return request;
   }

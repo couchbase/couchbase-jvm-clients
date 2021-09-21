@@ -120,6 +120,7 @@ internal class QueryExecutor(
                     common.actualSpan(TracingIdentifiers.SPAN_REQUEST_QUERY),
                     bucketName,
                     scopeName,
+                    null,
                 )
             }
             request.context().clientContext(common.clientContext)

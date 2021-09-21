@@ -36,6 +36,7 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
@@ -48,6 +49,7 @@ import java.util.TreeMap;
 import java.util.function.Consumer;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
 public class QueryRequest
@@ -62,10 +64,13 @@ public class QueryRequest
   private final String contextId;
   private final String bucket;
   private final String scope;
+  private NodeIdentifier target;
+
 
   public QueryRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
                       final Authenticator authenticator, final String statement, final byte[] query, boolean idempotent,
-                      final String contextId, final RequestSpan span, final String bucket, final String scope) {
+                      final String contextId, final RequestSpan span, final String bucket, final String scope,
+                      final NodeIdentifier target) {
     super(timeout, ctx, retryStrategy, span);
     this.query = query;
     this.statement = statement;
@@ -74,6 +79,7 @@ public class QueryRequest
     this.contextId = contextId;
     this.bucket = bucket;
     this.scope = scope;
+    this.target = target;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
       span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_QUERY);
@@ -125,6 +131,11 @@ public class QueryRequest
     return ServiceType.QUERY;
   }
 
+  @Override
+  public NodeIdentifier target() {
+    return target;
+  }
+
   public String statement() {
     return statement;
   }
@@ -162,6 +173,9 @@ public class QueryRequest
     }
     if (scope != null) {
       ctx.put("scope", redactMeta(scope));
+    }
+    if (target != null) {
+      ctx.put("target", redactSystem(target));
     }
     return ctx;
   }
@@ -225,7 +239,8 @@ public class QueryRequest
         operationId(),
         newSpan,
         bucket(),
-        scope()
+        scope(),
+        target()
     );
   }
 

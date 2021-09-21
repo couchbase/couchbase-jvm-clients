@@ -22,7 +22,6 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.msg.query.CoreQueryAccessor;
 import com.couchbase.client.core.msg.query.QueryRequest;
-import com.couchbase.client.core.msg.query.TargetedQueryRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -105,15 +104,8 @@ public class QueryAccessor {
                                                   Core core) {
     notNullOrEmpty(statement, "Statement", () -> new ReducedQueryErrorContext(statement));
 
-    QueryRequest request;
-    if (target != null) {
-      request = new TargetedQueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), statement,
-          queryBytes, readonly, clientContextId, parentSpan, null, null, target);
-    } else {
-      request = new QueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), statement,
-          queryBytes, readonly, clientContextId, parentSpan, null, null);
-    }
-    return request;
+    return new QueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), statement,
+        queryBytes, readonly, clientContextId, parentSpan, null, null, target);
   }
 
 }

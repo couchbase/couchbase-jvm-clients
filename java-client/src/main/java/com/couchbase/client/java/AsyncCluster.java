@@ -361,7 +361,7 @@ public class AsyncCluster {
       .requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, options.parentSpan().orElse(null));
 
     QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, authenticator, statement,
-     queryBytes, options.readonly(), clientContextId, span, null, null);
+     queryBytes, options.readonly(), clientContextId, span, null, null, null);
     request.context().clientContext(options.clientContext());
     return request;
   }
