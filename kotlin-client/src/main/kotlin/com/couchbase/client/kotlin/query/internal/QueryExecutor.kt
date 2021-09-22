@@ -18,6 +18,7 @@ package com.couchbase.client.kotlin.query.internal
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.cnc.TracingIdentifiers
+import com.couchbase.client.core.msg.query.CoreQueryAccessor
 import com.couchbase.client.core.msg.query.QueryRequest
 import com.couchbase.client.core.msg.query.QueryRequest.queryContext
 import com.couchbase.client.core.util.Golang
@@ -38,13 +39,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.reactive.awaitSingle
 
 internal class QueryExecutor(
     private val core: Core,
     private val scope: Scope? = null,
 ) {
+    private val coreQueryAccessor = CoreQueryAccessor(core)
     private val bucketName = scope?.bucket?.name
     private val scopeName = scope?.name
     private val queryContext = scope?.let { queryContext(scope.bucket.name, scope.name) }
@@ -74,12 +76,10 @@ internal class QueryExecutor(
         raw: Map<String, Any?>,
     ): Flow<QueryFlowItem> {
 
-        if (!adhoc) TODO("adhoc=false not yet implemented")
-
         val timeout = with(core.env) { common.actualQueryTimeout() }
 
         // use interface type so less capable serializers don't freak out
-        val queryJson: MutableMap<String, Any?> = HashMap<String, Any?>()
+        val queryJson: MutableMap<String, Any?> = HashMap()
 
         queryJson["statement"] = statement
         queryJson["timeout"] = Golang.encodeDurationToMs(timeout)
@@ -126,9 +126,7 @@ internal class QueryExecutor(
             request.context().clientContext(common.clientContext)
 
             try {
-                core.send(request)
-
-                val response = request.response().await()
+                val response = coreQueryAccessor.query(request, adhoc).awaitSingle()
 
                 emitAll(response.rows().asFlow()
                     .map { QueryRow(it.data(), actualSerializer) })
