@@ -52,10 +52,12 @@ public abstract class PreparedStatementStrategy {
   }
 
   public Mono<QueryResponse> executeAdhoc(QueryRequest request) {
-    core.send(request);
-    return Reactor
-        .wrap(request, request.response(), true)
-        .doFinally(signalType -> request.context().logicallyComplete());
+    return Mono.defer(() -> {
+      core.send(request);
+      return Reactor
+          .wrap(request, request.response(), true)
+          .doFinally(signalType -> request.context().logicallyComplete());
+    });
   }
 
   public void evict(QueryRequest request) {
