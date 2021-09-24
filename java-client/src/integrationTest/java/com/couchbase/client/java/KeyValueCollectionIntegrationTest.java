@@ -79,7 +79,7 @@ public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
     Collection notFoundCollection = bucket.collection("doesNotExist");
 
     try {
-      notFoundCollection.get("someDocumentId", getOptions().timeout(Duration.ofMillis(500)));
+      notFoundCollection.get("someDocumentId", getOptions().timeout(Duration.ofSeconds(5)));
       fail("Expected timeout!");
     } catch (UnambiguousTimeoutException ex) {
       assertTrue(ex.retryReasons().contains(RetryReason.COLLECTION_NOT_FOUND));
