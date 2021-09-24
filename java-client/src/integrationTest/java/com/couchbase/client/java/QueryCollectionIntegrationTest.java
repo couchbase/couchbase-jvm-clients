@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.*;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.service.ServiceType;
@@ -27,7 +26,6 @@ import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.manager.collection.CollectionManager;
 import com.couchbase.client.java.manager.collection.CollectionSpec;
-import com.couchbase.client.java.manager.collection.ScopeSpec;
 import com.couchbase.client.java.manager.query.CreatePrimaryQueryIndexOptions;
 import com.couchbase.client.java.query.*;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -53,9 +51,7 @@ import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -96,27 +92,12 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
 
     // Create the scope.collection (borrowed from CollectionManagerIntegrationTest )
     CollectionSpec collSpec = CollectionSpec.create(COLLECTION_NAME, SCOPE_NAME);
-    ScopeSpec scopeSpec = ScopeSpec.create(SCOPE_NAME);
 
     collectionManager.createScope(SCOPE_NAME);
-
     waitUntilCondition(() -> scopeExists(collectionManager, SCOPE_NAME));
-    List<ScopeSpec> scopeList = collectionManager.getAllScopes();
-    ScopeSpec scope = null;
-    for (ScopeSpec sc : scopeList) {
-      if (SCOPE_NAME.equals(sc.name())) {
-        scope = sc;
-        break;
-      }
-    }
-
-    assertEquals(scopeSpec, scope);
 
     collectionManager.createCollection(collSpec);
     waitUntilCondition(() -> collectionExists(collectionManager, collSpec));
-
-    assertNotEquals(scopeSpec, scope);
-    assertTrue(scope.collections().contains(collSpec));
 
     waitForQueryIndexerToHaveBucket(cluster, COLLECTION_NAME);
 
@@ -128,40 +109,6 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
   static void afterAll() {
     cluster.disconnect();
     environment.shutdown();
-  }
-
-  private static boolean collectionExists(CollectionManager mgr, CollectionSpec spec) {
-    try {
-      List<ScopeSpec> scopeList = mgr.getAllScopes();
-      ScopeSpec scope = null;
-      for (ScopeSpec sc : scopeList) {
-        if (spec.scopeName().equals(sc.name())) {
-          scope = sc;
-          break;
-        }
-      }
-      return scope.collections().contains(spec);
-    } catch (ScopeNotFoundException e) {
-      return false;
-    }
-  }
-
-  private static boolean scopeExists(CollectionManager mgr, String scopeName) {
-    try {
-      boolean scopeExists = false;
-      List<ScopeSpec> scopeList = mgr.getAllScopes();
-      ScopeSpec scope = null;
-      for (ScopeSpec sc : scopeList) {
-        if (scopeName.equals(sc.name())) {
-          scope = sc;
-          scopeExists = true;
-          break;
-        }
-      }
-      return scopeExists;
-    } catch (ScopeNotFoundException e) {
-      return false;
-    }
   }
 
   @Test

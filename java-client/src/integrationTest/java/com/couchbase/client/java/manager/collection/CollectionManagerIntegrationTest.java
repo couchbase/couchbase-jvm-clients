@@ -35,12 +35,12 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -73,26 +73,19 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     CollectionSpec collSpec = CollectionSpec.create(collection, scopeName);
     ScopeSpec scopeSpec = ScopeSpec.create(scopeName);
 
-    assertFalse(collectionExists(collSpec));
+    assertFalse(collectionExists(collections, collSpec));
     assertThrows(ScopeNotFoundException.class, () -> collections.createCollection(collSpec));
-
-    //assertThrows(ScopeNotFoundException.class, () -> collections.getAllScopes().contains(scope));
 
     collections.createScope(scopeName);
 
-    waitUntilCondition(() -> scopeExists(scopeName));
-    List<ScopeSpec> scopeList = collections.getAllScopes();
-    ScopeSpec scope = null;
-    for (ScopeSpec sc : scopeList) {
-      if (scope.equals(sc.name())) {
-        scope = sc;
-        break;
-      }
-    }
-    assertEquals(scopeSpec, scope);
+    waitUntilCondition(() -> scopeExists(collections, scopeName));
+    Optional<ScopeSpec> scope = collections.getAllScopes().stream().filter(ss -> ss.name().equals(scopeName)).findFirst();
+    assertEquals(scopeSpec, scope.get());
+
     collections.createCollection(collSpec);
-    waitUntilCondition(() -> collectionExists(collSpec));
-    assertTrue(scope.collections().contains(collSpec));
+    waitUntilCondition(() -> collectionExists(collections, collSpec));
+    scope = collections.getAllScopes().stream().filter(ss -> ss.name().equals(scopeName)).findFirst();
+    assertTrue(scope.get().collections().contains(collSpec));
   }
 
   @Test
@@ -100,7 +93,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     String scope = randomString();
 
     collections.createScope(scope);
-    waitUntilCondition(() -> scopeExists(scope));
+    waitUntilCondition(() -> scopeExists(collections, scope));
     assertThrows(ScopeExistsException.class, () -> collections.createScope(scope));
   }
 
@@ -108,7 +101,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   void shouldThrowWhenCollectionAlreadyExists() {
     String scope = randomString();
     collections.createScope(scope);
-    waitUntilCondition(() -> scopeExists(scope));
+    waitUntilCondition(() -> scopeExists(collections, scope));
 
     CollectionSpec collectionSpec = CollectionSpec.create(randomString(), scope);
     collections.createCollection(collectionSpec);
@@ -129,22 +122,23 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     assertThrows(ScopeNotFoundException.class, () -> collections.dropCollection(collectionSpec1));
 
     collections.createScope(scope);
-    waitUntilCondition(() -> scopeExists(scope));
+    waitUntilCondition(() -> scopeExists(collections, scope));
 
     collections.createCollection(collectionSpec1);
     collections.createCollection(collectionSpec2);
 
     collections.dropCollection(collectionSpec1);
-    waitUntilCondition(() -> !collectionExists(collectionSpec1));
+    waitUntilCondition(() -> !collectionExists(collections, collectionSpec1));
     assertThrows(CollectionNotFoundException.class, () -> collections.dropCollection(collectionSpec1));
 
     collections.dropScope(scope);
-    waitUntilCondition(() -> !scopeExists(scope));
+    waitUntilCondition(() -> !scopeExists(collections, scope));
 
     assertThrows(ScopeNotFoundException.class, () -> collections.dropCollection(collectionSpec2));
   }
 
   @Test
+  @IgnoreWhen(missesCapabilities = Capabilities.ENTERPRISE_EDITION)
   void shouldCreateCollectionWithMaxExpiry() {
     String scope = randomString();
     String collection1 = randomString();
@@ -153,13 +147,13 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     CollectionSpec collectionSpec2 = CollectionSpec.create(collection2, scope);
 
     collections.createScope(scope);
-    waitUntilCondition(() -> scopeExists(scope));
+    waitUntilCondition(() -> scopeExists(collections, scope));
 
     collections.createCollection(collectionSpec1);
     collections.createCollection(collectionSpec2);
 
-    waitUntilCondition(() -> collectionExists(collectionSpec1));
-    waitUntilCondition(() -> collectionExists(collectionSpec2));
+    waitUntilCondition(() -> collectionExists(collections, collectionSpec1));
+    waitUntilCondition(() -> collectionExists(collections, collectionSpec2));
 
     for (ScopeSpec ss : collections.getAllScopes()) {
       if (!ss.name().equals(scope)) {
@@ -182,7 +176,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     int collectionsPerScope = 10;
     ScopeSpec scopeSpec = ScopeSpec.create(scopeName);
     collections.createScope(scopeName);
-    waitUntilCondition(() -> scopeExists(scopeName));
+    waitUntilCondition(() -> scopeExists(collections, scopeName));
 
     List<ScopeSpec> scopeList = collections.getAllScopes();
     ScopeSpec scope = null;
@@ -197,8 +191,8 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     for (int i = 0; i < collectionsPerScope; i++) {
       CollectionSpec collectionSpec = CollectionSpec.create(String.valueOf(collectionsPerScope + i), scopeName);
       collections.createCollection(collectionSpec);
-      waitUntilCondition(() -> collectionExists(collectionSpec));
-      assertTrue(scope.collections().contains(collectionSpec));
+      waitUntilCondition(() -> collectionExists(collections, collectionSpec));
+      assertTrue(collections.getAllScopes().stream().anyMatch(ss -> ss.collections().contains(collectionSpec)));
     }
   }
 
@@ -228,37 +222,4 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     return UUID.randomUUID().toString().substring(0, 10);
   }
 
-  private boolean collectionExists(CollectionSpec spec) {
-    try {
-      String scopeName = spec.scopeName();
-      List<ScopeSpec> scopeList = collections.getAllScopes();
-      ScopeSpec scope = null;
-      for (ScopeSpec sc : scopeList) {
-        if (scopeName.equals(sc.name())) {
-          scope = sc;
-          break;
-        }
-      }
-      return scope.collections().contains(spec);
-    } catch (ScopeNotFoundException e) {
-      return false;
-    }
-  }
-
-  private boolean scopeExists(String scopeName) {
-    try {
-      boolean scopeExists = false;
-      List<ScopeSpec> scopeList = collections.getAllScopes();
-      ScopeSpec scope = null;
-      for (ScopeSpec sc : scopeList) {
-        if (scopeName.equals(sc.name())) {
-          scope = sc;
-          scopeExists = true;
-        }
-      }
-      return scopeExists;
-    } catch (ScopeNotFoundException e) {
-      return false;
-    }
-  }
 }

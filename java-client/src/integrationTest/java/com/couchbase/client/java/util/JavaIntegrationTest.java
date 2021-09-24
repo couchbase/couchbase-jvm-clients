@@ -19,9 +19,9 @@ package com.couchbase.client.java.util;
 import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.diagnostics.PingState;
 import com.couchbase.client.core.env.Authenticator;
-import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -29,6 +29,9 @@ import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.manager.collection.CollectionManager;
+import com.couchbase.client.java.manager.collection.CollectionSpec;
+import com.couchbase.client.java.manager.collection.ScopeSpec;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
@@ -152,5 +155,31 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
               && pingResult.endpoints().get(serviceType).size() > 0
               && pingResult.endpoints().get(serviceType).get(0).state() == PingState.OK;
     });
+  }
+
+  protected static boolean collectionExists(CollectionManager collectionManager, CollectionSpec spec) {
+    try {
+      List<ScopeSpec> scopeList = collectionManager.getAllScopes();
+      Optional<ScopeSpec> scope = scopeList.stream().filter(s -> s.name().equals(spec.scopeName())).findFirst();
+
+      if(scope.isPresent()) {
+        return scope.get().collections().contains(spec);
+      } else {
+        return false;
+      }
+    } catch (ScopeNotFoundException e) {
+      return false;
+    }
+  }
+
+  protected static boolean scopeExists(CollectionManager collectionManager, String scopeName) {
+    try {
+      List<ScopeSpec> scopeList = collectionManager.getAllScopes();
+      Optional<ScopeSpec> scope = scopeList.stream().filter(s -> s.name().equals(scopeName)).findFirst();
+
+      return scope.isPresent();
+    } catch (ScopeNotFoundException e) {
+      return false;
+    }
   }
 }

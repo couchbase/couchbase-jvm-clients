@@ -30,7 +30,6 @@ import com.couchbase.client.java.manager.analytics.DisconnectLinkAnalyticsOption
 import com.couchbase.client.java.manager.analytics.DropDatasetAnalyticsOptions;
 import com.couchbase.client.java.manager.collection.CollectionManager;
 import com.couchbase.client.java.manager.collection.CollectionSpec;
-import com.couchbase.client.java.manager.collection.ScopeSpec;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
@@ -174,14 +173,6 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
         .dataverseName(idx.dataverseName())));
   }
 
-  private static boolean collectionExists(CollectionManager mgr, CollectionSpec spec) {
-    try {
-      ScopeSpec scope = mgr.getScope(spec.scopeName());
-      return scope.collections().contains(spec);
-    } catch (ScopeNotFoundException e) {
-      return false;
-    }
-  }
 
   private static boolean dataverseExists(Cluster cluster, String dataverse) {
     try {
