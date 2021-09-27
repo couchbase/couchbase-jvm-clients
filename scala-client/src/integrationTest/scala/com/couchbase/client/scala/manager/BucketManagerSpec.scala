@@ -143,9 +143,11 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     val name: String = UUID.randomUUID.toString
 
     buckets.create(CreateBucketSettings(name, 100, minimumDurabilityLevel = Some(Majority)))
+    waitUntilHealthy(name)
 
     val bucket = buckets.getBucket(name).get
     assert(bucket.minimumDurabilityLevel == Majority)
+    buckets.dropBucket(name).get
   }
 
   @Test
