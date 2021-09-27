@@ -74,6 +74,8 @@ class ViewIntegrationTest extends JavaIntegrationTest {
       }
       return false;
     });
+    //Extra wait for service for CI test stability
+    waitForService(bucket, ServiceType.VIEWS);
   }
 
   @AfterAll
