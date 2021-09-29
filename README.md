@@ -1,3 +1,7 @@
+[**Issues**](https://issues.couchbase.com)
+| [**Discussion**](https://forums.couchbase.com)
+| [**Documentation**](https://docs.couchbase.com/home/sdk.html)
+
 # Couchbase JVM Clients
 
 [![license](https://img.shields.io/github/license/couchbase/couchbase-jvm-clients?color=brightgreen)](https://opensource.org/licenses/Apache-2.0)
@@ -106,7 +110,7 @@ each service release. See the tag information for specifics of what's in there.
 
  - [Colossus](https://en.wikipedia.org/wiki/Colossus_computer) (Initial Release 2020-01-10)
 
-| Release Train | Java-Client | Scala-Client | Core-Io | Tracing-OpenTelemetry | Tracing-OpenTracing | Metrics-OpenTelemetry | Metrics-Micrometer | 
+| Release Train | Java-Client | Scala-Client | Core-Io | Tracing-OpenTelemetry | Tracing-OpenTracing | Metrics-OpenTelemetry | Metrics-Micrometer |
 | ------------- | ----------- | ------------ | ------- | --------------------- | ------------------- | --------------------- | ------------------ |
 | colossus      | 3.0.x       | 1.0.x        | 2.0.x   | 0.2.x                 | 0.2.x               | -                     | -                  |
 | pegasus       | 3.1.x       | 1.1.x        | 2.1.x   | 0.3.x                 | 0.3.x               | 0.1.x                 | 0.1.x              |
