@@ -82,7 +82,7 @@ public abstract class AbstractEvent implements Event {
       + ", duration=" + duration
       + ", createdAt=" + createdAt
       + ", description=" + description()
-      + ", context=" + context
+      + ", context=" + context.exportAsString(Context.ExportFormat.STRING)
       + ", cause=" + cause()
       + '}';
   }

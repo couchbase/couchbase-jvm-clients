@@ -16,18 +16,24 @@
 
 package com.couchbase.client.core.cnc;
 
-import com.couchbase.client.core.deps.org.jctools.queues.QueueFactory;
-import com.couchbase.client.core.deps.org.jctools.queues.spec.ConcurrentQueueSpec;
+import com.couchbase.client.core.deps.org.jctools.queues.MpscArrayQueue;
+import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.util.CbCollections;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 
 import java.io.PrintStream;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 /**
@@ -58,9 +64,14 @@ public class DefaultEventBus implements EventBus {
   private static final Duration DEFAULT_IDLE_SLEEP_DURATION = Duration.ofMillis(100);
 
   /**
+   * Contains the default interval overflowed messages are logged.
+   */
+  private static final Duration DEFAULT_OVERFLOW_LOG_INTERVAL = Duration.ofSeconds(30);
+
+  /**
    * Holds all current event subscribers.
    */
-  private final CopyOnWriteArraySet<Consumer<Event>> subscribers;
+  private final CopyOnWriteArraySet<Consumer<Event>> subscribers = new CopyOnWriteArraySet<>();
 
   /**
    * Holds the bounded event mpsc queue dealing with all the events.
@@ -70,11 +81,11 @@ public class DefaultEventBus implements EventBus {
   /**
    * Contains the state if this event bus is currently running or not.
    */
-  private final AtomicBoolean running;
+  private final AtomicBoolean running = new AtomicBoolean(false);
 
   /**
-   * What should be done if something needs to be messaged to the user because
-   * of some failure.
+   * If the event queue is full, this print stream will notify the user (if not null) of the dropped
+   * event(s).
    */
   private final PrintStream errorLogging;
 
@@ -89,6 +100,11 @@ public class DefaultEventBus implements EventBus {
   private final Duration idleSleepDuration;
 
   /**
+   * The interval at which overflowed events are printed.
+   */
+  private final long overflowLogInterval;
+
+  /**
    * The scheduler used during i.e. shutdown.
    */
   private final Scheduler scheduler;
@@ -97,6 +113,17 @@ public class DefaultEventBus implements EventBus {
    * If the event bus is running, this variable holds the thread.
    */
   private volatile Thread runningThread;
+
+  /**
+   * The nano timestamp when the overflow log was last emitted.
+   */
+  private volatile long overflowLogTimestamp = 0;
+
+  /**
+   * This maps stores one event per event class so that it can be printed on overflow but does not
+   * spam the logs.
+   */
+  private final Map<Class<? extends Event>, SampleEventAndCount> overflowInfo = new ConcurrentHashMap<>();
 
   public static DefaultEventBus.Builder builder(final Scheduler scheduler) {
     return new Builder(scheduler);
@@ -107,16 +134,12 @@ public class DefaultEventBus implements EventBus {
   }
 
   private DefaultEventBus(final Builder builder) {
+    eventQueue = new MpscArrayQueue<>(builder.queueCapacity);
     scheduler = builder.scheduler;
-    subscribers = new CopyOnWriteArraySet<>();
-    running = new AtomicBoolean(false);
-
-    eventQueue = QueueFactory.newQueue(
-      ConcurrentQueueSpec.createBoundedMpsc(builder.queueCapacity)
-    );
     errorLogging = builder.errorLogging.orElse(null);
     threadName = builder.threadName;
     idleSleepDuration = builder.idleSleepDuration;
+    overflowLogInterval = builder.overflowLogInterval.toNanos();
   }
 
   @Override
@@ -138,7 +161,16 @@ public class DefaultEventBus implements EventBus {
       return PublishResult.SUCCESS;
     } else {
       if (errorLogging != null) {
-        errorLogging.println("Could not publish Event because the queue is full. " + event);
+        try {
+          overflowInfo.compute(
+            event.getClass(),
+            (k, v) -> v == null ? new SampleEventAndCount(event) : v.updateAndIncrement(event)
+          );
+        } catch (Exception ex) {
+          // ignored. we failed on the overflow error handling - this should be very rare but
+          // just in case it's important to move on and not let it impact the actual application
+          // in this case.
+        }
       }
       return PublishResult.OVERLOADED;
     }
@@ -153,6 +185,7 @@ public class DefaultEventBus implements EventBus {
       if (running.compareAndSet(false, true)) {
         runningThread = new Thread(() -> {
           long idleSleepTime = idleSleepDuration.toMillis();
+          long overflowCounter = 0;
           while (isRunning() || !eventQueue.isEmpty()) {
             Event event = eventQueue.poll();
             while (event != null) {
@@ -170,7 +203,18 @@ public class DefaultEventBus implements EventBus {
                 }
               }
               event = eventQueue.poll();
+
+              // After processing 10_000 events, check if the overflow print needs
+              // to be performed, to avoid the situation where a constant stream of
+              // influx events (which is a contributing factor to overflow in the first
+              // place) might never trigger the overflow print.
+              if (++overflowCounter == 10_000) {
+                maybePrintOverflow();
+                overflowCounter = 0;
+              }
             }
+
+            maybePrintOverflow();
 
             try {
               if (isRunning()) {
@@ -193,6 +237,36 @@ public class DefaultEventBus implements EventBus {
   }
 
   /**
+   * Checks if the overflow log should be printed to error logging and performs the action if needed.
+   */
+  private void maybePrintOverflow() {
+    try {
+      if (errorLogging != null && !overflowInfo.isEmpty()) {
+        long now = System.nanoTime();
+        if ((now - overflowLogTimestamp) > overflowLogInterval) {
+
+          Map<String, Object> encodedEvents = new HashMap<>();
+          for (Iterator<Map.Entry<Class<? extends Event>, SampleEventAndCount>> i = overflowInfo.entrySet().iterator(); i.hasNext(); ) {
+            Map.Entry<Class<? extends Event>, SampleEventAndCount> e = i.next();
+            encodedEvents.put(
+              e.getKey().getSimpleName(),
+              CbCollections.mapOf("sampleEvent", e.getValue().event.toString(), "totalDropCount", e.getValue().count)
+            );
+            i.remove();
+          }
+          errorLogging.println("Some events could not be published because the queue was (likely " +
+            "temporarily) over capacity: " + Mapper.encodeAsString(encodedEvents));
+          overflowInfo.clear();
+          overflowLogTimestamp = now;
+        }
+      }
+    } catch (Exception ex) {
+      errorLogging.println("Encountered an error while processing the overflow queue - this is a bug: " + ex);
+      overflowInfo.clear();
+    }
+  }
+
+  /**
    * Stops the {@link DefaultEventBus} from running.
    */
   @Override
@@ -202,6 +276,7 @@ public class DefaultEventBus implements EventBus {
         if(running.compareAndSet(true, false)) {
           runningThread.interrupt();
         }
+        overflowInfo.clear();
         return Mono.empty();
       })
       .then(Flux.interval(Duration.ofMillis(10), scheduler).takeUntil(i -> !runningThread.isAlive()).then())
@@ -227,20 +302,22 @@ public class DefaultEventBus implements EventBus {
    */
   public static class Builder {
 
-    final Scheduler scheduler;
+    private final Scheduler scheduler;
 
-    int queueCapacity;
-    Optional<PrintStream> errorLogging;
-    String threadName;
-    Duration idleSleepDuration;
+    private int queueCapacity;
+    private Optional<PrintStream> errorLogging;
+    private String threadName;
+    private Duration idleSleepDuration;
+    private Duration overflowLogInterval;
 
-    Builder(Scheduler scheduler) {
+    Builder(final Scheduler scheduler) {
       this.scheduler = scheduler;
 
       queueCapacity = DEFAULT_QUEUE_CAPACITY;
       errorLogging = Optional.of(System.err);
       threadName = "cb-events";
       idleSleepDuration = DEFAULT_IDLE_SLEEP_DURATION;
+      overflowLogInterval = DEFAULT_OVERFLOW_LOG_INTERVAL;
     }
 
     public Builder queueCapacity(final int queueCapacity) {
@@ -263,9 +340,48 @@ public class DefaultEventBus implements EventBus {
       return this;
     }
 
+    public Builder overflowLogInterval(final Duration overflowLogInterval) {
+      this.overflowLogInterval = overflowLogInterval;
+      return this;
+    }
+
     public DefaultEventBus build() {
       return new DefaultEventBus(this);
     }
 
   }
+
+  /**
+   * Value object that encapsulates a sample event and the total drop count for each event class.
+   */
+  static class SampleEventAndCount {
+
+    private volatile Event event;
+    private final AtomicLong count = new AtomicLong(1);
+
+    private SampleEventAndCount(Event event) {
+      this.event = event;
+    }
+
+    /**
+     * Updates the latest event and along the way increments the count by one.
+     *
+     * @param event the newest event to update.
+     * @return the same {@link SampleEventAndCount}.
+     */
+    public SampleEventAndCount updateAndIncrement(Event event) {
+      this.event = event;
+      count.incrementAndGet();
+      return this;
+    }
+
+    @Override
+    public String toString() {
+      return "{" +
+        "sampleEvent=" + event +
+        ", totalDropCount=" + count +
+        '}';
+    }
+  }
+
 }
