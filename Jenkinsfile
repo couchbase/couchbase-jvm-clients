@@ -75,10 +75,10 @@ pipeline {
 
                     // Skips the tests, that's done in other stages
                     // The -B -Dorg... stuff hides download progress messages, very verbose
-                    shWithEcho("mvn install -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+                    shWithEcho("mvn install -Dmaven.test.skip --batch-mode")
 
                     // This is to speed up iteration during development, skips out some stuff
-                    // shWithEcho("mvn -pl '!scala-client,!scala-implicits' install -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+                    // shWithEcho("mvn -pl '!scala-client,!scala-implicits' install -Dmaven.test.skip --batch-mode")
                 }
 
                 stash includes: 'couchbase-jvm-clients/', name: 'couchbase-jvm-clients', useDefaultExcludes: false
@@ -99,7 +99,7 @@ pipeline {
 
                     dir('couchbase-jvm-clients') {
                         shWithEcho("make deps-only")
-                        shWithEcho("mvn install -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+                        shWithEcho("mvn install -Dmaven.test.skip --batch-mode")
                     }
                 }
             }
@@ -122,7 +122,7 @@ pipeline {
 
                     dir('couchbase-jvm-clients') {
                         shWithEcho("make deps-only")
-                        shWithEcho("mvn -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Dscala.compat.version=2.11 -Dscala.compat.library.version=2.11.12 clean compile")
+                        shWithEcho("mvn -Dmaven.test.skip --batch-mode -Dscala.compat.version=2.11 -Dscala.compat.library.version=2.11.12 clean compile")
                     }
                 }
             }
@@ -142,7 +142,7 @@ pipeline {
 
                     dir('couchbase-jvm-clients') {
                         shWithEcho("make deps-only")
-                        shWithEcho("mvn -Dmaven.test.skip -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Dscala.compat.version=2.13 -Dscala.compat.library.version=2.13.1 clean compile")
+                        shWithEcho("mvn -Dmaven.test.skip --batch-mode -Dscala.compat.version=2.13 -Dscala.compat.library.version=2.13.1 clean compile")
                     }
                 }
             }
@@ -795,12 +795,12 @@ void testAgainstServer(String serverVersion,
         // Not sure why this is needed, it should be in stash from build....
         shWithEcho("make deps-only")
 
-        // The -B -Dorg... stuff hides download progress messages, very verbose
+        // The --batch-mode hides download progress messages, very verbose
         if (!QUICK_TEST_MODE) {
-            shWithEcho("mvn --fail-at-end install -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+            shWithEcho("mvn --fail-at-end install --batch-mode")
         } else {
             // This is for iteration during development, skips out some steps
-            shWithEcho("mvn -pl '!scala-client,!scala-implicits' --fail-at-end install test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn")
+            shWithEcho("mvn -pl '!scala-client,!scala-implicits' --fail-at-end install test --batch-mode")
 
             // Another iteration option, this runs just one test
             //shWithEcho("mvn package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
