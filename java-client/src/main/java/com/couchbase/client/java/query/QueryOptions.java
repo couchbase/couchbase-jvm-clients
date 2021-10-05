@@ -64,6 +64,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   private QueryScanConsistency scanConsistency;
   private JsonSerializer serializer;
   private boolean flexIndex = false;
+  private Boolean preserveExpiry = null;
 
   /**
    * The options should only be instantiated through the {@link #queryOptions()} static method.
@@ -374,6 +375,20 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
     return this;
   }
 
+  /**
+   * Tells the query engine to preserve expiration values set on any documents modified by this query.
+   * <p>
+   * This feature works from Couchbase Server 7.1.0 onwards.
+   *
+   * @param preserveExpiry if expiration values should be preserved, the default is false.
+   * @return the same {@link QueryOptions} for chaining purposes.
+   */
+  @Stability.Uncommitted
+  public QueryOptions preserveExpiry(final boolean preserveExpiry) {
+    this.preserveExpiry = preserveExpiry;
+    return this;
+  }
+
   @Stability.Internal
   public Built build() {
     return new Built();
@@ -482,6 +497,10 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
 
       if (flexIndex) {
         queryJson.put("use_fts", true);
+      }
+
+      if (preserveExpiry != null) {
+        queryJson.put("preserve_expiry", preserveExpiry);
       }
 
       if (raw != null) {

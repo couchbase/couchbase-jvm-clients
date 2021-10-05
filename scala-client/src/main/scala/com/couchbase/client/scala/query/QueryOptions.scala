@@ -16,8 +16,9 @@
 
 package com.couchbase.client.scala.query
 
-import java.util.UUID
+import com.couchbase.client.core.annotation.Stability
 
+import java.util.UUID
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.logging.RedactableArgument.redactUser
@@ -53,7 +54,8 @@ case class QueryOptions(
     private[scala] val deferredException: Option[RuntimeException] = None,
     private[scala] val parentSpan: Option[RequestSpan] = None,
     private[scala] val raw: Option[Map[String, Any]] = None,
-    private[scala] val flexIndex: Boolean = false
+    private[scala] val flexIndex: Boolean = false,
+    private[scala] val preserveExpiry: Option[Boolean] = None
 ) {
 
   /** Sets the parent `RequestSpan`.
@@ -253,6 +255,19 @@ case class QueryOptions(
     copy(flexIndex = flexIndex)
   }
 
+  /** Tells the query engine to preserve expiration values set on any documents modified by this query.
+    *
+    * The default is false.
+    *
+    * This feature works from Couchbase Server 7.1.0 onwards.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  @Stability.Uncommitted
+  def preserveExpiry(preserveExpiry: Boolean): QueryOptions = {
+    copy(preserveExpiry = Some(preserveExpiry))
+  }
+
   private[scala] def encode(): JsonObject = {
     encode(JsonObject.create)
   }
@@ -319,6 +334,7 @@ case class QueryOptions(
     if (flexIndex) {
       out.put("use_fts", true)
     }
+    preserveExpiry.foreach(v => out.put("preserve_expiry", v))
 
     out
   }
