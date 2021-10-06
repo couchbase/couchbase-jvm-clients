@@ -12,11 +12,13 @@ def QUICK_TEST_MODE = false // enable to support quicker development iteration
 
 // Java versions available through cbdeps are on
 // https://hub.internal.couchbase.com/confluence/pages/viewpage.action?spaceKey=CR&title=cbdep+available+packages
+// https://github.com/couchbasebuild/cbdep/blob/master/cbdep.config
 def ORACLE_JDK = "java"
 def ORACLE_JDK_8 = "8u192"
 def OPENJDK = "openjdk"
 def OPENJDK_8 = "8u202-b08"
 def OPENJDK_11 = "11.0.2+7"
+def OPENJDK_11_M1 = "11.0.11+9"
 def CORRETTO = "corretto"         // Amazon JDK
 def CORRETTO_8 = "8.232.09.1"     // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-8-ug/doc-history.html
 def CORRETTO_11 = "11.0.5.10.1"   // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-11-ug/doc-history.html
@@ -325,36 +327,6 @@ pipeline {
             }
         }
 
-        // Disabling DP tests to avoid (possibly) MB-37518
-//        stage('testing  (Linux, cbdyncluster 6.5, DP enabled, Oracle JDK 8)') {
-//            agent { label 'sdkqe-centos7' }
-//            environment {
-//                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-//                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-//            }
-//            when {
-//                expression
-//                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-//            }
-//            steps {
-//                // Experimental, don't fail the build as a result
-//                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-//                    cleanWs()
-//                    unstash 'couchbase-jvm-clients'
-//                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-//                    dir('couchbase-jvm-clients') {
-//                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE, false, true) }
-//                    }
-//                }
-//            }
-//            post {
-//                always {
-//                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-//                }
-//            }
-//        }
-
-
         stage('testing  (Linux, cbdyncluster 6.5-release, Oracle JDK 8)') {
             agent { label 'sdkqe-centos7' }
             environment {
@@ -603,6 +575,69 @@ pipeline {
             }
         }
 
+        stage('testing (M1, cbdyncluster 7.1-stable, openjdk 11)') {
+            agent { label 'm1' }
+            environment {
+                // Advice from builds team: '"java" doesn't support Linux aarch64. Only openjdk.'
+                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11_M1}"
+                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11_M1}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                // Temporary: there are known cbas crashes preventing this from passing currently, do not fail build
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_11_M1)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer("7.1-stable", QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
+
+        stage('testing (Graviton2, mocks, openjdk 11)') {
+            agent { label 'qe-grav2-amzn2' }
+            environment {
+                // Advice from builds team: '"java" doesn't support Linux aarch64. Only openjdk.'
+                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
+                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:${WORKSPACE}/deps/maven-3.5.2-cb6/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                // Temporary: there are known cbas crashes preventing this from passing currently, do not fail build
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_11)
+                    // qe-grav2-amzn2 doesn't have maven
+                    shWithEcho("cbdep install -d deps maven 3.5.2-cb6")
+                    dir('couchbase-jvm-clients') {
+                        // Advice from builds team: cbdyncluster cannot be contacted from qe-grav2-amzn2, so testing
+                        // against mocks only for now
+                        script { testAgainstMock() }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
 
         // Commented for now as sdk-integration-test-win temporarily down
 //         stage('testing (Windows, cbdyncluster 6.5, Oracle JDK 8)') {
@@ -743,10 +778,10 @@ void testAgainstServer(String serverVersion,
     def clusterId = null
     try {
         // For debugging
-        shWithEcho("echo $JAVA_HOME")
-        shWithEcho("ls $JAVA_HOME")
-        shWithEcho("echo $PATH")
-        shWithEcho("java -version")
+        shIgnoreFailure("echo $JAVA_HOME")
+        shIgnoreFailure("ls $JAVA_HOME")
+        shIgnoreFailure("echo $PATH")
+        shIgnoreFailure("java -version")
 
         // For debugging, what clusters are open
         shWithEcho("cbdyncluster ps -a")
@@ -816,4 +851,10 @@ void testAgainstServer(String serverVersion,
             sh(script: "cbdyncluster rm $clusterId")
         }
     }
+}
+
+void testAgainstMock() {
+    // Not sure why this is needed, it should be in stash from build....
+    shWithEcho("make deps-only")
+    shWithEcho("mvn --fail-at-end install --batch-mode")
 }
