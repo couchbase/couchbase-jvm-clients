@@ -43,7 +43,7 @@ object TestUtils {
 
   /** Wait for indexer to be aware of a (possibly newly created) bucket */
   def waitForIndexerToHaveBucket(cluster: Cluster, bucketName: String): Unit = {
-    println("Waiting for indexer to be aware of bucket")
+    println(s"Waiting for indexer to be aware of bucket ${bucketName}")
 
     var ready = false
     var guard = 100

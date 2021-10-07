@@ -60,6 +60,7 @@ class QuerySpec extends ScalaIntegrationTest {
       () => {
         val result =
           cluster.queryIndexes.createPrimaryIndex(config.bucketname, timeout = 20 seconds)
+        println(s"Result of creating primary index: ${result}")
         result.isSuccess
       },
       java.time.Duration.ofMinutes(3)
