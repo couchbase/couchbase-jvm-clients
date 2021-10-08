@@ -56,6 +56,7 @@ public class AnalyticsChunkResponseParser
   private byte[] metrics;
   private byte[] warnings;
   private byte[] errors;
+  private byte[] plans;
 
   @Override
   protected void doCleanup() {
@@ -67,11 +68,13 @@ public class AnalyticsChunkResponseParser
     metrics = null;
     warnings = null;
     errors = null;
+    plans = null;
   }
 
   private final JsonStreamParser.Builder parserBuilder = JsonStreamParser.builder()
     .doOnValue("/requestID", v -> requestId = v.readString())
     .doOnValue("/signature", v -> signature = Optional.of(v.readBytes()))
+    .doOnValue("/plans", v -> plans = v.readBytes())
     .doOnValue("/clientContextID", v -> clientContextId = Optional.of(v.readString()))
     .doOnValue("/results/-", v -> {
       markHeaderComplete();
@@ -158,7 +161,8 @@ public class AnalyticsChunkResponseParser
       status,
       metrics,
       Optional.ofNullable(warnings),
-      Optional.ofNullable(errors)
+      Optional.ofNullable(errors),
+      Optional.ofNullable(plans)
     ));
   }
 

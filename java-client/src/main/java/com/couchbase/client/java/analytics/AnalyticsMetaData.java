@@ -110,6 +110,22 @@ public class AnalyticsMetaData {
         ).orElse(Collections.emptyList());
     }
 
+    /**
+     * Returns plan information if present.
+     *
+     * @return plan information if present.
+     */
+    @Stability.Internal
+    public Optional<JsonObject> plans() {
+        return trailer.plans().map(bytes -> {
+            try {
+                return JacksonTransformers.MAPPER.readValue(bytes, JsonObject.class);
+            } catch (IOException e) {
+                throw new DecodingFailureException("Could not decode Analytics plan information", e);
+            }
+        });
+    }
+
     @Override
     public String toString() {
         return "AnalyticsMetaData{" +

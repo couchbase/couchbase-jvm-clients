@@ -27,13 +27,15 @@ public class AnalyticsChunkTrailer implements ChunkTrailer {
   private final byte[] metrics;
   private final Optional<byte[]> warnings;
   private final Optional<byte[]> errors;
+  private final Optional<byte[]> plans;
 
   public AnalyticsChunkTrailer(String status, byte[] metrics, Optional<byte[]> warnings,
-                               Optional<byte[]> errors) {
+                               Optional<byte[]> errors, Optional<byte[]> plans) {
     this.status = status;
     this.metrics = metrics;
     this.warnings = warnings;
     this.errors = errors;
+    this.plans = plans;
   }
 
   public String status() {
@@ -52,6 +54,10 @@ public class AnalyticsChunkTrailer implements ChunkTrailer {
     return errors;
   }
 
+  public Optional<byte[]> plans() {
+    return plans;
+  }
+
   @Override
   public String toString() {
     return "AnalyticsChunkTrailer{" +
@@ -59,6 +65,7 @@ public class AnalyticsChunkTrailer implements ChunkTrailer {
       ", metrics=" + new String(metrics, StandardCharsets.UTF_8) +
       ", warnings=" + warnings.map(v -> new String(v, StandardCharsets.UTF_8)) +
       ", errors=" + errors.map(v -> new String(v, StandardCharsets.UTF_8)) +
+      ", plans=" + plans.map(v -> new String(v, StandardCharsets.UTF_8)) +
       '}';
   }
 }
