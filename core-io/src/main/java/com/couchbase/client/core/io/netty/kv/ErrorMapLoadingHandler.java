@@ -63,10 +63,12 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
 
   /**
-   * Right now we are at version 1 for the error map, so that's what we
-   * negotiate as part of the process.
+   * Right now we are at version 2 for the error map, so that's what we
+   * negotiate as part of the process. Note that v1 and v2 are identical, the
+   * version bump was needed since other SDKs would not consume "new" properties
+   * as gracefully.
    */
-  private static final short MAP_VERSION = 1;
+  private static final short MAP_VERSION = 2;
 
   /**
    * Holds the core context as reference to event bus and more.

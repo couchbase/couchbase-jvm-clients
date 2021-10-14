@@ -159,7 +159,7 @@ class ErrorMapLoadingHandlerTest extends AbstractKeyValueEmbeddedChannelTest {
     assertTrue(ProtocolVerifier.body(writtenRequest).isPresent());
     ByteBuf body = ProtocolVerifier.body(writtenRequest).get();
     assertEquals(2, body.readableBytes());
-    assertEquals((short) 1, body.readShort()); // we are checking for version 1 here
+    assertEquals((short) 2, body.readShort()); // we are checking for version 2 here
 
     ReferenceCountUtil.release(writtenRequest);
   }
@@ -288,6 +288,47 @@ class ErrorMapLoadingHandlerTest extends AbstractKeyValueEmbeddedChannelTest {
     assertEquals(Event.Severity.DEBUG, event.severity());
     Optional<ErrorMap> maybeMap = event.errorMap();
     assertFalse(maybeMap.isPresent());
+  }
+
+  /**
+   * Verify that we can decode v2 of the error map.
+   */
+  @Test
+  void decodeSuccessfulErrorMapV2() {
+    ErrorMapLoadingHandler handler = new ErrorMapLoadingHandler(endpointContext);
+    channel.pipeline().addLast(handler);
+
+    assertEquals(handler, channel.pipeline().get(ErrorMapLoadingHandler.class));
+    ChannelFuture connectFuture = channel.connect(new InetSocketAddress("1.2.3.4", 1234));
+    assertFalse(connectFuture.isDone());
+
+    channel.pipeline().fireChannelActive();
+    channel.runPendingTasks();
+    ByteBuf writtenRequest = channel.readOutbound();
+    verifyRequest(writtenRequest, MemcacheProtocol.Opcode.ERROR_MAP.opcode(), false, false, true);
+    assertNotNull(channel.pipeline().get(ErrorMapLoadingHandler.class));
+    ReferenceCountUtil.release(writtenRequest);
+
+    ByteBuf response = decodeHexDump(readResource(
+      "success_errormapv2_response.txt",
+      ErrorMapLoadingHandlerTest.class
+    ));
+    channel.writeInbound(response);
+    channel.runPendingTasks();
+
+    assertTrue(connectFuture.isSuccess());
+
+    assertEquals(1, eventBus.publishedEvents().size());
+    ErrorMapLoadedEvent event =
+      (ErrorMapLoadedEvent) eventBus.publishedEvents().get(0);
+
+    assertEquals(Event.Severity.DEBUG, event.severity());
+    Optional<ErrorMap> maybeMap = event.errorMap();
+    assertTrue(maybeMap.isPresent());
+    assertNotNull(maybeMap.get());
+
+    ErrorMap errorMap = channel.attr(ChannelAttributes.ERROR_MAP_KEY).get();
+    assertEquals(errorMap, maybeMap.get());
   }
 
   /**
