@@ -6,7 +6,11 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext
-import com.couchbase.client.core.msg.kv.{SubDocumentField, SubDocumentOpResponseStatus, SubdocCommandType}
+import com.couchbase.client.core.msg.kv.{
+  SubDocumentField,
+  SubDocumentOpResponseStatus,
+  SubdocCommandType
+}
 import com.couchbase.client.scala.codec.{JsonDeserializer, Transcoder}
 
 import scala.compat.java8.OptionConverters._

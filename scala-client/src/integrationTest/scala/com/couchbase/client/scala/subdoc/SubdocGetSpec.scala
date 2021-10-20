@@ -13,7 +13,12 @@ import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
-import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, ClusterType, IgnoreWhen}
+import com.couchbase.client.test.{
+  Capabilities,
+  ClusterAwareIntegrationTest,
+  ClusterType,
+  IgnoreWhen
+}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 

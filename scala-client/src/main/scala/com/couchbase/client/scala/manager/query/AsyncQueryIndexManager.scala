@@ -269,60 +269,53 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): Future[Unit] = {
 
-    import reactor.core.scala.publisher.PimpMyPublisher._
     import scala.compat.java8.FunctionConverters._
 
-    FutureConversions
-      .javaMonoToScalaMono(
-        SMono
-          .defer(() => {
-            SMono
-              .fromFuture(getAllIndexes(bucketName, timeout, retryStrategy))
-              .doOnNext((allIndexes: collection.Seq[QueryIndex]) => {
+    SMono
+      .fromFuture(getAllIndexes(bucketName, timeout, retryStrategy))
+      .doOnNext((allIndexes: collection.Seq[QueryIndex]) => {
 
-                val matchingIndexes: collection.Seq[QueryIndex] = allIndexes
-                  .filter(v => indexNames.exists(_ == v.name) || (watchPrimary && v.isPrimary))
+        val matchingIndexes: collection.Seq[QueryIndex] = allIndexes
+          .filter(v => indexNames.exists(_ == v.name) || (watchPrimary && v.isPrimary))
 
-                val primaryIndexPresent: Boolean = matchingIndexes.exists(_.isPrimary)
+        val primaryIndexPresent: Boolean = matchingIndexes.exists(_.isPrimary)
 
-                if (watchPrimary && !primaryIndexPresent) {
-                  throw new IndexNotFoundException(PrimaryIndexName)
-                } else {
-                  val matchingIndexNames: Set[String] = matchingIndexes.map(_.name).toSet
+        if (watchPrimary && !primaryIndexPresent) {
+          throw new IndexNotFoundException(PrimaryIndexName)
+        } else {
+          val matchingIndexNames: Set[String] = matchingIndexes.map(_.name).toSet
 
-                  val missingIndexNames: Set[String] = indexNames.toSet.diff(matchingIndexNames)
+          val missingIndexNames: Set[String] = indexNames.toSet.diff(matchingIndexNames)
 
-                  if (missingIndexNames.nonEmpty) {
-                    throw new IndexNotFoundException(missingIndexNames.mkString(","))
-                  } else {
-                    val offlineIndexes = matchingIndexes.filter(_.state != "online")
+          if (missingIndexNames.nonEmpty) {
+            throw new IndexNotFoundException(missingIndexNames.mkString(","))
+          } else {
+            val offlineIndexes = matchingIndexes.filter(_.state != "online")
 
-                    if (offlineIndexes.nonEmpty) {
-                      throw new IndexesNotReadyException()
-                    }
-                  }
-                }
-              })
-          })
-          .retryWhen(
-            Retry
-              .onlyIf(
-                asJavaPredicate(
-                  (ctx: RetryContext[Unit]) =>
-                    hasCause(ctx.exception, classOf[IndexesNotReadyException])
-                )
-              )
-              .exponentialBackoff(50.milliseconds, 1.seconds)
-              .timeout(timeout)
-              .toReactorRetry
+            if (offlineIndexes.nonEmpty) {
+              throw new IndexesNotReadyException()
+            }
+          }
+        }
+      })
+      .retryWhen(
+        Retry
+          .onlyIf(
+            asJavaPredicate(
+              (ctx: RetryContext[Unit]) =>
+                hasCause(ctx.exception, classOf[IndexesNotReadyException])
+            )
           )
-          .onErrorMap(err => {
-            if (err.isInstanceOf[RetryExhaustedException]) toWatchTimeoutException(err, timeout)
-            else err
-          })
+          .exponentialBackoff(50.milliseconds, 1.seconds)
+          .timeout(timeout)
+          .toReactorRetry
       )
-      .toFuture
       .map(_ => ())
+      .onErrorMap {
+        case err @ (_: RetryExhaustedException) => toWatchTimeoutException(err, timeout)
+        case err                                => err
+      }
+      .toFuture
   }
 
   private def toWatchTimeoutException(t: Throwable, timeout: Duration): TimeoutException = {

@@ -31,25 +31,25 @@
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-scala-extensions_${scala.compat.version}</artifactId>
-            <version>0.7.1</version>
+            <version>${scala.reactor-core-extensions.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.github.plokhotnyuk.jsoniter-scala</groupId>
             <artifactId>jsoniter-scala-core_${scala.compat.version}</artifactId>
-            <version>2.1.6</version>
+            <version>${scala.jsoniter-scala.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.github.plokhotnyuk.jsoniter-scala</groupId>
             <artifactId>jsoniter-scala-macros_${scala.compat.version}</artifactId>
-            <version>2.1.6</version>
+            <version>${scala.jsoniter-scala.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.scala-lang.modules</groupId>
             <artifactId>scala-java8-compat_${scala.compat.version}</artifactId>
-            <version>0.9.0</version>
+            <version>1.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.scala-lang.modules</groupId>
@@ -81,35 +81,35 @@
         <dependency>
             <groupId>org.json4s</groupId>
             <artifactId>json4s-jackson_${scala.compat.version}</artifactId>
-            <version>3.6.7</version>
+            <version>${scala.json4s.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.json4s</groupId>
             <artifactId>json4s-native_${scala.compat.version}</artifactId>
-            <version>3.6.7</version>
+            <version>${scala.json4s.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.json4s</groupId>
             <artifactId>json4s-jackson_${scala.compat.version}</artifactId>
-            <version>3.6.7</version>
+            <version>${scala.json4s.version}</version>
             <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>org.typelevel</groupId>
             <artifactId>jawn-ast_${scala.compat.version}</artifactId>
-            <version>0.14.3</version>
+            <version>${scala.jawn.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.typelevel</groupId>
             <artifactId>jawn-ast_${scala.compat.version}</artifactId>
-            <version>0.14.3</version>
+            <version>${scala.jawn.version}</version>
             <optional>true</optional>
         </dependency>
 
@@ -130,14 +130,14 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.2.3</version>
+            <version>${scala.logback.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-core</artifactId>
-            <version>1.2.3</version>
+            <version>${scala.logback.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -227,42 +227,42 @@
                 <dependency>
                     <groupId>com.lihaoyi</groupId>
                     <artifactId>upickle_${scala.compat.version}</artifactId>
-                    <version>0.7.4</version>
+                    <version>${scala.upickle.version}</version>
                 </dependency>
                 <dependency>
                     <groupId>io.circe</groupId>
                     <artifactId>circe-core_${scala.compat.version}</artifactId>
-                    <version>0.11.2</version>
+                    <version>${scala.circe.version}</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>io.circe</groupId>
                     <artifactId>circe-core_${scala.compat.version}</artifactId>
-                    <version>0.11.2</version>
+                    <version>${scala.circe.version}</version>
                     <optional>true</optional>
                 </dependency>
                 <dependency>
                     <groupId>io.circe</groupId>
                     <artifactId>circe-generic_${scala.compat.version}</artifactId>
-                    <version>0.11.2</version>
+                    <version>${scala.circe.version}</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>io.circe</groupId>
                     <artifactId>circe-parser_${scala.compat.version}</artifactId>
-                    <version>0.11.2</version>
+                    <version>${scala.circe.version}</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>com.typesafe.play</groupId>
                     <artifactId>play-json_${scala.compat.version}</artifactId>
-                    <version>2.7.4</version>
+                    <version>${scala.play-json.version}</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>com.typesafe.play</groupId>
                     <artifactId>play-json_${scala.compat.version}</artifactId>
-                    <version>2.7.4</version>
+                    <version>${scala.play-json.version}</version>
                     <optional>true</optional>
                 </dependency>
             </dependencies>
@@ -279,42 +279,42 @@
                 <dependency>
                     <groupId>com.lihaoyi</groupId>
                     <artifactId>upickle_${scala.compat.version}</artifactId>
-                    <version>0.9.8</version>
+                    <version>${scala.upickle.version}</version>
                 </dependency>
                 <dependency>
                     <groupId>io.circe</groupId>
                     <artifactId>circe-core_${scala.compat.version}</artifactId>
-                    <version>0.12.3</version>
+                    <version>${scala.circe.version}</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>io.circe</groupId>
                     <artifactId>circe-core_${scala.compat.version}</artifactId>
-                    <version>0.12.3</version>
+                    <version>${scala.circe.version}</version>
                     <optional>true</optional>
                 </dependency>
                 <dependency>
                     <groupId>io.circe</groupId>
                     <artifactId>circe-generic_${scala.compat.version}</artifactId>
-                    <version>0.12.3</version>
+                    <version>${scala.circe.version}</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>io.circe</groupId>
                     <artifactId>circe-parser_${scala.compat.version}</artifactId>
-                    <version>0.12.3</version>
+                    <version>${scala.circe.version}</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>com.typesafe.play</groupId>
                     <artifactId>play-json_${scala.compat.version}</artifactId>
-                    <version>2.8.1</version>
+                    <version>${scala.play-json.version}</version>
                     <scope>test</scope>
                 </dependency>
                 <dependency>
                     <groupId>com.typesafe.play</groupId>
                     <artifactId>play-json_${scala.compat.version}</artifactId>
-                    <version>2.8.1</version>
+                    <version>${scala.play-json.version}</version>
                     <optional>true</optional>
                 </dependency>
             </dependencies>

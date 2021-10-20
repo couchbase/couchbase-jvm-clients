@@ -37,12 +37,13 @@ class ConnectionSpec extends ScalaIntegrationTest {
   def performsKeyValueIgnoringServerCert(): Unit = {
     val env = ClusterEnvironment.builder
       .securityConfig(SecurityConfig().trustManagerFactory(InsecureTrustManagerFactory.INSTANCE))
-      .build.get
+      .build
+      .get
 
     val cluster = Cluster.connect(connectionString, ClusterOptions(authenticator, Some(env))).get
 
-
-    cluster.diagnostics()
+    cluster
+      .diagnostics()
       .map(result => System.out.println(result))
     val id = TestUtils.docId()
     cluster.bucket(config.bucketname()).defaultCollection.upsert(id, JsonObject.create).get
@@ -54,15 +55,24 @@ class ConnectionSpec extends ScalaIntegrationTest {
     if (!config.clusterCert.isPresent) fail("Cluster Certificate must be present for this test!")
 
     val env = ClusterEnvironment.builder
-      .securityConfig(SecurityConfig()
-        .enableTls(true)
-        .trustCertificates(Seq(config.clusterCert().get())))
-      .build.get
+      .securityConfig(
+        SecurityConfig()
+          .enableTls(true)
+          .trustCertificates(Seq(config.clusterCert().get()))
+      )
+      .build
+      .get
 
-    val cluster = Cluster.connect(seedNodes.map(_.address).mkString(","), ClusterOptions(authenticator, Some(env))).get
+    val cluster = Cluster
+      .connect(seedNodes.map(_.address).mkString(","), ClusterOptions(authenticator, Some(env)))
+      .get
 
     val id = TestUtils.docId()
-    cluster.bucket(config.bucketname()).defaultCollection.upsert(id, JsonObject.create, UpsertOptions().timeout(Duration.create(20, TimeUnit.SECONDS))).get
+    cluster
+      .bucket(config.bucketname())
+      .defaultCollection
+      .upsert(id, JsonObject.create, UpsertOptions().timeout(Duration.create(20, TimeUnit.SECONDS)))
+      .get
   }
 
 //  @Disabled("Provided for manual testing")

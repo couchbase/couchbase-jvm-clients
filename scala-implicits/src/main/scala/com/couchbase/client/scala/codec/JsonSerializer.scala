@@ -143,7 +143,7 @@ object JsonSerializer {
     */
   implicit object UjsonConvert extends JsonSerializer[ujson.Value] {
     override def serialize(content: ujson.Value): Try[Array[Byte]] = {
-      Try(ujson.transform(content, ujson.BytesRenderer()).toBytes)
+      Try(ujson.transform(content, ujson.BytesRenderer()).toByteArray)
     }
   }
 

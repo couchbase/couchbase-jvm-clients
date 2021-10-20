@@ -114,7 +114,7 @@ class JsonInteropSpec extends ScalaIntegrationTest {
         import ujson.BytesRenderer
         import upickle.default._
 
-        val bytes: Array[Byte] = transform(ReferenceUser).to(BytesRenderer()).toBytes
+        val bytes: Array[Byte] = transform(ReferenceUser).to(BytesRenderer()).toByteArray
         assert(
           coll.insert(id, bytes, InsertOptions().transcoder(RawJsonTranscoder.Instance)).isSuccess
         )

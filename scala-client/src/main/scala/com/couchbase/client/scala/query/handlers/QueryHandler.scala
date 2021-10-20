@@ -152,7 +152,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
                 .requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, options.parentSpan.orNull),
               bucket.orNull,
               scope.orNull,
-              null,
+              null
             )
 
             request
@@ -360,7 +360,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, options.parentSpan.orNull),
       original.bucket(),
       original.scope(),
-      original.target(),
+      original.target()
     )
   }
 
@@ -401,7 +401,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
         .requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, originalOptions.parentSpan.orNull),
       original.bucket(),
       original.scope(),
-      original.target(),
+      original.target()
     )
   }
 
