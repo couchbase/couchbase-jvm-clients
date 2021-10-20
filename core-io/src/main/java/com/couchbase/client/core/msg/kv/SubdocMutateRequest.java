@@ -31,6 +31,7 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.subdoc.DocumentAlreadyAliveException;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
@@ -95,6 +96,12 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     if (createAsDeleted) {
       if (!bucketConfig.bucketCapabilities().contains(BucketCapabilities.CREATE_AS_DELETED)) {
         throw new FeatureNotAvailableException("Cannot use createAsDeleted Sub-Document flag, as it is not supported by this version of the cluster");
+      }
+    }
+
+    if (reviveDocument) {
+      if (!bucketConfig.bucketCapabilities().contains(BucketCapabilities.SUBDOC_REVIVE_DOCUMENT)) {
+          throw new FeatureNotAvailableException("Cannot use ReviveDocument Sub-Document flag, as it is not supported by this version of the cluster");
       }
     }
 
@@ -268,7 +275,11 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     } else if (rawOverallStatus == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status()) {
       SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.XATTR_INVALID_KEY_COMBO);
       error = Optional.of(new XattrInvalidKeyComboException(e));
+    } else if (rawOverallStatus == Status.SUBDOC_CAN_ONLY_REVIVE_DELETED_DOCUMENTS.status()) {
+      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.CAN_ONLY_REVIVE_DELETED_DOCUMENTS);
+      error = Optional.of(new DocumentAlreadyAliveException(e));
     }
+    // Note that error is only ultimately thrown if response.status() == SUBDOC_FAILURE
 
     // Do not handle SUBDOC_INVALID_COMBO here, it indicates a client-side bug
     return new SubdocMutateResponse(

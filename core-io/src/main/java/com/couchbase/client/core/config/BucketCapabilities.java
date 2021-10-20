@@ -41,7 +41,8 @@ public enum BucketCapabilities {
     COLLECTIONS("collections"),
     DURABLE_WRITE("durableWrite"),
     CREATE_AS_DELETED("tombstonedUserXAttrs"),
-    SUBDOC_REPLACE_BODY_WITH_XATTR("subdoc.ReplaceBodyWithXattr");
+    SUBDOC_REPLACE_BODY_WITH_XATTR("subdoc.ReplaceBodyWithXattr"),
+    SUBDOC_REVIVE_DOCUMENT("subdoc.ReviveDocument");
 
     private final String raw;
 

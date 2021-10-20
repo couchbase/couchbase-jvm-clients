@@ -649,7 +649,8 @@ public enum MemcacheProtocol {
             || status == Status.SUBDOC_DOC_NOT_JSON.status
             || status == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status
             || status == Status.SUBDOC_DOC_TOO_DEEP.status
-            || status == Status.SUBDOC_INVALID_COMBO.status) {
+            || status == Status.SUBDOC_INVALID_COMBO.status
+            || status == Status.SUBDOC_CAN_ONLY_REVIVE_DELETED_DOCUMENTS.status) {
       return ResponseStatus.SUBDOC_FAILURE;
     } else if (status == Status.SUBDOC_SUCCESS_DELETED_DOCUMENT.status) {
       return ResponseStatus.SUCCESS;
@@ -1223,6 +1224,10 @@ public enum MemcacheProtocol {
      * Invalid ordering of the extended attributes.
      */
     SUBDOC_INVALID_XATTR_ORDER((short) 0xd4),
+    /**
+     * ReviveDocument flag has been used on a document that's already alive.
+     */
+    SUBDOC_CAN_ONLY_REVIVE_DELETED_DOCUMENTS((short) 0xd6),
     /**
      * Invalid request. Returned if an invalid durability level is specified.
      */

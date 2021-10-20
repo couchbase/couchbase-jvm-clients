@@ -250,6 +250,9 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     if (bucketCapabilities.contains("subdoc.ReplaceBodyWithXattr")) {
       capabilities.add(Capabilities.SUBDOC_REPLACE_BODY_WITH_XATTR);
     }
+    if (bucketCapabilities.contains("subdoc.ReviveDocument")) {
+      capabilities.add(Capabilities.SUBDOC_REVIVE_DOCUMENT);
+    }
     if (clusterVersion.majorVersion() >= 7 && clusterVersion.minorVersion() >= 1) {
       capabilities.add(Capabilities.RATE_LIMITING);
 

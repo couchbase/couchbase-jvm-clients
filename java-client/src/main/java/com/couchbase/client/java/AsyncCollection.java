@@ -1047,7 +1047,7 @@ public class AsyncCollection {
       throw SubdocMutateRequest.errIfTooManyCommands(ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     }
 
-    final boolean requiresBucketConfig = opts.createAsDeleted();
+    final boolean requiresBucketConfig = opts.createAsDeleted() || opts.storeSemantics() == StoreSemantics.REVIVE ;
     CompletableFuture<BucketConfig> bucketConfigFuture;
 
     if (requiresBucketConfig) {

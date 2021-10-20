@@ -112,6 +112,10 @@ public enum SubDocumentOpResponseStatus {
    */
   XATTR_NO_ACCESS,
   /**
+   * The ReviveDocument flag can only be used on deleted documents (tombstones).
+   */
+  CAN_ONLY_REVIVE_DELETED_DOCUMENTS,
+  /**
    * Unknown error.
    */
   UNKNOWN;

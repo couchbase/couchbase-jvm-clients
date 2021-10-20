@@ -16,14 +16,18 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
+import com.couchbase.client.core.error.subdoc.DocumentAlreadyAliveException;
 import com.couchbase.client.core.error.subdoc.PathExistsException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetOptions;
@@ -35,6 +39,7 @@ import com.couchbase.client.java.kv.MutateInMacro;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.kv.ReplaceBodyWithXattr;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -52,6 +57,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
+import static com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus.CAN_ONLY_REVIVE_DELETED_DOCUMENTS;
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.java.kv.MutateInOptions.mutateInOptions;
 import static com.couchbase.client.java.kv.MutateInSpec.upsert;
@@ -892,15 +898,15 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
               mutateInOptions().storeSemantics(StoreSemantics.UPSERT).expiry(Duration.ofSeconds(60 * 60 * 24)));
     }
 
-    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REPLACE_BODY_WITH_XATTR})
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
     @Test
     void replaceBodyWithXattrSimulatingTransactionalInsert() {
         String docId = docId();
 
         JsonObject body = JsonObject.create().put("foo", "bar");
 
-        MutateInResult mr = coll.mutateIn(docId, Arrays.asList(
-                        MutateInSpec.upsert("txn", JsonObject.create()
+        coll.mutateIn(docId, Collections.singletonList(
+                        upsert("txn", JsonObject.create()
                                 .put("stgd", body)
                                 .put("baz", "qux")).xattr().createPath()),
                 MutateInOptions.mutateInOptions()
@@ -920,6 +926,28 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         assertEquals(gr.contentAsObject(), body);
     }
 
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @Test
+    void replaceBodyWithXattrWithDurability() {
+        String id = UUID.randomUUID().toString();
+
+        MutationResult mr = coll.mutateIn(id, Arrays.asList(
+                        MutateInSpec.upsert("txn", JsonObject.create()).xattr().createPath()
+                ),
+                mutateInOptions()
+                        .accessDeleted(true)
+                        .createAsDeleted(true)
+                        .durability(DurabilityLevel.MAJORITY)
+                        .storeSemantics(StoreSemantics.INSERT));
+
+        coll.mutateIn(id, Arrays.asList(
+                        MutateInSpec.remove("txn").xattr()),
+                mutateInOptions()
+                        .accessDeleted(true)
+                        .durability(DurabilityLevel.MAJORITY)
+                        .storeSemantics(StoreSemantics.REVIVE));
+    }
+
     @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REPLACE_BODY_WITH_XATTR})
     @Test
     void replaceBodyWithXattrSimulatingTransactionalReplace() {
@@ -929,8 +957,8 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
         coll.upsert(docId, JsonObject.create());
 
-        MutateInResult mr = coll.mutateIn(docId, Arrays.asList(
-                        MutateInSpec.upsert("txn", JsonObject.create()
+        MutateInResult mr = coll.mutateIn(docId, Collections.singletonList(
+                        upsert("txn", JsonObject.create()
                                 .put("stgd", body)
                                 .put("baz", "qux")).xattr().createPath()),
                 MutateInOptions.mutateInOptions().accessDeleted(true));
@@ -940,6 +968,213 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
                         MutateInSpec.remove("txn").xattr()),
                 MutateInOptions.mutateInOptions()
                         .cas(mr.cas()));
+
+        GetResult gr = coll.get(docId);
+
+        assertEquals(gr.contentAsObject(), body);
+    }
+
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @Test
+    void replaceBodyWithXattrPathNotFound() {
+        String docId = docId();
+
+        JsonObject body = JsonObject.create().put("foo", "bar");
+
+        coll.mutateIn(docId, Collections.singletonList(
+                        upsert("txn", JsonObject.create()
+                                .put("stgd", body)
+                                .put("baz", "qux")).xattr().createPath()),
+                MutateInOptions.mutateInOptions()
+                        .createAsDeleted(true)
+                        .accessDeleted(true)
+                        .storeSemantics(StoreSemantics.INSERT));
+
+        try {
+            coll.mutateIn(docId, Arrays.asList(
+                            new ReplaceBodyWithXattr("does_not_exist")),
+                    MutateInOptions.mutateInOptions()
+                            .accessDeleted(true)
+                            .storeSemantics(StoreSemantics.REVIVE));
+            fail();
+        }
+        catch (PathNotFoundException ignored) {
+        }
+    }
+
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @Test
+    void reviveDocumentWithoutAccessDeleted() {
+        String docId = docId();
+
+        JsonObject body = JsonObject.create().put("foo", "bar");
+
+        coll.insert(docId, body);
+
+        try {
+            coll.mutateIn(docId, Collections.singletonList(
+                            upsert("foo", "bar").xattr()),
+                    MutateInOptions.mutateInOptions()
+                            .storeSemantics(StoreSemantics.REVIVE));
+            fail();
+        }
+        catch (CouchbaseException err) {
+            // "ReviveDocument can’t be used without AccessDeleted"
+        }
+    }
+
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @Test
+    void reviveDocumentOnAlreadyAliveDocument() {
+        String docId = docId();
+
+        JsonObject body = JsonObject.create().put("foo", "bar");
+
+        coll.insert(docId, body);
+
+        try {
+            coll.mutateIn(docId, Collections.singletonList(
+                            upsert("foo", "bar").xattr()),
+                    MutateInOptions.mutateInOptions()
+                            .accessDeleted(true)
+                            .storeSemantics(StoreSemantics.REVIVE));
+            fail();
+        }
+        catch (DocumentAlreadyAliveException ignored) {
+            assertEquals(CAN_ONLY_REVIVE_DELETED_DOCUMENTS.name(), ignored.context().exportAsMap().get("subdocStatus"));
+        }
+    }
+
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @Test
+    void reviveDocumentWithCAS() {
+        String docId = docId();
+
+        JsonObject body = JsonObject.create().put("foo", "bar");
+
+        MutateInResult mr = coll.mutateIn(docId, Collections.singletonList(
+                        upsert("txn", JsonObject.create()
+                                .put("stgd", body)
+                                .put("baz", "qux")).xattr().createPath()),
+                MutateInOptions.mutateInOptions()
+                        .createAsDeleted(true)
+                        .accessDeleted(true)
+                        .storeSemantics(StoreSemantics.INSERT));
+
+        // Create a CAS mismatch
+        coll.mutateIn(docId, Collections.singletonList(
+                        upsert("txn", JsonObject.create()
+                                .put("stgd", body)
+                                .put("baz", "qux")).xattr().createPath()),
+                MutateInOptions.mutateInOptions()
+                        .accessDeleted(true));
+
+        try {
+            coll.mutateIn(docId, Arrays.asList(
+                            new ReplaceBodyWithXattr("txn.stgd"),
+                            MutateInSpec.remove("txn").xattr()
+                    ),
+                    MutateInOptions.mutateInOptions()
+                            .accessDeleted(true)
+                            .cas(mr.cas())
+                            .storeSemantics(StoreSemantics.REVIVE));
+            fail();
+        }
+        catch (CasMismatchException ignored) {
+        }
+    }
+
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @Test
+    void reviveDocumentWithCAS2() {
+        String docId = docId();
+
+        JsonObject body = JsonObject.create().put("foo", "bar");
+
+        coll.insert(docId, body);
+
+        MutationResult mr = coll.remove(docId);
+
+        coll.mutateIn(docId, Arrays.asList(
+                // Do a dummy op as server complains if do nothing
+                        MutateInSpec.upsert("txn", JsonObject.create()).xattr()
+                ),
+                MutateInOptions.mutateInOptions()
+                        .accessDeleted(true)
+                        .cas(mr.cas())
+                        .storeSemantics(StoreSemantics.REVIVE));
+    }
+
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @Test
+    void reviveDocumentWithCAS3() {
+        String docId = docId();
+
+        JsonObject body = JsonObject.create().put("foo", "bar");
+
+        MutateInResult mr = coll.mutateIn(docId, Collections.singletonList(
+                        upsert("txn", JsonObject.create()
+                                .put("stgd", body)
+                                .put("baz", "qux")).xattr().createPath()),
+                MutateInOptions.mutateInOptions()
+                        .createAsDeleted(true)
+                        .accessDeleted(true)
+                        .storeSemantics(StoreSemantics.INSERT));
+
+        // Create a CAS mismatch
+        coll.insert(docId, JsonObject.create());
+
+        try {
+            coll.mutateIn(docId, Arrays.asList(
+                            new ReplaceBodyWithXattr("txn.stgd"),
+                            MutateInSpec.remove("txn").xattr()
+                    ),
+                    MutateInOptions.mutateInOptions()
+                            .accessDeleted(true)
+                            .cas(mr.cas())
+                            .storeSemantics(StoreSemantics.REVIVE));
+            fail();
+        }
+        catch (CasMismatchException ignored) {
+            // It hits this rather than CannotReviveAliveDocumentException
+        }
+    }
+
+    // Without FeatureNotAvailable check raises 'com.couchbase.client.core.error.CouchbaseException: SubdocMutateRequest failed with unexpected status code INVALID_REQUEST'
+    @IgnoreWhen(hasCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @Test
+    void reviveDocumentOnClusterThatDoesNotSupportIt() {
+        try {
+            coll.mutateIn("request-is-not-sent", Collections.singletonList(
+                            upsert("foo", "bar").xattr()),
+                    MutateInOptions.mutateInOptions()
+                            .accessDeleted(true)
+                            .storeSemantics(StoreSemantics.REVIVE));
+            fail();
+        }
+        catch (FeatureNotAvailableException ignored) {
+        }
+    }
+
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @Test
+    void replaceBodyWithXattrWithoutReviveDocument() {
+        String docId = docId();
+
+        JsonObject body = JsonObject.create().put("foo", "bar");
+
+        coll.mutateIn(docId, Collections.singletonList(
+                        upsert("txn", JsonObject.create()
+                                .put("stgd", body)
+                                .put("baz", "qux")).xattr().createPath()),
+                MutateInOptions.mutateInOptions()
+                        .storeSemantics(StoreSemantics.INSERT));
+
+        coll.mutateIn(docId, Arrays.asList(
+                        new ReplaceBodyWithXattr("txn.stgd"),
+                        MutateInSpec.remove("txn").xattr()),
+                MutateInOptions.mutateInOptions()
+                        .accessDeleted(true));
 
         GetResult gr = coll.get(docId);
 

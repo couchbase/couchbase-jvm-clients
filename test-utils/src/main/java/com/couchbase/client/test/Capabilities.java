@@ -77,6 +77,10 @@ public enum Capabilities {
    */
   SUBDOC_REPLACE_BODY_WITH_XATTR,
   /**
+   * The cluster supports the Sub-Document ReviveDocument flag to turn a tombstone into a regular document, preserving xattrs.
+   */
+  SUBDOC_REVIVE_DOCUMENT,
+  /**
    * The cluster supports rate limiting.
    */
   RATE_LIMITING,
