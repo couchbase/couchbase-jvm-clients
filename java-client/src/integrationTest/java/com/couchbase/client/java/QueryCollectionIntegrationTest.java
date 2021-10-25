@@ -167,7 +167,7 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
     );
     List<JsonObject> rows = result.rowsAs(JsonObject.class);
     assertEquals(1, rows.size());
-    assertEquals(FOO_CONTENT, rows.get(0));
+    assertEquals(FOO_CONTENT, rows.get(0).getObject(COLLECTION_NAME));
   }
 
   /**
