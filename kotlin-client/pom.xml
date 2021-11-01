@@ -22,6 +22,7 @@
         <kotlin.coroutines.version>1.5.0</kotlin.coroutines.version>
         <kotlin.code.style>official</kotlin.code.style>
         <dokka.version>1.5.0</dokka.version>
+        <moshi.version>1.12.0</moshi.version>
     </properties>
 
 
@@ -55,6 +56,14 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Optional, used by MoshiJsonSerializer -->
+        <dependency>
+            <groupId>com.squareup.moshi</groupId>
+            <artifactId>moshi-kotlin</artifactId>
+            <version>${moshi.version}</version>
             <optional>true</optional>
         </dependency>
 
