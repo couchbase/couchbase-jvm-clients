@@ -28,7 +28,8 @@ import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
-import com.couchbase.client.kotlin.codec.JacksonJsonSerializer
+import com.couchbase.client.kotlin.codec.BasicJsonSerializer
+import com.couchbase.client.kotlin.codec.Jackson2JsonSerializer
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.JsonTranscoder
 import com.couchbase.client.kotlin.codec.Transcoder
@@ -36,9 +37,6 @@ import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentDslBuilder
 import com.couchbase.client.kotlin.internal.await
 import com.couchbase.client.kotlin.kv.Durability
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
-import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.fasterxml.jackson.module.kotlin.jsonMapper
 import reactor.core.scheduler.Scheduler
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicBoolean
@@ -63,10 +61,7 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
 
     init {
         this.cryptoManager = builder.cryptoManager
-        jsonSerializer = builder.jsonSerializer ?: JacksonJsonSerializer(jsonMapper {
-            addModule(Jdk8Module())
-            addModule(KotlinModule())
-        })
+        jsonSerializer = builder.jsonSerializer ?: BasicJsonSerializer()
         transcoder = builder.transcoder ?: JsonTranscoder(jsonSerializer)
     }
 
@@ -149,7 +144,7 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
         /**
          * Sets the default serializer for converting between JSON and Java objects.
          *
-         * Defaults to a [JacksonJsonSerializer] with modules for Kotlin and JDK8.
+         * Defaults to a [BasicJsonSerializer] with limited capabilities.
          */
         public fun jsonSerializer(jsonSerializer: JsonSerializer?): Builder {
             this.jsonSerializer = jsonSerializer

@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 internal class JsonTranscoderTest {
-    private val transcoder: Transcoder = JsonTranscoder(JacksonJsonSerializer(jsonMapper()))
+    private val transcoder: Transcoder = JsonTranscoder(Jackson2JsonSerializer(jsonMapper()))
 
     @Test
     fun `echoes pre-encoded content`() {
