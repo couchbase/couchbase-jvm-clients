@@ -8,7 +8,7 @@
     <parent>
         <groupId>com.couchbase.client</groupId>
         <artifactId>couchbase-jvm-clients</artifactId>
-        <version>1.11.3</version>
+        <version>1.11.4-SNAPSHOT</version>
     </parent>
 
     <properties>
@@ -16,7 +16,7 @@
     </properties>
 
     <artifactId>metrics-micrometer</artifactId>
-    <version>0.2.3</version>
+    <version>0.2.4-SNAPSHOT</version>
 
     <name>Micrometer Metrics Interoperability</name>
     <description>Provides interoperability with Micrometer</description>
