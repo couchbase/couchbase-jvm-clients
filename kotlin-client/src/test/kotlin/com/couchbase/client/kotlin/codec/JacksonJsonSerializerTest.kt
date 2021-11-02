@@ -26,9 +26,8 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-
-internal class Jackson2JsonSerializerTest {
-    private val serializer = Jackson2JsonSerializer(jsonMapper { addModule(KotlinModule()) })
+internal class JacksonJsonSerializerTest {
+    private val serializer = JacksonJsonSerializer(jsonMapper { addModule(KotlinModule()) })
 
     @Test
     fun `can serialize null`() {

@@ -19,29 +19,7 @@ package com.couchbase.client.kotlin.codec
 import com.fasterxml.jackson.databind.JavaType
 import com.fasterxml.jackson.databind.json.JsonMapper
 
-/**
- * A JSON serializer backed by Jackson.
- *
- * Requires adding Jackson 2.x as an additional dependency of your project.
- * Maven coordinates of the additional dependency:
- *
- * ```
- * <dependency>
- *     <groupId>com.fasterxml.jackson.module</groupId>
- *     <artifactId>jackson-module-kotlin</artifactId>
- *     <version>${jackson.version}</version>
- * </dependency>
- * ```
- *
- * Sample code for configuring the Couchbase cluster environment:
- *
- *```
- * val cluster = Cluster.connect("localhost", "Administrator", "password") {
- *     jsonSerializer = Jackson2JsonSerializer(jsonMapper { addModule(KotlinModule()) })
- * }
- * ```
- */
-public class Jackson2JsonSerializer(private val mapper: JsonMapper) : JsonSerializer {
+public class JacksonJsonSerializer(private val mapper: JsonMapper) : JsonSerializer {
     override fun <T> serialize(value: T, type: TypeRef<T>): ByteArray = mapper.writeValueAsBytes(value)
 
     override fun <T> deserialize(json: ByteArray, type: TypeRef<T>): T {
