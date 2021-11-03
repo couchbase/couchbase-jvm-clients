@@ -16,12 +16,43 @@
 
 package com.couchbase.client.core.io.netty.manager;
 
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.QuotaLimitingFailureException;
+import com.couchbase.client.core.error.RateLimitingFailureException;
+import com.couchbase.client.core.error.context.ManagerErrorContext;
+import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.NonChunkedHttpMessageHandler;
+import com.couchbase.client.core.msg.NonChunkedHttpRequest;
+import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.service.ServiceType;
 
 class NonChunkedManagerMessageHandler extends NonChunkedHttpMessageHandler {
   NonChunkedManagerMessageHandler(BaseEndpoint endpoint) {
     super(endpoint, ServiceType.MANAGER);
   }
+
+  @Override
+  protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
+    ManagerErrorContext errorContext = new ManagerErrorContext(
+      HttpProtocol.decodeStatus(status),
+      request.context(),
+      status.code(),
+      content
+    );
+
+    if (status.equals(HttpResponseStatus.TOO_MANY_REQUESTS)) {
+      if (content.contains("num_concurrent_requests")
+        || content.contains("ingress")
+        || content.contains("egress")) {
+        return new RateLimitingFailureException(errorContext);
+      } else if (content.contains("maximum number of collections has been reached for scope")) {
+        return new QuotaLimitingFailureException(errorContext);
+      }
+    }
+
+    return new CouchbaseException("Unknown manager error: " + content, errorContext);
+  }
+
 }

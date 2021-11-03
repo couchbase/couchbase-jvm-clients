@@ -19,6 +19,8 @@ package com.couchbase.client.core.io.netty.search;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.QuotaLimitingFailureException;
+import com.couchbase.client.core.error.RateLimitingFailureException;
 import com.couchbase.client.core.error.context.SearchErrorContext;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
 import com.couchbase.client.core.msg.search.*;
@@ -37,6 +39,10 @@ class ChunkedSearchMessageHandler
 
     @Override
     protected Optional<RetryReason> qualifiesForRetry(final CouchbaseException exception) {
+        if (exception instanceof RateLimitingFailureException || exception instanceof QuotaLimitingFailureException) {
+            return Optional.empty();
+        }
+
         if (exception.context() instanceof SearchErrorContext) {
             if (((SearchErrorContext) exception.context()).httpStatus() == HTTP_TOO_MANY_REQUESTS) {
                 return Optional.of(RetryReason.SEARCH_TOO_MANY_REQUESTS);

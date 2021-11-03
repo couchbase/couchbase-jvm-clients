@@ -27,6 +27,7 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.Response;
@@ -90,6 +91,11 @@ public abstract class BaseKeyValueRequest<R extends Response>
    * Indicates if this request has been rejected with a NMVB before.
    */
   private final AtomicInteger rejectedWithNotMyVbucket = new AtomicInteger(0);
+
+  /**
+   * If set, contains more information about the KV error through the error map.
+   */
+  private volatile ErrorMap.ErrorCode errorCode;
 
   protected BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
                                 final String key, final CollectionIdentifier collectionIdentifier) {
@@ -231,6 +237,13 @@ public abstract class BaseKeyValueRequest<R extends Response>
       ctx.put("rejectedWithNotMyVbucket", nmvb);
     }
 
+    if (errorCode != null) {
+      Map<String, Object> ec = new TreeMap<>();
+      ec.put("name", errorCode.name());
+      ec.put("description", errorCode.description());
+      ctx.put("errorCode", ec);
+    }
+
     return ctx;
   }
 
@@ -264,4 +277,8 @@ public abstract class BaseKeyValueRequest<R extends Response>
     rejectedWithNotMyVbucket.incrementAndGet();
   }
 
+  @Override
+  public void errorCode(final ErrorMap.ErrorCode errorCode) {
+    this.errorCode = errorCode;
+  }
 }

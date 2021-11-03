@@ -196,7 +196,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     return (int) serverMap.get("numReplicas");
   }
 
-  protected Set<Capabilities> capabilitiesFromRaw(final String config, boolean communityEdition) {
+  protected Set<Capabilities> capabilitiesFromRaw(final String config, ClusterVersion clusterVersion) {
     Set<Capabilities> capabilities = new HashSet<>();
     Map<String, Object> decoded;
     try {
@@ -244,11 +244,14 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       capabilities.add(Capabilities.CREATE_AS_DELETED);
       capabilities.add(Capabilities.BUCKET_MINIMUM_DURABILITY);
     }
-    if (!communityEdition) {
+    if (!clusterVersion.isCommunityEdition()) {
       capabilities.add(Capabilities.ENTERPRISE_EDITION);
     }
     if (bucketCapabilities.contains("subdoc.ReplaceBodyWithXattr")) {
       capabilities.add(Capabilities.SUBDOC_REPLACE_BODY_WITH_XATTR);
+    }
+    if (clusterVersion.majorVersion() >= 7 && clusterVersion.minorVersion() >= 1) {
+      capabilities.add(Capabilities.RATE_LIMITING);
     }
     return capabilities;
   }

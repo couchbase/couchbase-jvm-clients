@@ -151,6 +151,10 @@ public enum ResponseStatus {
 
   CANNOT_APPLY_COLLECTIONS_MANIFEST,
 
+  RATE_LIMITED,
+
+  QUOTA_LIMITED,
+
   /**
    * The server reports that it is not initialized yet.
    */

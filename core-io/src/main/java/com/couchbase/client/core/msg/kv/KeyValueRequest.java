@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -82,5 +83,12 @@ public interface KeyValueRequest<R extends Response> extends Request<R>, ScopedR
    * Increments the counter indicating that this request has been rejected with a not my vbucket response.
    */
   void indicateRejectedWithNotMyVbucket();
+
+  /**
+   * Sets the error code on the request for debugging purposes.
+   *
+   * @param errorCode the error code to set for the request.
+   */
+  void errorCode(ErrorMap.ErrorCode errorCode);
 
 }

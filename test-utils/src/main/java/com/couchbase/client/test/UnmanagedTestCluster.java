@@ -113,7 +113,7 @@ public class UnmanagedTestCluster extends TestCluster {
       nodesFromRaw(seedHost, raw),
       replicasFromRaw(raw),
       cert,
-      capabilitiesFromRaw(raw, clusterVersion.isCommunityEdition()),
+      capabilitiesFromRaw(raw, clusterVersion),
       clusterVersion
     );
   }

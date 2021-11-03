@@ -671,6 +671,13 @@ public enum MemcacheProtocol {
       return ResponseStatus.COLLECTIONS_MANIFEST_AHEAD;
     } else  if (status == Status.UNKNOWN_SCOPE.status) {
       return ResponseStatus.UNKNOWN_SCOPE;
+    } else if (status == Status.RATE_LIMITED_NETWORK_EGRESS.status
+      || status == Status.RATE_LIMITED_NETWORK_INGRESS.status
+      || status == Status.RATE_LIMITED_MAX_CONNECTIONS.status
+      || status == Status.RATE_LIMITED_MAX_COMMANDS.status) {
+      return ResponseStatus.RATE_LIMITED;
+    } else if (status == Status.SCOPE_SIZE_LIMIT_EXCEEDED.status) {
+      return ResponseStatus.QUOTA_LIMITED;
     } else {
       return ResponseStatus.UNKNOWN;
     }
@@ -1277,7 +1284,32 @@ public enum MemcacheProtocol {
     /**
      * Operation attempted with an unknown scope.
      */
-    UNKNOWN_SCOPE((short) 0x8c);
+    UNKNOWN_SCOPE((short) 0x8c),
+
+    /**
+     * Rate limited: Network Ingress.
+     */
+    RATE_LIMITED_NETWORK_INGRESS((short) 0x30),
+
+    /**
+     * Rate limited: Network Egress.
+     */
+    RATE_LIMITED_NETWORK_EGRESS((short) 0x31),
+
+    /**
+     * Rate limited: Max Connections.
+     */
+    RATE_LIMITED_MAX_CONNECTIONS((short) 0x32),
+
+    /**
+     * Rate limited: Max Commands.
+     */
+    RATE_LIMITED_MAX_COMMANDS((short) 0x33),
+
+    /**
+     * The scope contains too much data.
+     */
+    SCOPE_SIZE_LIMIT_EXCEEDED((short) 0x34);
 
     private final short status;
 

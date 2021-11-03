@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Couchbase, Inc.
+ * Copyright (c) 2021 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,14 +23,14 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import java.util.Map;
 
 @Stability.Uncommitted
-public class SearchErrorContext extends ErrorContext {
+public class ManagerErrorContext extends ErrorContext {
 
   private final RequestContext requestContext;
   private final int httpStatus;
   private final String content;
 
-  public SearchErrorContext(final ResponseStatus responseStatus, final RequestContext requestContext, final int httpStatus,
-                            final String content) {
+  public ManagerErrorContext(final ResponseStatus responseStatus, final RequestContext requestContext,
+                             final int httpStatus, final String content) {
     super(responseStatus);
     this.requestContext = requestContext;
     this.httpStatus = httpStatus;

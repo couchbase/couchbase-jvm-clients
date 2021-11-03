@@ -39,7 +39,8 @@ class NonChunkedSearchMessageHandler extends NonChunkedHttpMessageHandler {
     SearchErrorContext errorContext = new SearchErrorContext(
       HttpProtocol.decodeStatus(status),
       request.context(),
-      status.code()
+      status.code(),
+      content
     );
 
     if (status == HttpResponseStatus.BAD_REQUEST && content.contains("index missing for update")) {

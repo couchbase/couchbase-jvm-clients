@@ -135,7 +135,7 @@ public class ContainerizedTestCluster extends TestCluster {
       nodesFromRaw(seedHost, raw),
       replicasFromRaw(raw),
       loadClusterCertificate(seedHost, seedPort),
-      capabilitiesFromRaw(raw, clusterVersion.isCommunityEdition()),
+      capabilitiesFromRaw(raw, clusterVersion),
       clusterVersion
     );
   }

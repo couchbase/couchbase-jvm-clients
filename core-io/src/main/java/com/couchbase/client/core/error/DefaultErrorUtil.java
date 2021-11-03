@@ -52,6 +52,8 @@ public class DefaultErrorUtil {
             case TEMPORARY_FAILURE: return new TemporaryFailureException(ctx);
             case TOO_BIG: return new ValueTooLargeException(ctx);
             case INTERNAL_SERVER_ERROR: return new InternalServerFailureException(ctx);
+            case RATE_LIMITED: return new RateLimitingFailureException(ctx);
+            case QUOTA_LIMITED: return new QuotaLimitingFailureException(ctx);
             default: return new CouchbaseException(
               request.getClass().getSimpleName() + " failed with unexpected status code " + response.status(),
               ctx

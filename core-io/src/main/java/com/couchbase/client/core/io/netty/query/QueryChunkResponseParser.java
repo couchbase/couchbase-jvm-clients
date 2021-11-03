@@ -27,6 +27,8 @@ import com.couchbase.client.core.error.InternalServerFailureException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.PlanningFailureException;
 import com.couchbase.client.core.error.PreparedStatementFailureException;
+import com.couchbase.client.core.error.QuotaLimitingFailureException;
+import com.couchbase.client.core.error.RateLimitingFailureException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.error.context.QueryErrorContext;
@@ -143,6 +145,8 @@ public class QueryChunkResponseParser
         return new IndexNotFoundException(errorContext);
       } else if (code == 5000 && message.matches("^.*Index .*already exist.*")) {
         return new IndexExistsException(errorContext);
+      } else if (code == 5000 && message.contains("limit for number of indexes that can be created per scope has been reached")) {
+        return new QuotaLimitingFailureException(errorContext);
       } else if (code >= 5000 && code < 6000) {
         return new InternalServerFailureException(errorContext);
       } else if (code == 12009 && message.contains("CAS mismatch")) {
@@ -163,6 +167,8 @@ public class QueryChunkResponseParser
           "Query timed out while streaming/receiving rows",
           new CancellationErrorContext(errorContext)
         );
+      } else if (code == 1191 || code == 1192 || code == 1193 || code == 1194) {
+        return new RateLimitingFailureException(errorContext);
       }
     }
     return new CouchbaseException("Unknown query error", errorContext);

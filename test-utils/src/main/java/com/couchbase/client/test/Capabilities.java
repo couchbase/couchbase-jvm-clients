@@ -75,5 +75,9 @@ public enum Capabilities {
   /**
    * The cluster supports a Sub-Document instruction to replace a document's body with an xattr
    */
-  SUBDOC_REPLACE_BODY_WITH_XATTR
+  SUBDOC_REPLACE_BODY_WITH_XATTR,
+  /**
+   * The cluster supports rate limiting.
+   */
+  RATE_LIMITING
 }

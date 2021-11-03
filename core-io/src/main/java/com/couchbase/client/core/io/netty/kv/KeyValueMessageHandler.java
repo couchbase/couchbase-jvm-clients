@@ -47,7 +47,6 @@ import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.TracingUtils;
@@ -61,12 +60,10 @@ import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.UnsignedLEB128;
 
-import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
@@ -80,7 +77,6 @@ import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETR
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETRY_NOW;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.TEMP;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
-import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -337,14 +333,21 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
     short statusCode = MemcacheProtocol.status(response);
     ResponseStatus status = MemcacheProtocol.decodeStatus(statusCode);
-    ErrorMap.ErrorCode errorCode = status == ResponseStatus.UNKNOWN ? decodeErrorCode(statusCode) : null;
+    ErrorMap.ErrorCode errorCode = status != ResponseStatus.SUCCESS ? decodeErrorCode(statusCode) : null;
 
     if (errorCode != null) {
-      ioContext.environment().eventBus().publish(new KeyValueErrorMapCodeHandledEvent(ioContext, errorCode));
-      status = handleErrorCode(ctx, errorCode);
+      request.errorCode(errorCode);
     }
 
+    boolean errorUnknown = false;
     if (status == ResponseStatus.UNKNOWN) {
+      errorUnknown = true;
+
+      if (errorCode != null) {
+        ioContext.environment().eventBus().publish(new KeyValueErrorMapCodeHandledEvent(ioContext, errorCode));
+        status = handleErrorCode(ctx, errorCode);
+      }
+
       ioContext.environment().eventBus().publish(new UnknownResponseStatusReceivedEvent(ioContext, statusCode));
     }
 
@@ -352,7 +355,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       handleNotMyVbucket(request, response);
     } else if (status == ResponseStatus.UNKNOWN_COLLECTION) {
       handleOutdatedCollection(request, RetryReason.KV_COLLECTION_OUTDATED);
-    } else if (errorMapIndicatesRetry(errorCode)) {
+    } else if (errorUnknown && errorMapIndicatesRetry(errorCode)) {
       RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_ERROR_MAP_INDICATED);
     } else if (statusIndicatesInvalidChannel(status)) {
       closeChannelWithReason(ioContext, ctx, ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION);
