@@ -19,14 +19,18 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 
+import java.io.Serializable;
 import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 @Stability.Internal
-public class SubDocumentField {
+public class SubDocumentField implements Serializable {
+
+  private static final long serialVersionUID = 227930811730226484L;
+
   private final SubDocumentOpResponseStatus status;
-  private final Optional<CouchbaseException> error;
+  private final CouchbaseException error;
   private final byte[] value;
   private final String path;
   private final SubdocCommandType type;
@@ -34,7 +38,7 @@ public class SubDocumentField {
   public SubDocumentField(SubDocumentOpResponseStatus status, Optional<CouchbaseException> error, byte[] value,
                           String path, SubdocCommandType type) {
     this.status = status;
-    this.error = error;
+    this.error = error.orElse(null);
     this.value = value;
     this.path = path;
     this.type = type;
@@ -45,7 +49,7 @@ public class SubDocumentField {
   }
 
   public Optional<CouchbaseException> error() {
-    return error;
+    return Optional.ofNullable(error);
   }
 
   public byte[] value() {
