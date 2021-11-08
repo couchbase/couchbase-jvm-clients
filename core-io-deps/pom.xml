@@ -17,8 +17,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <netty.version>4.1.67.Final</netty.version>
-        <jackson.version>2.12.4</jackson.version>
+        <netty.version>4.1.70.Final</netty.version>
+        <jackson.version>2.12.5</jackson.version>
 
         <shaded.package.prefix>com.couchbase.client.core.deps.</shaded.package.prefix>
         <shaded.native.lib.prefix>com_couchbase_client_core_deps_</shaded.native.lib.prefix>
@@ -58,7 +58,7 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-tcnative-boringssl-static</artifactId>
-            <version>2.0.40.Final</version>
+            <version>2.0.45.Final</version>
         </dependency>
         <dependency>
             <groupId>org.jctools</groupId>
