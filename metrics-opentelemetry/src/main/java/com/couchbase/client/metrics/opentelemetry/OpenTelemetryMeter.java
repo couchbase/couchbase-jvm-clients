@@ -23,11 +23,10 @@ import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.metrics.NameAndTags;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.MeterException;
+import io.opentelemetry.api.common.AttributesBuilder;
+import io.opentelemetry.api.metrics.DoubleHistogram;
 import io.opentelemetry.api.metrics.LongCounter;
-import io.opentelemetry.api.metrics.LongValueRecorder;
 import io.opentelemetry.api.metrics.MeterProvider;
-import io.opentelemetry.api.metrics.common.Labels;
-import io.opentelemetry.api.metrics.common.LabelsBuilder;
 
 import java.net.URL;
 import java.util.Enumeration;
@@ -85,7 +84,7 @@ public class OpenTelemetryMeter implements Meter {
     }
 
     this.otMeter = version != null
-      ? meterProvider.get(INSTRUMENTATION_NAME, version)
+      ? meterProvider.meterBuilder(INSTRUMENTATION_NAME).setInstrumentationVersion(version).build()
       : meterProvider.get(INSTRUMENTATION_NAME);
   }
 
@@ -93,8 +92,8 @@ public class OpenTelemetryMeter implements Meter {
   public Counter counter(final String name, final Map<String, String> tags) {
     try {
       return counters.computeIfAbsent(new NameAndTags(name, tags), key -> {
-        LongCounter counter = otMeter.longCounterBuilder(name).build();
-        final LabelsBuilder builder = Labels.builder();
+        LongCounter counter = otMeter.counterBuilder(name).build();
+        AttributesBuilder builder = io.opentelemetry.api.common.Attributes.builder();
         for (Map.Entry<String, String> tag : tags.entrySet()) {
           builder.put(tag.getKey(), tag.getValue());
         }
@@ -109,8 +108,8 @@ public class OpenTelemetryMeter implements Meter {
   public ValueRecorder valueRecorder(final String name, final Map<String, String> tags) {
     try {
       return valueRecorders.computeIfAbsent(new NameAndTags(name, tags), key -> {
-        LongValueRecorder vc =  otMeter.longValueRecorderBuilder(name).build();
-        final LabelsBuilder builder = Labels.builder();
+        DoubleHistogram vc =  otMeter.histogramBuilder(name).build();
+        AttributesBuilder builder = io.opentelemetry.api.common.Attributes.builder();
         for (Map.Entry<String, String> tag : tags.entrySet()) {
           builder.put(tag.getKey(), tag.getValue());
         }
