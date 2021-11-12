@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core;
 
+import com.couchbase.client.core.deps.io.netty.util.Timeout;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -38,7 +40,6 @@ class TimerTest {
     try {
       Core core = mock(Core.class);
       assertEquals(0, timer.outstandingForRetry());
-
 
       Request<? extends Response> request = mock(Request.class);
       timer.scheduleForRetry(core, request, Duration.ofMillis(500));
@@ -62,6 +63,19 @@ class TimerTest {
       timer.scheduleForRetry(core, request, Duration.ofMillis(500));
       verify(request, never()).cancel(CancellationReason.TOO_MANY_REQUESTS_IN_RETRY);
       assertEquals(1, timer.outstandingForRetry());
+    } finally {
+      timer.stop();
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void assignsRegistrationToRequest() {
+    Timer timer = Timer.createAndStart(2);
+    try {
+      Request<Response> request = mock(Request.class);
+      timer.register(request);
+      verify(request, times(1)).timeoutRegistration(any(Timeout.class));
     } finally {
       timer.stop();
     }

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.deps.io.netty.util.Timeout;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
@@ -65,6 +66,13 @@ public interface Request<R extends Response> {
    * Cancels this request.
    */
   void cancel(CancellationReason reason);
+
+  /**
+   * Sets the timeout registration used to cancel when complete.
+   *
+   * @param registration the registration for the timeout timer.
+   */
+  void timeoutRegistration(Timeout registration);
 
   /**
    * If attached, returns the context for this request.

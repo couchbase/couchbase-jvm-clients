@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.deps.io.netty.util.Timeout;
 import com.couchbase.client.core.error.AmbiguousTimeoutException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
@@ -103,6 +104,11 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
    */
   private volatile CancellationReason cancellationReason;
 
+  /**
+   * Holds the timer timeout registration.
+   */
+  private volatile Timeout timeoutRegistration;
+
   public BaseRequest(final Duration timeout, final CoreContext ctx,
                      final RetryStrategy retryStrategy) {
     this(timeout, ctx, retryStrategy, null);
@@ -150,6 +156,7 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   @Override
   public void succeed(R result) {
     if (STATE_UPDATER.compareAndSet(this, State.INCOMPLETE, State.SUCCEEDED)) {
+      cancelTimeoutRegistration();
       response.complete(result);
     }
   }
@@ -157,6 +164,7 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   @Override
   public void fail(Throwable error) {
     if (STATE_UPDATER.compareAndSet(this, State.INCOMPLETE, State.FAILED)) {
+      cancelTimeoutRegistration();
       response.completeExceptionally(error);
     }
   }
@@ -164,6 +172,8 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   @Override
   public void cancel(final CancellationReason reason) {
     if (STATE_UPDATER.compareAndSet(this, State.INCOMPLETE, State.CANCELLED)) {
+      cancelTimeoutRegistration();
+
       cancellationReason = reason;
       final Exception exception;
 
@@ -177,6 +187,17 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
 
       response.completeExceptionally(exception);
     }
+  }
+
+  private void cancelTimeoutRegistration() {
+    if (timeoutRegistration != null) {
+      timeoutRegistration.cancel();
+    }
+  }
+
+  @Override
+  public void timeoutRegistration(final Timeout registration) {
+    this.timeoutRegistration = registration;
   }
 
   @Override

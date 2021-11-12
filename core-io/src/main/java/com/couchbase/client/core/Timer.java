@@ -49,7 +49,7 @@ public class Timer {
   /**
    * The internal timer.
    */
-  private HashedWheelTimer wheelTimer;
+  private final HashedWheelTimer wheelTimer;
 
   /**
    * Set to true once stopped.
@@ -59,7 +59,7 @@ public class Timer {
   /**
    * Number of requests currently outstanding for retry.
    */
-  private AtomicLong outstandingForRetry = new AtomicLong(0);
+  private final AtomicLong outstandingForRetry = new AtomicLong(0);
 
   /**
    * The maximum number of outstanding operations until backpressure kicks in.
@@ -158,7 +158,7 @@ public class Timer {
       request.timeout().toNanos(),
       TimeUnit.NANOSECONDS
     );
-    request.response().whenComplete((r, throwable) -> registration.cancel());
+    request.timeoutRegistration(registration);
   }
 
   /**
