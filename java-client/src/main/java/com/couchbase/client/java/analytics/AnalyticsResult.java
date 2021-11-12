@@ -75,7 +75,9 @@ public class AnalyticsResult {
    * Returns all rows, converted into instances of the target class.
    *
    * @param target the target class to deserialize into.
+   * @param <T> the generic type to cast the rows into.
    * @throws DecodingFailureException if any row could not be successfully deserialized.
+   * @return the Rows as a list of the generic target type.
    */
   public <T> List<T> rowsAs(final Class<T> target) {
     final List<T> converted = new ArrayList<>(rows.size());
@@ -89,7 +91,9 @@ public class AnalyticsResult {
    * Returns all rows, converted into instances of the target type.
    *
    * @param target the target type to deserialize into.
+   * @param <T> the generic type to cast the rows into.
    * @throws DecodingFailureException if any row could not be successfully deserialized.
+   * @return the Rows as a list of the generic target type.
    */
   public <T> List<T> rowsAs(final TypeRef<T> target) {
     final List<T> converted = new ArrayList<>(rows.size());
@@ -103,6 +107,7 @@ public class AnalyticsResult {
    * Returns all rows, converted into {@link JsonObject}s.
    *
    * @throws DecodingFailureException if any row could not be successfully deserialized.
+   * @return the Rows as a list of JsonObjects.
    */
   public List<JsonObject> rowsAsObject() {
     return rowsAs(JsonObject.class);
@@ -111,6 +116,8 @@ public class AnalyticsResult {
   /**
    * Returns the {@link AnalyticsMetaData} giving access to the additional metadata associated with this analytics
    * query.
+   *
+   * @return the analytics metadata.
    */
   public AnalyticsMetaData metaData() {
     return AnalyticsMetaData.from(header, trailer);

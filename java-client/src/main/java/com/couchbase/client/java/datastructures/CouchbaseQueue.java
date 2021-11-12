@@ -76,7 +76,7 @@ public class CouchbaseQueue<E> extends AbstractQueue<E> {
      *
      * @param id the id of the Couchbase document to back the queue.
      * @param collection the {@link Collection} through which to interact with the document.
-     * @param entityType a {@link Class<E>} describing the type of objects in this Set.
+     * @param entityType a {@link Class} describing the type of objects in this Set.
      * @param options a {@link CommonDatastructureOptions} to use for all operations on this instance of the queue.
      */
     public CouchbaseQueue(String id, Collection collection, Class<E> entityType, QueueOptions options) {

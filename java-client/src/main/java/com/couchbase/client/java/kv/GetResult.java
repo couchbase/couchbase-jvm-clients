@@ -152,7 +152,7 @@ public class GetResult {
    * Decodes the content of the document into an instance of the target type.
    * Example usage:
    * <pre>
-   * List&lt;String> strings = result.contentAs(new TypeRef&lt;List&lt;String>>(){});
+   * List&lt;String&gt; strings = result.contentAs(new TypeRef&lt;List&lt;String&gt;&gt;(){});
    * </pre>
    *
    * @param target the type to decode the encoded content into.

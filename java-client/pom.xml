@@ -70,7 +70,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.1.1</version>
+                <version>3.3.1</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -86,10 +86,18 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <source>8</source>
                     <links>
                         <link>https://projectreactor.io/docs/core/release/api/</link>
                         <link>https://docs.couchbase.com/sdk-api/couchbase-core-io/</link>
                     </links>
+                    <tags>
+                        <tag>
+                            <name>implNote</name>
+                            <placement>a</placement>
+                            <head>Implementation Note:</head>
+                        </tag>
+                    </tags>
                 </configuration>
             </plugin>
             <plugin>

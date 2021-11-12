@@ -42,6 +42,8 @@ public class DefaultJsonSerializer implements JsonSerializer {
 
   /**
    * Creates an instance without encryption support.
+   *
+   * @return the default JSON serializer without encryption support.
    */
   public static DefaultJsonSerializer create() {
     return create(null);
@@ -52,6 +54,7 @@ public class DefaultJsonSerializer implements JsonSerializer {
    *
    * @param cryptoManager (nullable) The manager to use for activating the
    * {@code Encrypted} annotation, or null to disable encryption support.
+   * @return the default JSON serializer with encryption support.
    */
   public static DefaultJsonSerializer create(CryptoManager cryptoManager) {
     return new DefaultJsonSerializer(cryptoManager);

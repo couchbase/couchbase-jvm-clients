@@ -25,7 +25,7 @@ import java.lang.reflect.Type;
  * Create an anonymous subclass parameterized with the type you want to represent.
  * For example:
  * <pre>
- * TypeRef&lt;List&lt;String>> listOfStrings = new TypeRef&lt;List&lt;String>>(){};
+ * TypeRef&lt;List&lt;String&gt;&gt; listOfStrings = new TypeRef&lt;List&lt;String&gt;&gt;(){};
  * </pre>
  * Immutable.
  *

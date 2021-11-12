@@ -74,7 +74,7 @@ public class CouchbaseArraySet<T> extends AbstractSet<T> {
      *
      * @param id the id of the Couchbase document to back the set.
      * @param collection the {@link Collection} through which to interact with the document.
-     * @param entityType a Class<T> describing the type of objects in this Set.
+     * @param entityType a Class describing the type of objects in this Set.
      * @param options a {@link ArraySetOptions} to use for all operations on this instance of the list.
      *
      **/

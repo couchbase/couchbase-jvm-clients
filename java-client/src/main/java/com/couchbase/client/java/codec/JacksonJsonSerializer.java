@@ -77,15 +77,19 @@ public class JacksonJsonSerializer implements JsonSerializer {
   private final ObjectMapper mapper;
 
   /**
-   * Returns a new instance backed by a the given ObjectMapper.
+   * Returns a new instance backed by the given ObjectMapper.
+   *
+   * @param mapper the custom ObjectMapper to use.
+   * @return the Jackson JSON serializer with a custom object mapper.
    */
   public static JacksonJsonSerializer create(ObjectMapper mapper) {
     return new JacksonJsonSerializer(mapper);
   }
 
   /**
-   * Returns a new instance backed by a default ObjectMapper
-   * without encryption support.
+   * Returns a new instance backed by a default ObjectMapper without encryption support.
+   *
+   * @return the Jackson JSON serializer with the default object mapper.
    */
   public static JacksonJsonSerializer create() {
     return create((CryptoManager) null);
@@ -97,6 +101,7 @@ public class JacksonJsonSerializer implements JsonSerializer {
    *
    * @param cryptoManager (nullable) The manager to use for activating the
    * {@link Encrypted} annotation, or null to disable encryption support.
+   @return the Jackson JSON serializer with a provided crypto manager.
    */
   public static JacksonJsonSerializer create(CryptoManager cryptoManager) {
     ObjectMapper mapper = new ObjectMapper();

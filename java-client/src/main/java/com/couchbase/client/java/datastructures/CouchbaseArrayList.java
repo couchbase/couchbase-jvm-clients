@@ -78,7 +78,7 @@ public class CouchbaseArrayList<E> extends AbstractList<E> {
      *
      * @param id the id of the Couchbase document to back the list.
      * @param collection the {@link Collection} through which to interact with the document.
-     * @param entityType a Class<T> describing the type of objects in this Set.
+     * @param entityType a Class describing the type of objects in this Set.
      * @param options a {@link ArrayListOptions} to use for all operations on this instance of the list.
      */
     public CouchbaseArrayList(String id, Collection collection, Class<E> entityType, ArrayListOptions options) {

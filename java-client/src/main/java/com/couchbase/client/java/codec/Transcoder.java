@@ -38,6 +38,7 @@ public interface Transcoder {
    * @param target the target type to decode.
    * @param input the wire representation to decode.
    * @param flags the flags on the wire
+   * @param <T> the generic type used for the decoding target.
    * @return the decoded entity.
    */
   <T> T decode(Class<T> target, byte[] input, int flags);
@@ -48,6 +49,7 @@ public interface Transcoder {
    * @param target the target type to decode.
    * @param input the wire representation to decode.
    * @param flags the flags on the wire
+   * @param <T> the generic type used for the decoding target.
    * @return the decoded entity.
    */
   default <T> T decode(TypeRef<T> target, byte[] input, int flags) {

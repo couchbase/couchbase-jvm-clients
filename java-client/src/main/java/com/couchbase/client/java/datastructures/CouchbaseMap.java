@@ -79,7 +79,7 @@ public class CouchbaseMap<E> extends AbstractMap<String, E> {
      *
      * @param id the id of the Couchbase document to back the map.
      * @param collection the {@link Collection} through which to interact with the document.
-     * @param entityType a {@link Class<E>} describing the type of objects used as values in this Map.
+     * @param entityType a {@link Class} describing the type of objects used as values in this Map.
      * @param options a {@link MapOptions} to use for all operations on this instance of the map.
      */
     public CouchbaseMap(String id, Collection collection, Class<E> entityType, MapOptions options) {
