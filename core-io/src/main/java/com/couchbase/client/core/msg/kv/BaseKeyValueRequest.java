@@ -228,6 +228,8 @@ public abstract class BaseKeyValueRequest<R extends Response>
       ctx.put("documentId", redactUser(new String(key, UTF_8)));
     }
 
+    ctx.put("vbucket", partition);
+
     if (this instanceof SyncDurabilityRequest) {
       ((SyncDurabilityRequest) this).durabilityLevel().ifPresent(d -> ctx.put("syncDurability", d));
     }
