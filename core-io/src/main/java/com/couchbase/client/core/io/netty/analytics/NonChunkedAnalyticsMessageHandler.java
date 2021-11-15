@@ -32,6 +32,6 @@ class NonChunkedAnalyticsMessageHandler extends NonChunkedHttpMessageHandler {
 
   @Override
   protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
-   return AnalyticsChunkResponseParser.errorsToThrowable(content.getBytes(UTF_8), request.context());
+   return AnalyticsChunkResponseParser.errorsToThrowable(content.getBytes(UTF_8), request.context(), status);
   }
 }

@@ -125,10 +125,13 @@ public class QueryChunkResponseParser
   }
 
   private CouchbaseException errorsToThrowable(final byte[] bytes) {
+    int httpStatus = responseHeader() != null ? responseHeader().status().code() : 0;
+
     final List<ErrorCodeAndMessage> errors = bytes.length == 0
       ? Collections.emptyList()
       : ErrorCodeAndMessage.fromJsonArray(bytes);
-    QueryErrorContext errorContext = new QueryErrorContext(requestContext(), errors);
+    QueryErrorContext errorContext = new QueryErrorContext(requestContext(), errors, httpStatus);
+
     if (errors.size() >= 1) {
       int code = errors.get(0).code();
       String message = errors.get(0).message();

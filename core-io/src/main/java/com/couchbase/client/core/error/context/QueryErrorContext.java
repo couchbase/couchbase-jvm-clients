@@ -30,11 +30,13 @@ public class QueryErrorContext extends ErrorContext {
 
   private final RequestContext requestContext;
   private final List<ErrorCodeAndMessage> errors;
+  private final int httpStatus;
 
-  public QueryErrorContext(final RequestContext requestContext, final List<ErrorCodeAndMessage> errors) {
+  public QueryErrorContext(final RequestContext requestContext, final List<ErrorCodeAndMessage> errors, final int httpStatus) {
     super(null);
     this.errors = errors;
     this.requestContext = requestContext;
+    this.httpStatus = httpStatus;
   }
 
   public RequestContext requestContext() {
@@ -50,6 +52,10 @@ public class QueryErrorContext extends ErrorContext {
     super.injectExportableParams(input);
     if (requestContext != null) {
       requestContext.injectExportableParams(input);
+    }
+
+    if (httpStatus != 0) {
+      input.put("httpStatus", httpStatus);
     }
 
     List<Map<String, Object>> errorList = new ArrayList<>(errors.size());

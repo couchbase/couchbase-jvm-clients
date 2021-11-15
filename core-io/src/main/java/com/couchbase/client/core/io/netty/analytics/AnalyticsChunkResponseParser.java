@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CompilationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -87,7 +88,7 @@ public class AnalyticsChunkResponseParser
     .doOnValue("/metrics", v -> metrics = v.readBytes())
     .doOnValue("/errors", v -> {
       errors = v.readBytes();
-      failRows(errorsToThrowable(errors, requestContext()));
+      failRows(errorsToThrowable(errors, requestContext(), responseHeader().status()));
     })
     .doOnValue("/warnings", v -> warnings = v.readBytes());
 
@@ -105,15 +106,17 @@ public class AnalyticsChunkResponseParser
 
   @Override
   public Optional<CouchbaseException> error() {
-    return Optional.ofNullable(errors).map(e -> errorsToThrowable(e, requestContext()));
+    return Optional.ofNullable(errors).map(e -> errorsToThrowable(e, requestContext(), responseHeader().status()));
   }
 
   @Stability.Internal
-  static CouchbaseException errorsToThrowable(final byte[] bytes, RequestContext ctx) {
+  static CouchbaseException errorsToThrowable(final byte[] bytes, RequestContext ctx, HttpResponseStatus httpStatus) {
+    int httpCode = httpStatus != null ? httpStatus.code() : 0;
+
     final List<ErrorCodeAndMessage> errors = bytes.length == 0
       ? Collections.emptyList()
       : ErrorCodeAndMessage.from(bytes);
-    AnalyticsErrorContext errorContext = new AnalyticsErrorContext(ctx, errors);
+    AnalyticsErrorContext errorContext = new AnalyticsErrorContext(ctx, errors, httpCode);
     if (errors.size() >= 1) {
       ErrorCodeAndMessage error = errors.get(0);
       // Analytics error code reference:

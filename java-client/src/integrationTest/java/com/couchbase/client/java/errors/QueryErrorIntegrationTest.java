@@ -17,12 +17,10 @@
 package com.couchbase.client.java.errors;
 
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.error.ViewNotFoundException;
+import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.manager.view.DesignDocument;
 import com.couchbase.client.java.util.JavaIntegrationTest;
-import com.couchbase.client.java.view.DesignDocumentNamespace;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
@@ -32,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IgnoreWhen( missesCapabilities = { Capabilities.QUERY })
 class QueryErrorIntegrationTest extends JavaIntegrationTest {
@@ -54,6 +53,12 @@ class QueryErrorIntegrationTest extends JavaIntegrationTest {
   void verifyInvalidArguments() {
     assertThrows(InvalidArgumentException.class, () -> cluster.query(null));
     assertThrows(InvalidArgumentException.class, () -> cluster.query("foo", null));
+  }
+
+  @Test
+  void includesHttpStatusCodeInErrorContext() {
+    ParsingFailureException ex = assertThrows(ParsingFailureException.class, () -> cluster.query("select 1="));
+    assertTrue(ex.getMessage().contains("\"httpStatus\":400"));
   }
 
 }

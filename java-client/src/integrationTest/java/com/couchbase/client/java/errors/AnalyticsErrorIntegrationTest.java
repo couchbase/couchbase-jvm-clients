@@ -17,6 +17,7 @@
 package com.couchbase.client.java.errors;
 
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IgnoreWhen( missesCapabilities = { Capabilities.ANALYTICS })
 class AnalyticsErrorIntegrationTest extends JavaIntegrationTest {
@@ -51,6 +53,12 @@ class AnalyticsErrorIntegrationTest extends JavaIntegrationTest {
   void verifyInvalidArguments() {
     assertThrows(InvalidArgumentException.class, () -> cluster.analyticsQuery(null));
     assertThrows(InvalidArgumentException.class, () -> cluster.analyticsQuery("foo", null));
+  }
+
+  @Test
+  void includesHttpStatusCodeInErrorContext() {
+    ParsingFailureException ex = assertThrows(ParsingFailureException.class, () -> cluster.analyticsQuery("select 1="));
+    assertTrue(ex.getMessage().contains("\"httpStatus\":400"));
   }
 
 }
