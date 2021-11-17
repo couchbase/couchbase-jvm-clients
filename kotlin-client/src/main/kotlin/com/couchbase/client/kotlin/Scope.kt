@@ -154,7 +154,7 @@ public class Scope(
         flexIndex: Boolean = false,
 
         metrics: Boolean = false,
-        @VolatileCouchbaseApi profile: QueryProfile = QueryProfile.OFF,
+        profile: QueryProfile = QueryProfile.OFF,
 
         maxParallelism: Int? = null,
         scanCap: Int? = null,

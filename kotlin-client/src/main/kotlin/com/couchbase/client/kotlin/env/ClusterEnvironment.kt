@@ -17,6 +17,7 @@
 package com.couchbase.client.kotlin.env
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.cnc.EventBus
 import com.couchbase.client.core.cnc.Meter
 import com.couchbase.client.core.cnc.RequestTracer
@@ -186,22 +187,22 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
             return this
         }
 
-        @UncommittedCouchbaseApi
+        @Stability.Uncommitted
         override fun eventBus(eventBus: EventBus?): Builder {
             return super.eventBus(eventBus)
         }
 
-        @UncommittedCouchbaseApi
+        @Stability.Uncommitted
         override fun scheduler(scheduler: Scheduler?): Builder {
             return super.scheduler(scheduler)
         }
 
-        @VolatileCouchbaseApi
+        @Stability.Uncommitted
         override fun requestTracer(requestTracer: RequestTracer?): Builder {
             return super.requestTracer(requestTracer)
         }
 
-        @VolatileCouchbaseApi
+        @Stability.Uncommitted
         override fun meter(meter: Meter?): Builder {
             return super.meter(meter)
         }

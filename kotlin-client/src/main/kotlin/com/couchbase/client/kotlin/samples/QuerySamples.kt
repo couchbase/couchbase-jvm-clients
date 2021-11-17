@@ -43,6 +43,7 @@ internal suspend fun singleValueQueryNamed(cluster: Cluster) {
 }
 
 @Suppress("UNUSED_VARIABLE")
+@OptIn(VolatileCouchbaseApi::class)
 internal suspend fun bufferedQuery(cluster: Cluster) {
     // Buffered query, for when results are known to fit in memory
     val result: QueryResult = cluster
@@ -53,6 +54,7 @@ internal suspend fun bufferedQuery(cluster: Cluster) {
 }
 
 @Suppress("UNUSED_VARIABLE")
+@OptIn(VolatileCouchbaseApi::class)
 internal suspend fun streamingQuery(cluster: Cluster) {
     // Streaming query, for when result size is large or unbounded
     val metadata: QueryMetadata = cluster

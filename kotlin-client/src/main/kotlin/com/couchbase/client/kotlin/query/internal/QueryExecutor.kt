@@ -65,7 +65,7 @@ internal class QueryExecutor(
         flexIndex: Boolean,
 
         metrics: Boolean,
-        @VolatileCouchbaseApi profile: QueryProfile,
+        profile: QueryProfile,
 
         maxParallelism: Int?,
         scanCap: Int?,
