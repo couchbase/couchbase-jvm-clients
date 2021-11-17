@@ -525,7 +525,7 @@ public class EventingFunctionSettings {
      * @return this {@link Builder} for chaining purposes.
      */
     public Builder description(String description) {
-      this.description = notNullOrEmpty(description, "Description");
+      this.description = notNull(description, "Description");
       return this;
     }
 
