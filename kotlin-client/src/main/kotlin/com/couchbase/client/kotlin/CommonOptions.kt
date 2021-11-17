@@ -19,7 +19,8 @@ package com.couchbase.client.kotlin
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.retry.RetryStrategy
-import java.time.Duration
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
 
 /**
  * Options that apply most requests.
@@ -37,5 +38,7 @@ public class CommonOptions(
     }
 
     internal fun toCore(): CoreCommonOptions =
-        if (this === Default) CoreDefault else CoreCommonOptions.of(timeout, retryStrategy, parentSpan)
+        if (this === Default) CoreDefault else CoreCommonOptions.of(timeout?.toJavaDuration(),
+            retryStrategy,
+            parentSpan)
 }

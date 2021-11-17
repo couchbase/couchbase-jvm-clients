@@ -24,8 +24,10 @@ import com.couchbase.client.core.endpoint.CircuitBreakerConfig.DEFAULT_ERROR_THR
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig.DEFAULT_ROLLING_WINDOW
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig.DEFAULT_SLEEP_WINDOW
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig.DEFAULT_VOLUME_THRESHOLD
-import java.time.Duration
 import kotlin.properties.Delegates.observable
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
+import kotlin.time.toKotlinDuration
 
 /**
  * DSL counterpart to [CircuitBreakerConfig.Builder].
@@ -54,13 +56,13 @@ public class CircuitBreakerConfigDslBuilder(private val wrapped: CircuitBreakerC
      * @see CircuitBreakerConfig.Builder.sleepWindow
      */
     public var sleepWindow: Duration
-            by observable(DEFAULT_SLEEP_WINDOW) { _, _, it -> wrapped.sleepWindow(it) }
+            by observable(DEFAULT_SLEEP_WINDOW.toKotlinDuration()) { _, _, it -> wrapped.sleepWindow(it.toJavaDuration()) }
 
     /**
      * @see CircuitBreakerConfig.Builder.rollingWindow
      */
     public var rollingWindow: Duration
-            by observable(DEFAULT_ROLLING_WINDOW) { _, _, it -> wrapped.rollingWindow(it) }
+            by observable(DEFAULT_ROLLING_WINDOW.toKotlinDuration()) { _, _, it -> wrapped.rollingWindow(it.toJavaDuration()) }
 
     /**
      * @see CircuitBreakerConfig.Builder.completionCallback

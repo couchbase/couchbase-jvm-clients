@@ -51,9 +51,11 @@ import com.couchbase.client.kotlin.query.QueryScanConsistency
 import com.couchbase.client.kotlin.query.internal.QueryExecutor
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.future.await
-import java.time.Duration
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
+import kotlin.time.toKotlinDuration
 
 /**
  * Main entry point for interacting with a Couchbase Server cluster.
@@ -122,7 +124,8 @@ public class Cluster internal constructor(
         services: Set<ServiceType> = emptySet(),
         desiredState: ClusterState = ClusterState.ONLINE,
     ): Cluster {
-        WaitUntilReadyHelper.waitUntilReady(core, services, timeout, desiredState, Optional.empty()).await()
+        WaitUntilReadyHelper.waitUntilReady(core, services, timeout.toJavaDuration(), desiredState, Optional.empty())
+            .await()
         return this
     }
 
@@ -292,11 +295,11 @@ public class Cluster internal constructor(
      * or when you are done using the cluster.
      */
     public suspend fun disconnect(
-        timeout: Duration = core.context().environment().timeoutConfig().disconnectTimeout()
+        timeout: Duration = core.context().environment().timeoutConfig().disconnectTimeout().toKotlinDuration(),
     ) {
-        core.shutdown(timeout).await()
+        core.shutdown(timeout.toJavaDuration()).await()
         if (ownsEnvironment) {
-            core.context().environment().shutdownReactive(timeout).await()
+            core.context().environment().shutdownReactive(timeout.toJavaDuration()).await()
         }
     }
 

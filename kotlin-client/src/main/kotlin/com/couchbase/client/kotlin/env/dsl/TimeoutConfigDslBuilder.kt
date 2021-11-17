@@ -17,8 +17,10 @@
 package com.couchbase.client.kotlin.env.dsl
 
 import com.couchbase.client.core.env.TimeoutConfig
-import java.time.Duration
 import kotlin.properties.Delegates.observable
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
+import kotlin.time.toKotlinDuration
 
 /**
  * DSL counterpart to [TimeoutConfig.Builder].
@@ -29,53 +31,65 @@ public class TimeoutConfigDslBuilder(private val wrapped: TimeoutConfig.Builder)
      * @see TimeoutConfig.Builder.kvTimeout
      */
     public var kvTimeout: Duration
-            by observable(TimeoutConfig.DEFAULT_KV_TIMEOUT) { _, _, it -> wrapped.kvTimeout(it) }
+            by observable(TimeoutConfig.DEFAULT_KV_TIMEOUT.toKotlinDuration()) { _, _, it -> wrapped.kvTimeout(it.toJavaDuration()) }
 
     /**
      * @see TimeoutConfig.Builder.kvDurableTimeout
      */
     public var kvDurableTimeout: Duration
-            by observable(TimeoutConfig.DEFAULT_KV_DURABLE_TIMEOUT) { _, _, it -> wrapped.kvDurableTimeout(it) }
+            by observable(TimeoutConfig.DEFAULT_KV_DURABLE_TIMEOUT.toKotlinDuration()) { _, _, it ->
+                wrapped.kvDurableTimeout(it.toJavaDuration())
+            }
 
     /**
      * @see TimeoutConfig.Builder.managementTimeout
      */
     public var managementTimeout: Duration
-            by observable(TimeoutConfig.DEFAULT_MANAGEMENT_TIMEOUT) { _, _, it -> wrapped.managementTimeout(it) }
+            by observable(TimeoutConfig.DEFAULT_MANAGEMENT_TIMEOUT.toKotlinDuration()) { _, _, it ->
+                wrapped.managementTimeout(it.toJavaDuration())
+            }
 
     /**
      * @see TimeoutConfig.Builder.queryTimeout
      */
     public var queryTimeout: Duration
-            by observable(TimeoutConfig.DEFAULT_QUERY_TIMEOUT) { _, _, it -> wrapped.queryTimeout(it) }
+            by observable(TimeoutConfig.DEFAULT_QUERY_TIMEOUT.toKotlinDuration()) { _, _, it -> wrapped.queryTimeout(it.toJavaDuration()) }
 
     /**
      * @see TimeoutConfig.Builder.viewTimeout
      */
     public var viewTimeout: Duration
-            by observable(TimeoutConfig.DEFAULT_VIEW_TIMEOUT) { _, _, it -> wrapped.viewTimeout(it) }
+            by observable(TimeoutConfig.DEFAULT_VIEW_TIMEOUT.toKotlinDuration()) { _, _, it -> wrapped.viewTimeout(it.toJavaDuration()) }
 
     /**
      * @see TimeoutConfig.Builder.searchTimeout
      */
     public var searchTimeout: Duration
-            by observable(TimeoutConfig.DEFAULT_SEARCH_TIMEOUT) { _, _, it -> wrapped.searchTimeout(it) }
+            by observable(TimeoutConfig.DEFAULT_SEARCH_TIMEOUT.toKotlinDuration()) { _, _, it ->
+                wrapped.searchTimeout(it.toJavaDuration())
+            }
 
     /**
      * @see TimeoutConfig.Builder.analyticsTimeout
      */
     public var analyticsTimeout: Duration
-            by observable(TimeoutConfig.DEFAULT_ANALYTICS_TIMEOUT) { _, _, it -> wrapped.analyticsTimeout(it) }
+            by observable(TimeoutConfig.DEFAULT_ANALYTICS_TIMEOUT.toKotlinDuration()) { _, _, it ->
+                wrapped.analyticsTimeout(it.toJavaDuration())
+            }
 
     /**
      * @see TimeoutConfig.Builder.connectTimeout
      */
     public var connectTimeout: Duration
-            by observable(TimeoutConfig.DEFAULT_CONNECT_TIMEOUT) { _, _, it -> wrapped.connectTimeout(it) }
+            by observable(TimeoutConfig.DEFAULT_CONNECT_TIMEOUT.toKotlinDuration()) { _, _, it ->
+                wrapped.connectTimeout(it.toJavaDuration())
+            }
 
     /**
      * @see TimeoutConfig.Builder.disconnectTimeout
      */
     public var disconnectTimeout: Duration
-            by observable(TimeoutConfig.DEFAULT_DISCONNECT_TIMEOUT) { _, _, it -> wrapped.disconnectTimeout(it) }
+            by observable(TimeoutConfig.DEFAULT_DISCONNECT_TIMEOUT.toKotlinDuration()) { _, _, it ->
+                wrapped.disconnectTimeout(it.toJavaDuration())
+            }
 }

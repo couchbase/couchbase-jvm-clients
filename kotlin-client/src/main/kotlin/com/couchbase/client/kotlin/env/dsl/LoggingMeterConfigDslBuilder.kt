@@ -19,8 +19,10 @@ package com.couchbase.client.kotlin.env.dsl
 import com.couchbase.client.core.env.LoggingMeterConfig
 import com.couchbase.client.core.env.LoggingMeterConfig.Defaults.DEFAULT_EMIT_INTERVAL
 import com.couchbase.client.core.env.LoggingMeterConfig.Defaults.DEFAULT_ENABLED
-import java.time.Duration
 import kotlin.properties.Delegates.observable
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
+import kotlin.time.toKotlinDuration
 
 /**
  * DSL counterpart to [LoggingMeterConfig.Builder].
@@ -31,7 +33,7 @@ public class LoggingMeterConfigDslBuilder(private val wrapped: LoggingMeterConfi
      * @see LoggingMeterConfig.Builder.emitInterval
      */
     public var emitInterval: Duration
-            by observable(DEFAULT_EMIT_INTERVAL) { _, _, it -> wrapped.emitInterval(it) }
+            by observable(DEFAULT_EMIT_INTERVAL.toKotlinDuration()) { _, _, it -> wrapped.emitInterval(it.toJavaDuration()) }
 
     /**
      * @see LoggingMeterConfig.Builder.enabled

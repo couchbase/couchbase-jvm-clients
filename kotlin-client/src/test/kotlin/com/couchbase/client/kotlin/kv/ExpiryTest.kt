@@ -16,6 +16,7 @@
 
 package com.couchbase.client.kotlin.kv
 
+import com.couchbase.client.kotlin.kv.Expiry.Companion.of
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.greaterThanOrEqualTo
 import org.hamcrest.Matchers.lessThanOrEqualTo
@@ -23,10 +24,11 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit.DAYS
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 internal class ExpiryTest {
 
@@ -108,12 +110,12 @@ internal class ExpiryTest {
 
     @Test
     fun `relative are equal if they have the same duration`() {
-        assertEquals(Expiry.ofSeconds(60), Expiry.ofMinutes(1))
-        assertEquals(Expiry.ofMinutes(60), Expiry.ofHours(1))
+        assertEquals(Expiry.ofSeconds(60), of(1.minutes))
+        assertEquals(of(60.minutes), Expiry.ofHours(1))
         assertEquals(Expiry.ofHours(24), Expiry.ofDays(1))
 
-        assertNotEquals(Expiry.ofSeconds(61), Expiry.ofMinutes(1))
-        assertNotEquals(Expiry.ofMinutes(61), Expiry.ofHours(1))
+        assertNotEquals(Expiry.ofSeconds(61), of(1.minutes))
+        assertNotEquals(of(61.minutes), Expiry.ofHours(1))
         assertNotEquals(Expiry.ofHours(25), Expiry.ofDays(1))
     }
 }

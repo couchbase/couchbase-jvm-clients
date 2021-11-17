@@ -25,8 +25,10 @@ import com.couchbase.client.core.env.ThresholdLoggingTracerConfig.Defaults.DEFAU
 import com.couchbase.client.core.env.ThresholdLoggingTracerConfig.Defaults.DEFAULT_SAMPLE_SIZE
 import com.couchbase.client.core.env.ThresholdLoggingTracerConfig.Defaults.DEFAULT_SEARCH_THRESHOLD
 import com.couchbase.client.core.env.ThresholdLoggingTracerConfig.Defaults.DEFAULT_VIEW_THRESHOLD
-import java.time.Duration
 import kotlin.properties.Delegates.observable
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
+import kotlin.time.toKotlinDuration
 
 /**
  * DSL counterpart to [ThresholdLoggingTracerConfig.Builder].
@@ -38,7 +40,7 @@ public class ThresholdLoggingTracerConfigDslBuilder(private val wrapped: Thresho
      * @see ThresholdLoggingTracerConfig.Builder.emitInterval
      */
     public var emitInterval: Duration
-            by observable(DEFAULT_EMIT_INTERVAL) { _, _, it -> wrapped.emitInterval(it) }
+            by observable(DEFAULT_EMIT_INTERVAL.toKotlinDuration()) { _, _, it -> wrapped.emitInterval(it.toJavaDuration()) }
 
     /**
      * @see ThresholdLoggingTracerConfig.Builder.queueLength
@@ -56,29 +58,29 @@ public class ThresholdLoggingTracerConfigDslBuilder(private val wrapped: Thresho
      * @see ThresholdLoggingTracerConfig.Builder.kvThreshold
      */
     public var kvThreshold: Duration
-            by observable(DEFAULT_KV_THRESHOLD) { _, _, it -> wrapped.kvThreshold(it) }
+            by observable(DEFAULT_KV_THRESHOLD.toKotlinDuration()) { _, _, it -> wrapped.kvThreshold(it.toJavaDuration()) }
 
     /**
      * @see ThresholdLoggingTracerConfig.Builder.queryThreshold
      */
     public var queryThreshold: Duration
-            by observable(DEFAULT_QUERY_THRESHOLD) { _, _, it -> wrapped.queryThreshold(it) }
+            by observable(DEFAULT_QUERY_THRESHOLD.toKotlinDuration()) { _, _, it -> wrapped.queryThreshold(it.toJavaDuration()) }
 
     /**
      * @see ThresholdLoggingTracerConfig.Builder.viewThreshold
      */
     public var viewThreshold: Duration
-            by observable(DEFAULT_VIEW_THRESHOLD) { _, _, it -> wrapped.viewThreshold(it) }
+            by observable(DEFAULT_VIEW_THRESHOLD.toKotlinDuration()) { _, _, it -> wrapped.viewThreshold(it.toJavaDuration()) }
 
     /**
      * @see ThresholdLoggingTracerConfig.Builder.searchThreshold
      */
     public var searchThreshold: Duration
-            by observable(DEFAULT_SEARCH_THRESHOLD) { _, _, it -> wrapped.searchThreshold(it) }
+            by observable(DEFAULT_SEARCH_THRESHOLD.toKotlinDuration()) { _, _, it -> wrapped.searchThreshold(it.toJavaDuration()) }
 
     /**
      * @see ThresholdLoggingTracerConfig.Builder.analyticsThreshold
      */
     public var analyticsThreshold: Duration
-            by observable(DEFAULT_ANALYTICS_THRESHOLD) { _, _, it -> wrapped.analyticsThreshold(it) }
+            by observable(DEFAULT_ANALYTICS_THRESHOLD.toKotlinDuration()) { _, _, it -> wrapped.analyticsThreshold(it.toJavaDuration()) }
 }

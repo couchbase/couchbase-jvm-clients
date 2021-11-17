@@ -27,8 +27,6 @@ import com.couchbase.client.core.env.PropertyLoader
 import com.couchbase.client.core.env.TimeoutConfig
 import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.CommonOptions
-import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JacksonJsonSerializer
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.JsonTranscoder
@@ -41,8 +39,10 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jsonMapper
 import reactor.core.scheduler.Scheduler
-import java.time.Duration
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
+import kotlin.time.toKotlinDuration
 
 public interface ClusterPropertyLoader : PropertyLoader<ClusterEnvironment.Builder>
 
@@ -120,8 +120,8 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
      *
      * Note that once shut down, the environment cannot be restarted.
      */
-    public suspend fun shutdownSuspend(timeout: Duration = timeoutConfig().disconnectTimeout()) {
-        shutdownReactive(timeout).await()
+    public suspend fun shutdownSuspend(timeout: Duration = timeoutConfig().disconnectTimeout().toKotlinDuration()) {
+        shutdownReactive(timeout.toJavaDuration()).await()
     }
 
     /**
@@ -230,14 +230,19 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
 
     internal fun CommonOptions.actualRetryStrategy() = retryStrategy ?: retryStrategy()
     internal fun CommonOptions.actualSpan(name: String) = requestTracer().requestSpan(name, parentSpan)
-    internal fun CommonOptions.actualViewTimeout(): Duration = timeout ?: timeoutConfig().viewTimeout()
-    internal fun CommonOptions.actualManagementTimeout(): Duration = timeout ?: timeoutConfig().managementTimeout()
-    internal fun CommonOptions.actualQueryTimeout() = timeout ?: timeoutConfig().queryTimeout()
-    internal fun CommonOptions.actualAnalyticsTimeout() = timeout ?: timeoutConfig().analyticsTimeout()
-    internal fun CommonOptions.actualKvTimeout(durability: Durability): Duration =
-        timeout ?: timeoutConfig().kvTimeout(durability)
-    private fun TimeoutConfig.kvTimeout(durability: Durability): Duration =
-        if (durability.isPersistent()) kvDurableTimeout() else kvTimeout()
+    internal fun CommonOptions.actualViewTimeout() = timeout?.toJavaDuration() ?: timeoutConfig().viewTimeout()
+    internal fun CommonOptions.actualManagementTimeout() =
+        timeout?.toJavaDuration() ?: timeoutConfig().managementTimeout().toKotlinDuration()
+
+    internal fun CommonOptions.actualQueryTimeout() = timeout?.toJavaDuration() ?: timeoutConfig().queryTimeout()
+    internal fun CommonOptions.actualAnalyticsTimeout() =
+        timeout?.toJavaDuration() ?: timeoutConfig().analyticsTimeout()
+
+    internal fun CommonOptions.actualKvTimeout(durability: Durability) =
+        (timeout ?: timeoutConfig().kvTimeout(durability)).toJavaDuration()
+
+    private fun TimeoutConfig.kvTimeout(durability: Durability) =
+        (if (durability.isPersistent()) kvDurableTimeout() else kvTimeout()).toKotlinDuration()
 }
 
 internal val Core.env : ClusterEnvironment

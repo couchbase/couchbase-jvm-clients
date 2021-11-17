@@ -17,7 +17,8 @@
 package com.couchbase.client.kotlin.analytics
 
 import com.couchbase.client.core.util.Golang
-import java.time.Duration
+import kotlin.time.Duration
+import kotlin.time.toKotlinDuration
 
 public class AnalyticsMetrics(
     public val map: Map<String, Any?>,
@@ -43,7 +44,7 @@ public class AnalyticsMetrics(
     public val processedObjects: Long
         get() = getLong("processedObjects")
 
-    private fun getDuration(key: String): Duration = Golang.parseDuration(map[key] as String? ?: "0")
+    private fun getDuration(key: String): Duration = Golang.parseDuration(map[key] as String? ?: "0").toKotlinDuration()
 
     private fun getLong(key: String): Long = (map[key] as Number? ?: 0).toLong()
 

@@ -28,8 +28,8 @@ import com.couchbase.client.kotlin.env.dsl.TrustSource
 import com.couchbase.client.kotlin.query.execute
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Paths
-import java.time.Duration
 import java.util.*
+import kotlin.time.Duration.Companion.seconds
 
 @Suppress("UNUSED_VARIABLE")
 @OptIn(VolatileCouchbaseApi::class)
@@ -113,7 +113,7 @@ internal fun configureManyThingsUsingDsl() {
         io {
             enableDnsSrv = false
             networkResolution = NetworkResolution.EXTERNAL
-            tcpKeepAliveTime = Duration.ofSeconds(45)
+            tcpKeepAliveTime = 45.seconds
 
             captureTraffic(ServiceType.KV, ServiceType.QUERY)
 
@@ -122,7 +122,7 @@ internal fun configureManyThingsUsingDsl() {
                 enabled = true
                 volumeThreshold = 30
                 errorThresholdPercentage = 20
-                rollingWindow = Duration.ofSeconds(30)
+                rollingWindow = 30.seconds
             }
 
             kvCircuitBreaker {
@@ -130,18 +130,18 @@ internal fun configureManyThingsUsingDsl() {
             }
 
             queryCircuitBreaker {
-                rollingWindow = Duration.ofSeconds(10)
+                rollingWindow = 10.seconds
             }
         }
 
         timeout {
-            kvTimeout = Duration.ofSeconds(3)
-            kvDurableTimeout = Duration.ofSeconds(20)
-            connectTimeout = Duration.ofSeconds(15)
+            kvTimeout = 3.seconds
+            kvDurableTimeout = 20.seconds
+            connectTimeout = 15.seconds
         }
 
         orphanReporter {
-            emitInterval = Duration.ofSeconds(20)
+            emitInterval = 20.seconds
         }
     }
 }

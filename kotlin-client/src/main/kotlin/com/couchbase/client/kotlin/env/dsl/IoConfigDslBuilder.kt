@@ -29,8 +29,10 @@ import com.couchbase.client.core.env.IoConfig.DEFAULT_TCP_KEEPALIVE_ENABLED
 import com.couchbase.client.core.env.IoConfig.DEFAULT_TCP_KEEPALIVE_TIME
 import com.couchbase.client.core.env.NetworkResolution
 import com.couchbase.client.core.service.ServiceType
-import java.time.Duration
 import kotlin.properties.Delegates.observable
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
+import kotlin.time.toKotlinDuration
 
 /**
  * DSL counterpart to [IoConfig.Builder].
@@ -47,7 +49,7 @@ public class IoConfigDslBuilder(private val wrapped: IoConfig.Builder) {
      * @see IoConfig.Builder.configPollInterval
      */
     public var configPollInterval: Duration
-            by observable(DEFAULT_CONFIG_POLL_INTERVAL) { _, _, it -> wrapped.configPollInterval(it) }
+            by observable(DEFAULT_CONFIG_POLL_INTERVAL.toKotlinDuration()) { _, _, it -> wrapped.configPollInterval(it.toJavaDuration()) }
 
     /**
      * @see IoConfig.Builder.networkResolution
@@ -78,7 +80,7 @@ public class IoConfigDslBuilder(private val wrapped: IoConfig.Builder) {
      * @see IoConfig.Builder.tcpKeepAliveTime
      */
     public var tcpKeepAliveTime: Duration
-            by observable(DEFAULT_TCP_KEEPALIVE_TIME) { _, _, it -> wrapped.tcpKeepAliveTime(it) }
+            by observable(DEFAULT_TCP_KEEPALIVE_TIME.toKotlinDuration()) { _, _, it -> wrapped.tcpKeepAliveTime(it.toJavaDuration()) }
 
     /**
      * @see IoConfig.Builder.numKvConnections
@@ -96,13 +98,17 @@ public class IoConfigDslBuilder(private val wrapped: IoConfig.Builder) {
      * @see IoConfig.Builder.idleHttpConnectionTimeout
      */
     public var idleHttpConnectionTimeout: Duration
-            by observable(DEFAULT_IDLE_HTTP_CONNECTION_TIMEOUT) { _, _, it -> wrapped.idleHttpConnectionTimeout(it) }
+            by observable(DEFAULT_IDLE_HTTP_CONNECTION_TIMEOUT.toKotlinDuration()) { _, _, it ->
+                wrapped.idleHttpConnectionTimeout(it.toJavaDuration())
+            }
 
     /**
      * @see IoConfig.Builder.configIdleRedialTimeout
      */
     public var configIdleRedialTimeout: Duration
-            by observable(DEFAULT_CONFIG_IDLE_REDIAL_TIMEOUT) { _, _, it -> wrapped.configIdleRedialTimeout(it) }
+            by observable(DEFAULT_CONFIG_IDLE_REDIAL_TIMEOUT.toKotlinDuration()) { _, _, it ->
+                wrapped.configIdleRedialTimeout(it.toJavaDuration())
+            }
 
     /**
      * Apply the given configuration to all circuit breakers.

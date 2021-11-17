@@ -28,7 +28,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.time.Duration
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 // Prevent timeouts against the Mock from interfering
 // with Gerrit verification.  Remove when mock is fixed:
@@ -80,9 +81,9 @@ private class ClusterIntegrationTest : KotlinIntegrationTest() {
     fun `can wait until ready`(): Unit = runBlocking {
         connect().use { cluster ->
             cluster
-                .waitUntilReady(Duration.ofSeconds(30))
+                .waitUntilReady(30.seconds)
                 .bucket(config().bucketname())
-                .waitUntilReady(Duration.ofSeconds(30))
+                .waitUntilReady(30.seconds)
         }
     }
 

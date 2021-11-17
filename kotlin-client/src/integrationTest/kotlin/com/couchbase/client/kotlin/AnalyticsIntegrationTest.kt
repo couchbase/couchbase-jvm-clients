@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.time.Duration
+import kotlin.time.Duration
 
 @IgnoreWhen(clusterTypes = [MOCKED], missesCapabilities = [ANALYTICS])
 internal class AnalyticsIntegrationTest : KotlinIntegrationTest() {

@@ -31,6 +31,7 @@ import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.internal.toStringUtf8
 import com.couchbase.client.kotlin.kv.Durability.Companion.clientVerified
 import com.couchbase.client.kotlin.kv.Expiry
+import com.couchbase.client.kotlin.kv.Expiry.Companion.of
 import com.couchbase.client.kotlin.kv.LookupInSpec
 import com.couchbase.client.kotlin.kv.MutateInMacro
 import com.couchbase.client.kotlin.kv.MutateInSpec
@@ -55,10 +56,11 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.time.Duration
 import java.time.Instant
 import kotlin.math.min
 import kotlin.system.measureNanoTime
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 import java.time.temporal.ChronoUnit.DAYS as ChronoDays
 import java.time.temporal.ChronoUnit.SECONDS as ChronoSeconds
 
@@ -75,7 +77,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         runBlocking {
             val bucketConfig = cluster
                 .bucket(config().bucketname())
-                .config(Duration.ofSeconds(30)) as CouchbaseBucketConfig
+                .config(30.seconds) as CouchbaseBucketConfig
 
             min(bucketConfig.nodes().size - 1, bucketConfig.numberOfReplicas())
         }
@@ -284,7 +286,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         @Test
         fun `throws DocumentNotFoundException`(): Unit = runBlocking {
             assertThrows<DocumentNotFoundException> {
-                collection.getAndLock("this document does not exist", Duration.ofSeconds(5))
+                collection.getAndLock("this document does not exist", 5.seconds)
             }
         }
 
@@ -293,13 +295,13 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
             val id = nextId()
             collection.upsert(id, "foo")
 
-            val cas = collection.getAndLock(id, Duration.ofSeconds(15)).cas
+            val cas = collection.getAndLock(id, 15.seconds).cas
             assertNotEquals(0, cas)
 
             assertThrows<TimeoutException> {
                 collection.getAndLock(
-                    id, Duration.ofSeconds(1),
-                    common = CommonOptions(timeout = Duration.ofSeconds(3)),
+                    id, 1.seconds,
+                    common = CommonOptions(timeout = 3.seconds),
                 )
             }
         }
@@ -309,7 +311,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
             val id = nextId()
             collection.upsert(id, "foo")
 
-            collection.getAndLock(id, Duration.ofSeconds(15)).cas
+            collection.getAndLock(id, 15.seconds).cas
             assertThrows<TimeoutException> { collection.upsert(id, "bar") }
         }
 
@@ -318,7 +320,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
             val id = nextId()
             collection.upsert(id, "foo")
 
-            val cas = collection.getAndLock(id, Duration.ofSeconds(15)).cas
+            val cas = collection.getAndLock(id, 15.seconds).cas
             collection.replace(id, "bar", cas = cas)
             assertEquals("bar", collection.get(id).contentAs<String>())
         }
@@ -327,7 +329,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         fun `locking changes cas`(): Unit = runBlocking {
             val id = nextId()
             val upsertCas = collection.upsert(id, "foo").cas
-            val cas = collection.getAndLock(id, Duration.ofSeconds(15)).cas
+            val cas = collection.getAndLock(id, 15.seconds).cas
             assertNotEquals(upsertCas, cas)
         }
 
@@ -336,16 +338,16 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
             val id = nextId()
             collection.upsert(id, "foo")
 
-            val lockTime = Duration.ofSeconds(3)
+            val lockTime = 3.seconds
             val lockWaitNanos = measureNanoTime {
                 collection.getAndLock(id, lockTime).cas
                 collection.getAndLock(
-                    id, Duration.ofSeconds(1),
-                    common = CommonOptions(timeout = Duration.ofSeconds(30))
+                    id, 1.seconds,
+                    common = CommonOptions(timeout = 30.seconds)
                 )
             }
 
-            assertThat(lockWaitNanos).isGreaterThanOrEqualTo(lockTime.toNanos())
+            assertThat(lockWaitNanos).isGreaterThanOrEqualTo(lockTime.inWholeNanoseconds)
         }
     }
 
@@ -356,10 +358,10 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
             val id = nextId()
             collection.upsert(id, "foo")
 
-            val lockTime = Duration.ofSeconds(25)
+            val lockTime = 25.seconds
             val cas = collection.getAndLock(id, lockTime).cas
             collection.unlock(id, cas)
-            collection.getAndLock(id, Duration.ofSeconds(1))
+            collection.getAndLock(id, 1.seconds)
         }
 
         @Test
@@ -397,7 +399,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         @Test
         fun `overrides existing expiry`(): Unit = runBlocking {
             val id = nextId()
-            collection.upsert(id, "foo", expiry = Expiry.ofMinutes(15))
+            collection.upsert(id, "foo", expiry = of(15.minutes))
 
             collection.getAndTouch(id, nearFutureExpiry).let {
                 assertEquals("foo", it.contentAs<String>())
@@ -446,7 +448,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         @Test
         fun `overrides existing expiry`(): Unit = runBlocking {
             val id = nextId()
-            collection.upsert(id, "foo", expiry = Expiry.ofMinutes(15))
+            collection.upsert(id, "foo", expiry = of(15.minutes))
             collection.touch(id, nearFutureExpiry)
             assertExpiry(nearFutureExpiry, id)
         }

@@ -52,8 +52,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.single
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.asFlow
-import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
 
 public class Bucket internal constructor(
     public val name: String,
@@ -195,12 +196,13 @@ public class Bucket internal constructor(
         services: Set<ServiceType> = emptySet(),
         desiredState: ClusterState = ClusterState.ONLINE,
     ): Bucket {
-        WaitUntilReadyHelper.waitUntilReady(core, services, timeout, desiredState, name.toOptional()).await()
+        WaitUntilReadyHelper.waitUntilReady(core, services, timeout.toJavaDuration(), desiredState, name.toOptional())
+            .await()
         return this
     }
 
     @VolatileCouchbaseApi
     public suspend fun config(timeout: Duration): BucketConfig =
         core.clusterConfig().bucketConfig(name)
-            ?: BucketConfigUtil.waitForBucketConfig(core, name, timeout).asFlow().single()
+            ?: BucketConfigUtil.waitForBucketConfig(core, name, timeout.toJavaDuration()).asFlow().single()
 }

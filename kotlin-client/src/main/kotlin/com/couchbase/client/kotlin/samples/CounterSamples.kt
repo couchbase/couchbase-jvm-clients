@@ -21,15 +21,15 @@ import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.kv.Expiry
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import java.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 
 @OptIn(VolatileCouchbaseApi::class)
 internal fun counterRateLimiting(collection: Collection) {
     // Limiting the rate of requests using an expiring counter.
 
-    val requestLimit = 2u;
-    val period = Duration.ofSeconds(3)
+    val requestLimit = 2u
+    val period = 3.seconds
     val counter = collection.counter("requests", expiry = Expiry.of(period))
 
     runBlocking {

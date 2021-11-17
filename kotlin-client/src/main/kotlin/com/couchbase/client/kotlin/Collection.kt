@@ -75,7 +75,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
-import java.time.Duration
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
+import kotlin.time.toKotlinDuration
 
 /**
  * Operations that act on a Couchbase collection.
@@ -101,10 +103,10 @@ public class Collection internal constructor(
     public val binary: BinaryCollection = BinaryCollection(this)
 
     private fun TimeoutConfig.kvTimeout(durability: Durability): Duration =
-        if (durability.isPersistent()) kvDurableTimeout() else kvTimeout()
+        (if (durability.isPersistent()) kvDurableTimeout() else kvTimeout()).toKotlinDuration()
 
-    internal fun CommonOptions.actualKvTimeout(durability: Durability): Duration =
-        timeout ?: env.timeoutConfig().kvTimeout(durability)
+    internal fun CommonOptions.actualKvTimeout(durability: Durability): java.time.Duration =
+        (timeout ?: env.timeoutConfig().kvTimeout(durability)).toJavaDuration()
 
     internal fun CommonOptions.actualRetryStrategy() = retryStrategy ?: env.retryStrategy()
     internal fun CommonOptions.actualSpan(name: String) = env.requestTracer().requestSpan(name, parentSpan)
@@ -181,7 +183,7 @@ public class Collection internal constructor(
             core.context(),
             collectionId,
             common.actualRetryStrategy(),
-            lockTime,
+            lockTime.toJavaDuration(),
             common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_LOCK),
         )
 
@@ -631,7 +633,7 @@ public class Collection internal constructor(
             timeout,
             core.context(),
             collectionId,
-            if (createAsDeleted) scope.bucket.config(timeout) else null,
+            if (createAsDeleted) scope.bucket.config(timeout.toKotlinDuration()) else null,
             common.actualRetryStrategy(),
             id,
             storeSemantics == StoreSemantics.Insert,

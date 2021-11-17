@@ -21,7 +21,8 @@ import com.couchbase.client.kotlin.kv.MutationState
 import com.couchbase.client.kotlin.query.QueryScanConsistency.Companion.consistentWith
 import com.couchbase.client.kotlin.query.QueryScanConsistency.Companion.notBounded
 import com.couchbase.client.kotlin.query.QueryScanConsistency.Companion.requestPlus
-import java.time.Duration
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
 
 /**
  * Create instances using the [requestPlus], [consistentWith], or [notBounded]
@@ -34,7 +35,7 @@ public sealed class QueryScanConsistency(
 
     internal open fun inject(queryJson: MutableMap<String, Any?>): Unit {
         wireName?.let { queryJson["scan_consistency"] = it }
-        scanWait?.let { queryJson["scan_wait"] = Golang.encodeDurationToMs(it) }
+        scanWait?.let { queryJson["scan_wait"] = Golang.encodeDurationToMs(it.toJavaDuration()) }
     }
 
     public companion object {

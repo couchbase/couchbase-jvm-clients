@@ -27,13 +27,13 @@ import com.couchbase.client.test.Services
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Timeout
-import java.time.Duration
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+import kotlin.time.Duration.Companion.seconds
 
 @Timeout(value = 10, unit = TimeUnit.MINUTES)
 internal open class KotlinIntegrationTest : ClusterAwareIntegrationTest() {
@@ -45,7 +45,7 @@ internal open class KotlinIntegrationTest : ClusterAwareIntegrationTest() {
         runBlocking {
             cluster.bucket(config().bucketname())
                 // It should not take this long, but the Jenkins box...
-                .waitUntilReady(Duration.ofSeconds(30))
+                .waitUntilReady(30.seconds)
         }
     }
 
@@ -90,7 +90,7 @@ internal open class KotlinIntegrationTest : ClusterAwareIntegrationTest() {
  * Disconnects the cluster after executing the given block.
  */
 internal inline fun <R> Cluster.use(block: (Cluster) -> R) =
-    use(block, { runBlocking { disconnect() } })
+    use(block) { runBlocking { disconnect() } }
 
 /**
  * A version of `use` that is not limited to Closeables.

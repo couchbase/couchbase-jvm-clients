@@ -27,12 +27,11 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.time.Duration
-import java.time.Duration.ofDays
 import java.time.Instant
 import java.time.temporal.ChronoUnit.DAYS
 import java.time.temporal.ChronoUnit.SECONDS
 import java.util.*
+import kotlin.time.Duration.Companion.days
 
 @IgnoreWhen(clusterTypes = [MOCKED])
 internal class ExpiryIntegrationTest : KotlinIntegrationTest() {
@@ -97,8 +96,7 @@ internal class ExpiryIntegrationTest : KotlinIntegrationTest() {
     private fun checkRelativeExpiryOfDays(days: Long): Unit = runBlocking {
         val id = UUID.randomUUID().toString()
 
-        val duration = Duration.ofDays(days)
-        collection.upsert(id, "foo", expiry = Expiry.of(duration))
+        collection.upsert(id, "foo", expiry = Expiry.of(days.days))
 
         val actualExpiry = collection.get(id, withExpiry = true).expiry as Expiry.Absolute
         assertThat(actualExpiry.instant).isBetween(

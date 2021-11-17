@@ -21,8 +21,10 @@ import com.couchbase.client.core.env.OrphanReporterConfig.Defaults.DEFAULT_EMIT_
 import com.couchbase.client.core.env.OrphanReporterConfig.Defaults.DEFAULT_ENABLED
 import com.couchbase.client.core.env.OrphanReporterConfig.Defaults.DEFAULT_QUEUE_LENGTH
 import com.couchbase.client.core.env.OrphanReporterConfig.Defaults.DEFAULT_SAMPLE_SIZE
-import java.time.Duration
 import kotlin.properties.Delegates.observable
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
+import kotlin.time.toKotlinDuration
 
 /**
  * DSL counterpart to [OrphanReporterConfig.Builder].
@@ -33,7 +35,7 @@ public class OrphanReporterConfigDslBuilder(private val wrapped: OrphanReporterC
      * @see OrphanReporterConfig.Builder.emitInterval
      */
     public var emitInterval: Duration
-            by observable(DEFAULT_EMIT_INTERVAL) { _, _, it -> wrapped.emitInterval(it) }
+            by observable(DEFAULT_EMIT_INTERVAL.toKotlinDuration()) { _, _, it -> wrapped.emitInterval(it.toJavaDuration()) }
 
     /**
      * @see OrphanReporterConfig.Builder.sampleSize
