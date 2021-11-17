@@ -20,17 +20,17 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
- * This error is raised if the operation failed due to hitting a quota-limit on the server side.
+ * This error is raised if the operation failed due to hitting a rate-limit on the server side.
  * <p>
- * Note that this quota-limit might be implicitly configured if you are using Couchbase Capella (for example when
+ * Note that this rate-limit might be implicitly configured if you are using Couchbase Capella (for example when
  * using the free tier). See the error context with the exception for further information on the exact cause and
  * check the documentation for potential remedy.
  */
 @Stability.Uncommitted
-public class QuotaLimitingFailureException extends CouchbaseException {
+public class RateLimitedException extends CouchbaseException {
 
-  public QuotaLimitingFailureException(final ErrorContext errorContext) {
-    super("Operation failed due to reaching a quota limit. See the error context for further details.", errorContext);
+  public RateLimitedException(final ErrorContext errorContext) {
+    super("Operation failed due to reaching a rate limit. See the error context for further details.", errorContext);
   }
 
 }

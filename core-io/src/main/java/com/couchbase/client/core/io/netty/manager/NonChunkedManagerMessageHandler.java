@@ -18,10 +18,9 @@ package com.couchbase.client.core.io.netty.manager;
 
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
-import com.couchbase.client.core.error.QuotaLimitingFailureException;
-import com.couchbase.client.core.error.RateLimitingFailureException;
+import com.couchbase.client.core.error.QuotaLimitedException;
+import com.couchbase.client.core.error.RateLimitedException;
 import com.couchbase.client.core.error.context.ManagerErrorContext;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.NonChunkedHttpMessageHandler;
@@ -47,9 +46,9 @@ class NonChunkedManagerMessageHandler extends NonChunkedHttpMessageHandler {
       if (content.contains("num_concurrent_requests")
         || content.contains("ingress")
         || content.contains("egress")) {
-        return new RateLimitingFailureException(errorContext);
+        return new RateLimitedException(errorContext);
       } else if (content.contains("maximum number of collections has been reached for scope")) {
-        return new QuotaLimitingFailureException(errorContext);
+        return new QuotaLimitedException(errorContext);
       }
     }
 

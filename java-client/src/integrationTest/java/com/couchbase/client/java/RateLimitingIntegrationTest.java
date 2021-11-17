@@ -21,8 +21,8 @@ import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.QuotaLimitingFailureException;
-import com.couchbase.client.core.error.RateLimitingFailureException;
+import com.couchbase.client.core.error.QuotaLimitedException;
+import com.couchbase.client.core.error.RateLimitedException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.json.Mapper;
@@ -43,7 +43,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 
@@ -108,7 +107,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       Collection collection = bucket.defaultCollection();
       bucket.waitUntilReady(Duration.ofSeconds(10));
 
-      RateLimitingFailureException ex = assertThrows(RateLimitingFailureException.class, () -> {
+      RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
         for (int i = 0; i < 30; i++) {
           collection.upsert("ratelimit", "test");
         }
@@ -137,8 +136,8 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
 
       collection.upsert("ratelimitingress", randomString(1024 * 512));
 
-      RateLimitingFailureException ex = assertThrows(
-        RateLimitingFailureException.class,
+      RateLimitedException ex = assertThrows(
+        RateLimitedException.class,
         () -> collection.upsert("ratelimitingress", randomString(1024 * 512))
       );
       assertTrue(ex.getMessage().contains("RATE_LIMITED_NETWORK_INGRESS"));
@@ -166,8 +165,8 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       collection.upsert("ratelimitegress", randomString(1024 * 512));
       collection.get("ratelimitegress");
       collection.get("ratelimitegress");
-      RateLimitingFailureException ex = assertThrows(
-        RateLimitingFailureException.class,
+      RateLimitedException ex = assertThrows(
+        RateLimitedException.class,
         () -> collection.get("ratelimitegress")
       );
       assertTrue(ex.getMessage().contains("RATE_LIMITED_NETWORK_EGRESS"));
@@ -218,7 +217,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     try {
       collection.upsert("ratelimitkvscope", randomString(512));
       assertThrows(
-        QuotaLimitingFailureException.class,
+        QuotaLimitedException.class,
         () -> collection.upsert("ratelimitkvscope", randomString(2048))
       );
     } finally {
@@ -239,7 +238,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       cluster.waitUntilReady(Duration.ofSeconds(10));
 
-      RateLimitingFailureException ex = assertThrows(RateLimitingFailureException.class, () -> {
+      RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
         for (int i = 0; i < 50; i++) {
           cluster.query("select 1 = 1");
         }
@@ -265,7 +264,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       cluster.waitUntilReady(Duration.ofSeconds(10));
 
-      RateLimitingFailureException ex = assertThrows(RateLimitingFailureException.class, () -> {
+      RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
         for (int i = 0; i < 50; i++) {
           String content = String.join("", Collections.nCopies(1024 * 1024 * 5, "a"));
           cluster.query("UPSERT INTO `" + config().bucketname() + "` (KEY,VALUE) VALUES (\"key1\", \""+content+"\")");
@@ -295,7 +294,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       String content = String.join("", Collections.nCopies(1024 * 1024, "a"));
       cluster.query("UPSERT INTO `" + config().bucketname() + "` (KEY,VALUE) VALUES (\"key1\", \""+content+"\")");
 
-      RateLimitingFailureException ex = assertThrows(RateLimitingFailureException.class, () -> {
+      RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
         for (int i = 0; i < 50; i++) {
             cluster.query("SELECT * FROM `"+ config().bucketname() +"` USE KEYS [\"key1\"]");
         }
@@ -322,7 +321,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       cluster.waitUntilReady(Duration.ofSeconds(10));
 
-      RateLimitingFailureException ex = assertThrows(RateLimitingFailureException.class, () -> Flux
+      RateLimitedException ex = assertThrows(RateLimitedException.class, () -> Flux
         .range(0, 50)
         .flatMap(i -> cluster.reactive().query("select 1=1"))
         .last()
@@ -349,7 +348,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       cluster.waitUntilReady(Duration.ofSeconds(10));
 
-      RateLimitingFailureException ex = assertThrows(RateLimitingFailureException.class, () -> Flux
+      RateLimitedException ex = assertThrows(RateLimitedException.class, () -> Flux
         .range(0, 10)
         .flatMap(i -> cluster.reactive().buckets().getAllBuckets())
         .last()
@@ -378,7 +377,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       cluster.waitUntilReady(Duration.ofSeconds(10));
 
-      RateLimitingFailureException ex = assertThrows(RateLimitingFailureException.class, () -> {
+      RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
         for (int i = 0; i < 50; i++) {
           try {
             cluster.searchQuery("ratelimits", QueryStringQuery.queryString("a"),
