@@ -18,6 +18,7 @@ package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.GenericHttpRequestErrorContext;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.msg.Request;
@@ -32,8 +33,12 @@ public class HttpStatusCodeException extends CouchbaseException {
   private final ResponseStatus couchbaseResponseStatus;
   private final String content;
 
-  public HttpStatusCodeException(HttpResponseStatus status, String content, Request<?> request) {
-    super("Unexpected HTTP status " + status, new GenericHttpRequestErrorContext(request, status.code()));
+  public HttpStatusCodeException(HttpResponseStatus status, String content, Request<?> request,
+                                 ErrorContext errorContext) {
+    super(
+      "Unexpected HTTP status " + status,
+      errorContext == null ? new GenericHttpRequestErrorContext(request, status.code()): errorContext
+    );
     this.httpStatusCode = status.code();
     this.couchbaseResponseStatus = HttpProtocol.decodeStatus(status);
     this.content = CbStrings.nullToEmpty(content);

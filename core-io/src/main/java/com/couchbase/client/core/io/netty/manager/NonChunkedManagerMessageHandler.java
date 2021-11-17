@@ -19,6 +19,7 @@ package com.couchbase.client.core.io.netty.manager;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.error.QuotaLimitingFailureException;
 import com.couchbase.client.core.error.RateLimitingFailureException;
 import com.couchbase.client.core.error.context.ManagerErrorContext;
@@ -52,7 +53,7 @@ class NonChunkedManagerMessageHandler extends NonChunkedHttpMessageHandler {
       }
     }
 
-    return new CouchbaseException("Unknown manager error: " + content, errorContext);
+    return new HttpStatusCodeException(status, content, request, errorContext);
   }
 
 }

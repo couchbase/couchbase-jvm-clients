@@ -128,7 +128,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
    * @return the exception with which the request will be failed.
    */
   protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
-    throw new HttpStatusCodeException(status, content, request);
+    throw new HttpStatusCodeException(status, content, request, null);
   }
 
   /**
