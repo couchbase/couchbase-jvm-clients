@@ -19,6 +19,7 @@ package com.couchbase.client.java.manager.bucket;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.manager.CoreBucketManager;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -126,6 +127,9 @@ public class AsyncBucketManager {
 
     if (settings.minimumDurabilityLevel() != DurabilityLevel.NONE) {
       params.put("durabilityMinLevel", settings.minimumDurabilityLevel().encodeForManagementApi());
+    }
+    if(settings.storageBackend() != null) {
+      params.put("storageBackend",settings.storageBackend().alias());
     }
 
     params.put("name", settings.name());

@@ -45,6 +45,7 @@ public class BucketSettings {
   private ConflictResolutionType conflictResolutionType = ConflictResolutionType.SEQUENCE_NUMBER;
   private EvictionPolicyType evictionPolicy = null; // null means default for the bucket type
   private DurabilityLevel minimumDurabilityLevel = DurabilityLevel.NONE;
+  private StorageBackend storageBackend = null;
   private boolean healthy = true;
 
   public static BucketSettings create(final String name) {
@@ -84,7 +85,8 @@ public class BucketSettings {
     @JsonProperty("bucketType") final BucketType bucketType,
     @JsonProperty("conflictResolutionType") final ConflictResolutionType conflictResolutionType,
     @JsonProperty("evictionPolicy") final EvictionPolicyType evictionPolicy,
-    @JsonProperty("durabilityMinLevel") final String durabilityMinLevel
+    @JsonProperty("durabilityMinLevel") final String durabilityMinLevel,
+    @JsonProperty("storageBackend") final StorageBackend storageBackend
   ) {
     this.name = name;
     this.flushEnabled = controllers.containsKey("flush");
@@ -103,6 +105,7 @@ public class BucketSettings {
     this.conflictResolutionType = conflictResolutionType;
     this.evictionPolicy = evictionPolicy;
     this.minimumDurabilityLevel = DurabilityLevel.decodeFromManagementApi(durabilityMinLevel);
+    this.storageBackend = storageBackend;
   }
 
   /**
@@ -173,6 +176,11 @@ public class BucketSettings {
 
   public ConflictResolutionType conflictResolutionType() {
     return conflictResolutionType;
+  }
+
+  @Stability.Uncommitted
+  public StorageBackend storageBackend() {
+    return storageBackend;
   }
 
   /**
@@ -274,6 +282,12 @@ public class BucketSettings {
     return this;
   }
 
+  @Stability.Uncommitted
+  public BucketSettings storageBackend(final StorageBackend storageBackend) {
+    this.storageBackend = notNull(storageBackend, "storageBackend");
+    return this;
+  }
+
   @Stability.Internal
   public boolean healthy() {
     return healthy;
@@ -293,6 +307,8 @@ public class BucketSettings {
       ", conflictResolutionType=" + conflictResolutionType +
       ", evictionPolicy=" + evictionPolicy +
       ", minimumDurabilityLevel=" + minimumDurabilityLevel +
+      ", storageBackend=" +storageBackend +
       '}';
   }
+
 }

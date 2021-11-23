@@ -192,11 +192,43 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(missesCapabilities = {Capabilities.STORAGE_BACKEND})
+  void createCouchbaseBucketWithStorageBackendCouchstore() {
+    String name = UUID.randomUUID().toString();
+    createBucket(BucketSettings.create(name)
+        .bucketType(BucketType.COUCHBASE)
+        .storageBackend(StorageBackend.COUCHSTORE));
+    BucketSettings settings = buckets.getBucket(name);
+    assertEquals(StorageBackend.COUCHSTORE, settings.storageBackend());
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = {Capabilities.STORAGE_BACKEND})
+  void createCouchbaseBucketWithStorageBackendDefault() {
+    String name = UUID.randomUUID().toString();
+    createBucket(BucketSettings.create(name)
+        .bucketType(BucketType.COUCHBASE));
+    BucketSettings settings = buckets.getBucket(name);
+    assertEquals(StorageBackend.COUCHSTORE, settings.storageBackend());
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = {Capabilities.STORAGE_BACKEND})
+  void createCouchbaseBucketWithStorageBackendMagma() {
+    String name = UUID.randomUUID().toString();
+    createBucket(BucketSettings.create(name)
+          .bucketType(BucketType.COUCHBASE)
+          .ramQuotaMB(256)
+          .storageBackend(StorageBackend.MAGMA));
+    BucketSettings settings = buckets.getBucket(name);
+    assertEquals(StorageBackend.MAGMA, settings.storageBackend());
+  }
+
+    @Test
   void shouldPickNoDurabilityLevelIfNotSpecified() {
     String name = UUID.randomUUID().toString();
     createBucket(BucketSettings.create(name)
       .bucketType(BucketType.COUCHBASE));
-
     BucketSettings settings = buckets.getBucket(name);
     assertEquals(DurabilityLevel.NONE, settings.minimumDurabilityLevel());
   }
