@@ -142,7 +142,7 @@
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
-                <version>4.3.1</version>
+                <version>${scala-maven-plugin.version}</version>
                 <configuration>
                     <args>
                         <arg>-target:jvm-1.8</arg>
@@ -175,7 +175,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.2.1</version>
+                <version>${flatten-maven-plugin.version}</version>
                 <configuration>
                     <flattenMode>oss</flattenMode>
                     <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
@@ -203,7 +203,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>${maven-source-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -220,7 +220,7 @@
                 <groupId>org.antipathy</groupId>
                 <!-- use mvn-scalafmt_2.13 for all scala.compat.version -->
                 <artifactId>mvn-scalafmt_2.13</artifactId>
-                <version>1.0.3</version>
+                <version>${mvn-scalafmt.version}</version>
                 <configuration>
                     <configLocation>${project.basedir}/../.scalafmt.conf</configLocation>
                     <!-- there are no tests for this project currently, disabling to remove a warning about no sourcess -->
@@ -240,7 +240,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>${build-helper-maven-plugin.version}</version>
                 <executions>
                     <execution>
                         <phase>generate-sources</phase>

@@ -45,6 +45,14 @@
         <scala.logback.version>1.2.7</scala.logback.version>
         <scala.collection-compat.version>2.6.0</scala.collection-compat.version>
 
+        <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
+        <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
+        <maven-javadoc-plugin.version>3.3.1</maven-javadoc-plugin.version>
+        <build-helper-maven-plugin.version>3.2.0</build-helper-maven-plugin.version>
+        <flatten-maven-plugin.version>1.2.7</flatten-maven-plugin.version>
+        <scala-maven-plugin.version>4.5.4</scala-maven-plugin.version>
+        <mvn-scalafmt.version>1.0.3</mvn-scalafmt.version>
+
         <gpg.keyname></gpg.keyname>
         <gpg.passphrase></gpg.passphrase>
     </properties>

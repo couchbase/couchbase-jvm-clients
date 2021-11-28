@@ -65,7 +65,7 @@
                 <groupId>org.antipathy</groupId>
                 <!-- use mvn-scalafmt_2.13 for all scala.compat.version -->
                 <artifactId>mvn-scalafmt_2.13</artifactId>
-                <version>1.0.3</version>
+                <version>${mvn-scalafmt.version}</version>
                 <configuration>
                     <configLocation>${project.basedir}/../.scalafmt.conf</configLocation>
                     <testSourceDirectories>
