@@ -165,7 +165,7 @@ pipeline {
 
                     dir('couchbase-jvm-clients') {
                         shWithEcho("make deps-only")
-                        shWithEcho("mvn -Dmaven.test.skip --batch-mode -Dscala.compat.version=2.13 -Dscala.compat.library.version=2.13.1 clean compile")
+                        shWithEcho("mvn -Dmaven.test.skip --batch-mode -Dscala.compat.version=2.13 -Dscala.compat.library.version=2.13.7 clean compile")
                     }
                 }
             }
