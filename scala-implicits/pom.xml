@@ -85,6 +85,31 @@
             <optional>true</optional>
         </dependency>
 
+        <dependency>
+            <groupId>com.lihaoyi</groupId>
+            <artifactId>upickle_${scala.compat.version}</artifactId>
+            <version>${scala.upickle.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.circe</groupId>
+            <artifactId>circe-generic_${scala.compat.version}</artifactId>
+            <version>${scala.circe.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.circe</groupId>
+            <artifactId>circe-parser_${scala.compat.version}</artifactId>
+            <version>${scala.circe.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.typesafe.play</groupId>
+            <artifactId>play-json_${scala.compat.version}</artifactId>
+            <version>${scala.play-json.version}</version>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Test Dependencies -->
         <dependency>
             <groupId>com.couchbase.client</groupId>
@@ -102,79 +127,11 @@
                     <value>2.11</value>
                 </property>
             </activation>
-            <dependencies>
-                <dependency>
-                    <groupId>com.lihaoyi</groupId>
-                    <artifactId>upickle_${scala.compat.version}</artifactId>
-                    <version>${scala.upickle.version}</version>
-                    <optional>true</optional>
-                </dependency>
-                <dependency>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-core_${scala.compat.version}</artifactId>
-                    <version>${scala.circe.version}</version>
-                    <optional>true</optional>
-                </dependency>
-                <dependency>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-generic_${scala.compat.version}</artifactId>
-                    <version>${scala.circe.version}</version>
-                    <optional>true</optional>
-                </dependency>
-                <dependency>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-parser_${scala.compat.version}</artifactId>
-                    <version>${scala.circe.version}</version>
-                    <optional>true</optional>
-                </dependency>
-                <dependency>
-                    <groupId>com.typesafe.play</groupId>
-                    <artifactId>play-json_${scala.compat.version}</artifactId>
-                    <version>${scala.play-json.version}</version>
-                    <optional>true</optional>
-                </dependency>
-            </dependencies>
-        </profile>
-        <profile>
-            <id>scala_NOT_2.11</id>
-            <activation>
-                <property>
-                    <name>scala.compat.version</name>
-                    <value>!2.11</value>
-                </property>
-            </activation>
-            <dependencies>
-                <dependency>
-                    <groupId>com.lihaoyi</groupId>
-                    <artifactId>upickle_${scala.compat.version}</artifactId>
-                    <version>${scala.upickle.version}</version>
-                    <optional>true</optional>
-                </dependency>
-                <dependency>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-core_${scala.compat.version}</artifactId>
-                    <version>${scala.circe.version}</version>
-                    <optional>true</optional>
-                </dependency>
-                <dependency>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-generic_${scala.compat.version}</artifactId>
-                    <version>${scala.circe.version}</version>
-                    <optional>true</optional>
-                </dependency>
-                <dependency>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-parser_${scala.compat.version}</artifactId>
-                    <version>${scala.circe.version}</version>
-                    <optional>true</optional>
-                </dependency>
-                <dependency>
-                    <groupId>com.typesafe.play</groupId>
-                    <artifactId>play-json_${scala.compat.version}</artifactId>
-                    <version>${scala.play-json.version}</version>
-                    <optional>true</optional>
-                </dependency>
-            </dependencies>
+            <properties>
+                <scala.circe.version>0.11.2</scala.circe.version>
+                <scala.play-json.version>2.7.4</scala.play-json.version>
+                <scala.jawn.version>0.14.3</scala.jawn.version>
+            </properties>
         </profile>
     </profiles>
 
