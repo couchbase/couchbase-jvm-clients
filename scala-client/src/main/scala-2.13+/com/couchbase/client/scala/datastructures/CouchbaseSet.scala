@@ -23,7 +23,6 @@ import com.couchbase.client.scala.json.JsonArraySafe
 import com.couchbase.client.scala.kv._
 
 import scala.collection.mutable
-import scala.reflect.runtime.universe._
 import scala.util.{Failure, Success}
 
 /** Presents a Scala Set interface on top of a mutable persistent data structure, in the form of a document stored
@@ -33,7 +32,7 @@ class CouchbaseSet[T](
     id: String,
     collection: Collection,
     options: Option[CouchbaseCollectionOptions] = None
-)(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: WeakTypeTag[T])
+)(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T])
     extends mutable.AbstractSet[T] {
 
   private val opts: CouchbaseCollectionOptions = options match {

@@ -17,7 +17,7 @@ package com.couchbase.client.scala.codec
 
 import com.couchbase.client.core.msg.kv.CodecFlags
 
-import scala.reflect.runtime.universe._
+import scala.reflect.ClassTag
 import scala.util.{Failure, Try}
 
 class JsonTranscoder() extends TranscoderWithSerializer {
@@ -40,9 +40,9 @@ class JsonTranscoder() extends TranscoderWithSerializer {
   }
 
   override def decode[T](input: Array[Byte], flags: Int, serializer: JsonDeserializer[T])(
-      implicit tag: WeakTypeTag[T]
+      implicit tag: ClassTag[T]
   ): Try[T] = {
-    if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[Array[Byte]])) {
+    if (tag.runtimeClass.isAssignableFrom(classOf[Array[Byte]])) {
       Failure(
         new IllegalArgumentException(
           "Array[Byte] input is not supported for the JsonTranscoder!. " +

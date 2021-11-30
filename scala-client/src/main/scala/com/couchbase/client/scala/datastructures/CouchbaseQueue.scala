@@ -26,7 +26,7 @@ import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer, JsonSeri
 import com.couchbase.client.scala.kv._
 
 import scala.util.{Failure, Success}
-import scala.reflect.runtime.universe._
+import scala.reflect.ClassTag
 
 /** Presents a Scala Queue interface on top of a mutable persistent data structure, in the form of a document stored
   * on the cluster.
@@ -35,7 +35,7 @@ class CouchbaseQueue[T](
     id: String,
     collection: Collection,
     options: Option[CouchbaseCollectionOptions] = None
-)(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: WeakTypeTag[T])
+)(implicit decode: JsonDeserializer[T], encode: JsonSerializer[T], tag: ClassTag[T])
     extends CouchbaseBuffer(id, collection, options) {
 
   private val lookupInOptions = LookupInOptions()

@@ -15,8 +15,7 @@
  */
 package com.couchbase.client.scala.codec
 
-import scala.language.experimental.macros
-import scala.reflect.runtime.universe._
+import scala.reflect.ClassTag
 import scala.util.Try
 
 case class EncodedValue(encoded: Array[Byte], flags: Int)
@@ -26,13 +25,13 @@ sealed trait Transcoder extends Serializable
 trait TranscoderWithoutSerializer extends Transcoder {
   def encode[T](value: T): Try[EncodedValue]
 
-  def decode[T](value: Array[Byte], flags: Int)(implicit tag: WeakTypeTag[T]): Try[T]
+  def decode[T](value: Array[Byte], flags: Int)(implicit tag: ClassTag[T]): Try[T]
 }
 
 trait TranscoderWithSerializer extends Transcoder {
   def encode[A](value: A, serializer: JsonSerializer[A]): Try[EncodedValue]
 
   def decode[A](value: Array[Byte], flags: Int, serializer: JsonDeserializer[A])(
-      implicit tag: WeakTypeTag[A]
+      implicit tag: ClassTag[A]
   ): Try[A]
 }

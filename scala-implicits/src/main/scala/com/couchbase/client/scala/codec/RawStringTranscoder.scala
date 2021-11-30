@@ -19,7 +19,7 @@ import java.nio.charset.StandardCharsets
 import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.core.msg.kv.CodecFlags
 
-import scala.reflect.runtime.universe
+import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
 class RawStringTranscoder extends TranscoderWithoutSerializer {
@@ -35,9 +35,9 @@ class RawStringTranscoder extends TranscoderWithoutSerializer {
   }
 
   override def decode[T](value: Array[Byte], flags: Int)(
-      implicit tag: universe.WeakTypeTag[T]
+      implicit tag: ClassTag[T]
   ): Try[T] = {
-    if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[String])) {
+    if (tag.runtimeClass.isAssignableFrom(classOf[String])) {
       Success(new String(value, StandardCharsets.UTF_8).asInstanceOf[T])
     } else Failure(new DecodingFailureException("RawStringTranscoder can only decode into String!"))
   }

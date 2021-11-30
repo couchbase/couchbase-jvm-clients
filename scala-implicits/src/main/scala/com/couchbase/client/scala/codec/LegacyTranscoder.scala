@@ -19,7 +19,7 @@ import java.nio.charset.StandardCharsets
 
 import com.couchbase.client.core.msg.kv.CodecFlags
 
-import scala.reflect.runtime.universe._
+import scala.reflect.ClassTag
 import scala.util.{Success, Try}
 
 class LegacyTranscoder() extends TranscoderWithSerializer {
@@ -36,11 +36,11 @@ class LegacyTranscoder() extends TranscoderWithSerializer {
   }
 
   override def decode[T](input: Array[Byte], flags: Int, serializer: JsonDeserializer[T])(
-      implicit tag: WeakTypeTag[T]
+      implicit tag: ClassTag[T]
   ): Try[T] = {
-    if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[Array[Byte]])) {
+    if (tag.runtimeClass.isAssignableFrom(classOf[Array[Byte]])) {
       Success(input.asInstanceOf[T])
-    } else if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[String])) {
+    } else if (tag.runtimeClass.isAssignableFrom(classOf[String])) {
       Success(new String(input, StandardCharsets.UTF_8).asInstanceOf[T])
     } else {
       serializer.deserialize(input)

@@ -25,7 +25,7 @@ import com.couchbase.client.scala.util.TimeoutUtil
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.reflect.runtime.universe._
+import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 import scala.util.{Failure, Try}
 
@@ -780,7 +780,7 @@ class Collection(
   def buffer[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
       implicit decode: JsonDeserializer[T],
       encode: JsonSerializer[T],
-      tag: WeakTypeTag[T]
+      tag: ClassTag[T]
   ): CouchbaseBuffer[T] = {
     new CouchbaseBuffer[T](id, this)
   }
@@ -792,8 +792,7 @@ class Collection(
     */
   def set[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
       implicit decode: JsonDeserializer[T],
-      encode: JsonSerializer[T],
-      tag: WeakTypeTag[T]
+      encode: JsonSerializer[T]
   ): CouchbaseSet[T] = {
     new CouchbaseSet[T](id, this)
   }
@@ -806,7 +805,7 @@ class Collection(
   def map[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
       implicit decode: JsonDeserializer[T],
       encode: JsonSerializer[T],
-      tag: WeakTypeTag[T]
+      tag: ClassTag[T]
   ): CouchbaseMap[T] = {
     new CouchbaseMap[T](id, this)
   }
@@ -819,7 +818,7 @@ class Collection(
   def queue[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
       implicit decode: JsonDeserializer[T],
       encode: JsonSerializer[T],
-      tag: WeakTypeTag[T]
+      tag: ClassTag[T]
   ): CouchbaseQueue[T] = {
     new CouchbaseQueue[T](id, this)
   }

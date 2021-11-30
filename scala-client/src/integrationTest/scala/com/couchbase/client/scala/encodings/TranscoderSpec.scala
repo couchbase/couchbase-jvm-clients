@@ -26,7 +26,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
 import scala.concurrent.duration._
-import scala.reflect.runtime.universe._
+import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
 object TranscoderSpec {
@@ -36,7 +36,7 @@ object TranscoderSpec {
     }
 
     def decode[A](value: Array[Byte], flags: Int, serializer: JsonDeserializer[A])(
-        implicit tag: WeakTypeTag[A]
+        implicit tag: ClassTag[A]
     ): Try[A] = JsonTranscoder.Instance.decode(value, flags, serializer)
   }
 }

@@ -18,7 +18,7 @@ package com.couchbase.client.scala.codec
 import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.core.msg.kv.CodecFlags
 
-import scala.reflect.runtime.universe
+import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
 class RawBinaryTranscoder extends TranscoderWithoutSerializer {
@@ -33,9 +33,9 @@ class RawBinaryTranscoder extends TranscoderWithoutSerializer {
   }
 
   override def decode[A](value: Array[Byte], flags: Int)(
-      implicit tag: universe.WeakTypeTag[A]
+      implicit tag: ClassTag[A]
   ): Try[A] = {
-    if (tag.mirror.runtimeClass(tag.tpe).isAssignableFrom(classOf[Array[Byte]])) {
+    if (tag.runtimeClass.isAssignableFrom(classOf[Array[Byte]])) {
       Success(value.asInstanceOf[A])
     } else
       Failure(new DecodingFailureException("RawBinaryTranscoder can only decode into Array[Byte]!"))

@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.json.JsonObject
 
-import scala.reflect.runtime.universe._
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
@@ -72,7 +71,6 @@ case class GetResult(
     */
   def contentAs[T](
       implicit deserializer: JsonDeserializer[T],
-      tt: WeakTypeTag[T],
       tag: ClassTag[T]
   ): Try[T] = {
     // Both WeakTypeTag and ClassTag are used, WeakTypeTag can be removed if find a way to do tag.unapply(obj) below with
