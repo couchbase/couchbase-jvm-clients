@@ -150,7 +150,7 @@ class CouchbaseMap[T](
     }
   }
 
-  private def retryIfDocDoesNotExist[_](f: () => Try[_]): Unit = {
+  private def retryIfDocDoesNotExist(f: () => Try[_]): Unit = {
     val result: Try[_] = f()
 
     result match {
@@ -167,7 +167,7 @@ class CouchbaseMap[T](
     collection.insert(id, JsonObjectSafe.create).get
   }
 
-  override def size(): Int = {
+  override def size: Int = {
     val op = collection.lookupIn(
       id,
       Seq(LookupInSpec.count("")),

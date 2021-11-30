@@ -123,7 +123,7 @@ class CouchbaseSet[T](
       .get
   }
 
-  override def size(): Int = {
+  override def size: Int = {
     val op = collection.lookupIn(
       id,
       Seq(LookupInSpec.count("")),

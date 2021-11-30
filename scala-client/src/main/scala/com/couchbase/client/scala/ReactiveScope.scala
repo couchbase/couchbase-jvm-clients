@@ -109,7 +109,7 @@ class ReactiveScope(async: AsyncScope, bucketName: String) {
       Some(name)
     ) match {
       case Success(request) => async.analyticsHandler.queryReactive(request)
-      case Failure(err)     => SMono.raiseError(err)
+      case Failure(err)     => SMono.error(err)
     }
   }
 }

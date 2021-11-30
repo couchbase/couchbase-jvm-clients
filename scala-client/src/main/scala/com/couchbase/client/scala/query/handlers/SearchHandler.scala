@@ -75,11 +75,11 @@ private[scala] class SearchHandler(hp: HandlerBasicParams) {
     } else {
       val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.searchTimeout)
 
-      val params = options.export(indexName, query, timeout)
+      val params = options.`export`(indexName, query, timeout)
 
       val queryBytes = params.toString.getBytes(CharsetUtil.UTF_8)
 
-      val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
+      val retryStrategy     = options.retryStrategy.getOrElse(environment.retryStrategy)
 
       Try(
         new SearchRequest(

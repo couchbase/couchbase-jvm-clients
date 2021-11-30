@@ -136,7 +136,7 @@ class ReactiveBucket private[scala] (val async: AsyncBucket) {
   private def viewQuery(req: Try[ViewRequest]): SMono[ReactiveViewResult] = {
     req match {
       case Failure(err) =>
-        SMono.raiseError(err)
+        SMono.error(err)
 
       case Success(request) =>
         SMono.defer(() => {

@@ -229,7 +229,7 @@ case class SearchOptions(
 
   /** Exports the whole query as a `JsonObject`.
     */
-  private[scala] def export(
+  private[scala] def `export`(
       indexName: String,
       query: SearchQuery,
       timeout: Duration

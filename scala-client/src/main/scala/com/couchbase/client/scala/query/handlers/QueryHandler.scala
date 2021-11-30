@@ -55,7 +55,7 @@ import scala.compat.java8.FutureConverters._
   * cluster state.
   */
 private[scala] case class QueryCacheEntry(name: String, fullPlan: Boolean, value: Option[String]) {
-  def export = {
+  def `export` = {
     val result = JsonObject.create
     result.put("prepared", name)
     if (fullPlan) value.foreach(plan => result.put("encoded_plan", plan))
@@ -263,7 +263,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
         .flatMap((qr: QueryResponse) => {
           val preparedName = qr.header().prepared()
           if (!preparedName.isPresent) {
-            SMono.raiseError(
+            SMono.error(
               new CouchbaseException("No prepared name present but must be, this is a query bug!")
             )
           } else {
@@ -378,7 +378,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
       original: QueryRequest,
       originalOptions: QueryOptions
   ): QueryRequest = {
-    val query = cacheEntry.export
+    val query = cacheEntry.`export`
 
     query.put("timeout", encodeDurationToMs(original.timeout))
 
@@ -430,7 +430,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
   ): SMono[ReactiveQueryResult] = {
     request(statement, options, environment, bucket, scope) match {
       case Success(req) => queryReactive(req, options)
-      case Failure(err) => SMono.raiseError(err)
+      case Failure(err) => SMono.error(err)
     }
   }
 
@@ -496,11 +496,11 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
                   .delay(cappedDuration, env.scheduler)
                   .flatMap(l => maybePrepareAndExecute(req, opts))
 
-              case _ => SMono.raiseError(t)
+              case _ => SMono.error(t)
             }
           })
 
-      case _ => SMono.raiseError(err)
+      case _ => SMono.error(err)
     }
   }
 }

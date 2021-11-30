@@ -103,7 +103,7 @@ class CouchbaseMapSpec extends ScalaIntegrationTest {
     l += "key1" -> 6
 
     assert(l("key1") == 6)
-    assert(l.size() == 1)
+    assert(l.size == 1)
   }
   @Test
   def remove(): Unit = {

@@ -150,7 +150,7 @@ class CouchbaseBuffer[T](
     }
   }
 
-  private def retryIfDocDoesNotExist[_](f: () => Try[_]): Unit = {
+  private def retryIfDocDoesNotExist(f: () => Try[_]): Unit = {
     val result: Try[_] = f()
 
     result match {

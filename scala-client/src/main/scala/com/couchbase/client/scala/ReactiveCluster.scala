@@ -153,7 +153,7 @@ class ReactiveCluster(val async: AsyncCluster) {
   ): SMono[ReactiveAnalyticsResult] = {
     async.analyticsHandler.request(statement, options, async.core, async.env, None, None) match {
       case Success(request) => async.analyticsHandler.queryReactive(request)
-      case Failure(err)     => SMono.raiseError(err)
+      case Failure(err)     => SMono.error(err)
     }
   }
 
@@ -228,7 +228,7 @@ class ReactiveCluster(val async: AsyncCluster) {
         })
 
       case Failure(err) =>
-        SMono.raiseError(err)
+        SMono.error(err)
     }
   }
 
