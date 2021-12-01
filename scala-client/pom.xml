@@ -61,7 +61,7 @@
         <dependency>
             <groupId>org.scalacheck</groupId>
             <artifactId>scalacheck_${scala.compat.version}</artifactId>
-            <version>1.14.0</version>
+            <version>1.15.4</version>
             <scope>test</scope>
         </dependency>
 
@@ -131,20 +131,6 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${scala.logback.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-core</artifactId>
-            <version>${scala.logback.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.30</version>
             <scope>test</scope>
         </dependency>
 

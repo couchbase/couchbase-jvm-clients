@@ -42,7 +42,7 @@
         <scala.json4s.version>3.6.11</scala.json4s.version>
         <scala.jawn.version>1.2.0</scala.jawn.version>
         <scala.upickle.version>1.4.2</scala.upickle.version>
-        <scala.logback.version>1.2.6</scala.logback.version>
+        <scala.logback.version>1.2.7</scala.logback.version>
 
         <gpg.keyname></gpg.keyname>
         <gpg.passphrase></gpg.passphrase>
