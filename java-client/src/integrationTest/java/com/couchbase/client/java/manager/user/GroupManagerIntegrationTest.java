@@ -46,7 +46,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
-@IgnoreWhen(clusterTypes =ClusterType.MOCKED, missesCapabilities = {Capabilities.USER_GROUPS, Capabilities.ENTERPRISE_EDITION})
+@IgnoreWhen(
+  clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES },
+  missesCapabilities = {Capabilities.USER_GROUPS, Capabilities.ENTERPRISE_EDITION}
+)
 class GroupManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

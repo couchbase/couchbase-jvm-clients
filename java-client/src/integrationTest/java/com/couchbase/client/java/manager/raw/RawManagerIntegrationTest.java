@@ -23,6 +23,7 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.junit.jupiter.api.AfterAll;
@@ -70,6 +71,7 @@ class RawManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void callsNonExistentUri() {
     RawManagerRequest request = RawManagerRequest.get(ServiceType.MANAGER, "/poolsDoesNotExist");
     RawManagerResponse response = RawManager.call(cluster, request).block();

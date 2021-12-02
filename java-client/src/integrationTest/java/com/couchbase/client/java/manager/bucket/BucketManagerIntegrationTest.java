@@ -57,7 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Verifies the functionality of the bucket manager.
  */
-@IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+@IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES })
 class BucketManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

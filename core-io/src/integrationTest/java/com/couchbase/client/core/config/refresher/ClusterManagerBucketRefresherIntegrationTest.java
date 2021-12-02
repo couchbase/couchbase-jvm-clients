@@ -20,6 +20,8 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.util.CoreIntegrationTest;
+import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +52,7 @@ class ClusterManagerBucketRefresherIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void streamsNewConfigurations() {
     Core core = Core.create(env, authenticator(), seedNodes());
 

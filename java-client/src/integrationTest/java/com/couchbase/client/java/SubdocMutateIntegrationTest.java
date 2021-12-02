@@ -396,6 +396,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
+    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void removeXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", "bar"),
                 Arrays.asList(MutateInSpec.remove("x.foo").xattr()));
@@ -415,6 +416,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
+    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void replaceStringXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", "bar"),
                 Arrays.asList(MutateInSpec.replace("x.foo", "bar2").xattr()));
@@ -485,6 +487,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
+    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void xattrOpsAreReordered() {
       JsonObject content = JsonObject.create();
       String docId = prepareXattr(content);
@@ -506,6 +509,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
 
     @Test
+    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void insertExpandMacroXattrDoNotFlag() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
                 Arrays.asList(MutateInSpec.insert("x.foo", "${Mutation.CAS}").xattr()));
@@ -529,7 +533,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES})
     void insertExpandMacroSEQ_NOXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
                 Arrays.asList(MutateInSpec.insert("x.foo", MutateInMacro.SEQ_NO).xattr()));
@@ -545,6 +549,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
+    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void insertXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
                 Arrays.asList(MutateInSpec.insert("x.foo.baz", "bar2").xattr().createPath()));
@@ -602,6 +607,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
 
     @Test
+    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void counterAddXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
                 Arrays.asList(MutateInSpec.increment("x.foo", 5).xattr().createPath()));
@@ -609,6 +615,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
+    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void counterMinusXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
                 Arrays.asList(MutateInSpec.decrement("x.foo", 3).xattr().createPath()));
@@ -644,6 +651,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
+    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void arrayAppendCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
                 Arrays.asList(MutateInSpec.arrayAppend("foo", Arrays.asList("world")).createPath()));
@@ -651,6 +659,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
+    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void arrayPrependCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
                 Arrays.asList(MutateInSpec.arrayPrepend("foo", Arrays.asList("world")).createPath()));
@@ -674,6 +683,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
 
     @Test
+    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void counterAddCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
                 Arrays.asList(MutateInSpec.increment("foo", 5).createPath()));
@@ -681,6 +691,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
+    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void counterMinusCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
                 Arrays.asList(MutateInSpec.decrement("foo", 3).createPath()));
@@ -689,7 +700,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
 
     @Test
-    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES})
     void expiration() {
         JsonObject content = JsonObject.create().put("hello", "world");
         String docId = prepare(content);
@@ -747,6 +758,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
 
     @Test
+    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void twoCommandsOneFails() {
         JsonObject content = JsonObject.create()
           .put("foo1", "bar_orig_1")
@@ -763,7 +775,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         assertEquals("bar_orig_1", updated.getString("foo1"));
     }
 
-    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES})
     @Test
     public void multipleXattrKeysShouldFail() {
         String docId = docId();
@@ -781,7 +793,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(missesCapabilities = Capabilities.CREATE_AS_DELETED)
+    @IgnoreWhen(missesCapabilities = Capabilities.CREATE_AS_DELETED, clusterTypes = ClusterType.CAVES)
     void createAsDeletedCanAccess() {
       String docId = docId();
 
@@ -806,7 +818,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(missesCapabilities = Capabilities.CREATE_AS_DELETED)
+    @IgnoreWhen(missesCapabilities = Capabilities.CREATE_AS_DELETED, clusterTypes = ClusterType.CAVES)
     void createAsDeletedCanInsertOnTop() {
       String docId = docId();
 

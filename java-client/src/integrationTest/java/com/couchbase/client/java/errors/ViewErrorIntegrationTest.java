@@ -23,6 +23,8 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.manager.view.DesignDocument;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.java.view.DesignDocumentNamespace;
+import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -60,6 +62,7 @@ class ViewErrorIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void verifyViewNotFound() {
     assertThrows(ViewNotFoundException.class, () -> bucket.viewQuery(designDocName, "bar"));
     assertThrows(ViewNotFoundException.class, () -> bucket.viewQuery("foo", "bar"));

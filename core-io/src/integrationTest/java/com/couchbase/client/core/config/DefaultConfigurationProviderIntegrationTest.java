@@ -28,6 +28,8 @@ import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.BucketNotFoundDuringLoadException;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.util.CoreIntegrationTest;
+import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
 import org.junit.jupiter.api.AfterEach;
@@ -202,6 +204,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
    * bucket attempts.
    */
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void retriesOnBucketNotFoundDuringLoadException() {
     TestNodeConfig cfg = config().firstNodeWith(Services.KV).get();
     Set<SeedNode> seeds = new HashSet<>(Collections.singletonList(SeedNode.create(

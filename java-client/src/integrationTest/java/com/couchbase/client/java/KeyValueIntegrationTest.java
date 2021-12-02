@@ -516,7 +516,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   private static final Instant NEAR_FUTURE_INSTANT = Instant.now().plus(5, DAYS);
 
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY)
+  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY, clusterTypes = ClusterType.CAVES)
   void upsertCanPreserveExpiry() {
     String id = UUID.randomUUID().toString();
     collection.upsert(id, "foo", upsertOptions()
@@ -541,7 +541,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY)
+  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY, clusterTypes = ClusterType.CAVES)
   void replaceCanPreserveExpiry() {
     String id = UUID.randomUUID().toString();
     collection.upsert(id, "foo", upsertOptions().expiry(NEAR_FUTURE_INSTANT));
@@ -554,7 +554,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY)
+  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY, clusterTypes = ClusterType.CAVES)
   void subdocCanPreserveExpiry() {
     String id = UUID.randomUUID().toString();
 

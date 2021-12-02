@@ -20,6 +20,8 @@ import com.couchbase.client.java.batch.BatchHelper;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Verifies the functionality of the {@link BatchHelper}.
  */
+@IgnoreWhen(clusterTypes = ClusterType.CAVES)
 public class BatchHelperIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;

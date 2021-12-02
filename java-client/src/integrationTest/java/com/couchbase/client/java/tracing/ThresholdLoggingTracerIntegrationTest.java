@@ -28,6 +28,7 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
+import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -96,7 +97,7 @@ public class ThresholdLoggingTracerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.QUERY)
+  @IgnoreWhen(missesCapabilities = Capabilities.QUERY, clusterTypes = ClusterType.CAVES)
   void logsAboveQueryThreshold() {
     cluster.query("select 1=1");
     assertInEvent("query");

@@ -30,6 +30,7 @@ import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
+import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -146,12 +147,14 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void insertTombstone() {
     String id = "test";
     insertTombstoneWithTxnXattr(coll, id, JsonObject.create());
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void getRegularTombstone() {
     String id = docId();
     coll.upsert(id, JsonObject.create());
@@ -169,6 +172,7 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void insertTombstoneOverTombstoneWithTxnXattr() {
     String id = docId();
     insertTombstoneWithTxnXattr(coll, id, JsonObject.create());
@@ -177,6 +181,7 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void insertTombstoneOverTombstoneWithoutTxnXattr() {
     String id = docId();
     upsertEmptyTombstone(coll, id);
@@ -185,6 +190,7 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void insertTombstoneOverExistingDoc() {
     String id = docId();
     createRegularDoc(coll, id, JsonObject.create());
@@ -193,6 +199,7 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void replaceTombstoneWithTxnXattrWithCAS() {
     String id = docId();
     insertTombstoneWithTxnXattr(coll, id, JsonObject.create());
@@ -209,6 +216,7 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void replaceTombstoneWithTxnXattrWithCASWhichHasChanged() {
     String id = docId();
     insertTombstoneWithTxnXattr(coll, id, JsonObject.create());
@@ -257,6 +265,7 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void upsertTombstone() {
     String id = docId();
     upsertTombstoneWithTxnXattr(coll, id, JsonObject.create());

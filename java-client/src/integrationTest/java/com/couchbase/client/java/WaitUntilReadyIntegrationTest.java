@@ -87,7 +87,7 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES })
   void handlesCreatingBucketDuringWaitUntilReady()  {
     ExecutorService es = Executors.newFixedThreadPool(1);
     String bucketName = UUID.randomUUID().toString();
@@ -124,7 +124,7 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
   }
 
   @RepeatedTest(3) // first time often succeeds regardless
-  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES })
   void waitsForNewlyCreatedBucket() {
     String bucketName = UUID.randomUUID().toString();
     Cluster cluster = Cluster.connect(connectionString(), config().adminUsername(), config().adminPassword());

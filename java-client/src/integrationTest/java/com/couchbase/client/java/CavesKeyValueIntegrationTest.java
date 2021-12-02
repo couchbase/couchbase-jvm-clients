@@ -30,7 +30,7 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@IgnoreWhen(clusterTypes = { ClusterType.CONTAINERIZED, ClusterType.MOCKED, ClusterType.UNMANAGED})
+@IgnoreWhen(clusterTypes = { ClusterType.CONTAINERIZED, ClusterType.MOCKED, ClusterType.UNMANAGED, ClusterType.CAVES})
 class CavesKeyValueIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;

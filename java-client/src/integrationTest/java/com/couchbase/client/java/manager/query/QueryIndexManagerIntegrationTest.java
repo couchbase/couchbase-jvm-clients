@@ -46,6 +46,7 @@ import static com.couchbase.client.java.manager.query.DropQueryIndexOptions.drop
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
 import static com.couchbase.client.java.manager.query.WatchQueryIndexesOptions.watchQueryIndexesOptions;
 import static com.couchbase.client.test.Capabilities.QUERY;
+import static com.couchbase.client.test.ClusterType.CAVES;
 import static com.couchbase.client.test.ClusterType.MOCKED;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -58,7 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 // Disabling against 5.5 as there appear to be several query bugs (SCBC-246, SCBC-251).  Hardcoding 5.5.6 as that's
 // the current 5.5-release and it's unlikely to change.
-@IgnoreWhen(clusterTypes = MOCKED, missesCapabilities = QUERY, clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER)
+@IgnoreWhen(clusterTypes = {CAVES, MOCKED}, missesCapabilities = QUERY, clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER)
 public class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
   public static final String DISABLE_QUERY_TESTS_FOR_CLUSTER = "5.5.6";
 

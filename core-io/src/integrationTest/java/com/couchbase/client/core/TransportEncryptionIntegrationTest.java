@@ -61,7 +61,7 @@ import static org.mockito.Mockito.mock;
  * <p>Note that since the mock does not support encrypted connections, they are ignored
  * on it.</p>
  */
-@IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
+@IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES })
 class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
 
   /**

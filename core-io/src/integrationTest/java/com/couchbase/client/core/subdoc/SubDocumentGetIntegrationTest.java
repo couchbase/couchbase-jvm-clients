@@ -150,7 +150,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
   /**
    * The mock does not return it as multi path failure like the server does...
    */
-  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES})
   @Test
   void notJson() {
     singleGetOpCheckExpectedFailure("I am not json!", "no_exist", DocumentNotJsonException.class);
@@ -168,6 +168,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void pathMismatch() {
     singleGetOpCheckExpectedFailure("{\"foo\":\"bar\"}", "foo.bar[0].baz", PathMismatchException.class);
   }
@@ -186,6 +187,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void pathNotFound() {
     singleGetOpCheckExpectedFailure("{\"foo\":\"bar\"}", "no_exist", PathNotFoundException.class);
   }
