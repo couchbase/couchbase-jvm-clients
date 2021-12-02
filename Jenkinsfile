@@ -19,6 +19,7 @@ def OPENJDK = "openjdk"
 def OPENJDK_8 = "8u202-b08"
 def OPENJDK_11 = "11.0.2+7"
 def OPENJDK_11_M1 = "11.0.11+9"
+def OPENJDK_17 = "17.0.1+12"
 def CORRETTO = "corretto"         // Amazon JDK
 def CORRETTO_8 = "8.232.09.1"     // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-8-ug/doc-history.html
 def CORRETTO_11 = "11.0.5.10.1"   // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-11-ug/doc-history.html
@@ -107,6 +108,26 @@ pipeline {
             }
         }
 
+        stage('build OpenJDK 17') {
+            agent { label DEFAULT_PLATFORM }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
+                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}/bin:$PATH"
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_17)
+
+                    dir('couchbase-jvm-clients') {
+                        shWithEcho("make deps-only")
+                        shWithEcho("mvn install -Dmaven.test.skip --batch-mode")
+                    }
+                }
+            }
+        }
+
         // Scala 2.11 & 2.13 aren't officially distributed or supported, but we have community depending on it so check
         // they at least compile
         stage('build Scala 2.11') {
@@ -185,6 +206,33 @@ pipeline {
         }
 
         // JDK combination tests
+
+        stage('testing (Linux, cbdyncluster 7.0-stable, openjdk 17)') {
+            agent { label 'sdkqe-centos7' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
+                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_17)
+                    dir('couchbase-jvm-clients') {
+                        script { testAgainstServer("7.0-stable", QUICK_TEST_MODE) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
 
         stage('testing (Linux, cbdyncluster 6.5, Amazon Corretto 8)') {
             agent { label 'sdkqe-centos7' }
