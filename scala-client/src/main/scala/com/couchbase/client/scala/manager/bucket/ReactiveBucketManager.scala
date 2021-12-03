@@ -194,6 +194,11 @@ class ReactiveBucketManager(core: Core) {
         case _ =>
           settings.replicaIndexes.foreach(v => params.add("replicaIndex", if (v) 1 else 0))
       }
+      settings.storageBackend match {
+        case Some(StorageBackend.Couchstore) => params.add("storageBackend", "couchstore")
+        case Some(StorageBackend.Magma) => params.add("storageBackend", "magma")
+        case _ =>
+      }
     }
     params
   }

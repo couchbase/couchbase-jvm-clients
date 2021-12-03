@@ -228,13 +228,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
       .compressionMode(CompressionMode.Off)
       .conflictResolutionType(ConflictResolutionType.Timestamp)
 
-    buckets.create(bucket).get
-    waitUntilHealthy(name)
-
-    val found = buckets.getBucket(name).get
-
-    buckets.dropBucket(name).get
-    waitUntilDropped(name)
+    val found: BucketSettings = createGetAndDestroy(name, bucket)
 
     assert(found.flushEnabled == bucket.flushEnabled.get)
     assert(found.ramQuotaMB == bucket.ramQuotaMB)
@@ -243,6 +237,53 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     assert(found.maxTTL == bucket.maxTTL.get)
     assert(found.ejectionMethod == bucket.ejectionMethod.get)
     assert(found.compressionMode == bucket.compressionMode.get)
+  }
+
+  @Test
+  def createCouchbaseBucketWithStorageBackendCouchstore(): Unit = {
+    val name: String = UUID.randomUUID.toString
+    val bucket = CreateBucketSettings(name, 110)
+      .bucketType(BucketType.Couchbase)
+      .storageBackend(StorageBackend.Couchstore)
+
+    val found: BucketSettings = createGetAndDestroy(name, bucket)
+
+    assert(found.storageBackend.contains(StorageBackend.Couchstore))
+  }
+
+  @Test
+  def createCouchbaseBucketWithStorageBackendDefault(): Unit = {
+    val name: String = UUID.randomUUID.toString
+    val bucket = CreateBucketSettings(name, 110)
+      .bucketType(BucketType.Couchbase)
+
+    val found: BucketSettings = createGetAndDestroy(name, bucket)
+
+    assert(found.storageBackend.contains(StorageBackend.Couchstore))
+  }
+
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.STORAGE_BACKEND))
+  @Test
+  def createCouchbaseBucketWithStorageBackendMagma(): Unit = {
+    val name: String = UUID.randomUUID.toString
+    val bucket = CreateBucketSettings(name, 110)
+      .bucketType(BucketType.Couchbase)
+      .storageBackend(StorageBackend.Magma)
+
+    val found: BucketSettings = createGetAndDestroy(name, bucket)
+
+    assert(found.storageBackend.contains(StorageBackend.Magma))
+  }
+
+  private def createGetAndDestroy(name: String, bucket: CreateBucketSettings) = {
+    buckets.create(bucket).get
+    waitUntilHealthy(name)
+
+    val found = buckets.getBucket(name).get
+
+    buckets.dropBucket(name).get
+    waitUntilDropped(name)
+    found
   }
 
   @Test

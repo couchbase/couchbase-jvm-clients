@@ -16,15 +16,9 @@
 package com.couchbase.client.scala.manager.bucket
 
 import java.nio.charset.StandardCharsets
-
-import com.couchbase.client.core.annotation.Stability.{Internal, Volatile}
+import com.couchbase.client.core.annotation.Stability.{Internal, Uncommitted, Volatile}
 import com.couchbase.client.scala.durability.Durability
-import com.couchbase.client.scala.durability.Durability.{
-  Disabled,
-  Majority,
-  MajorityAndPersistToActive,
-  PersistToMajority
-}
+import com.couchbase.client.scala.durability.Durability.{Disabled, Majority, MajorityAndPersistToActive, PersistToMajority}
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral, Memcached}
 import com.couchbase.client.scala.manager.bucket.ConflictResolutionType.{SequenceNumber, Timestamp}
@@ -192,8 +186,8 @@ case class CreateBucketSettings(
     private[scala] val maxTTL: Option[Int] = None,
     private[scala] val compressionMode: Option[CompressionMode] = None,
     private[scala] val conflictResolutionType: Option[ConflictResolutionType] = None,
-    private[scala] val minimumDurabilityLevel: Option[Durability] = None
-) {
+    private[scala] val minimumDurabilityLevel: Option[Durability] = None,
+    private[scala] val storageBackend: Option[StorageBackend]  = None) {
 
   def flushEnabled(value: Boolean): CreateBucketSettings = {
     copy(flushEnabled = Some(value))
@@ -234,6 +228,15 @@ case class CreateBucketSettings(
   def minimumDurabilityLevel(value: Durability): CreateBucketSettings = {
     copy(minimumDurabilityLevel = Some(value))
   }
+
+  /** Specifies the storage backend to use for this bucket.
+    *
+    * @param value the storage backend the new bucket will use.
+    * @return this, for chaining.
+    */
+  def storageBackend(value: StorageBackend): CreateBucketSettings = {
+    copy(storageBackend = Some(value))
+  }
 }
 
 object CreateBucketSettings {
@@ -260,7 +263,8 @@ case class BucketSettings(
     compressionMode: CompressionMode,
     @upickle.implicits.key("durabilityMinLevel")
     minimumDurabilityLevel: Durability,
-    @Internal private[scala] val healthy: Boolean
+    @Internal private[scala] val healthy: Boolean,
+    @Uncommitted storageBackend: Option[StorageBackend]  = None
 ) {
   def toCreateBucketSettings: CreateBucketSettings = {
     CreateBucketSettings(
@@ -273,7 +277,8 @@ case class BucketSettings(
       Some(ejectionMethod),
       Some(maxTTL),
       Some(compressionMode),
-      minimumDurabilityLevel = Some(minimumDurabilityLevel)
+      minimumDurabilityLevel = Some(minimumDurabilityLevel),
+      storageBackend = storageBackend
     )
   }
 }
@@ -308,6 +313,12 @@ object BucketSettings {
       .map(v => CouchbasePickler.read[Durability](v))
       .getOrElse(Durability.Disabled)
 
+    val storageBackend: Option[StorageBackend] = Try(json.str("storageBackend")).toOption match {
+      case Some("magma") => Some(StorageBackend.Magma)
+      case Some("couchstore") => Some(StorageBackend.Couchstore)
+      case _ => None
+    }
+
     BucketSettings(
       json.str("name"),
       flushEnabled,
@@ -319,7 +330,8 @@ object BucketSettings {
       maxTTL,
       compressionMode,
       minimumDurabilityLevel,
-      isHealthy
+      isHealthy,
+      storageBackend
     )
   }
 
@@ -350,3 +362,35 @@ object BucketSettings {
       }
     )
 }
+
+/** Specifies the underlying storage backend.
+  */
+@Uncommitted
+sealed trait StorageBackend
+
+object StorageBackend {
+  @Uncommitted
+  case object Couchstore extends StorageBackend
+
+  /** The Magma storage backend is an Enterprise Edition feature.
+    */
+  @Uncommitted
+  case object Magma extends StorageBackend
+
+
+  @Internal
+  implicit val rw: CouchbasePickler.ReadWriter[StorageBackend] = CouchbasePickler
+    .readwriter[String]
+    .bimap[StorageBackend](
+      x => x match {
+        case Couchstore => "couchstore"
+        case Magma => "magma"
+      },
+      str =>
+        str match {
+          case "couchstore" => Couchstore
+          case "magma" => Magma
+        }
+    )
+}
+

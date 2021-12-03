@@ -252,6 +252,10 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     }
     if (clusterVersion.majorVersion() >= 7 && clusterVersion.minorVersion() >= 1) {
       capabilities.add(Capabilities.RATE_LIMITING);
+
+      if (!clusterVersion.isCommunityEdition()) {
+        capabilities.add(Capabilities.STORAGE_BACKEND);
+      }
     }
     return capabilities;
   }

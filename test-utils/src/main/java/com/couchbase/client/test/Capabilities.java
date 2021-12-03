@@ -79,5 +79,9 @@ public enum Capabilities {
   /**
    * The cluster supports rate limiting.
    */
-  RATE_LIMITING
+  RATE_LIMITING,
+  /**
+   * The cluster supports setting the storage backend (e.g. Magma).
+   */
+  STORAGE_BACKEND
 }
