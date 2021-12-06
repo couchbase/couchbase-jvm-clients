@@ -46,7 +46,8 @@ case class SearchOptions(
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
     private[scala] val parentSpan: Option[RequestSpan] = None,
     private[scala] val raw: Option[Map[String, Any]] = None,
-    private[scala] val disableScoring: Boolean = false
+    private[scala] val disableScoring: Boolean = false,
+    private[scala] val includeLocations: Boolean = false
 ) {
 
   /** Sets the parent `RequestSpan`.
@@ -217,6 +218,15 @@ case class SearchOptions(
     copy(disableScoring = value)
   }
 
+  /** If set to true, will include the location in the search rows.
+    *
+    * @param value set to true if the locations should be included.
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def includeLocations(value: Boolean): SearchOptions = {
+    copy(includeLocations = value)
+  }
+
   /** Exports the whole query as a `JsonObject`.
     */
   private[scala] def export(indexName: String, query: SearchQuery): JsonObject = {
@@ -238,6 +248,10 @@ case class SearchOptions(
     limit.foreach(v => if (v > 0) queryJson.put("size", v))
     skip.foreach(v => if (v > 0) queryJson.put("from", v))
     explain.foreach(v => queryJson.put("explain", v))
+
+    if (includeLocations) {
+      queryJson.put("includeLocations", true)
+    }
 
     highlightStyle.foreach(hs => {
       val highlight = JsonObject.create

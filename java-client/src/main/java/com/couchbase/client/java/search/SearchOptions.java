@@ -50,6 +50,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   private JsonSerializer serializer;
   private Integer skip;
   private JsonArray sort;
+  private boolean includeLocations = false;
 
   public static SearchOptions searchOptions() {
     return new SearchOptions();
@@ -291,6 +292,17 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
     return this;
   }
 
+  /**
+   * If set to true, will include the {@link SearchRow#locations()}.
+   *
+   * @param includeLocations set to true to inclue the locations.
+   * @return these {@link SearchOptions} for chaining purposes.
+   */
+  public SearchOptions includeLocations(final boolean includeLocations) {
+    this.includeLocations = includeLocations;
+    return this;
+  }
+
   @Stability.Internal
   public Built build() {
     return new Built();
@@ -374,6 +386,10 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
 
       if (collections != null && collections.length > 0) {
         queryJson.put("collections", JsonArray.from((Object[]) collections));
+      }
+
+      if (includeLocations) {
+        queryJson.put("includeLocations", true);
       }
 
       if (raw != null) {
