@@ -153,14 +153,13 @@ object CompressionMode {
 
 }
 
-
 /** The type of conflict resolution to configure for the bucket.
- *
- * A conflict is caused when the source and target copies of an XDCR-replicated document are updated independently
- * of and dissimilarly to one another, each by a local application. The conflict must be resolved, by determining
- * which of the variants should prevail; and then correspondingly saving both documents in identical form. XDCR
- * provides an automated conflict resolution process.
- */
+  *
+  * A conflict is caused when the source and target copies of an XDCR-replicated document are updated independently
+  * of and dissimilarly to one another, each by a local application. The conflict must be resolved, by determining
+  * which of the variants should prevail; and then correspondingly saving both documents in identical form. XDCR
+  * provides an automated conflict resolution process.
+  */
 sealed trait ConflictResolutionType {
   def alias: String
 }
@@ -168,31 +167,31 @@ sealed trait ConflictResolutionType {
 object ConflictResolutionType {
 
   /** Conflict resolution based on a timestamp.
-   *
-   * Timestamp-based conflict resolution (often referred to as Last Write Wins, or LWW) uses the document
-   * timestamp (stored in the CAS) to resolve conflicts. The timestamps associated with the most recent
-   * updates of source and target documents are compared. The document whose update has the more recent
-   * timestamp prevails.
-   */
+    *
+    * Timestamp-based conflict resolution (often referred to as Last Write Wins, or LWW) uses the document
+    * timestamp (stored in the CAS) to resolve conflicts. The timestamps associated with the most recent
+    * updates of source and target documents are compared. The document whose update has the more recent
+    * timestamp prevails.
+    */
   case object Timestamp extends ConflictResolutionType {
     override def alias: String = "lww"
   }
 
   /** Conflict resolution based on the "Sequence Number".
-   *
-   * Conflicts can be resolved by referring to documents' sequence numbers. Sequence numbers are maintained
-   * per document, and are incremented on every document-update. The sequence numbers of source and
-   * target documents are compared; and the document with the higher sequence number prevails.
-   */
+    *
+    * Conflicts can be resolved by referring to documents' sequence numbers. Sequence numbers are maintained
+    * per document, and are incremented on every document-update. The sequence numbers of source and
+    * target documents are compared; and the document with the higher sequence number prevails.
+    */
   case object SequenceNumber extends ConflictResolutionType {
     override def alias: String = "seqno"
   }
 
   /** Custom bucket conflict resolution.
-   *
-   * In Couchbase Server 7.1, this feature is only available in "developer-preview" mode. See the UI XDCR settings
-   * for the custom conflict resolution properties.
-   */
+    *
+    * In Couchbase Server 7.1, this feature is only available in "developer-preview" mode. See the UI XDCR settings
+    * for the custom conflict resolution properties.
+    */
   @Volatile
   case object Custom extends ConflictResolutionType {
     override def alias: String = "custom"
@@ -204,8 +203,8 @@ object ConflictResolutionType {
       x => x.alias,
       str =>
         str match {
-          case "lww"   => Timestamp
-          case "seqno" => SequenceNumber
+          case "lww"    => Timestamp
+          case "seqno"  => SequenceNumber
           case "custom" => Custom
         }
     )

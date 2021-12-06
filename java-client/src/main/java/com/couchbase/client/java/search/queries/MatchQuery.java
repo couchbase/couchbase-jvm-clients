@@ -33,6 +33,7 @@ public class MatchQuery extends SearchQuery {
     private String analyzer;
     private Integer prefixLength;
     private Integer fuzziness;
+    private MatchOperator operator;
 
     public MatchQuery(String match) {
         super();
@@ -65,6 +66,11 @@ public class MatchQuery extends SearchQuery {
         return this;
     }
 
+    public MatchQuery operator(final MatchOperator operator) {
+        this.operator = operator;
+        return this;
+    }
+
     @Override
     protected void injectParams(JsonObject input) {
         input.put("match", match);
@@ -79,6 +85,9 @@ public class MatchQuery extends SearchQuery {
         }
         if (fuzziness != null) {
             input.put("fuzziness", fuzziness);
+        }
+        if (operator != null) {
+            input.put("operator", operator.toString());
         }
     }
 }

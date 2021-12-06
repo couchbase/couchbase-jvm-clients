@@ -16,6 +16,7 @@
 package com.couchbase.client.scala.search.queries
 
 import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.search.queries.MatchOperator.{And, Or}
 
 /** An FTS query that matches a given term, applying further processing to it
   * like analyzers, stemming and even fuzziness.
@@ -30,7 +31,8 @@ case class MatchQuery(
     private[scala] val prefixLength: Option[Int] = None,
     private[scala] val analyzer: Option[String] = None,
     private[scala] val field: Option[String] = None,
-    private[scala] val boost: Option[Double] = None
+    private[scala] val boost: Option[Double] = None,
+    private[scala] val operator: Option[MatchOperator] = None
 ) extends SearchQuery {
 
   /** If specified, only this field will be matched.
@@ -82,6 +84,15 @@ case class MatchQuery(
     copy(fuzziness = Some(fuzziness))
   }
 
+  /** Defines how the individual match terms should be logically concatenated.
+    *
+    * @param operator whith which logical operator the terms should be combined.
+    * @return a copy of this, for chaining
+    */
+  def matchOperator(operator: MatchOperator): MatchQuery = {
+    copy(operator = Some(operator))
+  }
+
   override protected def injectParams(input: JsonObject): Unit = {
     input.put("match", matchStr)
     boost.foreach(v => input.put("boost", v))
@@ -89,5 +100,9 @@ case class MatchQuery(
     analyzer.foreach(v => input.put("analyzer", v))
     prefixLength.foreach(v => input.put("prefix_length", v))
     fuzziness.foreach(v => input.put("fuzziness", v))
+    operator match {
+      case Some(And) => input.put("operator", "and")
+      case Some(Or)  => input.put("operator", "or")
+    }
   }
 }
