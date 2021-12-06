@@ -196,8 +196,8 @@ class ReactiveBucketManager(core: Core) {
       }
       settings.storageBackend match {
         case Some(StorageBackend.Couchstore) => params.add("storageBackend", "couchstore")
-        case Some(StorageBackend.Magma) => params.add("storageBackend", "magma")
-        case _ =>
+        case Some(StorageBackend.Magma)      => params.add("storageBackend", "magma")
+        case _                               =>
       }
     }
     params

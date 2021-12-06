@@ -18,7 +18,12 @@ package com.couchbase.client.scala.manager.bucket
 import java.nio.charset.StandardCharsets
 import com.couchbase.client.core.annotation.Stability.{Internal, Uncommitted, Volatile}
 import com.couchbase.client.scala.durability.Durability
-import com.couchbase.client.scala.durability.Durability.{Disabled, Majority, MajorityAndPersistToActive, PersistToMajority}
+import com.couchbase.client.scala.durability.Durability.{
+  Disabled,
+  Majority,
+  MajorityAndPersistToActive,
+  PersistToMajority
+}
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral, Memcached}
 import com.couchbase.client.scala.manager.bucket.ConflictResolutionType.{SequenceNumber, Timestamp}
@@ -187,7 +192,8 @@ case class CreateBucketSettings(
     private[scala] val compressionMode: Option[CompressionMode] = None,
     private[scala] val conflictResolutionType: Option[ConflictResolutionType] = None,
     private[scala] val minimumDurabilityLevel: Option[Durability] = None,
-    private[scala] val storageBackend: Option[StorageBackend]  = None) {
+    private[scala] val storageBackend: Option[StorageBackend] = None
+) {
 
   def flushEnabled(value: Boolean): CreateBucketSettings = {
     copy(flushEnabled = Some(value))
@@ -264,7 +270,7 @@ case class BucketSettings(
     @upickle.implicits.key("durabilityMinLevel")
     minimumDurabilityLevel: Durability,
     @Internal private[scala] val healthy: Boolean,
-    @Uncommitted storageBackend: Option[StorageBackend]  = None
+    @Uncommitted storageBackend: Option[StorageBackend] = None
 ) {
   def toCreateBucketSettings: CreateBucketSettings = {
     CreateBucketSettings(
@@ -314,9 +320,9 @@ object BucketSettings {
       .getOrElse(Durability.Disabled)
 
     val storageBackend: Option[StorageBackend] = Try(json.str("storageBackend")).toOption match {
-      case Some("magma") => Some(StorageBackend.Magma)
+      case Some("magma")      => Some(StorageBackend.Magma)
       case Some("couchstore") => Some(StorageBackend.Couchstore)
-      case _ => None
+      case _                  => None
     }
 
     BucketSettings(
@@ -376,21 +382,19 @@ object StorageBackend {
     */
   @Uncommitted
   case object Magma extends StorageBackend
-
-
   @Internal
   implicit val rw: CouchbasePickler.ReadWriter[StorageBackend] = CouchbasePickler
     .readwriter[String]
     .bimap[StorageBackend](
-      x => x match {
-        case Couchstore => "couchstore"
-        case Magma => "magma"
-      },
+      x =>
+        x match {
+          case Couchstore => "couchstore"
+          case Magma      => "magma"
+        },
       str =>
         str match {
           case "couchstore" => Couchstore
-          case "magma" => Magma
+          case "magma"      => Magma
         }
     )
 }
-
