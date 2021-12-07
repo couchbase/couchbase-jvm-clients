@@ -34,6 +34,8 @@ import com.couchbase.client.core.cnc.events.core.ReconfigurationIgnoredEvent;
 import com.couchbase.client.core.cnc.events.core.ServiceReconfigurationFailedEvent;
 import com.couchbase.client.core.cnc.events.core.ShutdownCompletedEvent;
 import com.couchbase.client.core.cnc.events.core.ShutdownInitiatedEvent;
+import com.couchbase.client.core.cnc.events.core.WatchdogInvalidStateIdentifiedEvent;
+import com.couchbase.client.core.cnc.events.core.WatchdogRunFailedEvent;
 import com.couchbase.client.core.config.AlternateAddress;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
@@ -66,7 +68,7 @@ import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.util.HostAndPort;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -82,6 +84,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -149,6 +152,11 @@ public class Core {
     new RoundRobinLocator(ServiceType.EVENTING);
 
   /**
+   * The interval under which the invalid state watchdog should be scheduled to run.
+   */
+  private static final Duration INVALID_STATE_WATCHDOG_INTERVAL = Duration.ofSeconds(5);
+
+  /**
    * Holds the current core context.
    */
   private final CoreContext coreContext;
@@ -199,6 +207,11 @@ public class Core {
   private final List<BeforeSendRequestCallback> beforeSendRequestCallbacks;
 
   /**
+   * Holds the timer to dispose for the invalid state watchdog
+   */
+  private final Disposable invalidStateWatchdog;
+
+  /**
    * Holds the response metrics per
    */
   private final Map<ResponseMetricIdentifier, ValueRecorder> responseMetrics = new ConcurrentHashMap<>();
@@ -244,6 +257,15 @@ public class Core {
       .collect(Collectors.toList());
 
     eventBus.publish(new CoreCreatedEvent(coreContext, environment, seedNodes));
+
+    long watchdogInterval = INVALID_STATE_WATCHDOG_INTERVAL.getSeconds();
+    if (watchdogInterval <= 1) {
+      throw InvalidArgumentException.fromMessage("The Watchdog Interval cannot be smaller than 1 second!");
+    }
+
+    invalidStateWatchdog = environment.scheduler().schedulePeriodically(new InvalidStateWatchdog(),
+      watchdogInterval, watchdogInterval, TimeUnit.SECONDS
+    );
   }
 
   /**
@@ -583,6 +605,7 @@ public class Core {
       long start = System.nanoTime();
       if (shutdown.compareAndSet(false, true)) {
         eventBus.publish(new ShutdownInitiatedEvent(coreContext));
+        invalidStateWatchdog.dispose();
 
         return Flux
           .fromIterable(currentConfig.bucketConfigs().keySet())
@@ -894,6 +917,38 @@ public class Core {
     @Override
     public int hashCode() {
       return Objects.hash(serviceType, requestName);
+    }
+  }
+
+  /**
+   * Watchdog responsible for checking for potentially invalid states and initiating corrective action.
+   * <p>
+   * The following checks are run at the moment:
+   * <ol>
+   *   <li>If the number of managed nodes differs from the number of nodes in the config, either we are currently undergoing
+   *    a rebalance/failover, or the system is in a state where there is some stray state that needs to be cleaned up. In
+   *    any case we can trigger a reconfiguration, which is safe under both an expected and unexpected state and will
+   *    help to clean up any weird leftover node state.</li>
+   * </ol>
+   */
+  class InvalidStateWatchdog implements Runnable {
+    @Override
+    public void run() {
+      try {
+        if (currentConfig != null && currentConfig.hasClusterOrBucketConfig()) {
+          int numNodes = nodes.size();
+          int numConfigNodes = currentConfig.allNodeAddresses().size();
+
+          if (numNodes != numConfigNodes) {
+            String message = "Number of managed nodes (" + numNodes + ") differs from the current config ("
+              + numConfigNodes + "), triggering reconfiguration.";
+            eventBus.publish(new WatchdogInvalidStateIdentifiedEvent(context(), message));
+            reconfigure();
+          }
+        }
+      } catch (Throwable ex) {
+        eventBus.publish(new WatchdogRunFailedEvent(context(), ex));
+      }
     }
   }
 
