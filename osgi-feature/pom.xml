@@ -7,11 +7,11 @@
     <parent>
         <groupId>com.couchbase.client</groupId>
         <artifactId>couchbase-jvm-clients</artifactId>
-        <version>1.11.4</version>
+        <version>1.11.5-SNAPSHOT</version>
     </parent>
 
     <artifactId>osgi-feature</artifactId>
-    <version>3.2.4</version>
+    <version>3.2.5-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Couchbase Java SDK OSGI Feature</name>
