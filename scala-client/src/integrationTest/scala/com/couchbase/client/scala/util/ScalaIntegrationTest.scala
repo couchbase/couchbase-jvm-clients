@@ -20,7 +20,12 @@ import java.util.concurrent.TimeUnit
 
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.scala.{Cluster, ClusterOptions, env}
-import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
+import com.couchbase.client.scala.env.{
+  ClusterEnvironment,
+  PasswordAuthenticator,
+  SecurityConfig,
+  SeedNode
+}
 import com.couchbase.client.test.{
   ClusterAwareIntegrationTest,
   Services,
@@ -29,6 +34,7 @@ import com.couchbase.client.test.{
 }
 import org.junit.jupiter.api.Timeout
 
+import scala.collection.JavaConverters
 import scala.jdk.CollectionConverters._
 import scala.concurrent.duration._
 
@@ -49,8 +55,22 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
     *
     * @return the builder, ready to be further modified or used directly.
     */
-  protected def environment: ClusterEnvironment.Builder =
-    ClusterEnvironment.builder
+  protected def environment: ClusterEnvironment.Builder = {
+    val builder = ClusterEnvironment.builder
+    if (config.clusterCerts().isPresent) {
+      builder.securityConfig(
+        SecurityConfig()
+          .enableTls(true)
+          .trustCertificates(
+            JavaConverters
+              .asScalaIteratorConverter(config.clusterCerts().get().iterator())
+              .asScala
+              .toSeq
+          )
+      )
+    }
+    builder
+  }
 
   /**
     * Creates the right connection string out of the seed nodes in the config.
@@ -71,8 +91,13 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
   protected def seedNodes =
     config.nodes.asScala
       .map((cfg: TestNodeConfig) => {
-        val kvPort   = Some(cfg.ports.get(Services.KV).toInt)
-        val httpPort = Some(cfg.ports.get(Services.MANAGER).toInt)
+        var kvPort   = Some(cfg.ports.get(Services.KV).toInt)
+        var httpPort = Some(cfg.ports.get(Services.MANAGER).toInt)
+
+        if (config.clusterCerts().isPresent) {
+          kvPort = Some(cfg.ports.get(Services.KV_TLS).toInt)
+          httpPort = Some(cfg.ports.get(Services.MANAGER_TLS).toInt)
+        }
 
         SeedNode(cfg.hostname, kvPort, httpPort)
       })

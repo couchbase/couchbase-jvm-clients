@@ -34,19 +34,19 @@ public class TestClusterConfig {
   private final String adminPassword;
   private final List<TestNodeConfig> nodes;
   private final int numReplicas;
-  private final Optional<X509Certificate> clusterCert;
+  private final Optional<List<X509Certificate>> clusterCerts;
   private final Set<Capabilities> capabilities;
   private final ClusterVersion clusterVersion;
 
   TestClusterConfig(String bucketname, String adminUsername, String adminPassword,
                     List<TestNodeConfig> nodes, int numReplicas,
-                    Optional<X509Certificate> clusterCert, Set<Capabilities> capabilities, ClusterVersion clusterVersion) {
+                    Optional<List<X509Certificate>> clusterCerts, Set<Capabilities> capabilities, ClusterVersion clusterVersion) {
     this.bucketname = bucketname;
     this.adminUsername = adminUsername;
     this.adminPassword = adminPassword;
     this.nodes = nodes;
     this.numReplicas = numReplicas;
-    this.clusterCert = clusterCert;
+    this.clusterCerts = clusterCerts;
     this.capabilities = capabilities;
     this.clusterVersion = clusterVersion;
   }
@@ -75,8 +75,8 @@ public class TestClusterConfig {
     return capabilities;
   }
 
-  public Optional<X509Certificate> clusterCert() {
-    return clusterCert;
+  public Optional<List<X509Certificate>> clusterCerts() {
+    return clusterCerts;
   }
 
   public ClusterVersion clusterVersion() {
@@ -103,7 +103,7 @@ public class TestClusterConfig {
       ", adminPassword='" + adminPassword + '\'' +
       ", nodes=" + nodes +
       ", numReplicas=" + numReplicas +
-      ", clusterCert=" + clusterCert +
+      ", clusterCerts=" + clusterCerts +
       ", capabilities=" + capabilities +
       ", version=" + clusterVersion +
       '}';

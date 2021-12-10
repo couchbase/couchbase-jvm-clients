@@ -397,6 +397,26 @@ pipeline {
             }
         }
 
+        stage('testing  (Linux, cbdyncluster 7.1-stable with multi certs, Oracle JDK 8)') {
+            agent { label 'sdkqe-centos7' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.1-stable", includeEventing : true, multiCerts : true)
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
         stage('testing  (Linux, cbdyncluster 7.0-release, Oracle JDK 8, CE)') {
             agent { label 'sdkqe-centos7' }
             environment {
@@ -568,6 +588,7 @@ void test(Map args=[:],
     boolean includeEventing = args.containsKey("includeEventing") ? args.get("includeEventing") : false
     boolean enableDevelopPreview = args.containsKey("enableDevelopPreview") ? args.get("enableDevelopPreview") : false
     boolean ceMode = args.containsKey("ceMode") ? args.get("ceMode") : false
+    boolean multiCerts = args.contains("multiCerts") ? args.get("multiCerts") : false
 
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
         cleanWs()
@@ -575,7 +596,7 @@ void test(Map args=[:],
         installJDKIfNeeded(platform, jdk, jdkVersion)
 
         dir('couchbase-jvm-clients') {
-            script { testAgainstServer(serverVersion, QUICK_TEST_MODE, includeAnalytics, includeEventing, enableDevelopPreview, ceMode) }
+            script { testAgainstServer(serverVersion, QUICK_TEST_MODE, includeAnalytics, includeEventing, enableDevelopPreview, ceMode, multiCerts) }
             shWithEcho("make deps-only")
             shWithEcho("mvn install -Dmaven.test.skip --batch-mode")
         }
@@ -677,7 +698,8 @@ void testAgainstServer(String serverVersion,
                        boolean includeAnalytics = true,
                        boolean includeEventing = false,
                        boolean enableDevelopPreview = false,
-                       boolean ceMode = false) {
+                       boolean ceMode = false,
+                       boolean multiCerts = false) {
     def clusterId = null
     try {
         // For debugging
@@ -731,6 +753,13 @@ void testAgainstServer(String serverVersion,
 
         if (enableDevelopPreview) {
             shWithEcho("curl -v -X POST -u Administrator:password -d 'enabled=true' http://" + ip + ":8091/settings/developerPreview")
+        }
+
+        if (multiCerts) {
+            shWithEcho("mkdir certs")
+            shWithEcho("cbdyncluster setup-cert-auth $clusterId --user Administrator --num-roots 2 --out-dir=certs")
+            shWithEcho("echo 'cluster.unmanaged.certsFile=${WORKSPACE}/certs/ca.pem' >> java-client/src/integrationTest/resources/integration.properties")
+            shWithEcho("echo 'cluster.unmanaged.certsFile=${WORKSPACE}/certs/ca.pem' >> scala-client/src/integrationTest/resources/integration.properties")
         }
 
         // Not sure why this is needed, it should be in stash from build....

@@ -109,13 +109,13 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
 
   @Test
   void performsKeyValueWithServerCert() throws Exception {
-    if (!config().clusterCert().isPresent()) {
+    if (!config().clusterCerts().isPresent()) {
       fail("Cluster Certificate must be present for this test!");
     }
 
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .enableTls(true)
-      .trustCertificates(Collections.singletonList(config().clusterCert().get())), null);
+      .trustCertificates(config().clusterCerts().get()), null);
     Core core = Core.create(env, authenticator(), secureSeeds());
     core.openBucket(config().bucketname());
 
@@ -131,14 +131,14 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
 
   @Test
   void allowsToConfigureCustomCipher() throws Exception {
-    if (!config().clusterCert().isPresent()) {
+    if (!config().clusterCerts().isPresent()) {
       fail("Cluster Certificate must be present for this test!");
     }
 
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .enableTls(true)
       .ciphers(Collections.singletonList("TLS_AES_256_GCM_SHA384"))
-      .trustCertificates(Collections.singletonList(config().clusterCert().get())), null);
+      .trustCertificates(config().clusterCerts().get()), null);
     Core core = Core.create(env, authenticator(), secureSeeds());
     core.openBucket(config().bucketname());
 
@@ -154,14 +154,14 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
 
   @Test
   void loadsSecurityConfigFromTrustStore() throws Exception {
-    if (!config().clusterCert().isPresent()) {
+    if (!config().clusterCerts().isPresent()) {
       fail("Cluster Certificate must be present for this test!");
     }
 
     // Prepare a keystore and load it with the cert
     KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
     trustStore.load(null, null);
-    trustStore.setCertificateEntry("server", config().clusterCert().get());
+    trustStore.setCertificateEntry("server", config().clusterCerts().get().get(0));
 
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .enableTls(true)

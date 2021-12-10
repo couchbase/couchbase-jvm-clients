@@ -20,6 +20,7 @@ import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.diagnostics.PingState;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.PasswordAuthenticator;
+import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
@@ -38,6 +39,7 @@ import com.couchbase.client.test.Services;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.Timeout;
 
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -64,7 +66,13 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
    * @return the builder, ready to be further modified or used directly.
    */
   protected static ClusterEnvironment.Builder environment() {
-    return ClusterEnvironment.builder();
+    ClusterEnvironment.Builder builder = ClusterEnvironment.builder();
+    if (config().clusterCerts().isPresent()) {
+      builder.securityConfig(SecurityConfig.builder()
+        .enableTls(true)
+        .trustCertificates(config().clusterCerts().get()));
+    }
+    return builder;
   }
 
   /**
@@ -98,11 +106,20 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
   }
 
   protected static Set<SeedNode> seedNodes() {
-    return config().nodes().stream().map(cfg -> SeedNode.create(
-      cfg.hostname(),
-      Optional.ofNullable(cfg.ports().get(Services.KV)),
-      Optional.ofNullable(cfg.ports().get(Services.MANAGER))
-    )).collect(Collectors.toSet());
+    return config().nodes().stream().map(cfg -> {
+      int kvPort = cfg.ports().get(Services.KV);
+      int managerPort = cfg.ports().get(Services.MANAGER);
+
+      if (config().clusterCerts().isPresent()) {
+        kvPort = cfg.ports().get(Services.KV_TLS);
+        managerPort = cfg.ports().get(Services.MANAGER_TLS);
+      }
+
+      return SeedNode.create(
+        cfg.hostname(),
+        Optional.ofNullable(kvPort),
+        Optional.ofNullable(managerPort));
+    }).collect(Collectors.toSet());
   }
 
   /**

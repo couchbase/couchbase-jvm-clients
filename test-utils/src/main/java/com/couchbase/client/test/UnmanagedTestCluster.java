@@ -23,10 +23,14 @@ import org.testcontainers.shaded.okhttp3.Request;
 import org.testcontainers.shaded.okhttp3.Response;
 
 import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -49,6 +53,7 @@ public class UnmanagedTestCluster extends TestCluster {
   private final String adminPassword;
   private volatile String bucketname;
   private final int numReplicas;
+  private final String certsFile;
 
   UnmanagedTestCluster(final Properties properties) {
     seedHost = properties.getProperty("cluster.unmanaged.seed").split(":")[0];
@@ -56,6 +61,7 @@ public class UnmanagedTestCluster extends TestCluster {
     adminUsername = properties.getProperty("cluster.adminUsername");
     adminPassword = properties.getProperty("cluster.adminPassword");
     numReplicas = Integer.parseInt(properties.getProperty("cluster.unmanaged.numReplicas"));
+    certsFile = properties.getProperty("cluster.unmanaged.certsFile");
   }
 
   @Override
@@ -104,21 +110,25 @@ public class UnmanagedTestCluster extends TestCluster {
 
     ClusterVersion clusterVersion = parseClusterVersion(getClusterVersionResponse);
 
-    Optional<X509Certificate> cert = loadClusterCertificate();
+    Optional<List<X509Certificate>> certs = loadClusterCertificate();
 
-    return new TestClusterConfig(
+    if (certsFile != null) {
+      certs = loadMultipleRootCertsFromFile();
+    }
+
+      return new TestClusterConfig(
       bucketname,
       adminUsername,
       adminPassword,
       nodesFromRaw(seedHost, raw),
       replicasFromRaw(raw),
-      cert,
+      certs,
       capabilitiesFromRaw(raw, clusterVersion),
       clusterVersion
     );
   }
 
-  private Optional<X509Certificate> loadClusterCertificate() {
+  private Optional<List<X509Certificate>> loadClusterCertificate() {
     try {
       Response getResponse = httpClient.newCall(new Request.Builder()
         .header("Authorization", Credentials.basic(adminUsername, adminPassword))
@@ -130,11 +140,27 @@ public class UnmanagedTestCluster extends TestCluster {
 
       CertificateFactory cf = CertificateFactory.getInstance("X.509");
       Certificate cert = cf.generateCertificate(new ByteArrayInputStream(raw.getBytes(UTF_8)));
-      return Optional.of((X509Certificate) cert);
+      return Optional.of(Collections.singletonList((X509Certificate) cert));
     } catch (Exception ex) {
       // could not load certificate, maybe add logging? could be CE instance.
       return Optional.empty();
     }
+  }
+
+  private Optional<List<X509Certificate>> loadMultipleRootCertsFromFile() {
+    if (certsFile != null) {
+      try (FileInputStream fis = new FileInputStream(certsFile)){
+        List<X509Certificate> certs = new ArrayList<>();
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+        Collection certCollection = cf.generateCertificates(fis);
+        certCollection.forEach(c -> certs.add((X509Certificate) c));
+        return Optional.of(certs);
+      } catch (Exception ex) {
+        // Could not load certs
+        return Optional.empty();
+      }
+    }
+    return Optional.empty();
   }
 
   private void waitUntilAllNodesHealthy() throws Exception {

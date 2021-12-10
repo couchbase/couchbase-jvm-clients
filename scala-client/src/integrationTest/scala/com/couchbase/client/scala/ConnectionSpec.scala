@@ -25,6 +25,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import org.junit.Assert.fail
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{Disabled, Test, TestInstance}
+import scala.collection.JavaConverters;
 
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
@@ -52,13 +53,18 @@ class ConnectionSpec extends ScalaIntegrationTest {
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
   def performsKeyValueWithServerCert(): Unit = {
-    if (!config.clusterCert.isPresent) fail("Cluster Certificate must be present for this test!")
+    if (!config.clusterCerts.isPresent) fail("Cluster Certificate must be present for this test!")
 
     val env = ClusterEnvironment.builder
       .securityConfig(
         SecurityConfig()
           .enableTls(true)
-          .trustCertificates(Seq(config.clusterCert().get()))
+          .trustCertificates(
+            JavaConverters
+              .asScalaIteratorConverter(config.clusterCerts().get().iterator())
+              .asScala
+              .toSeq
+          )
       )
       .build
       .get
