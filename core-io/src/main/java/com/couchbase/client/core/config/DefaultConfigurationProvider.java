@@ -367,6 +367,12 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
               .flatMap(seed -> {
                 long start = System.nanoTime();
 
+                if (!currentSeedNodes().contains(seed)) {
+                  // Since updating the seed nodes can race loading the global config, double check that the
+                  // node we are about to load is still part of the list.
+                  return Mono.empty();
+                }
+
                 NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
                 return globalLoader
                   .load(identifier, seed.kvPort().orElse(kvPort))
