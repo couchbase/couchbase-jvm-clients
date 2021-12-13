@@ -213,7 +213,7 @@
                  since the assembly uses files fetched by that plugin. -->
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.3.0</version>
                 <configuration>
                     <descriptors>
                         <descriptor>src/assembly/release-archive.xml</descriptor>
