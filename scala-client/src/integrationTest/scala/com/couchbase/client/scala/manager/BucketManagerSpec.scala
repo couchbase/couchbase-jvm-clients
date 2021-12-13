@@ -239,6 +239,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     assert(found.compressionMode == bucket.compressionMode.get)
   }
 
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.STORAGE_BACKEND))
   @Test
   def createCouchbaseBucketWithStorageBackendCouchstore(): Unit = {
     val name: String = UUID.randomUUID.toString
@@ -251,6 +252,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     assert(found.storageBackend.contains(StorageBackend.Couchstore))
   }
 
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.STORAGE_BACKEND))
   @Test
   def createCouchbaseBucketWithStorageBackendDefault(): Unit = {
     val name: String = UUID.randomUUID.toString
