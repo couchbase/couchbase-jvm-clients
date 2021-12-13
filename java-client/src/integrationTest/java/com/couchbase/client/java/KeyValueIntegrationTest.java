@@ -41,6 +41,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -109,6 +110,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
     GetResult getResult = collection.get(id);
     assertEquals("Hello, World", getResult.contentAs(String.class));
+    assertEquals("\"Hello, World\"", new String(getResult.contentAsBytes(), UTF_8));
     assertTrue(getResult.cas() != 0);
     assertFalse(getResult.expiryTime().isPresent());
   }

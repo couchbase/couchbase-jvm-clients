@@ -161,6 +161,16 @@ public class GetResult {
     return transcoder.decode(target, content, flags);
   }
 
+  /**
+   * Returns the raw bytes of the document content.
+   *
+   * @return the document content as a byte array
+   */
+  @Stability.Uncommitted
+  public byte[] contentAsBytes() {
+    return content;
+  }
+
   @Override
   public String toString() {
     return "GetResult{" +
