@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java.codec;
 
-import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import org.junit.jupiter.api.Test;
@@ -38,6 +37,11 @@ class JsonValueSerializerWrapperTest {
 
         @Override
         public <T> T deserialize(Class<T> target, byte[] input) {
+          throw new DelegatedException();
+        }
+
+        @Override
+        public <T> T deserialize(TypeRef<T> target, byte[] input) {
           throw new DelegatedException();
         }
       }
@@ -75,7 +79,7 @@ class JsonValueSerializerWrapperTest {
   void delegatesForOtherTypes() {
     assertThrows(DelegatedException.class, () -> serializer.serialize("foo"));
     assertThrows(DelegatedException.class, () -> serializer.deserialize(String.class, "\"foo\"".getBytes(UTF_8)));
-    assertThrows(DecodingFailureException.class, () -> serializer.deserialize(new TypeRef<String>() {
+    assertThrows(DelegatedException.class, () -> serializer.deserialize(new TypeRef<String>() {
     }, "\"foo\"".getBytes(UTF_8)));
   }
 }

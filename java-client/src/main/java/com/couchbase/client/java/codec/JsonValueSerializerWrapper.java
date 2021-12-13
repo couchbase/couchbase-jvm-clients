@@ -60,4 +60,9 @@ public class JsonValueSerializerWrapper implements JsonSerializer {
     }
     return wrapped.deserialize(target, input);
   }
+
+  @Override
+  public <T> T deserialize(TypeRef<T> target, byte[] input) {
+    return wrapped.deserialize(target, input);
+  }
 }
