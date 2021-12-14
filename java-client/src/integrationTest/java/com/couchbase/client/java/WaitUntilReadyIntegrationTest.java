@@ -24,6 +24,7 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.java.manager.bucket.BucketSettings;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
@@ -92,6 +93,12 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
     ExecutorService es = Executors.newFixedThreadPool(1);
     String bucketName = UUID.randomUUID().toString();
 
+    if (!config().capabilities().contains(Capabilities.GLOBAL_CONFIG)) {
+      // We need to open the "other" bucket to make sure the test passes in clusters pre 6.5
+      Bucket b = cluster.bucket(config().bucketname());
+      b.waitUntilReady(Duration.ofSeconds(30));
+    }
+
     long creationDelay = 2000;
     try {
       Bucket bucket = cluster.bucket(bucketName);
@@ -128,6 +135,13 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
   void waitsForNewlyCreatedBucket() {
     String bucketName = UUID.randomUUID().toString();
     Cluster cluster = Cluster.connect(connectionString(), config().adminUsername(), config().adminPassword());
+
+    if (!config().capabilities().contains(Capabilities.GLOBAL_CONFIG)) {
+      // We need to open the "other" bucket to make sure the test passes in clusters pre 6.5
+      Bucket b = cluster.bucket(config().bucketname());
+      b.waitUntilReady(Duration.ofSeconds(30));
+    }
+
     try {
       cluster.waitUntilReady(Duration.ofSeconds(30));
       cluster.buckets().createBucket(BucketSettings.create(bucketName).ramQuotaMB(100));
