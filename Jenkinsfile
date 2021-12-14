@@ -805,13 +805,16 @@ void testAgainstServer(String serverVersion,
         createIntegrationTestPropertiesFile('java-client/src/integrationTest/resources/integration.properties', ip)
         createIntegrationTestPropertiesFile('scala-client/src/integrationTest/resources/integration.properties', ip)
 
+        // We need a bit more than the default 600 for out bucket management integration tests
+        def ramQuota = 1000
+
         // Create the cluster
         if (!QUICK_TEST_MODE) {
             def services = "kv,index,n1ql,fts${includeAnalytics ? ',cbas' : ''}${includeEventing ? ',eventing' : ''}"
-            shWithEcho("cbdyncluster --node $services --node kv --node kv --bucket default setup $clusterId")
+            shWithEcho("cbdyncluster --node $services --node kv --node kv --bucket default --ram-quota $ramQuota setup $clusterId")
         } else {
             // During development, this is faster (less tests)
-            shWithEcho("cbdyncluster --node kv --node kv --node kv --bucket default setup $clusterId")
+            shWithEcho("cbdyncluster --node kv --node kv --node kv --bucket default --ram-quota $ramQuota setup $clusterId")
         }
 
         // Make sure the cluster stays up during all tests (the finally block below ensures that it's always pulled down)
