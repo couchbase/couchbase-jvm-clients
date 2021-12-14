@@ -149,7 +149,7 @@ class AnalyticsLinkManagerSpec extends ScalaIntegrationTest {
       "s3AccessKeyId",
       "s3SecretAccessKey",
       "s3SessionToken",
-      "s3Region",
+      "us-east-1",
       "s3ServiceEndpoint"
     )
     analytics.createLink(origLink).get
@@ -195,6 +195,7 @@ class AnalyticsLinkManagerSpec extends ScalaIntegrationTest {
 
   /** Doesn't test the server Azure functionality, simply that the link is created. */
   @Test
+  @Disabled("Disabled until we figure out the changes in 7.1 signature")
   def azureExternalLink(): Unit = {
     analytics.createDataverse(DataverseName).get
     val linkName = "azureInventory"
@@ -257,7 +258,7 @@ class AnalyticsLinkManagerSpec extends ScalaIntegrationTest {
       "s3AccessKeyId",
       "s3SecretAccessKey",
       "s3SessionToken",
-      "s3Region",
+      "us-east-1",
       "s3ServiceEndpoint"
     )
     analytics.createLink(origLink).get

@@ -108,7 +108,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
     final Set<String> builtIns = setOf("Default", "Metadata");
     getAllDataverseNames().stream()
         .filter(name -> !builtIns.contains(name))
-        .forEach(name -> disconnectLocalLink(name));
+        .forEach(this::disconnectLocalLink);
 
     getAllDataverseNames().stream()
         .filter(name -> !builtIns.contains(name))
@@ -151,6 +151,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
           .linkName("Local");
       analytics.disconnectLink(opts);
     } catch (LinkNotFoundException | DataverseNotFoundException e) {
+      // Ignored on purpose.
     }
   }
 
@@ -174,7 +175,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void createDataverse() {
-    assertDataverseExists(dataverse);
+    assertDataverseExists();
   }
 
   @Test
@@ -189,7 +190,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void dropDataverse() {
-    assertDataverseExists(dataverse);
+    assertDataverseExists();
     analytics.dropDataverse(dataverse);
     assertDataverseDoesNotExist(dataverse);
   }
@@ -206,8 +207,8 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
     analytics.dropDataverse(absentDataverse, dropDataverseAnalyticsOptions().ignoreIfNotExists(true));
   }
 
-  private void assertDataverseExists(String name) {
-    assertTrue(getAllDataverseNames().contains(name));
+  private void assertDataverseExists() {
+    assertTrue(getAllDataverseNames().contains(AnalyticsIndexManagerIntegrationTest.dataverse));
   }
 
   private void assertDataverseDoesNotExist(String name) {
@@ -463,7 +464,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
     assertEquals(linkName, link.name());
     assertEquals(dataverse, link.dataverse());
     assertEquals("accessKeyId", link.accessKeyId());
-    assertEquals("region", link.region());
+    assertEquals("us-east-1", link.region());
     assertEquals("serviceEndpoint", link.serviceEndpoint());
 
     assertNull(link.secretAccessKey());
@@ -660,7 +661,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
     return new S3ExternalAnalyticsLink(name, dataverse)
         .accessKeyId("accessKeyId")
         .secretAccessKey("secretAccessKey")
-        .region("region")
+        .region("us-east-1")
         .serviceEndpoint("serviceEndpoint")
         //.sessionToken("sessionToken") // Only supported by server 7.0 and later
         ;
