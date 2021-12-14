@@ -272,7 +272,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
     import scala.compat.java8.FunctionConverters._
 
     SMono
-      .fromFuture(getAllIndexes(bucketName, timeout, retryStrategy))
+      .defer(() => SMono.fromFuture(getAllIndexes(bucketName, timeout, retryStrategy)))
       .doOnNext((allIndexes: collection.Seq[QueryIndex]) => {
 
         val matchingIndexes: collection.Seq[QueryIndex] = allIndexes
