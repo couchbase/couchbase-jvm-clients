@@ -270,6 +270,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     val name: String = UUID.randomUUID.toString
     val bucket = CreateBucketSettings(name, 110)
       .bucketType(BucketType.Couchbase)
+      .ramQuotaMB(256)
       .storageBackend(StorageBackend.Magma)
 
     val found: BucketSettings = createGetAndDestroy(name, bucket)
