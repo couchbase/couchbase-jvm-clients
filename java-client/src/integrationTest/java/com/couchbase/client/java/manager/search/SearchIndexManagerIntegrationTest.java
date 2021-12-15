@@ -28,11 +28,14 @@ import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,6 +43,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IgnoreWhen(missesCapabilities = Capabilities.SEARCH, clusterTypes = ClusterType.CAVES)
 class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(SearchIndexManagerIntegrationTest.class);
+
 
   private static Cluster cluster;
 
@@ -60,7 +66,7 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  void upsertAndGetIndex() throws Exception {
+  void upsertAndGetIndex() throws Throwable {
     String name = "idx-" + UUID.randomUUID().toString().substring(0, 8);
     SearchIndex index = new SearchIndex(name, config().bucketname());
     indexes.upsertIndex(index);
@@ -69,11 +75,10 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
     assertEquals(name, foundIndex.name());
     assertEquals(config().bucketname(), foundIndex.sourceName());
 
-    // TODO: fixme
-    Thread.sleep(2000);
-
-    assertTrue(indexes.getIndexedDocumentsCount(name) >= 0);
-    assertThrows(IndexNotFoundException.class, () -> indexes.getIndexedDocumentsCount("some-weird-index"));
+    runWithRetry(Duration.ofSeconds(30), () -> {
+      assertTrue(indexes.getIndexedDocumentsCount(name) >= 0);
+      assertThrows(IndexNotFoundException.class, () -> indexes.getIndexedDocumentsCount("some-weird-index"));
+    });
   }
 
   @Test
@@ -125,16 +130,15 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
    */
   @Test
   @IgnoreWhen(missesCapabilities = Capabilities.COLLECTIONS)
-  void analyzeDocument() throws Exception {
+  void analyzeDocument() throws Throwable {
     String name = "idx-" + UUID.randomUUID().toString().substring(0, 8);
     SearchIndex index = new SearchIndex(name, config().bucketname());
     indexes.upsertIndex(index);
 
-    // TODO: FIXME
-    Thread.sleep(2000);
-
-    List<JsonObject> tokens = indexes.analyzeDocument(name, JsonObject.create().put("name", "hello world"));
-    assertFalse(tokens.isEmpty());
+    runWithRetry(Duration.ofSeconds(30), () -> {
+      List<JsonObject> tokens = indexes.analyzeDocument(name, JsonObject.create().put("name", "hello world"));
+      assertFalse(tokens.isEmpty());
+    });
   }
 
   /**
@@ -142,27 +146,45 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
    * alive.
    */
   @Test
-  void performVariousTasksOnIndex() throws Exception {
+  void performVariousTasksOnIndex() throws Throwable {
     String name = "idx-" + UUID.randomUUID().toString().substring(0, 8);
     SearchIndex index = new SearchIndex(name, config().bucketname());
     indexes.upsertIndex(index);
 
-    // TODO: FIXME
-    Thread.sleep(2000);
+    runWithRetry(Duration.ofSeconds(30), () -> {
+      indexes.pauseIngest(name);
+      indexes.resumeIngest(name);
+      indexes.freezePlan(name);
+      indexes.unfreezePlan(name);
+      indexes.allowQuerying(name);
+      indexes.disallowQuerying(name);
 
-    indexes.pauseIngest(name);
-    indexes.resumeIngest(name);
-    indexes.freezePlan(name);
-    indexes.unfreezePlan(name);
-    indexes.allowQuerying(name);
-    indexes.disallowQuerying(name);
+      assertThrows(IndexNotFoundException.class, () -> indexes.pauseIngest("some-weird-index"));
+      assertThrows(IndexNotFoundException.class, () -> indexes.resumeIngest("some-weird-index"));
+      assertThrows(IndexNotFoundException.class, () -> indexes.freezePlan("some-weird-index"));
+      assertThrows(IndexNotFoundException.class, () -> indexes.unfreezePlan("some-weird-index"));
+      assertThrows(IndexNotFoundException.class, () -> indexes.allowQuerying("some-weird-index"));
+      assertThrows(IndexNotFoundException.class, () -> indexes.disallowQuerying("some-weird-index"));
+    });
+  }
 
-    assertThrows(IndexNotFoundException.class, () -> indexes.pauseIngest("some-weird-index"));
-    assertThrows(IndexNotFoundException.class, () -> indexes.resumeIngest("some-weird-index"));
-    assertThrows(IndexNotFoundException.class, () -> indexes.freezePlan("some-weird-index"));
-    assertThrows(IndexNotFoundException.class, () -> indexes.unfreezePlan("some-weird-index"));
-    assertThrows(IndexNotFoundException.class, () -> indexes.allowQuerying("some-weird-index"));
-    assertThrows(IndexNotFoundException.class, () -> indexes.disallowQuerying("some-weird-index"));
+  private static void runWithRetry(Duration timeout, Runnable task) throws Throwable {
+    long startNanos = System.nanoTime();
+    Throwable deferred = null;
+    do {
+      if (deferred != null) {
+        // Don't spam the server ...
+        MILLISECONDS.sleep(2000);
+      }
+      try {
+        task.run();
+        return;
+      } catch (Throwable t) {
+        LOGGER.warn("Retrying due to {}", t.toString()); // don't need stack trace
+        deferred = t;
+      }
+    } while (System.nanoTime() - startNanos < timeout.toNanos());
+    throw deferred;
   }
 
 }

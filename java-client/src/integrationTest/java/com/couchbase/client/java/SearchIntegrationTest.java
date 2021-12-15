@@ -76,9 +76,10 @@ class SearchIntegrationTest extends JavaIntegrationTest {
   void simpleSearch() throws Throwable {
     String docId = UUID.randomUUID().toString();
     MutationResult insertResult = collection.insert(docId, mapOf("name", "michael"));
+
     try {
       // should not have to retry here, but newly-created index is flaky
-      runWithRetry(Duration.ofSeconds(5), () -> {
+      runWithRetry(Duration.ofSeconds(30), () -> {
         SearchResult result = cluster.searchQuery(indexName, queryString("michael"), searchOptions()
             .consistentWith(MutationState.from(insertResult.mutationToken().get())));
 
@@ -101,7 +102,8 @@ class SearchIntegrationTest extends JavaIntegrationTest {
     Throwable deferred = null;
     do {
       if (deferred != null) {
-        MILLISECONDS.sleep(100);
+        // Don't spam the server ...
+        MILLISECONDS.sleep(2000);
       }
       try {
         task.run();
