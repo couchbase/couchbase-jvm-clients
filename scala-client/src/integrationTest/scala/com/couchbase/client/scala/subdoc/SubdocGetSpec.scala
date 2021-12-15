@@ -185,6 +185,12 @@ class SubdocGetSpec extends ScalaIntegrationTest {
         }
       case Failure(err) => assert(false, s"unexpected error $err")
     }
+
+    coll.lookupIn(docId, Array(exists("hello"))) match {
+      case Success(result) =>
+        assert(result.contentAs[Boolean](0).get)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
   }
 
   @Test
