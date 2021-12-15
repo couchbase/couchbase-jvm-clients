@@ -23,6 +23,7 @@ import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownVirtualAttributeException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 
+import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.*;
@@ -42,6 +43,9 @@ import java.util.UUID;
 import static com.couchbase.client.java.kv.LookupInSpec.get;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.*;
+
+class BooleanTypeRef extends TypeRef<Boolean> {
+}
 
 class SubdocIntegrationTest extends JavaIntegrationTest {
 
@@ -164,6 +168,19 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  void doesExistSingle() {
+    String id = UUID.randomUUID().toString();
+
+    collection.upsert(id, JsonObject.create().put("foo", "bar"));
+
+    LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.exists("foo")));
+
+    assertTrue(result.exists(0));
+    assertTrue(result.contentAs(0, Boolean.class));
+    assertTrue(result.contentAs(0, new BooleanTypeRef()));
+  }
+
+  @Test
   void existsMulti() {
     String id = UUID.randomUUID().toString();
 
@@ -172,7 +189,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     LookupInResult result = collection.lookupIn(
       id,
-      Arrays.asList(LookupInSpec.exists("not_exist"), LookupInSpec.get("foo"))
+      Arrays.asList(LookupInSpec.exists("not_exist"), LookupInSpec.get("foo"), LookupInSpec.exists("foo"))
     );
 
     assertFalse(result.exists(0));
@@ -183,6 +200,12 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     assertTrue(result.exists(1));
     assertEquals("bar", result.contentAs(1, String.class));
+
+    assertTrue(result.exists(2));
+    assertTrue(result.contentAs(2, Boolean.class));
+    assertThrows(
+            IllegalArgumentException.class,
+            () -> result.contentAs(2, String.class));
   }
 
   @Test

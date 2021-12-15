@@ -22,11 +22,16 @@ import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.PathInvalidException;
 import com.couchbase.client.core.error.context.SubDocumentErrorContext;
 import com.couchbase.client.core.msg.kv.SubDocumentField;
+import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
+import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -102,7 +107,16 @@ public class LookupInResult {
    * @return the decoded content into the generic type requested.
    */
   public <T> T contentAs(int index, final Class<T> target) {
-    return serializer.deserialize(target, getFieldAtIndex(index).value());
+    SubDocumentField field = getFieldAtIndex(index);
+    if (field.type() == SubdocCommandType.EXISTS) {
+      if (target.isAssignableFrom(Boolean.class)) {
+        return target.cast(field.status() == SubDocumentOpResponseStatus.SUCCESS);
+      }
+
+      throw new IllegalArgumentException("A Boolean is the only supported target class for an exists Sub-Document spec");
+    }
+
+    return serializer.deserialize(target, field.value());
   }
 
   /**
@@ -113,7 +127,27 @@ public class LookupInResult {
    * @return the decoded content into the generic type requested.
    */
   public <T> T contentAs(int index, final TypeRef<T> target) {
-    return serializer.deserialize(target, getFieldAtIndex(index).value());
+    SubDocumentField field = getFieldAtIndex(index);
+    if (field.type() == SubdocCommandType.EXISTS) {
+      String existsAsString = (field.status() == SubDocumentOpResponseStatus.SUCCESS) ? "true" : "false";
+      Type type = target.type();
+      if (((Class<T>) type).isAssignableFrom(Boolean.class)) {
+        // Borrowed from http://gafter.blogspot.com/2006/12/super-type-tokens.html
+        Class<?> rawType = type instanceof Class<?>
+                ? (Class<?>) type
+                : (Class<?>) ((ParameterizedType) type).getRawType();
+        try {
+          // Get the String-based constructor as the only other ctor takes a primitive boolean
+          return (T) rawType.getConstructor(String.class).newInstance(existsAsString);
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+          throw new RuntimeException("Unable to convert result in target", e);
+        }
+      }
+
+      throw new IllegalArgumentException("A Boolean is the only supported target class for an exists Sub-Document spec");
+    }
+
+    return serializer.deserialize(target, field.value());
   }
 
   /**
