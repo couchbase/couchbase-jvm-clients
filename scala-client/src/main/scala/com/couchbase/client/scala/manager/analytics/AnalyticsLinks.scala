@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 package com.couchbase.client.scala.manager.analytics
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.scala.util.CouchbasePickler
 
 import scala.util.{Failure, Success, Try}
@@ -41,7 +40,6 @@ object AnalyticsLink {
         json("type").str match {
           case "couchbase" => CouchbasePickler.read[CouchbaseRemoteAnalyticsLink](json)
           case "s3"        => CouchbasePickler.read[S3ExternalAnalyticsLink](json)
-          case "azureblob" => CouchbasePickler.read[AzureBlobExternalAnalyticsLink](json)
           case x           => throw new IllegalStateException(s"Cannot decode analytics link type $x")
         }
       }
@@ -144,82 +142,6 @@ object AnalyticsLink {
       )
   }
 
-  @Volatile
-  sealed trait AzureBlobExternalAnalyticsConnection
-
-  /** Abstracts over the various ways of connecting an Azure blob analytics link. */
-  object AzureBlobExternalAnalyticsConnection {
-    case object Unknown extends AzureBlobExternalAnalyticsConnection
-
-    case class ConnectionString(connectionString: String)
-        extends AzureBlobExternalAnalyticsConnection
-
-    case class AccountNameAndKey(accountName: String, accountKey: String)
-        extends AzureBlobExternalAnalyticsConnection
-
-    case class AccountNameAndSignature(accountName: String, sharedAccessSignature: String)
-        extends AzureBlobExternalAnalyticsConnection
-  }
-
-  /** An analytics link to an Azure blob. */
-  @Volatile
-  case class AzureBlobExternalAnalyticsLink(
-      dataverse: String,
-      name: String,
-      connection: AzureBlobExternalAnalyticsConnection,
-      blobEndpoint: String,
-      endpointSuffix: String
-  ) extends AnalyticsLink {
-    private[scala] def linkType: AnalyticsLinkType = AnalyticsLinkType.AzureBlobExternal
-
-    override private[scala] def toMap: Try[Map[String, String]] = {
-      val connMap = connection match {
-        case AzureBlobExternalAnalyticsConnection.Unknown =>
-          Failure(
-            new IllegalStateException(
-              "Before replacing an existing analytics link, the original AzureBlobExternalAnalyticsConnection must be reapplied.  This is because, for security, the server does not return all originally set fields."
-            )
-          )
-        case AzureBlobExternalAnalyticsConnection.ConnectionString(cs) =>
-          Success(Map("connectionString" -> cs))
-        case AzureBlobExternalAnalyticsConnection.AccountNameAndKey(an, ak) =>
-          Success(Map("accountName" -> an, "accountKey" -> ak))
-        case AzureBlobExternalAnalyticsConnection.AccountNameAndSignature(an, sac) =>
-          Success(Map("accountName" -> an, "sharedAccessSignature" -> sac))
-      }
-
-      connMap.map(
-        v =>
-          v ++ Map(
-            "type"           -> "azureblob",
-            "dataverse"      -> dataverse,
-            "name"           -> name,
-            "blobEndpoint"   -> blobEndpoint,
-            "endpointSuffix" -> endpointSuffix
-          )
-      )
-    }
-
-    override def dataverseName: String = dataverse
-  }
-
-  private[scala] object AzureBlobExternalAnalyticsLink {
-    implicit val rw: CouchbasePickler.ReadWriter[AzureBlobExternalAnalyticsLink] = CouchbasePickler
-      .readwriter[ujson.Obj]
-      .bimap[AzureBlobExternalAnalyticsLink](
-        (x: AzureBlobExternalAnalyticsLink) => ???, // Unused
-        (json) => {
-          // As per RFC, some fields are blanked out
-          AzureBlobExternalAnalyticsLink(
-            json("scope").str,
-            json("name").str,
-            AzureBlobExternalAnalyticsConnection.Unknown,
-            json("blobEndpoint").str,
-            json("endpointSuffix").str
-          )
-        }
-      )
-  }
 }
 
 /** Identifies the type of the analytics link.
@@ -231,10 +153,6 @@ sealed trait AnalyticsLinkType {
 object AnalyticsLinkType {
   case object S3External extends AnalyticsLinkType {
     override private[scala] def encode = "s3"
-  }
-
-  case object AzureBlobExternal extends AnalyticsLinkType {
-    override private[scala] def encode = "azureblob"
   }
 
   case object CouchbaseRemote extends AnalyticsLinkType {

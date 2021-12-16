@@ -21,7 +21,6 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonValue
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static com.couchbase.client.core.manager.CoreAnalyticsLinkManager.AZURE_BLOB_TYPE_NAME;
 import static com.couchbase.client.core.manager.CoreAnalyticsLinkManager.COUCHBASE_TYPE_NAME;
 import static com.couchbase.client.core.manager.CoreAnalyticsLinkManager.S3_TYPE_NAME;
 import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
@@ -31,7 +30,6 @@ public class AnalyticsLinkType {
   private static final ConcurrentMap<String, AnalyticsLinkType> values = new ConcurrentHashMap<>();
 
   public static final AnalyticsLinkType S3_EXTERNAL = AnalyticsLinkType.of(S3_TYPE_NAME);
-  public static final AnalyticsLinkType AZURE_BLOB_EXTERNAL = AnalyticsLinkType.of(AZURE_BLOB_TYPE_NAME);
   public static final AnalyticsLinkType COUCHBASE_REMOTE = AnalyticsLinkType.of(COUCHBASE_TYPE_NAME);
 
   private final String wireName;

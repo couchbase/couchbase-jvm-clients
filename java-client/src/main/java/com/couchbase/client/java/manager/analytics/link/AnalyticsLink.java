@@ -29,7 +29,6 @@ import com.couchbase.client.core.json.Mapper;
 import java.util.Map;
 
 import static com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
-import static com.couchbase.client.core.manager.CoreAnalyticsLinkManager.AZURE_BLOB_TYPE_NAME;
 import static com.couchbase.client.core.manager.CoreAnalyticsLinkManager.COUCHBASE_TYPE_NAME;
 import static com.couchbase.client.core.manager.CoreAnalyticsLinkManager.S3_TYPE_NAME;
 import static java.util.Objects.requireNonNull;
@@ -43,8 +42,7 @@ import static java.util.Objects.requireNonNull;
 )
 @JsonSubTypes({
     @JsonSubTypes.Type(value = CouchbaseRemoteAnalyticsLink.class, name = COUCHBASE_TYPE_NAME),
-    @JsonSubTypes.Type(value = S3ExternalAnalyticsLink.class, name = S3_TYPE_NAME),
-    @JsonSubTypes.Type(value = AzureBlobExternalAnalyticsLink.class, name = AZURE_BLOB_TYPE_NAME),
+    @JsonSubTypes.Type(value = S3ExternalAnalyticsLink.class, name = S3_TYPE_NAME)
 })
 @JsonInclude(NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)

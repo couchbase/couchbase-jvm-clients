@@ -18,8 +18,6 @@ package com.couchbase.client.scala.manager
 import com.couchbase.client.core.error._
 import com.couchbase.client.scala.Cluster
 import com.couchbase.client.scala.manager.analytics.AnalyticsLink.{
-  AzureBlobExternalAnalyticsConnection,
-  AzureBlobExternalAnalyticsLink,
   CouchbaseRemoteAnalyticsLink,
   S3ExternalAnalyticsLink
 }
@@ -116,9 +114,6 @@ class AnalyticsLinkManagerSpec extends ScalaIntegrationTest {
           .isEmpty
       )
       assert(analytics.getLinks(linkType = Some(AnalyticsLinkType.S3External)).get.isEmpty)
-      assert(
-        analytics.getLinks(linkType = Some(AnalyticsLinkType.AzureBlobExternal)).get.isEmpty
-      )
 
       assert(links.head.linkType == AnalyticsLinkType.CouchbaseRemote)
       links.head match {
@@ -172,9 +167,6 @@ class AnalyticsLinkManagerSpec extends ScalaIntegrationTest {
           .isEmpty
       )
       assert(analytics.getLinks(linkType = Some(AnalyticsLinkType.CouchbaseRemote)).get.isEmpty)
-      assert(
-        analytics.getLinks(linkType = Some(AnalyticsLinkType.AzureBlobExternal)).get.isEmpty
-      )
 
       assert(links.head.linkType == AnalyticsLinkType.S3External)
       links.head match {
@@ -185,60 +177,6 @@ class AnalyticsLinkManagerSpec extends ScalaIntegrationTest {
           assert(l.region == origLink.region)
           assert(l.secretAccessKey == "")
           assert(l.sessionToken == "")
-        case _ => assert(false)
-      }
-    } finally {
-      analytics.dropLink(origLink.name, DataverseName) // ignore result
-      assert(analytics.getLinks().get.isEmpty)
-    }
-  }
-
-  /** Doesn't test the server Azure functionality, simply that the link is created. */
-  @Test
-  @Disabled("Disabled until we figure out the changes in 7.1 signature")
-  def azureExternalLink(): Unit = {
-    analytics.createDataverse(DataverseName).get
-    val linkName = "azureInventory"
-
-    // Cannot use `travel-sample`.inventory
-    val origLink = AzureBlobExternalAnalyticsLink(
-      DataverseName,
-      linkName,
-      AzureBlobExternalAnalyticsConnection.ConnectionString("azureConnectionString"),
-      "azureBlobEndpoint",
-      "azureEndpointSuffix"
-    )
-    analytics.createLink(origLink).get
-
-    try {
-      val links = analytics.getLinks().get
-      assert(links.size == 1)
-      assert(
-        analytics.getLinks(linkType = Some(AnalyticsLinkType.AzureBlobExternal)).get.size == 1
-      )
-      assert(analytics.getLinks(dataverse = Some(DataverseName)).get.size == 1)
-      assert(
-        analytics.getLinks(dataverse = Some(DataverseName), name = Some(linkName)).get.size == 1
-      )
-      assert(
-        analytics.getLinks(dataverse = Some(DataverseName), name = Some(linkName)).get.size == 1
-      )
-      assert(
-        analytics
-          .getLinks(dataverse = Some(DataverseName), name = Some("doesNotExist"))
-          .get
-          .isEmpty
-      )
-      assert(analytics.getLinks(linkType = Some(AnalyticsLinkType.CouchbaseRemote)).get.isEmpty)
-      assert(analytics.getLinks(linkType = Some(AnalyticsLinkType.S3External)).get.isEmpty)
-
-      assert(links.head.linkType == AnalyticsLinkType.AzureBlobExternal)
-      links.head match {
-        case l: AzureBlobExternalAnalyticsLink =>
-          assert(l.dataverse == origLink.dataverse)
-          assert(l.name == origLink.name)
-          assert(l.connection == AzureBlobExternalAnalyticsConnection.Unknown)
-          assert(l.blobEndpoint == origLink.blobEndpoint)
         case _ => assert(false)
       }
     } finally {

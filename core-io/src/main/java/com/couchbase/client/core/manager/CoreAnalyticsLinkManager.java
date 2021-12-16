@@ -45,7 +45,6 @@ import static java.util.Objects.requireNonNull;
 @Stability.Internal
 public class CoreAnalyticsLinkManager {
   public static final String S3_TYPE_NAME = "s3";
-  public static final String AZURE_BLOB_TYPE_NAME = "azureblob";
   public static final String COUCHBASE_TYPE_NAME = "couchbase";
 
   private final Core core;
