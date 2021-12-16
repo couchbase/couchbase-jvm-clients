@@ -29,6 +29,7 @@ import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.search.sort.SearchSort;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -321,10 +322,12 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
      * Inject the top level parameters of a query into a prepared {@link JsonObject}
      * that represents the root of the query.
      *
+     * @param indexName the name of the index to inject.
      * @param queryJson the prepared {@link JsonObject} for the whole query.
+     * @param timeout the timeout of the request to send to the server.
      */
     @Stability.Internal
-    public void injectParams(final String indexName, JsonObject queryJson) {
+    public void injectParams(final String indexName, JsonObject queryJson, Duration timeout) {
       if (limit != null && limit >= 0) {
         queryJson.put("size", limit);
       }
@@ -365,6 +368,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
       }
 
       JsonObject control = JsonObject.create();
+      control.put("timeout", timeout.toMillis());
 
       if (consistency != null && consistency != SearchScanConsistency.NOT_BOUNDED) {
         JsonObject consistencyJson = JsonObject.create();

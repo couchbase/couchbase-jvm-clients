@@ -229,9 +229,13 @@ case class SearchOptions(
 
   /** Exports the whole query as a `JsonObject`.
     */
-  private[scala] def export(indexName: String, query: SearchQuery): JsonObject = {
+  private[scala] def export(
+      indexName: String,
+      query: SearchQuery,
+      timeout: Duration
+  ): JsonObject = {
     val result = JsonObject.create
-    injectParams(indexName, result)
+    injectParams(indexName, result, timeout)
 
     val queryJson = JsonObject.create
     query.injectParamsAndBoost(queryJson)
@@ -244,7 +248,11 @@ case class SearchOptions(
     *
     * @param queryJson the prepared `JsonObject` for the whole query.
     */
-  private[scala] def injectParams(indexName: String, queryJson: JsonObject): Unit = {
+  private[scala] def injectParams(
+      indexName: String,
+      queryJson: JsonObject,
+      timeout: Duration
+  ): Unit = {
     limit.foreach(v => if (v > 0) queryJson.put("size", v))
     skip.foreach(v => if (v > 0) queryJson.put("from", v))
     explain.foreach(v => queryJson.put("explain", v))
@@ -294,7 +302,12 @@ case class SearchOptions(
       queryJson.put("facets", facets)
     })
     val control = JsonObject.create
-    serverSideTimeout.foreach(v => control.put("timeout", v))
+
+    serverSideTimeout match {
+      case Some(t) => control.put("timeout", t.toMillis)
+      case None    => control.put("timeout", timeout.toMillis)
+    }
+
     scanConsistency.foreach {
       case SearchScanConsistency.ConsistentWith(ms) =>
         val consistencyJson = JsonObject.create

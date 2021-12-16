@@ -447,11 +447,12 @@ public class AsyncCluster {
 
   SearchRequest searchRequest(final String indexName, final SearchQuery query, final SearchOptions.Built opts) {
     notNullOrEmpty(indexName, "IndexName", () -> new ReducedSearchErrorContext(indexName, query.export().toMap()));
+    Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().searchTimeout());
+
     JsonObject params = query.export();
-    opts.injectParams(indexName, params);
+    opts.injectParams(indexName, params, timeout);
     byte[] bytes = params.toString().getBytes(StandardCharsets.UTF_8);
 
-    Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().searchTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
 
     final RequestSpan span = environment()

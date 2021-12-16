@@ -73,12 +73,13 @@ private[scala] class SearchHandler(hp: HandlerBasicParams) {
     } else if (options.deferredError.isDefined) {
       Failure(options.deferredError.get)
     } else {
-      val params = options.export(indexName, query)
+      val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.searchTimeout)
+
+      val params = options.export(indexName, query, timeout)
 
       val queryBytes = params.toString.getBytes(CharsetUtil.UTF_8)
 
-      val timeout: Duration = options.timeout.getOrElse(environment.timeoutConfig.searchTimeout)
-      val retryStrategy     = options.retryStrategy.getOrElse(environment.retryStrategy)
+      val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
 
       Try(
         new SearchRequest(

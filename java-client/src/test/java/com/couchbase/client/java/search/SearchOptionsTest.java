@@ -20,6 +20,8 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import static com.couchbase.client.java.search.SearchOptions.searchOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -35,15 +37,15 @@ class SearchOptionsTest {
   @Test
   void allowToDisableScoring() {
     JsonObject output = JsonObject.create();
-    searchOptions().disableScoring(true).build().injectParams("idx", output);
+    searchOptions().disableScoring(true).build().injectParams("idx", output, Duration.ofSeconds(1));
     assertEquals(output.getString("score"), "none");
 
     output = JsonObject.create();
-    searchOptions().disableScoring(false).build().injectParams("idx", output);
+    searchOptions().disableScoring(false).build().injectParams("idx", output, Duration.ofSeconds(1));
     assertFalse(output.containsKey("score"));
 
     output = JsonObject.create();
-    searchOptions().build().injectParams("idx", output);
+    searchOptions().build().injectParams("idx", output, Duration.ofSeconds(1));
     assertFalse(output.containsKey("score"));
   }
 
@@ -54,8 +56,15 @@ class SearchOptionsTest {
   @Test
   void canProvideCollections() {
     JsonObject output = JsonObject.create();
-    searchOptions().collections("a", "b").build().injectParams("idx", output);
+    searchOptions().collections("a", "b").build().injectParams("idx", output, Duration.ofSeconds(1));
     assertEquals(output.getArray("collections"), JsonArray.from("a", "b"));
+  }
+
+  @Test
+  void injectsTimeout() {
+    JsonObject output = JsonObject.create();
+    searchOptions().build().injectParams("idx", output, Duration.ofSeconds(1));
+    assertEquals(1000, output.getObject("ctl").getLong("timeout"));
   }
 
 }
