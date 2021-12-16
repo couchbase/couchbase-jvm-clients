@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.manager.bucket;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonValue;
 
 import java.util.Set;
@@ -23,6 +24,9 @@ import java.util.Set;
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static java.util.Objects.requireNonNull;
 
+/**
+ * The eviction policy for a bucket.
+ */
 public enum EvictionPolicyType {
   /**
    * During ejection, everything (including key, metadata, and value) will be ejected.
@@ -65,6 +69,7 @@ public enum EvictionPolicyType {
   }
 
   @JsonValue
+  @Stability.Internal
   public String alias() {
     return alias;
   }

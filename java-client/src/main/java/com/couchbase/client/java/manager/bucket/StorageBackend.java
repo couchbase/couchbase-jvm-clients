@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.manager.bucket;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonValue;
 
@@ -24,10 +25,21 @@ import java.util.concurrent.ConcurrentMap;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * The storage backend that should be used for a Couchbase Bucket.
+ */
 public class StorageBackend {
+
   private static final ConcurrentMap<String, StorageBackend> interned = new ConcurrentHashMap<>();
 
+  /**
+   * The "Couchstore" storage backend.
+   */
   public static final StorageBackend COUCHSTORE = of("couchstore");
+
+  /**
+   * The newer "Magma" storage backend.
+   */
   public static final StorageBackend MAGMA = of("magma");
 
   private final String alias;
@@ -37,11 +49,13 @@ public class StorageBackend {
   }
 
   @JsonCreator
+  @Stability.Internal
   public static StorageBackend of(String alias) {
     return interned.computeIfAbsent(alias, k -> new StorageBackend(alias));
   }
 
   @JsonValue
+  @Stability.Internal
   public String alias() {
     return alias;
   }

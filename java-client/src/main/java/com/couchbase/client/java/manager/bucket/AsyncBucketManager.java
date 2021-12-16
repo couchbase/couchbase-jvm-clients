@@ -18,11 +18,14 @@ package com.couchbase.client.java.manager.bucket;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.error.BucketExistsException;
+import com.couchbase.client.core.error.BucketNotFlushableException;
+import com.couchbase.client.core.error.BucketNotFoundException;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.manager.CoreBucketManager;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
+import com.couchbase.client.java.AsyncCluster;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -38,72 +41,248 @@ import static com.couchbase.client.java.manager.bucket.GetAllBucketOptions.getAl
 import static com.couchbase.client.java.manager.bucket.GetBucketOptions.getBucketOptions;
 import static com.couchbase.client.java.manager.bucket.UpdateBucketOptions.updateBucketOptions;
 
-@Stability.Volatile
+/**
+ * Performs (async) management operations on Buckets.
+ * <p>
+ * All mutating operations on this manager are eventually consistent, which means that as soon as the call returns
+ * the operation is accepted by the server, but it does not mean that the operation has been applied to all nodes
+ * in the cluster yet. In the future, APIs will be provided which allow to assert the propagation state.
+ */
 public class AsyncBucketManager {
+
+  /**
+   * References the core-io bucket manager which abstracts common I/O functionality.
+   */
   private final CoreBucketManager coreBucketManager;
 
-  public AsyncBucketManager(Core core) {
+  /**
+   * Creates a new {@link AsyncBucketManager}.
+   * <p>
+   * This API is not intended to be called by the user directly, use {@link AsyncCluster#buckets()}
+   * instead.
+   *
+   * @param core the internal core reference.
+   */
+  @Stability.Internal
+  public AsyncBucketManager(final Core core) {
     this.coreBucketManager = new CoreBucketManager(core);
   }
 
-  public CompletableFuture<Void> createBucket(BucketSettings settings) {
+  /**
+   * Creates a new bucket on the server.
+   * <p>
+   * The SDK will not perform any logical validation on correct combination of the settings - the server will return
+   * an error on invalid combinations. As an example, a magma bucket needs at least 256mb of bucket quota - otherwise
+   * the server will reject it.
+   *
+   * @param settings the {@link BucketSettings} describing the properties of the bucket.
+   * @return a {@link CompletableFuture} completing when the operation is applied or has failed with an error.
+   * @throws BucketExistsException (async) if the bucket already exists.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> createBucket(final BucketSettings settings) {
     return createBucket(settings, createBucketOptions());
   }
 
-  public CompletableFuture<Void> createBucket(BucketSettings settings, CreateBucketOptions options) {
+  /**
+   * Creates a new bucket on the server with custom options.
+   * <p>
+   * The SDK will not perform any logical validation on correct combination of the settings - the server will return
+   * an error on invalid combinations. As an example, a magma bucket needs at least 256mb of bucket quota - otherwise
+   * the server will reject it.
+   *
+   * @param settings the {@link BucketSettings} describing the properties of the bucket.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or has failed with an error.
+   * @throws BucketExistsException (async) if the bucket already exists.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> createBucket(final BucketSettings settings, final CreateBucketOptions options) {
     return coreBucketManager.createBucket(toMap(settings), options.build());
   }
 
-  public CompletableFuture<Void> updateBucket(BucketSettings settings) {
+  /**
+   * Updates the settings of a bucket which already exists.
+   * <p>
+   * Not all properties of a bucket can be changed on an update. Notably, the following properties are ignored
+   * by the SDK on update and so will not produce an error but also not change anything on the server side:
+   * <ul>
+   *   <li>{@link BucketSettings#name()}</li>
+   *   <li>{@link BucketSettings#bucketType(BucketType)}</li>
+   *   <li>{@link BucketSettings#conflictResolutionType(ConflictResolutionType)}</li>
+   *   <li>{@link BucketSettings#replicaIndexes(boolean)}</li>
+   *   <li>{@link BucketSettings#storageBackend(StorageBackend)}</li>
+   * </ul>
+   * <p>
+   * The SDK will not perform any logical validation on correct combination of the settings - the server will return
+   * an error on invalid combinations. As an example, a magma bucket needs at least 256mb of bucket quota - otherwise
+   * the server will reject it.
+   *
+   * @param settings the {@link BucketSettings} describing the properties of the bucket.
+   * @return a {@link CompletableFuture} completing when the operation is applied or has failed with an error.
+   * @throws BucketNotFoundException (async) if the specified bucket does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> updateBucket(final BucketSettings settings) {
     return updateBucket(settings, updateBucketOptions());
   }
 
-  public CompletableFuture<Void> updateBucket(BucketSettings settings, UpdateBucketOptions options) {
+  /**
+   * Updates the settings of a bucket which already exists with custom options.
+   * <p>
+   * Not all properties of a bucket can be changed on an update. Notably, the following properties are ignored
+   * by the SDK on update and so will not produce an error but also not change anything on the server side:
+   * <ul>
+   *   <li>{@link BucketSettings#name()}</li>
+   *   <li>{@link BucketSettings#bucketType(BucketType)}</li>
+   *   <li>{@link BucketSettings#conflictResolutionType(ConflictResolutionType)}</li>
+   *   <li>{@link BucketSettings#replicaIndexes(boolean)}</li>
+   *   <li>{@link BucketSettings#storageBackend(StorageBackend)}</li>
+   * </ul>
+   * <p>
+   * The SDK will not perform any logical validation on correct combination of the settings - the server will return
+   * an error on invalid combinations. As an example, a magma bucket needs at least 256mb of bucket quota - otherwise
+   * the server will reject it.
+   *
+   * @param settings the {@link BucketSettings} describing the properties of the bucket.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or has failed with an error.
+   * @throws BucketNotFoundException (async) if the specified bucket does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> updateBucket(final BucketSettings settings, final UpdateBucketOptions options) {
     return coreBucketManager.updateBucket(toMap(settings), options.build());
   }
 
-  public CompletableFuture<Void> dropBucket(String bucketName) {
+  /**
+   * Drops ("deletes") a bucket from the cluster.
+   *
+   * @param bucketName the name of the bucket to drop.
+   * @return a {@link CompletableFuture} completing when the operation is applied or has failed with an error.
+   * @throws BucketNotFoundException (async) if the specified bucket does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> dropBucket(final String bucketName) {
     return dropBucket(bucketName, dropBucketOptions());
   }
 
-  public CompletableFuture<Void> dropBucket(String bucketName, DropBucketOptions options) {
+  /**
+   * Drops ("deletes") a bucket from the cluster with custom options.
+   *
+   * @param bucketName the name of the bucket to drop.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or has failed with an error.
+   * @throws BucketNotFoundException (async) if the specified bucket does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> dropBucket(final String bucketName, final DropBucketOptions options) {
     return coreBucketManager.dropBucket(bucketName, options.build());
   }
 
-  public CompletableFuture<BucketSettings> getBucket(String bucketName) {
+  /**
+   * Loads the properties of a bucket from the cluster.
+   *
+   * @param bucketName the name of the bucket for which the settings should be loaded.
+   * @return a {@link CompletableFuture} completing with the bucket settings or if the operation has failed.
+   * @throws BucketNotFoundException (async) if the specified bucket does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<BucketSettings> getBucket(final String bucketName) {
     return getBucket(bucketName, getBucketOptions());
   }
 
-  public CompletableFuture<BucketSettings> getBucket(String bucketName, GetBucketOptions options) {
+  /**
+   * Loads the properties of a bucket from the cluster with custom options.
+   *
+   * @param bucketName the name of the bucket for which the settings should be loaded.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing with the bucket settings or if the operation has failed.
+   * @throws BucketNotFoundException (async) if the specified bucket does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<BucketSettings> getBucket(final String bucketName, final GetBucketOptions options) {
     return coreBucketManager.getBucket(bucketName, options.build())
         .thenApply(parseBucketSettings());
   }
 
-  private static Function<byte[], BucketSettings> parseBucketSettings() {
-    return bucketBytes -> {
-      JsonNode tree = Mapper.decodeIntoTree(bucketBytes);
-      return BucketSettings.create(tree);
-    };
-  }
-
+  /**
+   * Loads the properties of all buckets the current user has access to from the cluster.
+   *
+   * @return a {@link CompletableFuture} completing with all bucket settings or if the operation has failed.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<Map<String, BucketSettings>> getAllBuckets() {
     return getAllBuckets(getAllBucketOptions());
   }
 
-  public CompletableFuture<Map<String, BucketSettings>> getAllBuckets(GetAllBucketOptions options) {
-    return coreBucketManager.getAllBuckets(options.build())
+  /**
+   * Loads the properties of all buckets the current user has access to from the cluster.
+   *
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing with all bucket settings or if the operation has failed.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Map<String, BucketSettings>> getAllBuckets(final GetAllBucketOptions options) {
+    return coreBucketManager
+        .getAllBuckets(options.build())
         .thenApply(bucketNameToBytes -> transformValues(bucketNameToBytes, parseBucketSettings()));
   }
 
-  public CompletableFuture<Void> flushBucket(String bucketName) {
+  /**
+   * Deletes all documents from ("flushes") a bucket.
+   * <p>
+   * Flush needs to be enabled on the bucket in order to perform the operation. Enabling flush is not recommended
+   * in a production cluster and can lead to data loss!
+   * <p>
+   * Keep in mind that flush is not an atomic operation, the server will need some time to clean the partitions
+   * out completely. If isolation is preferred in an integration-test scenario, creating individual buckets might
+   * provide a better user experience.
+   *
+   * @param bucketName the name of the bucket to flush.
+   * @return a {@link CompletableFuture} completing when the operation is applied or has failed with an error.
+   * @throws BucketNotFoundException (async) if the specified bucket does not exist.
+   * @throws BucketNotFlushableException (async) if flush is not enabled on the bucket.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> flushBucket(final String bucketName) {
     return flushBucket(bucketName, flushBucketOptions());
   }
 
-  public CompletableFuture<Void> flushBucket(String bucketName, FlushBucketOptions options) {
+  /**
+   * Deletes all documents from ("flushes") a bucket with custom options.
+   * <p>
+   * Flush needs to be enabled on the bucket in order to perform the operation. Enabling flush is not recommended
+   * in a production cluster and can lead to data loss!
+   * <p>
+   * Keep in mind that flush is not an atomic operation, the server will need some time to clean the partitions
+   * out completely. If isolation is preferred in an integration-test scenario, creating individual buckets might
+   * provide a better user experience.
+   *
+   * @param bucketName the name of the bucket to flush.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or has failed with an error.
+   * @throws BucketNotFoundException (async) if the specified bucket does not exist.
+   * @throws BucketNotFlushableException (async) if flush is not enabled on the bucket.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> flushBucket(final String bucketName, final FlushBucketOptions options) {
     return coreBucketManager.flushBucket(bucketName, options.build());
   }
 
-  private Map<String, String> toMap(BucketSettings settings) {
+  /**
+   * Returns a function that turns raw encoded bytes into {@link BucketSettings}.
+   */
+  private static Function<byte[], BucketSettings> parseBucketSettings() {
+    return bucketBytes -> BucketSettings.create(Mapper.decodeIntoTree(bucketBytes));
+  }
+
+  /**
+   * Turns {@link BucketSettings} into a map that represents the wire format of the server.
+   *
+   * @param settings the settings to encode.
+   * @return the encoded settings in a map.
+   */
+  private static Map<String, String> toMap(final BucketSettings settings) {
     Map<String, String> params = new HashMap<>();
 
     params.put("ramQuotaMB", String.valueOf(settings.ramQuotaMB()));
@@ -141,4 +320,5 @@ public class AsyncBucketManager {
 
     return params;
   }
+
 }

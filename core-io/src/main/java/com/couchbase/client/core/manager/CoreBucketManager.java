@@ -125,6 +125,7 @@ public class CoreBucketManager {
       params.remove("bucketType");
       params.remove("conflictResolutionType");
       params.remove("replicaIndex");
+      params.remove("storageBackend");
     }
 
     UrlQueryStringBuilder form = UrlQueryStringBuilder.createForUrlSafeNames();
