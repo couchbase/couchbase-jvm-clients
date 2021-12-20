@@ -131,11 +131,10 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
     this.ctx = new RequestContext(ctx, this);
     this.retryStrategy = retryStrategy == null ? ctx.environment().retryStrategy() : retryStrategy;
 
-
     if (requestSpan != null) {
-      if (CbTracing.isInternalSpan(requestSpan)) {
-        requestSpan.requestContext(this.ctx);
-      } else {
+      requestSpan.requestContext(this.ctx);
+
+      if (!CbTracing.isInternalSpan(requestSpan)) {
         requestSpan.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
       }
     }
