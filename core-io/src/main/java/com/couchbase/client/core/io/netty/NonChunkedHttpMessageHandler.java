@@ -128,7 +128,11 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
    * @return the exception with which the request will be failed.
    */
   protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
-    throw new HttpStatusCodeException(status, content, request, null);
+    return failRequestWithHttpStatusCodeException(status, content, request);
+  }
+
+  private Exception failRequestWithHttpStatusCodeException(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
+    return new HttpStatusCodeException(status, content, request, null);
   }
 
   /**
@@ -237,7 +241,10 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
                 currentRequest.succeed(response);
               } else {
                 String body = httpResponse.content().toString(StandardCharsets.UTF_8);
-                currentRequest.fail(failRequestWith(httpResponse.status(), body, currentRequest));
+                Exception error = currentRequest.bypassExceptionTranslation()
+                    ? failRequestWithHttpStatusCodeException(httpResponse.status(), body, currentRequest)
+                    : failRequestWith(httpResponse.status(), body, currentRequest);
+                currentRequest.fail(error);
               }
             } else {
               ioContext.environment().orphanReporter().report(currentRequest);

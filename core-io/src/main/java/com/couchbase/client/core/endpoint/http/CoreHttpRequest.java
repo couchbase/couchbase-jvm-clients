@@ -35,6 +35,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValu
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaders;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.io.netty.HttpChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
@@ -72,6 +73,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
   private final HttpHeaders headers;
   private final boolean idempotent;
   private final AtomicBoolean executed = new AtomicBoolean();
+  private final boolean bypassExceptionTranslation;
 
   public static Builder builder(CoreCommonOptions options, CoreContext coreContext, HttpMethod method, CoreHttpPath path, RequestTarget target) {
     return new Builder(options, coreContext, target, method, path);
@@ -87,6 +89,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     this.content = builder.content;
     this.headers = builder.headers;
     this.idempotent = defaultIfNull(builder.idempotent, method == GET);
+    this.bypassExceptionTranslation = builder.bypassExceptionTranslation;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
       span.attribute(TracingIdentifiers.ATTR_SERVICE, CbTracing.getTracingId(target.serviceType()));
@@ -158,7 +161,13 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
   }
 
   private String pathAndQueryString() {
-    return queryString.isEmpty() ? path.format() : path.format() + "?" + queryString;
+    String p = path.format();
+    if (queryString.isEmpty()) {
+      return p;
+    }
+    // If user was cheeky and included query string in path, join with "&" instead of "?"
+    String delimiter = p.contains("?") ? "&" : "?";
+    return p + delimiter + queryString;
   }
 
   @Override
@@ -167,6 +176,11 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
         "serviceContext=" + serviceContext() +
         ",headers=" + headers +
         '}';
+  }
+
+  @Override
+  public boolean bypassExceptionTranslation() {
+    return bypassExceptionTranslation;
   }
 
   /**
@@ -189,6 +203,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     private String spanName; // nullable
     private Map<String, Object> spanAttributes; // nullable
     private Boolean idempotent; // nullable
+    private boolean bypassExceptionTranslation;
 
     public Builder(CoreCommonOptions options, CoreContext coreContext, RequestTarget target, HttpMethod method, CoreHttpPath path) {
       this.options = requireNonNull(options);
@@ -248,7 +263,24 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     }
 
     public Builder queryString(UrlQueryStringBuilder queryString) {
-      this.queryString = queryString.build();
+      return queryString(queryString.build());
+    }
+
+    public Builder queryString(String preEncodedQueryString) {
+      this.queryString = requireNonNull(preEncodedQueryString);
+      return this;
+    }
+
+    /**
+     * If true, a non-2xx HTTP status codes is always reported as an {@link HttpStatusCodeException}.
+     * If false, the message handler may throw a domain-specific exception instead.
+     * <p>
+     * Defaults to false.
+     *
+     * @see NonChunkedHttpRequest#bypassExceptionTranslation
+     */
+    public Builder bypassExceptionTranslation(boolean bypass) {
+      this.bypassExceptionTranslation = bypass;
       return this;
     }
 

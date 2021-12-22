@@ -17,6 +17,7 @@
 package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics.ClusterState
 import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper
 import com.couchbase.client.core.env.Authenticator
@@ -41,6 +42,7 @@ import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.env.env
 import com.couchbase.client.kotlin.internal.await
+import com.couchbase.client.kotlin.manager.http.CouchbaseHttpClient
 import com.couchbase.client.kotlin.query.QueryFlowItem
 import com.couchbase.client.kotlin.query.QueryMetadata
 import com.couchbase.client.kotlin.query.QueryParameters
@@ -138,6 +140,18 @@ public class Cluster internal constructor(
         core.openBucket(key)
         Bucket(key, this, core)
     }
+
+    /**
+     * Returns an HTTP client for the Couchbase REST API. This is an "escape hatch"
+     * for use in areas where the Kotlin SDK's management APIs are incomplete.
+     *
+     * @sample com.couchbase.client.kotlin.samples.httpClientGetBucketStats
+     * @sample com.couchbase.client.kotlin.samples.httpClientGetWithQueryParameters
+     * @sample com.couchbase.client.kotlin.samples.httpClientPostWithFormData
+     * @sample com.couchbase.client.kotlin.samples.httpClientPostWithJsonBody
+     */
+    @Stability.Volatile
+    public fun httpClient() : CouchbaseHttpClient = CouchbaseHttpClient(this)
 
     /**
      * Returns a Flow which may be collected to execute a cluster-level

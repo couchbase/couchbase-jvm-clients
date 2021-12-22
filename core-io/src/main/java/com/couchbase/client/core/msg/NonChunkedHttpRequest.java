@@ -18,10 +18,20 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
+import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.io.netty.HttpChannelContext;
 
 public interface NonChunkedHttpRequest<R extends Response> extends Encodable<FullHttpRequest>, Request<R> {
 
   R decode(FullHttpResponse response, HttpChannelContext context);
 
+  /**
+   * If true, a non-2xx HTTP status code must be reported as an {@link HttpStatusCodeException}.
+   * This lets users see the raw HTTP response when making their own HTTP requests with CouchbaseHttpClient.
+   * <p>
+   * If false, the message handler may throw a domain-specific exception instead.
+   */
+  default boolean bypassExceptionTranslation() {
+    return false;
+  }
 }
