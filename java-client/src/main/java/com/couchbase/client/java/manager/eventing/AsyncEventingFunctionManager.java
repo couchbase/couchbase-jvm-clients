@@ -28,6 +28,7 @@ import com.couchbase.client.core.error.EventingFunctionIdenticalKeyspaceExceptio
 import com.couchbase.client.core.error.EventingFunctionNotBootstrappedException;
 import com.couchbase.client.core.error.EventingFunctionNotDeployedException;
 import com.couchbase.client.core.error.EventingFunctionNotFoundException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.manager.CoreEventingFunctionManager;
 import com.couchbase.client.java.AsyncCluster;
@@ -412,7 +413,7 @@ public class AsyncEventingFunctionManager {
       List<Map<String, String>> constants = function
         .constantBindings()
         .stream()
-        .map(c -> mapOf("alias", c.alias(), "literal", c.literal()))
+        .map(c -> mapOf("value", c.alias(), "literal", c.literal()))
         .collect(Collectors.toList());
       depcfg.put("constants", constants);
     }
@@ -420,7 +421,7 @@ public class AsyncEventingFunctionManager {
     if (function.urlBindings() != null && !function.urlBindings().isEmpty()) {
       List<Map<String, Object>> urls = function.urlBindings().stream().map(c -> {
         Map<String, Object> map = new HashMap<>();
-        map.put("alias", c.alias());
+        map.put("value", c.alias());
         map.put("hostname", c.hostname());
         map.put("allow_cookies", c.allowCookies());
         map.put("validate_ssl_certificate", c.validateSslCertificate());
@@ -432,9 +433,11 @@ public class AsyncEventingFunctionManager {
           map.put("password", ((EventingFunctionUrlAuthBasic) c.auth()).password());
         } else if (c.auth() instanceof EventingFunctionUrlAuthDigest) {
           map.put("auth_type", "digest");
-
+          map.put("username", ((EventingFunctionUrlAuthDigest) c.auth()).username());
+          map.put("password", ((EventingFunctionUrlAuthDigest) c.auth()).password());
         } else if (c.auth() instanceof EventingFunctionUrlAuthBearer) {
           map.put("auth_type", "bearer");
+          map.put("bearer_key", ((EventingFunctionUrlAuthBearer) c.auth()).key());
         }
         return map;
       }).collect(Collectors.toList());
@@ -564,8 +567,13 @@ public class AsyncEventingFunctionManager {
    * @param encoded the encoded JSON format.
    * @return an instantiated {@link EventingFunction}.
    */
-  private static EventingFunction decodeFunction(final byte[] encoded) {
+  static EventingFunction decodeFunction(final byte[] encoded) {
     JsonNode func = Mapper.decodeIntoTree(encoded);
+
+    if (func.isArray()) {
+      throw new InvalidArgumentException("The provided JSON is an array (potentially of functions), not an individual function.", null, null);
+    }
+
     JsonNode depcfg = func.get("depcfg");
     JsonNode settings = func.get("settings");
 

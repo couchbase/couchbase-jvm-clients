@@ -17,6 +17,9 @@
 package com.couchbase.client.java.manager.eventing;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.json.Mapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,6 +72,45 @@ public class EventingFunction {
   public static Builder builder(String name, String code, EventingFunctionKeyspace sourceKeyspace,
                                 EventingFunctionKeyspace metadataKeyspace) {
     return new Builder(name, code, sourceKeyspace, metadataKeyspace);
+  }
+
+  /**
+   * Creates a {@link EventingFunction} from a raw JSON.
+   * <p>
+   * Note that the server exports it as a JSON array, so you might want to consider using
+   * {@link #fromExportedFunctions(byte[])} for those.
+   *
+   * @param encoded the encoded function to load.
+   * @return the created {@link EventingFunction}.
+   */
+  @Stability.Volatile
+  public static EventingFunction fromFunction(final byte[] encoded) {
+    try {
+      return AsyncEventingFunctionManager.decodeFunction(encoded);
+    } catch (Exception ex) {
+      throw new InvalidArgumentException("Could not decode function JSON", ex, null);
+    }
+  }
+
+  /**
+   * Creates a list of {@link EventingFunction}s from a raw JSON, usually exported from the server UI.
+   *
+   * @param encoded the encoded functions to load.
+   * @return the created list of {@link EventingFunction}s.
+   */
+  @Stability.Volatile
+  public static List<EventingFunction> fromExportedFunctions(final byte[] encoded) {
+    JsonNode encodedFunctions = Mapper.decodeIntoTree(encoded);
+
+    if (!encodedFunctions.isArray()) {
+      throw new InvalidArgumentException("The encoded JSON must be a JSON array of functions", null, null);
+    }
+
+    List<EventingFunction> functions = new ArrayList<>();
+    for (JsonNode function : encodedFunctions) {
+      functions.add(fromFunction(Mapper.encodeAsBytes(function)));
+    }
+    return functions;
   }
 
   private EventingFunction(Builder builder) {
