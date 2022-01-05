@@ -327,7 +327,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
         .last()
         .block());
 
-      assertTrue(ex.getMessage().contains("User has exceeded request rate limit"));
+      assertTrue(ex.getMessage().contains("User has more requests running than allowed"));
 
       cluster.disconnect();
     } finally {
