@@ -133,8 +133,8 @@ private[scala] object FutureConversions {
     }
 
     mono.onErrorResume((err: Throwable) => {
-      if (err.isInstanceOf[CompletionException]) SMono.error(err.getCause)
-      else SMono.error(err)
+      if (err.isInstanceOf[CompletionException]) SMono.raiseError(err.getCause)
+      else SMono.raiseError(err)
     })
   }
 

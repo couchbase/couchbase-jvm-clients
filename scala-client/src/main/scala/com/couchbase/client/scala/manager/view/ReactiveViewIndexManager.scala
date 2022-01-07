@@ -62,7 +62,7 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
     pathForDesignDocument(designDocName, namespace) match {
       case Success(path) =>
         sendRequest(httpClient.get(CoreHttpPath.path(path), options).build())
-          .onErrorResume(err => SMono.error(mapNotFoundError(err, designDocName, namespace)))
+          .onErrorResume(err => SMono.raiseError(mapNotFoundError(err, designDocName, namespace)))
           .flatMap(response => {
             response.status match {
               case ResponseStatus.SUCCESS =>
@@ -72,10 +72,10 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
 
                 parsed match {
                   case Success(designDoc) => SMono.just(designDoc)
-                  case Failure(err)       => SMono.error(err)
+                  case Failure(err)       => SMono.raiseError(err)
                 }
               case _ =>
-                SMono.error(
+                SMono.raiseError(
                   new CouchbaseException(
                     "Failed to drop design document [" +
                       redactMeta(designDocName) + "] from namespace " + namespace
@@ -84,7 +84,7 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
             }
           })
       case Failure(err) =>
-        SMono.error(err)
+        SMono.raiseError(err)
     }
   }
 
@@ -102,10 +102,10 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
             ReactiveViewIndexManager
               .parseAllDesignDocuments(new String(response.content(), UTF_8), namespace) match {
               case Success(docs) => SFlux.fromIterable(docs)
-              case Failure(err)  => SFlux.error(err)
+              case Failure(err)  => SFlux.raiseError(err)
             }
           case _ =>
-            SFlux.error(
+            SFlux.raiseError(
               new CouchbaseException(
                 "Failed to get all design documents; response status=" + response.status + "; response body=" + new String(
                   response.content,
@@ -141,7 +141,7 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
             .map(_ => ())
         })
       case Failure(err) =>
-        SMono.error(err)
+        SMono.raiseError(err)
     }
   }
 
@@ -155,12 +155,12 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
     pathForDesignDocument(designDocName, namespace) match {
       case Success(path) =>
         sendRequest(httpClient.delete(CoreHttpPath.path(path), options).build())
-          .onErrorResume(err => SMono.error(mapNotFoundError(err, designDocName, namespace)))
+          .onErrorResume(err => SMono.raiseError(mapNotFoundError(err, designDocName, namespace)))
           .flatMap(response => {
             response.status match {
               case ResponseStatus.SUCCESS => SMono.just(())
               case _ =>
-                SMono.error(
+                SMono.raiseError(
                   new CouchbaseException(
                     "Failed to drop design document [" +
                       redactMeta(designDocName) + "] from namespace " + namespace
@@ -169,7 +169,7 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
             }
           })
       case Failure(err) =>
-        SMono.error(err)
+        SMono.raiseError(err)
     }
   }
 

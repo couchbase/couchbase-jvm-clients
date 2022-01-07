@@ -83,7 +83,7 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
       .flatMap(scopes => {
         scopes.find(_.name == scopeName) match {
           case Some(scope) => SMono.just(scope)
-          case _           => SMono.error(new ScopeNotFoundException(scopeName))
+          case _           => SMono.raiseError(new ScopeNotFoundException(scopeName))
         }
       })
   }
@@ -188,13 +188,13 @@ class ReactiveCollectionManager(private[scala] val bucket: AsyncBucket) {
 
         if (response.status == ResponseStatus.INVALID_ARGS) {
           if (error.contains("Not allowed on this version of cluster")) {
-            SMono.error(
+            SMono.raiseError(
               new IllegalArgumentException(
                 "This version of Couchbase Server does not support this operation"
               )
             )
           } else {
-            SMono.error(new IllegalArgumentException(error))
+            SMono.raiseError(new IllegalArgumentException(error))
           }
         } else {
           SMono.fromTry(

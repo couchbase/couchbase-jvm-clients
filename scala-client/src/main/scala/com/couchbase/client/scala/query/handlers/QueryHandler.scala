@@ -263,7 +263,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
         .flatMap((qr: QueryResponse) => {
           val preparedName = qr.header().prepared()
           if (!preparedName.isPresent) {
-            SMono.error(
+            SMono.raiseError(
               new CouchbaseException("No prepared name present but must be, this is a query bug!")
             )
           } else {
@@ -430,7 +430,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
   ): SMono[ReactiveQueryResult] = {
     request(statement, options, environment, bucket, scope) match {
       case Success(req) => queryReactive(req, options)
-      case Failure(err) => SMono.error(err)
+      case Failure(err) => SMono.raiseError(err)
     }
   }
 
@@ -496,11 +496,11 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
                   .delay(cappedDuration, env.scheduler)
                   .flatMap(l => maybePrepareAndExecute(req, opts))
 
-              case _ => SMono.error(t)
+              case _ => SMono.raiseError(t)
             }
           })
 
-      case _ => SMono.error(err)
+      case _ => SMono.raiseError(err)
     }
   }
 }

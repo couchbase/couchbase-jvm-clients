@@ -106,10 +106,10 @@ class ReactiveUserManager(private val core: Core) {
       .flatMap((response: GenericManagerResponse) => {
 
         if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.error(new UserNotFoundException(domain.alias, username))
+          SMono.raiseError(new UserNotFoundException(domain.alias, username))
         } else
           checkStatus(response, "get " + domain + " user [" + redactUser(username) + "]") match {
-            case Failure(err) => SMono.error(err)
+            case Failure(err) => SMono.raiseError(err)
             case _ =>
               val value = CouchbasePickler.read[UserAndMetadata](response.content)
               SMono.just(value)
@@ -126,7 +126,7 @@ class ReactiveUserManager(private val core: Core) {
       .flatMapMany((response: GenericManagerResponse) => {
 
         checkStatus(response, "get all users") match {
-          case Failure(err) => SFlux.error(err)
+          case Failure(err) => SFlux.raiseError(err)
           case _ =>
             val value = CouchbasePickler.read[Seq[UserAndMetadata]](response.content)
             SFlux.fromIterable(value)
@@ -158,7 +158,7 @@ class ReactiveUserManager(private val core: Core) {
       .flatMap((response: GenericManagerResponse) => {
 
         checkStatus(response, "create user [" + redactUser(user.username) + "]") match {
-          case Failure(err) => SMono.error(err)
+          case Failure(err) => SMono.raiseError(err)
           case _            => SMono.just(())
         }
       })
@@ -175,10 +175,10 @@ class ReactiveUserManager(private val core: Core) {
       .flatMap((response: GenericManagerResponse) => {
 
         if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.error(new UserNotFoundException(domain.alias, username))
+          SMono.raiseError(new UserNotFoundException(domain.alias, username))
         } else {
           checkStatus(response, "drop user [" + redactUser(username) + "]") match {
-            case Failure(err) => SMono.error(err)
+            case Failure(err) => SMono.raiseError(err)
             case _            => SMono.just(())
           }
         }
@@ -193,7 +193,7 @@ class ReactiveUserManager(private val core: Core) {
       .flatMapMany((response: GenericManagerResponse) => {
 
         checkStatus(response, "get all roles") match {
-          case Failure(err) => SFlux.error(err)
+          case Failure(err) => SFlux.raiseError(err)
           case _ =>
             val converted = ReactiveUserManager.convertRoles(response.content())
             val values    = CouchbasePickler.read[Seq[RoleAndDescription]](converted)
@@ -211,10 +211,10 @@ class ReactiveUserManager(private val core: Core) {
     sendRequest(HttpMethod.GET, pathForGroup(groupName), timeout, retryStrategy)
       .flatMap((response: GenericManagerResponse) => {
         if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.error(new GroupNotFoundException(groupName))
+          SMono.raiseError(new GroupNotFoundException(groupName))
         } else {
           checkStatus(response, "get group [" + redactMeta(groupName) + "]") match {
-            case Failure(err) => SMono.error(err)
+            case Failure(err) => SMono.raiseError(err)
             case _ =>
               val value = CouchbasePickler.read[Group](response.content)
               SMono.just(value)
@@ -231,7 +231,7 @@ class ReactiveUserManager(private val core: Core) {
     sendRequest(HttpMethod.GET, pathForGroups, timeout, retryStrategy)
       .flatMapMany((response: GenericManagerResponse) => {
         checkStatus(response, "get all groups") match {
-          case Failure(err) => SFlux.error(err)
+          case Failure(err) => SFlux.raiseError(err)
           case _ =>
             val values = CouchbasePickler.read[Seq[Group]](response.content())
             SFlux.fromIterable(values)
@@ -255,7 +255,7 @@ class ReactiveUserManager(private val core: Core) {
       .flatMap((response: GenericManagerResponse) => {
 
         checkStatus(response, "create group [" + redactSystem(group.name) + "]") match {
-          case Failure(err) => SMono.error(err)
+          case Failure(err) => SMono.raiseError(err)
           case _            => SMono.just(())
         }
       })
@@ -271,10 +271,10 @@ class ReactiveUserManager(private val core: Core) {
       .flatMap((response: GenericManagerResponse) => {
 
         if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.error(new GroupNotFoundException(groupName))
+          SMono.raiseError(new GroupNotFoundException(groupName))
         } else {
           checkStatus(response, "drop group [" + redactUser(groupName) + "]") match {
-            case Failure(err) => SMono.error(err)
+            case Failure(err) => SMono.raiseError(err)
             case _            => SMono.just(())
           }
         }

@@ -92,7 +92,7 @@ class ReactiveAnalyticsIndexManager(
 
         exec(statement, timeout, retryStrategy).map(_ => ())
 
-      case Failure(err) => SMono.error(err)
+      case Failure(err) => SMono.raiseError(err)
     }
   }
 
@@ -112,7 +112,7 @@ class ReactiveAnalyticsIndexManager(
 
         exec(statement, timeout, retryStrategy).map(_ => ())
 
-      case Failure(err) => SMono.error(err)
+      case Failure(err) => SMono.raiseError(err)
     }
   }
 
@@ -147,7 +147,7 @@ class ReactiveAnalyticsIndexManager(
 
     statement match {
       case Success(st)  => exec(st, timeout, retryStrategy).map(_ => ())
-      case Failure(err) => SMono.error(err)
+      case Failure(err) => SMono.raiseError(err)
     }
   }
 
@@ -168,7 +168,7 @@ class ReactiveAnalyticsIndexManager(
 
         exec(statement, timeout, retryStrategy).map(_ => ())
 
-      case Failure(err) => SMono.error(err)
+      case Failure(err) => SMono.raiseError(err)
     }
   }
 
@@ -205,7 +205,7 @@ class ReactiveAnalyticsIndexManager(
 
     statement match {
       case Success(st)  => exec(st, timeout, retryStrategy).map(_ => ())
-      case Failure(err) => SMono.error(err)
+      case Failure(err) => SMono.raiseError(err)
     }
   }
 
@@ -240,7 +240,7 @@ class ReactiveAnalyticsIndexManager(
 
         exec(statement, timeout, retryStrategy).map(_ => ())
 
-      case Failure(err) => SMono.error(err)
+      case Failure(err) => SMono.raiseError(err)
     }
   }
 
@@ -284,7 +284,7 @@ class ReactiveAnalyticsIndexManager(
             }
         }
 
-        SMono.error(errToRaise)
+        SMono.raiseError(errToRaise)
       })
   }
 
