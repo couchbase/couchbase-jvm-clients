@@ -54,7 +54,7 @@ class QuerySpec extends ScalaIntegrationTest {
     coll = bucket.defaultCollection
 
     TestUtils.waitForService(bucket, ServiceType.QUERY)
-    TestUtils.waitForIndexerToHaveBucket(cluster, config.bucketname())
+    TestUtils.waitForIndexerToHaveKeyspace(cluster, config.bucketname())
 
     Util.waitUntilCondition(
       () => {

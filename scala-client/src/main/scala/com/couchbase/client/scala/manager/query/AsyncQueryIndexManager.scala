@@ -16,7 +16,6 @@
 package com.couchbase.client.scala.manager.query
 
 import java.util.concurrent.TimeoutException
-
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.error.{IndexExistsException, IndexNotFoundException}
 import com.couchbase.client.core.logging.RedactableArgument.redactMeta
@@ -26,7 +25,7 @@ import com.couchbase.client.core.util.CbThrowables.hasCause
 import com.couchbase.client.scala.AsyncCluster
 import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.JsonObject
-import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
+import com.couchbase.client.scala.query.{QueryOptions, QueryParameters, QueryResult}
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.{FutureConversions, RowTraversalUtil}
@@ -38,13 +37,22 @@ import scala.util.{Failure, Success, Try}
 
 /** Allows query indexes to be managed.
   *
+  * Operations take a bucketName, scopeName and collectionName.
+  *
+  * If only bucketName is provided, the indexes affected will be those on the bucket's default scope and collection.
+  * If bucketName and scopeName are provided, the indexes affected will be all those on collections under that scope.
+  * If bucketName, scopeName and collectionName are provided, the affected fetched will be on that specific collection.
+  *
   * @define Timeout        when the operation will timeout.  This will default to `timeoutConfig().managementTimeout
   *                        ()` in the
   *                        provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
   * @define RetryStrategy  provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
   *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
+  * @define ScopeName      if specified, this operation will work on a given [[com.couchbase.client.scala.Scope]] and
+  *                        [[com.couchbase.client.scala.Collection]].  If specified, `collectionName` must also be specified.
+  * @define CollectionName if specified, this operation will work on a given [[com.couchbase.client.scala.Scope]] and
+  *                        [[com.couchbase.client.scala.Collection]].  If specified, `scopeName` must also be specified.
   */
-@Stability.Volatile
 class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
     implicit val ec: ExecutionContext
 ) {
@@ -54,28 +62,40 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
   private val PrimaryIndexName                    = "#primary"
 
-  /** Retries all indexes on a bucket.
+  /** Gets all indexes.
+    *
+    * If only bucketName is provided, all indexes for that bucket will be fetched, for all scopes and collections.
+    * If bucketName and scopeName are provided, the indexes fetched will be all those on collections under that scope.
+    * If bucketName, scopeName and collectionName are provided, the indexes fetched will be on that specific collection.
     *
     * @param bucketName     the bucket to get indexes on
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param scopeName      if specified, the indexes fetched will be limited to those on collections under this [[com.couchbase.client.scala.Scope]]
+    * @param collectionName if specified, the indexes fetched will be limited to those on this specific [[com.couchbase.client.scala.Collection]]
     */
   def getAllIndexes(
       bucketName: String,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): Future[collection.Seq[QueryIndex]] = {
-    val statement =
-      s"""SELECT idx.* FROM system:indexes AS idx WHERE keyspace_id = "$bucketName"
-         | AND `using`="gsi" ORDER BY is_primary
-         | DESC, name ASC""".stripMargin
+    if (collectionName.isDefined && scopeName.isEmpty) {
+      Future.failed(new IllegalArgumentException("scopeName must be specified if collectionName is"))
+    }
+    else {
+      val (statement: String, options: QueryOptions) = AsyncQueryIndexManager.getStatementAndOptions(bucketName, timeout, retryStrategy, scopeName, collectionName)
 
-    execInternal(readonly = true, statement, timeout, retryStrategy)
-      .map(_.rowsAs[QueryIndex])
-      .flatMap {
-        case Success(z)   => Future.successful(z)
-        case Failure(err) => Future.failed(err)
-      }
+      cluster.query(statement, options)
+        .map(_.rowsAs[QueryIndex])
+        .flatMap {
+          case Success(z) => Future.successful(z)
+          case Failure(err) => Future.failed(err)
+        }
+    }
   }
 
   /** Creates a new query index with the specified parameters.
@@ -88,6 +108,8 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
     *                       provide improved performance when creating multiple indexes.
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param scopeName      $ScopeName
+    * @param collectionName $CollectionName
     */
   def createIndex(
       bucketName: String,
@@ -97,7 +119,11 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       numReplicas: Option[Int] = None,
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): Future[Unit] = {
 
     val withOptions = JsonObject.create
@@ -106,10 +132,10 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
     deferred.foreach(value => withOptions.put("defer_build", value))
 
     val statement: Try[String] = for {
-      quotedBucketName <- quote(bucketName)
-      quotedIndexName  <- quote(indexName)
+      quotedKeyspace  <- quote(bucketName, scopeName, collectionName)
+      quotedIndexName <- quote(indexName)
       statement <- Success(
-        s"CREATE INDEX $quotedIndexName ON $quotedBucketName ${fields.mkString("(", ",", ")")}"
+        s"CREATE INDEX $quotedIndexName ON $quotedKeyspace ${fields.mkString("(", ",", ")")}"
       )
     } yield statement
 
@@ -138,6 +164,8 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
     *                       provide improved performance when creating multiple indexes.
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param scopeName      $ScopeName
+    * @param collectionName $CollectionName
     */
   def createPrimaryIndex(
       bucketName: String,
@@ -146,7 +174,11 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       numReplicas: Option[Int] = None,
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): Future[Unit] = {
 
     val withOptions = JsonObject.create
@@ -157,14 +189,14 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
     val statement: Try[String] = indexName match {
       case Some(in) =>
         for {
-          quotedBucketName <- quote(bucketName)
+          quotedKeyspace   <- quote(bucketName, scopeName, collectionName)
           quotedIndexName  <- quote(in)
-          statement        <- Success(s"CREATE PRIMARY INDEX $quotedIndexName ON $quotedBucketName")
+          statement        <- Success(s"CREATE PRIMARY INDEX $quotedIndexName ON $quotedKeyspace")
         } yield statement
       case _ =>
         for {
-          quotedBucketName <- quote(bucketName)
-          statement        <- Success(s"CREATE PRIMARY INDEX ON $quotedBucketName")
+          quotedKeyspace   <- quote(bucketName, scopeName, collectionName)
+          statement        <- Success(s"CREATE PRIMARY INDEX ON $quotedKeyspace")
         } yield statement
     }
 
@@ -190,19 +222,34 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
     * @param ignoreIfNotExists sets whether the operation should fail if the index does not exists
     * @param timeout           $Timeout
     * @param retryStrategy     $RetryStrategy
+    * @param scopeName         $ScopeName
+    * @param collectionName    $CollectionName
     */
   def dropIndex(
       bucketName: String,
       indexName: String,
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): Future[Unit] = {
-    val statement: Try[String] = for {
-      quotedBucketName <- quote(bucketName)
-      quotedIndexName  <- quote(indexName)
-      statement        <- Success(s"DROP INDEX $quotedBucketName.$quotedIndexName")
-    } yield statement
+    val statement: Try[String] = scopeName match {
+      case Some(_) =>
+        for {
+          quotedKeyspace  <- quote(bucketName, scopeName, collectionName)
+          quotedIndexName <- quote(indexName)
+          statement       <- Success(s"DROP INDEX $quotedIndexName ON $quotedKeyspace")
+        } yield statement
+      case _ =>
+        for {
+          quotedBucket    <- quote(bucketName)
+          quotedIndexName <- quote(indexName)
+          statement       <- Success(s"DROP INDEX $quotedBucket.$quotedIndexName")
+        } yield statement
+    }
 
     statement match {
       case Success(st) =>
@@ -225,16 +272,22 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
     * @param ignoreIfNotExists sets whether the operation should fail if the index does not exists
     * @param timeout           $Timeout
     * @param retryStrategy     $RetryStrategy
+    * @param scopeName         $ScopeName
+    * @param collectionName    $CollectionName
     */
   def dropPrimaryIndex(
       bucketName: String,
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): Future[Unit] = {
     val statement: Try[String] = for {
-      quotedBucketName <- quote(bucketName)
-      statement        <- Success(s"DROP PRIMARY INDEX ON $quotedBucketName")
+      quotedKeyspace   <- quote(bucketName, scopeName, collectionName)
+      statement        <- Success(s"DROP PRIMARY INDEX ON $quotedKeyspace")
     } yield statement
 
     statement match {
@@ -260,19 +313,25 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
     *                          will fail with `IndexNotFoundException`
     * @param timeout           when the operation will timeout.
     * @param retryStrategy     $RetryStrategy
+    * @param scopeName         $ScopeName
+    * @param collectionName    $CollectionName
     */
   def watchIndexes(
       bucketName: String,
       indexNames: Iterable[String],
       timeout: Duration,
       watchPrimary: Boolean = false,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): Future[Unit] = {
 
     import scala.compat.java8.FunctionConverters._
 
     SMono
-      .defer(() => SMono.fromFuture(getAllIndexes(bucketName, timeout, retryStrategy)))
+      .defer(() => SMono.fromFuture(getAllIndexes(bucketName, timeout, retryStrategy, scopeName, collectionName)))
       .doOnNext((allIndexes: collection.Seq[QueryIndex]) => {
 
         val matchingIndexes: collection.Seq[QueryIndex] = allIndexes
@@ -328,47 +387,96 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
     * @param bucketName        the bucket to build indexes on.
     * @param timeout           $Timeout
     * @param retryStrategy     $RetryStrategy
+    * @param scopeName         $ScopeName
+    * @param collectionName    $CollectionName
     */
   def buildDeferredIndexes(
       bucketName: String,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): Future[Unit] = {
-    getAllIndexes(bucketName, timeout, retryStrategy)
-      .flatMap(allIndexes => {
-        val deferred = allIndexes
-          .filter(_.state == "deferred")
-          .map(v => quote(v.name))
+    val ret: Try[(String, QueryOptions)] = scopeName match {
+      case Some(sn) =>
+        for {
+          quotedKeyspace <- quote(bucketName, scopeName, collectionName)
+          statement <- Success(
+            s"""BUILD INDEX ON ${quotedKeyspace} (
+            (
+              SELECT RAW name FROM system:indexes
+              WHERE bucket_id = ?
+                AND scope_id = ?
+                AND keyspace_id = ?
+                AND state = "deferred"
+            )
+          )""")
+          opts <- Success(QueryOptions()
+            .timeout(timeout)
+            .retryStrategy(retryStrategy)
+            // ok to use .get as we can only get here if quotedKeyspace is Success()
+            .parameters(QueryParameters.Positional(bucketName, sn, collectionName.get)))
+        } yield (statement, opts)
 
-        if (deferred.isEmpty) Future.successful(())
-        else {
-          val statement = for {
-            quotedDefers     <- RowTraversalUtil.traverse(deferred.iterator)
-            quotedBucketName <- quote(bucketName)
-            statement        <- Success(s"BUILD INDEX ON $quotedBucketName(${quotedDefers.mkString(",")})")
-          } yield statement
-
-          statement match {
-            case Success(st) =>
-              exec(
-                readonly = false,
-                st,
-                None,
-                ignoreIfExists = false,
-                ignoreIfNotExists = false,
-                timeout,
-                retryStrategy
+      case _ =>
+        quote(bucketName)
+          .map(bn => {
+            val statement = s"""BUILD INDEX ON ${bn} (
+              (
+                SELECT RAW name FROM system:indexes
+                  WHERE (keyspace_id = ? AND bucket_id IS MISSING)
+                AND state = "deferred"
               )
+            )"""
+            val opts = QueryOptions()
+              .timeout(timeout)
+              .retryStrategy(retryStrategy)
+              .parameters(QueryParameters.Positional(bucketName))
+
+            (statement, opts)
+          })
+    }
+
+    ret match {
+      case Success((st, opts)) =>
+        cluster.query(st, opts)
+          .map(_.rowsAs[QueryIndex])
+          .flatMap {
+            case Success(z) => Future.successful(z)
             case Failure(err) => Future.failed(err)
           }
-        }
-      })
+      case Failure(err) => Future.failed(err)
+    }
   }
 
   private def quote(s: String): Try[String] = {
     if (s.contains("`")) {
       Failure(new IllegalArgumentException(s"Value [${redactMeta(s)}] may not contain backticks."))
     } else Success("`" + s + "`")
+  }
+
+  private def quote(bucketName: String, scopeName: Option[String], collectionName: Option[String]): Try[String] = {
+    if ((scopeName.isDefined && collectionName.isEmpty) || (collectionName.isDefined && scopeName.isEmpty)) {
+      Failure(new IllegalArgumentException("scopeName and collectionName must both be specified if either is"))
+    }
+    else {
+      scopeName match {
+        case Some(sn) =>
+          val cn = collectionName.get
+              for {
+                quotedBucketName <- quote(bucketName)
+                quotedScopeName <- quote(sn)
+                quotedCollectionName <- quote(cn)
+                statement <- Success(
+                  s"$quotedBucketName.$quotedScopeName.$quotedCollectionName"
+                )
+              } yield statement
+
+        case _ => quote(bucketName)
+      }
+    }
   }
 
   private def exec(
@@ -419,9 +527,56 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
 
 }
 
-private class IndexesNotReadyException extends RuntimeException
+object AsyncQueryIndexManager {
+  private[scala] def getStatementAndOptions(bucketName: String, timeout: Duration, retryStrategy: RetryStrategy, scopeName: Option[String], collectionName: Option[String]) = {
+    val (statement, options) = scopeName match {
+      case Some(sn) =>
+        collectionName match {
+          case Some(cn) =>
+            val statement =
+              s"""SELECT idx.* FROM system:indexes AS idx WHERE bucket_id = ?
+                 | AND scope_id = ? and keyspace_id = ?
+                 | AND `using`="gsi" ORDER BY is_primary
+                 | DESC, name ASC""".stripMargin
+            val options = QueryOptions()
+              .readonly(true)
+              .timeout(timeout)
+              .retryStrategy(retryStrategy)
+              .parameters(QueryParameters.Positional(bucketName, sn, cn))
+            (statement, options)
 
-@Stability.Volatile
+          case _ =>
+            val statement =
+              s"""SELECT idx.* FROM system:indexes AS idx WHERE bucket_id = ?
+                 | AND scope_id = ?
+                 | AND `using`="gsi" ORDER BY is_primary
+                 | DESC, name ASC""".stripMargin
+            val options = QueryOptions()
+              .readonly(true)
+              .timeout(timeout)
+              .retryStrategy(retryStrategy)
+              .parameters(QueryParameters.Positional(bucketName, sn))
+            (statement, options)
+        }
+      case _ =>
+        val statement =
+          s"""SELECT idx.* FROM system:indexes AS idx
+             | WHERE ((bucket_id IS MISSING AND keyspace_id = ?) OR bucket_id = ?)
+             | AND `using`="gsi" ORDER BY is_primary
+             | DESC, name ASC""".stripMargin
+        val options = QueryOptions()
+          .readonly(true)
+          .timeout(timeout)
+          .retryStrategy(retryStrategy)
+          .parameters(QueryParameters.Positional(bucketName, bucketName))
+        (statement, options)
+    }
+    (statement, options)
+  }
+}
+
+  private class IndexesNotReadyException extends RuntimeException
+
 case class QueryIndex(
     name: String,
     private val is_primary: Option[Boolean],
@@ -430,9 +585,29 @@ case class QueryIndex(
     private val keyspace_id: String,
     private val index_key: Seq[String],
     condition: Option[String],
-    partition: Option[String]
+    partition: Option[String],
+    private val bucket_id: Option[String],
+    private val scope_id: Option[String]
 ) {
+  /** If this is a collection-level index then this will be the collection's name, otherwise the bucket name. */
   def keyspaceId: String = keyspace_id
+
+  /** If this is a collection-level index then this will be the collection's scope's name, otherwise empty. */
+  @Stability.Uncommitted
+  def scopeName: Option[String] = scope_id
+
+  /** The name of the bucket the index is on. */
+  @Stability.Uncommitted
+  def bucketName: String = scope_id match {
+    case Some(_) => bucket_id.get // .get is ok, must be present
+    case _ => keyspace_id
+  }
+
+  /** If this is a collection-level index then this will be the collection's name, otherwise empty. */
+  def collectionName: Option[String] = scope_id match {
+    case Some(_) => Some(keyspace_id)
+    case _ => None
+  }
 
   def isPrimary: Boolean = is_primary.getOrElse(false)
 

@@ -41,9 +41,9 @@ object TestUtils {
     }
   }
 
-  /** Wait for indexer to be aware of a (possibly newly created) bucket */
-  def waitForIndexerToHaveBucket(cluster: Cluster, bucketName: String): Unit = {
-    println(s"Waiting for indexer to be aware of bucket ${bucketName}")
+  /** Wait for indexer to be aware of a (possibly newly created) bucket or collection */
+  def waitForIndexerToHaveKeyspace(cluster: Cluster, keyspaceName: String): Unit = {
+    println(s"Waiting for indexer to be aware of bucket ${keyspaceName}")
 
     var ready = false
     var guard = 100
@@ -51,7 +51,7 @@ object TestUtils {
     while (!ready && guard != 0) {
       guard -= 1
       val statement =
-        s"""SELECT COUNT(*) > 0 as present FROM system:keyspaces where name = "${bucketName}";"""
+        s"""SELECT COUNT(*) > 0 as present FROM system:keyspaces where name = "${keyspaceName}";"""
 
       cluster.query(statement) match {
         case Success(result) =>

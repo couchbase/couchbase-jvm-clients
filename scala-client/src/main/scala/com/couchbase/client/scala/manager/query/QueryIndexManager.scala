@@ -27,31 +27,50 @@ import scala.util.Try
 
 /** Allows query indexes to be managed.
   *
+  * Operations take a bucketName, scopeName and collectionName.
+  *
+  * If only bucketName is provided, the indexes affected will be those on the bucket's default scope and collection.
+  * If bucketName and scopeName are provided, the indexes affected will be all those on collections under that scope.
+  * If bucketName, scopeName and collectionName are provided, the affected fetched will be on that specific collection.
+  *
   * @define Timeout        when the operation will timeout.  This will default to `timeoutConfig().managementTimeout
   *                        ()` in the
   *                        provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
   * @define RetryStrategy  provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
   *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
+  * @define ScopeName      if specified, this operation will work on a given [[com.couchbase.client.scala.Scope]] and
+  *                        [[com.couchbase.client.scala.Collection]].  If specified, `collectionName` must also be specified.
+  * @define CollectionName if specified, this operation will work on a given [[com.couchbase.client.scala.Scope]] and
+  *                        [[com.couchbase.client.scala.Collection]].  If specified, `scopeName` must also be specified.
   */
-@Stability.Volatile
 class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: ExecutionContext) {
   private val core = async.cluster.core
   private val DefaultTimeout: Duration =
     core.context().environment().timeoutConfig().managementTimeout()
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
 
-  /** Retries all indexes on a bucket.
+  /** Gets all indexes.
+    *
+    * If only bucketName is provided, all indexes for that bucket will be fetched, for all scopes and collections.
+    * If bucketName and scopeName are provided, the indexes fetched will be all those on collections under that scope.
+    * If bucketName, scopeName and collectionName are provided, the indexes fetched will be on that specific collection.
     *
     * @param bucketName     the bucket to get indexes on
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param scopeName      if specified, the indexes fetched will be limited to those on collections under this [[com.couchbase.client.scala.Scope]]
+    * @param collectionName if specified, the indexes fetched will be limited to those on this specific [[com.couchbase.client.scala.Collection]]
     */
   def getAllIndexes(
       bucketName: String,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): Try[collection.Seq[QueryIndex]] = {
-    Collection.block(async.getAllIndexes(bucketName, timeout, retryStrategy))
+    Collection.block(async.getAllIndexes(bucketName, timeout, retryStrategy, scopeName, collectionName))
   }
 
   /** Creates a new query index with the specified parameters.
@@ -64,6 +83,8 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
     *                       provide improved performance when creating multiple indexes.
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param scopeName      $ScopeName
+    * @param collectionName $CollectionName
     */
   def createIndex(
       bucketName: String,
@@ -73,7 +94,11 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       numReplicas: Option[Int] = None,
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): Try[Unit] = {
     Collection.block(
       async.createIndex(
@@ -84,7 +109,9 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
         numReplicas,
         deferred,
         timeout,
-        retryStrategy
+        retryStrategy,
+        scopeName,
+        collectionName
       )
     )
   }
@@ -99,6 +126,8 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
     *                       provide improved performance when creating multiple indexes.
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param scopeName      $ScopeName
+    * @param collectionName $CollectionName
     */
   def createPrimaryIndex(
       bucketName: String,
@@ -107,7 +136,11 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       numReplicas: Option[Int] = None,
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): Try[Unit] = {
     Collection.block(
       async.createPrimaryIndex(
@@ -117,7 +150,9 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
         numReplicas,
         deferred,
         timeout,
-        retryStrategy
+        retryStrategy,
+        scopeName,
+        collectionName
       )
     )
 
@@ -136,10 +171,14 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       indexName: String,
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): Try[Unit] = {
     Collection.block(
-      async.dropIndex(bucketName, indexName, ignoreIfNotExists, timeout, retryStrategy)
+      async.dropIndex(bucketName, indexName, ignoreIfNotExists, timeout, retryStrategy, scopeName, collectionName)
     )
 
   }
@@ -150,14 +189,20 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
     * @param ignoreIfNotExists sets whether the operation should fail if the index does not exists
     * @param timeout           $Timeout
     * @param retryStrategy     $RetryStrategy
+    * @param scopeName         $ScopeName
+    * @param collectionName    $CollectionName
     */
   def dropPrimaryIndex(
       bucketName: String,
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): Try[Unit] = {
-    Collection.block(async.dropPrimaryIndex(bucketName, ignoreIfNotExists, timeout, retryStrategy))
+    Collection.block(async.dropPrimaryIndex(bucketName, ignoreIfNotExists, timeout, retryStrategy, scopeName, collectionName))
   }
 
   /** Polls the specified indexes until they are all online.
@@ -168,16 +213,22 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
     *                          will fail with `IndexNotFoundException`
     * @param timeout           when the operation will timeout.
     * @param retryStrategy     $RetryStrategy
+    * @param scopeName         $ScopeName
+    * @param collectionName    $CollectionName
     */
   def watchIndexes(
       bucketName: String,
       indexNames: Iterable[String],
       timeout: Duration,
       watchPrimary: Boolean = false,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): Try[Unit] = {
     Collection.block(
-      async.watchIndexes(bucketName, indexNames, timeout, watchPrimary, retryStrategy)
+      async.watchIndexes(bucketName, indexNames, timeout, watchPrimary, retryStrategy, scopeName, collectionName)
     )
   }
 
@@ -186,12 +237,18 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
     * @param bucketName        the bucket to build indexes on.
     * @param timeout           $Timeout
     * @param retryStrategy     $RetryStrategy
+    * @param scopeName         $ScopeName
+    * @param collectionName    $CollectionName
     */
   def buildDeferredIndexes(
       bucketName: String,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): Try[Unit] = {
-    Collection.block(async.buildDeferredIndexes(bucketName, timeout, retryStrategy))
+    Collection.block(async.buildDeferredIndexes(bucketName, timeout, retryStrategy, scopeName, collectionName))
   }
 }

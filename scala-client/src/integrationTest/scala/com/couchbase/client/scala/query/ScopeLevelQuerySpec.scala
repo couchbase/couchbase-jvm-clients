@@ -66,7 +66,7 @@ class ScopeLevelQuerySpec extends ScalaIntegrationTest {
     coll = scope.collection(CollectionName)
 
     TestUtils.waitForService(bucket, ServiceType.QUERY)
-    TestUtils.waitForIndexerToHaveBucket(cluster, config.bucketname())
+    TestUtils.waitForIndexerToHaveKeyspace(cluster, config.bucketname())
 
     println("Waiting for primary index on collection to be created successfully")
 

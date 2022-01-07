@@ -17,18 +17,21 @@ package com.couchbase.client.scala.manager
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.SECONDS
-import com.couchbase.client.core.error.{IndexExistsException, IndexNotFoundException, TimeoutException}
+import com.couchbase.client.core.error.{IndexExistsException, IndexFailureException, IndexNotFoundException, TimeoutException}
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.scala.manager.bucket.CreateBucketSettings
+import com.couchbase.client.scala.manager.collection.CollectionSpec
 import com.couchbase.client.scala.manager.query.{QueryIndex, QueryIndexManager}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.test._
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.{assertTrue, fail}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.util.stream.Collectors.toSet
+import java.util.UUID
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -39,9 +42,12 @@ import scala.util.{Failure, Success, Try}
 class QueryIndexManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster           = _
   private var coll: Collection           = _
+  private var nonDefaultColl: Collection = _
   private var bucketName: String         = _
   private var indexes: QueryIndexManager = _
   private val logger                     = LoggerFactory.getLogger(classOf[QueryIndexManagerSpec])
+  private val ScopeName                  = "cars"
+  private val CollectionName             = "ferrari"
 
   @BeforeAll
   def setup(): Unit = {
@@ -51,9 +57,17 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     bucketName = config.bucketname
     indexes = cluster.queryIndexes
 
+    bucket.collections.createScope(ScopeName).get
+    Util.waitUntilCondition(() => {
+      val result = bucket.collections.createCollection(CollectionSpec(CollectionName, ScopeName))
+      result.isSuccess
+    })
+    nonDefaultColl = bucket.scope(ScopeName).collection(CollectionName)
+
     bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
     TestUtils.waitForService(bucket, ServiceType.QUERY)
-    TestUtils.waitForIndexerToHaveBucket(cluster, config.bucketname())
+    TestUtils.waitForIndexerToHaveKeyspace(cluster, config.bucketname())
+    TestUtils.waitForIndexerToHaveKeyspace(cluster, CollectionName)
   }
 
   @AfterAll
@@ -67,7 +81,14 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
       .getAllIndexes(config.bucketname)
       .get
       .foreach(index => {
-        cluster.queryIndexes.dropIndex(config.bucketname, index.name).get
+        index.scopeName match {
+          case Some(_) =>
+            // collection-level index
+            cluster.queryIndexes.dropIndex(index.bucketName, index.name, scopeName = index.scopeName, collectionName = Some(index.keyspaceId)).get
+          case _ =>
+            // bucket-level index
+            cluster.queryIndexes.dropIndex(index.keyspaceId, index.name).get
+        }
       })
   }
 
@@ -100,9 +121,11 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
   def createIndex(bucketName: String,
                   indexName: String,
                   fields: Iterable[String],
-                  deferred: Option[Boolean] = None) = {
+                  deferred: Option[Boolean] = None,
+                  scopeName: Option[String] = None,
+                  collectionName: Option[String] = None) = {
     Util.waitUntilCondition(() => {
-      val proceed = cluster.queryIndexes.createIndex(bucketName, indexName, fields, deferred = deferred) match {
+      val proceed = cluster.queryIndexes.createIndex(bucketName, indexName, fields, deferred = deferred, scopeName = scopeName, collectionName = collectionName) match {
         case Success(_) => true
         case Failure(_: IndexExistsException) => true
         case Failure(err) =>
@@ -187,9 +210,9 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
 
   }
 
-  private def getIndex(name: String): Option[QueryIndex] = {
+  private def getIndex(name: String, scopeName: Option[String] = None, collectionName: Option[String] = None): Option[QueryIndex] = {
     cluster.queryIndexes
-      .getAllIndexes(config.bucketname())
+      .getAllIndexes(config.bucketname(), scopeName = scopeName, collectionName = collectionName)
       .get
       .find(index => name == index.name)
   }
@@ -205,6 +228,10 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
 
     assert(!index.isPrimary)
     assert(Set("(`fieldB`.`foo`)", "(`fieldB`.`bar`)") == index.indexKey.toSet)
+    assert(index.keyspaceId == config.bucketname())
+    assert(index.bucketName == config.bucketname())
+    assert(index.scopeName.isEmpty)
+    assert(index.collectionName.isEmpty)
   }
 
   @Test
@@ -283,12 +310,14 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
   }
 
   private def assertAllIndexesComeOnline(bucketName: String): Unit = {
-    val states = cluster.queryIndexes
-      .getAllIndexes(bucketName)
-      .get
-      .map(_.state)
-      .toSet
-    if (states != Set("online")) assertAllIndexesComeOnline(bucketName)
+    Util.waitUntilCondition(() => {
+      val indexes = cluster.queryIndexes
+        .getAllIndexes(bucketName)
+        .get
+      logger.info(s"queryIndexes returned ${indexes}")
+      val states = indexes.map(_.state).toSet
+      states == Set("online")
+    })
   }
 
   private def assertAllIndexesAlreadyOnline(bucketName: String): Unit = {
@@ -311,9 +340,11 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def buildDeferredIndexOnAbsentBucket(): Unit = { // It would be great to throw
-    // BucketNotFoundException, but it's unclear how to detect that condition.
-    indexes.buildDeferredIndexes("noSuchBucket").get
+  def buildDeferredIndexOnAbsentBucket(): Unit = {
+    indexes.buildDeferredIndexes("noSuchBucket") match {
+      case Failure(_: IndexFailureException) =>
+      case x => logger.warn(s"buildDeferredIndexes returned ${x}")
+    }
   }
 
   @Test
@@ -392,5 +423,72 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     cluster.reactive.queryIndexes.createPrimaryIndex(bucketName).block()
 
     assert(cluster.reactive.queryIndexes.getAllIndexes(bucketName).collectSeq().block().size == 1)
+  }
+
+  // Using SUBDOC_REVIVE_DOCUMENT to indicate 7.1 support as fix MB-50132 is required
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.SUBDOC_REVIVE_DOCUMENT))
+  @Test
+  def createCollectionIndex(): Unit = {
+    val indexName = "myCollectionIndex"
+    val fields    = Seq("fieldB.foo", "`fieldB`.`bar`")
+
+    createIndex(config.bucketname(), indexName, fields, scopeName = Some(nonDefaultColl.scopeName), collectionName = Some(nonDefaultColl.name))
+
+    Util.waitUntilCondition(() => {
+      val result = getIndex(indexName, Some(nonDefaultColl.scopeName), Some(nonDefaultColl.name))
+
+      result match {
+        case Some(index) =>
+          assert(!index.isPrimary)
+          assert(Set("(`fieldB`.`foo`)", "(`fieldB`.`bar`)") == index.indexKey.toSet)
+          assert(index.keyspaceId == nonDefaultColl.name)
+          assert(index.bucketName == nonDefaultColl.bucketName)
+          assert(index.scopeName.contains(nonDefaultColl.scopeName))
+          assert(index.collectionName.contains(nonDefaultColl.name))
+          true
+        case _ =>
+          false
+      }
+    })
+  }
+
+  // Using SUBDOC_REVIVE_DOCUMENT to indicate 7.1 support as fix MB-50132 is required
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.SUBDOC_REVIVE_DOCUMENT))
+  @Test
+  def dropCollectionIndex() = {
+    val indexName = UUID.randomUUID().toString
+    createIndex(config.bucketname(), indexName, Seq("a", "b"),
+      scopeName = Some(nonDefaultColl.scopeName), collectionName = Some(nonDefaultColl.name))
+
+    cluster.queryIndexes.dropIndex(config.bucketname(), indexName) match {
+      case Failure(_: IndexNotFoundException) =>
+      case _ => fail("Index should not exist at the bucket level")
+    }
+
+    cluster.queryIndexes.dropIndex(config.bucketname(), indexName,
+      scopeName = Some(nonDefaultColl.scopeName), collectionName = Some(nonDefaultColl.name)).get
+
+    assert(cluster.queryIndexes.getAllIndexes(config.bucketname()).get.isEmpty)
+  }
+
+  // Using SUBDOC_REVIVE_DOCUMENT to indicate 7.1 support as fix MB-50132 is required
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.SUBDOC_REVIVE_DOCUMENT))
+  @Test
+  def buildOneDeferredCollectionIndex() = {
+    val indexName = UUID.randomUUID().toString
+    createIndex(config.bucketname, indexName, Seq("someField"), deferred = Some(true),
+        scopeName = Some(nonDefaultColl.scopeName), collectionName = Some(nonDefaultColl.name))
+
+    val index = getIndex(indexName, Some(nonDefaultColl.scopeName), Some(nonDefaultColl.name)).get
+    assert("deferred" == index.state)
+
+    cluster.queryIndexes.buildDeferredIndexes(config.bucketname, scopeName = Some(nonDefaultColl.scopeName), collectionName = Some(nonDefaultColl.name)).get
+
+    Util.waitUntilCondition(() => {
+      val indexes = cluster.queryIndexes.getAllIndexes(bucketName, scopeName = Some(nonDefaultColl.scopeName), collectionName = Some(nonDefaultColl.name)).get
+      logger.info(s"queryIndexes returned ${indexes}")
+      val states = indexes.map(_.state).toSet
+      states == Set("online")
+    })
   }
 }

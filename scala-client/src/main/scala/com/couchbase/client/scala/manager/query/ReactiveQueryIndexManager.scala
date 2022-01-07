@@ -18,7 +18,7 @@ package com.couchbase.client.scala.manager.query
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.ReactiveCluster
-import com.couchbase.client.scala.query.QueryOptions
+import com.couchbase.client.scala.query.{QueryOptions, QueryParameters}
 import com.couchbase.client.scala.util.DurationConversions._
 import reactor.core.scala.publisher.{SFlux, SMono}
 
@@ -27,13 +27,22 @@ import scala.concurrent.duration.Duration
 
 /** Allows query indexes to be managed.
   *
+  * Operations take a bucketName, scopeName and collectionName.
+  *
+  * If only bucketName is provided, the indexes affected will be those on the bucket's default scope and collection.
+  * If bucketName and scopeName are provided, the indexes affected will be all those on collections under that scope.
+  * If bucketName, scopeName and collectionName are provided, the affected fetched will be on that specific collection.
+  *
   * @define Timeout        when the operation will timeout.  This will default to `timeoutConfig().managementTimeout
   *                        ()` in the
   *                        provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
   * @define RetryStrategy  provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
   *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
+  * @define ScopeName      if specified, this operation will work on a given [[com.couchbase.client.scala.Scope]] and
+  *                        [[com.couchbase.client.scala.Collection]].  If specified, `collectionName` must also be specified.
+  * @define CollectionName if specified, this operation will work on a given [[com.couchbase.client.scala.Scope]] and
+  *                        [[com.couchbase.client.scala.Collection]].  If specified, `scopeName` must also be specified.
   */
-@Stability.Volatile
 class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: ReactiveCluster)(
     implicit val ec: ExecutionContext
 ) {
@@ -42,28 +51,33 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
     core.context().environment().timeoutConfig().managementTimeout()
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
 
-  /** Retries all indexes on a bucket.
+  /** Gets all indexes.
+    *
+    * If only bucketName is provided, all indexes for that bucket will be fetched, for all scopes and collections.
+    * If bucketName and scopeName are provided, the indexes fetched will be all those on collections under that scope.
+    * If bucketName, scopeName and collectionName are provided, the indexes fetched will be on that specific collection.
     *
     * @param bucketName     the bucket to get indexes on
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param scopeName      if specified, the indexes fetched will be limited to those on collections under this [[com.couchbase.client.scala.Scope]]
+    * @param collectionName if specified, the indexes fetched will be limited to those on this specific [[com.couchbase.client.scala.Collection]]
     */
   def getAllIndexes(
       bucketName: String,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): SFlux[QueryIndex] = {
-    val statement =
-      s"""SELECT idx.* FROM system:indexes AS idx WHERE keyspace_id = "$bucketName" ORDER BY is_primary
-         | DESC, name ASC""".stripMargin
+    val (statement: String, options: QueryOptions) = AsyncQueryIndexManager.getStatementAndOptions(bucketName, timeout, retryStrategy, scopeName, collectionName)
 
     cluster
       .query(
         statement,
-        QueryOptions()
-          .readonly(true)
-          .timeout(timeout)
-          .retryStrategy(retryStrategy)
+        options
       )
       .flatMapMany(_.rowsAs[QueryIndex])
   }
@@ -78,6 +92,8 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
     *                       provide improved performance when creating multiple indexes.
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param scopeName      $ScopeName
+    * @param collectionName $CollectionName
     */
   def createIndex(
       bucketName: String,
@@ -87,7 +103,11 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       numReplicas: Option[Int] = None,
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
       async.createIndex(
@@ -98,7 +118,9 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
         numReplicas,
         deferred,
         timeout,
-        retryStrategy
+        retryStrategy,
+        scopeName,
+        collectionName
       )
     )
   }
@@ -113,6 +135,8 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
     *                       provide improved performance when creating multiple indexes.
     * @param timeout        $Timeout
     * @param retryStrategy  $RetryStrategy
+    * @param scopeName      $ScopeName
+    * @param collectionName $CollectionName
     */
   def createPrimaryIndex(
       bucketName: String,
@@ -121,7 +145,11 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       numReplicas: Option[Int] = None,
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
       async.createPrimaryIndex(
@@ -131,7 +159,9 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
         numReplicas,
         deferred,
         timeout,
-        retryStrategy
+        retryStrategy,
+        scopeName,
+        collectionName
       )
     )
   }
@@ -143,16 +173,22 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
     * @param ignoreIfNotExists sets whether the operation should fail if the index does not exists
     * @param timeout           $Timeout
     * @param retryStrategy     $RetryStrategy
+    * @param scopeName         $ScopeName
+    * @param collectionName    $CollectionName
     */
   def dropIndex(
       bucketName: String,
       indexName: String,
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
-      async.dropIndex(bucketName, indexName, ignoreIfNotExists, timeout, retryStrategy)
+      async.dropIndex(bucketName, indexName, ignoreIfNotExists, timeout, retryStrategy, scopeName, collectionName)
     )
 
   }
@@ -163,14 +199,20 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
     * @param ignoreIfNotExists sets whether the operation should fail if the index does not exists
     * @param timeout           $Timeout
     * @param retryStrategy     $RetryStrategy
+    * @param scopeName         $ScopeName
+    * @param collectionName    $CollectionName
     */
   def dropPrimaryIndex(
       bucketName: String,
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): SMono[Unit] = {
-    SMono.fromFuture(async.dropPrimaryIndex(bucketName, ignoreIfNotExists, timeout, retryStrategy))
+    SMono.fromFuture(async.dropPrimaryIndex(bucketName, ignoreIfNotExists, timeout, retryStrategy, scopeName, collectionName))
   }
 
   /** Polls the specified indexes until they are all online.
@@ -181,16 +223,22 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
     *                          will fail with `IndexNotFoundException`
     * @param timeout           when the operation will timeout.
     * @param retryStrategy     $RetryStrategy
+    * @param scopeName         $ScopeName
+    * @param collectionName    $CollectionName
     */
   def watchIndexes(
       bucketName: String,
       indexNames: Iterable[String],
       timeout: Duration,
       watchPrimary: Boolean = false,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
-      async.watchIndexes(bucketName, indexNames, timeout, watchPrimary, retryStrategy)
+      async.watchIndexes(bucketName, indexNames, timeout, watchPrimary, retryStrategy, scopeName, collectionName)
     )
   }
 
@@ -199,12 +247,18 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
     * @param bucketName        the bucket to build indexes on.
     * @param timeout           $Timeout
     * @param retryStrategy     $RetryStrategy
+    * @param scopeName         $ScopeName
+    * @param collectionName    $CollectionName
     */
   def buildDeferredIndexes(
       bucketName: String,
       timeout: Duration = DefaultTimeout,
-      retryStrategy: RetryStrategy = DefaultRetryStrategy
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      @Stability.Uncommitted
+      scopeName: Option[String] = None,
+      @Stability.Uncommitted
+      collectionName: Option[String] = None
   ): SMono[Unit] = {
-    SMono.fromFuture(async.buildDeferredIndexes(bucketName, timeout, retryStrategy))
+    SMono.fromFuture(async.buildDeferredIndexes(bucketName, timeout, retryStrategy, scopeName, collectionName))
   }
 }
