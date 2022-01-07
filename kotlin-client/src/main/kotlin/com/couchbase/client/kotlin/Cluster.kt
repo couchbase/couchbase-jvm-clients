@@ -19,6 +19,7 @@ package com.couchbase.client.kotlin
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.diagnostics.ClusterState
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics
 import com.couchbase.client.core.diagnostics.HealthPinger
@@ -29,6 +30,8 @@ import com.couchbase.client.core.env.ConnectionStringPropertyLoader
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.env.SeedNode
 import com.couchbase.client.core.error.UnambiguousTimeoutException
+import com.couchbase.client.core.json.Mapper
+import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASES
@@ -48,6 +51,9 @@ import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.env.env
 import com.couchbase.client.kotlin.http.CouchbaseHttpClient
 import com.couchbase.client.kotlin.internal.await
+import com.couchbase.client.kotlin.internal.putIfNotEmpty
+import com.couchbase.client.kotlin.internal.putIfNotNull
+import com.couchbase.client.kotlin.internal.putIfTrue
 import com.couchbase.client.kotlin.query.QueryFlowItem
 import com.couchbase.client.kotlin.query.QueryMetadata
 import com.couchbase.client.kotlin.query.QueryParameters
@@ -56,8 +62,24 @@ import com.couchbase.client.kotlin.query.QueryResult
 import com.couchbase.client.kotlin.query.QueryRow
 import com.couchbase.client.kotlin.query.QueryScanConsistency
 import com.couchbase.client.kotlin.query.internal.QueryExecutor
+import com.couchbase.client.kotlin.search.Direction.DESCENDING
+import com.couchbase.client.kotlin.search.Highlight
+import com.couchbase.client.kotlin.search.Score
+import com.couchbase.client.kotlin.search.SearchFacet
+import com.couchbase.client.kotlin.search.SearchFlowItem
+import com.couchbase.client.kotlin.search.SearchMetadata
+import com.couchbase.client.kotlin.search.SearchPage
+import com.couchbase.client.kotlin.search.SearchQuery
+import com.couchbase.client.kotlin.search.SearchResult
+import com.couchbase.client.kotlin.search.SearchRow
+import com.couchbase.client.kotlin.search.SearchScanConsistency
+import com.couchbase.client.kotlin.search.SearchSort
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitSingle
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -210,6 +232,162 @@ public class Cluster internal constructor(
     )
 
     /**
+     * Returns a Flow which can be collected to execute a Full-Text Search query
+     * and process the results.
+     *
+     * The returned Flow is cold, meaning the query is not executed unless
+     * the Flow is collected. If you collect the flow multiple times,
+     * the query is executed each time.
+     *
+     * The extension function `Flow<SearchFlowItem>.execute()` may be used
+     * when the results are known to fit in memory. It simply collects the flow
+     * into a [SearchResult].
+     *
+     * For larger query results, prefer the streaming version which takes a
+     * lambda to invoke when each row is received from the server:
+     * `Flow<SearchFlowItem>.execute { row -> ... }`.
+     *
+     * @param indexName Index to search.
+     *
+     * @param query Condition a document must match in order to be included in the search results.
+     *
+     * @param page Specifies which rows of the search result to return.
+     *
+     * @param limit Number of rows to return (page size).
+     *
+     * @param sort Specifies how the results should be sorted.
+     * For tiered sort (sort by X then by Y) see [SearchSort.then].
+     *
+     * @param fields Stored fields to include in the result rows, or `listOf("*")`
+     * to include all stored fields.
+     *
+     * @param facets Specifies the facets to include in the search results.
+     * A facet counts the number of documents in the full, unpaginated search results
+     * that meet certain criteria. Facet results may be retrieved from either
+     * [SearchResult] or [SearchMetadata], whichever is more convenient.
+     *
+     * @param highlight Specifies whether to include fragments of text
+     * with the matching search term highlighted. If highlighting is requested,
+     * the result also includes location information for matched terms.
+     *
+     * @param includeLocations If true, triggers the inclusion of location information
+     * for matched terms. If highlighting is requested, locations are always included
+     * and this parameter has no effect.
+     *
+     * @param score The scoring algorithm to use.
+     *
+     * @param explain If true, [SearchRow.explanation] holds the bytes of a JSON Object
+     * describing how the score was calculated.
+     *
+     * @param collections If not empty, only search within the named collections.
+     * Requires an index defined on a non-default scope containing the collections.
+     *
+     * @param consistency Specifies whether to wait for the index to catch up with the
+     * latest versions of certain documents. The default (unbounded) is fast, but means
+     * the results might not reflect the latest document mutations.
+     *
+     * @param serializer Default serializer to use for [SearchRow.fieldsAs].
+     * If not specified, defaults to the cluster environment's default serializer.
+     *
+     * @param raw The keys and values in this map are added to the query specification JSON.
+     * This is an "escape hatch" for sending arguments supported by Couchbase Server, but not
+     * by this version of the SDK.
+     *
+     * @sample com.couchbase.client.kotlin.samples.searchQuerySimple
+     * @sample com.couchbase.client.kotlin.samples.checkSearchQueryResultForPartialFailure
+     * @sample com.couchbase.client.kotlin.samples.searchQueryWithFacets
+     */
+    @Stability.Volatile
+    public fun searchQuery(
+        indexName: String,
+        query: SearchQuery,
+        common: CommonOptions = CommonOptions.Default,
+        page: SearchPage = SearchPage.startAt(offset = 0),
+        limit: Int? = null,
+        sort: SearchSort = SearchSort.byScore(DESCENDING),
+        fields: List<String> = emptyList(),
+        facets: List<SearchFacet> = emptyList(),
+        highlight: Highlight = Highlight.none(),
+        includeLocations: Boolean = false,
+        score: Score = Score.default(),
+        explain: Boolean = false,
+        @SinceCouchbase("7.0") collections: List<String> = emptyList(),
+        consistency: SearchScanConsistency = SearchScanConsistency.notBounded(),
+        serializer: JsonSerializer? = null,
+        raw: Map<String, Any?> = emptyMap(),
+    ): Flow<SearchFlowItem> {
+
+        // use interface type so less capable serializers don't freak out
+        val rootJson: MutableMap<String, Any?> = HashMap<String, Any?>()
+
+        rootJson["query"] = query.toMap()
+
+        highlight.inject(rootJson)
+        score.inject(rootJson)
+        sort.inject(rootJson)
+
+        val facetMap = facets.groupBy { it.name }.mapValues { (name, facets) ->
+            require(facets.size == 1) {
+                "Facet names must be unique within a request, but found found multiple facts named '$name'." +
+                        " Specify a unique name when creating the facet using the optional 'name' parameter." +
+                        " Facets with the duplicate name: $facets"
+            }
+            facets.single().toMap()
+        }
+
+        with(rootJson) {
+            putIfNotNull("size", limit)
+            putAll(page.map)
+            putIfTrue("explain", explain)
+            putIfTrue("includeLocations", includeLocations)
+            putIfNotEmpty("fields", fields)
+            putIfNotEmpty("facets", facetMap)
+            putIfNotEmpty("collections", collections)
+        }
+
+        val timeout = with(core.env) { common.actualSearchTimeout() }
+
+        val control = mutableMapOf<String, Any?>("timeout" to timeout.toMillis())
+        rootJson["ctl"] = control
+        consistency.inject(indexName, control)
+
+        rootJson.putAll(raw)
+
+        val actualSerializer = serializer ?: core.env.jsonSerializer
+        val queryBytes = Mapper.encodeAsBytes(rootJson)
+
+        return flow {
+            val request = with(core.env) {
+                SearchRequest(
+                    timeout,
+                    core.context(),
+                    common.actualRetryStrategy(),
+                    core.context().authenticator(),
+                    indexName,
+                    queryBytes,
+                    common.actualSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH),
+                )
+            }
+            request.context().clientContext(common.clientContext)
+
+            try {
+                core.send(request)
+
+                val response = request.response().await()
+
+                emitAll(response.rows().asFlow()
+                    .map { SearchRow.from(it.data(), actualSerializer) })
+
+                emitAll(response.trailer().asFlow()
+                    .map { SearchMetadata(response.header(), it) })
+
+            } finally {
+                request.logicallyComplete()
+            }
+        }
+    }
+
+    /**
      * Returns a Flow which may be collected to execute a cluster-level
      * N1QL query and process the results.
      *
@@ -217,7 +395,7 @@ public class Cluster internal constructor(
      * the Flow is collected. If you collect the flow multiple times,
      * the query is executed each time.
      *
-     * The extension function `Flow<QueryFlowItem>.execute()` may be used when
+     * The extension function `Flow<QueryFlowItem>.execute()` may be used
      * when the results are known to fit in memory. It simply collects the flow
      * into a [QueryResult].
      *

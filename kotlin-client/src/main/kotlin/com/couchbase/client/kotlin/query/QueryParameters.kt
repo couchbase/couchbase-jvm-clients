@@ -51,6 +51,7 @@ public sealed class QueryParameters {
     }
 
     public companion object {
+        // positional has no varargs overload because there would be ambiguity in the case of values that are themselves lists.
         public fun positional(values: List<Any?>): QueryParameters = Positional(values)
         public fun named(values: Map<String, Any?>): QueryParameters = Named(values)
         public fun named(vararg values: Pair<String, Any?>): QueryParameters = Named(values.toMap())

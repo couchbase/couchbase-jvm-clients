@@ -241,6 +241,9 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
     internal fun CommonOptions.actualKvTimeout(durability: Durability) =
         (timeout ?: timeoutConfig().kvTimeout(durability)).toJavaDuration()
 
+    internal fun CommonOptions.actualSearchTimeout() =
+        timeout?.toJavaDuration() ?: timeoutConfig().searchTimeout()
+
     private fun TimeoutConfig.kvTimeout(durability: Durability) =
         (if (durability.isPersistent()) kvDurableTimeout() else kvTimeout()).toKotlinDuration()
 }

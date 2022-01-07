@@ -74,7 +74,7 @@ public sealed class Durability {
          * the other durability options may be preferable.
          */
         public fun clientVerified(persistTo: PersistTo, replicateTo: ReplicateTo = ReplicateTo.NONE): Durability =
-            if (replicateTo == ReplicateTo.NONE && persistTo == PersistTo.NONE) Disabled
+            if (replicateTo == ReplicateTo.NONE && persistTo == PersistTo.NONE) None
             else ClientVerified(persistTo, replicateTo)
 
         /**

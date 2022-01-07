@@ -16,15 +16,20 @@
 
 package com.couchbase.client.kotlin.util
 
+import com.couchbase.client.core.diagnostics.PingState
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.env.SeedNode
+import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.kotlin.Bucket
 import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.test.ClusterAwareIntegrationTest
 import com.couchbase.client.test.Services
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Timeout
 import java.util.*
@@ -33,6 +38,8 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 @Timeout(value = 10, unit = TimeUnit.MINUTES)
@@ -84,6 +91,18 @@ internal open class KotlinIntegrationTest : ClusterAwareIntegrationTest() {
 
     fun connect(envConfig: ClusterEnvironmentConfigBlock = {}) =
         Cluster.connect(connectionString, authenticator, envConfig)
+}
+
+internal suspend fun Bucket.waitForService(serviceType: ServiceType) {
+    waitUntilReady(30.seconds)
+    withTimeout(1.minutes) {
+        while (true) {
+            val pingResult = ping(services = setOf(serviceType))
+            val serviceEndpoints = pingResult.endpoints[serviceType] ?: emptyList()
+            if (serviceEndpoints.isNotEmpty() && serviceEndpoints.all { it.state == PingState.OK }) return@withTimeout
+            delay(250.milliseconds)
+        }
+    }
 }
 
 /**

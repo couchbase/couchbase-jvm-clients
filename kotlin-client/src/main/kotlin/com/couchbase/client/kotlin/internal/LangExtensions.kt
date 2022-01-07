@@ -25,3 +25,33 @@ internal fun ByteArray.toStringUtf8() = toString(UTF_8)
 internal fun <T> T?.toOptional() = java.util.Optional.ofNullable(this)
 
 internal suspend fun Mono<Void>.await() = toFuture().await()
+
+internal fun MutableMap<String, Any?>.putIfNotEmpty(key: String, value: Collection<*>) {
+    if (value.isNotEmpty()) put(key, value)
+}
+
+internal fun MutableMap<String, Any?>.putIfNotEmpty(key: String, value: Map<*,*>) {
+    if (value.isNotEmpty()) put(key, value)
+}
+
+internal fun MutableMap<String, Any?>.putIfTrue(key: String, value: Boolean) {
+    if (value) put(key, true)
+}
+
+internal fun MutableMap<String, Any?>.putIfFalse(key: String, value: Boolean) {
+    if (!value) put(key, false)
+}
+
+internal fun MutableMap<String, Any?>.putIfNotNull(key: String, value: Any?) {
+    if (value != null) put(key, value)
+}
+
+internal fun MutableMap<String, Any?>.putIfNotZero(key: String, value: Int) {
+    if (value != 0) put(key, value)
+}
+
+/**
+ * The presence of this type in a method signature indicates
+ * callers must use named arguments for all subsequent parameters.
+ */
+public class MustUseNamedArguments private constructor()
