@@ -75,11 +75,11 @@ public class CouchbaseHttpClient internal constructor(
     public suspend fun get(
         target: HttpTarget,
         path: String,
-        options: CommonOptions = CommonOptions.Default,
+        common: CommonOptions = CommonOptions.Default,
         queryString: NameValuePairs? = null,
     ): CouchbaseHttpResponse {
         val request = CoreHttpClient(core, target.coreTarget)
-            .get(CoreHttpPath.path(path), options.toCore())
+            .get(CoreHttpPath.path(path), common.toCore())
 
         queryString?.let { request.queryString(it.urlEncoded) }
 
@@ -93,11 +93,11 @@ public class CouchbaseHttpClient internal constructor(
     public suspend fun post(
         target: HttpTarget,
         path: String,
-        options: CommonOptions = CommonOptions.Default,
+        common: CommonOptions = CommonOptions.Default,
         body: HttpBody? = null,
     ): CouchbaseHttpResponse {
         val request = CoreHttpClient(core, target.coreTarget)
-            .post(CoreHttpPath.path(path), options.toCore())
+            .post(CoreHttpPath.path(path), common.toCore())
 
         body?.let { request.content(it.content, it.contentType) }
 
@@ -107,11 +107,11 @@ public class CouchbaseHttpClient internal constructor(
     public suspend fun put(
         target: HttpTarget,
         path: String,
-        options: CommonOptions = CommonOptions.Default,
+        common: CommonOptions = CommonOptions.Default,
         body: HttpBody? = null,
     ): CouchbaseHttpResponse {
         val request = CoreHttpClient(core, target.coreTarget)
-            .put(CoreHttpPath.path(path), options.toCore())
+            .put(CoreHttpPath.path(path), common.toCore())
 
         body?.let { request.content(it.content, it.contentType) }
 
@@ -121,10 +121,10 @@ public class CouchbaseHttpClient internal constructor(
     public suspend fun delete(
         target: HttpTarget,
         path: String,
-        options: CommonOptions = CommonOptions.Default,
+        common: CommonOptions = CommonOptions.Default,
     ): CouchbaseHttpResponse {
         val request = CoreHttpClient(core, target.coreTarget)
-            .delete(CoreHttpPath.path(path), options.toCore())
+            .delete(CoreHttpPath.path(path), common.toCore())
 
         return exec(request)
     }
