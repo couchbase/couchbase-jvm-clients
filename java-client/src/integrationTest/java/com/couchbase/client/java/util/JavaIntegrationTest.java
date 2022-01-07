@@ -114,14 +114,14 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
             .ignoreIfExists(true));
   }
 
-  protected static void waitForQueryIndexerToHaveBucket(final Cluster cluster, final String bucketName) {
+  protected static void waitForQueryIndexerToHaveKeyspace(final Cluster cluster, final String keyspaceName) {
     boolean ready = false;
     int guard = 100;
 
     while (!ready && guard != 0) {
       guard -= 1;
       String statement =
-              "SELECT COUNT(*) > 0 as present FROM system:keyspaces where name = '" + bucketName + "';";
+              "SELECT COUNT(*) > 0 as present FROM system:keyspaces where name = '" + keyspaceName + "';";
 
       QueryResult queryResult = cluster.query(statement);
       List<JsonObject> rows = queryResult.rowsAsObject();
@@ -138,7 +138,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
     }
 
     if (guard == 0) {
-      throw new IllegalStateException("Query indexer is still not aware of bucket " + bucketName);
+      throw new IllegalStateException("Query indexer is still not aware of keyspaceName " + keyspaceName);
     }
   }
 

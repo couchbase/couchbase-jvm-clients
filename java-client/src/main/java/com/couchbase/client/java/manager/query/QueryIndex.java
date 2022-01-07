@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.manager.query;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
@@ -42,8 +43,10 @@ public class QueryIndex {
   private final Optional<String> condition;
   private final Optional<String> partition;
   private final JsonObject raw;
+  private final Optional<String> scopeName;
+  private final Optional<String> bucketName;
 
-  public QueryIndex(JsonObject raw) {
+  QueryIndex(final JsonObject raw) {
     this.raw = requireNonNull(raw);
 
     this.name = raw.getString("name");
@@ -55,6 +58,8 @@ public class QueryIndex {
     this.primary = Boolean.TRUE.equals(raw.getBoolean("is_primary"));
     this.type = defaultIfNull(raw.getString("using"), "gsi");
     this.partition = Optional.ofNullable(emptyToNull(raw.getString("partition")));
+    this.scopeName = Optional.ofNullable(emptyToNull(raw.getString("scope_id")));
+    this.bucketName = Optional.ofNullable(emptyToNull(raw.getString("bucket_id")));
   }
 
   public boolean primary() {
@@ -121,6 +126,26 @@ public class QueryIndex {
    */
   public Optional<String> partition() {
     return partition;
+  }
+
+  /**
+   * If present, returns the name of the scope this index is stored in.
+   *
+   * @return the name of the scope, if present.
+   */
+  @Stability.Uncommitted
+  public Optional<String> scopeName() {
+    return scopeName;
+  }
+
+  /**
+   * If present, returns the name of the bucket this index is stored in.
+   *
+   * @return the name of the bucket, if present.
+   */
+  @Stability.Uncommitted
+  public String bucketName() {
+    return bucketName.orElse(keyspace);
   }
 
   /**

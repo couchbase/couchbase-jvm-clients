@@ -39,6 +39,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
@@ -81,10 +82,12 @@ public class AsyncQueryIndexManager {
     return createIndex(bucketName, indexName, fields, createQueryIndexOptions());
   }
 
-  public CompletableFuture<Void> createIndex(String bucketName, String indexName, Collection<String> fields, CreateQueryIndexOptions options) {
+  public CompletableFuture<Void> createIndex(String bucketName, String indexName, Collection<String> fields,
+                                             CreateQueryIndexOptions options) {
     final CreateQueryIndexOptions.Built builtOpts = options.build();
+    String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
 
-    String statement = "CREATE INDEX " + quote(indexName) + " ON " + quote(bucketName) + formatIndexFields(fields);
+    String statement = "CREATE INDEX " + quote(indexName) + " ON " + keyspace + formatIndexFields(fields);
 
     return exec(WRITE, statement, builtOpts.with(), builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_INDEX, bucketName)
         .exceptionally(t -> {
@@ -104,12 +107,13 @@ public class AsyncQueryIndexManager {
   public CompletableFuture<Void> createPrimaryIndex(String bucketName, CreatePrimaryQueryIndexOptions options) {
     final CreatePrimaryQueryIndexOptions.Built builtOpts = options.build();
     final String indexName = builtOpts.indexName().orElse(null);
+    String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
 
     String statement = "CREATE PRIMARY INDEX ";
     if (indexName != null) {
       statement += quote(indexName) + " ";
     }
-    statement += "ON " + quote(bucketName);
+    statement += "ON " + keyspace;
 
     return exec(WRITE, statement, builtOpts.with(), builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_PRIMARY_INDEX, bucketName)
         .exceptionally(t -> {
@@ -135,10 +139,19 @@ public class AsyncQueryIndexManager {
 
     final GetAllQueryIndexesOptions.Built builtOpts = options.build();
 
-    String statement = "SELECT idx.* FROM system:indexes AS idx" +
+    String statement;
+    if (builtOpts.scopeName().isPresent() && builtOpts.collectionName().isPresent()) {
+      statement = "SELECT idx.* FROM system:indexes AS idx" +
+        " WHERE keyspace_id = \"" + builtOpts.collectionName().get() + "\" AND bucket_id = \""
+        + bucketName + "\" AND scope_id = \"" + builtOpts.scopeName().get() + "\"" +
+        " AND `using` = \"gsi\"" +
+        " ORDER BY is_primary DESC, name ASC";
+    } else {
+      statement = "SELECT idx.* FROM system:indexes AS idx" +
         " WHERE keyspace_id = \"" + bucketName + "\"" +
         " AND `using` = \"gsi\"" +
         " ORDER BY is_primary DESC, name ASC";
+    }
 
     return exec(READ_ONLY, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_GET_ALL_INDEXES, bucketName)
         .thenApply(result -> result.rowsAsObject().stream()
@@ -154,8 +167,9 @@ public class AsyncQueryIndexManager {
     requireNonNull(bucketName);
 
     final DropPrimaryQueryIndexOptions.Built builtOpts = options.build();
+    String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
 
-    String statement = "DROP PRIMARY INDEX ON " + quote(bucketName);
+    String statement = "DROP PRIMARY INDEX ON " + keyspace;
 
     return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_DROP_PRIMARY_INDEX, bucketName)
         .exceptionally(t -> {
@@ -177,7 +191,9 @@ public class AsyncQueryIndexManager {
 
     final DropQueryIndexOptions.Built builtOpts = options.build();
 
-    String statement = "DROP INDEX " + quote(bucketName, indexName);
+    String statement = builtOpts.scopeName().isPresent() && builtOpts.collectionName().isPresent()
+      ? "DROP INDEX " + quote(indexName) + " ON " + buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName())
+      : "DROP INDEX " + quote(bucketName, indexName);
 
     return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_DROP_INDEX, bucketName)
         .exceptionally(t -> {
@@ -194,10 +210,12 @@ public class AsyncQueryIndexManager {
     return buildDeferredIndexes(bucketName, buildDeferredQueryIndexesOptions());
   }
 
-  private static GetAllQueryIndexesOptions toGetAllIndexesOptions(CommonOptions<?>.BuiltCommonOptions opts) {
+  private static GetAllQueryIndexesOptions toGetAllIndexesOptions(final BuildQueryIndexOptions.Built opts) {
     GetAllQueryIndexesOptions result = getAllQueryIndexesOptions();
     opts.retryStrategy().ifPresent(result::retryStrategy);
     opts.timeout().ifPresent(result::timeout);
+    opts.scopeName().ifPresent(result::scopeName);
+    opts.collectionName().ifPresent(result::collectionName);
     result.clientContext(opts.clientContext());
     return result;
   }
@@ -217,7 +235,8 @@ public class AsyncQueryIndexManager {
             return completedFuture(null);
           }
 
-          String statement = "BUILD INDEX ON " + quote(bucketName) + "(" +
+          String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
+          String statement = "BUILD INDEX ON " + keyspace + "(" +
               deferredIndexNames.stream()
                   .map(AsyncQueryIndexManager::quote)
                   .collect(Collectors.joining(",")) + ")";
@@ -232,7 +251,8 @@ public class AsyncQueryIndexManager {
     return watchIndexes(bucketName, indexNames, timeout, watchQueryIndexesOptions());
   }
 
-  public CompletableFuture<Void> watchIndexes(String bucketName, Collection<String> indexNames, Duration timeout, WatchQueryIndexesOptions options) {
+  public CompletableFuture<Void> watchIndexes(String bucketName, Collection<String> indexNames, Duration timeout,
+                                              WatchQueryIndexesOptions options) {
     requireNonNull(timeout);
 
     Set<String> indexNameSet = new HashSet<>(indexNames);
@@ -241,7 +261,8 @@ public class AsyncQueryIndexManager {
     RequestSpan parent = cluster.environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, null);
     parent.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
-    return Mono.fromFuture(() -> failIfIndexesOffline(bucketName, indexNameSet, builtOpts.watchPrimary(), parent))
+    return Mono.fromFuture(() -> failIfIndexesOffline(bucketName, indexNameSet, builtOpts.watchPrimary(), parent,
+        builtOpts.scopeName(), builtOpts.collectionName()))
         .retryWhen(Retry.onlyIf(ctx -> hasCause(ctx.exception(), IndexesNotReadyException.class))
             .exponentialBackoff(Duration.ofMillis(50), Duration.ofSeconds(1))
             .timeout(timeout)
@@ -260,16 +281,19 @@ public class AsyncQueryIndexManager {
     return new TimeoutException(msg.toString());
   }
 
-  private CompletableFuture<Void> failIfIndexesOffline(String bucketName,
-                                                       Set<String> indexNames,
-                                                       boolean includePrimary,
-                                                       RequestSpan parentSpan)
-      throws IndexesNotReadyException, IndexNotFoundException {
+  private CompletableFuture<Void> failIfIndexesOffline(final String bucketName, final Set<String> indexNames,
+                                                       final boolean includePrimary, final RequestSpan parentSpan,
+                                                       final Optional<String> scopeName, final Optional<String> collectionName)
+    throws IndexesNotReadyException, IndexNotFoundException {
 
     requireNonNull(bucketName);
     requireNonNull(indexNames);
 
-    return getAllIndexes(bucketName, getAllQueryIndexesOptions().parentSpan(parentSpan))
+    GetAllQueryIndexesOptions getAllQueryIndexesOptions = getAllQueryIndexesOptions().parentSpan(parentSpan);
+    scopeName.ifPresent(getAllQueryIndexesOptions::scopeName);
+    collectionName.ifPresent(getAllQueryIndexesOptions::collectionName);
+
+    return getAllIndexes(bucketName, getAllQueryIndexesOptions)
         .thenApply(allIndexes -> {
           final List<QueryIndex> matchingIndexes = allIndexes.stream()
               .filter(idx -> indexNames.contains(idx.name()) || (includePrimary && idx.primary()))
@@ -384,4 +408,14 @@ public class AsyncQueryIndexManager {
         .map(AsyncQueryIndexManager::quote)
         .collect(Collectors.joining("."));
   }
+
+  private static String buildKeyspace(final String bucket, final Optional<String> scope,
+                                      final Optional<String> collection) {
+    if (scope.isPresent() && collection.isPresent()) {
+      return quote(bucket, scope.get(), collection.get());
+    } else {
+      return quote(bucket);
+    }
+  }
+
 }

@@ -17,11 +17,18 @@
 package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.java.CommonOptions;
+
+import java.util.Optional;
+
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 public class DropPrimaryQueryIndexOptions extends CommonOptions<DropPrimaryQueryIndexOptions> {
 
   private boolean ignoreIfNotExists;
+  private String scopeName;
+  private String collectionName;
 
   private DropPrimaryQueryIndexOptions() {
   }
@@ -38,8 +45,42 @@ public class DropPrimaryQueryIndexOptions extends CommonOptions<DropPrimaryQuery
     return this;
   }
 
+  /**
+   * Sets the scope name for this query management operation.
+   * <p>
+   * Please note that if the scope name is set, the {@link #collectionName(String)} (String)} must also be set.
+   *
+   * @param scopeName the name of the scope.
+   * @return this options class for chaining purposes.
+   */
+  @Stability.Uncommitted
+  public DropPrimaryQueryIndexOptions scopeName(final String scopeName) {
+    this.scopeName = notNullOrEmpty(scopeName, "ScopeName");
+    return this;
+  }
+
+  /**
+   * Sets the collection name for this query management operation.
+   * <p>
+   * Please note that if the collection name is set, the {@link #scopeName(String)} must also be set.
+   *
+   * @param collectionName the name of the collection.
+   * @return this options class for chaining purposes.
+   */
+  @Stability.Uncommitted
+  public DropPrimaryQueryIndexOptions collectionName(final String collectionName) {
+    this.collectionName = notNullOrEmpty(collectionName, "CollectionName");
+    return this;
+  }
+
   @Stability.Internal
   public Built build() {
+    if (collectionName != null && scopeName == null) {
+      throw InvalidArgumentException.fromMessage("If a collectionName is provided, a scopeName must also be provided");
+    }
+    if (scopeName != null && collectionName == null) {
+      throw InvalidArgumentException.fromMessage("If a scopeName is provided, a collectionName must also be provided");
+    }
     return new Built();
   }
 
@@ -47,6 +88,14 @@ public class DropPrimaryQueryIndexOptions extends CommonOptions<DropPrimaryQuery
     Built() { }
     public boolean ignoreIfNotExists() {
       return ignoreIfNotExists;
+    }
+
+    public Optional<String> scopeName() {
+      return Optional.ofNullable(scopeName);
+    }
+
+    public Optional<String> collectionName() {
+      return Optional.ofNullable(collectionName);
     }
   }
 }

@@ -87,7 +87,7 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
     Bucket bucket = cluster.bucket(config().bucketname());
     bucket.waitUntilReady(Duration.ofSeconds(5));
     waitForService(bucket, ServiceType.QUERY);
-    waitForQueryIndexerToHaveBucket(cluster, config().bucketname());
+    waitForQueryIndexerToHaveKeyspace(cluster, config().bucketname());
     collectionManager = bucket.collections();
 
     // Create the scope.collection (borrowed from CollectionManagerIntegrationTest )
@@ -99,7 +99,7 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
     collectionManager.createCollection(collSpec);
     waitUntilCondition(() -> collectionExists(collectionManager, collSpec));
 
-    waitForQueryIndexerToHaveBucket(cluster, COLLECTION_NAME);
+    waitForQueryIndexerToHaveKeyspace(cluster, COLLECTION_NAME);
 
     // the call to createPrimaryIndex takes about 60 seconds
     block(createPrimaryIndex(config().bucketname(), SCOPE_NAME, COLLECTION_NAME));
