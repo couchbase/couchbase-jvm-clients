@@ -4,11 +4,11 @@
 // - Can do it with scripted pipeline, but anything inside a node {} block won't trigger the post block, so can't gather junit results
 // So, for now, everything is hard-coded.  It's unlikely to change often.
 // TODO: stashing the junit file after its generated and unstashing it in post, may work
-def PLATFORMS = ["ubuntu16", "ubuntu20"]
-def DEFAULT_PLATFORM = PLATFORMS[0]
-def platform = DEFAULT_PLATFORM
-def LINUX_AGENTS = 'centos6||centos7||ubuntu16||ubuntu14||ubuntu20'
-def QUICK_TEST_MODE = false // enable to support quicker development iteration
+PLATFORMS = ["ubuntu16", "ubuntu20"]
+DEFAULT_PLATFORM = PLATFORMS[0]
+platform = DEFAULT_PLATFORM
+LINUX_AGENTS = 'centos6||centos7||ubuntu16||ubuntu14||ubuntu20'
+QUICK_TEST_MODE = false // enable to support quicker development iteration
 
 // Java versions available through cbdeps are on
 // https://hub.internal.couchbase.com/confluence/pages/viewpage.action?spaceKey=CR&title=cbdep+available+packages
@@ -54,80 +54,6 @@ pipeline {
             }
         }
 
-        stage('build Oracle 8') {
-            // agent { label LINUX_AGENTS }
-            // Hit a random scalafmt error when running on other Linux platforms...
-            agent { label DEFAULT_PLATFORM }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
-            steps {
-                // Is cleanWs strictly needed?  Probably not, but hit odd AccessDeniedException errors without it...
-                // Update: and 'stale source detected' errors - just, always safer to clean then unstash
-                cleanWs()
-                unstash 'couchbase-jvm-clients'
-                installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-
-                dir('couchbase-jvm-clients') {
-                    shWithEcho("echo $JAVA_HOME")
-                    shWithEcho("ls $JAVA_HOME")
-                    shWithEcho("echo $PATH")
-                    shWithEcho("java -version")
-                    shWithEcho("make deps-only")
-
-                    // Skips the tests, that's done in other stages
-                    // The -B -Dorg... stuff hides download progress messages, very verbose
-                    shWithEcho("mvn install -Dmaven.test.skip --batch-mode")
-
-                    // This is to speed up iteration during development, skips out some stuff
-                    // shWithEcho("mvn -pl '!scala-client,!scala-implicits' install -Dmaven.test.skip --batch-mode")
-                }
-
-                stash includes: 'couchbase-jvm-clients/', name: 'couchbase-jvm-clients', useDefaultExcludes: false
-            }
-        }
-
-        stage('build OpenJDK 11') {
-            agent { label DEFAULT_PLATFORM }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
-            }
-            steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_11)
-
-                    dir('couchbase-jvm-clients') {
-                        shWithEcho("make deps-only")
-                        shWithEcho("mvn install -Dmaven.test.skip --batch-mode")
-                    }
-                }
-            }
-        }
-
-        stage('build OpenJDK 17') {
-            agent { label DEFAULT_PLATFORM }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}/bin:$PATH"
-            }
-            steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_17)
-
-                    dir('couchbase-jvm-clients') {
-                        shWithEcho("make deps-only")
-                        shWithEcho("mvn install -Dmaven.test.skip --batch-mode")
-                    }
-                }
-            }
-        }
-
         // Scala 2.11 & 2.13 aren't officially distributed or supported, but we have community depending on it so check
         // they at least compile
         stage('build Scala 2.11') {
@@ -137,17 +63,8 @@ pipeline {
                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
             }
             steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    // 2.11 must be built with JDK 8
-                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_8)
-
-                    dir('couchbase-jvm-clients') {
-                        shWithEcho("make deps-only")
-                        shWithEcho("mvn -Dmaven.test.skip --batch-mode -Dscala.compat.version=2.11 -Dscala.compat.library.version=2.11.12 clean compile")
-                    }
-                }
+                // 2.11 must be built with JDK 8
+                buildScala(OPENJDK, OPENJDK_8, "2.11", "2.11.12")
             }
         }
 
@@ -158,16 +75,7 @@ pipeline {
                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
             }
             steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_11)
-
-                    dir('couchbase-jvm-clients') {
-                        shWithEcho("make deps-only")
-                        shWithEcho("mvn -Dmaven.test.skip --batch-mode -Dscala.compat.version=2.13 -Dscala.compat.library.version=2.13.7 clean compile")
-                    }
-                }
+                buildScala(OPENJDK, OPENJDK_11, "2.13", "2.13.7")
             }
         }
 
@@ -207,7 +115,7 @@ pipeline {
 
         // JDK combination tests
 
-        stage('testing (Linux, cbdyncluster 7.0-stable, openjdk 17)') {
+        stage('testing (Linux, cbdyncluster 7.0-release, openjdk 17)') {
             agent { label 'sdkqe-centos7' }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
@@ -218,14 +126,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_17)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer("7.0-stable", QUICK_TEST_MODE) }
-                    }
-                }
+                test(OPENJDK, OPENJDK_17, "7.0-release")
             }
             post {
                 always {
@@ -245,14 +146,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, CORRETTO, CORRETTO_8)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
-                    }
-                }
+                test(CORRETTO, CORRETTO_8, "6.5-release")
             }
             post {
                 always {
@@ -272,14 +166,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, CORRETTO, CORRETTO_11)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
-                    }
-                }
+                test(CORRETTO, CORRETTO_11, "6.5-release")
             }
             post {
                 always {
@@ -299,14 +186,7 @@ pipeline {
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
              steps {
-                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                     cleanWs()
-                     unstash 'couchbase-jvm-clients'
-                     installJDKIfNeeded(platform, OPENJDK, OPENJDK_11)
-                     dir('couchbase-jvm-clients') {
-                         script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
-                     }
-                 }
+                test(OPENJDK, OPENJDK_11, "6.5-release")
              }
              post {
                  always {
@@ -326,14 +206,7 @@ pipeline {
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
              steps {
-                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                     cleanWs()
-                     unstash 'couchbase-jvm-clients'
-                     installJDKIfNeeded(platform, OPENJDK, OPENJDK_8)
-                     dir('couchbase-jvm-clients') {
-                         script { testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE) }
-                     }
-                 }
+                 test(OPENJDK, OPENJDK_8, "6.5-release")
              }
              post {
                  always {
@@ -386,14 +259,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer("6.5-release", QUICK_TEST_MODE) }
-                    }
-                }
+                test(ORACLE_JDK, ORACLE_JDK_8, "6.5-release")
             }
             post {
                 always {
@@ -413,14 +279,7 @@ pipeline {
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
              steps {
-                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                     cleanWs()
-                     unstash 'couchbase-jvm-clients'
-                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                     dir('couchbase-jvm-clients') {
-                         script { testAgainstServer("6.0-release", QUICK_TEST_MODE) }
-                     }
-                 }
+                 test(ORACLE_JDK, ORACLE_JDK_8, "6.0-release")
              }
              post {
                  always {
@@ -440,14 +299,7 @@ pipeline {
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
              steps {
-                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                     cleanWs()
-                     unstash 'couchbase-jvm-clients'
-                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                     dir('couchbase-jvm-clients') {
-                         script { testAgainstServer("5.5-release", QUICK_TEST_MODE, false) }
-                     }
-                 }
+                 test(ORACLE_JDK, ORACLE_JDK_8, "5.5-release", includeAnalytics = false)
              }
              post {
                  always {
@@ -456,34 +308,7 @@ pipeline {
              }
          }
 
-//        stage('testing  (Linux, cbdyncluster 5.1.3, Oracle JDK 8)') {
-//            agent { label 'sdkqe-centos7' }
-//            environment {
-//                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-//                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-//            }
-//            when {
-//                expression
-//                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-//            }
-//            steps {
-//                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-//                    cleanWs()
-//                    unstash 'couchbase-jvm-clients'
-//                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-//                    dir('couchbase-jvm-clients') {
-//                        script { testAgainstServer("5.1.3", QUICK_TEST_MODE, false) }
-//                    }
-//                }
-//            }
-//            post {
-//                always {
-//                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-//                }
-//            }
-//        }
-
-        stage('testing  (Linux, cbdyncluster 6.6-stable, Oracle JDK 8)') {
+        stage('testing  (Linux, cbdyncluster 6.6-release, Oracle JDK 8)') {
             agent { label 'sdkqe-centos7' }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
@@ -494,14 +319,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer("6.6-stable", QUICK_TEST_MODE) }
-                    }
-                }
+                test(ORACLE_JDK, ORACLE_JDK_8, "6.6-release")
             }
             post {
                 always {
@@ -510,7 +328,7 @@ pipeline {
             }
         }
 
-        stage('testing (Linux, cbdyncluster 6.6-stable, colossus, Oracle JDK 8)') {
+        stage('testing (Linux, cbdyncluster 6.6-release, colossus, Oracle JDK 8)') {
             agent { label 'sdkqe-centos7' }
             environment {
                 JAVA_HOME = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
@@ -528,7 +346,7 @@ pipeline {
                                   branches: [[name: 'colossus']],
                                   userRemoteConfigs: [[url: '$REPO']]])
                         installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                        script { testAgainstServer("6.6-stable", QUICK_TEST_MODE) }
+                        script { testAgainstServer("6.6-release", QUICK_TEST_MODE) }
                     }
                 }
             }
@@ -539,7 +357,7 @@ pipeline {
             }
         }
 
-        stage('testing  (Linux, cbdyncluster 7.0-stable, Oracle JDK 8)') {
+        stage('testing  (Linux, cbdyncluster 7.0-release, Oracle JDK 8)') {
             agent { label 'sdkqe-centos7' }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
@@ -550,15 +368,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                // Temporary: there are known cbas crashes preventing this from passing currently, do not fail build
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer("7.0-stable", QUICK_TEST_MODE, true, true) }
-                    }
-                }
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.0-release", includeAnalytics = true, includeEventing = true)
             }
             post {
                 always {
@@ -578,15 +388,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                // Temporary: there are known cbas crashes preventing this from passing currently, do not fail build
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer("7.1-stable", QUICK_TEST_MODE, true, true) }
-                    }
-                }
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.1-stable", includeAnalytics = true, includeEventing = true)
             }
             post {
                 always {
@@ -595,7 +397,7 @@ pipeline {
             }
         }
 
-        stage('testing  (Linux, cbdyncluster 7.0-stable, Oracle JDK 8, CE)') {
+        stage('testing  (Linux, cbdyncluster 7.0-release, Oracle JDK 8, CE)') {
             agent { label 'sdkqe-centos7' }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
@@ -606,15 +408,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                // Temporary: there are known cbas crashes preventing this from passing currently, do not fail build
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer("7.0-stable", QUICK_TEST_MODE, false, false, false, true) }
-                    }
-                }
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.0-release", ceMode = true)
             }
             post {
                 always {
@@ -635,15 +429,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                // Temporary: there are known cbas crashes preventing this from passing currently, do not fail build
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
-                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_11_M1)
-                    dir('couchbase-jvm-clients') {
-                        script { testAgainstServer("7.1-stable", QUICK_TEST_MODE) }
-                    }
-                }
+                test(OPENJDK, OPENJDK_11_M1, "7.1-stable")
             }
             post {
                 always {
@@ -741,6 +527,44 @@ pipeline {
     post {
         failure { emailFailure() }
         success { emailSuccess() }
+    }
+}
+
+
+void test(String jdk,
+            String jdkVersion,
+            String serverVersion,
+            boolean includeAnalytics = true,
+            boolean includeEventing = false,
+            boolean enableDevelopPreview = false,
+            boolean ceMode = false) {
+    catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+        cleanWs()
+        unstash 'couchbase-jvm-clients'
+        installJDKIfNeeded(platform, jdk, jdkVersion)
+
+        dir('couchbase-jvm-clients') {
+            script { testAgainstServer(serverVersion, QUICK_TEST_MODE, includeAnalytics, includeEventing, enableDevelopPreview, ceMode) }
+            shWithEcho("make deps-only")
+            shWithEcho("mvn install -Dmaven.test.skip --batch-mode")
+        }
+    }
+}
+
+
+void buildScala(String jdk,
+                String jdkVersion,
+                String scalaCompatVersion,
+                String scalaLibraryVersion) {
+    catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+        cleanWs()
+        unstash 'couchbase-jvm-clients'
+        installJDKIfNeeded(platform, jdk, jdkVersion)
+
+        dir('couchbase-jvm-clients') {
+            shWithEcho("make deps-only")
+            shWithEcho("mvn -Dmaven.test.skip --batch-mode -Dscala.compat.version=${scalaCompatVersion} -Dscala.compat.library.version=${scalaLibraryVersion} clean compile")
+        }
     }
 }
 
@@ -902,10 +726,4 @@ void testAgainstServer(String serverVersion,
             sh(script: "cbdyncluster rm $clusterId")
         }
     }
-}
-
-void testAgainstMock() {
-    // Not sure why this is needed, it should be in stash from build....
-    shWithEcho("make deps-only")
-    shWithEcho("mvn --fail-at-end install --batch-mode")
 }
