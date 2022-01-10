@@ -36,7 +36,8 @@ class SearchOptionsSpec {
   @Test
   def serverSideTimeoutOverrides(): Unit = {
     val output = JsonObject.create
-    SearchOptions(serverSideTimeout = Some(Duration("3s"))).injectParams("idx", output, Duration("1s"))
+    SearchOptions(serverSideTimeout = Some(Duration("3s")))
+      .injectParams("idx", output, Duration("1s"))
     assertEquals(3000, output.obj("ctl").numLong("timeout"))
   }
 

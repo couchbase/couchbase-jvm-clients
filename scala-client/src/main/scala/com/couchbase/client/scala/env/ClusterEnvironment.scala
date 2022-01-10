@@ -288,7 +288,8 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
       thread
     }
   })
-  private[scala] implicit val ec: ExecutionContextExecutor = ExecutionContext.fromExecutor(threadPool)
+  private[scala] implicit val ec: ExecutionContextExecutor =
+    ExecutionContext.fromExecutor(threadPool)
   private[scala] val defaultScheduler = ExecutionContextScheduler(ec)
 
   private val coreBuilder = new CoreEnvironmentWrapper()

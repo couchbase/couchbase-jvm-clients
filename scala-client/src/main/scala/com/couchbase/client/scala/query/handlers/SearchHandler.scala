@@ -79,7 +79,7 @@ private[scala] class SearchHandler(hp: HandlerBasicParams) {
 
       val queryBytes = params.toString.getBytes(CharsetUtil.UTF_8)
 
-      val retryStrategy     = options.retryStrategy.getOrElse(environment.retryStrategy)
+      val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
 
       Try(
         new SearchRequest(
