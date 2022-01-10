@@ -24,6 +24,9 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
+/**
+ * Allows customizing how primary indexes are dropped.
+ */
 public class DropPrimaryQueryIndexOptions extends CommonOptions<DropPrimaryQueryIndexOptions> {
 
   private boolean ignoreIfNotExists;
@@ -33,6 +36,11 @@ public class DropPrimaryQueryIndexOptions extends CommonOptions<DropPrimaryQuery
   private DropPrimaryQueryIndexOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static DropPrimaryQueryIndexOptions dropPrimaryQueryIndexOptions() {
     return new DropPrimaryQueryIndexOptions();
   }

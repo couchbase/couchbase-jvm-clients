@@ -24,6 +24,9 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
+/**
+ * Allows customizing how query indexes are loaded.
+ */
 public class GetAllQueryIndexesOptions extends CommonOptions<GetAllQueryIndexesOptions> {
 
   private String scopeName;
@@ -32,6 +35,11 @@ public class GetAllQueryIndexesOptions extends CommonOptions<GetAllQueryIndexesO
   private GetAllQueryIndexesOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static GetAllQueryIndexesOptions getAllQueryIndexesOptions() {
     return new GetAllQueryIndexesOptions();
   }

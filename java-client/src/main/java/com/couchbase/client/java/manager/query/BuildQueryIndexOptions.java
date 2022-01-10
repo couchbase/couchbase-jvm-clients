@@ -24,6 +24,9 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
+/**
+ * Allows customizing how deferred indexes are built.
+ */
 public class BuildQueryIndexOptions extends CommonOptions<BuildQueryIndexOptions> {
 
   private String scopeName;
@@ -32,6 +35,11 @@ public class BuildQueryIndexOptions extends CommonOptions<BuildQueryIndexOptions
   private BuildQueryIndexOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static BuildQueryIndexOptions buildDeferredQueryIndexesOptions() {
     return new BuildQueryIndexOptions();
   }

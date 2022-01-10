@@ -24,6 +24,9 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
+/**
+ * Allows customizing how the query indexes are watched.
+ */
 public class WatchQueryIndexesOptions {
 
   private boolean watchPrimary;
@@ -33,17 +36,25 @@ public class WatchQueryIndexesOptions {
   private WatchQueryIndexesOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static WatchQueryIndexesOptions watchQueryIndexesOptions() {
     return new WatchQueryIndexesOptions();
   }
 
   /**
-   * Include the bucket's primary index in the watch result.
-   * If the bucket has no primary index, the watch operation
-   * will fail with {@link IndexNotFoundException}.
+   * Set to true if the primary index should be included in the watch result.
+   * <p>
+   * Note that if the bucket has no primary index, the watch operation will fail with a {@link IndexNotFoundException}.
+   *
+   * @param watchPrimary if the primary index should be included in the watch.
+   * @return this options class for chaining purposes.
    */
-  public WatchQueryIndexesOptions watchPrimary(boolean watch) {
-    this.watchPrimary = watch;
+  public WatchQueryIndexesOptions watchPrimary(final boolean watchPrimary) {
+    this.watchPrimary = watchPrimary;
     return this;
   }
 

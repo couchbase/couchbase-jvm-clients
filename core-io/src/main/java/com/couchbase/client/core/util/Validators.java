@@ -19,6 +19,7 @@ package com.couchbase.client.core.util;
 import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -97,6 +98,13 @@ public class Validators {
   }
 
   public static <T> Set<T> notNullOrEmpty(final Set<T> input, final String identifier) {
+    if (input == null || input.isEmpty()) {
+      throw InvalidArgumentException.fromMessage(identifier + " cannot be null or empty");
+    }
+    return input;
+  }
+
+  public static <T> Collection<T> notNullOrEmpty(final Collection<T> input, final String identifier) {
     if (input == null || input.isEmpty()) {
       throw InvalidArgumentException.fromMessage(identifier + " cannot be null or empty");
     }

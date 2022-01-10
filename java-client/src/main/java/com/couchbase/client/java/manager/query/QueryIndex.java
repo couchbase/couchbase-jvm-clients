@@ -29,7 +29,7 @@ import static com.couchbase.client.core.util.CbStrings.emptyToNull;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Describes a N1QL index.
+ * Contains the properties of a Query Index.
  */
 public class QueryIndex {
 
@@ -46,6 +46,7 @@ public class QueryIndex {
   private final Optional<String> scopeName;
   private final Optional<String> bucketName;
 
+  @Stability.Internal
   QueryIndex(final JsonObject raw) {
     this.raw = requireNonNull(raw);
 
@@ -62,24 +63,49 @@ public class QueryIndex {
     this.bucketName = Optional.ofNullable(emptyToNull(raw.getString("bucket_id")));
   }
 
+  /**
+   * True if this index is a primary index.
+   *
+   * @return true if this index is a primary index.
+   */
   public boolean primary() {
     return this.primary;
   }
 
+  /**
+   * Returns the name of this index.
+   *
+   * @return the name of the index.
+   */
   public String name() {
     return this.name;
   }
 
+  /**
+   * Returns the index type (most likely "gsi").
+   *
+   * @return the type of the index.
+   */
   public String type() {
     return type;
   }
 
+  /**
+   * Returns the state in which the index is in (i.e. "online").
+   *
+   * @return the state of the index.
+   */
   public String state() {
     return state;
   }
 
   /**
-   * @return the keyspace for the index, typically the bucket name.
+   * Returns the keyspace of this index.
+   * <p>
+   * If the index is at the bucket-level, this will return the bucket name. If the index is at the collection-level,
+   * the keyspace is the name of the collection.
+   *
+   * @return the keyspace of this index.
    */
   public String keyspace() {
     return keyspace;
@@ -89,13 +115,23 @@ public class QueryIndex {
    * @return the namespace for the index. A namespace is a resource pool that contains multiple keyspaces.
    * @see #keyspace()
    */
+
+  /**
+   * Returns the namespace of this index.
+   * <p>
+   * The namespace should not be confused with the keyspace - the namespace usually is "default".
+   *
+   * @return the namespace of this index.
+   */
   public String namespace() {
     return namespace;
   }
 
   /**
-   * Return an {@link JsonArray array} of Strings that represent the index key(s).
+   * Returns an {@link JsonArray array} of Strings that represent the index key(s).
+   * <p>
    * The array is empty in the case of a PRIMARY INDEX.
+   * <p>
    * Note that the query service can present the key in a slightly different manner from when you declared the index:
    * for instance, it will show the indexed fields in an escaped format (surrounded by backticks).
    *
@@ -106,7 +142,7 @@ public class QueryIndex {
   }
 
   /**
-   * Return the {@link String} representation of the index's condition (the WHERE clause of the index), or an empty
+   * Returns the {@link String} representation of the index's condition (the WHERE clause of the index), or an empty
    * Optional if no condition was set.
    * <p>
    * Note that the query service can present the condition in a slightly different manner from when you declared the index:
@@ -149,6 +185,8 @@ public class QueryIndex {
   }
 
   /**
+   * Returns the JSON as it arrived from the server.
+   *
    * @return the raw JSON representation of the index information, as returned by the query service.
    */
   public JsonObject raw() {

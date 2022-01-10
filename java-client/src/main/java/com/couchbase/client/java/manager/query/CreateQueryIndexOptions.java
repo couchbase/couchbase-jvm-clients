@@ -24,13 +24,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
+/**
+ * Allows customizing how a query index is created.
+ */
 public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptions> {
 
   private final Map<String, Object> with = new HashMap<>();
 
-  private Optional<String> indexName = Optional.empty();
   private boolean ignoreIfExists;
   private String scopeName;
   private String collectionName;
@@ -38,45 +41,64 @@ public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptio
   private CreateQueryIndexOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static CreateQueryIndexOptions createQueryIndexOptions() {
     return new CreateQueryIndexOptions();
   }
 
   /**
-   * If an index with the same name already exists, an exception will be thrown unless this is set to true.
+   * Set to true if no exception should be thrown if the index already exists (false by default).
+   *
+   * @param ignoreIfExists true if no exception should be thrown if the index already exists.
+   * @return this options builder for chaining purposes.
    */
-  public CreateQueryIndexOptions ignoreIfExists(boolean ignore) {
-    this.ignoreIfExists = ignore;
+  public CreateQueryIndexOptions ignoreIfExists(final boolean ignoreIfExists) {
+    this.ignoreIfExists = ignoreIfExists;
     return this;
   }
 
   /**
-   * Specifies the number of replicas of the index to create.
+   * Configures the number of index replicas.
+   *
+   * @param numReplicas the number of replicas used for this index.
+   * @return this options builder for chaining purposes.
    */
-  public CreateQueryIndexOptions numReplicas(int numReplicas) {
-    // yeah, there's no "s" in the option name
+  public CreateQueryIndexOptions numReplicas(final int numReplicas) {
+    if (numReplicas < 0) {
+      throw InvalidArgumentException.fromMessage("numReplicas must be >= 0");
+    }
     return with("num_replica", numReplicas);
   }
 
   /**
-   * Set to {@code true} to defer building of the index until
-   * {@link QueryIndexManager#buildDeferredIndexes} is called.
+   * If set to true will defer building of this index (false by default).
    * <p>
-   * If you are creating multiple indexes on the same bucket,
-   * you may see improved performance by creating them in deferred
-   * mode and then building them all at once.
+   * If you are creating multiple indexes on the same bucket, you may see improved performance by creating
+   * them in deferred mode and then building them all at once. Please use
+   * {@link QueryIndexManager#buildDeferredIndexes(String)} afterwards to build the deferred indexes.
+   *
+   * @param deferred if building this index should be deferred.
+   * @return this options builder for chaining purposes.
    */
-  public CreateQueryIndexOptions deferred(boolean deferred) {
+  public CreateQueryIndexOptions deferred(final boolean deferred) {
     return with("defer_build", deferred);
   }
 
   /**
-   * Escape hatch for specifying extra options in the {@code WITH} clause.
-   * Intended for options that are supported by Couchbase Server but not by this
-   * version of the SDK.
+   * Allows passing in custom options into the N1QL WITH clause for index creation.
+   * <p>
+   * This method should only be used if no other option is available - use with caution!
+   *
+   * @param optionName the name of the WITH option.
+   * @param optionValue the value of the WITH option.
+   * @return this options builder for chaining purposes.
    */
-  public CreateQueryIndexOptions with(String optionName, Object optionValue) {
-    this.with.put(optionName, optionValue);
+  public CreateQueryIndexOptions with(final String optionName, final Object optionValue) {
+    this.with.put(notNullOrEmpty(optionName, "OptionName"), notNull(optionValue, "OptionValue"));
     return this;
   }
 
@@ -120,7 +142,9 @@ public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptio
   }
 
   public class Built extends BuiltCommonOptions {
+
     Built() { }
+
     public boolean ignoreIfExists() {
       return ignoreIfExists;
     }
@@ -136,5 +160,7 @@ public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptio
     public Optional<String> collectionName() {
       return Optional.ofNullable(collectionName);
     }
+
   }
+
 }

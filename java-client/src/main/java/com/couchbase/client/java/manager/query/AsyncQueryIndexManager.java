@@ -16,9 +16,12 @@
 
 package com.couchbase.client.java.manager.query;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.IndexExistsException;
+import com.couchbase.client.core.error.IndexFailureException;
 import com.couchbase.client.core.error.IndexesNotReadyException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.QueryException;
@@ -51,6 +54,8 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.util.CbThrowables.findCause;
 import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static com.couchbase.client.core.util.CbThrowables.throwIfUnchecked;
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.manager.query.AsyncQueryIndexManager.QueryType.READ_ONLY;
 import static com.couchbase.client.java.manager.query.AsyncQueryIndexManager.QueryType.WRITE;
 import static com.couchbase.client.java.manager.query.BuildQueryIndexOptions.buildDeferredQueryIndexesOptions;
@@ -66,28 +71,75 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
+/**
+ * Performs management operations on query indexes.
+ */
 public class AsyncQueryIndexManager {
-  enum QueryType {
-    READ_ONLY,
-    WRITE
-  }
 
+  /**
+   * Holds a reference to the async cluster since query management ops are actually N1QL queries.
+   */
   private final AsyncCluster cluster;
 
-  public AsyncQueryIndexManager(AsyncCluster cluster) {
+  /**
+   * Creates a new {@link AsyncQueryIndexManager}.
+   * <p>
+   * This API is not intended to be called by the user directly, use {@link AsyncCluster#queryIndexes()}
+   * instead.
+   *
+   * @param cluster the async cluster to perform the queries on.
+   */
+  @Stability.Internal
+  public AsyncQueryIndexManager(final AsyncCluster cluster) {
     this.cluster = requireNonNull(cluster);
   }
 
-  public CompletableFuture<Void> createIndex(String bucketName, String indexName, Collection<String> fields) {
+  /**
+   * Creates a named query index.
+   * <p>
+   * By default, this method will create an index on the bucket. If an index needs to be created on a collection,
+   * both {@link CreateQueryIndexOptions#scopeName(String)} and {@link CreateQueryIndexOptions#collectionName(String)}
+   * must be set.
+   *
+   * @param bucketName the name of the bucket to create the index on.
+   * @param indexName the name of the query index.
+   * @param fields the collection of fields that are part of the index.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws IndexFailureException (async) if creating the index failed (see reason for details).
+   * @throws IndexExistsException (async) if an index already exists with the given name on the keyspace.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> createIndex(final String bucketName, final String indexName,
+                                             final Collection<String> fields) {
     return createIndex(bucketName, indexName, fields, createQueryIndexOptions());
   }
 
-  public CompletableFuture<Void> createIndex(String bucketName, String indexName, Collection<String> fields,
-                                             CreateQueryIndexOptions options) {
-    final CreateQueryIndexOptions.Built builtOpts = options.build();
-    String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
+  /**
+   * Creates a named query index with custom options.
+   * <p>
+   * By default, this method will create an index on the bucket. If an index needs to be created on a collection,
+   * both {@link CreateQueryIndexOptions#scopeName(String)} and {@link CreateQueryIndexOptions#collectionName(String)}
+   * must be set.
+   *
+   * @param bucketName the name of the bucket to create the index on.
+   * @param indexName the name of the query index.
+   * @param fields the collection of fields that are part of the index.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws IndexFailureException (async) if creating the index failed (see reason for details).
+   * @throws IndexExistsException (async) if an index already exists with the given name on the keyspace.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> createIndex(final String bucketName, final String indexName,
+                                             final Collection<String> fields, final CreateQueryIndexOptions options) {
+    notNullOrEmpty(bucketName, "BucketName");
+    notNullOrEmpty(indexName, "IndexName");
+    notNullOrEmpty(fields, "Fields");
+    notNull(options, "Options");
 
-    String statement = "CREATE INDEX " + quote(indexName) + " ON " + keyspace + formatIndexFields(fields);
+    final CreateQueryIndexOptions.Built builtOpts = options.build();
+    final String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
+    final String statement = "CREATE INDEX " + quote(indexName) + " ON " + keyspace + formatIndexFields(fields);
 
     return exec(WRITE, statement, builtOpts.with(), builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_INDEX, bucketName)
         .exceptionally(t -> {
@@ -100,14 +152,45 @@ public class AsyncQueryIndexManager {
         .thenApply(result -> null);
   }
 
-  public CompletableFuture<Void> createPrimaryIndex(String bucketName) {
+  /**
+   * Creates a primary query index.
+   * <p>
+   * By default, this method will create an index on the bucket. If an index needs to be created on a collection,
+   * both {@link CreatePrimaryQueryIndexOptions#scopeName(String)} and
+   * {@link CreatePrimaryQueryIndexOptions#collectionName(String)} must be set.
+   *
+   * @param bucketName the name of the bucket to create the index on.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws IndexFailureException (async) if creating the index failed (see reason for details).
+   * @throws IndexExistsException (async) if an index already exists with the given name on the keyspace.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> createPrimaryIndex(final String bucketName) {
     return createPrimaryIndex(bucketName, createPrimaryQueryIndexOptions());
   }
 
-  public CompletableFuture<Void> createPrimaryIndex(String bucketName, CreatePrimaryQueryIndexOptions options) {
+  /**
+   * Creates a primary query index with custom options.
+   * <p>
+   * By default, this method will create an index on the bucket. If an index needs to be created on a collection,
+   * both {@link CreatePrimaryQueryIndexOptions#scopeName(String)} and
+   * {@link CreatePrimaryQueryIndexOptions#collectionName(String)} must be set.
+   *
+   * @param bucketName the name of the bucket to create the index on.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws IndexFailureException (async) if creating the index failed (see reason for details).
+   * @throws IndexExistsException (async) if an index already exists with the given name on the keyspace.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> createPrimaryIndex(final String bucketName,
+                                                    final CreatePrimaryQueryIndexOptions options) {
+    notNullOrEmpty(bucketName, "BucketName");
+    notNull(options, "Options");
+
     final CreatePrimaryQueryIndexOptions.Built builtOpts = options.build();
     final String indexName = builtOpts.indexName().orElse(null);
-    String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
+    final String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
 
     String statement = "CREATE PRIMARY INDEX ";
     if (indexName != null) {
@@ -126,17 +209,37 @@ public class AsyncQueryIndexManager {
         .thenApply(result -> null);
   }
 
-  private static String formatIndexFields(Collection<String> fields) {
-    return "(" + String.join(",", fields) + ")";
-  }
-
-  public CompletableFuture<List<QueryIndex>> getAllIndexes(String bucketName) {
+  /**
+   * Fetches all indexes from the bucket.
+   * <p>
+   * By default, this method will fetch all index on the bucket. If the indexes should be loaded for a collection,
+   * both {@link GetAllQueryIndexesOptions#scopeName(String)} and
+   * {@link GetAllQueryIndexesOptions#collectionName(String)} must be set.
+   *
+   * @param bucketName the name of the bucket to load the indexes from.
+   * @return a {@link CompletableFuture} completing with a list of (potentially empty) indexes or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<List<QueryIndex>> getAllIndexes(final String bucketName) {
     return getAllIndexes(bucketName, getAllQueryIndexesOptions());
   }
 
-  public CompletableFuture<List<QueryIndex>> getAllIndexes(String bucketName, GetAllQueryIndexesOptions options) {
-    requireNonNull(bucketName);
-
+  /**
+   * Fetches all indexes from the bucket with custom options.
+   * <p>
+   * By default, this method will fetch all index on the bucket. If the indexes should be loaded for a collection,
+   * both {@link GetAllQueryIndexesOptions#scopeName(String)} and
+   * {@link GetAllQueryIndexesOptions#collectionName(String)} must be set.
+   *
+   * @param bucketName the name of the bucket to load the indexes from.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing with a list of (potentially empty) indexes or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<List<QueryIndex>> getAllIndexes(final String bucketName,
+                                                           final GetAllQueryIndexesOptions options) {
+    notNullOrEmpty(bucketName, "BucketName");
+    notNull(options, "Options");
     final GetAllQueryIndexesOptions.Built builtOpts = options.build();
 
     String statement;
@@ -159,17 +262,44 @@ public class AsyncQueryIndexManager {
             .collect(toList()));
   }
 
-  public CompletableFuture<Void> dropPrimaryIndex(String bucketName) {
+  /**
+   * Drops the primary index from a bucket.
+   * <p>
+   * By default, this method will drop the primary index on the bucket. If the index should be dropped on a collection,
+   * both {@link DropPrimaryQueryIndexOptions#scopeName(String)} and
+   * {@link DropPrimaryQueryIndexOptions#collectionName(String)} must be set.
+   *
+   * @param bucketName the name of the bucket to drop the indexes from.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws IndexNotFoundException (async) if the index does not exist.
+   * @throws IndexFailureException (async) if dropping the index failed (see reason for details).
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> dropPrimaryIndex(final String bucketName) {
     return dropPrimaryIndex(bucketName, dropPrimaryQueryIndexOptions());
   }
 
-  public CompletableFuture<Void> dropPrimaryIndex(String bucketName, DropPrimaryQueryIndexOptions options) {
-    requireNonNull(bucketName);
+  /**
+   * Drops the primary index from a bucket with custom options.
+   * <p>
+   * By default, this method will drop the primary index on the bucket. If the index should be dropped on a collection,
+   * both {@link DropPrimaryQueryIndexOptions#scopeName(String)} and
+   * {@link DropPrimaryQueryIndexOptions#collectionName(String)} must be set.
+   *
+   * @param bucketName the name of the bucket to drop the indexes from.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws IndexNotFoundException (async) if the index does not exist.
+   * @throws IndexFailureException (async) if dropping the index failed (see reason for details).
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> dropPrimaryIndex(final String bucketName, final DropPrimaryQueryIndexOptions options) {
+    notNullOrEmpty(bucketName, "BucketName");
+    notNull(options, "Options");
 
     final DropPrimaryQueryIndexOptions.Built builtOpts = options.build();
-    String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
-
-    String statement = "DROP PRIMARY INDEX ON " + keyspace;
+    final String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
+    final String statement = "DROP PRIMARY INDEX ON " + keyspace;
 
     return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_DROP_PRIMARY_INDEX, bucketName)
         .exceptionally(t -> {
@@ -182,16 +312,47 @@ public class AsyncQueryIndexManager {
         .thenApply(result -> null);
   }
 
-  public CompletableFuture<Void> dropIndex(String bucketName, String indexName) {
+  /**
+   * Drops a query index from a bucket.
+   * <p>
+   * By default, this method will drop the index on the bucket. If the index should be dropped on a collection,
+   * both {@link DropQueryIndexOptions#scopeName(String)} and
+   * {@link DropQueryIndexOptions#collectionName(String)} must be set.
+   *
+   * @param bucketName the name of the bucket to drop the indexes from.
+   * @param indexName the name of the index top drop.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws IndexNotFoundException (async) if the index does not exist.
+   * @throws IndexFailureException (async) if dropping the index failed (see reason for details).
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> dropIndex(final String bucketName, final String indexName) {
     return dropIndex(bucketName, indexName, dropQueryIndexOptions());
   }
 
-  public CompletableFuture<Void> dropIndex(String bucketName, String indexName, DropQueryIndexOptions options) {
-    requireNonNull(bucketName);
+  /**
+   * Drops a query index from a bucket with custom options.
+   * <p>
+   * By default, this method will drop the index on the bucket. If the index should be dropped on a collection,
+   * both {@link DropQueryIndexOptions#scopeName(String)} and
+   * {@link DropQueryIndexOptions#collectionName(String)} must be set.
+   *
+   * @param bucketName the name of the bucket to drop the indexes from.
+   * @param indexName the name of the index top drop.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws IndexNotFoundException (async) if the index does not exist.
+   * @throws IndexFailureException (async) if dropping the index failed (see reason for details).
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> dropIndex(final String bucketName, final String indexName,
+                                           final DropQueryIndexOptions options) {
+    notNullOrEmpty(bucketName, "BucketName");
+    notNullOrEmpty(indexName, "IndexName");
+    notNull(options, "Options");
 
     final DropQueryIndexOptions.Built builtOpts = options.build();
-
-    String statement = builtOpts.scopeName().isPresent() && builtOpts.collectionName().isPresent()
+    final String statement = builtOpts.scopeName().isPresent() && builtOpts.collectionName().isPresent()
       ? "DROP INDEX " + quote(indexName) + " ON " + buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName())
       : "DROP INDEX " + quote(bucketName, indexName);
 
@@ -206,22 +367,36 @@ public class AsyncQueryIndexManager {
         .thenApply(result -> null);
   }
 
-  public CompletableFuture<Void> buildDeferredIndexes(String bucketName) {
+  /**
+   * Builds all currently deferred indexes.
+   * <p>
+   * By default, this method will build the indexes on the bucket. If the indexes should be built on a collection,
+   * both {@link BuildQueryIndexOptions#scopeName(String)} and
+   * {@link BuildQueryIndexOptions#collectionName(String)} must be set.
+   *
+   * @param bucketName the name of the bucket to build deferred indexes for.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> buildDeferredIndexes(final String bucketName) {
     return buildDeferredIndexes(bucketName, buildDeferredQueryIndexesOptions());
   }
 
-  private static GetAllQueryIndexesOptions toGetAllIndexesOptions(final BuildQueryIndexOptions.Built opts) {
-    GetAllQueryIndexesOptions result = getAllQueryIndexesOptions();
-    opts.retryStrategy().ifPresent(result::retryStrategy);
-    opts.timeout().ifPresent(result::timeout);
-    opts.scopeName().ifPresent(result::scopeName);
-    opts.collectionName().ifPresent(result::collectionName);
-    result.clientContext(opts.clientContext());
-    return result;
-  }
-
-  public CompletableFuture<Void> buildDeferredIndexes(String bucketName, BuildQueryIndexOptions options) {
-    requireNonNull(bucketName);
+  /**
+   * Builds all currently deferred indexes.
+   * <p>
+   * By default, this method will build the indexes on the bucket. If the indexes should be built on a collection,
+   * both {@link BuildQueryIndexOptions#scopeName(String)} and
+   * {@link BuildQueryIndexOptions#collectionName(String)} must be set.
+   *
+   * @param bucketName the name of the bucket to build deferred indexes for.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> buildDeferredIndexes(final String bucketName, final BuildQueryIndexOptions options) {
+    notNullOrEmpty(bucketName, "BucketName");
+    notNull(options, "Options");
     final BuildQueryIndexOptions.Built builtOpts = options.build();
 
     return getAllIndexes(bucketName, toGetAllIndexesOptions(builtOpts))
@@ -247,13 +422,44 @@ public class AsyncQueryIndexManager {
         .thenApply(result -> null);
   }
 
-  public CompletableFuture<Void> watchIndexes(String bucketName, Collection<String> indexNames, Duration timeout) {
+  /**
+   * Watches/Polls indexes until they are online.
+   * <p>
+   * By default, this method will watch the indexes on the bucket. If the indexes should be watched on a collection,
+   * both {@link WatchQueryIndexesOptions#scopeName(String)} and
+   * {@link WatchQueryIndexesOptions#collectionName(String)} must be set.
+   *
+   * @param bucketName the name of the bucket where the indexes should be watched.
+   * @param indexNames the names of the indexes to watch.
+   * @param timeout the maximum amount of time the indexes should be watched.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> watchIndexes(final String bucketName, final Collection<String> indexNames,
+                                              final Duration timeout) {
     return watchIndexes(bucketName, indexNames, timeout, watchQueryIndexesOptions());
   }
 
-  public CompletableFuture<Void> watchIndexes(String bucketName, Collection<String> indexNames, Duration timeout,
-                                              WatchQueryIndexesOptions options) {
-    requireNonNull(timeout);
+  /**
+   * Watches/Polls indexes until they are online with custom options.
+   * <p>
+   * By default, this method will watch the indexes on the bucket. If the indexes should be watched on a collection,
+   * both {@link WatchQueryIndexesOptions#scopeName(String)} and
+   * {@link WatchQueryIndexesOptions#collectionName(String)} must be set.
+   *
+   * @param bucketName the name of the bucket where the indexes should be watched.
+   * @param indexNames the names of the indexes to watch.
+   * @param timeout the maximum amount of time the indexes should be watched.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> watchIndexes(final String bucketName, final Collection<String> indexNames,
+                                              final Duration timeout, final WatchQueryIndexesOptions options) {
+    notNullOrEmpty(bucketName, "BucketName");
+    notNull(indexNames, "IndexNames");
+    notNull(timeout, "Timeout");
+    notNull(options, "Options");
 
     Set<String> indexNameSet = new HashSet<>(indexNames);
     WatchQueryIndexesOptions.Built builtOpts = options.build();
@@ -270,6 +476,20 @@ public class AsyncQueryIndexManager {
         .onErrorMap(t -> t instanceof RetryExhaustedException ? toWatchTimeoutException(t, timeout) : t)
         .toFuture()
         .whenComplete((r, t) -> parent.end());
+  }
+
+  private static GetAllQueryIndexesOptions toGetAllIndexesOptions(final BuildQueryIndexOptions.Built opts) {
+    GetAllQueryIndexesOptions result = getAllQueryIndexesOptions();
+    opts.retryStrategy().ifPresent(result::retryStrategy);
+    opts.timeout().ifPresent(result::timeout);
+    opts.scopeName().ifPresent(result::scopeName);
+    opts.collectionName().ifPresent(result::collectionName);
+    result.clientContext(opts.clientContext());
+    return result;
+  }
+
+  private static String formatIndexFields(Collection<String> fields) {
+    return "(" + String.join(",", fields) + ")";
   }
 
   private static TimeoutException toWatchTimeoutException(Throwable t, Duration timeout) {
@@ -374,15 +594,6 @@ public class AsyncQueryIndexManager {
 
   private static final Map<Predicate<QueryException>, Function<QueryException, ? extends QueryException>> errorMessageMap = new LinkedHashMap<>();
 
-  private static Predicate<QueryException> code(int code) {
-    return e -> e.code() == code;
-  }
-
-  private static Predicate<QueryException> message(String substringRegex) {
-    final String CASE_INSENSITIVE = "(?i)";
-    return e -> e.msg().matches(CASE_INSENSITIVE + ".*\\b" + substringRegex + "\\b.*");
-  }
-
   private RuntimeException translateException(Throwable t) {
     if (t instanceof QueryException) {
       final QueryException e = ((QueryException) t);
@@ -416,6 +627,11 @@ public class AsyncQueryIndexManager {
     } else {
       return quote(bucket);
     }
+  }
+
+  enum QueryType {
+    READ_ONLY,
+    WRITE
   }
 
 }
