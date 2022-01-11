@@ -214,7 +214,8 @@ public class AsyncQueryIndexManager {
    * <p>
    * By default, this method will fetch all index on the bucket. If the indexes should be loaded for a collection,
    * both {@link GetAllQueryIndexesOptions#scopeName(String)} and
-   * {@link GetAllQueryIndexesOptions#collectionName(String)} must be set.
+   * {@link GetAllQueryIndexesOptions#collectionName(String)} must be set. If all indexes for a scope should be loaded,
+   * only the {@link GetAllQueryIndexesOptions#scopeName(String)} can be set.
    *
    * @param bucketName the name of the bucket to load the indexes from.
    * @return a {@link CompletableFuture} completing with a list of (potentially empty) indexes or failed with an error.
@@ -229,7 +230,8 @@ public class AsyncQueryIndexManager {
    * <p>
    * By default, this method will fetch all index on the bucket. If the indexes should be loaded for a collection,
    * both {@link GetAllQueryIndexesOptions#scopeName(String)} and
-   * {@link GetAllQueryIndexesOptions#collectionName(String)} must be set.
+   * {@link GetAllQueryIndexesOptions#collectionName(String)} must be set. If all indexes for a scope should be loaded,
+   * only the {@link GetAllQueryIndexesOptions#scopeName(String)} can be set.
    *
    * @param bucketName the name of the bucket to load the indexes from.
    * @param options the custom options to apply.
@@ -247,6 +249,11 @@ public class AsyncQueryIndexManager {
       statement = "SELECT idx.* FROM system:indexes AS idx" +
         " WHERE keyspace_id = \"" + builtOpts.collectionName().get() + "\" AND bucket_id = \""
         + bucketName + "\" AND scope_id = \"" + builtOpts.scopeName().get() + "\"" +
+        " AND `using` = \"gsi\"" +
+        " ORDER BY is_primary DESC, name ASC";
+    } else if (builtOpts.scopeName().isPresent()) {
+      statement = "SELECT idx.* FROM system:indexes AS idx" +
+        " WHERE bucket_id = \"" + bucketName + "\" AND scope_id = \"" + builtOpts.scopeName().get() + "\"" +
         " AND `using` = \"gsi\"" +
         " ORDER BY is_primary DESC, name ASC";
     } else {

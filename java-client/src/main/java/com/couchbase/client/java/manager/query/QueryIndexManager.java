@@ -149,7 +149,8 @@ public class QueryIndexManager {
    * <p>
    * By default, this method will fetch all index on the bucket. If the indexes should be loaded for a collection,
    * both {@link GetAllQueryIndexesOptions#scopeName(String)} and
-   * {@link GetAllQueryIndexesOptions#collectionName(String)} must be set.
+   * {@link GetAllQueryIndexesOptions#collectionName(String)} must be set. If all indexes for a scope should be loaded,
+   * only the {@link GetAllQueryIndexesOptions#scopeName(String)} can be set.
    *
    * @param bucketName the name of the bucket to load the indexes from.
    * @return a list of (potentially empty) indexes or failed with an error.
@@ -164,7 +165,8 @@ public class QueryIndexManager {
    * <p>
    * By default, this method will fetch all index on the bucket. If the indexes should be loaded for a collection,
    * both {@link GetAllQueryIndexesOptions#scopeName(String)} and
-   * {@link GetAllQueryIndexesOptions#collectionName(String)} must be set.
+   * {@link GetAllQueryIndexesOptions#collectionName(String)} must be set. If all indexes for a scope should be loaded,
+   * only the {@link GetAllQueryIndexesOptions#scopeName(String)} can be set.
    *
    * @param bucketName the name of the bucket to load the indexes from.
    * @param options the custom options to apply.

@@ -185,6 +185,16 @@ public class QueryIndex {
   }
 
   /**
+   * If present, returns the name of the collection this index is stored in.
+   *
+   * @return the name of the collection, if present.
+   */
+  @Stability.Uncommitted
+  public Optional<String> collectionName() {
+    return bucketName.isPresent() && scopeName.isPresent() ? Optional.of(keyspace) : Optional.empty();
+  }
+
+  /**
    * Returns the JSON as it arrived from the server.
    *
    * @return the raw JSON representation of the index information, as returned by the query service.

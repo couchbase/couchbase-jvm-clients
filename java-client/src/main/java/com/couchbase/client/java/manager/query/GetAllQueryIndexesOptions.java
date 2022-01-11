@@ -47,7 +47,8 @@ public class GetAllQueryIndexesOptions extends CommonOptions<GetAllQueryIndexesO
   /**
    * Sets the scope name for this query management operation.
    * <p>
-   * Please note that if the scope name is set, the {@link #collectionName(String)} (String)} must also be set.
+   * If the scope name is set but the {@link #collectionName(String)} (String)} is not, then all indexes within
+   * a scope (for all the collections inside) will be returned.
    *
    * @param scopeName the name of the scope.
    * @return this options class for chaining purposes.
@@ -76,9 +77,6 @@ public class GetAllQueryIndexesOptions extends CommonOptions<GetAllQueryIndexesO
   public Built build() {
     if (collectionName != null && scopeName == null) {
       throw InvalidArgumentException.fromMessage("If a collectionName is provided, a scopeName must also be provided");
-    }
-    if (scopeName != null && collectionName == null) {
-      throw InvalidArgumentException.fromMessage("If a scopeName is provided, a collectionName must also be provided");
     }
     return new Built();
   }
