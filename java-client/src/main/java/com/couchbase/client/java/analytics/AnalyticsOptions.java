@@ -17,6 +17,7 @@
 package com.couchbase.client.java.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.util.Golang;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -24,6 +25,7 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -48,6 +50,7 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
   private Map<String, Object> raw;
   private boolean readonly = false;
   private AnalyticsScanConsistency scanConsistency;
+  private String scanWait;
   private JsonSerializer serializer;
 
   /**
@@ -144,6 +147,22 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
   }
 
   /**
+   * Allows customizing how long the query engine is willing to wait until the index catches up to whatever scan
+   * consistency is asked for in this query.
+   * <p>
+   * Note that if {@link AnalyticsScanConsistency#NOT_BOUNDED} is used (which is the default), this method doesn't
+   * do anything at all. If no value is provided to this method, the server default is used.
+   *
+   * @param wait the maximum duration the analytics engine should wait before failing.
+   * @return the same {@link AnalyticsOptions} for chaining purposes.
+   */
+  @Stability.Uncommitted
+  public AnalyticsOptions scanWait(final Duration wait) {
+    this.scanWait = Golang.encodeDurationToMs(notNull(wait, "Wait Duration"));
+    return this;
+  }
+
+  /**
    * Sets named parameters for this query.
    * <p>
    * Note that named and positional parameters cannot be used at the same time. If one is set, the other one is "nulled"
@@ -227,6 +246,11 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
 
       if (scanConsistency != null) {
         input.put("scan_consistency", scanConsistency.toString());
+      }
+
+      if (scanWait != null && !scanWait.isEmpty() && scanConsistency != null
+        && AnalyticsScanConsistency.NOT_BOUNDED != scanConsistency) {
+          input.put("scan_wait", scanWait);
       }
 
       boolean positionalPresent = positionalParameters != null && !positionalParameters.isEmpty();
