@@ -299,7 +299,7 @@ pipeline {
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
              steps {
-                 test(ORACLE_JDK, ORACLE_JDK_8, "5.5-release", includeAnalytics = false)
+                 test(ORACLE_JDK, ORACLE_JDK_8, "5.5-release", includeAnalytics : false)
              }
              post {
                  always {
@@ -368,7 +368,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "7.0-release", includeAnalytics = true, includeEventing = true)
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.0-release", includeEventing : true)
             }
             post {
                 always {
@@ -388,7 +388,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "7.1-stable", includeAnalytics = true, includeEventing = true)
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.1-stable", includeEventing : true)
             }
             post {
                 always {
@@ -408,7 +408,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "7.0-release", ceMode = true)
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.0-release", ceMode : true)
             }
             post {
                 always {
@@ -464,6 +464,34 @@ pipeline {
                         script { testAgainstMock() }
                     }
                 }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('testing (Alpine, mock, openjdk 11)') {
+            agent { label 'alpine' }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11_M1}"
+                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11_M1}/bin:$PATH"
+            }
+            when {
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    cleanWs()
+                    unstash 'couchbase-jvm-clients'
+                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_11_M1)
+                    dir('couchbase-jvm-clients') {
+                        // Mock testing only, with native IO disabled - check JVMCBC-942 for details
+                        script { testAgainstMock(true) }
+                    }
+                 }
             }
             post {
                 always {
@@ -531,13 +559,16 @@ pipeline {
 }
 
 
-void test(String jdk,
+void test(Map args=[:],
+            String jdk,
             String jdkVersion,
-            String serverVersion,
-            boolean includeAnalytics = true,
-            boolean includeEventing = false,
-            boolean enableDevelopPreview = false,
-            boolean ceMode = false) {
+            String serverVersion) {
+
+    boolean includeAnalytics = args.containsKey("includeAnalytics") ? args.get("includeAnalytics") : true
+    boolean includeEventing = args.containsKey("includeEventing") ? args.get("includeEventing") : false
+    boolean enableDevelopPreview = args.containsKey("enableDevelopPreview") ? args.get("enableDevelopPreview") : false
+    boolean ceMode = args.containsKey("ceMode") ? args.get("ceMode") : false
+
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
         cleanWs()
         unstash 'couchbase-jvm-clients'
@@ -726,4 +757,9 @@ void testAgainstServer(String serverVersion,
             sh(script: "cbdyncluster rm $clusterId")
         }
     }
+}
+
+void testAgainstMock(boolean disableNativeIo = false) {
+    shWithEcho("make deps-only")
+    shWithEcho("mvn --fail-at-end install --batch-mode ${disableNativeIo ? '-Dcom.couchbase.client.core.deps.io.netty.transport.noNative=true' : ''}")
 }
