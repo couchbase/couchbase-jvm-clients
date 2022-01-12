@@ -19,10 +19,18 @@ package com.couchbase.client.java.manager.collection;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
+/**
+ * Allows to customize the behavior of the get scope operation.
+ */
 public class GetScopeOptions extends CommonOptions<GetScopeOptions> {
 
   private GetScopeOptions() { }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static GetScopeOptions getScopeOptions() {
     return new GetScopeOptions();
   }

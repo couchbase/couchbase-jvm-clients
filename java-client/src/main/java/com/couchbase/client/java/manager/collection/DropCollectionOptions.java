@@ -19,10 +19,18 @@ package com.couchbase.client.java.manager.collection;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
+/**
+ * Allows to customize the behavior of the drop collection operation.
+ */
 public class DropCollectionOptions extends CommonOptions<DropCollectionOptions> {
 
   private DropCollectionOptions() { }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static DropCollectionOptions dropCollectionOptions() {
     return new DropCollectionOptions();
   }

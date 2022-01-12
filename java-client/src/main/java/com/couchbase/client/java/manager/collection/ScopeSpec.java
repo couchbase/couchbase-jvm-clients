@@ -16,36 +16,77 @@
 
 package com.couchbase.client.java.manager.collection;
 
+import com.couchbase.client.core.annotation.Stability;
+
 import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 
+/**
+ * The {@link ScopeSpec} describes properties of a scope that can be managed.
+ */
 public class ScopeSpec {
 
+  /**
+   * The name of the scope.
+   */
   private final String name;
 
+  /**
+   * The underlying {@link CollectionSpec}s.
+   */
   private final Set<CollectionSpec> collectionSpecs;
 
+  /**
+   * Creates a new {@link ScopeSpec} with a set of {@link CollectionSpec}s.
+   *
+   * @param name the name of the scope.
+   * @param collectionSpecs the collections that should be part of the scope.
+   */
   private ScopeSpec(final String name, final Set<CollectionSpec> collectionSpecs) {
     this.name = name;
     this.collectionSpecs = collectionSpecs;
   }
 
+  /**
+   * Creates a new {@link ScopeSpec} with a set of {@link CollectionSpec}s.
+   *
+   * @param name the name of the scope.
+   * @param collectionSpecs the collections that should be part of the scope.
+   * @return the created {@link ScopeSpec}.
+   */
+  @Stability.Internal
   public static ScopeSpec create(final String name, final Set<CollectionSpec> collectionSpecs) {
     return new ScopeSpec(name, collectionSpecs);
   }
 
+  /**
+   * Creates a new {@link ScopeSpec} with no collections attached.
+   *
+   * @param name the name of the scope.
+   * @return the created {@link ScopeSpec}.
+   */
+  @Stability.Internal
   public static ScopeSpec create(final String name) {
     return create(name, Collections.emptySet());
   }
 
+  /**
+   * Returns the name of the scope.
+   *
+   * @return the name of the scope.
+   */
   public String name() {
     return name;
   }
 
+  /**
+   * Returns the underlying collections of this scope.
+   *
+   * @return the underlying collections of this scope.
+   */
   public Set<CollectionSpec> collections() {
     return collectionSpecs;
   }

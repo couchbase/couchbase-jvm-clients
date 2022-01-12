@@ -19,10 +19,18 @@ package com.couchbase.client.java.manager.collection;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
+/**
+ * Allows to customize the behavior of the create scope operation.
+ */
 public class CreateScopeOptions extends CommonOptions<CreateScopeOptions> {
 
   private CreateScopeOptions() { }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static CreateScopeOptions createScopeOptions() {
     return new CreateScopeOptions();
   }

@@ -19,10 +19,18 @@ package com.couchbase.client.java.manager.collection;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
+/**
+ * Allows to customize the behavior of the create collection operation.
+ */
 public class CreateCollectionOptions extends CommonOptions<CreateCollectionOptions> {
 
   private CreateCollectionOptions() { }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static CreateCollectionOptions createCollectionOptions() {
     return new CreateCollectionOptions();
   }
