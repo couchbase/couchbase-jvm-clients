@@ -21,24 +21,43 @@ import com.couchbase.client.java.CommonOptions;
 
 import java.util.Optional;
 
+/**
+ * Customizes how an index is dropped.
+ */
 public class DropIndexAnalyticsOptions extends CommonOptions<DropIndexAnalyticsOptions> {
 
   private boolean ignoreIfNotExists;
   private Optional<String> dataverseName = Optional.empty();
 
-  private DropIndexAnalyticsOptions() {
-  }
+  private DropIndexAnalyticsOptions() {}
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static DropIndexAnalyticsOptions dropIndexAnalyticsOptions() {
     return new DropIndexAnalyticsOptions();
   }
 
-  public DropIndexAnalyticsOptions ignoreIfNotExists(boolean ignore) {
+  /**
+   * Ignore the drop operation if the index does not exist.
+   *
+   * @param ignore if true no exception will be thrown if the index does not exist.
+   * @return this {@link DropIndexAnalyticsOptions} for chaining purposes.
+   */
+  public DropIndexAnalyticsOptions ignoreIfNotExists(final boolean ignore) {
     this.ignoreIfNotExists = ignore;
     return this;
   }
 
-  public DropIndexAnalyticsOptions dataverseName(String dataverseName) {
+  /**
+   * The name of the dataverse in which the index exists.
+   *
+   * @param dataverseName the name of the dataverse.
+   * @return this {@link DropIndexAnalyticsOptions} for chaining purposes.
+   */
+  public DropIndexAnalyticsOptions dataverseName(final String dataverseName) {
     this.dataverseName = Optional.ofNullable(dataverseName);
     return this;
   }

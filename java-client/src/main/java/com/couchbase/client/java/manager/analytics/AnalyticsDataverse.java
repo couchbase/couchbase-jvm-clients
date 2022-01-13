@@ -16,24 +16,45 @@
 
 package com.couchbase.client.java.manager.analytics;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.json.JsonObject;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Represents a dataverse in analytics.
+ */
 public class AnalyticsDataverse {
 
   private final String name;
   private final JsonObject json;
 
-  public AnalyticsDataverse(JsonObject json) {
+  /**
+   * Creates a new dataverse from a raw JSON object.
+   *
+   * @param json the decoded JSON object.
+   */
+  @Stability.Internal
+  public AnalyticsDataverse(final JsonObject json) {
     this.json = requireNonNull(json);
     this.name = requireNonNull(json.getString("DataverseName"));
   }
 
+  /**
+   * Returns the name of the dataverse.
+   *
+   * @return the name of the dataverse.
+   */
   public String name() {
     return name;
   }
 
+  /**
+   * Returns the "raw" JSON returned from the analytics service.
+   *
+   * @return the "raw" JSON returned from the analytics service.
+   */
   public JsonObject json() {
     return json;
   }
@@ -41,8 +62,8 @@ public class AnalyticsDataverse {
   @Override
   public String toString() {
     return "AnalyticsDataverse{" +
-        "name='" + name + '\'' +
-        ", json=" + json +
+        "name='" + redactMeta(name) + '\'' +
+        ", json=" + redactMeta(json) +
         '}';
   }
 }

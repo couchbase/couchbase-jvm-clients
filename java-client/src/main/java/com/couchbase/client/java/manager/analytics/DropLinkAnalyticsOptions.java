@@ -19,11 +19,19 @@ package com.couchbase.client.java.manager.analytics;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
+/**
+ * Allows customizing how the analytics links are dropped.
+ */
 public class DropLinkAnalyticsOptions extends CommonOptions<DropLinkAnalyticsOptions> {
 
   private DropLinkAnalyticsOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static DropLinkAnalyticsOptions dropLinkAnalyticsOptions() {
     return new DropLinkAnalyticsOptions();
   }

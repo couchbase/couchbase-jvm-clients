@@ -21,23 +21,43 @@ import com.couchbase.client.java.CommonOptions;
 
 import java.util.Optional;
 
+/**
+ * Customizes how a analytics link is disconnected.
+ */
 public class DisconnectLinkAnalyticsOptions extends CommonOptions<DisconnectLinkAnalyticsOptions> {
+
   private Optional<String> linkName = Optional.empty();
   private Optional<String> dataverseName = Optional.empty();
 
-  private DisconnectLinkAnalyticsOptions() {
-  }
+  private DisconnectLinkAnalyticsOptions() {}
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static DisconnectLinkAnalyticsOptions disconnectLinkAnalyticsOptions() {
     return new DisconnectLinkAnalyticsOptions();
   }
 
-  public DisconnectLinkAnalyticsOptions dataverseName(String dataverseName) {
+  /**
+   * Sets the name of the dataverse in which the link should be disconnected.
+   *
+   * @param dataverseName the name of the dataverse.
+   * @return this {@link DisconnectLinkAnalyticsOptions} for chaining purposes.
+   */
+  public DisconnectLinkAnalyticsOptions dataverseName(final String dataverseName) {
     this.dataverseName = Optional.ofNullable(dataverseName);
     return this;
   }
 
-  public DisconnectLinkAnalyticsOptions linkName(String linkName) {
+  /**
+   * Sets the name of the link which should be disconnected.
+   *
+   * @param linkName the name of the link.
+   * @return this {@link DisconnectLinkAnalyticsOptions} for chaining purposes.
+   */
+  public DisconnectLinkAnalyticsOptions linkName(final String linkName) {
     this.linkName = Optional.ofNullable(linkName);
     return this;
   }

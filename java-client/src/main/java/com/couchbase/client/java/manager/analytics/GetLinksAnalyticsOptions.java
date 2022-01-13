@@ -17,12 +17,17 @@
 package com.couchbase.client.java.manager.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.manager.analytics.link.AnalyticsLinkType;
 
 import java.util.Optional;
 
+/**
+ * Allows customizing how the analytics links are loaded.
+ */
 public class GetLinksAnalyticsOptions extends CommonOptions<GetLinksAnalyticsOptions> {
+
   private Optional<String> dataverseName = Optional.empty();
   private Optional<AnalyticsLinkType> linkType = Optional.empty();
   private Optional<String> name = Optional.empty();
@@ -30,41 +35,55 @@ public class GetLinksAnalyticsOptions extends CommonOptions<GetLinksAnalyticsOpt
   private GetLinksAnalyticsOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static GetLinksAnalyticsOptions getLinksAnalyticsOptions() {
     return new GetLinksAnalyticsOptions();
   }
 
   /**
-   * Only get links in this dataverse.
+   * Limits the loading only to the specified dataverse.
+   *
+   * @param dataverseName the name of the dataverse for which the links should be loaded.
+   * @return this options class for chaining purposes.
    */
-  public GetLinksAnalyticsOptions dataverseName(String dataverseName) {
+  public GetLinksAnalyticsOptions dataverseName(final String dataverseName) {
     this.dataverseName = Optional.ofNullable(dataverseName);
     return this;
   }
 
   /**
-   * Only get the link with this name.
+   * Limits the loading only to the specified name of the link.
    * <p>
-   * Requires specifying {@link #dataverseName(String)}.
-   * <p>
-   * If there is no link with this name in the specified dataverse,
-   * the result is an empty list.
+   * If this option is set, the {@link #dataverseName(String)} must also be set.
+   *
+   * @param linkName the name of the link that should be loaded.
+   * @return this options class for chaining purposes.
    */
-  public GetLinksAnalyticsOptions name(String linkName) {
+  public GetLinksAnalyticsOptions name(final String linkName) {
     this.name = Optional.ofNullable(linkName);
     return this;
   }
 
   /**
-   * Only get links of this type.
+   * Limits the loading to only the specified {@link AnalyticsLinkType}.
+   *
+   * @param linkType the type of link that should be loaded.
+   * @return this options class for chaining purposes.
    */
-  public GetLinksAnalyticsOptions linkType(AnalyticsLinkType linkType) {
+  public GetLinksAnalyticsOptions linkType(final AnalyticsLinkType linkType) {
     this.linkType = Optional.ofNullable(linkType);
     return this;
   }
 
   @Stability.Internal
   public Built build() {
+    if (name.isPresent() && !dataverseName.isPresent()) {
+      throw InvalidArgumentException.fromMessage("If a linkName is provided, a dataverseName must also be provided");
+    }
     return new Built();
   }
 
@@ -84,4 +103,5 @@ public class GetLinksAnalyticsOptions extends CommonOptions<GetLinksAnalyticsOpt
       return linkType;
     }
   }
+
 }

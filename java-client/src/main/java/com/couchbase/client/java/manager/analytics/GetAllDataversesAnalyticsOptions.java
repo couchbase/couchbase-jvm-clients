@@ -19,11 +19,19 @@ package com.couchbase.client.java.manager.analytics;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
+/**
+ * Allows customizing how analytics dataverses are loaded.
+ */
 public class GetAllDataversesAnalyticsOptions extends CommonOptions<GetAllDataversesAnalyticsOptions> {
 
   private GetAllDataversesAnalyticsOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static GetAllDataversesAnalyticsOptions getAllDataversesAnalyticsOptions() {
     return new GetAllDataversesAnalyticsOptions();
   }

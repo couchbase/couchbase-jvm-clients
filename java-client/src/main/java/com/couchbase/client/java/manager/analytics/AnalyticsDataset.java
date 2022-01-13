@@ -16,29 +16,56 @@
 
 package com.couchbase.client.java.manager.analytics;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.json.JsonObject;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Represents a dataset (or collection) in analytics.
+ */
 public class AnalyticsDataset {
+
   private final String name;
   private final String dataverseName;
   private final JsonObject json;
 
-  public AnalyticsDataset(JsonObject json) {
+  /**
+   * Creates a new dataset from a raw JSON object.
+   *
+   * @param json the decoded JSON object.
+   */
+  @Stability.Internal
+  public AnalyticsDataset(final JsonObject json) {
     this.json = requireNonNull(json);
     this.name = requireNonNull(json.getString("DatasetName"));
     this.dataverseName = requireNonNull(json.getString("DataverseName"));
   }
 
+  /**
+   * Returns the name of the dataset (or collection).
+   *
+   * @return the name of the dataset (or collection).
+   */
   public String name() {
     return name;
   }
 
+  /**
+   * Returns the name of the dataverse in which this dataset is stored.
+   *
+   * @return the name of the dataverse.
+   */
   public String dataverseName() {
     return dataverseName;
   }
 
+  /**
+   * Returns the "raw" JSON returned from the analytics service.
+   *
+   * @return the "raw" JSON returned from the analytics service.
+   */
   public JsonObject json() {
     return json;
   }
@@ -46,9 +73,10 @@ public class AnalyticsDataset {
   @Override
   public String toString() {
     return "AnalyticsDataset{" +
-        "name='" + name + '\'' +
-        ", dataverseName='" + dataverseName + '\'' +
-        ", json=" + json +
+        "name='" + redactMeta(name) + '\'' +
+        ", dataverseName='" + redactMeta(dataverseName) + '\'' +
+        ", json=" + redactMeta(json) +
         '}';
   }
+
 }

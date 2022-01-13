@@ -23,9 +23,18 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
+import com.couchbase.client.core.error.AuthenticationFailureException;
+import com.couchbase.client.core.error.CompilationFailureException;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DatasetExistsException;
+import com.couchbase.client.core.error.DatasetNotFoundException;
 import com.couchbase.client.core.error.DataverseExistsException;
 import com.couchbase.client.core.error.DataverseNotFoundException;
+import com.couchbase.client.core.error.IndexExistsException;
+import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.LinkExistsException;
+import com.couchbase.client.core.error.LinkNotFoundException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.manager.CoreAnalyticsLinkManager;
 import com.couchbase.client.core.msg.RequestTarget;
@@ -35,6 +44,8 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.manager.analytics.link.AnalyticsLink;
 import com.couchbase.client.java.manager.analytics.link.AnalyticsLinkType;
+import com.couchbase.client.java.manager.analytics.link.CouchbaseRemoteAnalyticsLink;
+import com.couchbase.client.java.manager.analytics.link.S3ExternalAnalyticsLink;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +56,8 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
 import static com.couchbase.client.java.manager.analytics.ConnectLinkAnalyticsOptions.connectLinkAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.CreateDatasetAnalyticsOptions.createDatasetAnalyticsOptions;
@@ -66,6 +79,9 @@ import static java.util.Collections.singletonMap;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
+/**
+ * Performs management operations on analytics indexes.
+ */
 public class AsyncAnalyticsIndexManager {
 
   private final AsyncCluster cluster;
@@ -76,22 +92,47 @@ public class AsyncAnalyticsIndexManager {
   private static final String DEFAULT_DATAVERSE = "Default";
   private static final String DEFAULT_LINK = "Local";
 
-  public AsyncAnalyticsIndexManager(AsyncCluster cluster) {
+  /**
+   * Creates a new {@link AsyncAnalyticsIndexManager}.
+   * <p>
+   * This API is not intended to be called by the user directly, use {@link AsyncCluster#analyticsIndexes()}
+   * instead.
+   *
+   * @param cluster the async cluster to perform the analytics queries on.
+   */
+  @Stability.Internal
+  public AsyncAnalyticsIndexManager(final AsyncCluster cluster) {
     this.cluster = requireNonNull(cluster);
     this.core = cluster.core();
     this.httpClient = core.httpClient(RequestTarget.analytics());
     this.linkManager = new CoreAnalyticsLinkManager(core);
   }
 
-  public CompletableFuture<Void> createDataverse(String dataverseName) {
+  /**
+   * Creates a new dataverse (analytics scope) if it does not already exist.
+   *
+   * @param dataverseName the name of the dataverse to create.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws DataverseExistsException (async) if the dataverse already exists.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> createDataverse(final String dataverseName) {
     return createDataverse(dataverseName, createDataverseAnalyticsOptions());
   }
 
   /**
-   * @throws DataverseExistsException
+   * Creates a new dataverse (analytics scope) if it does not already exist with custom options.
+   *
+   * @param dataverseName the name of the dataverse to create.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws DataverseExistsException (async) if the dataverse already exists.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
-  public CompletableFuture<Void> createDataverse(String dataverseName, CreateDataverseAnalyticsOptions options) {
-    requireNonNull(dataverseName);
+  public CompletableFuture<Void> createDataverse(final String dataverseName,
+                                                 final CreateDataverseAnalyticsOptions options) {
+    notNullOrEmpty(dataverseName, "DataverseName");
+    notNull(options, "Options");
 
     final CreateDataverseAnalyticsOptions.Built builtOpts = options.build();
 
@@ -104,13 +145,28 @@ public class AsyncAnalyticsIndexManager {
         .thenApply(result -> null);
   }
 
+  /**
+   * Fetches all dataverses (analytics scopes) from the analytics service.
+   *
+   * @return a {@link CompletableFuture} completing with a (potentially empty) list of dataverses or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   @Stability.Uncommitted
   public CompletableFuture<List<AnalyticsDataverse>> getAllDataverses() {
     return getAllDataverses(getAllDataversesAnalyticsOptions());
   }
 
+  /**
+   * Fetches all dataverses (analytics scopes) from the analytics service with custom options.
+   *
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing with a (potentially empty) list of dataverses or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   @Stability.Uncommitted
   public CompletableFuture<List<AnalyticsDataverse>> getAllDataverses(final GetAllDataversesAnalyticsOptions options) {
+    notNull(options, "Options");
+
     final GetAllDataversesAnalyticsOptions.Built builtOpts = options.build();
 
     String statement = "SELECT DataverseName from Metadata.`Dataverse`";
@@ -118,21 +174,37 @@ public class AsyncAnalyticsIndexManager {
       .thenApply(result -> result.rowsAsObject().stream()
         .map((dv) -> dv.put("DataverseName",((String)dv.get("DataverseName")).replace("@.",".")))
         .map(AnalyticsDataverse::new)
-        .collect(toList()));
+        .collect(toList())
+      );
   }
 
   /**
-   * @throws DataverseNotFoundException
+   * Drops (deletes) a dataverse.
+   *
+   * @param dataverseName the name of the dataverse to drop.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws DataverseNotFoundException (async) if the dataverse does not exist.
+   * @throws CompilationFailureException (async) if a dataverse that cannot be dropped (i.e. Default) is attempted.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
-  public CompletableFuture<Void> dropDataverse(String dataverseName) {
+  public CompletableFuture<Void> dropDataverse(final String dataverseName) {
     return dropDataverse(dataverseName, dropDataverseAnalyticsOptions());
   }
 
   /**
-   * @throws DataverseNotFoundException
+   * Drops (deletes) a dataverse with custom options.
+   *
+   * @param dataverseName the name of the dataverse to drop.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws DataverseNotFoundException (async) if the dataverse does not exist.
+   * @throws CompilationFailureException (async) if a dataverse that cannot be dropped (i.e. Default) is attempted.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
-  public CompletableFuture<Void> dropDataverse(String dataverseName, DropDataverseAnalyticsOptions options) {
-    requireNonNull(dataverseName);
+  public CompletableFuture<Void> dropDataverse(final String dataverseName,
+                                               final DropDataverseAnalyticsOptions options) {
+    notNullOrEmpty(dataverseName, "DataverseName");
+    notNull(options, "Options");
 
     final DropDataverseAnalyticsOptions.Built builtOpts = options.build();
 
@@ -145,13 +217,34 @@ public class AsyncAnalyticsIndexManager {
         .thenApply(result -> null);
   }
 
-  public CompletableFuture<Void> createDataset(String datasetName, String bucketName) {
+  /**
+   * Creates a new dataset (analytics collection) if it does not already exist.
+   *
+   * @param datasetName the name of the dataset to create.
+   * @param bucketName the name of the bucket where the dataset is stored inside.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws DatasetExistsException (async) if the dataset already exists.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> createDataset(final String datasetName, final String bucketName) {
     return createDataset(datasetName, bucketName, createDatasetAnalyticsOptions());
   }
 
-  public CompletableFuture<Void> createDataset(String datasetName, String bucketName, CreateDatasetAnalyticsOptions options) {
-    requireNonNull(datasetName);
-    requireNonNull(bucketName);
+  /**
+   * Creates a new dataset (analytics collection) if it does not already exist with custom options.
+   *
+   * @param datasetName the name of the dataset to create.
+   * @param bucketName the name of the bucket where the dataset is stored inside.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws DatasetExistsException (async) if the dataset already exists.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> createDataset(final String datasetName, final String bucketName,
+                                               final CreateDatasetAnalyticsOptions options) {
+    notNullOrEmpty(datasetName, "DatasetName");
+    notNullOrEmpty(bucketName, "BucketName");
+    notNull(options, "Options");
 
     final CreateDatasetAnalyticsOptions.Built builtOpts = options.build();
     final String dataverseName = builtOpts.dataverseName().orElse(DEFAULT_DATAVERSE);
@@ -172,12 +265,30 @@ public class AsyncAnalyticsIndexManager {
         .thenApply(result -> null);
   }
 
-  public CompletableFuture<Void> dropDataset(String datasetName) {
+  /**
+   * Drops (deletes) a dataset.
+   *
+   * @param datasetName the name of the dataset to create.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws DatasetNotFoundException (async) if the dataset to drop does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> dropDataset(final String datasetName) {
     return dropDataset(datasetName, dropDatasetAnalyticsOptions());
   }
 
-  public CompletableFuture<Void> dropDataset(String datasetName, DropDatasetAnalyticsOptions options) {
-    requireNonNull(datasetName);
+  /**
+   * Drops (deletes) a dataset with custom options.
+   *
+   * @param datasetName the name of the dataset to create.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws DatasetNotFoundException (async) if the dataset to drop does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> dropDataset(final String datasetName, final DropDatasetAnalyticsOptions options) {
+    notNullOrEmpty(datasetName, "DatasetName");
+    notNull(options, "Options");
 
     final DropDatasetAnalyticsOptions.Built builtOpts = options.build();
     final String dataverseName = builtOpts.dataverseName().orElse(DEFAULT_DATAVERSE);
@@ -191,27 +302,72 @@ public class AsyncAnalyticsIndexManager {
         .thenApply(result -> null);
   }
 
+  /**
+   * Fetches all datasets (analytics collections) from the analytics service.
+   *
+   * @return a {@link CompletableFuture} completing with a (potentially empty) list of datasets or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<List<AnalyticsDataset>> getAllDatasets() {
     return getAllDatasets(getAllDatasetsAnalyticsOptions());
   }
 
-  public CompletableFuture<List<AnalyticsDataset>> getAllDatasets(GetAllDatasetsAnalyticsOptions options) {
+  /**
+   * Fetches all datasets (analytics collections) from the analytics service with custom options.
+   *
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing with a (potentially empty) list of datasets or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<List<AnalyticsDataset>> getAllDatasets(final GetAllDatasetsAnalyticsOptions options) {
+    notNull(options, "Options");
     final GetAllDatasetsAnalyticsOptions.Built builtOpts = options.build();
     String statement = "SELECT d.* FROM Metadata.`Dataset` d WHERE d.DataverseName <> \"Metadata\"";
 
     return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_GET_ALL_DATASETS)
         .thenApply(result -> result.rowsAsObject().stream()
             .map(AnalyticsDataset::new)
-            .collect(toList()));
+            .collect(toList())
+        );
   }
 
-  public CompletableFuture<Void> createIndex(String indexName, String datasetName, Map<String, AnalyticsDataType> fields) {
+  /**
+   * Creates a new analytics index if it does not exist.
+   *
+   * @param indexName the name of the index to create.
+   * @param datasetName the name of the dataset in which the index should be created.
+   * @param fields the fields that should be indexed.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws IndexExistsException (async) if the index already exists and not ignored in the options.
+   * @throws DataverseNotFoundException (async) if a dataverse is provided in the options that does not exist.
+   * @throws DatasetNotFoundException (async) if a dataset is provided which does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> createIndex(final String indexName, final String datasetName,
+                                             final Map<String, AnalyticsDataType> fields) {
     return createIndex(indexName, datasetName, fields, createIndexAnalyticsOptions());
   }
 
-  public CompletableFuture<Void> createIndex(String indexName, String datasetName, Map<String, AnalyticsDataType> fields, CreateIndexAnalyticsOptions options) {
-    requireNonNull(indexName);
-    requireNonNull(datasetName);
+  /**
+   * Creates a new analytics index if it does not exist with custom options.
+   *
+   * @param indexName the name of the index to create.
+   * @param datasetName the name of the dataset in which the index should be created.
+   * @param fields the fields that should be indexed.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws IndexExistsException (async) if the index already exists and not ignored in the options.
+   * @throws DataverseNotFoundException (async) if a dataverse is provided in the options that does not exist.
+   * @throws DatasetNotFoundException (async) if a dataset is provided which does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> createIndex(final String indexName, final String datasetName,
+                                             final Map<String, AnalyticsDataType> fields,
+                                             final CreateIndexAnalyticsOptions options) {
+    notNullOrEmpty(indexName, "IndexName");
+    notNullOrEmpty(datasetName, "DatasetName");
+    notNull(fields, "Fields");
+    notNull(options, "Options");
 
     final CreateIndexAnalyticsOptions.Built builtOpts = options.build();
     final String dataverseName = builtOpts.dataverseName().orElse(DEFAULT_DATAVERSE);
@@ -228,31 +384,67 @@ public class AsyncAnalyticsIndexManager {
         .thenApply(result -> null);
   }
 
+  /**
+   * Lists all analytics indexes.
+   *
+   * @return a {@link CompletableFuture} completing with a list of indexes or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<List<AnalyticsIndex>> getAllIndexes() {
     return getAllIndexes(getAllIndexesAnalyticsOptions());
   }
 
-  public CompletableFuture<List<AnalyticsIndex>> getAllIndexes(GetAllIndexesAnalyticsOptions options) {
+  /**
+   * Lists all analytics indexes with custom options.
+   *
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing with a (potentially empty) list of indexes or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<List<AnalyticsIndex>> getAllIndexes(final GetAllIndexesAnalyticsOptions options) {
+    notNull(options, "Options");
     final GetAllIndexesAnalyticsOptions.Built builtOpts = options.build();
     String statement = "SELECT d.* FROM Metadata.`Index` d WHERE d.DataverseName <> \"Metadata\"";
 
     return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_GET_ALL_INDEXES)
         .thenApply(result -> result.rowsAsObject().stream()
             .map(AnalyticsIndex::new)
-            .collect(toList()));
+            .collect(toList())
+        );
   }
 
-  private static String formatIndexFields(Map<String, AnalyticsDataType> fields) {
-    List<String> result = new ArrayList<>();
-    fields.forEach((k, v) -> result.add(k + ":" + v.value()));
-    return "(" + String.join(",", result) + ")";
-  }
-
-  public CompletableFuture<Void> dropIndex(String indexName, String datasetName) {
+  /**
+   * Drops (removes) an index if it exists.
+   *
+   * @param indexName the name of the index to drop.
+   * @param datasetName the dataset in which the index exists.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws IndexNotFoundException (async) if the index does not exist and not ignored via options.
+   * @throws DataverseNotFoundException (async) if a dataverse is provided in the options that does not exist.
+   * @throws DatasetNotFoundException (async) if a dataset is provided which does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> dropIndex(final String indexName, final String datasetName) {
     return dropIndex(indexName, datasetName, dropIndexAnalyticsOptions());
   }
 
-  public CompletableFuture<Void> dropIndex(String indexName, String datasetName, DropIndexAnalyticsOptions options) {
+  /**
+   * Drops (removes) an index if it exists with custom options.
+   *
+   * @param indexName the name of the index to drop.
+   * @param datasetName the dataset in which the index exists.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws IndexNotFoundException (async) if the index does not exist and not ignored via options.
+   * @throws DataverseNotFoundException (async) if a dataverse is provided in the options that does not exist.
+   * @throws DatasetNotFoundException (async) if a dataset is provided which does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> dropIndex(final String indexName, final String datasetName,
+                                           final DropIndexAnalyticsOptions options) {
+    notNullOrEmpty(indexName, "IndexName");
+    notNullOrEmpty(datasetName, "DatasetName");
+    notNull(options, "Options");
     final DropIndexAnalyticsOptions.Built builtOpts = options.build();
     final String dataverseName = builtOpts.dataverseName().orElse(DEFAULT_DATAVERSE);
 
@@ -265,100 +457,271 @@ public class AsyncAnalyticsIndexManager {
         .thenApply(result -> null);
   }
 
+  /**
+   * Returns the pending mutations for different dataverses.
+   *
+   * @return a {@link CompletableFuture} completing with the pending mutations or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Map<String, Map<String, Long>>> getPendingMutations() {
+    return getPendingMutations(getPendingMutationsAnalyticsOptions());
+  }
+
+  /**
+   * Returns the pending mutations for different dataverses with custom options.
+   *
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing with the pending mutations or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Map<String, Map<String, Long>>> getPendingMutations(
+    final GetPendingMutationsAnalyticsOptions options) {
+    notNull(options, "Options");
+    return httpClient.get(path("/analytics/node/agg/stats/remaining"), options.build())
+      .trace(TracingIdentifiers.SPAN_REQUEST_MA_GET_PENDING_MUTATIONS)
+      .exec(core)
+      .thenApply(response ->
+        Mapper.decodeInto(response.content(), new TypeReference<Map<String, Map<String, Long>> >() {})
+      );
+  }
+
+  /**
+   * Connects the analytics link for the default dataverse (Default.Local).
+   *
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<Void> connectLink() {
     return connectLink(connectLinkAnalyticsOptions());
   }
 
-  public CompletableFuture<Void> connectLink(ConnectLinkAnalyticsOptions options) {
+  /**
+   * Connects the analytics link for the default dataverse with custom options.
+   *
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws LinkNotFoundException (async) if the link does not exist.
+   * @throws DataverseNotFoundException (async) if a dataverse is provided in the options that does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> connectLink(final ConnectLinkAnalyticsOptions options) {
+    notNull(options, "Options");
     final ConnectLinkAnalyticsOptions.Built builtOpts = options.build();
     String statement = "CONNECT LINK " + quoteDataverse(
         builtOpts.dataverseName().orElse(DEFAULT_DATAVERSE),
-        builtOpts.linkName().orElse(DEFAULT_LINK));
+        builtOpts.linkName().orElse(DEFAULT_LINK)
+    );
 
     if (builtOpts.force()) {
       statement += " WITH " + Mapper.encodeAsString(singletonMap("force", true));
     }
 
-    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_CONNECT_LINK)
-        .thenApply(result -> null);
+    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_CONNECT_LINK).thenApply(result -> null);
   }
 
+  /**
+   * Disconnects the analytics link for the default dataverse (Default.Local).
+   *
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<Void> disconnectLink() {
     return disconnectLink(disconnectLinkAnalyticsOptions());
   }
 
-  public CompletableFuture<Void> disconnectLink(DisconnectLinkAnalyticsOptions options) {
+  /**
+   * Disconnects the analytics link for the default dataverse with custom options.
+   *
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws LinkNotFoundException (async) if the link does not exist.
+   * @throws DataverseNotFoundException (async) if a dataverse is provided in the options that does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> disconnectLink(final DisconnectLinkAnalyticsOptions options) {
+    notNull(options, "Options");
     final DisconnectLinkAnalyticsOptions.Built builtOpts = options.build();
     String statement = "DISCONNECT LINK " + quoteDataverse(
         builtOpts.dataverseName().orElse(DEFAULT_DATAVERSE),
-        builtOpts.linkName().orElse(DEFAULT_LINK));
+        builtOpts.linkName().orElse(DEFAULT_LINK)
+    );
 
-    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_DISCONNECT_LINK)
-        .thenApply(result -> null);
+    return exec(statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MA_DISCONNECT_LINK).thenApply(result -> null);
   }
 
-  public CompletableFuture<Map<String, Map<String, Long>>> getPendingMutations() {
-    return getPendingMutations(getPendingMutationsAnalyticsOptions());
-  }
-
-  public CompletableFuture<Map<String, Map<String, Long>>> getPendingMutations(final GetPendingMutationsAnalyticsOptions options) {
-    return httpClient.get(path("/analytics/node/agg/stats/remaining"), options.build())
-        .trace(TracingIdentifiers.SPAN_REQUEST_MA_GET_PENDING_MUTATIONS)
-        .exec(core)
-        .thenApply(response ->
-          Mapper.decodeInto(response.content(), new TypeReference<Map<String, Map<String, Long>> >() {
-        }));
-  }
-
-  public CompletableFuture<Void> createLink(AnalyticsLink link) {
+  /**
+   * Creates a new analytics link.
+   *
+   * @param link the name of the link that should be created.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws InvalidArgumentException (async) if required parameters are not supplied or are invalid.
+   * @throws AuthenticationFailureException (async) if the remote link cannot be authenticated on creation.
+   * @throws LinkExistsException (async) if the link with the name already exists.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> createLink(final AnalyticsLink link) {
     return createLink(link, createLinkAnalyticsOptions());
   }
 
-  public CompletableFuture<Void> createLink(AnalyticsLink link, CreateLinkAnalyticsOptions options) {
+  /**
+   * Creates a new analytics link with custom options.
+   *
+   * @param link the name of the link that should be created.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws InvalidArgumentException (async) if required parameters are not supplied or are invalid.
+   * @throws AuthenticationFailureException (async) if the remote link cannot be authenticated on creation.
+   * @throws LinkExistsException (async) if the link with the name already exists.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> createLink(final AnalyticsLink link, final CreateLinkAnalyticsOptions options) {
     return linkManager.createLink(link.toMap(), options.build());
   }
 
-  public CompletableFuture<Void> replaceLink(AnalyticsLink link) {
+  /**
+   * Replaces an existing analytics link.
+   *
+   * @param link the name of the link that should be replaced.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws InvalidArgumentException (async) if required parameters are not supplied or are invalid.
+   * @throws AuthenticationFailureException (async) if the remote link cannot be authenticated on replace.
+   * @throws LinkNotFoundException (async) if the link does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> replaceLink(final AnalyticsLink link) {
     return replaceLink(link, replaceLinkAnalyticsOptions());
   }
 
-  public CompletableFuture<Void> replaceLink(AnalyticsLink link, ReplaceLinkAnalyticsOptions options) {
+  /**
+   * Replaces an analytics link with custom options.
+   *
+   * @param link the name of the link that should be replaced.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws InvalidArgumentException (async) if required parameters are not supplied or are invalid.
+   * @throws AuthenticationFailureException (async) if the remote link cannot be authenticated on replace.
+   * @throws LinkNotFoundException (async) if the link does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> replaceLink(final AnalyticsLink link, final ReplaceLinkAnalyticsOptions options) {
     return linkManager.replaceLink(link.toMap(), options.build());
   }
 
-  public CompletableFuture<Void> dropLink(String linkName, String dataverse) {
+  /**
+   * Drops (removes) a link if it exists.
+   *
+   * @param linkName the name of the link that should be dropped.
+   * @param dataverse the name of the dataverse in which the link exists.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws LinkNotFoundException (async) if the link does not exist.
+   * @throws DataverseNotFoundException (async) if a dataverse is provided that does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> dropLink(final String linkName, final String dataverse) {
     return dropLink(linkName, dataverse, dropLinkAnalyticsOptions());
   }
 
-  public CompletableFuture<Void> dropLink(String linkName, String dataverse, DropLinkAnalyticsOptions options) {
+  /**
+   * Drops (removes) a link if it exists with custom options.
+   *
+   * @param linkName the name of the link that should be dropped.
+   * @param dataverse the name of the dataverse in which the link exists.
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws LinkNotFoundException (async) if the link does not exist.
+   * @throws DataverseNotFoundException (async) if a dataverse is provided that does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<Void> dropLink(final String linkName, final String dataverse,
+                                          final DropLinkAnalyticsOptions options) {
+    notNullOrEmpty(linkName, "LinkName");
+    notNullOrEmpty(dataverse, "Dataverse");
+    notNull(options, "Options");
     return linkManager.dropLink(linkName, dataverse, options.build());
   }
 
+  /**
+   * Returns a (potentially empty) list of current analytics links.
+   * <p>
+   * Links describe connections between an external data source and the analytics engine. Note that
+   * {@link AnalyticsLink} is an abstract class and has implementations depending on the type of link configured. See
+   * and cast into {@link S3ExternalAnalyticsLink}, or {@link CouchbaseRemoteAnalyticsLink} for specific attributes. In
+   * the future, more external link types might be supported - please consult the server documentation for more
+   * information.
+   *
+   * @return a {@link CompletableFuture} completing with a (potentially empty) list of links or failed with an error.
+   * @throws DataverseNotFoundException (async) if a dataverse is provided in the options that does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
   public CompletableFuture<List<AnalyticsLink>> getLinks() {
     return getLinks(getLinksAnalyticsOptions());
   }
 
-  public CompletableFuture<List<AnalyticsLink>> getLinks(GetLinksAnalyticsOptions options) {
+  /**
+   * Returns a (potentially empty) list of current analytics links with custom options.
+   * <p>
+   * Links describe connections between an external data source and the analytics engine. Note that
+   * {@link AnalyticsLink} is an abstract class and has implementations depending on the type of link configured. See
+   * and cast into {@link S3ExternalAnalyticsLink}, or {@link CouchbaseRemoteAnalyticsLink} for specific attributes. In
+   * the future, more external link types might be supported - please consult the server documentation for more
+   * information.
+   *
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing with a (potentially empty) list of links or failed with an error.
+   * @throws DataverseNotFoundException (async) if a dataverse is provided in the options that does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  public CompletableFuture<List<AnalyticsLink>> getLinks(final GetLinksAnalyticsOptions options) {
+    notNull(options, "Options");
     GetLinksAnalyticsOptions.Built opts = options.build();
+
     String dataverseName = opts.dataverseName().orElse(null);
     String linkType = opts.linkType().map(AnalyticsLinkType::wireName).orElse(null);
     String linkName = opts.name().orElse(null);
-    return linkManager.getLinks(dataverseName, linkType, linkName, opts)
-        .thenApply(responseBytes ->
-            Mapper.decodeInto(responseBytes, new TypeReference<List<AnalyticsLink>>() {
-            }));
+    return linkManager
+      .getLinks(dataverseName, linkType, linkName, opts)
+      .thenApply(responseBytes -> Mapper.decodeInto(responseBytes, new TypeReference<List<AnalyticsLink>>() {}));
   }
 
-  private CompletableFuture<AnalyticsResult> exec(String statement, CommonOptions<?>.BuiltCommonOptions options, String spanName) {
-    RequestSpan parent = CbTracing.newSpan(cluster.environment().requestTracer(), spanName, options.parentSpan().orElse(null));
-    final AnalyticsOptions analyticsOptions = toAnalyticsOptions(options)
-        .parentSpan(parent);
+  /**
+   * Formats a map of index fields and their datatype into the representation analytics needs on the wire.
+   *
+   * @param fields the fields to convert.
+   * @return the converted and stringified fields, ready to be included in a statement.
+   */
+  private static String formatIndexFields(final Map<String, AnalyticsDataType> fields) {
+    List<String> result = new ArrayList<>();
+    fields.forEach((k, v) -> result.add(k + ":" + v.value()));
+    return "(" + String.join(",", result) + ")";
+  }
+
+  /**
+   * Executes a statement with options against analytics.
+   *
+   * @param statement the statement of the query.
+   * @param options the options that should be passed along.
+   * @param spanName the name of the span as the outer parent.
+   * @return a future eventually containing the analytics result once complete, or a failure.
+   */
+  private CompletableFuture<AnalyticsResult> exec(final String statement,
+                                                  final CommonOptions<?>.BuiltCommonOptions options,
+                                                  final String spanName) {
+    RequestSpan parent = CbTracing.newSpan(
+      cluster.environment().requestTracer(), spanName, options.parentSpan().orElse(null)
+    );
+    final AnalyticsOptions analyticsOptions = toAnalyticsOptions(options).parentSpan(parent);
 
     return cluster
       .analyticsQuery(statement, analyticsOptions)
       .whenComplete((r, t) -> parent.end());
   }
 
+  /**
+   * Converts the common options into a single {@link AnalyticsOptions} so it can be passed down to the query.
+   *
+   * @param options the options to convert.
+   * @return the converted {@link AnalyticsOptions}.
+   */
   private static AnalyticsOptions toAnalyticsOptions(final CommonOptions<?>.BuiltCommonOptions options) {
     AnalyticsOptions result = analyticsOptions();
     options.timeout().ifPresent(result::timeout);

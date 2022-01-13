@@ -19,11 +19,19 @@ package com.couchbase.client.java.manager.analytics;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
+/**
+ * Allows customizing how the analytics links are created.
+ */
 public class CreateLinkAnalyticsOptions extends CommonOptions<CreateLinkAnalyticsOptions> {
 
   private CreateLinkAnalyticsOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static CreateLinkAnalyticsOptions createLinkAnalyticsOptions() {
     return new CreateLinkAnalyticsOptions();
   }

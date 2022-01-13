@@ -19,11 +19,19 @@ package com.couchbase.client.java.manager.analytics;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
+/**
+ * Allows customizing how pending mutations are loaded.
+ */
 public class GetPendingMutationsAnalyticsOptions extends CommonOptions<GetPendingMutationsAnalyticsOptions> {
 
   private GetPendingMutationsAnalyticsOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static GetPendingMutationsAnalyticsOptions getPendingMutationsAnalyticsOptions() {
     return new GetPendingMutationsAnalyticsOptions();
   }

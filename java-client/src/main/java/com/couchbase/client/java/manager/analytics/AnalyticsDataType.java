@@ -21,23 +21,35 @@ import java.util.Objects;
 import static java.util.Objects.requireNonNull;
 
 /**
- * The indexable data types.
+ * Holds the data-types for fields to index.
  */
 public class AnalyticsDataType {
+
+  /**
+   * Represents the "string" data-type for an analytics field index.
+   */
   public static final AnalyticsDataType STRING = new AnalyticsDataType("string");
+
+  /**
+   * Represents the "int64" data-type for an analytics field index.
+   */
   public static final AnalyticsDataType INT64 = new AnalyticsDataType("int64");
+
+  /**
+   * Represents the "double" data-type for an analytics field index.
+   */
   public static final AnalyticsDataType DOUBLE = new AnalyticsDataType("double");
 
   private final String value;
 
-  private AnalyticsDataType(String value) {
+  private AnalyticsDataType(final String value) {
     this.value = requireNonNull(value);
   }
 
   /**
    * If there's no pre-defined constant for a data type, you can create your own using this method.
    */
-  public static AnalyticsDataType valueOf(String value) {
+  public static AnalyticsDataType valueOf(final String value) {
     return new AnalyticsDataType(value);
   }
 

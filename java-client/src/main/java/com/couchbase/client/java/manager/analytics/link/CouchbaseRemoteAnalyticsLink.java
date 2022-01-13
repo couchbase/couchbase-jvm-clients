@@ -23,17 +23,11 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonValue
 import static com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY;
 import static java.util.Objects.requireNonNull;
 
+/**
+ * An analytics link to a remote couchbase cluster.
+ */
 @SuppressWarnings("unused")
 public class CouchbaseRemoteAnalyticsLink extends AnalyticsLink {
-
-  public CouchbaseRemoteAnalyticsLink(String name, String dataverse) {
-    super(name, dataverse);
-  }
-
-  // For Jackson
-  private CouchbaseRemoteAnalyticsLink() {
-    super("", "");
-  }
 
   @JsonProperty
   @JsonAlias("activeHostname")
@@ -57,67 +51,21 @@ public class CouchbaseRemoteAnalyticsLink extends AnalyticsLink {
   @JsonProperty(access = READ_ONLY)
   private String clientKey;
 
-  public String hostname() {
-    return hostname;
+  /**
+   * Creates a new Analytics Link to a remote Couchbase cluster.
+   * <p>
+   * As an alternative to this constructor, {@link AnalyticsLink#couchbaseRemote(String, String)} can be used as well.
+   * <p>
+   * Please note that additional parameters are required and must be set on {@link CouchbaseRemoteAnalyticsLink} in order
+   * for the link to work properly.
+   */
+  public CouchbaseRemoteAnalyticsLink(final String name, final String dataverse) {
+    super(name, dataverse);
   }
 
-  public CouchbaseRemoteAnalyticsLink hostname(String hostname) {
-    this.hostname = hostname;
-    return this;
-  }
-
-  public EncryptionLevel encryption() {
-    return encryption;
-  }
-
-  public CouchbaseRemoteAnalyticsLink encryption(EncryptionLevel encryption) {
-    this.encryption = encryption;
-    return this;
-  }
-
-  public String username() {
-    return username;
-  }
-
-  public CouchbaseRemoteAnalyticsLink username(String username) {
-    this.username = username;
-    return this;
-  }
-
-  public String password() {
-    return password;
-  }
-
-  public CouchbaseRemoteAnalyticsLink password(String password) {
-    this.password = password;
-    return this;
-  }
-
-  public String certificate() {
-    return certificate;
-  }
-
-  public CouchbaseRemoteAnalyticsLink certificate(String certificate) {
-    this.certificate = certificate;
-    return this;
-  }
-
-  public String clientCertificate() {
-    return clientCertificate;
-  }
-
-  public CouchbaseRemoteAnalyticsLink clientCertificate(String clientCertificate) {
-    this.clientCertificate = clientCertificate;
-    return this;
-  }
-
-  public String clientKey() {
-    return clientKey;
-  }
-
-  public CouchbaseRemoteAnalyticsLink clientKey(String clientKey) {
-    this.clientKey = clientKey;
-    return this;
+  // For Jackson
+  private CouchbaseRemoteAnalyticsLink() {
+    super("", "");
   }
 
   @Override
@@ -125,9 +73,149 @@ public class CouchbaseRemoteAnalyticsLink extends AnalyticsLink {
     return AnalyticsLinkType.COUCHBASE_REMOTE;
   }
 
+  /**
+   * Returns the hostname of the remote cluster.
+   *
+   * @return the hostname of the remote cluster.
+   */
+  public String hostname() {
+    return hostname;
+  }
+
+  /**
+   * Sets the hostname of the remote cluster (required).
+   *
+   * @param hostname the hostname of the remote cluster.
+   * @return this {@link CouchbaseRemoteAnalyticsLink} for chaining purposes.
+   */
+  public CouchbaseRemoteAnalyticsLink hostname(final String hostname) {
+    this.hostname = hostname;
+    return this;
+  }
+
+  /**
+   * Returns the encryption level for the link to the remote cluster.
+   *
+   * @return the encryption level for the link to the remote cluster.
+   */
+  public EncryptionLevel encryption() {
+    return encryption;
+  }
+
+  /**
+   * Sets the encryption level for the link to the remote cluster (required).
+   *
+   * @param encryption the encryption level for the link to the remote cluster.
+   * @return this {@link CouchbaseRemoteAnalyticsLink} for chaining purposes.
+   */
+  public CouchbaseRemoteAnalyticsLink encryption(final EncryptionLevel encryption) {
+    this.encryption = encryption;
+    return this;
+  }
+
+  /**
+   * Returns the username when connecting to the remote cluster.
+   *
+   * @return the username when connecting to the remote cluster.
+   */
+  public String username() {
+    return username;
+  }
+
+  /**
+   * Sets the username when connecting to the remote cluster (required).
+   *
+   * @param username the username when connecting to the remote cluster.
+   * @return this {@link CouchbaseRemoteAnalyticsLink} for chaining purposes.
+   */
+  public CouchbaseRemoteAnalyticsLink username(final String username) {
+    this.username = username;
+    return this;
+  }
+
+  /**
+   * Sets the password when connecting to the remote cluster.
+   *
+   * @return the password when connecting to the remote cluster.
+   */
+  public String password() {
+    return password;
+  }
+
+  /**
+   * Sets the password when connecting to the remote cluster (required).
+   *
+   * @param password the password when connecting to the remote cluster.
+   * @return this {@link CouchbaseRemoteAnalyticsLink} for chaining purposes.
+   */
+  public CouchbaseRemoteAnalyticsLink password(final String password) {
+    this.password = password;
+    return this;
+  }
+
+  /**
+   * Returns the certificate when encryption is used.
+   *
+   * @return the certificate when encryption is used.
+   */
+  public String certificate() {
+    return certificate;
+  }
+
+  /**
+   * Sets the certificate when encryption is used.
+   *
+   * @param certificate the certificate when encryption is used.
+   * @return this {@link CouchbaseRemoteAnalyticsLink} for chaining purposes.
+   */
+  public CouchbaseRemoteAnalyticsLink certificate(final String certificate) {
+    this.certificate = certificate;
+    return this;
+  }
+
+  /**
+   * Returns the client certificate when encryption is used.
+   *
+   * @return the client certificate when encryption is used.
+   */
+  public String clientCertificate() {
+    return clientCertificate;
+  }
+
+  /**
+   * Sets the client certificate when encryption is used.
+   *
+   * @param clientCertificate the client certificate when encryption is used.
+   * @return this {@link CouchbaseRemoteAnalyticsLink} for chaining purposes.
+   */
+  public CouchbaseRemoteAnalyticsLink clientCertificate(final String clientCertificate) {
+    this.clientCertificate = clientCertificate;
+    return this;
+  }
+
+  /**
+   * Returns the client key.
+   *
+   * @return the client key.
+   */
+  public String clientKey() {
+    return clientKey;
+  }
+
+  /**
+   * Sets the client key.
+   *
+   * @param clientKey the client key.
+   * @return this {@link CouchbaseRemoteAnalyticsLink} for chaining purposes.
+   */
+  public CouchbaseRemoteAnalyticsLink clientKey(final String clientKey) {
+    this.clientKey = clientKey;
+    return this;
+  }
+
   @Override
   public String toString() {
-    return "CouchbaseAnalyticsLink{" +
+    return "CouchbaseRemoteAnalyticsLink{" +
         "encryption=" + encryption +
         ", hostname='" + hostname + '\'' +
         ", username='" + username + '\'' +

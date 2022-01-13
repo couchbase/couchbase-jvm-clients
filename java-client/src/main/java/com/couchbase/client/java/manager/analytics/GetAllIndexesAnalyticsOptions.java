@@ -19,11 +19,19 @@ package com.couchbase.client.java.manager.analytics;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
+/**
+ * Customizes how indexes are loaded.
+ */
 public class GetAllIndexesAnalyticsOptions extends CommonOptions<GetAllIndexesAnalyticsOptions> {
 
   private GetAllIndexesAnalyticsOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static GetAllIndexesAnalyticsOptions getAllIndexesAnalyticsOptions() {
     return new GetAllIndexesAnalyticsOptions();
   }

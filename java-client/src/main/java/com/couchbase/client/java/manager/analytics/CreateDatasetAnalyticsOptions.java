@@ -21,6 +21,9 @@ import com.couchbase.client.java.CommonOptions;
 
 import java.util.Optional;
 
+/**
+ * Allows customizing how datasets are created.
+ */
 public class CreateDatasetAnalyticsOptions extends CommonOptions<CreateDatasetAnalyticsOptions> {
 
   private boolean ignoreIfExists;
@@ -30,21 +33,44 @@ public class CreateDatasetAnalyticsOptions extends CommonOptions<CreateDatasetAn
   private CreateDatasetAnalyticsOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static CreateDatasetAnalyticsOptions createDatasetAnalyticsOptions() {
     return new CreateDatasetAnalyticsOptions();
   }
 
-  public CreateDatasetAnalyticsOptions ignoreIfExists(boolean ignore) {
+  /**
+   * Customizes if an already existing dataset should throw an exception or not (false by default, so it will throw).
+   *
+   * @param ignore true if no exception should be raised if the dataset already exists.
+   * @return this options class for chaining purposes.
+   */
+  public CreateDatasetAnalyticsOptions ignoreIfExists(final boolean ignore) {
     this.ignoreIfExists = ignore;
     return this;
   }
 
-  public CreateDatasetAnalyticsOptions dataverseName(String dataverseName) {
+  /**
+   * Customizes the dataverse from which this dataset should be created.
+   *
+   * @param dataverseName the name of the dataverse.
+   * @return this options class for chaining purposes.
+   */
+  public CreateDatasetAnalyticsOptions dataverseName(final String dataverseName) {
     this.dataverseName = Optional.ofNullable(dataverseName);
     return this;
   }
 
-  public CreateDatasetAnalyticsOptions condition(String condition) {
+  /**
+   * Customizes the "WHERE" clause of the index creation statement.
+   *
+   * @param condition the condition that should be appended to the where clause.
+   * @return this options class for chaining purposes.
+   */
+  public CreateDatasetAnalyticsOptions condition(final String condition) {
     this.condition = Optional.ofNullable(condition);
     return this;
   }

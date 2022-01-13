@@ -19,11 +19,19 @@ package com.couchbase.client.java.manager.analytics;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
+/**
+ * Allows customizing how datasets are loaded.
+ */
 public class GetAllDatasetsAnalyticsOptions extends CommonOptions<GetAllDatasetsAnalyticsOptions> {
 
   private GetAllDatasetsAnalyticsOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static GetAllDatasetsAnalyticsOptions getAllDatasetsAnalyticsOptions() {
     return new GetAllDatasetsAnalyticsOptions();
   }

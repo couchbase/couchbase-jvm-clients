@@ -21,6 +21,9 @@ import com.couchbase.client.java.CommonOptions;
 
 import java.util.Optional;
 
+/**
+ * Customizes how an index is created.
+ */
 public class CreateIndexAnalyticsOptions extends CommonOptions<CreateIndexAnalyticsOptions> {
 
   private boolean ignoreIfExists;
@@ -29,16 +32,33 @@ public class CreateIndexAnalyticsOptions extends CommonOptions<CreateIndexAnalyt
   private CreateIndexAnalyticsOptions() {
   }
 
+  /**
+   * Creates a new instance with default values.
+   *
+   * @return the instantiated default options.
+   */
   public static CreateIndexAnalyticsOptions createIndexAnalyticsOptions() {
     return new CreateIndexAnalyticsOptions();
   }
 
-  public CreateIndexAnalyticsOptions ignoreIfExists(boolean ignore) {
+  /**
+   * Ignore the create operation if the index exists.
+   *
+   * @param ignore if true no exception will be thrown if the index already exists.
+   * @return this {@link CreateIndexAnalyticsOptions} for chaining purposes.
+   */
+  public CreateIndexAnalyticsOptions ignoreIfExists(final boolean ignore) {
     this.ignoreIfExists = ignore;
     return this;
   }
 
-  public CreateIndexAnalyticsOptions dataverseName(String dataverseName) {
+  /**
+   * The name of the dataverse in which the index exists.
+   *
+   * @param dataverseName the name of the dataverse.
+   * @return this {@link CreateIndexAnalyticsOptions} for chaining purposes.
+   */
+  public CreateIndexAnalyticsOptions dataverseName(final String dataverseName) {
     this.dataverseName = Optional.ofNullable(dataverseName);
     return this;
   }
