@@ -24,8 +24,8 @@ This repository contains the following projects:
 
 Other toplevel modules might be present which contain examples, experimental code or internal tooling and test infrastructure.
 
-Documentation is available for [Java](https://docs.couchbase.com/java-sdk/3.0/hello-world/start-using-sdk.html)
-and [Scala](https://docs.couchbase.com/scala-sdk/1.0/start-using-sdk.html)
+Documentation is available for [Java](https://docs.couchbase.com/java-sdk/3.2/hello-world/start-using-sdk.html)
+and [Scala](https://docs.couchbase.com/scala-sdk/1.2/start-using-sdk.html)
 
 ## Usage
 
@@ -38,7 +38,7 @@ For Java:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>java-client</artifactId>
-        <version>3.1.5</version>
+        <version>3.2.4</version>
     </dependency>
 </dependencies>
 ```
@@ -50,13 +50,13 @@ For Scala:
     <dependency>
         <groupId>com.couchbase.client</groupId>
         <artifactId>scala-client_2.12</artifactId>
-        <version>1.1.5</version>
+        <version>1.2.4</version>
     </dependency>
 </dependencies>
 ```
 or if you use sbt:
 ```sbt
-libraryDependencies += "com.couchbase.client" %% "scala-client" % "1.1.5"
+libraryDependencies += "com.couchbase.client" %% "scala-client" % "1.2.4"
 ```
 
 ## Building
@@ -109,11 +109,14 @@ Tags in each branch are named `branchname-ga` for the initial GA release, and th
 each service release. See the tag information for specifics of what's in there.
 
  - [Colossus](https://en.wikipedia.org/wiki/Colossus_computer) (Initial Release 2020-01-10)
+ - [Pegasus](https://en.wikipedia.org/wiki/Ferranti_Pegasus) (Initial Release 2020-12-02)
+ - [Hopper](https://en.wikipedia.org/wiki/Grace_Hopper) (Initial Release 2021-07-20)
 
 | Release Train | Java-Client | Scala-Client | Core-Io | Tracing-OpenTelemetry | Tracing-OpenTracing | Metrics-OpenTelemetry | Metrics-Micrometer |
-| ------------- | ----------- | ------------ | ------- | --------------------- | ------------------- | --------------------- | ------------------ |
+|---------------|-------------|--------------|---------|-----------------------|---------------------|-----------------------|--------------------|
 | colossus      | 3.0.x       | 1.0.x        | 2.0.x   | 0.2.x                 | 0.2.x               | -                     | -                  |
 | pegasus       | 3.1.x       | 1.1.x        | 2.1.x   | 0.3.x                 | 0.3.x               | 0.1.x                 | 0.1.x              |
+| hopper        | 3.2.x       | 1.2.x        | 2.2.x   | 1.0.x                 | 1.0.x               | 0.2.x                 | 0.2.x              |
 
 ### Testing Info
 
