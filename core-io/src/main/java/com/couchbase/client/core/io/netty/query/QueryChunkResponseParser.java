@@ -23,6 +23,8 @@ import com.couchbase.client.core.error.DmlFailureException;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.IndexExistsException;
+import com.couchbase.client.core.error.IndexFailureException;
+import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.InternalServerFailureException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.PlanningFailureException;
@@ -32,8 +34,6 @@ import com.couchbase.client.core.error.RateLimitedException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.error.context.QueryErrorContext;
-import com.couchbase.client.core.error.IndexFailureException;
-import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
@@ -160,8 +160,13 @@ public class QueryChunkResponseParser
         return new AuthenticationFailureException("Could not authenticate query", errorContext, null);
       } else if ((code >= 12000 && code < 13000) || (code >= 14000 && code < 15000)) {
         return new IndexFailureException(errorContext);
-      } else if (code == 1065 && message.contains("query_context")) {
-        return FeatureNotAvailableException.scopeLevelQuery(ServiceType.QUERY);
+      } else if (code == 1065) {
+        if (message.contains("query_context")) {
+          return FeatureNotAvailableException.scopeLevelQuery(ServiceType.QUERY);
+        }
+        if (message.contains("preserve_expiry")) {
+          return FeatureNotAvailableException.queryPreserveExpiry();
+        }
       } else if (code == 1080) {
         // This can happen when the server starts streaming responses - at this point our timeout is already
         // canceled. But then the streaming takes longer than the configured timeout, in which case the query

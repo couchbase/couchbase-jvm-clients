@@ -42,8 +42,13 @@ public class FeatureNotAvailableException extends CouchbaseException {
   }
 
   public static FeatureNotAvailableException scopeLevelQuery(final ServiceType serviceType) {
-    return new FeatureNotAvailableException("Scope-Level queries for the " + serviceType + " service are not supported" +
+    return new FeatureNotAvailableException("Scope-Level queries for the " + serviceType + " service are not supported " +
       "on the connected cluster (Only supported with Couchbase Server 7.0 and later).");
+  }
+
+  public static FeatureNotAvailableException queryPreserveExpiry() {
+    return new FeatureNotAvailableException("Preserving expiry for the query service is not supported " +
+      "on the connected cluster (Only supported with Couchbase Server 7.1 and later).");
   }
 
   public static FeatureNotAvailableException collections() {
