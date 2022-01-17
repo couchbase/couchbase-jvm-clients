@@ -56,6 +56,7 @@ internal class QueryExecutor(
         statement: String,
         common: CommonOptions,
         parameters: QueryParameters,
+        preserveExpiry: Boolean,
 
         serializer: JsonSerializer?,
 
@@ -84,6 +85,7 @@ internal class QueryExecutor(
         queryJson["statement"] = statement
         queryJson["timeout"] = Golang.encodeDurationToMs(timeout)
 
+        if (preserveExpiry) queryJson["preserve_expiry"] = true
         if (readonly) queryJson["readonly"] = true
         if (flexIndex) queryJson["use_fts"] = true
         if (!metrics) queryJson["metrics"] = false

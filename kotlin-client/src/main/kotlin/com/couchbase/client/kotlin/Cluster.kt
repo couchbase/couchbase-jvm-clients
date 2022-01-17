@@ -175,6 +175,10 @@ public class Cluster internal constructor(
      *
      * @param parameters parameters to the N1QL statement.
      *
+     * @param preserveExpiry pass true if you want the query engine to preserve
+     * existing expiration times for any documents modified by this query.
+     * *Requires Couchbase Server 7.1.0 or later.*
+     *
      * @param serializer the serializer to use for converting parameters to JSON,
      * and the default serializer for parsing [QueryRow] content.
      * Defaults to the serializer configured on the cluster environment.
@@ -231,6 +235,7 @@ public class Cluster internal constructor(
         statement: String,
         common: CommonOptions = CommonOptions.Default,
         parameters: QueryParameters = QueryParameters.None,
+        preserveExpiry: Boolean = false,
 
         serializer: JsonSerializer? = null,
 
@@ -256,6 +261,7 @@ public class Cluster internal constructor(
             statement,
             common,
             parameters,
+            preserveExpiry,
             serializer,
             consistency,
             readonly,
