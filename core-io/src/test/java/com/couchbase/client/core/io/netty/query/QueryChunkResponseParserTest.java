@@ -24,6 +24,8 @@ import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DmlFailureException;
+import com.couchbase.client.core.error.DocumentExistsException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexFailureException;
@@ -41,6 +43,7 @@ import java.nio.charset.StandardCharsets;
 
 import static com.couchbase.client.test.Util.readResource;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies aspects of query response parsing.
@@ -78,6 +81,7 @@ class QueryChunkResponseParserTest {
     assertThrows(InternalServerFailureException.class, () -> runAndThrow("internal_5000"));
 
     assertThrows(CasMismatchException.class, () -> runAndThrow("cas_mismatch"));
+    assertThrows(CasMismatchException.class, () -> runAndThrow("cas_mismatch_reason"));
 
     assertThrows(DmlFailureException.class, () -> runAndThrow("dml_failure"));
 
@@ -99,6 +103,19 @@ class QueryChunkResponseParserTest {
 
     assertThrows(CouchbaseException.class, () -> runAndThrow("empty_list"));
     assertThrows(CouchbaseException.class, () -> runAndThrow("unknown"));
+
+    assertThrows(DocumentNotFoundException.class, () -> runAndThrow("kv_notfound"));
+    assertThrows(DocumentExistsException.class, () -> runAndThrow("kv_exists"));
+  }
+
+  @Test
+  void errorContextIncludesReasonAndRetry() {
+    DocumentExistsException ex = assertThrows(DocumentExistsException.class, () -> runAndThrow("kv_exists"));
+
+    String message = ex.getMessage();
+    assertTrue(message.contains("17012"));
+    assertTrue(message.contains("Duplicate Key: k1"));
+    assertTrue(message.contains("\"retry\""));
   }
 
   /**

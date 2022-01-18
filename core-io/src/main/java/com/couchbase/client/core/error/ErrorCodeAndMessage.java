@@ -39,8 +39,11 @@ import static java.util.Collections.unmodifiableMap;
  * A numeric error code and associated human-readable error message.
  */
 public class ErrorCodeAndMessage {
+
   private final int code;
   private final String message;
+  private final boolean retry;
+  private final Map<String, Object> reason;
 
   // Jackson adds unrecognized properties here. An example is the "query_from_user" field
   // that appears in some query errors.
@@ -49,9 +52,13 @@ public class ErrorCodeAndMessage {
   private final Map<String, Object> context = new HashMap<>();
 
   public ErrorCodeAndMessage(@JsonProperty("code") int code,
-                             @JsonProperty("msg") String message) {
+                             @JsonProperty("msg") String message,
+                             @JsonProperty("retry") boolean retry,
+                             @JsonProperty("reason") Map<String, Object> reason) {
     this.code = code;
     this.message = nullToEmpty(message);
+    this.retry = retry;
+    this.reason = reason;
   }
 
   public int code() {
@@ -60,6 +67,14 @@ public class ErrorCodeAndMessage {
 
   public String message() {
     return message;
+  }
+
+  public boolean retry() {
+    return retry;
+  }
+
+  public Map<String, Object> reason() {
+    return reason;
   }
 
   /**
@@ -87,9 +102,9 @@ public class ErrorCodeAndMessage {
 
     Matcher m = plaintextErrorPattern.matcher(error);
     if (m.matches()) {
-      return listOf(new ErrorCodeAndMessage(Integer.parseInt(m.group("errorCode")), m.group("message")));
+      return listOf(new ErrorCodeAndMessage(Integer.parseInt(m.group("errorCode")), m.group("message"), false, null));
     }
-    return listOf(new ErrorCodeAndMessage(0, "Failed to decode error: " + error));
+    return listOf(new ErrorCodeAndMessage(0, "Failed to decode error: " + error, false, null));
   }
 
   private static String translateLegacyAnalyticsErrorCodes(String error) {
@@ -131,6 +146,6 @@ public class ErrorCodeAndMessage {
       // fall through
     }
 
-    return listOf(new ErrorCodeAndMessage(0, "Failed to decode errors: " + new String(content, UTF_8)));
+    return listOf(new ErrorCodeAndMessage(0, "Failed to decode errors: " + new String(content, UTF_8), false, null));
   }
 }

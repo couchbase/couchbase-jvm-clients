@@ -21,6 +21,8 @@ import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DmlFailureException;
+import com.couchbase.client.core.error.DocumentExistsException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.IndexExistsException;
@@ -135,8 +137,12 @@ public class QueryChunkResponseParser
     QueryErrorContext errorContext = new QueryErrorContext(ctx, errors, httpStatus);
 
     if (errors.size() >= 1) {
-      int code = errors.get(0).code();
-      String message = errors.get(0).message();
+      ErrorCodeAndMessage codeAndMessage = errors.get(0);
+      int code = codeAndMessage.code();
+      String message = codeAndMessage.message();
+      int reasonCode = codeAndMessage.reason() != null
+        ? (int) codeAndMessage.reason().getOrDefault("code", 0)
+        : 0;
 
       if (code == 3000) {
         return new ParsingFailureException(errorContext);
@@ -154,10 +160,16 @@ public class QueryChunkResponseParser
         return new QuotaLimitedException(errorContext);
       } else if (code >= 5000 && code < 6000) {
         return new InternalServerFailureException(errorContext);
-      } else if (code == 12009 && message.contains("CAS mismatch")) {
-        return new CasMismatchException(errorContext);
       } else if (code == 12009) {
-        return new DmlFailureException(errorContext);
+        if (message.contains("CAS mismatch") || reasonCode == 12033) {
+          return new CasMismatchException(errorContext);
+        } else if (reasonCode == 17014) {
+          return new DocumentNotFoundException(errorContext);
+        } else if (reasonCode == 17012) {
+          return new DocumentExistsException(errorContext);
+        } else {
+          return new DmlFailureException(errorContext);
+        }
       } else if ((code >= 10000 && code < 11000) || code == 13014) {
         return new AuthenticationFailureException("Could not authenticate query", errorContext, null);
       } else if ((code >= 12000 && code < 13000) || (code >= 14000 && code < 15000)) {

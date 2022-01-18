@@ -77,6 +77,10 @@ public class QueryMessageHandler
       return Optional.of(RetryReason.QUERY_TRANSACTION_BUFFER_FULL);
     }
 
+    if (error.retry()) {
+      return Optional.of(RetryReason.QUERY_ERROR_RETRYABLE);
+    }
+
     return Optional.empty();
   }
 

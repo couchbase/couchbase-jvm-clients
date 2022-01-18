@@ -63,6 +63,10 @@ public class QueryErrorContext extends ErrorContext {
       Map<String, Object> err = new TreeMap<>();
       err.put("code", error.code());
       err.put("message", error.message());
+      err.put("retry", error.retry());
+      if (error.reason() != null) {
+        err.put("reason", error.reason());
+      }
       if (error.context() != null && !error.context().isEmpty()) {
         err.put("additional", error.context());
       }

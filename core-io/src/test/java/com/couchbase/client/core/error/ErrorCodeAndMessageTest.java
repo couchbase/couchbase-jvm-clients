@@ -21,13 +21,19 @@ import org.junit.jupiter.api.Test;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ErrorCodeAndMessageTest {
+
   @Test
   void parsesPlaintext() {
     ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" 123:Something bad happened!\n".getBytes(UTF_8)).get(0);
     assertEquals(123, e.code());
     assertEquals("Something bad happened!", e.message());
+    assertFalse(e.retry());
+    assertNull(e.reason());
   }
 
   @Test
@@ -35,6 +41,8 @@ class ErrorCodeAndMessageTest {
     ErrorCodeAndMessage e = ErrorCodeAndMessage.from("oops".getBytes(UTF_8)).get(0);
     assertEquals(0, e.code());
     assertEquals("Failed to decode error: oops", e.message());
+    assertFalse(e.retry());
+    assertNull(e.reason());
   }
 
   @Test
@@ -42,6 +50,8 @@ class ErrorCodeAndMessageTest {
     ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" {\"code\":123,\"msg\":\"Something bad happened!\"}".getBytes(UTF_8)).get(0);
     assertEquals(123, e.code());
     assertEquals("Something bad happened!", e.message());
+    assertFalse(e.retry());
+    assertNull(e.reason());
   }
 
   @Test
@@ -49,6 +59,8 @@ class ErrorCodeAndMessageTest {
     ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" {\"msg\":\"Something bad happened!\"}".getBytes(UTF_8)).get(0);
     assertEquals(0, e.code());
     assertEquals("Something bad happened!", e.message());
+    assertFalse(e.retry());
+    assertNull(e.reason());
   }
 
   @Test
@@ -56,6 +68,8 @@ class ErrorCodeAndMessageTest {
     ErrorCodeAndMessage e = ErrorCodeAndMessage.from("{\"foo\":\"bar\"}".getBytes(UTF_8)).get(0);
     assertEquals(0, e.code());
     assertEquals(mapOf("foo", "bar"), e.context());
+    assertFalse(e.retry());
+    assertNull(e.reason());
   }
 
   @Test
@@ -63,6 +77,8 @@ class ErrorCodeAndMessageTest {
     ErrorCodeAndMessage e = ErrorCodeAndMessage.from("{".getBytes(UTF_8)).get(0);
     assertEquals(0, e.code());
     assertEquals("Failed to decode error: {", e.message());
+    assertFalse(e.retry());
+    assertNull(e.reason());
   }
 
   @Test
@@ -70,6 +86,8 @@ class ErrorCodeAndMessageTest {
     ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" [{\"code\":123,\"msg\":\"Something bad happened!\"}]".getBytes(UTF_8)).get(0);
     assertEquals(123, e.code());
     assertEquals("Something bad happened!", e.message());
+    assertFalse(e.retry());
+    assertNull(e.reason());
   }
 
   @Test
@@ -77,5 +95,41 @@ class ErrorCodeAndMessageTest {
     ErrorCodeAndMessage e = ErrorCodeAndMessage.from("[".getBytes(UTF_8)).get(0);
     assertEquals(0, e.code());
     assertEquals("Failed to decode error: [", e.message());
+    assertFalse(e.retry());
+    assertNull(e.reason());
   }
+
+  @Test
+  void parsesJsonWithRetry() {
+    ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" {\"code\":123,\"msg\":\"Something bad happened!\",\"retry\":true}".getBytes(UTF_8)).get(0);
+    assertEquals(123, e.code());
+    assertEquals("Something bad happened!", e.message());
+    assertTrue(e.retry());
+    assertNull(e.reason());
+  }
+
+  @Test
+  void parsesJsonWithRetryFalse() {
+    ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" {\"code\":123,\"msg\":\"Something bad happened!\",\"retry\":false}".getBytes(UTF_8)).get(0);
+    assertEquals(123, e.code());
+    assertEquals("Something bad happened!", e.message());
+    assertFalse(e.retry());
+    assertNull(e.reason());
+  }
+
+  @Test
+  void parseJsonArrayWithRetry() {
+    ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" [{\"code\":123,\"msg\":\"Something bad happened!\",\"retry\":true}]".getBytes(UTF_8)).get(0);
+    assertEquals(123, e.code());
+    assertEquals("Something bad happened!", e.message());
+    assertTrue(e.retry());
+    assertNull(e.reason());
+  }
+
+  @Test
+  void parsesReason() {
+    ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" {\"code\":123,\"msg\":\"Something bad happened!\",\"retry\":false,\"reason\":{\"foo\":\"bar\"}}}".getBytes(UTF_8)).get(0);
+    assertEquals("bar", e.reason().get("foo"));
+  }
+
 }

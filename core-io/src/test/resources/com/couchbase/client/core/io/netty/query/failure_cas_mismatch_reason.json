@@ -1,0 +1,13 @@
+[
+  {
+    "code": 12009,
+    "msg": "DML Error, possible causes include CAS mismatch. Failed to perform UPDATE on key k1 - cause: CAS mismatch",
+    "reason": {
+      "caller": "couchbase:2065",
+      "code": 12033,
+      "key": "datastore.couchbase.CAS_mismatch",
+      "message": "CAS mismatch"
+    },
+    "retry": false
+  }
+]
