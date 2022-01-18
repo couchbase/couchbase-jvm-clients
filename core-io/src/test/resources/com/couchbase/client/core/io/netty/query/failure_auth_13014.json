@@ -1,0 +1,6 @@
+[
+  {
+    "code": 13014,
+    "msg": "User does not have credentials to run SELECT queries on default:a. Add role query_select on default:a to allow the query to run."
+  }
+]

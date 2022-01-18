@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.query;
 
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -36,6 +37,7 @@ import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.error.context.QueryErrorContext;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
+import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
@@ -103,7 +105,7 @@ public class QueryChunkResponseParser
     .doOnValue("/profile", v -> profile = v.readBytes())
     .doOnValue("/errors", v -> {
       errors = v.readBytes();
-      failRows(errorsToThrowable(errors));
+      failRows(errorsToThrowable(errors, responseHeader(), requestContext()));
     })
     .doOnValue("/warnings", v -> warnings = v.readBytes());
 
@@ -121,16 +123,16 @@ public class QueryChunkResponseParser
 
   @Override
   public Optional<CouchbaseException> error() {
-    return Optional.ofNullable(errors).map(this::errorsToThrowable);
+    return Optional.ofNullable(errors).map(bytes -> errorsToThrowable(bytes, responseHeader(), requestContext()));
   }
 
-  private CouchbaseException errorsToThrowable(final byte[] bytes) {
-    int httpStatus = responseHeader() != null ? responseHeader().status().code() : 0;
+  static CouchbaseException errorsToThrowable(final byte[] bytes, HttpResponse header, RequestContext ctx) {
+    int httpStatus = header != null ? header.status().code() : 0;
 
     final List<ErrorCodeAndMessage> errors = bytes.length == 0
       ? Collections.emptyList()
       : ErrorCodeAndMessage.fromJsonArray(bytes);
-    QueryErrorContext errorContext = new QueryErrorContext(requestContext(), errors, httpStatus);
+    QueryErrorContext errorContext = new QueryErrorContext(ctx, errors, httpStatus);
 
     if (errors.size() >= 1) {
       int code = errors.get(0).code();

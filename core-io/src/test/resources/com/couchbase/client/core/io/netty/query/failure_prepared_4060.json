@@ -1,0 +1,7 @@
+[
+  {
+    "code": 4060,
+    "msg": "No such prepared statement: blaa, context: unset",
+    "query": "execute blaa"
+  }
+]

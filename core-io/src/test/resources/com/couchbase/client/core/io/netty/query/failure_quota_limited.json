@@ -1,0 +1,6 @@
+[
+  {
+    "code": 5000,
+    "msg": "limit for number of indexes that can be created per scope has been reached"
+  }
+]

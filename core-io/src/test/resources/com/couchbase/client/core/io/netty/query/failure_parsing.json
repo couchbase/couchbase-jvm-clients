@@ -1,0 +1,7 @@
+[
+  {
+    "code": 3000,
+    "msg": "Ambiguous reference to field a (near line 1, column 0).",
+    "query": "select  a"
+  }
+]

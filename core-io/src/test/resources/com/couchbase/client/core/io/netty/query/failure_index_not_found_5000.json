@@ -1,0 +1,10 @@
+[
+  {
+    "code": 5000,
+    "msg": "Index Not Found - cause: GSI index bla not found.",
+    "reason": {
+      "name": "bla"
+    },
+    "retry": true
+  }
+]

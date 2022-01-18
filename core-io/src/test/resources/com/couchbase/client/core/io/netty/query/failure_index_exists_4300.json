@@ -1,0 +1,10 @@
+[
+  {
+    "code": 4300,
+    "msg": "The index #primary already exists.",
+    "reason": {
+      "name": "#primary"
+    },
+    "query": "create primary index on `travel-sample`"
+  }
+]
