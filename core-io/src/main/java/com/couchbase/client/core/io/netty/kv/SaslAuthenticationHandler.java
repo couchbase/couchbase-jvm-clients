@@ -242,7 +242,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
           if (MemcacheProtocol.Opcode.SASL_AUTH.opcode() == opcode) {
             handleAuthResponse(ctx, (ByteBuf) msg);
           } else if (MemcacheProtocol.Opcode.SASL_STEP.opcode() == opcode) {
-            completeAuth(ctx);
+            completeAuth(ctx, (ByteBuf) msg);
           }
         } catch (Exception ex) {
           failConnect(ctx, "Unexpected error during SASL auth", response, ex, status(response));
@@ -365,9 +365,9 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
    * @param ctx the channel context.
    * @param response the response from the server from our AUTH request.
    */
-  private void handleAuthResponse(final ChannelHandlerContext ctx, final ByteBuf response) {
+  private void handleAuthResponse(final ChannelHandlerContext ctx, final ByteBuf response) throws SaslException {
     if (saslClient.isComplete()) {
-      completeAuth(ctx);
+      completeAuth(ctx, response);
       return;
     }
 
@@ -425,7 +425,18 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
   /**
    * Helper method to complete the SASL auth successfully.
    */
-  private void completeAuth(final ChannelHandlerContext ctx) {
+  private void completeAuth(final ChannelHandlerContext ctx, ByteBuf msg) throws SaslException {
+    if (!saslClient.isComplete()) {
+      // validate final server response
+      ByteBuf responseBody = body(msg).orElse(Unpooled.EMPTY_BUFFER);
+      byte[] payload = ByteBufUtil.getBytes(responseBody);
+      saslClient.evaluateChallenge(payload);
+
+      if (!saslClient.isComplete()) {
+        throw new SaslException("Incomplete SASL exchange");
+      }
+    }
+
     Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
     endpointContext.environment().eventBus().publish(
       new SaslAuthenticationCompletedEvent(latency.orElse(Duration.ZERO), ioContext)
