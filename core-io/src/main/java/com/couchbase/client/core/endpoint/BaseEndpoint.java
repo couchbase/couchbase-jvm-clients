@@ -17,11 +17,12 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.Counter;
+import com.couchbase.client.core.cnc.AbstractContext;
+import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionAbortedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
-import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionIgnoredEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectionFailedEvent;
@@ -29,9 +30,24 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointStateChangedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointWriteFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnectedEvent;
+import com.couchbase.client.core.deps.io.netty.bootstrap.Bootstrap;
+import com.couchbase.client.core.deps.io.netty.channel.Channel;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelFutureListener;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelInitializer;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelOption;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.channel.DefaultEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollChannelOption;
+import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollSocketChannel;
+import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueSocketChannel;
 import com.couchbase.client.core.deps.io.netty.channel.local.LocalChannel;
+import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChannel;
+import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.error.BucketNotFoundException;
@@ -50,23 +66,8 @@ import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.deps.io.netty.bootstrap.Bootstrap;
-import com.couchbase.client.core.deps.io.netty.channel.Channel;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelFutureListener;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelInitializer;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelOption;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
-import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollEventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollSocketChannel;
-import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueEventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueSocketChannel;
-import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChannel;
-import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
-import com.couchbase.client.core.util.SingleStateful;
 import com.couchbase.client.core.util.HostAndPort;
+import com.couchbase.client.core.util.SingleStateful;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
@@ -81,7 +82,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -508,15 +508,17 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   @Stability.Internal
   public void notifyChannelInactive() {
-    outstandingRequests.set(0);
+    int outstandingBeforeInactive = outstandingRequests.getAndSet(0);
     if (disconnect.get()) {
       // We don't need to do anything if we've been already instructed to disconnect.
       return;
     }
 
+    long connectedSince = System.nanoTime() - lastConnectedAt;
+
     if (state() == EndpointState.CONNECTED) {
       endpointContext.get().environment().eventBus().publish(
-        new UnexpectedEndpointDisconnectedEvent(endpointContext.get())
+        new UnexpectedEndpointDisconnectedEvent(endpointContext.get(), outstandingBeforeInactive, connectedSince)
       );
 
       state.transition(EndpointState.DISCONNECTED);

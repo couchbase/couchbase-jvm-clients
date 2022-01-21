@@ -16,23 +16,56 @@
 
 package com.couchbase.client.core.cnc.events.endpoint;
 
+import com.couchbase.client.core.cnc.AbstractContext;
 import com.couchbase.client.core.cnc.AbstractEvent;
+import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.endpoint.EndpointContext;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This event is usually raised if the server closes the socket and the client didn't expect it.
  */
 public class UnexpectedEndpointDisconnectedEvent extends AbstractEvent {
 
-  public UnexpectedEndpointDisconnectedEvent(final EndpointContext context) {
+  /**
+   * How many requests were outstanding when the socket is closed.
+   */
+  private final int outstandingBeforeInactive;
+
+  /**
+   * For how long the socket was connected in nanoseconds.
+   */
+  private final long connectedForNs;
+
+  private final EndpointContext endpointContext;
+
+  public UnexpectedEndpointDisconnectedEvent(final EndpointContext context, final int outstandingBeforeInactive,
+                                             final long connectedForNs) {
     super(Severity.WARN, Category.ENDPOINT, Duration.ZERO, context);
+    this.outstandingBeforeInactive = outstandingBeforeInactive;
+    this.connectedForNs = connectedForNs;
+    this.endpointContext = context;
   }
 
   @Override
   public String description() {
     return "The remote side disconnected the endpoint unexpectedly";
+  }
+
+  @Override
+  public Context context() {
+    return new AbstractContext() {
+      @Override
+      public void injectExportableParams(final Map<String, Object> input) {
+        endpointContext.injectExportableParams(input);
+
+        input.put("connectedForMs", TimeUnit.NANOSECONDS.toMillis(connectedForNs));
+        input.put("numOutstandingRequests", outstandingBeforeInactive);
+      }
+    };
   }
 
 }
