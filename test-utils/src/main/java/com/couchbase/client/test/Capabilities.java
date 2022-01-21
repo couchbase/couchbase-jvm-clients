@@ -87,5 +87,9 @@ public enum Capabilities {
   /**
    * The cluster supports setting the storage backend (e.g. Magma).
    */
-  STORAGE_BACKEND
+  STORAGE_BACKEND,
+  /**
+   * The cluster can modify a document with Queries without changing its expiry.
+   */
+  QUERY_PRESERVE_EXPIRY
 }

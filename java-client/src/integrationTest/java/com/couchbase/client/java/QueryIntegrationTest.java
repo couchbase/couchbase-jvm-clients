@@ -25,6 +25,9 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.query.QueryMetrics;
@@ -44,6 +47,7 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -424,6 +428,33 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     void failsIfScopeLevelIsNotAvailable() {
         Scope scope = cluster.bucket(bucketName).scope("myscope");
         assertThrows(FeatureNotAvailableException.class, () ->  scope.query("select * from mycollection"));
+    }
+
+    @Test
+    @IgnoreWhen(missesCapabilities = Capabilities.QUERY_PRESERVE_EXPIRY)
+    void preserveExpiry() {
+        String id = UUID.randomUUID().toString();
+        collection.insert(id, FOO_CONTENT, InsertOptions.insertOptions()
+          .expiry(Duration.ofDays(1L)));
+
+        Instant expectedExpiry = collection.get(id, GetOptions.getOptions().withExpiry(true)).expiryTime().get();
+
+        cluster.query(
+          "UPDATE " + bucketName + " AS content USE KEYS '" + id + "' SET content.foo = 'updated'",
+          queryOptions().preserveExpiry(true)
+        );
+
+        GetResult result = collection.get(id, GetOptions.getOptions().withExpiry(true));
+        assertEquals("updated", result.contentAsObject().get("foo"));
+        assertEquals(expectedExpiry, result.expiryTime().get());
+    }
+
+    @Test
+    @IgnoreWhen(hasCapabilities = Capabilities.QUERY_PRESERVE_EXPIRY)
+    void preserveExpiryThrowsFeatureNotAvailable() {
+        FeatureNotAvailableException ex = assertThrows(FeatureNotAvailableException.class,
+          () -> cluster.query("select 1=1", queryOptions().preserveExpiry(true)));
+        assertTrue(ex.getMessage().contains("Preserving expiry for the query service is not supported"));
     }
 
     /**
