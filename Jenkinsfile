@@ -588,7 +588,7 @@ void test(Map args=[:],
     boolean includeEventing = args.containsKey("includeEventing") ? args.get("includeEventing") : false
     boolean enableDevelopPreview = args.containsKey("enableDevelopPreview") ? args.get("enableDevelopPreview") : false
     boolean ceMode = args.containsKey("ceMode") ? args.get("ceMode") : false
-    boolean multiCerts = args.contains("multiCerts") ? args.get("multiCerts") : false
+    boolean multiCerts = args.containsKey("multiCerts") ? args.get("multiCerts") : false
 
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
         cleanWs()
