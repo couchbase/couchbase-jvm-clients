@@ -36,6 +36,7 @@ import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.AnalyticsService;
 import com.couchbase.client.core.service.AnalyticsServiceConfig;
+import com.couchbase.client.core.service.BackupService;
 import com.couchbase.client.core.service.EventingService;
 import com.couchbase.client.core.service.KeyValueService;
 import com.couchbase.client.core.service.KeyValueServiceConfig;
@@ -461,6 +462,8 @@ public class Node implements Stateful<NodeState> {
           ctx, address, port);
       case EVENTING:
         return new EventingService(ctx, address, port);
+      case BACKUP:
+        return new BackupService(ctx, address, port);
       default:
         throw InvalidArgumentException.fromMessage("Unsupported ServiceType: " + serviceType);
     }

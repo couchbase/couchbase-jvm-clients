@@ -59,6 +59,7 @@ public class IoConfig {
   private final CircuitBreakerConfig analyticsCircuitBreakerConfig;
   private final CircuitBreakerConfig managerCircuitBreakerConfig;
   private final CircuitBreakerConfig eventingCircuitBreakerConfig;
+  private final CircuitBreakerConfig backupCircuitBreakerConfig;
   private final Set<ServiceType> captureTraffic;
   private final NetworkResolution networkResolution;
   private final boolean dnsSrvEnabled;
@@ -83,6 +84,7 @@ public class IoConfig {
     analyticsCircuitBreakerConfig = builder.analyticsCircuitBreakerConfig.build();
     managerCircuitBreakerConfig = builder.managerCircuitBreakerConfig.build();
     eventingCircuitBreakerConfig = builder.eventingCircuitBreakerConfig.build();
+    backupCircuitBreakerConfig = builder.backupCircuitBreakerConfig.build();
     captureTraffic = Optional
       .ofNullable(builder.captureTraffic)
       .orElse(Collections.emptySet());
@@ -142,6 +144,11 @@ public class IoConfig {
 
   public static Builder eventingCircuitBreakerConfig(CircuitBreakerConfig.Builder eventingCircuitBreakerConfig) {
     return builder().eventingCircuitBreakerConfig(eventingCircuitBreakerConfig);
+  }
+
+  @Stability.Volatile
+  public static Builder backupCircuitBreakerConfig(CircuitBreakerConfig.Builder backupCircuitBreakerConfig) {
+    return builder().backupCircuitBreakerConfig(backupCircuitBreakerConfig);
   }
 
   /**
@@ -231,6 +238,11 @@ public class IoConfig {
     return eventingCircuitBreakerConfig;
   }
 
+  @Stability.Volatile
+  public CircuitBreakerConfig backupCircuitBreakerConfig() {
+    return backupCircuitBreakerConfig;
+  }
+
   public boolean mutationTokensEnabled() {
     return mutationTokensEnabled;
   }
@@ -304,6 +316,7 @@ public class IoConfig {
     export.put("analyticsCircuitBreakerConfig", analyticsCircuitBreakerConfig.enabled() ? analyticsCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("managerCircuitBreakerConfig", managerCircuitBreakerConfig.enabled() ? managerCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("eventingCircuitBreakerConfig", eventingCircuitBreakerConfig.enabled() ? eventingCircuitBreakerConfig.exportAsMap() : "disabled");
+    export.put("backupCircuitBreakerConfig", backupCircuitBreakerConfig.enabled() ? backupCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("numKvConnections", numKvConnections);
     export.put("maxHttpConnections", maxHttpConnections);
     export.put("idleHttpConnectionTimeoutMs", idleHttpConnectionTimeout.toMillis());
@@ -323,6 +336,7 @@ public class IoConfig {
     private CircuitBreakerConfig.Builder analyticsCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
     private CircuitBreakerConfig.Builder managerCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
     private CircuitBreakerConfig.Builder eventingCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
+    private CircuitBreakerConfig.Builder backupCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
     private Set<ServiceType> captureTraffic;
     private NetworkResolution networkResolution = DEFAULT_NETWORK_RESOLUTION;
     private boolean dnsSrvEnabled = DEFAULT_DNS_SRV_ENABLED;
@@ -474,6 +488,22 @@ public class IoConfig {
 
     public CircuitBreakerConfig.Builder eventingCircuitBreakerConfig() {
       return eventingCircuitBreakerConfig;
+    }
+
+    /**
+     * Configures a {@link CircuitBreaker} to use for backup operations.
+     *
+     * @return this, for chaining
+     */
+    @Stability.Volatile
+    public Builder backupCircuitBreakerConfig(CircuitBreakerConfig.Builder backupCircuitBreakerConfig) {
+      this.backupCircuitBreakerConfig = backupCircuitBreakerConfig;
+      return this;
+    }
+
+    @Stability.Volatile
+    public CircuitBreakerConfig.Builder backupCircuitBreakerConfig() {
+      return backupCircuitBreakerConfig;
     }
 
     /**

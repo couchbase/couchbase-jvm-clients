@@ -91,6 +91,7 @@ public class IoEnvironment {
   private final Supplier<EventLoopGroup> searchEventLoopGroup;
   private final Supplier<EventLoopGroup> viewEventLoopGroup;
   private final Supplier<EventLoopGroup> eventingEventLoopGroup;
+  private final Supplier<EventLoopGroup> backupEventLoopGroup;
 
   /**
    * Creates the {@link IoEnvironment} with default settings.
@@ -204,7 +205,6 @@ public class IoEnvironment {
   }
 
   /**
-
    * Allows to specify a custom event loop group (I/O event loop thread pool) for the eventing service.
    * <p>
    * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
@@ -217,6 +217,22 @@ public class IoEnvironment {
    */
   public static Builder eventingEventLoopGroup(final EventLoopGroup eventLoopGroup) {
     return builder().eventingEventLoopGroup(eventLoopGroup);
+  }
+
+  /**
+   * Allows to specify a custom event loop group (I/O event loop thread pool) for the backup service.
+   * <p>
+   * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+   * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+   * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+   * all the services and what effect a custom pool might have.
+   *
+   * @param eventLoopGroup the dedicated event loop group to use.
+   * @return this {@link Builder} for chaining purposes.
+   */
+  @Stability.Volatile
+  public static Builder backupEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+    return builder().backupEventLoopGroup(eventLoopGroup);
   }
 
   /**
@@ -267,6 +283,7 @@ public class IoEnvironment {
     eventLoopGroups.add(searchEventLoopGroup.get().getClass().getSimpleName());
     eventLoopGroups.add(viewEventLoopGroup.get().getClass().getSimpleName());
     eventLoopGroups.add(eventingEventLoopGroup.get().getClass().getSimpleName());
+    eventLoopGroups.add(backupEventLoopGroup.get().getClass().getSimpleName());
     export.put("eventLoopGroups", eventLoopGroups);
 
     return export;
@@ -281,7 +298,8 @@ public class IoEnvironment {
       || builder.analyticsEventLoopGroup == null
       || builder.searchEventLoopGroup == null
       || builder.viewEventLoopGroup == null
-      || builder.eventingEventLoopGroup == null) {
+      || builder.eventingEventLoopGroup == null
+      || builder.backupEventLoopGroup == null) {
       httpDefaultGroup = createEventLoopGroup(nativeIoEnabled, eventLoopThreadCount, "cb-io-http");
     }
 
@@ -319,6 +337,11 @@ public class IoEnvironment {
       ? httpDefaultGroup
       : builder.eventingEventLoopGroup;
     sanityCheckEventLoop(eventingEventLoopGroup);
+
+    backupEventLoopGroup = builder.backupEventLoopGroup == null
+      ? httpDefaultGroup
+      : builder.backupEventLoopGroup;
+    sanityCheckEventLoop(backupEventLoopGroup);
   }
 
   /**
@@ -396,6 +419,16 @@ public class IoEnvironment {
   }
 
   /**
+   * Returns the {@link EventLoopGroup} to be used for backup traffic.
+   *
+   * @return the selected event loop group.
+   */
+  @Stability.Volatile
+  public Supplier<EventLoopGroup> backupEventLoopGroup() {
+    return backupEventLoopGroup;
+  }
+
+  /**
    * Returns true if native IO is enabled and can be used if supported.
    *
    * @return true if enabled.
@@ -425,7 +458,8 @@ public class IoEnvironment {
       shutdownGroup(analyticsEventLoopGroup, timeout),
       shutdownGroup(searchEventLoopGroup, timeout),
       shutdownGroup(viewEventLoopGroup, timeout),
-      shutdownGroup(eventingEventLoopGroup, timeout)
+      shutdownGroup(eventingEventLoopGroup, timeout),
+      shutdownGroup(backupEventLoopGroup, timeout)
     ).then();
   }
 
@@ -506,6 +540,7 @@ public class IoEnvironment {
     private Supplier<EventLoopGroup> searchEventLoopGroup = null;
     private Supplier<EventLoopGroup> viewEventLoopGroup = null;
     private Supplier<EventLoopGroup> eventingEventLoopGroup = null;
+    private Supplier<EventLoopGroup> backupEventLoopGroup = null;
     private int eventLoopThreadCount = DEFAULT_EVENT_LOOP_THREAD_COUNT;
 
     /**
@@ -604,6 +639,23 @@ public class IoEnvironment {
      */
     public Builder eventingEventLoopGroup(final EventLoopGroup eventLoopGroup) {
       this.eventingEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
+      return this;
+    }
+
+    /**
+     * Allows to specify a custom event loop group (I/O event loop thread pool) for the backup service.
+     * <p>
+     * <strong>Note:</strong> tweaking the dedicated event loops should be done with care and only after profiling
+     * indicated that the default event loop setup is not achieving the desired performance characteristics. Please
+     * see the javadoc for the {@link IoEnvironment} class for an explanation how the event loops play together for
+     * all the services and what effect a custom pool might have.
+     *
+     * @param eventLoopGroup the dedicated event loop group to use.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    @Stability.Volatile
+    public Builder backupEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+      this.backupEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
     }
 

@@ -103,6 +103,7 @@ public class CbTracing {
     Map<ServiceType, String> map = new EnumMap<>(ServiceType.class);
     map.put(ServiceType.ANALYTICS, TracingIdentifiers.SERVICE_ANALYTICS);
     map.put(ServiceType.EVENTING, TracingIdentifiers.SERVICE_EVENTING);
+    map.put(ServiceType.BACKUP, TracingIdentifiers.SERVICE_BACKUP);
     map.put(ServiceType.KV, TracingIdentifiers.SERVICE_KV);
     map.put(ServiceType.MANAGER, TracingIdentifiers.SERVICE_MGMT);
     map.put(ServiceType.QUERY, TracingIdentifiers.SERVICE_QUERY);

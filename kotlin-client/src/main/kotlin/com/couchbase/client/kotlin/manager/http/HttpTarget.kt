@@ -51,6 +51,14 @@ public class HttpTarget internal constructor(
             HttpTarget(ServiceType.ANALYTICS, nodeIdentifier)
 
         /**
+         * Target the Backup service (port 8097 by default).
+         *
+         * @param nodeIdentifier node to receive requests, or null to let the service locator decide.
+         */
+        public fun backup(nodeIdentifier: NodeIdentifier? = null): HttpTarget =
+            HttpTarget(ServiceType.BACKUP, nodeIdentifier)
+
+        /**
          * Target the Eventing service (port 8096 by default).
          *
          * @param nodeIdentifier node to receive requests, or null to let the service locator decide.

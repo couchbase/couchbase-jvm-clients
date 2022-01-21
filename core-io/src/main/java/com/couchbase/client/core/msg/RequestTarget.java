@@ -56,6 +56,10 @@ public class RequestTarget {
     return new RequestTarget(ServiceType.EVENTING, null, null);
   }
 
+  public static RequestTarget backup() {
+    return new RequestTarget(ServiceType.BACKUP, null, null);
+  }
+
   /**
    * @param nodeIdentifier (nullable)
    * @param bucketName (nullable)

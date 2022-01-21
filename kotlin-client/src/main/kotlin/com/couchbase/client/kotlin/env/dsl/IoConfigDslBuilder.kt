@@ -120,6 +120,8 @@ public class IoConfigDslBuilder(private val wrapped: IoConfig.Builder) {
         searchCircuitBreaker(initializer)
         analyticsCircuitBreaker(initializer)
         managerCircuitBreaker(initializer)
+        eventingCircuitBreaker(initializer)
+        backupCircuitBreaker(initializer)
     }
 
     private var kvCircuitBreakerConfigBuilder = CircuitBreakerConfigDslBuilder(wrapped.kvCircuitBreakerConfig())
@@ -154,5 +156,19 @@ public class IoConfigDslBuilder(private val wrapped: IoConfig.Builder) {
 
     public fun managerCircuitBreaker(initializer: CircuitBreakerConfigDslBuilder.() -> Unit) {
         managerCircuitBreakerConfigBuilder.initializer()
+    }
+
+    private var eventingCircuitBreakerConfigBuilder =
+        CircuitBreakerConfigDslBuilder(wrapped.eventingCircuitBreakerConfig())
+
+    public fun eventingCircuitBreaker(initializer: CircuitBreakerConfigDslBuilder.() -> Unit) {
+        eventingCircuitBreakerConfigBuilder.initializer()
+    }
+
+    private var backupCircuitBreakerConfigBuilder =
+        CircuitBreakerConfigDslBuilder(wrapped.backupCircuitBreakerConfig())
+
+    public fun backupCircuitBreaker(initializer: CircuitBreakerConfigDslBuilder.() -> Unit) {
+        backupCircuitBreakerConfigBuilder.initializer()
     }
 }

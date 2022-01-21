@@ -39,6 +39,7 @@ class CoreHttpTimeoutHelper {
   static {
     Map<ServiceType, Function<TimeoutConfig, Duration>> map = new EnumMap<>(ServiceType.class);
     map.put(ServiceType.ANALYTICS, TimeoutConfig::analyticsTimeout);
+    map.put(ServiceType.BACKUP, TimeoutConfig::backupTimeout);
     map.put(ServiceType.EVENTING, TimeoutConfig::eventingTimeout);
     map.put(ServiceType.KV, TimeoutConfig::kvTimeout);
     map.put(ServiceType.MANAGER, TimeoutConfig::managementTimeout);

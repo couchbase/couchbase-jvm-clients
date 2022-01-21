@@ -134,6 +134,12 @@ public class PortInfo {
             case "eventingSSL":
               sslPorts.put(ServiceType.EVENTING, port);
               break;
+            case "backupAPI":
+              ports.put(ServiceType.BACKUP, port);
+              break;
+            case "backupAPIHTTPS":
+              sslPorts.put(ServiceType.BACKUP, port);
+              break;
           }
         }
     }

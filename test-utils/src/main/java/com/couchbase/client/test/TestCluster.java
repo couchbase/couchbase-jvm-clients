@@ -225,6 +225,9 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
         if (name.equals("eventing") || name.equals("eventingSSL")) {
           capabilities.add(Capabilities.EVENTING);
         }
+        if (name.equals("backupAPI") || name.equals("backupAPIHTTPS")) {
+          capabilities.add(Capabilities.BACKUP);
+        }
       }
     }
     List<String> bucketCapabilities = (List<String>) decoded.get("bucketCapabilities");

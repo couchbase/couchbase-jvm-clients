@@ -151,6 +151,9 @@ public class Core {
   private static final RoundRobinLocator EVENTING_LOCATOR =
     new RoundRobinLocator(ServiceType.EVENTING);
 
+  private static final RoundRobinLocator BACKUP_LOCATOR =
+      new RoundRobinLocator(ServiceType.BACKUP);
+
   /**
    * The interval under which the invalid state watchdog should be scheduled to run.
    */
@@ -891,6 +894,8 @@ public class Core {
         return VIEWS_LOCATOR;
       case EVENTING:
         return EVENTING_LOCATOR;
+      case BACKUP:
+        return BACKUP_LOCATOR;
       default:
         throw new IllegalStateException("Unsupported ServiceType: " + serviceType);
     }

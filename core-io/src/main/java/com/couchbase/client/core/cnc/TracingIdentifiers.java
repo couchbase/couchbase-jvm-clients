@@ -74,6 +74,11 @@ public class TracingIdentifiers {
    */
   public static final String SERVICE_EVENTING = "eventing";
 
+  /**
+   * The identifier commonly used to identify the backup service.
+   */
+  public static final String SERVICE_BACKUP = "backup";
+
   public static final String SPAN_REQUEST_QUERY = "query";
 
   public static final String SPAN_REQUEST_ANALYTICS = "analytics";

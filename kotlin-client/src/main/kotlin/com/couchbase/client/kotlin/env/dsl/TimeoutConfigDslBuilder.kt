@@ -50,6 +50,22 @@ public class TimeoutConfigDslBuilder(private val wrapped: TimeoutConfig.Builder)
             }
 
     /**
+     * @see TimeoutConfig.Builder.eventingTimeout
+     */
+    public var eventingTimeout: Duration
+            by observable(TimeoutConfig.DEFAULT_EVENTING_TIMEOUT.toKotlinDuration()) { _, _, it ->
+                wrapped.eventingTimeout(it.toJavaDuration())
+            }
+
+    /**
+     * @see TimeoutConfig.Builder.backupTimeout
+     */
+    public var backupTimeout: Duration
+            by observable(TimeoutConfig.DEFAULT_BACKUP_TIMEOUT.toKotlinDuration()) { _, _, it ->
+                wrapped.backupTimeout(it.toJavaDuration())
+            }
+
+    /**
      * @see TimeoutConfig.Builder.queryTimeout
      */
     public var queryTimeout: Duration

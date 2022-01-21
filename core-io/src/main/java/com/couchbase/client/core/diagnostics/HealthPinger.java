@@ -141,8 +141,10 @@ public class HealthPinger {
       case SEARCH: return pingHttpEndpoint(core, target, options, "/api/ping");
       case MANAGER:
       case EVENTING:
+      case BACKUP:
         // right now we are not pinging the cluster manager
         // right now we are not pinging the eventing service
+        // right now we are not pinging the backup service
         return Mono.empty();
       case ANALYTICS: return pingHttpEndpoint(core, target, options, "/admin/ping");
       default: return Mono.error(new IllegalStateException("Unknown service to ping, this is a bug!"));

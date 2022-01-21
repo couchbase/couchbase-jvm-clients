@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.annotation.Stability;
+
 /**
  * Describes the types of services available in a couchbase cluster.
  *
@@ -56,7 +58,13 @@ public enum ServiceType {
   /**
    * The Eventing (function) service.
    */
-  EVENTING(ServiceScope.CLUSTER, "eventing");
+  EVENTING(ServiceScope.CLUSTER, "eventing"),
+
+  /**
+   * The Backup service
+   */
+  @Stability.Volatile
+  BACKUP(ServiceScope.CLUSTER, "backup");
 
   private final ServiceScope scope;
   private final String ident;
