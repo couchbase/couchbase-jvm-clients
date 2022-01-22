@@ -18,10 +18,15 @@ package com.couchbase.client.core.endpoint.http;
 
 import com.couchbase.client.core.annotation.Stability;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
 import static java.util.Collections.emptyMap;
@@ -37,6 +42,30 @@ public class CoreHttpPath {
   private final String template;
   private final Map<String, String> params;
   private final String formatted;
+
+  private static final Pattern PATH_PLACEHOLDER = Pattern.compile(Pattern.quote("{}"));
+
+  public static String formatPath(String template, String... args) {
+    return formatPath(template, Arrays.asList(args));
+  }
+
+  public static String formatPath(String template, List<String> args) {
+    Iterator<String> i = args.iterator();
+    Matcher m = PATH_PLACEHOLDER.matcher(template);
+    StringBuffer result = new StringBuffer();
+    while (m.find()) {
+      if (!i.hasNext()) {
+        throw new IllegalArgumentException("Too few arguments (" + args.size() + ") for format string: " + template);
+      }
+      m.appendReplacement(result, urlEncode(i.next()));
+    }
+    m.appendTail(result);
+
+    if (i.hasNext()) {
+      throw new IllegalArgumentException("Too many arguments (" + args.size() + ") for format string: " + template);
+    }
+    return result.toString();
+  }
 
   public static CoreHttpPath path(String template) {
     return new CoreHttpPath(template, emptyMap());

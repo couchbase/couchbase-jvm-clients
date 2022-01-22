@@ -36,6 +36,7 @@ import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
 import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.http.ReactiveCouchbaseHttpClient;
 import com.couchbase.client.java.manager.analytics.ReactiveAnalyticsIndexManager;
 import com.couchbase.client.java.manager.bucket.ReactiveBucketManager;
 import com.couchbase.client.java.manager.eventing.ReactiveEventingFunctionManager;
@@ -190,6 +191,14 @@ public class ReactiveCluster {
   @Stability.Volatile
   public Core core() {
     return asyncCluster.core();
+  }
+
+  /**
+   * Returns a specialized HTTP client for making requests to the Couchbase Server REST API.
+   */
+  @Stability.Volatile
+  public ReactiveCouchbaseHttpClient httpClient() {
+    return new ReactiveCouchbaseHttpClient(asyncCluster.httpClient());
   }
 
   /**

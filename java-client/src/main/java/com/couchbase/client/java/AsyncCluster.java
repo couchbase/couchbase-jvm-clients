@@ -47,6 +47,7 @@ import com.couchbase.client.java.diagnostics.DiagnosticsOptions;
 import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.http.AsyncCouchbaseHttpClient;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.manager.analytics.AsyncAnalyticsIndexManager;
 import com.couchbase.client.java.manager.bucket.AsyncBucketManager;
@@ -271,6 +272,14 @@ public class AsyncCluster {
   @Stability.Volatile
   public Core core() {
     return core;
+  }
+
+  /**
+   * Returns a specialized HTTP client for making requests to the Couchbase Server REST API.
+   */
+  @Stability.Volatile
+  public AsyncCouchbaseHttpClient httpClient() {
+    return new AsyncCouchbaseHttpClient(this);
   }
 
   /**

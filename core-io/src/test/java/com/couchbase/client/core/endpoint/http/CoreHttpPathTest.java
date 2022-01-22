@@ -18,6 +18,7 @@ package com.couchbase.client.core.endpoint.http;
 
 import org.junit.jupiter.api.Test;
 
+import static com.couchbase.client.core.endpoint.http.CoreHttpPath.formatPath;
 import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static java.util.Collections.emptyMap;
@@ -25,6 +26,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class CoreHttpPathTest {
+
+  @Test
+  void format() {
+    assertThrows(IllegalArgumentException.class, ()-> formatPath("/a", "b"));
+    assertThrows(IllegalArgumentException.class, ()-> formatPath("/a/{}", "b", "c"));
+    assertEquals("/foo/hello%20world/bar/red/zot", formatPath("/foo/{}/bar/{}/zot", "hello world", "red"));
+    assertEquals("foo", formatPath("foo"));
+    assertEquals("", formatPath(""));
+  }
 
   @Test
   void withoutPlaceholders() {
