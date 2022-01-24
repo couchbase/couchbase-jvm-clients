@@ -54,6 +54,7 @@ public class UnmanagedTestCluster extends TestCluster {
   private volatile String bucketname;
   private final int numReplicas;
   private final String certsFile;
+  private volatile boolean runWithTLS;
 
   UnmanagedTestCluster(final Properties properties) {
     seedHost = properties.getProperty("cluster.unmanaged.seed").split(":")[0];
@@ -62,6 +63,7 @@ public class UnmanagedTestCluster extends TestCluster {
     adminPassword = properties.getProperty("cluster.adminPassword");
     numReplicas = Integer.parseInt(properties.getProperty("cluster.unmanaged.numReplicas"));
     certsFile = properties.getProperty("cluster.unmanaged.certsFile");
+    runWithTLS = Boolean.parseBoolean(properties.getProperty("cluster.unmanaged.runWithTLS"));
   }
 
   @Override
@@ -114,6 +116,7 @@ public class UnmanagedTestCluster extends TestCluster {
 
     if (certsFile != null) {
       certs = loadMultipleRootCertsFromFile();
+      runWithTLS = true;
     }
 
       return new TestClusterConfig(
@@ -124,7 +127,8 @@ public class UnmanagedTestCluster extends TestCluster {
       replicasFromRaw(raw),
       certs,
       capabilitiesFromRaw(raw, clusterVersion),
-      clusterVersion
+      clusterVersion,
+      runWithTLS
     );
   }
 

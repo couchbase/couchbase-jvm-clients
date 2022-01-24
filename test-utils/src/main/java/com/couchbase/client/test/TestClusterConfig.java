@@ -37,10 +37,12 @@ public class TestClusterConfig {
   private final Optional<List<X509Certificate>> clusterCerts;
   private final Set<Capabilities> capabilities;
   private final ClusterVersion clusterVersion;
+  private final boolean runWithTLS;
 
   TestClusterConfig(String bucketname, String adminUsername, String adminPassword,
                     List<TestNodeConfig> nodes, int numReplicas,
-                    Optional<List<X509Certificate>> clusterCerts, Set<Capabilities> capabilities, ClusterVersion clusterVersion) {
+                    Optional<List<X509Certificate>> clusterCerts,
+                    Set<Capabilities> capabilities, ClusterVersion clusterVersion, boolean runWithTLS) {
     this.bucketname = bucketname;
     this.adminUsername = adminUsername;
     this.adminPassword = adminPassword;
@@ -49,6 +51,7 @@ public class TestClusterConfig {
     this.clusterCerts = clusterCerts;
     this.capabilities = capabilities;
     this.clusterVersion = clusterVersion;
+    this.runWithTLS = runWithTLS;
   }
 
   public String bucketname() {
@@ -81,6 +84,10 @@ public class TestClusterConfig {
 
   public ClusterVersion clusterVersion() {
     return clusterVersion;
+  }
+
+  public boolean runWithTLS() {
+    return runWithTLS;
   }
 
   /**

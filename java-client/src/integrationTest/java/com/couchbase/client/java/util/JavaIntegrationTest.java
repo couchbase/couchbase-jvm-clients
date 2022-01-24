@@ -67,7 +67,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
    */
   protected static ClusterEnvironment.Builder environment() {
     ClusterEnvironment.Builder builder = ClusterEnvironment.builder();
-    if (config().clusterCerts().isPresent()) {
+    if (config().runWithTLS()) {
       builder.securityConfig(SecurityConfig.builder()
         .enableTls(true)
         .trustCertificates(config().clusterCerts().get()));
@@ -110,7 +110,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
       int kvPort = cfg.ports().get(Services.KV);
       int managerPort = cfg.ports().get(Services.MANAGER);
 
-      if (config().clusterCerts().isPresent()) {
+      if (config().runWithTLS()) {
         kvPort = cfg.ports().get(Services.KV_TLS);
         managerPort = cfg.ports().get(Services.MANAGER_TLS);
       }

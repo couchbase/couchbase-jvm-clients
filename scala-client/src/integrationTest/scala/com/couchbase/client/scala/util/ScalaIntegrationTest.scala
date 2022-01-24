@@ -56,9 +56,9 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
     * @return the builder, ready to be further modified or used directly.
     */
   protected def environment: ClusterEnvironment.Builder = {
-    val builder = ClusterEnvironment.builder
-    if (config.clusterCerts().isPresent) {
-      builder.securityConfig(
+    var builder = ClusterEnvironment.builder
+    if (config.runWithTLS()) {
+      builder = ClusterEnvironment.builder.securityConfig(
         SecurityConfig()
           .enableTls(true)
           .trustCertificates(
@@ -94,7 +94,7 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
         var kvPort   = Some(cfg.ports.get(Services.KV).toInt)
         var httpPort = Some(cfg.ports.get(Services.MANAGER).toInt)
 
-        if (config.clusterCerts().isPresent) {
+        if (config.runWithTLS()) {
           kvPort = Some(cfg.ports.get(Services.KV_TLS).toInt)
           httpPort = Some(cfg.ports.get(Services.MANAGER_TLS).toInt)
         }

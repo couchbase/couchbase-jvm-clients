@@ -164,7 +164,8 @@ public class CavesTestCluster extends TestCluster {
       replicasFromRaw(raw),
       Optional.empty(),
       capabilitiesFromRaw(raw, clusterVersion),
-      clusterVersion
+      clusterVersion,
+      false
     );
   }
 
