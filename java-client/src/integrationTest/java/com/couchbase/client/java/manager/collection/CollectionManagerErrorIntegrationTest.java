@@ -23,6 +23,8 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.manager.bucket.BucketSettings;
+import com.couchbase.client.java.manager.bucket.BucketType;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
@@ -32,7 +34,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
@@ -74,6 +79,26 @@ public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
       FeatureNotAvailableException.class,
       () -> collections.createCollection(CollectionSpec.create("foo", "bar"))
     );
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Capabilities.COLLECTIONS)
+  void failsUnderMemcachedBuckets() {
+    String bucketName = UUID.randomUUID().toString();
+    cluster.buckets().createBucket(BucketSettings.create(bucketName).bucketType(BucketType.MEMCACHED));
+
+    try {
+      Bucket bucket = cluster.bucket(bucketName);
+      bucket.waitUntilReady(Duration.ofSeconds(10));
+
+      CollectionManager mgr = bucket.collections();
+      assertThrows(FeatureNotAvailableException.class, () -> mgr.createScope("a"));
+      assertThrows(FeatureNotAvailableException.class, () -> mgr.createCollection(CollectionSpec.create("a", "b")));
+      assertThrows(FeatureNotAvailableException.class, () -> mgr.dropScope("a"));
+      assertThrows(FeatureNotAvailableException.class, () -> mgr.dropCollection(CollectionSpec.create("a", "b")));
+    } finally {
+      cluster.buckets().dropBucket(bucketName);
+    }
   }
 
 }

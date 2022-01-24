@@ -180,6 +180,11 @@ public class CoreCollectionManager {
           // This happens on 6.5 if collections dev preview is not enabled
           throw FeatureNotAvailableException.collections();
         }
+        if (error.contains("Not allowed on this type of bucket")) {
+          // This happens on 7.0 and later under memcached buckets
+          throw FeatureNotAvailableException.collectionsForMemcached();
+        }
+
         if (error.matches(".*Collection.+not found.*")
             || error.contains("collection_not_found")) {
           throw CollectionNotFoundException.forCollection(collectionName);
