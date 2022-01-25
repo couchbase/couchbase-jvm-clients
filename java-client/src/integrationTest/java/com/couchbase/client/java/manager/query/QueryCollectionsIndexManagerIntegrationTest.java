@@ -148,9 +148,9 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     indexes.createIndex(bucketName, "mySecondary", fields, createIndexOptions);
 
     GetAllQueryIndexesOptions getOptions = enrich(getAllQueryIndexesOptions());
-    assertFalse(indexes.getAllIndexes(bucketName).stream().anyMatch(i -> i.name().equals("myPrimary")));
+    assertTrue(indexes.getAllIndexes(bucketName).stream().anyMatch(i -> i.name().equals("myPrimary")));
     assertTrue(indexes.getAllIndexes(bucketName, getOptions).stream().anyMatch(i -> i.name().equals("myPrimary")));
-    assertFalse(indexes.getAllIndexes(bucketName).stream().anyMatch(i -> i.name().equals("mySecondary")));
+    assertTrue(indexes.getAllIndexes(bucketName).stream().anyMatch(i -> i.name().equals("mySecondary")));
     assertTrue(indexes.getAllIndexes(bucketName, getOptions).stream().anyMatch(i -> i.name().equals("mySecondary")));
   }
 

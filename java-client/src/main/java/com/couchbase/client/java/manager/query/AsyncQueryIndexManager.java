@@ -258,7 +258,7 @@ public class AsyncQueryIndexManager {
         " ORDER BY is_primary DESC, name ASC";
     } else {
       statement = "SELECT idx.* FROM system:indexes AS idx" +
-        " WHERE keyspace_id = \"" + bucketName + "\"" +
+        " WHERE ((bucket_id IS MISSING AND keyspace_id = \"" + bucketName + "\") OR bucket_id = \"" + bucketName + "\")" +
         " AND `using` = \"gsi\"" +
         " ORDER BY is_primary DESC, name ASC";
     }
