@@ -47,7 +47,7 @@ class NonChunkedManagerMessageHandler extends NonChunkedHttpMessageHandler {
         || content.contains("ingress")
         || content.contains("egress")) {
         return new RateLimitedException(errorContext);
-      } else if (content.contains("maximum number of collections has been reached for scope")) {
+      } else if (content.contains("Maximum number of collections has been reached for scope")) {
         return new QuotaLimitedException(errorContext);
       }
     }

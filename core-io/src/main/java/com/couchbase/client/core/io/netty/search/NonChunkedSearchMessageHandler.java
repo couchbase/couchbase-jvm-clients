@@ -21,6 +21,8 @@ import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.error.QuotaLimitedException;
+import com.couchbase.client.core.error.RateLimitedException;
 import com.couchbase.client.core.error.context.SearchErrorContext;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.NonChunkedHttpMessageHandler;
@@ -51,6 +53,15 @@ class NonChunkedSearchMessageHandler extends NonChunkedHttpMessageHandler {
     } else if (status == HttpResponseStatus.BAD_REQUEST && content.contains("index with the same name already exists")) {
       return new IndexExistsException("The index already exists. If you meant to replace/update it, make sure " +
         "that the UUID property is set.", errorContext);
+    } else if (status == HttpResponseStatus.BAD_REQUEST && content.contains("num_fts_indexes")) {
+      return new QuotaLimitedException(errorContext);
+    } else if (status == HttpResponseStatus.TOO_MANY_REQUESTS) {
+      if (content.contains("num_concurrent_requests")
+        || content.contains("num_queries_per_min")
+        || content.contains("ingress_mib_per_min")
+        || content.contains("egress_mib_per_min")) {
+        return new RateLimitedException(errorContext);
+      }
     } else if (content.contains("Page not found")) {
 
     }

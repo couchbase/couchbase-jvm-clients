@@ -28,14 +28,23 @@ import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CbCollections;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.MutationState;
+import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.java.manager.collection.CollectionManager;
 import com.couchbase.client.java.manager.collection.CollectionSpec;
 import com.couchbase.client.java.manager.search.SearchIndex;
+import com.couchbase.client.java.query.QueryOptions;
+import com.couchbase.client.java.search.HighlightStyle;
 import com.couchbase.client.java.search.SearchOptions;
+import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.queries.QueryStringQuery;
+import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
@@ -54,6 +63,8 @@ import java.util.Map;
 import java.util.Random;
 
 import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -101,8 +112,9 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.keyValueLimits = new KeyValueLimits(10, 10, 10, 10);
     createRateLimitedUser(username, limits);
 
+    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+
     try {
-      Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       Bucket bucket = cluster.bucket(config().bucketname());
       Collection collection = bucket.defaultCollection();
       bucket.waitUntilReady(Duration.ofSeconds(10));
@@ -112,10 +124,10 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
           collection.upsert("ratelimit", "test");
         }
       });
-      assertTrue(ex.getMessage().contains("RATE_LIMITED_MAX_COMMANDS"));
 
-      cluster.disconnect();
+      assertTrue(ex.getMessage().contains("RATE_LIMITED_MAX_COMMANDS"));
     } finally {
+      cluster.disconnect();
       adminCluster.users().dropUser(username);
     }
   }
@@ -128,22 +140,25 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.keyValueLimits = new KeyValueLimits(10, 100, 1, 10);
     createRateLimitedUser(username, limits);
 
+    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+
     try {
-      Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       Bucket bucket = cluster.bucket(config().bucketname());
       Collection collection = bucket.defaultCollection();
       bucket.waitUntilReady(Duration.ofSeconds(10));
 
-      collection.upsert("ratelimitingress", randomString(1024 * 512));
+      collection.upsert("ratelimitingress", randomString(1024 * 512),
+        UpsertOptions.upsertOptions().timeout(Duration.ofSeconds(5)));
 
       RateLimitedException ex = assertThrows(
         RateLimitedException.class,
-        () -> collection.upsert("ratelimitingress", randomString(1024 * 512))
+        () -> collection.upsert("ratelimitingress", randomString(1024 * 512),
+          UpsertOptions.upsertOptions().timeout(Duration.ofSeconds(5)))
       );
-      assertTrue(ex.getMessage().contains("RATE_LIMITED_NETWORK_INGRESS"));
 
-      cluster.disconnect();
+      assertTrue(ex.getMessage().contains("RATE_LIMITED_NETWORK_INGRESS"));
     } finally {
+      cluster.disconnect();
       adminCluster.users().dropUser(username);
     }
   }
@@ -156,23 +171,25 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.keyValueLimits = new KeyValueLimits(10, 100, 10, 1);
     createRateLimitedUser(username, limits);
 
+    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+
     try {
-      Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       Bucket bucket = cluster.bucket(config().bucketname());
       Collection collection = bucket.defaultCollection();
       bucket.waitUntilReady(Duration.ofSeconds(10));
 
-      collection.upsert("ratelimitegress", randomString(1024 * 512));
+      collection.upsert("ratelimitegress", randomString(1024 * 512),
+        UpsertOptions.upsertOptions().timeout(Duration.ofSeconds(5)));
       collection.get("ratelimitegress");
       collection.get("ratelimitegress");
       RateLimitedException ex = assertThrows(
         RateLimitedException.class,
         () -> collection.get("ratelimitegress")
       );
-      assertTrue(ex.getMessage().contains("RATE_LIMITED_NETWORK_EGRESS"));
 
-      cluster.disconnect();
+      assertTrue(ex.getMessage().contains("RATE_LIMITED_NETWORK_EGRESS"));
     } finally {
+      cluster.disconnect();
       adminCluster.users().dropUser(username);
     }
   }
@@ -185,8 +202,9 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.keyValueLimits = new KeyValueLimits(2, 100, 10, 10);
     createRateLimitedUser(username, limits);
 
+    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+
     try {
-      Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       Bucket bucket = cluster.bucket(config().bucketname());
       bucket.waitUntilReady(Duration.ofSeconds(10));
 
@@ -195,9 +213,9 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       // The first connect will succeed, but the second will time out due to the num connection limit
       assertThrows(UnambiguousTimeoutException.class, () -> bucket2.waitUntilReady(Duration.ofSeconds(3)));
 
-      cluster.disconnect();
       cluster2.disconnect();
     } finally {
+      cluster.disconnect();
       adminCluster.users().dropUser(username);
     }
   }
@@ -234,8 +252,9 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.queryLimits = new QueryLimits(10, 1, 10, 10);
     createRateLimitedUser(username, limits);
 
+    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+
     try {
-      Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       cluster.waitUntilReady(Duration.ofSeconds(10));
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
@@ -243,10 +262,10 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
           cluster.query("select 1 = 1");
         }
       });
-      assertTrue(ex.getMessage().contains("User has exceeded request rate limit"));
 
-      cluster.disconnect();
+      assertTrue(ex.getMessage().contains("User has exceeded request rate limit"));
     } finally {
+      cluster.disconnect();
       adminCluster.users().dropUser(username);
     }
   }
@@ -260,20 +279,22 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.queryLimits = new QueryLimits(10000, 10000, 1, 10);
     createRateLimitedUser(username, limits);
 
+    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+
     try {
-      Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       cluster.waitUntilReady(Duration.ofSeconds(10));
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
-        for (int i = 0; i < 50; i++) {
-          String content = String.join("", Collections.nCopies(1024 * 1024 * 5, "a"));
-          cluster.query("UPSERT INTO `" + config().bucketname() + "` (KEY,VALUE) VALUES (\"key1\", \""+content+"\")");
+        for (int i = 0; i < 5; i++) {
+          String content = repeatString(1024 * 1024 * 5, "a");
+          cluster.query("UPSERT INTO `" + config().bucketname() + "` (KEY,VALUE) VALUES (\"key1\", \"" + content + "\")",
+            QueryOptions.queryOptions().timeout(Duration.ofSeconds(30)));//Can take a while
         }
       });
-      assertTrue(ex.getMessage().contains("User has exceeded input network traffic limit"));
 
-      cluster.disconnect();
+      assertTrue(ex.getMessage().contains("User has exceeded input network traffic limit"));
     } finally {
+      cluster.disconnect();
       adminCluster.users().dropUser(username);
     }
   }
@@ -287,23 +308,25 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.queryLimits = new QueryLimits(10000, 10000, 10, 1);
     createRateLimitedUser(username, limits);
 
+    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+
     try {
-      Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       cluster.waitUntilReady(Duration.ofSeconds(10));
 
-      String content = String.join("", Collections.nCopies(1024 * 1024, "a"));
-      cluster.query("UPSERT INTO `" + config().bucketname() + "` (KEY,VALUE) VALUES (\"key1\", \""+content+"\")");
+      String content = repeatString(1024 * 1024, "a");
+      Collection collection = cluster.bucket(config().bucketname()).defaultCollection();
+      collection.upsert("key1", content, UpsertOptions.upsertOptions().timeout(Duration.ofSeconds(5)));
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
         for (int i = 0; i < 50; i++) {
-            cluster.query("SELECT * FROM `"+ config().bucketname() +"` USE KEYS [\"key1\"]");
+          cluster.query("SELECT * FROM `" + config().bucketname() + "` USE KEYS [\"key1\"]",
+            QueryOptions.queryOptions().timeout(Duration.ofSeconds(15)));
         }
       });
 
       assertTrue(ex.getMessage().contains("User has exceeded results size limit"));
-
-      cluster.disconnect();
     } finally {
+      cluster.disconnect();
       adminCluster.users().dropUser(username);
     }
   }
@@ -316,27 +339,24 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     Limits limits = new Limits();
     limits.queryLimits = new QueryLimits(1, 100, 10, 10);
     createRateLimitedUser(username, limits);
+    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
 
     try {
-      Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       cluster.waitUntilReady(Duration.ofSeconds(10));
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> Flux
         .range(0, 50)
         .flatMap(i -> cluster.reactive().query("select 1=1"))
-        .last()
-        .block());
+        .blockLast());
 
       assertTrue(ex.getMessage().contains("User has more requests running than allowed"));
-
-      cluster.disconnect();
     } finally {
+      cluster.disconnect();
       adminCluster.users().dropUser(username);
     }
   }
 
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.QUERY)
   void clusterManagerRateLimitConcurrentRequests() throws Exception {
     String username = "clusterManagerRateLimitConcurrentRequests";
 
@@ -344,21 +364,40 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.clusterManagerLimits = new ClusterManagerLimits(1, 10, 10);
     createRateLimitedUser(username, limits);
 
+    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+
     try {
-      Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       cluster.waitUntilReady(Duration.ofSeconds(10));
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> Flux
         .range(0, 10)
         .flatMap(i -> cluster.reactive().buckets().getAllBuckets())
-        .last()
-        .block());
+        .blockLast());
 
       assertTrue(ex.getMessage().contains("Limit(s) exceeded [num_concurrent_requests]"));
-
-      cluster.disconnect();
     } finally {
+      cluster.disconnect();
       adminCluster.users().dropUser(username);
+    }
+  }
+
+  @Test
+  void scopeQuotaLimitExceedMaxCollections() throws Exception {
+    String scopeName = "exceedMaxCollections";
+
+    ScopeRateLimits limits = new ScopeRateLimits();
+    limits.clusterManager = new ClusterManagerScopeRateLimit(1);
+    createLimitedScope(scopeName, config().bucketname(), limits);
+
+    CollectionManager collectionManager = adminCluster.bucket(config().bucketname()).collections();
+
+    try {
+      collectionManager.createCollection(CollectionSpec.create("collection1", scopeName));
+
+      assertThrows(QuotaLimitedException.class, () ->
+        collectionManager.createCollection(CollectionSpec.create("collection2", scopeName)));
+    } finally {
+      collectionManager.dropScope(scopeName);
     }
   }
 
@@ -372,9 +411,9 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     createRateLimitedUser(username, limits);
 
     adminCluster.searchIndexes().upsertIndex(new SearchIndex("ratelimits", config().bucketname()));
+    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
 
     try {
-      Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
       cluster.waitUntilReady(Duration.ofSeconds(10));
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
@@ -392,12 +431,173 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
           }
         }
       });
-      assertTrue(ex.getMessage().contains("num_queries_per_min"));
 
-      cluster.disconnect();
+      assertTrue(ex.getMessage().contains("num_queries_per_min"));
     } finally {
+      cluster.disconnect();
       adminCluster.users().dropUser(username);
       adminCluster.searchIndexes().dropIndex("ratelimits");
+    }
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Capabilities.SEARCH)
+  void searchRateLimitMaxEgress() throws Exception {
+    String username = "searchRateLimitEgress";
+
+    Limits limits = new Limits();
+    limits.searchLimits = new SearchLimits(10, 100, 10, 1);
+    createRateLimitedUser(username, limits);
+
+    adminCluster.searchIndexes().upsertIndex(new SearchIndex("ratelimits-egress", config().bucketname()));
+    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+
+    try {
+      cluster.waitUntilReady(Duration.ofSeconds(10));
+
+      String content = repeatString(1024 * 1024, "a");
+      MutationResult mutationResult = cluster.bucket(config().bucketname()).defaultCollection()
+        .upsert("fts-egress", JsonObject.create().put("content", content),
+          UpsertOptions.upsertOptions().timeout(Duration.ofSeconds(10)));
+
+      RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
+        for (int i = 0; i < 10; i++) {
+          try {
+            cluster.searchQuery("ratelimits-egress", SearchQuery.wildcard("a*"),
+              SearchOptions.searchOptions().timeout(Duration.ofSeconds(10)).fields("content")
+                .consistentWith(MutationState.from(mutationResult.mutationToken().get())).highlight(HighlightStyle.HTML, "content"));
+          } catch (TimeoutException e) {
+            // continue
+          } catch (CouchbaseException e) {
+            if (e.getMessage().contains("no planPIndexes")) {
+              continue;
+            }
+            throw e;
+          }
+        }
+      });
+
+      assertTrue(ex.getMessage().contains("egress_mib_per_min"));
+    } finally {
+      cluster.disconnect();
+      adminCluster.users().dropUser(username);
+      adminCluster.searchIndexes().dropIndex("ratelimits-egress");
+    }
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Capabilities.SEARCH)
+  void searchRateLimitMaxIngress() throws Exception {
+    String username = "searchRateLimitIngress";
+
+    Limits limits = new Limits();
+    limits.searchLimits = new SearchLimits(10, 100, 1, 10);
+    createRateLimitedUser(username, limits);
+
+    adminCluster.searchIndexes().upsertIndex(new SearchIndex("ratelimits-ingress", config().bucketname()));
+    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+
+    try {
+      cluster.waitUntilReady(Duration.ofSeconds(10));
+      String content = repeatString(1024 * 1024, "a");
+
+      RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
+        for (int i = 0; i < 10; i++) {
+          try {
+            SearchResult res = cluster.searchQuery("ratelimits-ingress", QueryStringQuery.match(content),
+              SearchOptions.searchOptions().timeout(Duration.ofSeconds(10)).limit(1));
+          } catch (TimeoutException e) {
+            // continue
+          } catch (CouchbaseException e) {
+            if (e.getMessage().contains("no planPIndexes")) {
+              continue;
+            }
+            throw e;
+          }
+        }
+      });
+
+      assertTrue(ex.getMessage().contains("ingress_mib_per_min"));
+    } finally {
+      cluster.disconnect();
+      adminCluster.users().dropUser(username);
+      adminCluster.searchIndexes().dropIndex("ratelimits-ingress");
+    }
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Capabilities.SEARCH)
+  void searchRateLimitConcurrentRequests() throws Exception {
+    String username = "searchRateLimitConcurrentRequests";
+
+    Limits limits = new Limits();
+    limits.searchLimits = new SearchLimits(1, 100, 10, 10);
+    createRateLimitedUser(username, limits);
+
+    adminCluster.searchIndexes().upsertIndex(new SearchIndex("ratelimits", config().bucketname()));
+    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+
+    try {
+      cluster.waitUntilReady(Duration.ofSeconds(10));
+
+      RateLimitedException ex = assertThrows(RateLimitedException.class, () -> Flux
+        .range(0, 50)
+        .flatMap(i -> cluster.reactive().searchQuery("ratelimits", QueryStringQuery.queryString("a")))
+        .blockLast());
+
+      assertTrue(ex.getMessage().contains("num_concurrent_requests"));
+    } finally {
+      cluster.disconnect();
+      adminCluster.users().dropUser(username);
+      adminCluster.searchIndexes().dropIndex("ratelimits");
+    }
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Capabilities.SEARCH)
+  void searchQuotaLimitScopesMaxIndexes() throws Exception {
+    String scopeName = "ratelimitSearch";
+    String collectionName = "searchCollection";
+    ScopeRateLimits limits = new ScopeRateLimits();
+    limits.fts = new SearchScopeRateLimit(1);
+    createLimitedScope(scopeName, config().bucketname(), limits);
+
+    CollectionManager collectionManager = adminCluster.bucket(config().bucketname()).collections();
+
+    Map<String, Object> params = mapOf("mapping", mapOf(
+      "types", mapOf(
+        scopeName + "." + collectionName, mapOf(
+          "enabled", true,
+          "dynamic", true
+        )
+      ),
+      "default_mapping", mapOf(
+        "enabled", false
+      ),
+      "default_type", "_default",
+      "default_analyzer", "standard",
+      "default_field", "_all"
+      ),
+      "doc_config", mapOf(
+        "mode", "scope.collection.type_field",
+        "type_field", "type"
+      ));
+
+    try {
+      CollectionSpec collectionSpec = CollectionSpec.create(collectionName, scopeName);
+      collectionManager.createCollection(collectionSpec);
+      waitUntilCondition(() -> collectionExists(collectionManager, collectionSpec));
+
+      waitForService(adminCluster.bucket(config().bucketname()), ServiceType.SEARCH);
+      adminCluster.searchIndexes().upsertIndex(new SearchIndex("ratelimits1", config().bucketname())
+        .params(params));
+      QuotaLimitedException ex = assertThrows(
+        QuotaLimitedException.class,
+        () -> adminCluster.searchIndexes().upsertIndex(new SearchIndex("ratelimits2", config().bucketname())
+          .params(params))
+      );
+    } finally {
+      collectionManager.dropScope(scopeName);
     }
   }
 
@@ -412,6 +612,17 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     byte[] array = new byte[length];
     new Random().nextBytes(array);
     return new String(array, StandardCharsets.UTF_8);
+  }
+
+  /**
+   * Generates a string of a sequence repeated n times for Search service tests
+   *
+   * @param repeats the length of the random string.
+   * @param seq     the character sequence to be repeated
+   * @return the generated string.
+   */
+  static String repeatString(int repeats, String seq) {
+    return String.join("", Collections.nCopies(repeats, seq));
   }
 
   /**
@@ -443,7 +654,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     }
     if (limits.queryLimits != null) {
       QueryLimits query = limits.queryLimits;
-      jsonLimits.put("query", CbCollections.mapOf(
+      jsonLimits.put("query", mapOf(
         "num_queries_per_min", query.numQueriesPerMin,
         "num_concurrent_requests", query.numConcurrentRequests,
         "ingress_mib_per_min", query.ingressMibPerMin,
@@ -452,7 +663,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     }
     if (limits.searchLimits != null) {
       SearchLimits fts = limits.searchLimits;
-      jsonLimits.put("fts", CbCollections.mapOf(
+      jsonLimits.put("fts", mapOf(
         "num_queries_per_min", fts.numQueriesPerMin,
         "num_concurrent_requests", fts.numConcurrentRequests,
         "ingress_mib_per_min", fts.ingressMibPerMin,
@@ -461,7 +672,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     }
     if (limits.clusterManagerLimits != null) {
       ClusterManagerLimits cm = limits.clusterManagerLimits;
-      jsonLimits.put("clusterManager", CbCollections.mapOf(
+      jsonLimits.put("clusterManager", mapOf(
         "num_concurrent_requests", cm.numConcurrentRequests,
         "ingress_mib_per_min", cm.ingressMibPerMin,
         "egress_mib_per_min", cm.egressMibPerMin
@@ -487,22 +698,22 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
   static void createLimitedScope(String name, String bucket, ScopeRateLimits limits) throws Exception {
     Map<String, Object> jsonLimits = new HashMap<>();
     if (limits.kv != null) {
-      jsonLimits.put("kv", CbCollections.mapOf(
+      jsonLimits.put("kv", mapOf(
         "data_size", limits.kv.dataSize
       ));
     }
     if (limits.fts != null) {
-      jsonLimits.put("fts", CbCollections.mapOf(
+      jsonLimits.put("fts", mapOf(
         "num_fts_indexes", limits.fts.numFtsIndexes
       ));
     }
     if (limits.index != null) {
-      jsonLimits.put("index", CbCollections.mapOf(
+      jsonLimits.put("index", mapOf(
         "num_indexes", limits.index.numIndexes
       ));
     }
     if (limits.clusterManager != null) {
-      jsonLimits.put("clusterManager", CbCollections.mapOf(
+      jsonLimits.put("clusterManager", mapOf(
         "num_collections", limits.clusterManager.numCollections
       ));
     }
@@ -600,14 +811,26 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
 
   static class SearchScopeRateLimit {
     int numFtsIndexes;
+
+    public SearchScopeRateLimit(int numFtsIndexes) {
+      this.numFtsIndexes = numFtsIndexes;
+    }
   }
 
   static class IndexScopeRateLimit {
     int numIndexes;
+
+    public IndexScopeRateLimit(int numIndexes) {
+      this.numIndexes = numIndexes;
+    }
   }
 
   static class ClusterManagerScopeRateLimit {
     int numCollections;
+
+    public ClusterManagerScopeRateLimit(int numCollections) {
+      this.numCollections = numCollections;
+    }
   }
 
 }
