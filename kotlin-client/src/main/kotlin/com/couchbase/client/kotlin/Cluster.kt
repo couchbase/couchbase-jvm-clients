@@ -36,6 +36,7 @@ import com.couchbase.client.kotlin.analytics.AnalyticsParameters
 import com.couchbase.client.kotlin.analytics.AnalyticsPriority
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
+import com.couchbase.client.kotlin.annotations.SinceCouchbase
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.env.ClusterEnvironment
@@ -177,7 +178,7 @@ public class Cluster internal constructor(
      *
      * @param preserveExpiry pass true if you want the query engine to preserve
      * existing expiration times for any documents modified by this query.
-     * *Requires Couchbase Server 7.1.0 or later.*
+     * *Requires Couchbase Server 7.1 or later.*
      *
      * @param serializer the serializer to use for converting parameters to JSON,
      * and the default serializer for parsing [QueryRow] content.
@@ -235,7 +236,7 @@ public class Cluster internal constructor(
         statement: String,
         common: CommonOptions = CommonOptions.Default,
         parameters: QueryParameters = QueryParameters.None,
-        preserveExpiry: Boolean = false,
+        @SinceCouchbase("7.1") preserveExpiry: Boolean = false,
 
         serializer: JsonSerializer? = null,
 

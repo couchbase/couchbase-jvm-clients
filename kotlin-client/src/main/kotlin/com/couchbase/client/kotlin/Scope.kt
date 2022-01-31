@@ -36,6 +36,7 @@ import com.couchbase.client.kotlin.query.QueryResult
 import com.couchbase.client.kotlin.query.QueryRow
 import com.couchbase.client.kotlin.query.QueryScanConsistency
 import com.couchbase.client.kotlin.query.internal.QueryExecutor
+import com.couchbase.client.kotlin.annotations.SinceCouchbase
 import kotlinx.coroutines.flow.Flow
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -96,7 +97,7 @@ public class Scope(
      *
      * @param preserveExpiry pass true if you want the query engine to preserve
      * existing expiration times for any documents modified by this query.
-     * *Requires Couchbase Server 7.1.0 or later.*
+     * *Requires Couchbase Server 7.1 or later.*
      *
      * @param serializer the serializer to use for converting parameters to JSON,
      * and the default serializer for parsing [QueryRow] content.
@@ -149,7 +150,7 @@ public class Scope(
         statement: String,
         common: CommonOptions = CommonOptions.Default,
         parameters: QueryParameters = QueryParameters.None,
-        preserveExpiry: Boolean = false,
+        @SinceCouchbase("7.1") preserveExpiry: Boolean = false,
 
         serializer: JsonSerializer? = null,
 

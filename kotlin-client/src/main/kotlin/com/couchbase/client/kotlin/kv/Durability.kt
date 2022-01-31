@@ -7,6 +7,7 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel.PERSIST_TO_MAJORITY
 import com.couchbase.client.core.service.kv.Observe.ObservePersistTo
 import com.couchbase.client.core.service.kv.Observe.ObserveReplicateTo
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
+import com.couchbase.client.kotlin.annotations.SinceCouchbase
 
 /**
  * Specifies the durability requirements for a mutation.
@@ -56,16 +57,14 @@ public sealed class Durability {
         /**
          * The mutation must be replicated to (that is, held in the memory
          * allocated to the bucket on) a majority of the Data Service nodes.
-         *
-         * Requires Couchbase Server 6.5 or later.
          */
+        @SinceCouchbase("6.5")
         public fun majority(): Durability = Synchronous(MAJORITY)
 
         /**
          * The mutation must be persisted to a majority of the Data Service nodes.
-         *
-         * Requires Couchbase Server 6.5 or later.
          */
+        @SinceCouchbase("6.5")
         public fun persistToMajority(): Durability = Synchronous(PERSIST_TO_MAJORITY)
 
         /**
@@ -73,9 +72,8 @@ public sealed class Durability {
          *
          * Additionally, it must be persisted (that is, written and synchronised to disk)
          * on the node hosting the active partition (vBucket) for the data.
-         *
-         * Requires Couchbase Server 6.5 or later.
          */
+        @SinceCouchbase("6.5")
         public fun majorityAndPersistToActive(): Durability = Synchronous(MAJORITY_AND_PERSIST_TO_ACTIVE)
     }
 }
