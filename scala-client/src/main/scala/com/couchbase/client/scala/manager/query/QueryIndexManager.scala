@@ -70,7 +70,9 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Try[collection.Seq[QueryIndex]] = {
-    Collection.block(async.getAllIndexes(bucketName, timeout, retryStrategy, scopeName, collectionName))
+    Collection.block(
+      async.getAllIndexes(bucketName, timeout, retryStrategy, scopeName, collectionName)
+    )
   }
 
   /** Creates a new query index with the specified parameters.
@@ -178,7 +180,15 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       collectionName: Option[String] = None
   ): Try[Unit] = {
     Collection.block(
-      async.dropIndex(bucketName, indexName, ignoreIfNotExists, timeout, retryStrategy, scopeName, collectionName)
+      async.dropIndex(
+        bucketName,
+        indexName,
+        ignoreIfNotExists,
+        timeout,
+        retryStrategy,
+        scopeName,
+        collectionName
+      )
     )
 
   }
@@ -202,7 +212,16 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Try[Unit] = {
-    Collection.block(async.dropPrimaryIndex(bucketName, ignoreIfNotExists, timeout, retryStrategy, scopeName, collectionName))
+    Collection.block(
+      async.dropPrimaryIndex(
+        bucketName,
+        ignoreIfNotExists,
+        timeout,
+        retryStrategy,
+        scopeName,
+        collectionName
+      )
+    )
   }
 
   /** Polls the specified indexes until they are all online.
@@ -228,7 +247,15 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       collectionName: Option[String] = None
   ): Try[Unit] = {
     Collection.block(
-      async.watchIndexes(bucketName, indexNames, timeout, watchPrimary, retryStrategy, scopeName, collectionName)
+      async.watchIndexes(
+        bucketName,
+        indexNames,
+        timeout,
+        watchPrimary,
+        retryStrategy,
+        scopeName,
+        collectionName
+      )
     )
   }
 
@@ -249,6 +276,8 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Try[Unit] = {
-    Collection.block(async.buildDeferredIndexes(bucketName, timeout, retryStrategy, scopeName, collectionName))
+    Collection.block(
+      async.buildDeferredIndexes(bucketName, timeout, retryStrategy, scopeName, collectionName)
+    )
   }
 }

@@ -72,7 +72,13 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       @Stability.Uncommitted
       collectionName: Option[String] = None
   ): SFlux[QueryIndex] = {
-    val (statement: String, options: QueryOptions) = AsyncQueryIndexManager.getStatementAndOptions(bucketName, timeout, retryStrategy, scopeName, collectionName)
+    val (statement: String, options: QueryOptions) = AsyncQueryIndexManager.getStatementAndOptions(
+      bucketName,
+      timeout,
+      retryStrategy,
+      scopeName,
+      collectionName
+    )
 
     cluster
       .query(
@@ -188,7 +194,15 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       collectionName: Option[String] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
-      async.dropIndex(bucketName, indexName, ignoreIfNotExists, timeout, retryStrategy, scopeName, collectionName)
+      async.dropIndex(
+        bucketName,
+        indexName,
+        ignoreIfNotExists,
+        timeout,
+        retryStrategy,
+        scopeName,
+        collectionName
+      )
     )
 
   }
@@ -212,7 +226,16 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       @Stability.Uncommitted
       collectionName: Option[String] = None
   ): SMono[Unit] = {
-    SMono.fromFuture(async.dropPrimaryIndex(bucketName, ignoreIfNotExists, timeout, retryStrategy, scopeName, collectionName))
+    SMono.fromFuture(
+      async.dropPrimaryIndex(
+        bucketName,
+        ignoreIfNotExists,
+        timeout,
+        retryStrategy,
+        scopeName,
+        collectionName
+      )
+    )
   }
 
   /** Polls the specified indexes until they are all online.
@@ -238,7 +261,15 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       collectionName: Option[String] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
-      async.watchIndexes(bucketName, indexNames, timeout, watchPrimary, retryStrategy, scopeName, collectionName)
+      async.watchIndexes(
+        bucketName,
+        indexNames,
+        timeout,
+        watchPrimary,
+        retryStrategy,
+        scopeName,
+        collectionName
+      )
     )
   }
 
@@ -259,6 +290,8 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       @Stability.Uncommitted
       collectionName: Option[String] = None
   ): SMono[Unit] = {
-    SMono.fromFuture(async.buildDeferredIndexes(bucketName, timeout, retryStrategy, scopeName, collectionName))
+    SMono.fromFuture(
+      async.buildDeferredIndexes(bucketName, timeout, retryStrategy, scopeName, collectionName)
+    )
   }
 }
