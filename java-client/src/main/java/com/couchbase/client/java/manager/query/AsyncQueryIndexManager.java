@@ -66,7 +66,6 @@ import static com.couchbase.client.java.manager.query.DropQueryIndexOptions.drop
 import static com.couchbase.client.java.manager.query.GetAllQueryIndexesOptions.getAllQueryIndexesOptions;
 import static com.couchbase.client.java.manager.query.WatchQueryIndexesOptions.watchQueryIndexesOptions;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
@@ -406,27 +405,30 @@ public class AsyncQueryIndexManager {
     notNull(options, "Options");
     final BuildQueryIndexOptions.Built builtOpts = options.build();
 
-    return getAllIndexes(bucketName, toGetAllIndexesOptions(builtOpts))
-        .thenCompose(allIndexes -> {
-          List<String> deferredIndexNames = allIndexes.stream()
-              .filter(idx -> "deferred".equals(idx.state()))
-              .map(QueryIndex::name)
-              .collect(toList());
+    String statement;
+    if (builtOpts.collectionName().isPresent() && builtOpts.scopeName().isPresent()) {
+      String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
 
-          if (deferredIndexNames.isEmpty()) {
-            return completedFuture(null);
-          }
+      statement = "BUILD INDEX ON " + keyspace + " (" +
+        "  (" +
+        "    SELECT RAW name FROM system:indexes " +
+        "    WHERE bucket_id = \"" + bucketName + "\"" +
+        "      AND scope_id = \"" + builtOpts.scopeName().get() + "\"" +
+        "      AND keyspace_id = \"" + builtOpts.collectionName().get() + "\"" +
+        "      AND state = \"deferred\"" +
+        "  )" +
+        ")";
+    } else {
+      statement = "BUILD INDEX ON `" + bucketName + "` (" +
+        "  (" +
+        "    SELECT RAW name FROM system:indexes " +
+        "    WHERE keyspace_id = \"" + bucketName + "\" AND bucket_id IS MISSING AND state = \"deferred\"" +
+        "  )" +
+        ")";
+    }
 
-          String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
-          String statement = "BUILD INDEX ON " + keyspace + "(" +
-              deferredIndexNames.stream()
-                  .map(AsyncQueryIndexManager::quote)
-                  .collect(Collectors.joining(",")) + ")";
-
-          return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_BUILD_DEFERRED_INDEXES, bucketName);
-
-        })
-        .thenApply(result -> null);
+    return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_BUILD_DEFERRED_INDEXES, bucketName)
+      .thenApply(result -> null);
   }
 
   /**
@@ -483,16 +485,6 @@ public class AsyncQueryIndexManager {
         .onErrorMap(t -> t instanceof RetryExhaustedException ? toWatchTimeoutException(t, timeout) : t)
         .toFuture()
         .whenComplete((r, t) -> parent.end());
-  }
-
-  private static GetAllQueryIndexesOptions toGetAllIndexesOptions(final BuildQueryIndexOptions.Built opts) {
-    GetAllQueryIndexesOptions result = getAllQueryIndexesOptions();
-    opts.retryStrategy().ifPresent(result::retryStrategy);
-    opts.timeout().ifPresent(result::timeout);
-    opts.scopeName().ifPresent(result::scopeName);
-    opts.collectionName().ifPresent(result::collectionName);
-    result.clientContext(opts.clientContext());
-    return result;
   }
 
   private static String formatIndexFields(Collection<String> fields) {

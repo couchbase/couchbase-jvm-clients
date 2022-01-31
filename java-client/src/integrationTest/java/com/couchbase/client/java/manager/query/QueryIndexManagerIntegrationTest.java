@@ -17,6 +17,7 @@
 package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.error.IndexExistsException;
+import com.couchbase.client.core.error.IndexFailureException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
@@ -224,8 +225,7 @@ public class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void buildDeferredIndexOnAbsentBucket() {
-    // It would be great to throw BucketNotFoundException, but it's unclear how to detect that condition.
-    indexes.buildDeferredIndexes("noSuchBucket");
+    assertThrows(IndexFailureException.class, () -> indexes.buildDeferredIndexes("noSuchBucket"));
   }
 
   @Test
