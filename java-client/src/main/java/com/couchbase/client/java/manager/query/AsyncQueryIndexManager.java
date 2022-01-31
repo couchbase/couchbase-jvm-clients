@@ -31,6 +31,7 @@ import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 import reactor.core.publisher.Mono;
@@ -140,7 +141,7 @@ public class AsyncQueryIndexManager {
     final String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
     final String statement = "CREATE INDEX " + quote(indexName) + " ON " + keyspace + formatIndexFields(fields);
 
-    return exec(WRITE, statement, builtOpts.with(), builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_INDEX, bucketName)
+    return exec(WRITE, statement, builtOpts.with(), builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_INDEX, bucketName, null)
         .exceptionally(t -> {
           if (builtOpts.ignoreIfExists() && hasCause(t, IndexExistsException.class)) {
             return null;
@@ -197,7 +198,7 @@ public class AsyncQueryIndexManager {
     }
     statement += "ON " + keyspace;
 
-    return exec(WRITE, statement, builtOpts.with(), builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_PRIMARY_INDEX, bucketName)
+    return exec(WRITE, statement, builtOpts.with(), builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_PRIMARY_INDEX, bucketName, null)
         .exceptionally(t -> {
           if (builtOpts.ignoreIfExists() && hasCause(t, IndexExistsException.class)) {
             return null;
@@ -244,25 +245,28 @@ public class AsyncQueryIndexManager {
     final GetAllQueryIndexesOptions.Built builtOpts = options.build();
 
     String statement;
+    JsonArray params;
     if (builtOpts.scopeName().isPresent() && builtOpts.collectionName().isPresent()) {
       statement = "SELECT idx.* FROM system:indexes AS idx" +
-        " WHERE keyspace_id = \"" + builtOpts.collectionName().get() + "\" AND bucket_id = \""
-        + bucketName + "\" AND scope_id = \"" + builtOpts.scopeName().get() + "\"" +
+        " WHERE keyspace_id = ? AND bucket_id = ? AND scope_id = ?" +
         " AND `using` = \"gsi\"" +
         " ORDER BY is_primary DESC, name ASC";
+      params = JsonArray.from(builtOpts.collectionName().get(), bucketName, builtOpts.scopeName().get());
     } else if (builtOpts.scopeName().isPresent()) {
       statement = "SELECT idx.* FROM system:indexes AS idx" +
-        " WHERE bucket_id = \"" + bucketName + "\" AND scope_id = \"" + builtOpts.scopeName().get() + "\"" +
+        " WHERE bucket_id = ? AND scope_id = ?" +
         " AND `using` = \"gsi\"" +
         " ORDER BY is_primary DESC, name ASC";
+      params = JsonArray.from(bucketName, builtOpts.scopeName().get());
     } else {
       statement = "SELECT idx.* FROM system:indexes AS idx" +
-        " WHERE ((bucket_id IS MISSING AND keyspace_id = \"" + bucketName + "\") OR bucket_id = \"" + bucketName + "\")" +
+        " WHERE ((bucket_id IS MISSING AND keyspace_id = ?) OR bucket_id = ?)" +
         " AND `using` = \"gsi\"" +
         " ORDER BY is_primary DESC, name ASC";
+      params = JsonArray.from(bucketName, bucketName);
     }
 
-    return exec(READ_ONLY, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_GET_ALL_INDEXES, bucketName)
+    return exec(READ_ONLY, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_GET_ALL_INDEXES, bucketName, params)
         .thenApply(result -> result.rowsAsObject().stream()
             .map(QueryIndex::new)
             .collect(toList()));
@@ -307,7 +311,7 @@ public class AsyncQueryIndexManager {
     final String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
     final String statement = "DROP PRIMARY INDEX ON " + keyspace;
 
-    return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_DROP_PRIMARY_INDEX, bucketName)
+    return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_DROP_PRIMARY_INDEX, bucketName, null)
         .exceptionally(t -> {
           if (builtOpts.ignoreIfNotExists() && hasCause(t, IndexNotFoundException.class)) {
             return null;
@@ -362,7 +366,7 @@ public class AsyncQueryIndexManager {
       ? "DROP INDEX " + quote(indexName) + " ON " + buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName())
       : "DROP INDEX " + quote(bucketName, indexName);
 
-    return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_DROP_INDEX, bucketName)
+    return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_DROP_INDEX, bucketName, null)
         .exceptionally(t -> {
           if (builtOpts.ignoreIfNotExists() && hasCause(t, IndexNotFoundException.class)) {
             return null;
@@ -406,28 +410,31 @@ public class AsyncQueryIndexManager {
     final BuildQueryIndexOptions.Built builtOpts = options.build();
 
     String statement;
+    JsonArray parameters;
     if (builtOpts.collectionName().isPresent() && builtOpts.scopeName().isPresent()) {
       String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
 
       statement = "BUILD INDEX ON " + keyspace + " (" +
         "  (" +
         "    SELECT RAW name FROM system:indexes " +
-        "    WHERE bucket_id = \"" + bucketName + "\"" +
-        "      AND scope_id = \"" + builtOpts.scopeName().get() + "\"" +
-        "      AND keyspace_id = \"" + builtOpts.collectionName().get() + "\"" +
+        "    WHERE bucket_id = ?" +
+        "      AND scope_id = ?" +
+        "      AND keyspace_id = ?" +
         "      AND state = \"deferred\"" +
         "  )" +
         ")";
+      parameters = JsonArray.from(bucketName, builtOpts.scopeName().get(), builtOpts.collectionName().get());
     } else {
       statement = "BUILD INDEX ON `" + bucketName + "` (" +
         "  (" +
         "    SELECT RAW name FROM system:indexes " +
-        "    WHERE keyspace_id = \"" + bucketName + "\" AND bucket_id IS MISSING AND state = \"deferred\"" +
+        "    WHERE keyspace_id = ? AND bucket_id IS MISSING AND state = \"deferred\"" +
         "  )" +
         ")";
+      parameters = JsonArray.from(bucketName);
     }
 
-    return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_BUILD_DEFERRED_INDEXES, bucketName)
+    return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_BUILD_DEFERRED_INDEXES, bucketName, parameters)
       .thenApply(result -> null);
   }
 
@@ -556,16 +563,22 @@ public class AsyncQueryIndexManager {
   }
 
   private CompletableFuture<QueryResult> exec(QueryType queryType, CharSequence statement, Map<String, Object> with,
-                                              CommonOptions<?>.BuiltCommonOptions options, String spanName, String bucketName) {
+                                              CommonOptions<?>.BuiltCommonOptions options, String spanName, String bucketName,
+                                              JsonArray parameters) {
     return with.isEmpty()
-        ? exec(queryType, statement, options, spanName, bucketName)
-        : exec(queryType, statement + " WITH " + Mapper.encodeAsString(with), options, spanName, bucketName);
+        ? exec(queryType, statement, options, spanName, bucketName, parameters)
+        : exec(queryType, statement + " WITH " + Mapper.encodeAsString(with), options, spanName, bucketName, parameters);
   }
 
   private CompletableFuture<QueryResult> exec(QueryType queryType, CharSequence statement,
-                                              CommonOptions<?>.BuiltCommonOptions options, String spanName, String bucketName) {
+                                              CommonOptions<?>.BuiltCommonOptions options, String spanName, String bucketName,
+                                              JsonArray parameters) {
     QueryOptions queryOpts = toQueryOptions(options)
         .readonly(requireNonNull(queryType) == READ_ONLY);
+
+    if (parameters != null && !parameters.isEmpty()) {
+      queryOpts.parameters(parameters);
+    }
 
     RequestSpan parent = cluster.environment().requestTracer().requestSpan(spanName, options.parentSpan().orElse(null));
     parent.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
