@@ -17,6 +17,7 @@ package com.couchbase.client.scala.kv
 
 import java.time.Instant
 
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability.{Uncommitted, Volatile}
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
@@ -38,7 +39,7 @@ case class ReplaceOptions(
     // null is not very Scala, but is required for backwards-compatibility
     private[scala] val expiry: Duration = null,
     private[scala] val expiryTime: Option[Instant] = None,
-    private[scala] val preserveExpiry: Boolean = false
+    @SinceCouchbase("7.0") private[scala] val preserveExpiry: Boolean = false
 ) {
 
   /** Couchbase documents all have a CAS (Compare-And-Set) field, a simple integer that allows
@@ -170,6 +171,7 @@ case class ReplaceOptions(
     *
     * @return a copy of this with the change applied, for chaining.
     */
+  @SinceCouchbase("7.0")
   def preserveExpiry(value: Boolean): ReplaceOptions = {
     copy(preserveExpiry = value)
   }

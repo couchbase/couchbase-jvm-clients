@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.util.EnumLookupTable;
 
@@ -31,9 +32,9 @@ public enum ServerFeature {
   /**
    * The custom datatype feature.
    *
-   * @since Couchbase Server 4.0
    * @deprecated this feature is considered retired.
    */
+  @SinceCouchbase("4.0")
   @Deprecated
   DATATYPE((short) 0x01),
 
@@ -44,106 +45,103 @@ public enum ServerFeature {
 
   /**
    * Enables TCP Nodelay.
-   *
-   * @since Couchbase Server 4.0
    */
+  @SinceCouchbase("4.0")
   TCPNODELAY((short) 0x03),
 
   /**
    * Returns the sequence number on every mutation.
-   *
-   * @since Couchbase Server 4.0
    */
+  @SinceCouchbase("4.0")
   MUTATION_SEQNO((short) 0x04),
 
   /**
    * Disable TCP Nodelay.
-   *
-   * @since Couchbase Server 4.0
    */
+  @SinceCouchbase("4.0")
   TCPDELAY((short) 0x05),
 
   /**
    * Enable xattr support.
-   *
-   * @since Couchbase Server Spock (5.0)
    */
+  @SinceCouchbase("5.0")
   XATTR((short) 0x06),
 
   /**
    * Enable extended error map support.
-   *
-   * @since Couchbase Server Spock (5.0)
    */
+  @SinceCouchbase("5.0")
   XERROR((short) 0x07),
 
   /**
    * Enable select_bucket support.
-   *
-   * @since Couchbase Server Spock (5.0)
    */
+  @SinceCouchbase("5.0")
   SELECT_BUCKET((short) 0x08),
 
   /**
    * Enable snappy-based compression support.
-   *
-   * @since Couchbase Server Vulcan (5.5)
    */
+  @SinceCouchbase("5.5")
   SNAPPY((short) 0x0a),
 
   /**
    * Enables JSON data identification support.
-   *
-   * @since Couchbase Server Vulcan (5.5)
    */
+  @SinceCouchbase("5.5")
   JSON((short) 0x0b),
 
   /**
    * Enables Duplex mode support.
    */
+  @SinceCouchbase("5.5")
   DUPLEX((short) 0x0c),
 
   /**
    * Request the server to push any cluster maps stored by ns_server into
    * one of the buckets the client have access to.
    */
+  @SinceCouchbase("5.5")
   CLUSTERMAP_CHANGE_NOTIFICATION((short) 0x0d),
 
   /**
    * Tell the server that we're ok with the server reordering the execution
    * of commands.
    */
+  @SinceCouchbase("5.5")
   UNORDERED_EXECUTION((short) 0x0e),
 
   /**
    * Enable tracing support.
-   *
-   * @since Couchbase Server Vulcan (5.5)
    */
+  @SinceCouchbase("5.5")
   TRACING((short) 0x0f),
 
   /**
    * Allows the server to accept requests with flexible extras.
    */
+  @SinceCouchbase("6.5")
   ALT_REQUEST((short) 0x10),
 
   /**
    * Specify durability requirements for mutations.
    */
+  @SinceCouchbase("6.5")
   SYNC_REPLICATION((short) 0x11),
 
   /**
    * Enables the collections feature.
-   *
-   * @since Couchbase Server Spock (5.0)
+   * <p>
+   * History note: There was a "collections" feature in Couchbase in 5.0,
+   * but it had a different code (0x09) that has since been retired.
    */
+  @SinceCouchbase("6.5") // GA in 7.0
   COLLECTIONS((short) 0x12),
 
   /**
    * Enables preserving expiry when updating document.
-   *
-   * @since Couchbase Server 7.0
    */
+  @SinceCouchbase("7.0")
   PRESERVE_TTL((short) 0x14),
 
   /**
@@ -152,16 +150,14 @@ public enum ServerFeature {
    * Note that vattrs (such as $document) were available before this, but this flag signifies that if a vattr is
    * requested that the server does not recognise, it will be rejected with the correct XATTR_UNKNOWN_VATTR error,
    * rather than the connection being disconnected.
-   *
-   * @since Couchbase Server 6.5.1
    */
+  @SinceCouchbase("6.5.1")
   VATTR((short) 0x15),
 
   /**
    * Enables the "create as deleted" flag, allowing a document to be created in a tombstoned state.
-   *
-   * @since Couchbase Server 6.6
    */
+  @SinceCouchbase("6.6")
   CREATE_AS_DELETED((short) 0x17),
   ;
 

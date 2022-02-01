@@ -17,7 +17,7 @@ package com.couchbase.client.scala.kv
 
 import java.time.Instant
 
-import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.annotation.{SinceCouchbase, Stability}
 import com.couchbase.client.core.annotation.Stability.{Uncommitted, Volatile}
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
@@ -43,7 +43,7 @@ case class MutateInOptions(
     private[scala] val accessDeleted: Boolean = false,
     private[scala] val createAsDeleted: Boolean = false,
     private[scala] val expiryTime: Option[Instant] = None,
-    private[scala] val preserveExpiry: Boolean = false
+    @SinceCouchbase("7.0") private[scala] val preserveExpiry: Boolean = false
 ) {
 
   /** Controls whether the document should be inserted, upserted, or not touched.  See
@@ -194,6 +194,7 @@ case class MutateInOptions(
     *
     * @return a copy of this with the change applied, for chaining.
     */
+  @SinceCouchbase("7.0")
   def preserveExpiry(value: Boolean): MutateInOptions = {
     copy(preserveExpiry = value)
   }

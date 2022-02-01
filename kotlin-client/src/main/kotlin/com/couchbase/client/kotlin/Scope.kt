@@ -36,7 +36,7 @@ import com.couchbase.client.kotlin.query.QueryResult
 import com.couchbase.client.kotlin.query.QueryRow
 import com.couchbase.client.kotlin.query.QueryScanConsistency
 import com.couchbase.client.kotlin.query.internal.QueryExecutor
-import com.couchbase.client.kotlin.annotations.SinceCouchbase
+import com.couchbase.client.core.annotation.SinceCouchbase
 import kotlinx.coroutines.flow.Flow
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -201,7 +201,7 @@ public class Scope(
         serializer: JsonSerializer? = null,
 
         consistency: AnalyticsScanConsistency = AnalyticsScanConsistency.notBounded(),
-        readonly: Boolean = false,
+        @SinceCouchbase("6.5") readonly: Boolean = false,
         priority: AnalyticsPriority = AnalyticsPriority.normal(),
 
         clientContextId: String? = UUID.randomUUID().toString(),

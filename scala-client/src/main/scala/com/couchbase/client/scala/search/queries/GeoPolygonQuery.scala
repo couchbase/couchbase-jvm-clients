@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.search.queries
 
-import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.annotation.{SinceCouchbase, Stability}
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.util.Coordinate
 
@@ -24,6 +24,7 @@ import com.couchbase.client.scala.util.Coordinate
   * An FTS query that finds all matches inside a given search polygon.
   */
 @Stability.Uncommitted
+@SinceCouchbase("6.5.1")
 case class GeoPolygonQuery(
     private[scala] val coordinates: Seq[Coordinate],
     private[scala] val field: Option[String] = None,

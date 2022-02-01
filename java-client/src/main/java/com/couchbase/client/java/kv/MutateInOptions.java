@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -81,6 +82,7 @@ public class MutateInOptions extends CommonDurabilityOptions<MutateInOptions> {
    * @return this options class for chaining purposes.
    */
   @Stability.Uncommitted
+  @SinceCouchbase("7.0")
   public MutateInOptions preserveExpiry(boolean preserveExpiry) {
     this.preserveExpiry = preserveExpiry;
     return this;

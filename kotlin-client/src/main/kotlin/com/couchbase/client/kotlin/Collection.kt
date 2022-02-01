@@ -17,6 +17,7 @@
 package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.env.TimeoutConfig
 import com.couchbase.client.core.error.CasMismatchException
@@ -377,7 +378,7 @@ public class Collection internal constructor(
         transcoder: Transcoder? = null,
         durability: Durability = Durability.disabled(),
         expiry: Expiry = Expiry.None,
-        preserveExpiry: Boolean = false,
+        @SinceCouchbase("7.0") preserveExpiry: Boolean = false,
     ): MutationResult = internalUpsert(id, content, typeRef(), common, transcoder, durability, expiry, preserveExpiry)
 
     @PublishedApi
@@ -424,7 +425,7 @@ public class Collection internal constructor(
         transcoder: Transcoder? = null,
         durability: Durability = Durability.disabled(),
         expiry: Expiry = Expiry.None,
-        preserveExpiry: Boolean = false,
+        @SinceCouchbase("7.0") preserveExpiry: Boolean = false,
         cas: Long = 0,
     ): MutationResult = internalReplace(id, content, typeRef(), common, transcoder, durability, expiry, preserveExpiry, cas)
 

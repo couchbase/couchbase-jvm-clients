@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.analytics;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.util.Golang;
 import com.couchbase.client.java.Cluster;
@@ -109,6 +110,7 @@ public class AnalyticsOptions extends CommonOptions<AnalyticsOptions> {
    * @param readonly true if readonly should be set, false is the default and will use the server side default.
    * @return the same {@link AnalyticsOptions} for chaining purposes.
    */
+  @SinceCouchbase("6.5")
   public AnalyticsOptions readonly(boolean readonly) {
     this.readonly = readonly;
     return this;

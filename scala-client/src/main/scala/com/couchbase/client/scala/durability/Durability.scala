@@ -18,6 +18,7 @@ package com.couchbase.client.scala.durability
 
 import java.util.Optional
 
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.msg.kv.{DurabilityLevel => CoreLevel}
 import com.couchbase.client.core.service.kv.Observe
 import com.couchbase.client.core.service.kv.Observe.{ObservePersistTo, ObserveReplicateTo}
@@ -66,6 +67,7 @@ object Durability {
     *
     * Only available in Couchbase Server 6.5 and above.
     */
+  @SinceCouchbase("6.5")
   case object Majority extends Durability
 
   /** The server will ensure that the change is available in memory on the majority of
@@ -74,6 +76,7 @@ object Durability {
     *
     * Only available in Couchbase Server 6.5 and above.
     */
+  @SinceCouchbase("6.5")
   case object MajorityAndPersistToActive extends Durability
 
   /** The server will ensure that the change is both available in memory and persisted to disk
@@ -81,6 +84,7 @@ object Durability {
     *
     * Only available in Couchbase Server 6.5 and above.
     */
+  @SinceCouchbase("6.5")
   case object PersistToMajority extends Durability
 
 }

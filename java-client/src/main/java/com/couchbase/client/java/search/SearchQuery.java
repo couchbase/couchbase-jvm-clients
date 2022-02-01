@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.java.search;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.queries.BooleanFieldQuery;
@@ -215,6 +216,7 @@ public abstract class SearchQuery {
 
     /** Prepare a {@link GeoPolygonQuery} body. */
     @Stability.Uncommitted
+    @SinceCouchbase("6.5.1")
     public static GeoPolygonQuery geoPolygon(final List<Coordinate> coordinates) {
         return new GeoPolygonQuery(coordinates);
     }

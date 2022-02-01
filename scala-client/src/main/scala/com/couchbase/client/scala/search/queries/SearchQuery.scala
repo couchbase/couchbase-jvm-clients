@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala.search.queries
 
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.util.Coordinate
@@ -154,6 +155,7 @@ object SearchQuery {
     */
   def matchNone = MatchNoneQuery()
 
+  @SinceCouchbase("6.5.1")
   def geoPolygon(coordinates: Seq[Coordinate]) = GeoPolygonQuery(coordinates)
 
   /** An FTS query which finds all matches within a given box (identified by the upper left and lower right corner

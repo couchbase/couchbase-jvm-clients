@@ -7,7 +7,7 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel.PERSIST_TO_MAJORITY
 import com.couchbase.client.core.service.kv.Observe.ObservePersistTo
 import com.couchbase.client.core.service.kv.Observe.ObserveReplicateTo
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
-import com.couchbase.client.kotlin.annotations.SinceCouchbase
+import com.couchbase.client.core.annotation.SinceCouchbase
 
 /**
  * Specifies the durability requirements for a mutation.
@@ -20,6 +20,7 @@ public sealed class Durability {
         override fun toString(): String = "Disabled"
     }
 
+    @SinceCouchbase("6.5")
     public data class Synchronous internal constructor(
         val level: DurabilityLevel,
     ) : Durability() {

@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.search.queries;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.Coordinate;
@@ -28,6 +29,7 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 /**
  * A search query which allows to match inside a geo polygon.
  */
+@SinceCouchbase("6.5.1")
 public class GeoPolygonQuery extends SearchQuery {
 
     private final List<Coordinate> coordinates;

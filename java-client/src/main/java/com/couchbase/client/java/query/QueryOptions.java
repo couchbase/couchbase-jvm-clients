@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.query;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.kv.MutationToken;
@@ -383,6 +384,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @param preserveExpiry if expiration values should be preserved, the default is false.
    * @return the same {@link QueryOptions} for chaining purposes.
    */
+  @SinceCouchbase("7.1")
   @Stability.Uncommitted
   public QueryOptions preserveExpiry(final boolean preserveExpiry) {
     this.preserveExpiry = preserveExpiry;

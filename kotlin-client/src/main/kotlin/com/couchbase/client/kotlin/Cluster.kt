@@ -17,6 +17,7 @@
 package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics.ClusterState
 import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper
@@ -36,7 +37,6 @@ import com.couchbase.client.kotlin.analytics.AnalyticsParameters
 import com.couchbase.client.kotlin.analytics.AnalyticsPriority
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
-import com.couchbase.client.kotlin.annotations.SinceCouchbase
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.env.ClusterEnvironment
@@ -289,7 +289,7 @@ public class Cluster internal constructor(
         serializer: JsonSerializer? = null,
 
         consistency: AnalyticsScanConsistency = AnalyticsScanConsistency.notBounded(),
-        readonly: Boolean = false,
+        @SinceCouchbase("6.5") readonly: Boolean = false,
         priority: AnalyticsPriority = AnalyticsPriority.normal(),
 
         clientContextId: String? = UUID.randomUUID().toString(),

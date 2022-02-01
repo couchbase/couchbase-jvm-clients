@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.query
 
-import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.annotation.{SinceCouchbase, Stability}
 
 import java.util.UUID
 import com.couchbase.client.core.annotation.Stability.Volatile
@@ -55,7 +55,7 @@ case class QueryOptions(
     private[scala] val parentSpan: Option[RequestSpan] = None,
     private[scala] val raw: Option[Map[String, Any]] = None,
     private[scala] val flexIndex: Boolean = false,
-    private[scala] val preserveExpiry: Option[Boolean] = None
+    @SinceCouchbase("7.1") private[scala] val preserveExpiry: Option[Boolean] = None
 ) {
 
   /** Sets the parent `RequestSpan`.
@@ -264,6 +264,7 @@ case class QueryOptions(
     * @return a copy of this with the change applied, for chaining.
     */
   @Stability.Uncommitted
+  @SinceCouchbase("7.1")
   def preserveExpiry(preserveExpiry: Boolean): QueryOptions = {
     copy(preserveExpiry = Some(preserveExpiry))
   }

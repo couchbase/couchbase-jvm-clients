@@ -18,6 +18,7 @@ package com.couchbase.client.scala.analytics
 
 import java.util.UUID
 
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
@@ -36,7 +37,7 @@ case class AnalyticsOptions(
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
     private[scala] val timeout: Option[Duration] = None,
     private[scala] val priority: Boolean = false,
-    private[scala] val readonly: Option[Boolean] = None,
+    @SinceCouchbase("6.5") private[scala] val readonly: Option[Boolean] = None,
     private[scala] val scanConsistency: Option[AnalyticsScanConsistency] = None,
     private[scala] val parentSpan: Option[RequestSpan] = None,
     private[scala] val raw: Option[Map[String, Any]] = None
@@ -102,8 +103,11 @@ case class AnalyticsOptions(
     *
     * The default is false.
     *
+    * Requires Couchbase Server 6.5 or later.
+    *
     * @return a copy of this with the change applied, for chaining.
     */
+  @SinceCouchbase("6.5")
   def readonly(readonly: Boolean): AnalyticsOptions = copy(readonly = Option(readonly))
 
   /** Allows providing custom JSON key/value pairs for advanced usage.

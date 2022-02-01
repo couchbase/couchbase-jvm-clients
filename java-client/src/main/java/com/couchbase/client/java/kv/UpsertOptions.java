@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.codec.Transcoder;
 
@@ -75,6 +76,7 @@ public class UpsertOptions extends CommonDurabilityOptions<UpsertOptions> {
    * @return this options class for chaining purposes.
    */
   @Stability.Uncommitted
+  @SinceCouchbase("7.0")
   public UpsertOptions preserveExpiry(boolean preserveExpiry) {
     this.preserveExpiry = preserveExpiry;
     return this;
