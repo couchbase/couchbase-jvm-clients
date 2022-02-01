@@ -215,6 +215,13 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.1.2</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>8.45.1</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <headerLocation>config/checkstyle/checkstyle-header.txt</headerLocation>
                     <configLocation>config/checkstyle/checkstyle-basic.xml</configLocation>
