@@ -77,7 +77,11 @@ public class QueryMessageHandler
       return Optional.of(RetryReason.QUERY_TRANSACTION_BUFFER_FULL);
     }
 
-    if (error.retry()) {
+    // The SDK will always try to retry if retry is set to true on a query
+    // response, but due to https://issues.couchbase.com/browse/MB-50643 we
+    // need to explicitly don't do that for error code 12016 to preserve
+    // backwards compatibility.
+    if (error.retry() && code != 12016) {
       return Optional.of(RetryReason.QUERY_ERROR_RETRYABLE);
     }
 
