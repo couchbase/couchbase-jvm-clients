@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.kotlin.manager.http
+package com.couchbase.client.kotlin.http
 
 public class HttpBody internal constructor(
     public val contentType: String,

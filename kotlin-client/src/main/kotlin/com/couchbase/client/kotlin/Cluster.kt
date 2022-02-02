@@ -43,7 +43,7 @@ import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.env.env
 import com.couchbase.client.kotlin.internal.await
-import com.couchbase.client.kotlin.manager.http.CouchbaseHttpClient
+import com.couchbase.client.kotlin.http.CouchbaseHttpClient
 import com.couchbase.client.kotlin.query.QueryFlowItem
 import com.couchbase.client.kotlin.query.QueryMetadata
 import com.couchbase.client.kotlin.query.QueryParameters

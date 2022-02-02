@@ -17,11 +17,11 @@
 package com.couchbase.client.kotlin.samples
 
 import com.couchbase.client.kotlin.Cluster
-import com.couchbase.client.kotlin.manager.http.CouchbaseHttpClient
-import com.couchbase.client.kotlin.manager.http.HttpBody
-import com.couchbase.client.kotlin.manager.http.HttpTarget
-import com.couchbase.client.kotlin.manager.http.NameValuePairs
-import com.couchbase.client.kotlin.manager.http.formatPath
+import com.couchbase.client.kotlin.http.CouchbaseHttpClient
+import com.couchbase.client.kotlin.http.HttpBody
+import com.couchbase.client.kotlin.http.HttpTarget
+import com.couchbase.client.kotlin.http.NameValuePairs
+import com.couchbase.client.kotlin.http.formatPath
 import kotlinx.coroutines.runBlocking
 
 internal fun httpClientGetWithQueryParameters(httpClient: CouchbaseHttpClient) {

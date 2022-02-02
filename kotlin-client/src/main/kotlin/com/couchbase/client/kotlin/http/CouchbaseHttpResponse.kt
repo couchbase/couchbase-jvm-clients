@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.kotlin.manager.http
+package com.couchbase.client.kotlin.http
 
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse
 import com.couchbase.client.core.error.HttpStatusCodeException

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.kotlin.manager.http
+package com.couchbase.client.kotlin.http
 
 import com.couchbase.client.core.util.UrlQueryStringBuilder
-import com.couchbase.client.kotlin.manager.http.NameValuePairs.Companion.ofPreEncoded
+import com.couchbase.client.kotlin.http.NameValuePairs.Companion.ofPreEncoded
 
 /**
  * Represents a query string or form data.

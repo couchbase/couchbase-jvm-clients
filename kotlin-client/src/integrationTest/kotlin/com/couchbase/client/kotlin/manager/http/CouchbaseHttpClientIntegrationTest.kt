@@ -17,6 +17,9 @@
 package com.couchbase.client.kotlin.manager.http
 
 import com.couchbase.client.core.json.Mapper
+import com.couchbase.client.kotlin.http.HttpTarget
+import com.couchbase.client.kotlin.http.NameValuePairs
+import com.couchbase.client.kotlin.http.formatPath
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.test.ClusterType
 import com.couchbase.client.test.IgnoreWhen

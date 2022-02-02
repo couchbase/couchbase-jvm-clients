@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.kotlin.manager.http
+package com.couchbase.client.kotlin.http
 
 import com.couchbase.client.core.msg.RequestTarget
 import com.couchbase.client.core.node.NodeIdentifier
