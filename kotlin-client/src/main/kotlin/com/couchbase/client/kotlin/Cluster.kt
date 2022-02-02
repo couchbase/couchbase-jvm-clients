@@ -143,8 +143,10 @@ public class Cluster internal constructor(
     }
 
     /**
-     * Returns an HTTP client for the Couchbase REST API. This is an "escape hatch"
-     * for use in areas where the Kotlin SDK's management APIs are incomplete.
+     * An HTTP client for the Couchbase REST API.
+     *
+     * This is an "escape hatch" to use in areas where the Kotlin SDK's
+     * management APIs do not provide full coverage of the REST API.
      *
      * @sample com.couchbase.client.kotlin.samples.httpClientGetBucketStats
      * @sample com.couchbase.client.kotlin.samples.httpClientGetWithQueryParameters
@@ -152,7 +154,7 @@ public class Cluster internal constructor(
      * @sample com.couchbase.client.kotlin.samples.httpClientPostWithJsonBody
      */
     @Stability.Volatile
-    public fun httpClient() : CouchbaseHttpClient = CouchbaseHttpClient(this)
+    public val httpClient : CouchbaseHttpClient = CouchbaseHttpClient(this)
 
     /**
      * Returns a Flow which may be collected to execute a cluster-level

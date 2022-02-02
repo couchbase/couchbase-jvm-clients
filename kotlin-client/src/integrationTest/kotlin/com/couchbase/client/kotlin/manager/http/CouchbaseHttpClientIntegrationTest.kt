@@ -66,7 +66,7 @@ internal class CouchbaseHttpClientIntegrationTest : KotlinIntegrationTest() {
 
     @Test
     fun `can get bucket`(): Unit = runBlocking {
-        val response = cluster.httpClient().get(
+        val response = cluster.httpClient.get(
             target = HttpTarget.manager(),
             path = formatPath("/pools/default/buckets/{}", config().bucketname()),
         )

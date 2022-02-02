@@ -73,7 +73,7 @@ internal fun httpClientGetBucketStats() {
     // and the travel-sample bucket installed.
 
     val cluster = Cluster.connect("127.0.0.1", "Administrator", "password")
-    val httpClient = cluster.httpClient()
+    val httpClient = cluster.httpClient
     val bucketName = "travel-sample"
     try {
         runBlocking {
