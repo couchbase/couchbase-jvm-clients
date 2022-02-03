@@ -20,10 +20,6 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit.DAYS
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 
 public sealed class Expiry {
     internal abstract fun encode(): Long
@@ -94,62 +90,6 @@ public sealed class Expiry {
          * @throws IllegalArgumentException if the duration is less than 1 second.
          */
         public fun of(duration: Duration): Expiry = if (duration.isInfinite()) none() else Relative(duration)
-
-        /**
-         * The document will expire after the given number of seconds.
-         * Shorthand for `Expiry.of(x.seconds)`
-         * @throws IllegalArgumentException if seconds < 1
-         */
-        @Deprecated(
-            message = "Deprecated in favor of Expiry.of(x.seconds)",
-            replaceWith = ReplaceWith(
-                expression = "of(seconds.seconds)",
-                imports = ["kotlin.time.Duration.Companion.seconds"]
-            ),
-        )
-        public fun ofSeconds(seconds: Long): Expiry = of(seconds.seconds)
-
-        /**
-         * The document will expire after the given number of minutes.
-         * Shorthand for `Expiry.of(x.minutes)`
-         * @throws IllegalArgumentException if minutes < 1
-         */
-        @Deprecated(
-            message = "Deprecated in favor of Expiry.of(x.minutes)",
-            replaceWith = ReplaceWith(
-                expression = "of(minutes.minutes)",
-                imports = ["kotlin.time.Duration.Companion.minutes"]
-            ),
-        )
-        public fun ofMinutes(minutes: Long): Expiry = of(minutes.minutes)
-
-        /**
-         * The document will expire after the given number of hours.
-         * Shorthand for `Expiry.of(Duration.ofHours(x))`
-         * @throws IllegalArgumentException if hours < 1
-         */
-        @Deprecated(
-            message = "Deprecated in favor of Expiry.of(x.hours)",
-            replaceWith = ReplaceWith(
-                expression = "of(hours.hours)",
-                imports = ["kotlin.time.Duration.Companion.hours"]
-            ),
-        )
-        public fun ofHours(hours: Long): Expiry = of(hours.hours)
-
-        /**
-         * The document will expire after the given number of days.
-         * Shorthand for `Expiry.of(x.days)`
-         * @throws IllegalArgumentException if days < 1
-         */
-        @Deprecated(
-            message = "Deprecated in favor of Expiry.of(x.days)",
-            replaceWith = ReplaceWith(
-                expression = "of(days.days)",
-                imports = ["kotlin.time.Duration.Companion.minutes"]
-            ),
-        )
-        public fun ofDays(days: Long): Expiry = of(days.days)
 
         /**
          * The document will expire at the given instant.

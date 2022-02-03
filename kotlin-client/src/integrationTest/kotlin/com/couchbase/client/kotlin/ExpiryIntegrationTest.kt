@@ -63,7 +63,7 @@ internal class ExpiryIntegrationTest : KotlinIntegrationTest() {
     @Test
     fun `GetResult expiry is null when unknown`(): Unit = runBlocking {
         val id = UUID.randomUUID().toString()
-        collection.upsert(id, "foo", expiry = Expiry.ofDays(1))
+        collection.upsert(id, "foo", expiry = Expiry.of(1.days))
         assertNull(collection.get(id, withExpiry = false).expiry)
     }
 

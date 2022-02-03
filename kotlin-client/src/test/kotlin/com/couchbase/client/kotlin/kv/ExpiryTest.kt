@@ -16,7 +16,6 @@
 
 package com.couchbase.client.kotlin.kv
 
-import com.couchbase.client.kotlin.kv.Expiry.Companion.of
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.greaterThanOrEqualTo
 import org.hamcrest.Matchers.lessThanOrEqualTo
@@ -28,7 +27,10 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit.DAYS
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 internal class ExpiryTest {
 
@@ -44,25 +46,25 @@ internal class ExpiryTest {
 
     @Test
     fun `negative duration is invalid`() {
-        assertThrows<IllegalArgumentException> { Expiry.ofSeconds(-1) }
+        assertThrows<IllegalArgumentException> { Expiry.of((-1).seconds) }
     }
 
     @Test
     fun `duration ending after 2106 is invalid`() {
         val daysUntil2107 = ChronoUnit.DAYS.between(Instant.now(), Instant.parse("2107-01-01T00:00:00Z"))
-        assertThrows<IllegalArgumentException> { Expiry.ofDays(daysUntil2107) }
+        assertThrows<IllegalArgumentException> { Expiry.of(daysUntil2107.days) }
     }
 
     @Test
     fun `short durations are encoded verbatim`() {
         val longestVerbatimSeconds = DAYS.toSeconds(30) - 1
-        assertEquals(longestVerbatimSeconds, Expiry.ofSeconds(longestVerbatimSeconds).encode())
+        assertEquals(longestVerbatimSeconds, Expiry.of(longestVerbatimSeconds.seconds).encode())
     }
 
     @Test
     fun `long durations are converted to absolute`() {
         val lowerBound = Instant.now().epochSecond + DAYS.toSeconds(30)
-        val actual = Expiry.ofDays(30).encode()
+        val actual = Expiry.of(30.days).encode()
         val upperBound = Instant.now().epochSecond + DAYS.toSeconds(30)
 
         assertThat(actual, greaterThanOrEqualTo(lowerBound))
@@ -110,12 +112,12 @@ internal class ExpiryTest {
 
     @Test
     fun `relative are equal if they have the same duration`() {
-        assertEquals(Expiry.ofSeconds(60), of(1.minutes))
-        assertEquals(of(60.minutes), Expiry.ofHours(1))
-        assertEquals(Expiry.ofHours(24), Expiry.ofDays(1))
+        assertEquals(Expiry.of(60.seconds), Expiry.of(1.minutes))
+        assertEquals(Expiry.of(60.minutes), Expiry.of(1.hours))
+        assertEquals(Expiry.of(24.hours), Expiry.of(1.days))
 
-        assertNotEquals(Expiry.ofSeconds(61), of(1.minutes))
-        assertNotEquals(of(61.minutes), Expiry.ofHours(1))
-        assertNotEquals(Expiry.ofHours(25), Expiry.ofDays(1))
+        assertNotEquals(Expiry.of(61.seconds), Expiry.of(1.minutes))
+        assertNotEquals(Expiry.of(61.minutes), Expiry.of(1.hours))
+        assertNotEquals(Expiry.of(25.hours), Expiry.of(1.days))
     }
 }
