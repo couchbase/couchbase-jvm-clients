@@ -154,7 +154,7 @@ public enum RetryReason {
     this.alwaysRetry = alwaysRetry;
   }
 
-  boolean allowsNonIdempotentRetry() {
+  public boolean allowsNonIdempotentRetry() {
     return allowsNonIdempotentRetry;
   }
 
