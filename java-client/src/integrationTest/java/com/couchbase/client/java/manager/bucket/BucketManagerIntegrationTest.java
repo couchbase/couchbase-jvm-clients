@@ -20,6 +20,7 @@ import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.BucketNotFlushableException;
 import com.couchbase.client.core.error.BucketNotFoundException;
+import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
@@ -315,6 +316,21 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
 
     BucketSettings bucket = buckets.getBucket(name);
     assertEquals(3, bucket.numReplicas());
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = {Capabilities.STORAGE_BACKEND})
+  void customConflictResolution() {
+    String bucketName = UUID.randomUUID().toString();
+    try {
+      createBucket(BucketSettings.create(bucketName).ramQuotaMB(100).conflictResolutionType(ConflictResolutionType.CUSTOM));
+      waitUntilHealthy(bucketName);
+
+      BucketSettings bucket = buckets.getBucket(bucketName);
+      assertEquals(ConflictResolutionType.CUSTOM, bucket.conflictResolutionType());
+    } catch (HttpStatusCodeException ex) {
+      assertTrue(ex.getMessage().contains("Conflict resolution type 'custom' is supported only with developer preview enabled"));
+    }
   }
 
   /**
