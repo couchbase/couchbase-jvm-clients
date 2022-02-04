@@ -99,7 +99,7 @@ public class CoreQueryAccessor {
           .flatMap(retryAction -> {
             Optional<Duration> duration = retryAction.duration();
             if (!duration.isPresent()) {
-              return Mono.error(t);
+              return Mono.error(retryAction.exceptionTranslator().apply(t));
             }
             final Duration cappedDuration = capDuration(duration.get(), request);
             request.context().incrementRetryAttempts(cappedDuration, retryReason);

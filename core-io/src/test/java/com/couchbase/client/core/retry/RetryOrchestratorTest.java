@@ -34,6 +34,7 @@ import org.mockito.Mockito;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -82,7 +83,7 @@ class RetryOrchestratorTest {
     CoreContext context = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
     RetryOrchestrator.maybeRetry(context, request, RetryReason.UNKNOWN);
 
-    verify(request, times(1)).cancel(CancellationReason.noMoreRetries(RetryReason.UNKNOWN));
+    verify(request, times(1)).cancel(CancellationReason.noMoreRetries(RetryReason.UNKNOWN), Function.identity());
 
     assertEquals(1, eventBus.publishedEvents().size());
     RequestNotRetriedEvent retryEvent = (RequestNotRetriedEvent) eventBus.publishedEvents().get(0);

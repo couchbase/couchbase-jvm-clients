@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Function;
 
 /**
  * Base class for all {@link Request Requests}.
@@ -170,12 +171,12 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   }
 
   @Override
-  public void cancel(final CancellationReason reason) {
+  public void cancel(final CancellationReason reason, Function<Throwable, Throwable> exceptionTranslator) {
     if (STATE_UPDATER.compareAndSet(this, State.INCOMPLETE, State.CANCELLED)) {
       cancelTimeoutRegistration();
 
       cancellationReason = reason;
-      final Exception exception;
+      final Throwable exception;
 
       final String msg = this.getClass().getSimpleName() + ", Reason: " + reason;
       final CancellationErrorContext ctx = new CancellationErrorContext(context());
@@ -185,7 +186,7 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
         exception = new RequestCanceledException(msg, reason, ctx);
       }
 
-      response.completeExceptionally(exception);
+      response.completeExceptionally(exceptionTranslator.apply(exception));
     }
   }
 

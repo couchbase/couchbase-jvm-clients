@@ -76,7 +76,7 @@ public class RetryOrchestrator {
         ctx.environment().eventBus().publish(
           new RequestNotRetriedEvent(severity, request.getClass(), request.context(), reason, null)
         );
-        request.cancel(CancellationReason.noMoreRetries(reason));
+        request.cancel(CancellationReason.noMoreRetries(reason), retryAction.exceptionTranslator());
       }
     });
   }

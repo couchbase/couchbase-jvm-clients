@@ -26,6 +26,7 @@ import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 /**
  * Represents a {@link Request} flowing through the client.
@@ -65,7 +66,17 @@ public interface Request<R extends Response> {
   /**
    * Cancels this request.
    */
-  void cancel(CancellationReason reason);
+  default void cancel(CancellationReason reason) {
+    cancel(reason, Function.identity());
+  }
+
+  /**
+   * Cancels this request, allowing the caller to customize the exception.
+   *
+   * @param exceptionTranslator A typical function might create a new
+   * custom exception using the argument as the cause.
+   */
+  void cancel(CancellationReason reason, Function<Throwable, Throwable> exceptionTranslator);
 
   /**
    * Sets the timeout registration used to cancel when complete.
