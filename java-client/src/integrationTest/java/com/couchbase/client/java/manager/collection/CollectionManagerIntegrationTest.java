@@ -24,8 +24,6 @@ import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.ClusterOptions;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
@@ -48,13 +46,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
   private static CollectionManager collections;
 
   @BeforeAll
   static void setup() {
-    environment = environment().ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)).build();
-    cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
+    cluster = createCluster(env -> env.ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)));
     Bucket bucket = cluster.bucket(config().bucketname());
     collections = bucket.collections();
     bucket.waitUntilReady(Duration.ofSeconds(5));
@@ -63,7 +59,6 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void tearDown() {
     cluster.disconnect();
-    environment.shutdown();
   }
 
   @Test

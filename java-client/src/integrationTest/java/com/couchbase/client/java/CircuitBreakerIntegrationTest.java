@@ -31,7 +31,6 @@ import com.couchbase.client.core.msg.kv.GetResponse;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,14 +50,12 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 class CircuitBreakerIntegrationTest extends JavaIntegrationTest {
 
-  private ClusterEnvironment environment;
   private Cluster cluster;
   private Collection collection;
 
   @BeforeEach
   void beforeEach() {
-    environment = environment().ioConfig(IoConfig.kvCircuitBreakerConfig(CircuitBreakerConfig.enabled(true))).build();
-    cluster = Cluster.connect(seedNodes(), clusterOptions().environment(environment));
+    cluster = createCluster(env -> env.ioConfig(IoConfig.kvCircuitBreakerConfig(CircuitBreakerConfig.enabled(true))));
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
     bucket.waitUntilReady(Duration.ofSeconds(5));
@@ -67,7 +64,6 @@ class CircuitBreakerIntegrationTest extends JavaIntegrationTest {
   @AfterEach
   void afterEach() {
     cluster.disconnect();
-    environment.shutdown();
   }
 
   /**

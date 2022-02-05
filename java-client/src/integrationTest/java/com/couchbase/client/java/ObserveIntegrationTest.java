@@ -19,7 +19,6 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.ReplicaNotConfiguredException;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.ReplicateTo;
@@ -36,8 +35,8 @@ import static com.couchbase.client.java.kv.InsertOptions.insertOptions;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ObserveIntegrationTest extends JavaIntegrationTest {
 
@@ -46,7 +45,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void beforeAll() {
-    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    cluster = createCluster();
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
@@ -136,17 +135,13 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void disallowObserveWhenTokensDisabled() {
-    ClusterEnvironment environment = environment()
-      .ioConfig(IoConfig.enableMutationTokens(false))
-      .build();
-    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator())
-      .environment(environment));
-    Bucket bucket = cluster.bucket(config().bucketname());
-    Collection collection = bucket.defaultCollection();
-
-    waitUntilCondition(() -> cluster.core().clusterConfig().hasClusterOrBucketConfig());
-
+    Cluster cluster = createCluster(env -> env.ioConfig(IoConfig.enableMutationTokens(false)));
     try {
+      Bucket bucket = cluster.bucket(config().bucketname());
+      Collection collection = bucket.defaultCollection();
+
+      waitUntilCondition(() -> cluster.core().clusterConfig().hasClusterOrBucketConfig());
+
       assertThrows(
         FeatureNotAvailableException.class,
         () -> collection.upsert(
@@ -157,7 +152,6 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
       );
     } finally {
       cluster.disconnect();
-      environment.shutdown();
     }
   }
 

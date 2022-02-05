@@ -22,7 +22,6 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.context.QueryErrorContext;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetOptions;
@@ -34,9 +33,9 @@ import com.couchbase.client.java.query.QueryMetrics;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryProfile;
 import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.query.QueryScanConsistency;
 import com.couchbase.client.java.query.QueryStatus;
 import com.couchbase.client.java.query.ReactiveQueryResult;
-import com.couchbase.client.java.query.QueryScanConsistency;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
@@ -73,7 +72,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class QueryIntegrationTest extends JavaIntegrationTest {
 
     private static Cluster cluster;
-    private static ClusterEnvironment environment;
     private static Collection collection;
     private static String bucketName;
 
@@ -86,8 +84,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void setup() {
-        environment = environment().ioConfig(IoConfig.enableMutationTokens(true)).build();
-        cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
+        cluster = createCluster(env -> env.ioConfig(IoConfig.enableMutationTokens(true)));
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
 
@@ -102,7 +99,6 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     @AfterAll
     static void tearDown() {
         cluster.disconnect();
-        environment.shutdown();
     }
 
     @Test

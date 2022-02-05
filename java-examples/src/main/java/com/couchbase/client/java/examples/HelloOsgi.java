@@ -25,7 +25,6 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetResult;
 import org.osgi.framework.BundleActivator;
@@ -106,7 +105,10 @@ public class HelloOsgi implements BundleActivator {
 
   protected ClusterOptions clusterOptions() {
     return ClusterOptions.clusterOptions(authenticator())
-        .environment(environment().build());
+        .environment(env -> {
+          // Customize environment. For example:
+          // env.ioConfig().enableDnsSrv(false);
+        });
   }
 
   protected Authenticator authenticator() {
@@ -114,7 +116,4 @@ public class HelloOsgi implements BundleActivator {
         password);
   }
 
-  protected static ClusterEnvironment.Builder environment() {
-    return ClusterEnvironment.builder();
-  }
 }

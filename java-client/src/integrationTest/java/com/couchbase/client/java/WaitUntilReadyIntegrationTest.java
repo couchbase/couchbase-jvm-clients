@@ -37,6 +37,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -46,23 +47,20 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
+  private static Consumer<ClusterEnvironment.Builder> environment;
   private static SimpleEventBus eventBus;
 
   @BeforeAll
   static void beforeAll() {
     eventBus = new SimpleEventBus(true);
-    environment = ClusterEnvironment
-      .builder()
-      .eventBus(eventBus)
-      .build();
-    cluster = Cluster.connect(seedNodes(), clusterOptions().environment(environment));
+    environment = env -> env.eventBus(eventBus);
+    cluster = createCluster(environment);
   }
 
   @AfterAll
   static void afterAll() {
     cluster.disconnect();
-    environment.shutdown();
+    eventBus = null;
   }
 
   @Test

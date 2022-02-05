@@ -22,9 +22,7 @@ import com.couchbase.client.core.cnc.events.tracing.OverThresholdRequestsRecorde
 import com.couchbase.client.core.env.ThresholdLoggingTracerConfig;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
@@ -47,7 +45,6 @@ public class ThresholdLoggingTracerIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;
   static private Collection collection;
-  static private ClusterEnvironment environment;
   static private SimpleEventBus eventBus;
 
   @BeforeAll
@@ -60,14 +57,10 @@ public class ThresholdLoggingTracerIntegrationTest extends JavaIntegrationTest {
       .queryThreshold(Duration.ofNanos(1))
       .emitInterval(Duration.ofSeconds(2));
 
-      environment = environment()
-      .thresholdLoggingTracerConfig(config)
-      .eventBus(eventBus)
-      .build();
-    cluster = Cluster.connect(
-      seedNodes(),
-      ClusterOptions.clusterOptions(authenticator()).environment(environment)
-    );
+    cluster = createCluster(env -> env
+        .thresholdLoggingTracerConfig(config)
+        .eventBus(eventBus));
+
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
@@ -82,7 +75,6 @@ public class ThresholdLoggingTracerIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void afterAll() {
     cluster.disconnect();
-    environment.shutdown();
   }
 
 

@@ -207,6 +207,9 @@ public class AsyncCluster {
     Supplier<ClusterEnvironment> envSupplier;
     if (opts.environment() == null) {
       ClusterEnvironment.Builder builder = ClusterEnvironment.builder();
+      if (opts.environmentCustomizer() != null) {
+        opts.environmentCustomizer().accept(builder);
+      }
       if (connectionString != null) {
         builder.load(new ConnectionStringPropertyLoader(connectionString));
       }

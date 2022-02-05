@@ -19,31 +19,25 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class KeyValueManyEndpointsTest extends JavaIntegrationTest {
 
   private Cluster cluster;
-  private ClusterEnvironment environment;
   private Collection collection;
 
-  private static int CONNS_TO_OPEN = 8;
+  private static final int CONNS_TO_OPEN = 8;
 
   @BeforeEach
   void beforeEach() {
-    IoConfig.Builder ioConfig = IoConfig.numKvConnections(CONNS_TO_OPEN);
-    environment = environment().ioConfig(ioConfig).build();
-    cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
+    cluster = createCluster(env -> env.ioConfig(IoConfig.numKvConnections(CONNS_TO_OPEN)));
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
@@ -53,7 +47,6 @@ class KeyValueManyEndpointsTest extends JavaIntegrationTest {
   @AfterEach
   void afterEach() {
     cluster.disconnect();
-    environment.shutdown();
   }
 
   /**

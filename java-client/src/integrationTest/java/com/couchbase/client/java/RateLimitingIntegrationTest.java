@@ -31,7 +31,6 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CbCollections;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
@@ -79,8 +78,6 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster adminCluster;
 
-  private ClusterEnvironment testEnvironment;
-
   @BeforeAll
   static void beforeAll() throws Exception {
     adminCluster = Cluster.connect(seedNodes(), clusterOptions());
@@ -94,14 +91,9 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     adminCluster.disconnect();
   }
 
-  @BeforeEach
-  void beforeEach() {
-    testEnvironment = ClusterEnvironment.builder().eventBus(new SimpleEventBus(true)).build();
-  }
-
-  @AfterEach
-  void afterEach() {
-    testEnvironment.shutdown();
+  private static Cluster createTestCluster(String username) {
+    return Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD)
+        .environment(env -> env.eventBus(new SimpleEventBus(true))));
   }
 
   @Test
@@ -112,7 +104,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.keyValueLimits = new KeyValueLimits(10, 10, 10, 10);
     createRateLimitedUser(username, limits);
 
-    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+    Cluster cluster = createTestCluster(username);
 
     try {
       Bucket bucket = cluster.bucket(config().bucketname());
@@ -140,7 +132,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.keyValueLimits = new KeyValueLimits(10, 100, 1, 10);
     createRateLimitedUser(username, limits);
 
-    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+    Cluster cluster = createTestCluster(username);
 
     try {
       Bucket bucket = cluster.bucket(config().bucketname());
@@ -171,7 +163,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.keyValueLimits = new KeyValueLimits(10, 100, 10, 1);
     createRateLimitedUser(username, limits);
 
-    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+    Cluster cluster = createTestCluster(username);
 
     try {
       Bucket bucket = cluster.bucket(config().bucketname());
@@ -202,13 +194,13 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.keyValueLimits = new KeyValueLimits(2, 100, 10, 10);
     createRateLimitedUser(username, limits);
 
-    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+    Cluster cluster = createTestCluster(username);
 
     try {
       Bucket bucket = cluster.bucket(config().bucketname());
       bucket.waitUntilReady(Duration.ofSeconds(10));
 
-      Cluster cluster2 = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+      Cluster cluster2 = createTestCluster(username);
       Bucket bucket2 = cluster2.bucket(config().bucketname());
       // The first connect will succeed, but the second will time out due to the num connection limit
       assertThrows(UnambiguousTimeoutException.class, () -> bucket2.waitUntilReady(Duration.ofSeconds(3)));
@@ -252,7 +244,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.queryLimits = new QueryLimits(10, 1, 10, 10);
     createRateLimitedUser(username, limits);
 
-    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+    Cluster cluster = createTestCluster(username);
 
     try {
       cluster.waitUntilReady(Duration.ofSeconds(10));
@@ -279,7 +271,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.queryLimits = new QueryLimits(10000, 10000, 1, 10);
     createRateLimitedUser(username, limits);
 
-    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+    Cluster cluster = createTestCluster(username);
 
     try {
       cluster.waitUntilReady(Duration.ofSeconds(10));
@@ -308,7 +300,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.queryLimits = new QueryLimits(10000, 10000, 10, 1);
     createRateLimitedUser(username, limits);
 
-    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+    Cluster cluster = createTestCluster(username);
 
     try {
       cluster.waitUntilReady(Duration.ofSeconds(10));
@@ -339,7 +331,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     Limits limits = new Limits();
     limits.queryLimits = new QueryLimits(1, 100, 10, 10);
     createRateLimitedUser(username, limits);
-    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+    Cluster cluster = createTestCluster(username);
 
     try {
       cluster.waitUntilReady(Duration.ofSeconds(10));
@@ -364,7 +356,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     limits.clusterManagerLimits = new ClusterManagerLimits(1, 10, 10);
     createRateLimitedUser(username, limits);
 
-    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+    Cluster cluster = createTestCluster(username);
 
     try {
       cluster.waitUntilReady(Duration.ofSeconds(10));
@@ -411,7 +403,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     createRateLimitedUser(username, limits);
 
     adminCluster.searchIndexes().upsertIndex(new SearchIndex("ratelimits", config().bucketname()));
-    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+    Cluster cluster = createTestCluster(username);
 
     try {
       cluster.waitUntilReady(Duration.ofSeconds(10));
@@ -450,7 +442,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     createRateLimitedUser(username, limits);
 
     adminCluster.searchIndexes().upsertIndex(new SearchIndex("ratelimits-egress", config().bucketname()));
-    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+    Cluster cluster = createTestCluster(username);
 
     try {
       cluster.waitUntilReady(Duration.ofSeconds(10));
@@ -495,7 +487,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     createRateLimitedUser(username, limits);
 
     adminCluster.searchIndexes().upsertIndex(new SearchIndex("ratelimits-ingress", config().bucketname()));
-    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+    Cluster cluster = createTestCluster(username);
 
     try {
       cluster.waitUntilReady(Duration.ofSeconds(10));
@@ -535,7 +527,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     createRateLimitedUser(username, limits);
 
     adminCluster.searchIndexes().upsertIndex(new SearchIndex("ratelimits", config().bucketname()));
-    Cluster cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD).environment(testEnvironment));
+    Cluster cluster = createTestCluster(username);
 
     try {
       cluster.waitUntilReady(Duration.ofSeconds(10));

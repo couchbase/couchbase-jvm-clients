@@ -39,13 +39,13 @@ import com.couchbase.client.test.Services;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.Timeout;
 
-import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.java.manager.query.CreatePrimaryQueryIndexOptions.createPrimaryQueryIndexOptions;
@@ -60,19 +60,28 @@ import static com.couchbase.client.java.manager.query.CreatePrimaryQueryIndexOpt
 public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
 
   /**
-   * Creates a {@link ClusterEnvironment.Builder} which already has the seed nodes and
-   * credentials plugged and ready to use depending on the environment.
-   *
-   * @return the builder, ready to be further modified or used directly.
+   * Customizes a {@link ClusterEnvironment.Builder} to use appropriate
+   * security settings for the test environment.
    */
-  protected static ClusterEnvironment.Builder environment() {
-    ClusterEnvironment.Builder builder = ClusterEnvironment.builder();
-    if (config().runWithTLS()) {
-      builder.securityConfig(SecurityConfig.builder()
-        .enableTls(true)
-        .trustCertificates(config().clusterCerts().get()));
-    }
-    return builder;
+  protected static Consumer<ClusterEnvironment.Builder> environmentCustomizer() {
+    return env -> {
+      if (config().runWithTLS()) {
+        env.securityConfig(SecurityConfig.builder()
+          .enableTls(true)
+          .trustCertificates(config().clusterCerts()
+            .orElseThrow(() -> new IllegalStateException("expected cluster certs")))
+        );
+      }
+    };
+  }
+
+  protected static Cluster createCluster() {
+    return createCluster(env -> {
+    });
+  }
+
+  protected static Cluster createCluster(Consumer<ClusterEnvironment.Builder> environmentCustomizer) {
+    return Cluster.connect(seedNodes(), clusterOptions(environmentCustomizer));
   }
 
   /**
@@ -96,9 +105,19 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
    * @return the cluster options ready to be used.
    */
   protected static ClusterOptions clusterOptions() {
+    return clusterOptions(env -> {
+    });
+  }
+
+  /**
+   * Returns the pre-set cluster options with the environment and authenticator configured.
+   *
+   * @return the cluster options ready to be used.
+   */
+  protected static ClusterOptions clusterOptions(Consumer<ClusterEnvironment.Builder> environmentCustomizer) {
     return ClusterOptions
       .clusterOptions(authenticator())
-      .environment(environment().build());
+      .environment(environmentCustomizer().andThen(environmentCustomizer));
   }
 
   protected static Authenticator authenticator() {

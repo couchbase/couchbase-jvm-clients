@@ -24,9 +24,7 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
@@ -45,8 +43,8 @@ import java.util.UUID;
 
 import static com.couchbase.client.java.manager.bucket.BucketType.MEMCACHED;
 import static com.couchbase.client.java.manager.bucket.EvictionPolicyType.FULL;
-import static com.couchbase.client.java.manager.bucket.EvictionPolicyType.NO_EVICTION;
 import static com.couchbase.client.java.manager.bucket.EvictionPolicyType.NOT_RECENTLY_USED;
+import static com.couchbase.client.java.manager.bucket.EvictionPolicyType.NO_EVICTION;
 import static com.couchbase.client.java.manager.bucket.EvictionPolicyType.VALUE_ONLY;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -61,14 +59,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BucketManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
   private static BucketManager buckets;
   private final Set<String> bucketsToDrop = new HashSet<>();
 
   @BeforeAll
   static void setup() {
-    environment = environment().ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)).build();
-    cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
+    cluster = createCluster(env -> env.ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)));
     Bucket bucket = cluster.bucket(config().bucketname());
     buckets = cluster.buckets();
     bucket.waitUntilReady(Duration.ofSeconds(5));
@@ -92,7 +88,6 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void tearDown() {
     cluster.disconnect();
-    environment.shutdown();
   }
 
   private void waitUntilHealthy(String bucket) {

@@ -19,7 +19,6 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.java.codec.RawBinaryTranscoder;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.CounterResult;
 import com.couchbase.client.java.kv.MutateInResult;
@@ -39,19 +38,17 @@ import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
 import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
 import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class MutationTokenIntegrationTest extends JavaIntegrationTest {
 
   private Cluster cluster;
-  private ClusterEnvironment environment;
   private Collection collection;
 
   @BeforeEach
   void beforeEach() {
-    environment = environment().ioConfig(IoConfig.enableMutationTokens(true)).build();
-    cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
+    cluster = createCluster(env -> env.ioConfig(IoConfig.enableMutationTokens(true)));
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
@@ -61,7 +58,6 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
   @AfterEach
   void afterEach() {
     cluster.disconnect();
-    environment.shutdown();
   }
 
   @Test

@@ -20,7 +20,6 @@ import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
@@ -36,7 +35,6 @@ import static com.couchbase.client.test.Util.waitUntilCondition;
 
 class OpenTracingIntegrationTest extends ClusterAwareIntegrationTest {
 
-  private static ClusterEnvironment environment;
   private static Cluster cluster;
   private static Collection collection;
   private static MockTracer tracer;
@@ -47,15 +45,10 @@ class OpenTracingIntegrationTest extends ClusterAwareIntegrationTest {
 
     TestNodeConfig config = config().firstNodeWith(Services.KV).get();
 
-    environment = ClusterEnvironment
-      .builder()
-      .requestTracer(OpenTracingRequestTracer.wrap(tracer))
-      .build();
-
     cluster = Cluster.connect(
       String.format("couchbase://%s:%d", config.hostname(), config.ports().get(Services.KV)),
       clusterOptions(config().adminUsername(), config().adminPassword())
-        .environment(environment)
+        .environment(env -> env.requestTracer(OpenTracingRequestTracer.wrap(tracer)))
     );
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
@@ -66,7 +59,6 @@ class OpenTracingIntegrationTest extends ClusterAwareIntegrationTest {
   @AfterAll
   static void afterAll() {
     cluster.disconnect();
-    environment.shutdown();
     tracer.close();
   }
 

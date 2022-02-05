@@ -22,9 +22,7 @@ import com.couchbase.client.core.cnc.events.metrics.LatencyMetricsAggregatedEven
 import com.couchbase.client.core.env.LoggingMeterConfig;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterAll;
@@ -43,20 +41,14 @@ class LoggingMeterIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;
   static private Collection collection;
-  static private ClusterEnvironment environment;
   static private SimpleEventBus eventBus;
 
   @BeforeAll
   static void beforeAll() {
     eventBus = new SimpleEventBus(false);
-    environment = environment()
-      .loggingMeterConfig(LoggingMeterConfig.enabled(true).emitInterval(Duration.ofSeconds(2)))
-      .eventBus(eventBus)
-      .build();
-    cluster = Cluster.connect(
-      seedNodes(),
-      ClusterOptions.clusterOptions(authenticator()).environment(environment)
-    );
+    cluster = createCluster(env -> env
+        .loggingMeterConfig(LoggingMeterConfig.enabled(true).emitInterval(Duration.ofSeconds(2)))
+        .eventBus(eventBus));
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
@@ -66,7 +58,6 @@ class LoggingMeterIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void afterAll() {
     cluster.disconnect();
-    environment.shutdown();
   }
 
   @Test

@@ -18,7 +18,6 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.QueryScanConsistency;
@@ -51,10 +50,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
   private static String bucketName;
 
-  private static int numDocsInserted = 1000;
+  private static final int numDocsInserted = 1000;
 
   /**
    * Holds sample content for simple assertions.
@@ -65,8 +63,7 @@ class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void setup() {
-    environment = environment().ioConfig(IoConfig.enableMutationTokens(true)).build();
-    cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
+    cluster = createCluster(env -> env.ioConfig(IoConfig.enableMutationTokens(true)));
     Bucket bucket = cluster.bucket(config().bucketname());
     Collection collection = bucket.defaultCollection();
 
@@ -98,7 +95,6 @@ class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void tearDown() {
     cluster.disconnect();
-    environment.shutdown();
   }
 
   @Test

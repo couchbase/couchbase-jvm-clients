@@ -16,10 +16,10 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.error.*;
+import com.couchbase.client.core.error.IndexExistsException;
+import com.couchbase.client.core.error.QueryException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MutationResult;
@@ -27,7 +27,11 @@ import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.manager.collection.CollectionManager;
 import com.couchbase.client.java.manager.collection.CollectionSpec;
 import com.couchbase.client.java.manager.query.CreatePrimaryQueryIndexOptions;
-import com.couchbase.client.java.query.*;
+import com.couchbase.client.java.query.QueryOptions;
+import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.query.QueryScanConsistency;
+import com.couchbase.client.java.query.QueryStatus;
+import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
@@ -69,7 +73,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class QueryCollectionIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
   private static CollectionManager collectionManager;
 
   private final static String SCOPE_NAME = "scope_" + randomString();
@@ -82,8 +85,7 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void beforeAll() {
-    environment = environment().build();
-    cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
+    cluster = createCluster();
     Bucket bucket = cluster.bucket(config().bucketname());
     bucket.waitUntilReady(Duration.ofSeconds(5));
     waitForService(bucket, ServiceType.QUERY);
@@ -108,7 +110,6 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void afterAll() {
     cluster.disconnect();
-    environment.shutdown();
   }
 
   @Test

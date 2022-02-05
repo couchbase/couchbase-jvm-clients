@@ -22,9 +22,7 @@ import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -47,17 +45,12 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;
   static private Collection collection;
-  static private ClusterEnvironment environment;
   static private TrackingRequestTracer requestTracer;
 
   @BeforeAll
   static void beforeAll() {
     requestTracer = new TrackingRequestTracer();
-    environment = environment().requestTracer(requestTracer).build();
-    cluster = Cluster.connect(
-      seedNodes(),
-      ClusterOptions.clusterOptions(authenticator()).environment(environment)
-    );
+    cluster = createCluster(env -> env.requestTracer(requestTracer));
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
@@ -67,7 +60,6 @@ class RequestTracerIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void afterAll() {
     cluster.disconnect();
-    environment.shutdown();
   }
 
   @Test

@@ -21,8 +21,6 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.ClusterOptions;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.bucket.BucketSettings;
 import com.couchbase.client.java.manager.bucket.BucketType;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -34,22 +32,18 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
-  private static ClusterEnvironment environment;
   private static CollectionManager collections;
 
   @BeforeAll
   static void setup() {
-    environment = environment().ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)).build();
-    cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
+    cluster = createCluster(env -> env.ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)));
     Bucket bucket = cluster.bucket(config().bucketname());
     collections = bucket.collections();
     bucket.waitUntilReady(Duration.ofSeconds(5));
@@ -58,7 +52,6 @@ public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
   @AfterAll
   static void tearDown() {
     cluster.disconnect();
-    environment.shutdown();
   }
 
   /**

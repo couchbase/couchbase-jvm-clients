@@ -17,7 +17,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.callbacks.BeforeSendRequestCallback;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterAll;
@@ -38,10 +37,9 @@ public class BeforeSendCallbackIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void beforeAll() {
-    ClusterEnvironment environment = environment()
+    cluster = createCluster(env -> env
       .addRequestCallback((BeforeSendRequestCallback) request -> adder.increment())
-      .build();
-    cluster = Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(authenticator()).environment(environment));
+    );
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 

@@ -21,7 +21,6 @@ import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
-import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
@@ -40,7 +39,6 @@ import static com.couchbase.client.test.Util.waitUntilCondition;
 
 class MicrometerMeterIntegrationTest extends ClusterAwareIntegrationTest {
 
-  private static ClusterEnvironment environment;
   private static Cluster cluster;
   private static Collection collection;
 
@@ -52,15 +50,10 @@ class MicrometerMeterIntegrationTest extends ClusterAwareIntegrationTest {
 
     meterRegistry = new SimpleMeterRegistry();
 
-    environment = ClusterEnvironment
-      .builder()
-      .meter(MicrometerMeter.wrap(meterRegistry))
-      .build();
-
     cluster = Cluster.connect(
       String.format("couchbase://%s:%d", config.hostname(), config.ports().get(Services.KV)),
       clusterOptions(config().adminUsername(), config().adminPassword())
-        .environment(environment)
+        .environment(env -> env.meter(MicrometerMeter.wrap(meterRegistry)))
     );
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
@@ -71,7 +64,6 @@ class MicrometerMeterIntegrationTest extends ClusterAwareIntegrationTest {
   @AfterAll
   static void afterAll() {
     cluster.disconnect();
-    environment.shutdown();
     meterRegistry.close();
   }
 
