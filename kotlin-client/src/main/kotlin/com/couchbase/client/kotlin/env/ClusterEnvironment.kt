@@ -102,7 +102,7 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
      * Pick your tagline.
      *
      * "A modern programming language that makes developers happier."
-     *     -- https://kotlinlang.org
+     *     -- [kotlinlang.org](https://kotlinlang.org)
      *
      * "Kotlin: So you don’t need a billion lines of code to get your shit done!"
      *     -- [Erik Meijer](https://youtu.be/NKeHrApPWlo?t=92s)
