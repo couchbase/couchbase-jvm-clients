@@ -47,8 +47,8 @@ public class SearchDateRange {
         this.name = name;
         this.count = count;
 
-        this.start = Instant.parse(start);
-        this.end = Instant.parse(end);
+        this.start = start == null ? null : Instant.parse(start);
+        this.end = end == null ? null : Instant.parse(end);
     }
 
     public String name() {
