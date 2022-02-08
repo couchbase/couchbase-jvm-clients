@@ -19,6 +19,8 @@ package com.couchbase.client.java.manager.analytics;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
 
+import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.java.manager.analytics.AsyncAnalyticsIndexManager.formatIndexFields;
 import static com.couchbase.client.java.manager.analytics.AsyncAnalyticsIndexManager.quoteDataverse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,5 +42,13 @@ class AsyncAnalyticsIndexManagerTest {
   @Test
   void rejectsPreQuoted() {
     assertThrows(InvalidArgumentException.class, () -> quoteDataverse("`foo`"));
+  }
+
+  @Test
+  void escapesIndexFields() {
+    String result = formatIndexFields(mapOf("foo", AnalyticsDataType.INT64, "bar", AnalyticsDataType.STRING));
+    assertEquals("(`bar`:string,`foo`:int64)", result);
+
+    assertThrows(InvalidArgumentException.class, () -> formatIndexFields(mapOf("`foo`", AnalyticsDataType.INT64)));
   }
 }

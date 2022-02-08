@@ -689,9 +689,9 @@ public class AsyncAnalyticsIndexManager {
    * @param fields the fields to convert.
    * @return the converted and stringified fields, ready to be included in a statement.
    */
-  private static String formatIndexFields(final Map<String, AnalyticsDataType> fields) {
+  static String formatIndexFields(final Map<String, AnalyticsDataType> fields) {
     List<String> result = new ArrayList<>();
-    fields.forEach((k, v) -> result.add(k + ":" + v.value()));
+    fields.forEach((k, v) -> result.add(quote(k) + ":" + v.value()));
     return "(" + String.join(",", result) + ")";
   }
 
