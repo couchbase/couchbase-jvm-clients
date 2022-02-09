@@ -93,7 +93,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster createTestCluster(String username) {
     return Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD)
-        .environment(env -> env.eventBus(new SimpleEventBus(true))));
+        .environment(environmentCustomizer().andThen(env -> env.eventBus(new SimpleEventBus(true)))));
   }
 
   @Test

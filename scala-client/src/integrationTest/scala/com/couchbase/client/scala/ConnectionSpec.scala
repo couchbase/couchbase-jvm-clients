@@ -37,7 +37,11 @@ class ConnectionSpec extends ScalaIntegrationTest {
   @Test
   def performsKeyValueIgnoringServerCert(): Unit = {
     val env = ClusterEnvironment.builder
-      .securityConfig(SecurityConfig().trustManagerFactory(InsecureTrustManagerFactory.INSTANCE))
+      .securityConfig(
+        SecurityConfig()
+          .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE)
+          .enableTls(config.runWithTLS())
+      )
       .build
       .get
 

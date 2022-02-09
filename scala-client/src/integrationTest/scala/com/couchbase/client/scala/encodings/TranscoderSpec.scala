@@ -48,7 +48,7 @@ class TranscoderSpec extends ScalaIntegrationTest {
   private var coll: Collection = _
 
   override protected def environment: ClusterEnvironment.Builder = {
-    ClusterEnvironment.builder.transcoder(TranscoderSpec.Transcoder)
+    super.environment.transcoder(TranscoderSpec.Transcoder)
   }
 
   @BeforeAll

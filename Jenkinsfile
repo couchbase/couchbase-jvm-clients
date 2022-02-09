@@ -758,8 +758,8 @@ void testAgainstServer(String serverVersion,
         if (multiCerts) {
             shWithEcho("mkdir certs")
             shWithEcho("cbdyncluster setup-cert-auth $clusterId --user Administrator --num-roots 2 --out-dir=certs")
-            shWithEcho("echo 'cluster.unmanaged.certsFile=${WORKSPACE}/certs/ca.pem' >> java-client/src/integrationTest/resources/integration.properties")
-            shWithEcho("echo 'cluster.unmanaged.certsFile=${WORKSPACE}/certs/ca.pem' >> scala-client/src/integrationTest/resources/integration.properties")
+            shWithEcho("echo 'cluster.unmanaged.certsFile=${WORKSPACE}/couchbase-jvm-clients/certs/ca.pem' >> java-client/src/integrationTest/resources/integration.properties")
+            shWithEcho("echo 'cluster.unmanaged.certsFile=${WORKSPACE}/couchbase-jvm-clients/certs/ca.pem' >> scala-client/src/integrationTest/resources/integration.properties")
         }
 
         // Not sure why this is needed, it should be in stash from build....
