@@ -288,6 +288,9 @@ public class Collection internal constructor(
         }
     }
 
+    /**
+     * @throws DocumentNotFoundException if the document id is not found in the collection.
+     */
     public suspend fun remove(
         id: String,
         common: CommonOptions = CommonOptions.Default,
@@ -310,6 +313,25 @@ public class Collection internal constructor(
                 observe(request, id, durability, it.cas(), it.mutationToken())
             }
             MutationResult(it.cas(), it.mutationToken().orElse(null))
+        }
+    }
+
+    /**
+     * Like [remove], but does not throw
+     * [DocumentNotFoundException] if the document was not found.
+     */
+    public suspend fun safeRemove(
+        id: String,
+        common: CommonOptions = CommonOptions.Default,
+        durability: Durability = Durability.disabled(),
+        cas: Long = 0,
+    ) {
+        runCatching {
+            this.remove(id, common, durability, cas)
+        }.recoverCatching { error ->
+            if (error != DocumentNotFoundException::class.java) {
+                throw error
+            }
         }
     }
 
