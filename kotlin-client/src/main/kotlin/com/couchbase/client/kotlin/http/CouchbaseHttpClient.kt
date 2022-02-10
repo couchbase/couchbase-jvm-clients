@@ -32,6 +32,29 @@ private val PATH_PLACEHOLDER = Regex("\\{}")
 
 /**
  * Replaces each `{}` placeholder in the template string with the
+ * URL-encoded form of the corresponding list element.
+ *
+ * For example:
+ * ```
+ *     formatPath("/foo/{}/bar/{}", listOf("hello world", "a/b"))
+ * ```
+ * returns the string `"/foo/hello%20world/bar/a%2Fb"`
+ *
+ * @throws IllegalArgumentException if the number of placeholders
+ * does not match the size of the list.
+ */
+public fun formatPath(template: String, args: List<String>): String {
+    val i = args.iterator()
+    val result = template.replace(PATH_PLACEHOLDER) {
+        require(i.hasNext()) { "Too few arguments (${args.size}) for format string: $template" }
+        urlEncode(i.next())
+    }
+    require(!i.hasNext()) { "Too many arguments (${args.size}) for format string: $template" }
+    return result
+}
+
+/**
+ * Replaces each `{}` placeholder in the template string with the
  * URL-encoded form of the corresponding additional argument.
  *
  * For example:
@@ -43,19 +66,17 @@ private val PATH_PLACEHOLDER = Regex("\\{}")
  * @throws IllegalArgumentException if the number of placeholders
  * does not match the number of additional arguments.
  */
-public fun formatPath(template: String, vararg args: String): String {
-    val i = args.iterator()
-    val result = template.replace(PATH_PLACEHOLDER) {
-        require(i.hasNext()) { "Too few arguments (${args.size}) for format string: $template" }
-        urlEncode(i.next())
-    }
-    require(!i.hasNext()) { "Too many arguments (${args.size}) for format string: $template" }
-    return result
-}
+public fun formatPath(template: String, vararg args: String): String =
+    formatPath(template, listOf(*args))
+
+/**
+ * An HTTP header is represented as a pair of header name to value.
+ */
+public typealias Header = Pair<String, String>
 
 /**
  * Specialized HTTP client for the Couchbase Server REST API.
- * Get an instance by calling [Cluster.httpClient].
+ * An instance is available as [Cluster.httpClient].
  *
  * Instead of an explicit host and port, provide an [HttpTarget]
  * identifying the service to invoke.
@@ -69,6 +90,17 @@ public class CouchbaseHttpClient internal constructor(
     private val core = cluster.core
 
     /**
+     * Issues a `GET` request to the [target] Couchbase service.
+     *
+     * If the [path] has variable parts, consider using [formatPath]
+     * to build the path string.
+     *
+     * Query parameters can be passed via [queryString], and/or
+     * embedded in the [path] if you prefer.
+     *
+     * There's usually no reason to set extra [headers] unless you're
+     * invoking an API that requires a special header.
+     *
      * @sample com.couchbase.client.kotlin.samples.httpClientGetBucketStats
      * @sample com.couchbase.client.kotlin.samples.httpClientGetWithQueryParameters
      */
@@ -77,16 +109,28 @@ public class CouchbaseHttpClient internal constructor(
         path: String,
         common: CommonOptions = CommonOptions.Default,
         queryString: NameValuePairs? = null,
+        headers: List<Header> = emptyList(),
     ): CouchbaseHttpResponse {
         val request = CoreHttpClient(core, target.coreTarget)
             .get(CoreHttpPath.path(path), common.toCore())
 
         queryString?.let { request.queryString(it.urlEncoded) }
 
-        return exec(request)
+        return exec(request, headers)
     }
 
     /**
+     * Issues a `POST` request to the [target] Couchbase service.
+     *
+     * If the [path] has variable parts, consider using [formatPath]
+     * to build the path string.
+     *
+     * Request content and type is defined by [body]. Specifying a body
+     * automatically sets the "Content-Type" header appropriately.
+     *
+     * There's usually no reason to set extra [headers] unless you're
+     * invoking an API that requires a special header.
+     *
      * @sample com.couchbase.client.kotlin.samples.httpClientPostWithFormData
      * @sample com.couchbase.client.kotlin.samples.httpClientPostWithJsonBody
      */
@@ -95,41 +139,66 @@ public class CouchbaseHttpClient internal constructor(
         path: String,
         common: CommonOptions = CommonOptions.Default,
         body: HttpBody? = null,
+        headers: List<Header> = emptyList(),
     ): CouchbaseHttpResponse {
         val request = CoreHttpClient(core, target.coreTarget)
             .post(CoreHttpPath.path(path), common.toCore())
 
         body?.let { request.content(it.content, it.contentType) }
 
-        return exec(request)
+        return exec(request, headers)
     }
 
+    /**
+     * Issues a `PUT` request to the [target] Couchbase service.
+     *
+     * If the [path] has variable parts, consider using [formatPath]
+     * to build the path string.
+     *
+     * Request content and type is defined by [body]. Specifying a body
+     * automatically sets the "Content-Type" header appropriately.
+     *
+     * There's usually no reason to set extra [headers] unless you're
+     * invoking an API that requires a special header.
+     */
     public suspend fun put(
         target: HttpTarget,
         path: String,
         common: CommonOptions = CommonOptions.Default,
         body: HttpBody? = null,
+        headers: List<Header> = emptyList(),
     ): CouchbaseHttpResponse {
         val request = CoreHttpClient(core, target.coreTarget)
             .put(CoreHttpPath.path(path), common.toCore())
 
         body?.let { request.content(it.content, it.contentType) }
 
-        return exec(request)
+        return exec(request, headers)
     }
 
+    /**
+     * Issues a `DELETE` request to the [target] Couchbase service.
+     *
+     * If the [path] has variable parts, consider using [formatPath]
+     * to build the path string.
+     *
+     * There's usually no reason to set extra [headers] unless you're
+     * invoking an API that requires a special header.
+     */
     public suspend fun delete(
         target: HttpTarget,
         path: String,
         common: CommonOptions = CommonOptions.Default,
+        headers: List<Header> = emptyList(),
     ): CouchbaseHttpResponse {
         val request = CoreHttpClient(core, target.coreTarget)
             .delete(CoreHttpPath.path(path), common.toCore())
 
-        return exec(request)
+        return exec(request, headers)
     }
 
-    private suspend fun exec(request: CoreHttpRequest.Builder): CouchbaseHttpResponse {
+    private suspend fun exec(request: CoreHttpRequest.Builder, headers: List<Header>): CouchbaseHttpResponse {
+        headers.forEach { request.header(it.first, it.second) }
         val req = request
             .bypassExceptionTranslation(true) // no domain-specific exceptions, please
             .build()

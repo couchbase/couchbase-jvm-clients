@@ -38,9 +38,6 @@ internal class CouchbaseHttpClientIntegrationTest : KotlinIntegrationTest() {
             "/foo/hello%20world/bar/a%2Fb",
             formatPath("/foo/{}/bar/{}", "hello world", "a/b")
         )
-
-        assertThrows<IllegalArgumentException> { formatPath("{}") }
-        assertThrows<IllegalArgumentException> { formatPath("foo", "bar") }
     }
 
     @Test
