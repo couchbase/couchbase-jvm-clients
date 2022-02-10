@@ -17,87 +17,48 @@
 package com.couchbase.client.kotlin.http
 
 import com.couchbase.client.core.msg.RequestTarget
-import com.couchbase.client.core.node.NodeIdentifier
 import com.couchbase.client.core.service.ServiceType
 
 /**
  * Determines which host and port an HTTP request is dispatched to.
- * Use the factory methods in the companion object to create new instances.
+ * Use the companion factory methods to create new instances.
  */
 public class HttpTarget internal constructor(
     serviceType: ServiceType,
-    nodeIdentifier: NodeIdentifier?,
-    bucketName: String? = null,
 ) {
-    internal val coreTarget = RequestTarget(serviceType, nodeIdentifier, bucketName)
+    internal val coreTarget = RequestTarget(serviceType, null, null)
 
     override fun toString(): String = coreTarget.toString()
-
-    /**
-     * Returns a copy of this target with a different node.
-     *
-     * @param nodeIdentifier node to receive requests, or null to let the service locator decide.
-     */
-    public fun copy(nodeIdentifier: NodeIdentifier? = null): HttpTarget =
-        HttpTarget(coreTarget.serviceType(), nodeIdentifier ?: coreTarget.nodeIdentifier(), coreTarget.bucketName())
 
     public companion object {
         /**
          * Target the Analytics service (port 8095 by default).
-         *
-         * @param nodeIdentifier node to receive requests, or null to let the service locator decide.
          */
-        public fun analytics(nodeIdentifier: NodeIdentifier? = null): HttpTarget =
-            HttpTarget(ServiceType.ANALYTICS, nodeIdentifier)
+        public fun analytics(): HttpTarget = HttpTarget(ServiceType.ANALYTICS)
 
         /**
          * Target the Backup service (port 8097 by default).
-         *
-         * @param nodeIdentifier node to receive requests, or null to let the service locator decide.
          */
-        public fun backup(nodeIdentifier: NodeIdentifier? = null): HttpTarget =
-            HttpTarget(ServiceType.BACKUP, nodeIdentifier)
+        public fun backup(): HttpTarget = HttpTarget(ServiceType.BACKUP)
 
         /**
          * Target the Eventing service (port 8096 by default).
-         *
-         * @param nodeIdentifier node to receive requests, or null to let the service locator decide.
          */
-        public fun eventing(nodeIdentifier: NodeIdentifier? = null): HttpTarget =
-            HttpTarget(ServiceType.EVENTING, nodeIdentifier)
+        public fun eventing(): HttpTarget = HttpTarget(ServiceType.EVENTING)
 
         /**
          * Target the Cluster Management service (port 8091 by default).
-         *
-         * @param nodeIdentifier node to receive requests, or null to let the service locator decide.
          */
-        public fun manager(nodeIdentifier: NodeIdentifier? = null): HttpTarget =
-            HttpTarget(ServiceType.MANAGER, nodeIdentifier)
+        public fun manager(): HttpTarget = HttpTarget(ServiceType.MANAGER)
 
         /**
          * Target the N1QL Query service (port 8093 by default).
-         *
-         * @param nodeIdentifier node to receive requests, or null to let the service locator decide.
          */
-        public fun query(nodeIdentifier: NodeIdentifier? = null): HttpTarget =
-            HttpTarget(ServiceType.QUERY, nodeIdentifier)
+        public fun query(): HttpTarget = HttpTarget(ServiceType.QUERY)
 
         /**
          * Target the Full-Text Search service (port 8094 by default).
-         *
-         * @param nodeIdentifier node to receive requests, or null to let the service locator decide.
          */
-        public fun search(nodeIdentifier: NodeIdentifier? = null): HttpTarget =
-            HttpTarget(ServiceType.SEARCH, nodeIdentifier)
-
-        /**
-         * Target the Views service (port 8092 by default).
-         *
-         * @param bucketName the bucket whose views you want to access.
-         * @param nodeIdentifier node to receive requests, or null to let the service locator decide.
-         * If non-null, must be hosting active KV partitions for the target bucket.
-         */
-        public fun views(bucketName: String, nodeIdentifier: NodeIdentifier? = null): HttpTarget =
-            HttpTarget(ServiceType.VIEWS, nodeIdentifier, bucketName)
+        public fun search(): HttpTarget = HttpTarget(ServiceType.SEARCH)
     }
 }
