@@ -20,8 +20,10 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.manager.search.SearchIndex;
+import com.couchbase.client.java.search.queries.MatchOperator;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.result.SearchRow;
+import com.couchbase.client.java.search.result.SearchRowLocations;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
@@ -34,18 +36,21 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.java.search.SearchOptions.searchOptions;
+import static com.couchbase.client.java.search.SearchQuery.match;
 import static com.couchbase.client.java.search.SearchQuery.queryString;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies the basic functionality of analytics queries in an end-to-end fashion.
+ * Verifies the basic functionality of search queries in an end-to-end fashion.
  */
 @IgnoreWhen(missesCapabilities = Capabilities.SEARCH, clusterTypes = ClusterType.CAVES)
 class SearchIntegrationTest extends JavaIntegrationTest {
@@ -94,6 +99,119 @@ class SearchIntegrationTest extends JavaIntegrationTest {
 
     } finally {
       collection.remove(docId);
+    }
+  }
+
+  @Test
+  void searchIncludeLocations() throws Throwable {
+    String docId = UUID.randomUUID().toString();
+    MutationResult insertResult = collection.insert(docId, mapOf("name", "billy"));
+
+    try {
+      runWithRetry(Duration.ofSeconds(30), () -> {
+        SearchResult result = cluster.searchQuery(indexName, queryString("billy"), searchOptions()
+          .consistentWith(MutationState.from(insertResult.mutationToken().get()))
+          .includeLocations(true));
+
+        List<SearchRowLocations> locationsList = result.rows().stream()
+          .map(SearchRow::locations)
+          .filter(opt -> opt.isPresent())
+          .map(Optional::get)
+          .collect(toList());
+
+        assertTrue(!locationsList.isEmpty());
+      });
+
+    } finally {
+      collection.remove(docId);
+    }
+  }
+
+  @Test
+  void searchMatchOperatorOr() throws Throwable {
+    String docId1 = UUID.randomUUID().toString();
+    String docId2 = UUID.randomUUID().toString();
+
+    MutationResult insertResult1 = collection.insert(docId1, mapOf("name", "milly"));
+    MutationResult insertResult2 = collection.insert(docId2, mapOf("name", "tilly"));
+
+    try {
+      runWithRetry(Duration.ofSeconds(30), () -> {
+        SearchResult result = cluster.searchQuery(indexName, match("milly tilly").operator(MatchOperator.OR),
+          searchOptions().consistentWith(MutationState.from(
+            insertResult1.mutationToken().get(),
+            insertResult2.mutationToken().get()))
+        );
+
+        List<String> actualDocIds = result.rows().stream()
+          .map(SearchRow::id)
+          .collect(toList());
+
+        assertEquals(listOf(docId1, docId2), actualDocIds);
+      });
+
+    } finally {
+      collection.remove(docId1);
+      collection.remove(docId2);
+    }
+  }
+
+  @Test
+  void searchMatchOperatorAndMiss() throws Throwable {
+    String docId1 = UUID.randomUUID().toString();
+    String docId2 = UUID.randomUUID().toString();
+
+    MutationResult insertResult1 = collection.insert(docId1, mapOf("name", "billy"));
+    MutationResult insertResult2 = collection.insert(docId2, mapOf("name", "silly"));
+
+    try {
+      runWithRetry(Duration.ofSeconds(10), () -> {
+        SearchResult result = cluster.searchQuery(indexName, match("silly billy").operator(MatchOperator.AND),
+          searchOptions().consistentWith(MutationState.from(
+            insertResult1.mutationToken().get(),
+            insertResult2.mutationToken().get()))
+        );
+
+        List<String> actualDocIds = result.rows().stream()
+          .map(SearchRow::id)
+          .collect(toList());
+
+        assertTrue(actualDocIds.isEmpty());
+      });
+
+    } finally {
+      collection.remove(docId1);
+      collection.remove(docId2);
+    }
+  }
+
+  @Test
+  void searchMatchOperatorAndHit() throws Throwable {
+    String missId = UUID.randomUUID().toString();
+    String hitId = UUID.randomUUID().toString();
+
+    MutationResult insertResult1 = collection.insert(missId, mapOf("fields", mapOf("name", "billy")));
+    MutationResult insertResult2 = collection.insert(hitId, mapOf("fields", mapOf("name", "billy",
+      "surname","kid")));
+
+    try {
+      runWithRetry(Duration.ofSeconds(30), () -> {
+        SearchResult result = cluster.searchQuery(indexName, match("billy kid").operator(MatchOperator.AND),
+          searchOptions().consistentWith(MutationState.from(
+            insertResult1.mutationToken().get(),
+            insertResult2.mutationToken().get()))
+        );
+
+        List<String> actualDocIds = result.rows().stream()
+          .map(SearchRow::id)
+          .collect(toList());
+
+        assertEquals(listOf(hitId), actualDocIds);
+      });
+
+    } finally {
+      collection.remove(missId);
+      collection.remove(hitId);
     }
   }
 
