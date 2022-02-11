@@ -136,7 +136,7 @@ public class Collection internal constructor(
         if (!withExpiry && project.isEmpty()) {
             val request = GetRequest(
                 validateDocumentId(id),
-                common.actualKvTimeout(Durability.disabled()),
+                common.actualKvTimeout(Durability.none()),
                 core.context(),
                 collectionId,
                 common.actualRetryStrategy(),
@@ -180,7 +180,7 @@ public class Collection internal constructor(
     ): GetResult {
         val request = GetAndLockRequest(
             validateDocumentId(id),
-            common.actualKvTimeout(Durability.disabled()),
+            common.actualKvTimeout(Durability.none()),
             core.context(),
             collectionId,
             common.actualRetryStrategy(),
@@ -200,7 +200,7 @@ public class Collection internal constructor(
     ): GetResult {
         val request = GetAndTouchRequest(
             validateDocumentId(id),
-            common.actualKvTimeout(Durability.disabled()),
+            common.actualKvTimeout(Durability.none()),
             core.context(),
             collectionId,
             common.actualRetryStrategy(),
@@ -220,7 +220,7 @@ public class Collection internal constructor(
         core,
         collectionId,
         id,
-        common.actualKvTimeout(Durability.disabled()),
+        common.actualKvTimeout(Durability.none()),
         common.actualRetryStrategy(),
         common.clientContext,
         common.parentSpan,
@@ -252,7 +252,7 @@ public class Collection internal constructor(
             core,
             collectionId,
             id,
-            common.actualKvTimeout(Durability.disabled()),
+            common.actualKvTimeout(Durability.none()),
             common.actualRetryStrategy(),
             common.clientContext,
             common.parentSpan,
@@ -267,7 +267,7 @@ public class Collection internal constructor(
     ): ExistsResult {
         val request = GetMetaRequest(
             validateDocumentId(id),
-            common.actualKvTimeout(Durability.disabled()),
+            common.actualKvTimeout(Durability.none()),
             core.context(),
             collectionId,
             common.actualRetryStrategy(),
@@ -291,7 +291,7 @@ public class Collection internal constructor(
     public suspend fun remove(
         id: String,
         common: CommonOptions = CommonOptions.Default,
-        durability: Durability = Durability.disabled(),
+        durability: Durability = Durability.none(),
         cas: Long = 0,
     ): MutationResult {
         val request = RemoveRequest(
@@ -318,7 +318,7 @@ public class Collection internal constructor(
         content: T,
         common: CommonOptions = CommonOptions.Default,
         transcoder: Transcoder? = null,
-        durability: Durability = Durability.disabled(),
+        durability: Durability = Durability.none(),
         expiry: Expiry = Expiry.None,
     ): MutationResult = internalInsert(id, content, typeRef(), common, transcoder, durability, expiry)
 
@@ -376,7 +376,7 @@ public class Collection internal constructor(
         content: T,
         common: CommonOptions = CommonOptions.Default,
         transcoder: Transcoder? = null,
-        durability: Durability = Durability.disabled(),
+        durability: Durability = Durability.none(),
         expiry: Expiry = Expiry.None,
         @SinceCouchbase("7.0") preserveExpiry: Boolean = false,
     ): MutationResult = internalUpsert(id, content, typeRef(), common, transcoder, durability, expiry, preserveExpiry)
@@ -423,7 +423,7 @@ public class Collection internal constructor(
         content: T,
         common: CommonOptions = CommonOptions.Default,
         transcoder: Transcoder? = null,
-        durability: Durability = Durability.disabled(),
+        durability: Durability = Durability.none(),
         expiry: Expiry = Expiry.None,
         @SinceCouchbase("7.0") preserveExpiry: Boolean = false,
         cas: Long = 0,
@@ -474,7 +474,7 @@ public class Collection internal constructor(
         common: CommonOptions = CommonOptions.Default,
     ): MutationResult {
         val request = TouchRequest(
-            common.actualKvTimeout(Durability.disabled()),
+            common.actualKvTimeout(Durability.none()),
             core.context(),
             collectionId,
             common.actualRetryStrategy(),
@@ -496,7 +496,7 @@ public class Collection internal constructor(
         if (cas == 0L) throw InvalidArgumentException("Unlock CAS must be non-zero.", null, ReducedKeyValueErrorContext.create(id, collectionId))
 
         val request = UnlockRequest(
-            common.actualKvTimeout(Durability.disabled()),
+            common.actualKvTimeout(Durability.none()),
             core.context(),
             collectionId,
             common.actualRetryStrategy(),
@@ -543,7 +543,7 @@ public class Collection internal constructor(
 
         val flags: Byte = if (accessDeleted) SubdocMutateRequest.SUBDOC_DOC_FLAG_ACCESS_DELETED else 0
         val request = SubdocGetRequest(
-            common.actualKvTimeout(Durability.disabled()),
+            common.actualKvTimeout(Durability.none()),
             core.context(),
             collectionId,
             common.actualRetryStrategy(),
@@ -578,7 +578,7 @@ public class Collection internal constructor(
         common: CommonOptions = CommonOptions.Default,
         expiry: Expiry = Expiry.none(),
         preserveExpiry: Boolean = false,
-        durability: Durability = Durability.disabled(),
+        durability: Durability = Durability.none(),
         storeSemantics: StoreSemantics = StoreSemantics.replace(),
         serializer: JsonSerializer? = null,
         accessDeleted: Boolean = false,
@@ -614,7 +614,7 @@ public class Collection internal constructor(
         common: CommonOptions = CommonOptions.Default,
         expiry: Expiry = Expiry.none(),
         preserveExpiry: Boolean = false,
-        durability: Durability = Durability.disabled(),
+        durability: Durability = Durability.none(),
         storeSemantics: StoreSemantics = StoreSemantics.replace(),
         serializer: JsonSerializer? = null,
         accessDeleted: Boolean = false,
@@ -691,7 +691,7 @@ public class Collection internal constructor(
     public fun counter(
         documentId: String,
         common: CommonOptions = CommonOptions.Default,
-        durability: Durability = Durability.disabled(),
+        durability: Durability = Durability.none(),
         expiry: Expiry = Expiry.none()
     ): Counter = Counter(this, documentId, common, durability, expiry)
 

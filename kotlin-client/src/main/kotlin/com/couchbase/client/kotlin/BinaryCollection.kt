@@ -49,7 +49,7 @@ public class BinaryCollection internal constructor(
         id: String,
         content: ByteArray,
         common: CommonOptions = CommonOptions.Default,
-        durability: Durability = Durability.disabled(),
+        durability: Durability = Durability.none(),
         cas: Long = 0,
     ): MutationResult = with(core.env) {
         val span = common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_APPEND)
@@ -86,7 +86,7 @@ public class BinaryCollection internal constructor(
         id: String,
         content: ByteArray,
         common: CommonOptions = CommonOptions.Default,
-        durability: Durability = Durability.disabled(),
+        durability: Durability = Durability.none(),
         cas: Long = 0,
     ): MutationResult = with(core.env) {
         val span = common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_PREPEND)
@@ -119,7 +119,7 @@ public class BinaryCollection internal constructor(
      *
      * If the counter document does not exist, the behavior depends on the
      * `initialValue` argument. If null, [DocumentNotFoundException] is thrown.
-     * Otherwise the document is created with the initial value, and this initial
+     * Otherwise, the document is created with the initial value, and this initial
      * value is returned regardless of the `delta` argument.
      *
      * The content of a counter document is a single JSON integer with
@@ -149,7 +149,7 @@ public class BinaryCollection internal constructor(
     public suspend fun increment(
         id: String,
         common: CommonOptions = CommonOptions.Default,
-        durability: Durability = Durability.disabled(),
+        durability: Durability = Durability.none(),
         expiry: Expiry = Expiry.none(),
         delta: ULong = 1u,
         initialValue: ULong? = delta,
@@ -202,7 +202,7 @@ public class BinaryCollection internal constructor(
      * If null and the document does not exist, [DocumentNotFoundException]
      * is thrown.
      *
-     * @param delta the number to add to the counter. A value of zero
+     * @param delta the number to subtract from to the counter. A value of zero
      * returns the current value of the counter. Ignored if the counter document
      * does not already exist, in which case the returned value is determined
      * by `initialValue`.
@@ -216,7 +216,7 @@ public class BinaryCollection internal constructor(
     public suspend fun decrement(
         id: String,
         common: CommonOptions = CommonOptions.Default,
-        durability: Durability = Durability.disabled(),
+        durability: Durability = Durability.none(),
         expiry: Expiry = Expiry.none(),
         delta: ULong = 1u,
         initialValue: ULong? = 0u,

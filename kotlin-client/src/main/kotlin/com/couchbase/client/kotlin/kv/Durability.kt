@@ -1,5 +1,6 @@
 package com.couchbase.client.kotlin.kv
 
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.msg.kv.DurabilityLevel
 import com.couchbase.client.core.msg.kv.DurabilityLevel.MAJORITY
 import com.couchbase.client.core.msg.kv.DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE
@@ -7,7 +8,6 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel.PERSIST_TO_MAJORITY
 import com.couchbase.client.core.service.kv.Observe.ObservePersistTo
 import com.couchbase.client.core.service.kv.Observe.ObserveReplicateTo
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
-import com.couchbase.client.core.annotation.SinceCouchbase
 
 /**
  * Specifies the durability requirements for a mutation.
@@ -15,9 +15,19 @@ import com.couchbase.client.core.annotation.SinceCouchbase
 public sealed class Durability {
     internal abstract fun isPersistent(): Boolean
 
+    @Deprecated(
+        level = DeprecationLevel.WARNING,
+        replaceWith = ReplaceWith("Durability.None", "com.couchbase.client.kotlin.kv.Durability"),
+        message = "For consistency with other options, 'Disabled' is renamed to 'None'.",
+    )
     public object Disabled : Durability() {
         override fun isPersistent(): Boolean = false
         override fun toString(): String = "Disabled"
+    }
+
+    public object None : Durability() {
+        override fun isPersistent(): Boolean = false
+        override fun toString(): String = "None"
     }
 
     @SinceCouchbase("6.5")
@@ -41,7 +51,19 @@ public sealed class Durability {
          * active partition has the mutation in memory (but not necessarily
          * persisted to disk).
          */
+        @Deprecated(
+            level = DeprecationLevel.WARNING,
+            message = "For consistency with other options, 'disabled' is renamed to 'none'.",
+            replaceWith = ReplaceWith("none()", "static com.couchbase.client.kotlin.kv.Durability.none"),
+        )
         public fun disabled(): Durability = Disabled
+
+        /**
+         * The SDK will report success as soon as the node hosting the
+         * active partition has the mutation in memory (but not necessarily
+         * persisted to disk).
+         */
+        public fun none(): Durability = None
 
         /**
          * The client will poll the server until the specified durability
