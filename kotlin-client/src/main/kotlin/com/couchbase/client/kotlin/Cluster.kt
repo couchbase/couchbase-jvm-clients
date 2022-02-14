@@ -20,6 +20,8 @@ import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics.ClusterState
+import com.couchbase.client.core.diagnostics.EndpointDiagnostics
+import com.couchbase.client.core.diagnostics.HealthPinger
 import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.env.CertificateAuthenticator
@@ -39,11 +41,13 @@ import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
+import com.couchbase.client.kotlin.diagnostics.DiagnosticsResult
+import com.couchbase.client.kotlin.diagnostics.PingResult
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.env.env
-import com.couchbase.client.kotlin.internal.await
 import com.couchbase.client.kotlin.http.CouchbaseHttpClient
+import com.couchbase.client.kotlin.internal.await
 import com.couchbase.client.kotlin.query.QueryFlowItem
 import com.couchbase.client.kotlin.query.QueryMetadata
 import com.couchbase.client.kotlin.query.QueryParameters
@@ -54,8 +58,10 @@ import com.couchbase.client.kotlin.query.QueryScanConsistency
 import com.couchbase.client.kotlin.query.internal.QueryExecutor
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.reactive.awaitSingle
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.stream.Collectors
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 import kotlin.time.toKotlinDuration
@@ -154,7 +160,54 @@ public class Cluster internal constructor(
      * @sample com.couchbase.client.kotlin.samples.httpClientPostWithJsonBody
      */
     @Stability.Volatile
-    public val httpClient : CouchbaseHttpClient = CouchbaseHttpClient(this)
+    public val httpClient: CouchbaseHttpClient = CouchbaseHttpClient(this)
+
+    /**
+     * Pings the Couchbase cluster's global services.
+     * (To ping bucket-level services like KV as well, use [Bucket.ping] instead.)
+     *
+     * This operation performs I/O against services and endpoints to assess their health.
+     * If you do not wish to perform I/O, consider using [diagnostics] instead.
+     *
+     * @param services The services to ping. Defaults to all services.
+     * @param reportId An arbitrary ID to assign to the report.
+     */
+    public suspend fun ping(
+        common: CommonOptions = CommonOptions.Default,
+        services: Set<ServiceType> = EnumSet.allOf(ServiceType::class.java),
+        reportId: String = UUID.randomUUID().toString(),
+    ): PingResult = PingResult(
+        HealthPinger.ping(
+            core,
+            Optional.ofNullable(common.timeout?.toJavaDuration()),
+            common.retryStrategy,
+            services,
+            Optional.of(reportId),
+            Optional.empty(),
+        ).awaitSingle()
+    )
+
+    /**
+     * Generates a diagnostic report on the current state of the cluster from the SDKs point of view.
+     *
+     * This operation does not perform any I/O. It uses only the last known state of the cluster
+     * to assemble the report. For example, if no N1QL query has been executed, the Query service's
+     * socket pool might be empty, and as result not show up in the report.
+     *
+     * If you wish to actively assess the health of the cluster by performing I/O,
+     * consider using [ping] instead.
+     *
+     * @param reportId An arbitrary ID to assign to the report.
+     */
+    public fun diagnostics(
+        reportId: String = UUID.randomUUID().toString(),
+    ): DiagnosticsResult = DiagnosticsResult(
+        com.couchbase.client.core.diagnostics.DiagnosticsResult(
+            core.diagnostics().collect(Collectors.groupingBy(EndpointDiagnostics::type)),
+            core.context().environment().userAgent().formattedShort(),
+            reportId,
+        )
+    )
 
     /**
      * Returns a Flow which may be collected to execute a cluster-level
@@ -334,7 +387,7 @@ public class Cluster internal constructor(
             connectionString: String,
             username: String,
             password: String,
-            envConfigBlock: ClusterEnvironmentConfigBlock
+            envConfigBlock: ClusterEnvironmentConfigBlock,
         ): Cluster = connect(connectionString, username, password, ClusterEnvironment.builder(envConfigBlock))
 
         /**
@@ -349,7 +402,7 @@ public class Cluster internal constructor(
             connectionString: String,
             username: String,
             password: String,
-            envBuilder: ClusterEnvironment.Builder = ClusterEnvironment.builder()
+            envBuilder: ClusterEnvironment.Builder = ClusterEnvironment.builder(),
         ): Cluster = connect(connectionString, PasswordAuthenticator.create(username, password), envBuilder)
 
         /**
@@ -359,7 +412,7 @@ public class Cluster internal constructor(
         public fun connect(
             connectionString: String,
             authenticator: Authenticator,
-            envConfigBlock: ClusterEnvironmentConfigBlock
+            envConfigBlock: ClusterEnvironmentConfigBlock,
         ): Cluster = connect(connectionString, authenticator, ClusterEnvironment.builder(envConfigBlock))
 
         /**
@@ -374,7 +427,7 @@ public class Cluster internal constructor(
         public fun connect(
             connectionString: String,
             authenticator: Authenticator,
-            envBuilder: ClusterEnvironment.Builder = ClusterEnvironment.builder()
+            envBuilder: ClusterEnvironment.Builder = ClusterEnvironment.builder(),
         ): Cluster {
             envBuilder.load(ConnectionStringPropertyLoader(connectionString))
             return doConnect(connectionString, authenticator, envBuilder.build(), ownsEnv = true)

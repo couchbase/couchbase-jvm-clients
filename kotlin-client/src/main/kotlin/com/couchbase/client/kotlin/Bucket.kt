@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core
 import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.config.BucketConfig
 import com.couchbase.client.core.diagnostics.ClusterState
+import com.couchbase.client.core.diagnostics.HealthPinger
 import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper
 import com.couchbase.client.core.error.UnambiguousTimeoutException
 import com.couchbase.client.core.error.ViewNotFoundException
@@ -31,6 +32,7 @@ import com.couchbase.client.core.util.UrlQueryStringBuilder
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.typeRef
+import com.couchbase.client.kotlin.diagnostics.PingResult
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.internal.toStringUtf8
@@ -52,6 +54,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.single
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.reactive.awaitSingle
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
@@ -200,6 +204,30 @@ public class Bucket internal constructor(
             .await()
         return this
     }
+
+    /**
+     * Pings services in the Couchbase cluster.
+     * <p>
+     * This operation performs I/O against services and endpoints to assess their health.
+     * If you do not wish to perform I/O, consider using [Cluster.diagnostics] instead.
+     *
+     * @param services The services to ping. Defaults to all services.
+     * @param reportId An arbitrary ID to assign to the report.
+     */
+    public suspend fun ping(
+        common: CommonOptions = CommonOptions.Default,
+        services: Set<ServiceType> = EnumSet.allOf(ServiceType::class.java),
+        reportId: String = UUID.randomUUID().toString(),
+    ): PingResult = PingResult(
+        HealthPinger.ping(
+            core,
+            Optional.ofNullable(common.timeout?.toJavaDuration()),
+            common.retryStrategy,
+            services,
+            Optional.of(reportId),
+            Optional.of(name),
+        ).awaitSingle()
+    )
 
     @VolatileCouchbaseApi
     public suspend fun config(timeout: Duration): BucketConfig =
