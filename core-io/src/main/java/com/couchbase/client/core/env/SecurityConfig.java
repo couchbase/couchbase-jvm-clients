@@ -17,17 +17,16 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
+import com.couchbase.client.core.util.Bytes;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyStore;
@@ -43,6 +42,7 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * The {@link SecurityConfig} allows to enable transport encryption between the client and the servers.
@@ -103,7 +103,7 @@ public class SecurityConfig {
   }
 
   /**
-   * Allows to enable or disable hostname verification (enabled by default).
+   * Allows enabling or disabling hostname verification (enabled by default).
    * <p>
    * Note that disabling hostname verification will cause the TLS connection to not verify that the hostname/ip
    * is actually part of the certificate and as a result not detect certain kinds of attacks. Only disable if
@@ -137,9 +137,9 @@ public class SecurityConfig {
   }
 
   /**
-   * Loads a X.509 trust certificate from the given path and uses it.
+   * Loads X.509 certificates from the specified file into the trust store.
    *
-   * @param certificatePath the path to load the certificate from.
+   * @param certificatePath the path to load the certificates from.
    * @return this {@link Builder} for chaining purposes.
    */
   public static Builder trustCertificate(final Path certificatePath) {
@@ -356,24 +356,32 @@ public class SecurityConfig {
     }
 
     /**
-     * Loads a X.509 trust certificate from the given path and uses it.
+     * Loads X.509 certificates from the file at the given path into the trust store.
+     * <p>
+     * TIP: If you have multiple certificate files in PEM format (for example,
+     * "cert1.pem" and "cert2.pem"), and you want to create a single PEM file
+     * containing all the certificates, concatenate the PEM files using this shell command:
+     * <pre>
+     * $ cat cert1.pem cert2.pem > both-certs.pem
+     * </pre>
+     * Then, when configuring the SDK, call this method with the path to `both-certs.pem`
+     * as the argument.
      *
-     * @param certificatePath the path to load the certificate from.
+     * @param certificatePath the file to load the certificates from.
      * @return this {@link Builder} for chaining purposes.
      */
     public Builder trustCertificate(final Path certificatePath) {
       notNull(certificatePath, "CertificatePath");
 
-      final StringBuilder contentBuilder = new StringBuilder();
-      try {
-        Files.lines(certificatePath, StandardCharsets.UTF_8).forEach(s -> contentBuilder.append(s).append("\n"));
-      } catch (IOException ex) {
+      try (InputStream is = Files.newInputStream(certificatePath)) {
+        return trustCertificates(decodeCertificates(Bytes.readAllBytes(is)));
+
+      } catch (IOException e) {
         throw InvalidArgumentException.fromMessage(
-          "Could not read trust certificate from file \"" + certificatePath + "\"" ,
-          ex
+          "Could not read trust certificates from file \"" + certificatePath + "\"",
+          e
         );
       }
-      return trustCertificates(decodeCertificates(Collections.singletonList(contentBuilder.toString())));
     }
 
     /**
@@ -468,22 +476,30 @@ public class SecurityConfig {
   public static List<X509Certificate> decodeCertificates(final List<String> certificates) {
     notNull(certificates, "Certificates");
 
-    final CertificateFactory cf;
-    try {
-      cf = CertificateFactory.getInstance("X.509");
-    } catch (CertificateException e) {
-      throw InvalidArgumentException.fromMessage("Could not instantiate X.509 CertificateFactory", e);
-    }
+    return certificates.stream()
+        .flatMap(it -> decodeCertificates(it.getBytes(UTF_8)).stream())
+        .collect(Collectors.toList());
+  }
 
-    return certificates.stream().map(c -> {
-      try {
-        return (X509Certificate) cf.generateCertificate(
-          new ByteArrayInputStream(c.getBytes(StandardCharsets.UTF_8))
-        );
-      } catch (CertificateException e) {
-        throw InvalidArgumentException.fromMessage("Could not generate certificate from raw input: \"" + c + "\"", e);
-      }
-    }).collect(Collectors.toList());
+  private static List<X509Certificate> decodeCertificates(byte[] bytes) {
+    notNull(bytes, "bytes");
+
+    try {
+      //noinspection unchecked
+      return (List<X509Certificate>) getX509CertificateFactory()
+          .generateCertificates(new ByteArrayInputStream(bytes));
+    } catch (CertificateException e) {
+      String inputAsString = new String(bytes, UTF_8);
+      throw InvalidArgumentException.fromMessage("Could not generate certificates from raw input: \"" + inputAsString + "\"", e);
+    }
+  }
+
+  private static CertificateFactory getX509CertificateFactory() {
+    try {
+      return CertificateFactory.getInstance("X.509");
+    } catch (CertificateException e) {
+      throw new CouchbaseException("Could not instantiate X.509 CertificateFactory", e);
+    }
   }
 
   /**

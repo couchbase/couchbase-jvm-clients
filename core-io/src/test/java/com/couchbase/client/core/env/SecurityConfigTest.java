@@ -20,9 +20,19 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
 import org.junit.jupiter.api.Test;
 
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static com.couchbase.client.core.util.CbCollections.listOf;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SecurityConfigTest {
 
@@ -48,4 +58,53 @@ class SecurityConfigTest {
     }
   }
 
+  @Test
+  void trustOneCertificateFromFile() {
+    checkCertificatesFromFile(
+        "one-certificate.pem",
+        listOf(
+            "CN=Couchbase Server 1d6c9ec6"
+        )
+    );
+  }
+
+  @Test
+  void trustTwoCertificatesFromFile() {
+    checkCertificatesFromFile(
+        "two-certificates.pem",
+        listOf(
+            "CN=Couchbase Server 1d6c9ec6",
+            "CN=Couchbase Server f233ba43"
+        )
+    );
+  }
+
+  private void checkCertificatesFromFile(
+      String resourceName,
+      List<String> expectedSubjectDns
+  ) {
+    Path path = getResourceAsPath(getClass(), resourceName);
+    SecurityConfig config = SecurityConfig.trustCertificate(path).build();
+
+    assertEquals(
+        expectedSubjectDns,
+        config.trustCertificates().stream()
+            .map(it -> it.getSubjectDN().getName())
+            .collect(toList())
+    );
+  }
+
+  private static Path getResourceAsPath(
+      Class<?> loader,
+      String resourceName
+  ) {
+    try {
+      URL url = loader.getResource(resourceName);
+      requireNonNull(url, "missing class path resource " + resourceName);
+      return Paths.get(url.toURI());
+
+    } catch (URISyntaxException e) {
+      throw new AssertionError(e);
+    }
+  }
 }

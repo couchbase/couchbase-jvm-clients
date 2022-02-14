@@ -16,14 +16,37 @@
 
 package com.couchbase.client.core.util;
 
+import com.couchbase.client.core.error.CouchbaseException;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
+import static com.couchbase.client.core.util.Validators.notNull;
+
 /**
- * Defines useful constants and methods with regards to bytes.
+ * Defines useful constants and methods regarding bytes.
  */
 public class Bytes {
 
   /**
    * Holds an empty byte array, so we do not need to create one every time.
    */
-  public static final byte[] EMPTY_BYTE_ARRAY = new byte[] {};
+  public static final byte[] EMPTY_BYTE_ARRAY = new byte[]{};
 
+  public static byte[] readAllBytes(InputStream is) {
+    notNull(is, "input stream");
+    try {
+      ByteArrayOutputStream result = new ByteArrayOutputStream();
+      byte[] buffer = new byte[4 * 1024];
+      int len;
+      while ((len = is.read(buffer)) != -1) {
+        result.write(buffer, 0, len);
+      }
+      return result.toByteArray();
+    } catch (IOException e) {
+      throw new CouchbaseException("Failed to read bytes from stream.", e);
+    }
+  }
 }
+
