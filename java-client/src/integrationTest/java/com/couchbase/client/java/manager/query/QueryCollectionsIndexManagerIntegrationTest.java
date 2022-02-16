@@ -98,11 +98,16 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
 
   @AfterAll
   static void tearDown() {
+    cleanupIndexes();
     cluster.disconnect();
   }
 
   @BeforeEach
   void cleanup() {
+    cleanupIndexes();
+  }
+
+  static void cleanupIndexes() {
     indexes
       .getAllIndexes(bucketName, enrich(getAllQueryIndexesOptions()))
       .forEach(idx ->

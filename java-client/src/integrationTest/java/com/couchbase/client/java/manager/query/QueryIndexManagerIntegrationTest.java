@@ -87,13 +87,25 @@ public class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @AfterAll
   static void tearDown() {
+    cleanupIndexes();
     cluster.disconnect();
   }
 
   @BeforeEach
   void cleanup() {
+    cleanupIndexes();
+  }
+
+  static void cleanupIndexes() {
     indexes.getAllIndexes(bucketName).forEach(idx -> {
-      indexes.dropIndex(bucketName, idx.name());
+      if (idx.scopeName().isPresent()) {
+        indexes.dropIndex(bucketName, idx.name(), DropQueryIndexOptions.dropQueryIndexOptions()
+        .scopeName(idx.scopeName().get())
+        .collectionName(idx.collectionName().get())
+        );
+      } else {
+        indexes.dropIndex(bucketName, idx.name());
+      }
     });
     assertEquals(emptyList(), indexes.getAllIndexes(bucketName));
   }
