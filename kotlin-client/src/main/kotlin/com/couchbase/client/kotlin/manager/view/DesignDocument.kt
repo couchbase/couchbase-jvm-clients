@@ -17,9 +17,7 @@
 package com.couchbase.client.kotlin.manager.view
 
 import com.couchbase.client.core.manager.CoreViewIndexManager
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 
-@VolatileCouchbaseApi
 public class DesignDocument(
     name: String,
     views: Map<String, View> = emptyMap()

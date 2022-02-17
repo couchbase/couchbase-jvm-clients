@@ -20,7 +20,6 @@ import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.error.subdoc.PathExistsException
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
 import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.LookupInSpec
 import com.couchbase.client.kotlin.kv.MutateInMacro
@@ -380,7 +379,6 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
         assertEquals(7, updatedContent.getInt("foo"))
     }
 
-    @OptIn(VolatileCouchbaseApi::class)
     @IgnoreWhen(clusterTypes = [MOCKED])
     @Test
     fun `insert expand macro xattr do not flag`(): Unit = runBlocking {
@@ -390,7 +388,6 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
         assertEquals("\${Mutation.CAS}", updatedContent.getString("foo"))
     }
 
-    @OptIn(VolatileCouchbaseApi::class)
     @IgnoreWhen(clusterTypes = [MOCKED])
     @Test
     fun `insert expand macro xattr`(): Unit = runBlocking {
@@ -400,7 +397,6 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
         assertThat(updatedContent.getString("foo")).matches(HEX_ENCODED_INT64)
     }
 
-    @OptIn(VolatileCouchbaseApi::class)
     @IgnoreWhen(clusterTypes = [MOCKED])
     @Test
     fun `insert expand macro crc32 xattr`(): Unit = runBlocking {
@@ -410,7 +406,6 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
         assertThat(updatedContent.getString("foo")).matches(HEX_ENCODED_INT32)
     }
 
-    @OptIn(VolatileCouchbaseApi::class)
     @IgnoreWhen(clusterTypes = [MOCKED])
     @Test
     fun `insert expand macro seqno xattr`(): Unit = runBlocking {
@@ -420,7 +415,6 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
         assertThat(updatedContent.getString("foo")).matches(HEX_ENCODED_INT64)
     }
 
-    @OptIn(VolatileCouchbaseApi::class)
     @IgnoreWhen(clusterTypes = [MOCKED])
     @Test
     fun `upsert expand macro xattr`(): Unit = runBlocking {

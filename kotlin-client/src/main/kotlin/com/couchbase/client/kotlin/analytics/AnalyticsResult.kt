@@ -21,7 +21,6 @@ import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.typeRef
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
 
 public class AnalyticsResult(
     public val rows: List<AnalyticsRow>,

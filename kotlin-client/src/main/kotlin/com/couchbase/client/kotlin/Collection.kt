@@ -125,7 +125,7 @@ public class Collection internal constructor(
      * To work around this limitation, consider specifying shallower paths or
      * fetching the whole document.
      *
-     * @throws DocumentNotFoundException if the document id is not found in the collection.
+     * @throws DocumentNotFoundException if a document with ID [id] is not found in the collection.
      */
     public suspend fun get(
         id: String,
@@ -171,7 +171,7 @@ public class Collection internal constructor(
     }
 
     /**
-     * @throws DocumentNotFoundException if the document id is not found in the collection.
+     * @throws DocumentNotFoundException if a document with ID [id] is not found in the collection.
      */
     public suspend fun getAndLock(
         id: String,
@@ -234,7 +234,6 @@ public class Collection internal constructor(
         id: String,
         common: CommonOptions = CommonOptions.Default,
     ): GetReplicaResult {
-        @OptIn(VolatileCouchbaseApi::class)
         return getAnyReplicaOrNull(id, common)
             ?: throw DocumentUnretrievableException(ReducedKeyValueErrorContext.create(id, collectionId))
     }
@@ -288,6 +287,10 @@ public class Collection internal constructor(
         }
     }
 
+    /**
+     * @throws DocumentNotFoundException if a document with ID [id] is not found in the collection.
+     * @throws CasMismatchException if [cas] != 0 and does not match the existing document's CAS value.
+     */
     public suspend fun remove(
         id: String,
         common: CommonOptions = CommonOptions.Default,
@@ -313,6 +316,27 @@ public class Collection internal constructor(
         }
     }
 
+    /**
+     * Like [remove], but returns null instead of throwing
+     * [DocumentNotFoundException] if the document was not found.
+     */
+    @VolatileCouchbaseApi
+    public suspend fun removeOrNull(
+        id: String,
+        common: CommonOptions = CommonOptions.Default,
+        durability: Durability = Durability.none(),
+        cas: Long = 0,
+    ): MutationResult? {
+        return try {
+            remove(id, common, durability, cas)
+        } catch (_: DocumentNotFoundException) {
+            null;
+        }
+    }
+
+    /**
+     * @throws DocumentExistsException if a document with the same ID already exists.
+     */
     public suspend inline fun <reified T> insert(
         id: String,
         content: T,
@@ -418,6 +442,10 @@ public class Collection internal constructor(
         }
     }
 
+    /**
+     * @throws DocumentNotFoundException if a document with ID [id] is not found in the collection.
+     * @throws CasMismatchException if [cas] != 0 and does not match the existing document's CAS value.
+     */
     public suspend inline fun <reified T> replace(
         id: String,
         content: T,
@@ -629,7 +657,6 @@ public class Collection internal constructor(
         val encodedCommands = spec.commands.map { it.encode(defaultCreateParent, serializer ?: defaultJsonSerializer) }
         val timeout = common.actualKvTimeout(durability)
 
-        @OptIn(VolatileCouchbaseApi::class)
         val request = SubdocMutateRequest(
             timeout,
             core.context(),

@@ -17,13 +17,11 @@
 package com.couchbase.client.kotlin.samples
 
 import com.couchbase.client.kotlin.Cluster
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.query.QueryMetadata
 import com.couchbase.client.kotlin.query.QueryResult
 import com.couchbase.client.kotlin.query.execute
 
 @Suppress("UNUSED_VARIABLE")
-@OptIn(VolatileCouchbaseApi::class)
 internal suspend fun singleValueQueryAnonymous(cluster: Cluster) {
     // Single-value query with anonymous result
     val count = cluster
@@ -33,7 +31,6 @@ internal suspend fun singleValueQueryAnonymous(cluster: Cluster) {
 }
 
 @Suppress("UNUSED_VARIABLE")
-@OptIn(VolatileCouchbaseApi::class)
 internal suspend fun singleValueQueryNamed(cluster: Cluster) {
     // Single-value query with named result
     val count = cluster
@@ -43,7 +40,6 @@ internal suspend fun singleValueQueryNamed(cluster: Cluster) {
 }
 
 @Suppress("UNUSED_VARIABLE")
-@OptIn(VolatileCouchbaseApi::class)
 internal suspend fun bufferedQuery(cluster: Cluster) {
     // Buffered query, for when results are known to fit in memory
     val result: QueryResult = cluster
@@ -54,7 +50,6 @@ internal suspend fun bufferedQuery(cluster: Cluster) {
 }
 
 @Suppress("UNUSED_VARIABLE")
-@OptIn(VolatileCouchbaseApi::class)
 internal suspend fun streamingQuery(cluster: Cluster) {
     // Streaming query, for when result size is large or unbounded
     val metadata: QueryMetadata = cluster

@@ -21,7 +21,6 @@ import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.msg.kv.CodecFlags.JSON_COMPAT_FLAGS
 import com.couchbase.client.core.msg.kv.SubdocCommandType
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.TypeRef
@@ -41,7 +40,6 @@ public class SubdocLong internal constructor(
     }
 }
 
-@OptIn(VolatileCouchbaseApi::class)
 public class MutateInSpec {
 
     internal class Command<T>(
@@ -54,7 +52,6 @@ public class MutateInSpec {
         private val createParent: Boolean?,
         private val arrayElementType: TypeRef<*>?,
     ) {
-        @OptIn(VolatileCouchbaseApi::class)
         internal fun encode(defaultCreateParent: Boolean, serializer: JsonSerializer): SubdocMutateRequest.Command {
             if (fragment is MutateInMacro) {
                 return SubdocMutateRequest.Command(
@@ -262,7 +259,6 @@ public class MutateInSpec {
     ): SubdocLong = incrementAndGet(path, -delta, xattr)
 }
 
-@OptIn(VolatileCouchbaseApi::class)
 private fun <T> serializeArrayFragment(
     values: List<*>,
     elementType: TypeRef<T>,

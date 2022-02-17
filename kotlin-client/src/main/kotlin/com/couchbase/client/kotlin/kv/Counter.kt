@@ -19,12 +19,13 @@ package com.couchbase.client.kotlin.kv
 import com.couchbase.client.kotlin.BinaryCollection
 import com.couchbase.client.kotlin.Collection
 import com.couchbase.client.kotlin.CommonOptions
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import kotlin.math.absoluteValue
 
 /**
  * A counter backed by a document on Couchbase Server.
+ *
+ * Create an instance using [Collection.counter].
  *
  * Counter operations are atomic with respect to a single Couchbase Server cluster,
  * but not between clusters when Cross-Datacenter Replication (XDCR) is used.
@@ -43,7 +44,6 @@ import kotlin.math.absoluteValue
  * @see BinaryCollection.increment
  * @see BinaryCollection.decrement
  */
-@VolatileCouchbaseApi
 public class Counter internal constructor(
     public val collection: Collection,
     public val documentId: String,

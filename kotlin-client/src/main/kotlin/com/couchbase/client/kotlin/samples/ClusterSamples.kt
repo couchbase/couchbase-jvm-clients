@@ -21,7 +21,6 @@ import com.couchbase.client.core.env.SecurityConfig
 import com.couchbase.client.core.retry.FailFastRetryStrategy
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.kotlin.Cluster
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.RawJsonTranscoder
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.env.dsl.TrustSource
@@ -32,7 +31,6 @@ import java.util.*
 import kotlin.time.Duration.Companion.seconds
 
 @Suppress("UNUSED_VARIABLE")
-@OptIn(VolatileCouchbaseApi::class)
 internal fun quickstart() {
     // Quickstart
 

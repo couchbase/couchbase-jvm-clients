@@ -24,7 +24,6 @@ import com.couchbase.client.core.msg.query.QueryRequest.queryContext
 import com.couchbase.client.core.util.Golang
 import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.Scope
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.env.env
@@ -51,7 +50,6 @@ internal class QueryExecutor(
     private val scopeName = scope?.name
     private val queryContext = scope?.let { queryContext(scope.bucket.name, scope.name) }
 
-    @OptIn(VolatileCouchbaseApi::class)
     fun query(
         statement: String,
         common: CommonOptions,

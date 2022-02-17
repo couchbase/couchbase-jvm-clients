@@ -23,12 +23,10 @@ import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.manager.CoreViewIndexManager
 import com.couchbase.client.kotlin.Bucket
 import com.couchbase.client.kotlin.CommonOptions
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace.PRODUCTION
 import kotlinx.coroutines.future.await
 
-@OptIn(VolatileCouchbaseApi::class)
 public class ViewIndexManager internal constructor(internal val bucket: Bucket) {
     private val coreManager = CoreViewIndexManager(bucket.core, bucket.name)
 

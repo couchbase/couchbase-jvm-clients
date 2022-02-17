@@ -17,6 +17,7 @@
 package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE
@@ -25,7 +26,6 @@ import com.couchbase.client.kotlin.analytics.AnalyticsParameters
 import com.couchbase.client.kotlin.analytics.AnalyticsPriority
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.query.QueryFlowItem
@@ -36,7 +36,6 @@ import com.couchbase.client.kotlin.query.QueryResult
 import com.couchbase.client.kotlin.query.QueryRow
 import com.couchbase.client.kotlin.query.QueryScanConsistency
 import com.couchbase.client.kotlin.query.internal.QueryExecutor
-import com.couchbase.client.core.annotation.SinceCouchbase
 import kotlinx.coroutines.flow.Flow
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -145,7 +144,6 @@ public class Scope(
      * @param raw an "escape hatch" for passing arbitrary query options that
      * aren't otherwise exposed by this method.
      */
-    @OptIn(VolatileCouchbaseApi::class)
     public fun query(
         statement: String,
         common: CommonOptions = CommonOptions.Default,

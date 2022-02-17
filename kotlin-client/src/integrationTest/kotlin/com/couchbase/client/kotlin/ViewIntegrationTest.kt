@@ -16,7 +16,6 @@
 
 package com.couchbase.client.kotlin
 
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.manager.view.DesignDocument
 import com.couchbase.client.kotlin.manager.view.View
 import com.couchbase.client.kotlin.manager.view.ViewIndexManager
@@ -38,9 +37,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import java.util.*
 
-@OptIn(VolatileCouchbaseApi::class)
 @IgnoreWhen(clusterTypes = [MOCKED, CAVES])
 internal class ViewIntegrationTest : KotlinIntegrationTest() {
     private val DDOC_NAME = "everything"

@@ -24,7 +24,6 @@ import com.couchbase.client.core.msg.kv.CodecFlags
 import com.couchbase.client.core.projections.ProjectionsApplier
 import com.couchbase.client.kotlin.Collection
 import com.couchbase.client.kotlin.CommonOptions
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.LookupInSpec
 import java.nio.charset.StandardCharsets
@@ -37,7 +36,6 @@ internal class SubdocGetResult(
     val expiry: Expiry?,
 )
 
-@OptIn(VolatileCouchbaseApi::class)
 internal suspend fun Collection.subdocGet(
     id: String,
     withExpiry: Boolean = false,

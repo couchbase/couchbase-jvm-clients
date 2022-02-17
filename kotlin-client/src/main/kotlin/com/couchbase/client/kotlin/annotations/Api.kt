@@ -35,11 +35,11 @@ import com.couchbase.client.core.annotation.Stability
  * Couchbase Java SDK and core-io library. The Kotlin SDK uses a separate
  * annotation in order to specify opt-in requirements.
  */
-@RequiresOptIn(level = RequiresOptIn.Level.ERROR)
+@MustBeDocumented
 public annotation class VolatileCouchbaseApi
 
 /**
- * No commitment is made about the API.
+ * The API will probably remain stable, but no commitment has been made yet.
  *
  * It may be changed in incompatible ways or dropped from one release
  * to another. The difference between uncommitted and volatile
@@ -52,5 +52,5 @@ public annotation class VolatileCouchbaseApi
  * Couchbase Java SDK and core-io library. The Kotlin SDK uses a separate
  * annotation in order to specify opt-in requirements.
  */
-@RequiresOptIn(level = RequiresOptIn.Level.WARNING)
+@MustBeDocumented
 public annotation class UncommittedCouchbaseApi

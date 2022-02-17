@@ -42,7 +42,6 @@ import com.couchbase.client.kotlin.analytics.AnalyticsParameters
 import com.couchbase.client.kotlin.analytics.AnalyticsPriority
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.diagnostics.DiagnosticsResult
 import com.couchbase.client.kotlin.diagnostics.PingResult
@@ -297,7 +296,6 @@ public class Cluster internal constructor(
      * @sample com.couchbase.client.kotlin.samples.checkSearchQueryResultForPartialFailure
      * @sample com.couchbase.client.kotlin.samples.searchQueryWithFacets
      */
-    @Stability.Volatile
     public fun searchQuery(
         indexName: String,
         query: SearchQuery,
@@ -464,7 +462,6 @@ public class Cluster internal constructor(
      * @sample com.couchbase.client.kotlin.samples.singleValueQueryAnonymous
      * @sample com.couchbase.client.kotlin.samples.singleValueQueryNamed
      */
-    @OptIn(VolatileCouchbaseApi::class)
     public fun query(
         statement: String,
         common: CommonOptions = CommonOptions.Default,

@@ -68,7 +68,6 @@ import java.time.temporal.ChronoUnit.SECONDS as ChronoSeconds
 // with Gerrit verification.  Remove when mock is fixed:
 //    http://review.couchbase.org/c/CouchbaseMock/+/148081
 @IgnoreWhen(clusterTypes = [ClusterType.MOCKED])
-@OptIn(VolatileCouchbaseApi::class)
 internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
 
     val nearFutureExpiry = Expiry.of(Instant.now().plus(3, ChronoDays).truncatedTo(ChronoSeconds))
@@ -140,7 +139,6 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
     }
 
     @Nested
-    @VolatileCouchbaseApi
     inner class GetAnyReplicaOrNull {
         @Test
         fun `returns null`(): Unit = runBlocking {

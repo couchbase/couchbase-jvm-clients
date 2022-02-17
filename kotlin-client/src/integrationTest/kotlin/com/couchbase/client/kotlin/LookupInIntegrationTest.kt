@@ -3,7 +3,6 @@ package com.couchbase.client.kotlin
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException
 import com.couchbase.client.core.msg.kv.CodecFlags
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.internal.toStringUtf8
 import com.couchbase.client.kotlin.kv.LookupInSpec
@@ -20,7 +19,6 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-@OptIn(VolatileCouchbaseApi::class)
 @IgnoreWhen(clusterTypes = [ClusterType.MOCKED])
 internal class LookupInIntegrationTest : KotlinIntegrationTest() {
 

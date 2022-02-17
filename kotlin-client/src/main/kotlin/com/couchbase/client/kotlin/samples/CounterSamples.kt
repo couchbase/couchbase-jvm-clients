@@ -17,14 +17,12 @@
 package com.couchbase.client.kotlin.samples
 
 import com.couchbase.client.kotlin.Collection
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.kv.Expiry
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlin.time.Duration.Companion.seconds
 
 
-@OptIn(VolatileCouchbaseApi::class)
 internal fun counterRateLimiting(collection: Collection) {
     // Limiting the rate of requests using an expiring counter.
 
@@ -49,7 +47,6 @@ internal fun counterRateLimiting(collection: Collection) {
     }
 }
 
-@OptIn(VolatileCouchbaseApi::class)
 internal fun counterGenerateDocumentIds(collection: Collection) {
     // Generate unique document IDs using a counter.
 
