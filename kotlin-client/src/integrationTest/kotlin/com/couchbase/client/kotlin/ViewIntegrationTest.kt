@@ -38,11 +38,13 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
+private const val DDOC_NAME = "everything"
+private const val VIEW_NAME = "all"
+private const val VIEW_WITH_REDUCE_NAME = "all_red"
+
+@Suppress("DEPRECATION")
 @IgnoreWhen(clusterTypes = [MOCKED, CAVES])
 internal class ViewIntegrationTest : KotlinIntegrationTest() {
-    private val DDOC_NAME = "everything"
-    private val VIEW_NAME = "all"
-    private val VIEW_WITH_REDUCE_NAME = "all_red"
 
     private val viewIndexes by lazy { bucket.viewIndexes }
 
@@ -65,7 +67,7 @@ internal class ViewIntegrationTest : KotlinIntegrationTest() {
 
     @BeforeAll
     fun setup() {
-        createDesignDocument();
+        createDesignDocument()
     }
 
     @AfterAll

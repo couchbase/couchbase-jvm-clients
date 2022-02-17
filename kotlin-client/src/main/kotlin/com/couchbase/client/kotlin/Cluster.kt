@@ -190,12 +190,12 @@ public class Cluster internal constructor(
      * This operation performs I/O against services and endpoints to assess their health.
      * If you do not wish to perform I/O, consider using [diagnostics] instead.
      *
-     * @param services The services to ping. Defaults to all services.
+     * @param services The services to ping, or an empty set to ping all services (the default).
      * @param reportId An arbitrary ID to assign to the report.
      */
     public suspend fun ping(
         common: CommonOptions = CommonOptions.Default,
-        services: Set<ServiceType> = EnumSet.allOf(ServiceType::class.java),
+        services: Set<ServiceType> = emptySet(),
         reportId: String = UUID.randomUUID().toString(),
     ): PingResult = PingResult(
         HealthPinger.ping(

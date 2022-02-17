@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("DEPRECATION")
+
 package com.couchbase.client.kotlin.samples
 
 import com.couchbase.client.kotlin.Bucket

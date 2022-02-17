@@ -57,6 +57,7 @@ import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitSingle
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.DeprecationLevel.WARNING
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 
@@ -69,7 +70,8 @@ public class Bucket internal constructor(
 
     private val scopeCache = ConcurrentHashMap<String, Scope>()
 
-    public val viewIndexes: ViewIndexManager = ViewIndexManager(this);
+    @Deprecated(level = WARNING, message = viewsDeprecationMessage)
+    public val viewIndexes: ViewIndexManager = ViewIndexManager(this)
 
     /**
      * Returns the default collection in this bucket's default scope.
@@ -100,6 +102,7 @@ public class Bucket internal constructor(
      * @sample com.couchbase.client.kotlin.samples.bufferedViewQuery
      * @sample com.couchbase.client.kotlin.samples.streamingViewQuery
      */
+    @Deprecated(level = WARNING, message = viewsDeprecationMessage)
     public fun viewQuery(
         designDocument: String,
         viewName: String,
@@ -211,12 +214,12 @@ public class Bucket internal constructor(
      * This operation performs I/O against services and endpoints to assess their health.
      * If you do not wish to perform I/O, consider using [Cluster.diagnostics] instead.
      *
-     * @param services The services to ping. Defaults to all services.
+     * @param services The services to ping, or an empty set to ping all services (the default).
      * @param reportId An arbitrary ID to assign to the report.
      */
     public suspend fun ping(
         common: CommonOptions = CommonOptions.Default,
-        services: Set<ServiceType> = EnumSet.allOf(ServiceType::class.java),
+        services: Set<ServiceType> = emptySet(),
         reportId: String = UUID.randomUUID().toString(),
     ): PingResult = PingResult(
         HealthPinger.ping(
@@ -234,3 +237,7 @@ public class Bucket internal constructor(
         core.clusterConfig().bucketConfig(name)
             ?: BucketConfigUtil.waitForBucketConfig(core, name, timeout.toJavaDuration()).asFlow().single()
 }
+
+private const val viewsDeprecationMessage = "Views are deprecated in Couchbase Server 7.0+. " +
+        "Views support in Couchbase Server will be removed in a future release, " +
+        "but only after the core functionality of the View engine is covered by other services."
