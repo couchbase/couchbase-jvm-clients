@@ -237,7 +237,7 @@ public class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @Test
   void buildDeferredIndexOnAbsentBucket() {
-    assertThrows(IndexFailureException.class, () -> indexes.buildDeferredIndexes("noSuchBucket"));
+    indexes.buildDeferredIndexes("noSuchBucket");
   }
 
   @Test

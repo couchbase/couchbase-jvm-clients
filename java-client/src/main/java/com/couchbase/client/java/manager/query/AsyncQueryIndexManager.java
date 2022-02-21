@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.manager.query;
 
+import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -409,33 +410,38 @@ public class AsyncQueryIndexManager {
     notNull(options, "Options");
     final BuildQueryIndexOptions.Built builtOpts = options.build();
 
-    String statement;
-    JsonArray parameters;
-    if (builtOpts.collectionName().isPresent() && builtOpts.scopeName().isPresent()) {
-      String keyspace = buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName());
 
-      statement = "BUILD INDEX ON " + keyspace + " (" +
-        "  (" +
-        "    SELECT RAW name FROM system:indexes " +
-        "    WHERE bucket_id = ?" +
-        "      AND scope_id = ?" +
-        "      AND keyspace_id = ?" +
-        "      AND state = \"deferred\"" +
-        "  )" +
-        ")";
-      parameters = JsonArray.from(bucketName, builtOpts.scopeName().get(), builtOpts.collectionName().get());
-    } else {
-      statement = "BUILD INDEX ON `" + bucketName + "` (" +
-        "  (" +
-        "    SELECT RAW name FROM system:indexes " +
-        "    WHERE keyspace_id = ? AND bucket_id IS MISSING AND state = \"deferred\"" +
-        "  )" +
-        ")";
-      parameters = JsonArray.from(bucketName);
-    }
+    GetAllQueryIndexesOptions getAllOptions = getAllQueryIndexesOptions();
+    builtOpts.collectionName().ifPresent(getAllOptions::collectionName);
+    builtOpts.scopeName().ifPresent(getAllOptions::scopeName);
+    builtOpts.timeout().ifPresent(getAllOptions::timeout);
 
-    return exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_BUILD_DEFERRED_INDEXES, bucketName, parameters)
-      .thenApply(result -> null);
+    return Reactor
+      .toMono(() -> getAllIndexes(bucketName, getAllOptions))
+      .map(indexes -> indexes
+        .stream()
+        .filter(idx -> idx.state().equals("deferred"))
+        .map(idx -> quote(idx.name()))
+        .collect(Collectors.toList())
+      )
+      .flatMap(indexNames -> {
+        if (indexNames.isEmpty()) {
+          return Mono.empty();
+        }
+
+        String keyspace = builtOpts.collectionName().isPresent() && builtOpts.scopeName().isPresent()
+          ? buildKeyspace(bucketName, builtOpts.scopeName(), builtOpts.collectionName())
+          : quote(bucketName);
+
+        String statement = "BUILD INDEX ON " + keyspace + " (" + String.join(",", indexNames) + ")";
+
+        return Reactor.toMono(
+          () -> exec(WRITE, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_BUILD_DEFERRED_INDEXES, bucketName, null)
+          .thenApply(result -> null)
+        );
+      })
+      .then()
+      .toFuture();
   }
 
   /**
