@@ -57,7 +57,11 @@ public class FeatureNotAvailableException extends CouchbaseException {
 
   public static FeatureNotAvailableException collectionsForMemcached() {
     return new FeatureNotAvailableException("Non-Default collections are not supported for memcached buckets.");
+  }
 
+  public static FeatureNotAvailableException communityEdition(final String feature) {
+    return new FeatureNotAvailableException("The feature [" + feature + "] is not supported in the Community " +
+      "Edition (CE) of Couchbase Server.");
   }
 
 }

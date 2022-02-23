@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.manager;
 
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.error.QuotaLimitedException;
 import com.couchbase.client.core.error.RateLimitedException;
@@ -41,6 +42,12 @@ class NonChunkedManagerMessageHandler extends NonChunkedHttpMessageHandler {
       status.code(),
       content
     );
+
+    if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
+      if (content.contains("Magma is supported in enterprise edition only")) {
+        return FeatureNotAvailableException.communityEdition("Storage Backend: Magma");
+      }
+    }
 
     if (status.equals(HttpResponseStatus.TOO_MANY_REQUESTS)) {
       if (content.contains("num_concurrent_requests")
