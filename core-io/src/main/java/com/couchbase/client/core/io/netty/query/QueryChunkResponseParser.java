@@ -191,6 +191,14 @@ public class QueryChunkResponseParser
         );
       } else if (code == 1191 || code == 1192 || code == 1193 || code == 1194) {
         return new RateLimitedException(errorContext);
+      } else if (code == 3230) {
+        String feature = null;
+        if (message.contains("Advisor") || message.contains("Advise")) {
+          feature = "Query Index Advisor";
+        } else if (message.contains("Window")) {
+          feature = "Query Window Functions";
+        }
+        return FeatureNotAvailableException.communityEdition(feature);
       }
     }
     return new CouchbaseException("Unknown query error", errorContext);

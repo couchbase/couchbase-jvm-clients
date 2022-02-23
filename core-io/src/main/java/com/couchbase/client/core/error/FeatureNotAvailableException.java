@@ -60,7 +60,8 @@ public class FeatureNotAvailableException extends CouchbaseException {
   }
 
   public static FeatureNotAvailableException communityEdition(final String feature) {
-    return new FeatureNotAvailableException("The feature [" + feature + "] is not supported in the Community " +
+    String f = feature == null || feature.isEmpty() ? "" : " [" + feature + "]";
+    return new FeatureNotAvailableException("The feature" + f + " is not supported in the Community " +
       "Edition (CE) of Couchbase Server.");
   }
 
