@@ -181,6 +181,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   void createCouchbaseBucketWithMinimumDurability() {
     String name = UUID.randomUUID().toString();
     createBucket(BucketSettings.create(name)
+      .numReplicas(0)
       .bucketType(BucketType.COUCHBASE)
       .minimumDurabilityLevel(DurabilityLevel.MAJORITY));
     BucketSettings settings = buckets.getBucket(name);

@@ -53,6 +53,7 @@ import com.couchbase.client.kotlin.internal.await
 import com.couchbase.client.kotlin.internal.putIfNotEmpty
 import com.couchbase.client.kotlin.internal.putIfNotNull
 import com.couchbase.client.kotlin.internal.putIfTrue
+import com.couchbase.client.kotlin.manager.bucket.BucketManager
 import com.couchbase.client.kotlin.query.QueryFlowItem
 import com.couchbase.client.kotlin.query.QueryMetadata
 import com.couchbase.client.kotlin.query.QueryParameters
@@ -182,6 +183,11 @@ public class Cluster internal constructor(
      */
     @Stability.Volatile
     public val httpClient: CouchbaseHttpClient = CouchbaseHttpClient(this)
+
+    /**
+     * A manager for administering buckets (create, update, drop, flush, list, etc.)
+     */
+    public val buckets: BucketManager = BucketManager(core)
 
     /**
      * Pings the Couchbase cluster's global services.

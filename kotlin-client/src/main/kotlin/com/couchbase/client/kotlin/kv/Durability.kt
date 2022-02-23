@@ -4,6 +4,7 @@ import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.msg.kv.DurabilityLevel
 import com.couchbase.client.core.msg.kv.DurabilityLevel.MAJORITY
 import com.couchbase.client.core.msg.kv.DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE
+import com.couchbase.client.core.msg.kv.DurabilityLevel.NONE
 import com.couchbase.client.core.msg.kv.DurabilityLevel.PERSIST_TO_MAJORITY
 import com.couchbase.client.core.service.kv.Observe.ObservePersistTo
 import com.couchbase.client.core.service.kv.Observe.ObserveReplicateTo
@@ -98,6 +99,9 @@ public sealed class Durability {
          */
         @SinceCouchbase("6.5")
         public fun majorityAndPersistToActive(): Durability = Synchronous(MAJORITY_AND_PERSIST_TO_ACTIVE)
+
+        internal fun of(coreLevel: DurabilityLevel): Durability =
+            if (coreLevel == NONE) none() else Synchronous(coreLevel)
     }
 }
 
