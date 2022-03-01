@@ -213,7 +213,10 @@ public class RequestContext extends CoreContext {
     }
 
     if (!(environment().meter() instanceof NoopMeter)) {
-      core().responseMetric(request).recordValue(logicalRequestLatency());
+      long latency = logicalRequestLatency();
+      if (latency > 0) {
+        core().responseMetric(request).recordValue(latency);
+      }
     }
 
     return this;
@@ -243,10 +246,11 @@ public class RequestContext extends CoreContext {
    * calls).
    */
   public long logicalRequestLatency() {
-    if (logicallyCompletedAt == 0) {
+    long createdAt = request.createdAt();
+    if (logicallyCompletedAt == 0 || logicallyCompletedAt <= createdAt) {
       return 0;
     }
-    return logicallyCompletedAt - request.createdAt();
+    return logicallyCompletedAt - createdAt;
   }
 
   @Stability.Internal
