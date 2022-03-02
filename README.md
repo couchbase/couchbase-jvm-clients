@@ -17,6 +17,7 @@ This repository contains the following projects:
  - `core-io`: the foundational library for all language bindings
  - `java-client`: the Java language binding
  - `scala-client`: the Scala language binding
+ - `kotlin-client`: the Kotlin language binding (in Developer Preview at present)
  - `tracing-opentracing`: module to integrate with [OpenTracing](https://opentracing.io/)
  - `tracing-opentelemetry`: module to integrate with [OpenTelemetry](https://opentelemetry.io/) tracing
  - `metrics-opentelemetry`: module to integrate with [OpenTelemetry](https://opentelemetry.io/) metrics
@@ -24,43 +25,15 @@ This repository contains the following projects:
 
 Other toplevel modules might be present which contain examples, experimental code or internal tooling and test infrastructure.
 
-Documentation is available for [Java](https://docs.couchbase.com/java-sdk/3.2/hello-world/start-using-sdk.html)
-and [Scala](https://docs.couchbase.com/scala-sdk/1.2/start-using-sdk.html)
-
-## Usage
-
-Stable releases are published on [maven central](https://search.maven.org/search?q=com.couchbase.client).
-
-For Java:
-
-```xml
-<dependencies>
-    <dependency>
-        <groupId>com.couchbase.client</groupId>
-        <artifactId>java-client</artifactId>
-        <version>3.2.4</version>
-    </dependency>
-</dependencies>
-```
-
-For Scala:
-
-```xml
-<dependencies>
-    <dependency>
-        <groupId>com.couchbase.client</groupId>
-        <artifactId>scala-client_2.12</artifactId>
-        <version>1.2.4</version>
-    </dependency>
-</dependencies>
-```
-or if you use sbt:
-```sbt
-libraryDependencies += "com.couchbase.client" %% "scala-client" % "1.2.4"
-```
+Documentation is available for [Java](https://docs.couchbase.com/java-sdk/current/hello-world/start-using-sdk.html), 
+[Scala](https://docs.couchbase.com/scala-sdk/current/start-using-sdk.html)
+and [Kotlin](https://docs.couchbase.com/kotlin-sdk/current/hello-world/overview.html).  
+These include getting started guides.
 
 ## Building
-You can always also just build it from source:
+Stable releases are published on [maven central](https://search.maven.org/search?q=com.couchbase.client).
+
+You can always also just build it from source, using any JDK 8+:
 
 ```
 $ git clone https://github.com/couchbase/couchbase-jvm-clients.git
@@ -78,8 +51,8 @@ $ ./mvnw -D"scala.compat.version=2.11" -D"scala.compat.library.version=2.11.12" 
 
 Notes:
 + The two `mvn` runs are to cross-compile the Scala SDK for Scala 2.11, and 2.13
-+ Couchbase only officially provides, tests and supports a Scala 2.12 build.
-Our community kindly added the capability to create builds for Scala 2.11 and 2.13, and users are of course welcome to create such builds; but Couchbase cannot provide support for them.
++ Couchbase officially provides, tests and supports builds for Scala 2.12 and 2.13.
+Our community kindly added the capability to create builds for Scala 2.11, and users are of course welcome to create such builds; but Couchbase cannot provide support for them.
 + When building for Scala 2.11, JDK 8 should be used. If JDK 11 is used then goal scala:doc-jar will fail
 + Default `scala.compat.`X properties are defined in file [.mvn/maven.config]
 + You can always go into one of the sub-directories like `core-io` to only build or test an
