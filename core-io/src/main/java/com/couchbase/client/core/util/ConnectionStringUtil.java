@@ -19,9 +19,12 @@ package com.couchbase.client.core.util;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.events.config.ConnectionStringIgnoredEvent;
+import com.couchbase.client.core.cnc.events.config.TlsRequiredButNotEnabledEvent;
 import com.couchbase.client.core.cnc.events.core.DnsSrvLookupDisabledEvent;
 import com.couchbase.client.core.cnc.events.core.DnsSrvLookupFailedEvent;
 import com.couchbase.client.core.cnc.events.core.DnsSrvRecordsLoadedEvent;
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
@@ -29,12 +32,16 @@ import javax.naming.NameNotFoundException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static com.couchbase.client.core.env.SecurityConfig.InternalMethods.userSpecifiedTrustSource;
+import static com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASES;
 
 /**
  * Contains various helper methods when dealing with the connection string.
@@ -168,4 +175,71 @@ public class ConnectionStringUtil {
         }
     }
 
+  /**
+   * Returns true if the addresses indicate this is a Couchbase Capella cluster.
+   */
+  public static boolean isCapella(ConnectionString connectionString) {
+    return connectionString.hosts().stream()
+        .allMatch(it -> it.hostname().endsWith(".cloud.couchbase.com"));
+  }
+
+  /**
+   * Returns a synthetic connection string corresponding to the seed nodes.
+   */
+  public static String asConnectionString(Collection<SeedNode> nodes) {
+    return nodes.stream()
+        .map(ConnectionStringUtil::asConnectionStringAddress)
+        .collect(Collectors.joining(","));
+  }
+
+  private static String asConnectionStringAddress(SeedNode node) {
+    StringBuilder sb = new StringBuilder(node.address());
+    // Connection string can have only one port per address.
+    // If both KV and manager ports are present, prefer the KV port.
+    if (node.kvPort().isPresent()) {
+      // "=kv" is the default, but it doesn't hurt to be explicit
+      sb.append(":").append(node.kvPort().get()).append("=kv");
+    } else {
+      node.clusterManagerPort().ifPresent(it ->
+          sb.append(":").append(it).append("=manager")
+      );
+    }
+    return sb.toString();
+  }
+
+  public static void checkConnectionString(CoreEnvironment env, boolean ownsEnvironment, ConnectionString connStr) {
+    boolean tls = env.securityConfig().tlsEnabled();
+
+    // Let the user know if we're ignoring bits of the connection string
+    // because they're incompatible with a shared cluster environment.
+    if (!ownsEnvironment) {
+      if (!tls && connStr.scheme() == COUCHBASES) {
+        env.eventBus().publish(ConnectionStringIgnoredEvent.ignoringScheme(connStr));
+      }
+      if (!connStr.params().isEmpty()) {
+        env.eventBus().publish(ConnectionStringIgnoredEvent.ignoringParameters(connStr));
+      }
+    }
+
+    boolean capella = isCapella(connStr);
+    if (tls && !userSpecifiedTrustSource(env.securityConfig()) && !capella) {
+      // Default trust source only works with Capella.
+      throw InvalidArgumentException.fromMessage(
+          "When TLS is enabled, the cluster environment's security config must specify" +
+              " either the Certificate Authority certificate(s) to trust," +
+              " or the trust manager factory to use." +
+              " (Unless connecting to cloud.couchbase.com.)"
+      );
+    }
+
+    if (capella && !tls) {
+      // Can't connect to Capella without TLS. Until we determine
+      // a better way of detecting and handling this, log a warning
+      // and continue marching straight off the cliff.
+      env.eventBus().publish(ownsEnvironment
+          ? TlsRequiredButNotEnabledEvent.forOwnedEnvironment()
+          : TlsRequiredButNotEnabledEvent.forSharedEnvironment()
+      );
+    }
+  }
 }

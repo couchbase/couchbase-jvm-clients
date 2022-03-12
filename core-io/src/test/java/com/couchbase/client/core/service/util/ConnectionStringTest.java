@@ -16,11 +16,17 @@
 
 package com.couchbase.client.core.service.util;
 
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.util.ConnectionString;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
+import static com.couchbase.client.core.util.CbCollections.listOf;
+import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
+import static com.couchbase.client.core.util.ConnectionStringUtil.isCapella;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -251,4 +257,28 @@ class ConnectionStringTest {
     assertEquals(ConnectionString.Scheme.COUCHBASES, ConnectionString.create("cOuChBaSeS://").scheme());
   }
 
+
+  @Test
+  void canCreateFromSeedNodes() {
+    ConnectionString connectionString = ConnectionString.create(asConnectionString(listOf(
+        SeedNode.create("neither"),
+        SeedNode.create("onlyKvPort", Optional.of(123), Optional.empty()),
+        SeedNode.create("onlyManagerPort", Optional.empty(), Optional.of(456)),
+        SeedNode.create("both", Optional.of(123), Optional.of(456))
+    )));
+
+    System.out.println(connectionString);
+
+    assertEquals(
+        "neither,onlyKvPort:123=kv,onlyManagerPort:456=manager,both:123=kv",
+        connectionString.original()
+    );
+  }
+
+  @Test
+  void canIdentifyCapella() {
+    assertTrue(isCapella(ConnectionString.create("foo.cloud.couchbase.com")));
+    assertFalse(isCapella(ConnectionString.create("bar.example.com,foo.cloud.couchbase.com")));
+    assertFalse(isCapella(ConnectionString.create("bar.example.com")));
+  }
 }

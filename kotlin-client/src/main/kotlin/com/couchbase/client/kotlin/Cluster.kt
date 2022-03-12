@@ -36,6 +36,7 @@ import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASES
 import com.couchbase.client.core.util.ConnectionStringUtil
+import com.couchbase.client.core.util.ConnectionStringUtil.checkConnectionString
 import com.couchbase.client.kotlin.Cluster.Companion.connect
 import com.couchbase.client.kotlin.analytics.AnalyticsFlowItem
 import com.couchbase.client.kotlin.analytics.AnalyticsParameters
@@ -670,6 +671,8 @@ public class Cluster internal constructor(
             env: ClusterEnvironment,
             ownsEnv: Boolean,
         ): Cluster {
+            checkConnectionString(env, ownsEnv, ConnectionString.create(connectionString))
+
             val seedNodes = ConnectionStringUtil.seedNodesFromConnectionString(
                 connectionString,
                 env.ioConfig().dnsSrvEnabled(),

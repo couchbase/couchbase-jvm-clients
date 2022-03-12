@@ -40,9 +40,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.unmodifiableList;
 
 /**
  * The {@link SecurityConfig} allows to enable transport encryption between the client and the servers.
@@ -67,12 +69,20 @@ public class SecurityConfig {
     public static final boolean DEFAULT_HOSTNAME_VERIFICATION_ENABLED = true;
   }
 
+  @Stability.Internal
+  public static class InternalMethods {
+    public static boolean userSpecifiedTrustSource(SecurityConfig config) {
+      return config.userSpecifiedTrustSource;
+    }
+  }
+
   private final boolean nativeTlsEnabled;
   private final boolean hostnameVerificationEnabled;
   private final boolean tlsEnabled;
   private final List<X509Certificate> trustCertificates;
   private final TrustManagerFactory trustManagerFactory;
   private final List<String> ciphers;
+  private final boolean userSpecifiedTrustSource;
 
   /**
    * Creates a builder to customize the {@link SecurityConfig} configuration.
@@ -201,21 +211,25 @@ public class SecurityConfig {
   private SecurityConfig(final Builder builder) {
     tlsEnabled = builder.tlsEnabled;
     nativeTlsEnabled = builder.nativeTlsEnabled;
-    trustCertificates = builder.trustCertificates;
     trustManagerFactory = builder.trustManagerFactory;
     hostnameVerificationEnabled = builder.hostnameVerificationEnabled;
     ciphers = builder.ciphers;
 
-    if (tlsEnabled) {
-      if (trustCertificates != null && trustManagerFactory != null) {
+    if (!tlsEnabled) {
+      trustCertificates = builder.trustCertificates;
+      userSpecifiedTrustSource = true; // well, they specified not to use TLS!
+    } else {
+      if (builder.trustCertificates != null && builder.trustManagerFactory != null) {
         throw InvalidArgumentException.fromMessage("Either trust certificates or a trust manager factory" +
           " can be provided, but not both!");
       }
-      if ((trustCertificates == null || trustCertificates.isEmpty()) && trustManagerFactory == null) {
-        throw InvalidArgumentException.fromMessage("Either a trust certificate or a trust manager factory" +
-          " must be provided when TLS is enabled!");
-      }
 
+      userSpecifiedTrustSource = builder.trustCertificates != null || builder.trustManagerFactory != null;
+
+      // If no trust settings have been specified, trust the default CA certificates.
+      trustCertificates = userSpecifiedTrustSource
+          ? builder.trustCertificates
+          : defaultCaCertificates();
     }
   }
 
@@ -280,7 +294,7 @@ public class SecurityConfig {
     export.put("tlsEnabled", tlsEnabled);
     export.put("nativeTlsEnabled", nativeTlsEnabled);
     export.put("hostnameVerificationEnabled", hostnameVerificationEnabled);
-    export.put("hasTrustCertificates", trustCertificates != null && !trustCertificates.isEmpty());
+    export.put("trustCertificates", trustCertificates != null ? trustCertificatesToString() : null);
     export.put("trustManagerFactory", trustManagerFactory != null ? trustManagerFactory.getClass().getSimpleName() : null);
     export.put("ciphers", ciphers);
     return export;
@@ -516,4 +530,42 @@ public class SecurityConfig {
     return SslHandlerFactory.defaultCiphers(nativeTlsEnabled);
   }
 
+  private String trustCertificatesToString() {
+    if (isNullOrEmpty(trustCertificates)) {
+      return null;
+    }
+
+    return trustCertificates.stream()
+        .map(it -> it.getSubjectDN() + " (valid from " + it.getNotBefore().toInstant() + " to " + it.getNotAfter().toInstant() + ")")
+        .collect(Collectors.toList())
+        .toString();
+  }
+
+  /**
+   * Returns the Certificate Authority (CA) certificates that are trusted if
+   * no other certificates (or other trust source) are specified in the security config.
+   * <p>
+   * Includes the CA certificate(s) required for connecting to hosted Couchbase Capella clusters.
+   */
+  @Stability.Volatile
+  public static List<X509Certificate> defaultCaCertificates() {
+    return DefaultCaCertificatesInitOnDemandHolder.certificates;
+  }
+
+  private static class DefaultCaCertificatesInitOnDemandHolder {
+    private static final List<X509Certificate> certificates = unmodifiableList(
+        decodeCertificates(getResourceAsBytes("capella-ca.pem"))
+    );
+  }
+
+  private static byte[] getResourceAsBytes(String resourceName) {
+    try (InputStream is = SecurityConfig.class.getResourceAsStream(resourceName)) {
+      if (is == null) {
+        throw new RuntimeException("Missing resource: " + resourceName);
+      }
+      return Bytes.readAllBytes(is);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
 }

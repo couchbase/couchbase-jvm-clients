@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * This {@link PropertyLoader} takes a connection string and applies all properties
  * that are supported and it knows about.
@@ -45,7 +47,11 @@ public class ConnectionStringPropertyLoader extends AbstractMapPropertyLoader<Co
   }
 
   public ConnectionStringPropertyLoader(final String connectionString) {
-    this.connectionString = ConnectionString.create(connectionString);
+    this(ConnectionString.create(connectionString));
+  }
+
+  public ConnectionStringPropertyLoader(final ConnectionString connectionString) {
+    this.connectionString = requireNonNull(connectionString);
   }
 
   @Override

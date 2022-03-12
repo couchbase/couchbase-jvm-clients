@@ -27,10 +27,12 @@ import java.nio.file.Paths;
 import java.util.List;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
+import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -77,6 +79,11 @@ class SecurityConfigTest {
             "CN=Couchbase Server f233ba43"
         )
     );
+  }
+
+  @Test
+  void canReadDefaultCaCertificates() {
+    assertNotEquals(emptyList(), SecurityConfig.defaultCaCertificates());
   }
 
   private void checkCertificatesFromFile(

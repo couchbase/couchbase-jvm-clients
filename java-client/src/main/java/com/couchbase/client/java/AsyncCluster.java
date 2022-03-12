@@ -38,6 +38,7 @@ import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.ConnectionStringUtil;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
@@ -75,6 +76,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.util.ConnectionStringUtil.checkConnectionString;
+import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -194,7 +197,7 @@ public class AsyncCluster {
     notNull(options, "ClusterOptions");
 
     final ClusterOptions.Built opts = options.build();
-    return new AsyncCluster(extractClusterEnvironment(null, opts), opts.authenticator(), seedNodes);
+    return new AsyncCluster(extractClusterEnvironment(asConnectionString(seedNodes), opts), opts.authenticator(), seedNodes);
   }
 
   /**
@@ -205,19 +208,22 @@ public class AsyncCluster {
    * @return the cluster environment, created if not passed in or the one supplied from the user.
    */
   static Supplier<ClusterEnvironment> extractClusterEnvironment(final String connectionString, final ClusterOptions.Built opts) {
+    ConnectionString connStr = ConnectionString.create(connectionString);
     Supplier<ClusterEnvironment> envSupplier;
     if (opts.environment() == null) {
       ClusterEnvironment.Builder builder = ClusterEnvironment.builder();
       if (opts.environmentCustomizer() != null) {
         opts.environmentCustomizer().accept(builder);
       }
-      if (connectionString != null) {
-        builder.load(new ConnectionStringPropertyLoader(connectionString));
-      }
+      builder.load(new ConnectionStringPropertyLoader(connStr));
       envSupplier = new OwnedSupplier<>(builder.build());
     } else {
       envSupplier = opts::environment;
     }
+
+    boolean ownsEnvironment = envSupplier instanceof OwnedSupplier;
+    checkConnectionString(envSupplier.get(), ownsEnvironment, connStr);
+
     return envSupplier;
   }
 
