@@ -17,22 +17,22 @@
 package com.couchbase.client.kotlin.samples
 
 import com.couchbase.client.kotlin.Cluster
-import com.couchbase.client.kotlin.manager.bucket.BucketSettings
 import com.couchbase.client.kotlin.util.StorageSize.Companion.mebibytes
 
 @Suppress("UNUSED_VARIABLE")
 internal suspend fun createBucket(cluster: Cluster) {
     // Create a new bucket
-    cluster.buckets.createBucket(BucketSettings(
+    cluster.buckets.createBucket(
         name = "my-bucket",
         ramQuota = 256.mebibytes,
-    ))
+    )
 }
 
 @Suppress("UNUSED_VARIABLE")
 internal suspend fun updateBucket(cluster: Cluster) {
     // Modify the RAM quota of an existing bucket
-    val newSettings = cluster.buckets.getBucket("my-bucket")
-        .copy(ramQuota = 1024.mebibytes)
-    cluster.buckets.updateBucket(newSettings)
+    cluster.buckets.updateBucket(
+        name = "my-bucket",
+        ramQuota = 1024.mebibytes,
+    )
 }

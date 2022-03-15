@@ -22,8 +22,14 @@ import com.couchbase.client.core.error.BucketNotFlushableException
 import com.couchbase.client.core.error.BucketNotFoundException
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.manager.CoreBucketManager
+import com.couchbase.client.core.msg.kv.DurabilityLevel
 import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
+import com.couchbase.client.kotlin.kv.Durability
+import com.couchbase.client.kotlin.kv.Expiry
+import com.couchbase.client.kotlin.kv.internal.levelIfSynchronous
+import com.couchbase.client.kotlin.util.StorageSize
+import com.couchbase.client.kotlin.util.StorageSize.Companion.mebibytes
 import kotlinx.coroutines.future.await
 
 public class BucketManager(core: Core) {
@@ -35,27 +41,71 @@ public class BucketManager(core: Core) {
      * @throws BucketExistsException if bucket already exists
      */
     public suspend fun createBucket(
-        settings: BucketSettings,
+        name: String,
         common: CommonOptions = CommonOptions.Default,
+        ramQuota: StorageSize = 100.mebibytes,
+        bucketType: BucketType = BucketType.COUCHBASE,
+        storageBackend: StorageBackend? = null, // null means default for bucket type
+        evictionPolicy: EvictionPolicyType? = null, // null means default for bucket type
+        flushEnabled: Boolean = false,
+        replicas: Int = 1,
+        maximumExpiry: Expiry = Expiry.none(),
+        compressionMode: CompressionMode = CompressionMode.PASSIVE,
+        minimumDurability: Durability = Durability.none(),
+        conflictResolutionType: ConflictResolutionType = ConflictResolutionType.SEQUENCE_NUMBER,
     ) {
-        coreManager.createBucket(settings.toMap(), common.toCore()).await()
+        @Suppress("DEPRECATION")
+        val params = toMap(
+            name = name,
+            ramQuota = ramQuota,
+            bucketType = bucketType,
+            storageBackend = storageBackend,
+            evictionPolicy = evictionPolicy,
+            flushEnabled = flushEnabled,
+            conflictResolutionType = conflictResolutionType,
+            replicas = if (bucketType == BucketType.MEMCACHED) null else replicas,
+
+            // CE doesn't support these, so exclude the default values from the request
+            maximumExpiry = if (maximumExpiry == Expiry.none()) null else maximumExpiry,
+            compressionMode = if (compressionMode == CompressionMode.PASSIVE) null else compressionMode,
+            minimumDurability = if (minimumDurability !is Durability.Synchronous) null else minimumDurability,
+        )
+
+        coreManager.createBucket(params.toMap(), common.toCore()).await()
     }
 
     /**
      * Modifies an existing bucket.
      *
-     * First call [getBucket] to get the current settings.
-     * Then call [BucketSettings.copy] and specify the properties you'd like to change.
-     * Finally, pass the copy to updateBucket.
-     *
      * @throws BucketNotFoundException if the bucket does not exist
      * @sample com.couchbase.client.kotlin.samples.updateBucket
      */
     public suspend fun updateBucket(
-        settings: BucketSettings,
+        name: String,
         common: CommonOptions = CommonOptions.Default,
+        ramQuota: StorageSize? = null,
+        flushEnabled: Boolean? = null,
+        replicas: Int? = null,
+        maximumExpiry: Expiry? = null,
+        compressionMode: CompressionMode? = null,
+        minimumDurability: Durability? = null,
+        evictionPolicy: EvictionPolicyType? = null,
+
+        // bucketType can't be updated
+        // conflictResolutionType can't be updated
+        // storageBackend can't be updated
     ) {
-        coreManager.updateBucket(settings.toMap(), common.toCore()).await()
+        val params = toMap(
+            name = name,
+            ramQuota = ramQuota,
+            flushEnabled = flushEnabled,
+            replicas = replicas,
+            maximumExpiry = maximumExpiry,
+            compressionMode = compressionMode,
+            minimumDurability = minimumDurability,
+            evictionPolicy = evictionPolicy,
+        )
+        coreManager.updateBucket(params, common.toCore()).await()
     }
 
     /**
@@ -122,4 +172,44 @@ public class BucketManager(core: Core) {
         }
     }
 
+    private fun toMap(
+        name: String,
+        ramQuota: StorageSize? = null,
+        bucketType: BucketType? = null,
+        storageBackend: StorageBackend? = null,
+        flushEnabled: Boolean? = null,
+        replicas: Int? = null,
+        maximumExpiry: Expiry? = null,
+        compressionMode: CompressionMode? = null,
+        minimumDurability: Durability? = null,
+        evictionPolicy: EvictionPolicyType? = null,
+        conflictResolutionType: ConflictResolutionType? = null,
+    ): Map<String, String> {
+        val params = mutableMapOf<String, Any?>("name" to name)
+        ramQuota?.let { params["ramQuotaMB"] = ramQuota.inWholeMebibytes }
+        flushEnabled?.let { params["flushEnabled"] = if (flushEnabled) 1 else 0 }
+        evictionPolicy?.let { params["evictionPolicy"] = evictionPolicy.name }
+        compressionMode?.let { params["compressionMode"] = it.name }
+        storageBackend?.let { params["storageBackend"] = it.name }
+        bucketType?.let { params["bucketType"] = it.name }
+        conflictResolutionType?.let { params["conflictResolutionType"] = it.name }
+        replicas?.let { params["replicaNumber"] = replicas }
+
+        maximumExpiry?.let {
+            require(it !is Expiry.Absolute) {
+                "Maximum expiry must not be absolute -- use Expiry.none() or Expiry.of(Duration)."
+            }
+            params["maxTTL"] = if (it is Expiry.Relative) it.duration.inWholeSeconds else 0
+        }
+
+        minimumDurability?.let {
+            require(it !is Durability.ClientVerified) {
+                "Minimum durability must not be client verified."
+            }
+            params["durabilityMinLevel"] = minimumDurability.levelIfSynchronous().orElse(DurabilityLevel.NONE)
+                .encodeForManagementApi()
+        }
+
+        return params.mapValues { (_, v) -> v.toString() }
+    }
 }

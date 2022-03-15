@@ -20,13 +20,10 @@ import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.msg.kv.DurabilityLevel
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
-import com.couchbase.client.kotlin.internal.putIfNotNull
 import com.couchbase.client.kotlin.kv.Durability
-import com.couchbase.client.kotlin.kv.internal.levelIfSynchronous
-import com.couchbase.client.kotlin.manager.bucket.BucketType.Companion.MEMCACHED
+import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.util.StorageSize
 import com.couchbase.client.kotlin.util.StorageSize.Companion.bytes
-import com.couchbase.client.kotlin.util.StorageSize.Companion.mebibytes
 import kotlin.DeprecationLevel.WARNING
 import kotlin.time.Duration.Companion.seconds
 
@@ -219,51 +216,28 @@ public value class StorageBackend private constructor(
     override fun toString(): String = name
 }
 
-public class BucketSettings(
+public class BucketSettings internal constructor(
     public val name: String,
-    public val ramQuota: StorageSize = 100.mebibytes,
-    public val bucketType: BucketType = BucketType.COUCHBASE,
-    public val storageBackend: StorageBackend? = null, // null means default for the bucket type
-    public val flushEnabled: Boolean = false,
-    public val replicas: Int = 1,
-    public val maximumExpiry: kotlin.time.Duration? = null,
-    public val compressionMode: CompressionMode = CompressionMode.PASSIVE,
-    public val conflictResolutionType: ConflictResolutionType = ConflictResolutionType.SEQUENCE_NUMBER,
-    public val minimumDurability: Durability = Durability.none(),
-    public val evictionPolicy: EvictionPolicyType? = null, // null means default for the bucket type
+    public val ramQuota: StorageSize,
+    public val bucketType: BucketType,
+    public val storageBackend: StorageBackend,
+    public val flushEnabled: Boolean,
+    public val replicas: Int,
+    public val maximumExpiry: Expiry,
+    public val compressionMode: CompressionMode,
+    public val conflictResolutionType: ConflictResolutionType,
+    public val minimumDurability: Durability,
+    public val evictionPolicy: EvictionPolicyType,
 ) {
 
     init {
         require(minimumDurability !is Durability.ClientVerified) {
             "Minimum durability must not be client verified."
         }
+        require(maximumExpiry !is Expiry.Absolute) {
+            "Maximum expiry must not be absolute -- use Expiry.none() or Expiry.of(Duration)."
+        }
     }
-
-    public fun copy(
-        name: String = this.name,
-        ramQuota: StorageSize = this.ramQuota,
-        bucketType: BucketType = this.bucketType,
-        storageBackend: StorageBackend? = this.storageBackend,
-        flushEnabled: Boolean = this.flushEnabled,
-        replicas: Int = this.replicas,
-        maximumExpiry: kotlin.time.Duration? = this.maximumExpiry,
-        compressionMode: CompressionMode = this.compressionMode,
-        conflictResolutionType: ConflictResolutionType = this.conflictResolutionType,
-        minimumDurability: Durability = this.minimumDurability,
-        evictionPolicy: EvictionPolicyType? = this.evictionPolicy,
-    ): BucketSettings = BucketSettings(
-        name = name,
-        ramQuota = ramQuota,
-        bucketType = bucketType,
-        storageBackend = storageBackend,
-        flushEnabled = flushEnabled,
-        replicas = replicas,
-        maximumExpiry = maximumExpiry,
-        compressionMode = compressionMode,
-        conflictResolutionType = conflictResolutionType,
-        minimumDurability = minimumDurability,
-        evictionPolicy = evictionPolicy,
-    )
 
     public companion object {
 
@@ -275,7 +249,8 @@ public class BucketSettings(
                 flushEnabled = !json.path("controllers").path("flush").isMissingNode,
                 ramQuota = json.path("quota").path("rawRAM").longValue().bytes.simplify(),
                 replicas = json.path("replicaNumber").intValue(),
-                maximumExpiry = json.path("maxTTL").asLong().let { if (it == 0L) null else it.seconds },
+                maximumExpiry = json.path("maxTTL").asLong()
+                    .let { if (it == 0L) Expiry.none() else Expiry.of(it.seconds) },
 
                 // Couchbase 5.0 doesn't send a compressionMode
                 compressionMode = CompressionMode.of(json.path("compressionMode").asText(CompressionMode.OFF.name)),
@@ -289,37 +264,6 @@ public class BucketSettings(
                 storageBackend = StorageBackend.of(json.path("storageBackend").asText())
             )
         }
-    }
-
-    internal fun toMap(): Map<String, String> {
-        val params = mutableMapOf<String, Any?>()
-        params["ramQuotaMB"] = ramQuota.inWholeMebibytes
-
-        params["flushEnabled"] = if (flushEnabled) 1 else 0
-
-        // Do not send if it's been left at default, else will get an error on CE
-        params.putIfNotNull("maxTTL", maximumExpiry?.inWholeSeconds)
-
-        // If null, let server assign the default policy for this bucket type
-        params.putIfNotNull("evictionPolicy", evictionPolicy?.name)
-
-        // Do not send if it's been left at default, else will get an error on CE
-        if (compressionMode != CompressionMode.PASSIVE) params["compressionMode"] = compressionMode.name
-
-        if (minimumDurability != Durability.None) {
-            params.putIfNotNull("durabilityMinLevel",
-                minimumDurability.levelIfSynchronous().map { it.encodeForManagementApi() }.orElse(null))
-        }
-
-        params.putIfNotNull("storageBackend", storageBackend?.name)
-
-        params["name"] = name
-        params["bucketType"] = bucketType.name
-        params["conflictResolutionType"] = conflictResolutionType.name
-
-        if (bucketType != MEMCACHED) params["replicaNumber"] = replicas
-
-        return params.mapValues { (_, v) -> v.toString() }
     }
 
     override fun toString(): String {

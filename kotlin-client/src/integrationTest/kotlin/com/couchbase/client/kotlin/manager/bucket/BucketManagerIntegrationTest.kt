@@ -13,17 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.manager.bucket
+package com.couchbase.client.kotlin.manager.bucket
 
 import com.couchbase.client.core.error.BucketExistsException
 import com.couchbase.client.core.error.BucketNotFlushableException
 import com.couchbase.client.core.error.BucketNotFoundException
 import com.couchbase.client.kotlin.kv.Durability
-import com.couchbase.client.kotlin.manager.bucket.BucketManager
-import com.couchbase.client.kotlin.manager.bucket.BucketSettings
-import com.couchbase.client.kotlin.manager.bucket.BucketType
-import com.couchbase.client.kotlin.manager.bucket.EvictionPolicyType
-import com.couchbase.client.kotlin.manager.bucket.StorageBackend
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.kotlin.util.StorageSize.Companion.mebibytes
 import com.couchbase.client.test.Capabilities
@@ -40,9 +35,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.*
 
-/**
- * Verifies the functionality of the bucket manager.
- */
 @IgnoreWhen(clusterTypes = [ClusterType.MOCKED, ClusterType.CAVES])
 internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
     private val buckets: BucketManager by lazy { cluster.buckets }
@@ -73,11 +65,10 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
         }
     }
 
-    private fun randomName() = UUID.randomUUID().toString()
-
-    private suspend fun createAndCheck(settings: BucketSettings, block: suspend BucketSettings.() -> Unit) {
-        createBucket(settings)
-        buckets.getBucket(settings.name).block()
+    private fun randomName(): String {
+        val name = UUID.randomUUID().toString();
+        bucketsToDrop.add(name)
+        return name
     }
 
     /**
@@ -86,7 +77,7 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
      */
     @Test
     fun getBucket(): Unit = runBlocking {
-        buckets.getBucket(bucket.name)
+        assertEquals(bucket.name, buckets.getBucket(bucket.name).name)
     }
 
     /**
@@ -102,42 +93,50 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
 
     @Test
     fun createEphemeralBucketWithDefaultEvictionPolicy(): Unit = runBlocking {
-        createAndCheck(BucketSettings(
-            name = randomName(),
+        val name = randomName()
+        buckets.createBucket(
+            name = name,
             bucketType = BucketType.EPHEMERAL,
-        )) {
+        )
+        check(name) {
             assertEquals(EvictionPolicyType.NO_EVICTION, evictionPolicy)
         }
     }
 
     @Test
     fun createEphemeralBucketWithNruEvictionPolicy(): Unit = runBlocking {
-        createAndCheck(BucketSettings(
-            name = randomName(),
+        val name = randomName()
+        buckets.createBucket(
+            name = name,
             bucketType = BucketType.EPHEMERAL,
             evictionPolicy = EvictionPolicyType.NOT_RECENTLY_USED,
-        )) {
+        )
+        check(name) {
             assertEquals(EvictionPolicyType.NOT_RECENTLY_USED, evictionPolicy)
         }
     }
 
     @Test
     fun createCouchbaseBucketWithDefaultEvictionPolicy(): Unit = runBlocking {
-        createAndCheck(BucketSettings(
-            name = randomName(),
+        val name = randomName()
+        buckets.createBucket(
+            name = name,
             bucketType = BucketType.COUCHBASE,
-        )) {
+        )
+        check(name) {
             assertEquals(EvictionPolicyType.VALUE_ONLY, evictionPolicy)
         }
     }
 
     @Test
     fun createCouchbaseBucketWithFullEvictionPolicy(): Unit = runBlocking {
-        createAndCheck(BucketSettings(
-            name = randomName(),
+        val name = randomName()
+        buckets.createBucket(
+            name = name,
             bucketType = BucketType.COUCHBASE,
             evictionPolicy = EvictionPolicyType.FULL,
-        )) {
+        )
+        check(name) {
             assertEquals(EvictionPolicyType.FULL, evictionPolicy)
         }
     }
@@ -145,12 +144,14 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
     @Test
     @IgnoreWhen(missesCapabilities = [Capabilities.BUCKET_MINIMUM_DURABILITY])
     fun createCouchbaseBucketWithMinimumDurability(): Unit = runBlocking {
-        createAndCheck(BucketSettings(
-            name = randomName(),
+        val name = randomName()
+        buckets.createBucket(
+            name = name,
             bucketType = BucketType.COUCHBASE,
             replicas = 0,
             minimumDurability = Durability.majority(),
-        )) {
+        )
+        check(name) {
             assertEquals(Durability.majority(), minimumDurability)
         }
     }
@@ -158,11 +159,13 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
     @Test
     @IgnoreWhen(missesCapabilities = [Capabilities.STORAGE_BACKEND])
     fun createCouchbaseBucketWithStorageBackendCouchstore(): Unit = runBlocking {
-        createAndCheck(BucketSettings(
-            name = randomName(),
+        val name = randomName()
+        buckets.createBucket(
+            name = name,
             bucketType = BucketType.COUCHBASE,
             storageBackend = StorageBackend.COUCHSTORE,
-        )) {
+        )
+        check(name) {
             assertEquals(StorageBackend.COUCHSTORE, storageBackend)
         }
     }
@@ -170,10 +173,12 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
     @Test
     @IgnoreWhen(missesCapabilities = [Capabilities.STORAGE_BACKEND])
     fun createCouchbaseBucketWithStorageBackendDefault(): Unit = runBlocking {
-        createAndCheck(BucketSettings(
-            name = randomName(),
+        val name = randomName()
+        buckets.createBucket(
+            name = name,
             bucketType = BucketType.COUCHBASE,
-        )) {
+        )
+        check(name) {
             assertEquals(StorageBackend.COUCHSTORE, storageBackend)
         }
     }
@@ -181,12 +186,14 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
     @Test
     @IgnoreWhen(missesCapabilities = [Capabilities.STORAGE_BACKEND])
     fun createCouchbaseBucketWithStorageBackendMagma(): Unit = runBlocking {
-        createAndCheck(BucketSettings(
-            name = randomName(),
+        val name = randomName()
+        buckets.createBucket(
+            name = name,
             ramQuota = 256.mebibytes,
             bucketType = BucketType.COUCHBASE,
             storageBackend = StorageBackend.MAGMA,
-        )) {
+        )
+        check(name) {
             assertEquals(StorageBackend.MAGMA, storageBackend)
             assertEquals(256.mebibytes, ramQuota)
         }
@@ -194,10 +201,31 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
 
     @Test
     fun shouldPickNoDurabilityLevelIfNotSpecified(): Unit = runBlocking {
-        createAndCheck(BucketSettings(
-            name = randomName(),
+        val name = randomName()
+        buckets.createBucket(
+            name = name,
             bucketType = BucketType.COUCHBASE,
-        )) {
+        )
+        check(name) {
+            assertEquals(Durability.none(), minimumDurability)
+        }
+    }
+
+    @Test
+    @IgnoreWhen(missesCapabilities = [Capabilities.BUCKET_MINIMUM_DURABILITY])
+    fun canUpdateDurabilityToNone(): Unit = runBlocking {
+        val name = randomName()
+        buckets.createBucket(
+            name = name,
+            replicas = 0,
+            minimumDurability = Durability.majority(),
+        )
+        check(name) {
+            assertEquals(Durability.majority(), minimumDurability)
+        }
+
+        buckets.updateBucket(name = name, minimumDurability = Durability.none())
+        check(name) {
             assertEquals(Durability.none(), minimumDurability)
         }
     }
@@ -205,11 +233,13 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
     @Test
     @Suppress("DEPRECATION")
     fun createMemcachedBucket(): Unit = runBlocking {
-        createAndCheck(BucketSettings(
-            name = randomName(),
+        val name = randomName()
+        buckets.createBucket(
+            name = name,
             bucketType = BucketType.MEMCACHED,
             minimumDurability = Durability.majority(),
-        )) {
+        )
+        check(name) {
             assertEquals(BucketType.MEMCACHED, bucketType)
         }
     }
@@ -217,7 +247,7 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
     @Test
     fun createAndDropBucket(): Unit = runBlocking {
         val name = randomName()
-        createBucket(BucketSettings(name))
+        buckets.createBucket(name = name)
         waitUntilHealthy(name)
         assertNotNull(buckets.getAllBuckets().find { it.name == name })
         buckets.dropBucket(name)
@@ -239,29 +269,37 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
 
     @Test
     fun failIfBucketFlushDisabled(): Unit = runBlocking {
-        val bucketName = UUID.randomUUID().toString()
-        createBucket(BucketSettings(bucketName, flushEnabled = false))
+        val name = randomName()
+        buckets.createBucket(
+            name = name,
+            flushEnabled = false,
+        )
         assertThrows<BucketNotFlushableException> {
-            buckets.flushBucket(bucketName)
+            buckets.flushBucket(name)
         }
     }
 
     @Test
     fun createShouldFailWhenPresent(): Unit = runBlocking {
         assertThrows<BucketExistsException> {
-            buckets.createBucket(BucketSettings(bucket.name))
+            buckets.createBucket(name = bucket.name)
         }
     }
 
     @Test
     fun updateShouldOverrideWhenPresent(): Unit = runBlocking {
-        createAndCheck(BucketSettings(
-            name = randomName(),
-            ramQuota = 100.mebibytes
-        )) {
+        val name = randomName()
+        buckets.createBucket(
+            name = name,
+            ramQuota = 100.mebibytes,
+        )
+        check(name) {
             assertEquals(100.mebibytes, ramQuota)
             val newQuota = 110.mebibytes
-            buckets.updateBucket(copy(ramQuota = newQuota))
+            buckets.updateBucket(
+                name = name,
+                ramQuota = newQuota,
+            )
 
             Util.waitUntilCondition {
                 runBlocking {
@@ -274,7 +312,7 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
     @Test
     fun updateShouldFailIfAbsent(): Unit = runBlocking {
         assertThrows<BucketNotFoundException> {
-            buckets.updateBucket(BucketSettings("does-not-exist"))
+            buckets.updateBucket(name = "does-not-exist")
         }
     }
 
@@ -294,17 +332,18 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
 
     @Test
     fun createWithMoreThanOneReplica(): Unit = runBlocking {
-        createAndCheck(BucketSettings(
-            name = randomName(),
+        val name = randomName()
+        buckets.createBucket(
+            name = name,
             replicas = 3,
-        )) {
+        )
+        check(name) {
             assertEquals(3, replicas)
         }
     }
 
-    private suspend fun createBucket(settings: BucketSettings) {
-        buckets.createBucket(settings)
-        bucketsToDrop.add(settings.name)
-        waitUntilHealthy(settings.name)
+    private suspend fun check(name: String, block: suspend BucketSettings.() -> Unit) {
+        waitUntilHealthy(name)
+        buckets.getBucket(name).block()
     }
 }
