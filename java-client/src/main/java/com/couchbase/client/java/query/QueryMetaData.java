@@ -49,7 +49,7 @@ public class QueryMetaData {
     }
 
     @Stability.Internal
-    static QueryMetaData from(final QueryChunkHeader header, final QueryChunkTrailer trailer) {
+    public static QueryMetaData from(final QueryChunkHeader header, final QueryChunkTrailer trailer) {
         return new QueryMetaData(header, trailer);
     }
 

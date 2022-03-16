@@ -40,7 +40,8 @@ public class ReactiveQueryResult {
 	 */
 	private final JsonSerializer serializer;
 
-	ReactiveQueryResult(final QueryResponse response, final JsonSerializer serializer) {
+	@Stability.Internal
+	public ReactiveQueryResult(final QueryResponse response, final JsonSerializer serializer) {
 		this.response = response;
 		this.serializer = serializer;
 	}

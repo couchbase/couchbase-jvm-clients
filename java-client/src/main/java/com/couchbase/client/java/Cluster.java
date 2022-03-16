@@ -17,9 +17,9 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.DiagnosticsResult;
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.PasswordAuthenticator;
@@ -45,6 +45,7 @@ import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
+import com.couchbase.client.java.transactions.Transactions;
 
 import java.time.Duration;
 import java.util.Map;
@@ -63,7 +64,6 @@ import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTION
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_DIAGNOSTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
-
 /**
  * The {@link Cluster} is the main entry point when connecting to a Couchbase cluster.
  * <p>
@@ -584,5 +584,14 @@ public class Cluster {
     block(asyncCluster.waitUntilReady(timeout, options));
   }
 
+  /**
+   * Allows access to transactions.
+   *
+   * @return the {@link Transactions} interface.
+   */
+  @Stability.Uncommitted
+  public Transactions transactions() {
+    return new Transactions(core(), environment().jsonSerializer());
+  }
 }
 

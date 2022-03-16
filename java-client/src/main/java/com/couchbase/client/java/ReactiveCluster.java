@@ -50,6 +50,10 @@ import com.couchbase.client.java.search.SearchAccessor;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.ReactiveSearchResult;
+import com.couchbase.client.java.transactions.ReactiveTransactions;
+import com.couchbase.client.java.transactions.Transactions;
+import com.couchbase.client.java.transactions.internal.ErrorUtil;
+import com.couchbase.client.java.transactions.internal.SingleQueryTransactions;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -279,14 +283,19 @@ public class ReactiveCluster {
   public Mono<ReactiveQueryResult> query(final String statement, final QueryOptions options) {
     notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
-    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-    return Mono.defer(() -> {
-      return asyncCluster.queryAccessor().queryReactive(
-        asyncCluster.queryRequest(statement, opts),
-        opts,
-        serializer
-      );
-    });
+    if (opts.asTransaction()) {
+      return SingleQueryTransactions.singleQueryTransactionStreaming(core(), environment(), statement, null, null, opts, (err) -> ErrorUtil.convertTransactionFailedSingleQuery(err));
+    }
+    else {
+      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+      return Mono.defer(() -> {
+        return asyncCluster.queryAccessor().queryReactive(
+                asyncCluster.queryRequest(statement, opts),
+                opts,
+                serializer
+        );
+      });
+    }
   }
 
   /**
@@ -465,4 +474,13 @@ public class ReactiveCluster {
     return Mono.defer(() -> Mono.fromFuture(asyncCluster.waitUntilReady(timeout, options)));
   }
 
+  /**
+   * Allows access to transactions.
+   *
+   * @return the {@link Transactions} interface.
+   */
+  @Stability.Uncommitted
+  public ReactiveTransactions transactions() {
+    return new ReactiveTransactions(core(), environment().jsonSerializer());
+  }
 }

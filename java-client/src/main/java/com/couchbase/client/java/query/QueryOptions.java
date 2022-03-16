@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.kv.MutationToken;
+import com.couchbase.client.core.transaction.config.CoreSingleQueryTransactionOptions;
 import com.couchbase.client.core.util.Golang;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.CommonOptions;
@@ -29,6 +30,7 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
+import com.couchbase.client.java.transactions.config.SingleQueryTransactionOptions;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -66,6 +68,8 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   private JsonSerializer serializer;
   private boolean flexIndex = false;
   private Boolean preserveExpiry = null;
+  private boolean asTransaction = false;
+  private CoreSingleQueryTransactionOptions asTransactionOptions;
 
   /**
    * The options should only be instantiated through the {@link #queryOptions()} static method.
@@ -396,6 +400,31 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
     return new Built();
   }
 
+  /**
+   * Performs this as a single query transaction, with default options.
+   * <p>
+   * @return the same {@link QueryOptions} for chaining purposes.
+   */
+  @SinceCouchbase("7.0")
+  public QueryOptions asTransaction() {
+    asTransaction = true;
+    return this;
+  }
+
+  /**
+   * Performs this as a single query transaction.
+   * <p>
+   * @param options configuration options to use.
+   * @return the same {@link QueryOptions} for chaining purposes.
+   */
+  @SinceCouchbase("7.0")
+  public QueryOptions asTransaction(final SingleQueryTransactionOptions options) {
+    notNull(options, "asTransaction");
+    asTransaction = true;
+    asTransactionOptions = options.build();
+    return this;
+  }
+
   @Stability.Internal
   public class Built extends BuiltCommonOptions {
 
@@ -415,6 +444,10 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
 
     public String clientContextId() {
       return clientContextId;
+    }
+
+    public boolean asTransaction() {
+      return asTransaction;
     }
 
     @Stability.Internal
@@ -510,6 +543,10 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
           queryJson.put(entry.getKey(), entry.getValue());
         }
       }
+    }
+
+    public CoreSingleQueryTransactionOptions asTransactionOptions() {
+      return asTransactionOptions;
     }
   }
 

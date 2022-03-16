@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.query;
+package com.couchbase.client.java.transactions;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DecodingFailureException;
@@ -24,16 +24,19 @@ import com.couchbase.client.core.msg.query.QueryChunkTrailer;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.query.QueryMetaData;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
- * The result of a N1QL query, including rows and associated metadata.
- *
- * @since 3.0.0
+ * The result of a N1QL query executed within a transaction, including rows and associated metadata.
+ * <p>
+ * Queries executed inside a transaction are always blocking/non-streaming, to allow essential error handling logic to
+ * reliably take place.
  */
-public class QueryResult {
+public class TransactionQueryResult {
 
     /**
      * Stores the encoded rows from the query response.
@@ -56,19 +59,19 @@ public class QueryResult {
     private final JsonSerializer serializer;
 
     /**
-     * Creates a new QueryResult.
+     * Creates a new TransactionQueryResult.
      *
      * @param header the query header.
      * @param rows the query rows.
      * @param trailer the query trailer.
      */
     @Stability.Internal
-    public QueryResult(final QueryChunkHeader header, final List<QueryChunkRow> rows, final QueryChunkTrailer trailer,
-                final JsonSerializer serializer) {
-        this.rows = rows;
-        this.header = header;
-        this.trailer = trailer;
-        this.serializer = serializer;
+    public TransactionQueryResult(final QueryChunkHeader header, final List<QueryChunkRow> rows, final QueryChunkTrailer trailer,
+                                  final JsonSerializer serializer) {
+        this.rows = Objects.requireNonNull(rows);
+        this.header = Objects.requireNonNull(header);
+        this.trailer = Objects.requireNonNull(trailer);
+        this.serializer = Objects.requireNonNull(serializer);
     }
 
     /**
@@ -117,7 +120,7 @@ public class QueryResult {
 
     @Override
     public String toString() {
-        return "QueryResult{" +
+        return "TransactionQueryResult{" +
             "rows=" + rows +
             ", header=" + header +
             ", trailer=" + trailer +

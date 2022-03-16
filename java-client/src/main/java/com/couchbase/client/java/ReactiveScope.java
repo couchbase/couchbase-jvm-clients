@@ -28,6 +28,8 @@ import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
+import com.couchbase.client.java.transactions.internal.ErrorUtil;
+import com.couchbase.client.java.transactions.internal.SingleQueryTransactions;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
@@ -148,11 +150,16 @@ public class ReactiveScope {
   public Mono<ReactiveQueryResult> query(final String statement, final QueryOptions options) {
     notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
-    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-    return Mono.defer(() -> {
-      return async().queryAccessor().queryReactive(
-          async().queryRequest(bucketName(), name(), statement, opts, core(), environment()), opts, serializer);
-    });
+    if (opts.asTransaction()) {
+      return SingleQueryTransactions.singleQueryTransactionStreaming(core(), asyncScope.environment(), statement, bucketName(), name(), opts, ErrorUtil::convertTransactionFailedSingleQuery);
+    }
+    else {
+      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+      return Mono.defer(() -> {
+        return async().queryAccessor().queryReactive(
+                async().queryRequest(bucketName(), name(), statement, opts, core(), environment()), opts, serializer);
+      });
+    }
   }
 
   /**

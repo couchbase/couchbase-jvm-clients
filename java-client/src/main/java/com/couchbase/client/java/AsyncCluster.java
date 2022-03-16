@@ -63,6 +63,8 @@ import com.couchbase.client.java.search.SearchAccessor;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
+import com.couchbase.client.java.transactions.Transactions;
+import com.couchbase.client.java.transactions.internal.SingleQueryTransactions;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
@@ -351,8 +353,14 @@ public class AsyncCluster {
   public CompletableFuture<QueryResult> query(final String statement, final QueryOptions options) {
     notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
-    JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
-    return queryAccessor.queryAsync(queryRequest(statement, opts), opts, serializer);
+
+    if (opts.asTransaction()) {
+      return SingleQueryTransactions.singleQueryTransactionBuffered(core, environment(), statement, null, null, opts).toFuture();
+    }
+    else {
+      JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
+      return queryAccessor.queryAsync(queryRequest(statement, opts), opts, serializer);
+    }
   }
 
   /**

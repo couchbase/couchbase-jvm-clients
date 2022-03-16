@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.env;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.encryption.CryptoManager;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.java.ClusterOptions;
@@ -26,6 +27,7 @@ import com.couchbase.client.java.codec.JsonTranscoder;
 import com.couchbase.client.java.codec.JsonValueSerializerWrapper;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.json.JsonObjectCrypto;
+import com.couchbase.client.java.transactions.config.TransactionsConfig;
 
 import java.util.Optional;
 
@@ -201,6 +203,19 @@ public class ClusterEnvironment extends CoreEnvironment {
      */
     public Builder cryptoManager(CryptoManager cryptoManager) {
       this.cryptoManager = cryptoManager;
+      return this;
+    }
+
+    /**
+     * Sets the configuration for all transactions.
+     *
+     * @param transactionsConfig the transactions configuration.
+     * @return this builder for chaining purposes.
+     */
+    @Stability.Uncommitted
+    public Builder transactionsConfig(final TransactionsConfig.Builder transactionsConfig) {
+      notNull(transactionsConfig, "transactionsConfig");
+      this.transactionsConfig = transactionsConfig.build();
       return this;
     }
 

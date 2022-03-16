@@ -37,6 +37,8 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.transactions.internal.ErrorUtil;
+import com.couchbase.client.java.transactions.internal.SingleQueryTransactions;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -214,9 +216,16 @@ public class AsyncScope {
   public CompletableFuture<QueryResult> query(final String statement, final QueryOptions options) {
     notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
-    JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
-    return queryAccessor.queryAsync(queryRequest(bucketName(), scopeName, statement, opts, core, environment()), opts,
-        serializer);
+    if (opts.asTransaction()) {
+      return SingleQueryTransactions.singleQueryTransactionBuffered(core, environment, statement, bucketName, scopeName, opts)
+              .onErrorResume(ErrorUtil::convertTransactionFailedInternal)
+              .toFuture();
+    }
+    else {
+      JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
+      return queryAccessor.queryAsync(queryRequest(bucketName(), scopeName, statement, opts, core, environment()), opts,
+              serializer);
+    }
   }
 
   /**
