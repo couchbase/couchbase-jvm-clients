@@ -29,6 +29,7 @@ import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
 import javax.naming.NameNotFoundException;
+import javax.naming.NamingException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -41,6 +42,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.env.SecurityConfig.InternalMethods.userSpecifiedTrustSource;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASES;
 
 /**
@@ -77,13 +79,17 @@ public class ConnectionStringUtil {
                     srvHostname = srvHostname.replace(DnsSrv.DEFAULT_DNS_SECURE_SERVICE, "");
                 }
 
-                final List<String> foundNodes = DnsSrv.fromDnsSrv(srvHostname, false, tlsEnabled);
+                final List<String> foundNodes = fromDnsSrvOrThrowIfTlsRequired(srvHostname, tlsEnabled);
                 if (foundNodes.isEmpty()) {
                     throw new IllegalStateException("The loaded DNS SRV list from " + srvHostname + " is empty!");
                 }
                 Duration took = Duration.ofNanos(System.nanoTime() - start);
                 eventBus.publish(new DnsSrvRecordsLoadedEvent(took, foundNodes));
                 return foundNodes.stream().map(SeedNode::create).collect(Collectors.toSet());
+
+            } catch (InvalidArgumentException t) {
+                throw t;
+
             } catch (Throwable t) {
                 Duration took = Duration.ofNanos(System.nanoTime() - start);
                 if (t instanceof NameNotFoundException) {
@@ -240,6 +246,45 @@ public class ConnectionStringUtil {
           ? TlsRequiredButNotEnabledEvent.forOwnedEnvironment()
           : TlsRequiredButNotEnabledEvent.forSharedEnvironment()
       );
+    }
+  }
+
+  private static List<String> fromDnsSrvOrThrowIfTlsRequired(final String serviceName, boolean secure) throws NamingException {
+    final boolean full = false;
+
+    // If the user enabled TLS, just return records for the secure protocol.
+    if (secure) {
+      return DnsSrv.fromDnsSrv(serviceName, full, true);
+    }
+
+    try {
+      // User didn't enable TLS, so try to return records for the insecure protocol.
+      return DnsSrv.fromDnsSrv(serviceName, full, false);
+
+    } catch (NameNotFoundException errorFromFirstLookup) {
+      // There's no DNS SRV record for the insecure protocol.
+      // If there's one for the secure protocol, tell the user TLS is required.
+      try {
+        if (!DnsSrv.fromDnsSrv(serviceName, full, true).isEmpty()) {
+          throw InvalidArgumentException.fromMessage(
+              "The DNS SRV record for '" + redactSystem(serviceName) + "' indicates" +
+                  " TLS must be used when connecting to this cluster." +
+                  " Please enable TLS by setting the 'security.enableTLS' client setting to true." +
+                  " If the Cluster does not use a shared ClusterEnvironment, an alternative way to enable TLS is to" +
+                  " prefix the connection string with \"couchbases://\" (note the final 's')");
+        }
+
+        throw errorFromFirstLookup;
+
+      } catch (InvalidArgumentException propagateMe) {
+        throw propagateMe;
+
+      } catch (Exception e) {
+        if (e != errorFromFirstLookup) {
+          errorFromFirstLookup.addSuppressed(e);
+        }
+        throw errorFromFirstLookup;
+      }
     }
   }
 }
