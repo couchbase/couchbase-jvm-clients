@@ -40,6 +40,7 @@ import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.Bytes;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.List;
@@ -81,6 +82,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   private final String origKey;
   private final Optional<DurabilityLevel> syncReplicationType;
   private final boolean createAsDeleted;
+  private final boolean insertDocument;
 
   public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                              final BucketConfig bucketConfig, final RetryStrategy retryStrategy, final String key,
@@ -91,6 +93,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
                              long cas,
                              final Optional<DurabilityLevel> syncReplicationType, final RequestSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
+    this.insertDocument = insertDocument;
     byte flags = 0;
 
     if (createAsDeleted) {
@@ -316,22 +319,27 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     );
   }
 
+  public boolean insertDocument() {
+    return insertDocument;
+  }
+
   public static class Command {
+    private final static byte[] EMPTY_ARRAY = new byte[] {};
 
     private final SubdocCommandType type;
     private final String path;
-    private final byte[] fragment;
+    @Nullable private final byte[] fragment;
     private final boolean createParent;
     private final boolean xattr;
     private final boolean expandMacro;
     private final int originalIndex;
 
-    public Command(SubdocCommandType type, String path, byte[] fragment,
+    public Command(SubdocCommandType type, String path, @Nullable byte[] fragment,
                    boolean createParent, boolean xattr, boolean expandMacro, int originalIndex) {
       this.type = type;
       this.path = path;
       this.xattr = xattr;
-      this.fragment = fragment;
+      this.fragment = fragment == null ? EMPTY_ARRAY : fragment;
       this.createParent = createParent;
       this.expandMacro = expandMacro;
       this.originalIndex = originalIndex;

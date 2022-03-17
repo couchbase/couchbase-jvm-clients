@@ -16,15 +16,11 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.error.DocumentExistsException;
-import com.couchbase.client.core.error.context.KeyValueErrorContext;
-import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.java.codec.JsonSerializer;
 
 import java.util.concurrent.CompletableFuture;
 
-import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
 import static com.couchbase.client.java.kv.DurabilityUtils.wrapWithDurability;
 
 public class MutateInAccessor {
@@ -40,15 +36,7 @@ public class MutateInAccessor {
         if (response.status().success()) {
           return new MutateInResult(response.values(), response.cas(), response.mutationToken(), serializer);
         }
-
-        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
-        if (insertDocument
-                && (response.status() == ResponseStatus.EXISTS || response.status() == ResponseStatus.NOT_STORED)) {
-          throw new DocumentExistsException(ctx);
-        } else if (response.status() == ResponseStatus.SUBDOC_FAILURE && response.error().isPresent()) {
-          throw response.error().get();
-        }
-        throw keyValueStatusToException(request, response);
+        throw response.throwError(request, insertDocument);
       });
     return wrapWithDurability(mutateInResult, key, persistTo, replicateTo, core, request, false);
   }

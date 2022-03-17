@@ -44,7 +44,7 @@ public enum InsertAccessor {
         } else if (response.status() == ResponseStatus.EXISTS || response.status() == ResponseStatus.NOT_STORED) {
           throw new DocumentExistsException(KeyValueErrorContext.completedRequest(request, response.status()));
         }
-        throw keyValueStatusToException(request, response);
+        throw response.errorIfNeeded(request);
       });
     return wrapWithDurability(mutationResult, key, persistTo, replicateTo, core, request, false);
   }

@@ -13,19 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.transactions.log;
+package com.couchbase.client.core.error.transaction;
 
-import com.couchbase.client.core.transactions.log.CoreTransactionLogMessage;
+import com.couchbase.client.core.error.CouchbaseException;
 
-public class TransactionLogMessage {
-    private final CoreTransactionLogMessage internal;
-
-    public TransactionLogMessage(CoreTransactionLogMessage internal) {
-        this.internal = internal;
-    }
-
-    @Override
-    public String toString() {
-        return internal.toString();
+public class TransactionAlreadyCommittedException extends CouchbaseException {
+    public TransactionAlreadyCommittedException() {
+        super("An operation cannot proceed as the transaction has already committed");
     }
 }

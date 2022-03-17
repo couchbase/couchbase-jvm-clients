@@ -69,6 +69,8 @@ import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.NanoTimestamp;
+import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
+import com.couchbase.client.core.cnc.events.transaction.TransactionsStartedEvent;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -220,6 +222,8 @@ public class Core {
    */
   private final Map<ResponseMetricIdentifier, ValueRecorder> responseMetrics = new ConcurrentHashMap<>();
 
+  private final CoreTransactionsCleanup transactionsCleanup;
+
   /**
    * Creates a new {@link Core} with the given environment.
    *
@@ -270,6 +274,10 @@ public class Core {
     invalidStateWatchdog = environment.scheduler().schedulePeriodically(new InvalidStateWatchdog(),
       watchdogInterval, watchdogInterval, TimeUnit.SECONDS
     );
+
+    this.transactionsCleanup = new CoreTransactionsCleanup(this, environment.transactionsConfig());
+    context().environment().eventBus().publish(new TransactionsStartedEvent(environment.transactionsConfig().cleanupConfig().runLostAttemptsCleanupThread(),
+            environment.transactionsConfig().cleanupConfig().runRegularAttemptsCleanupThread()));
   }
 
   /**
@@ -605,26 +613,27 @@ public class Core {
    */
   @Stability.Internal
   public Mono<Void> shutdown(Duration timeout) {
-    return Mono.defer(() -> {
-      NanoTimestamp start = NanoTimestamp.now();
-      if (shutdown.compareAndSet(false, true)) {
-        eventBus.publish(new ShutdownInitiatedEvent(coreContext));
-        invalidStateWatchdog.dispose();
+    return transactionsCleanup.shutdown(timeout)
+      .then(Mono.defer(() -> {
+        NanoTimestamp start = NanoTimestamp.now();
+        if (shutdown.compareAndSet(false, true)) {
+          eventBus.publish(new ShutdownInitiatedEvent(coreContext));
+          invalidStateWatchdog.dispose();
 
-        return Flux
-          .fromIterable(currentConfig.bucketConfigs().keySet())
-          .flatMap(this::closeBucket)
-          .then(configurationProvider.shutdown())
-          // every 10ms check if all nodes have been cleared, and then move on.
-          // this links the config provider shutdown with our core reconfig logic
-          .then(Flux.interval(Duration.ofMillis(10), coreContext.environment().scheduler()).takeUntil(i -> nodes.isEmpty()).then())
-          .doOnTerminate(() -> eventBus.publish(
-            new ShutdownCompletedEvent(start.elapsed(), coreContext)
-          ))
-          .then();
-      }
-      return Mono.empty();
-    }).timeout(timeout, coreContext.environment().scheduler());
+          return Flux
+            .fromIterable(currentConfig.bucketConfigs().keySet())
+            .flatMap(this::closeBucket)
+            .then(configurationProvider.shutdown())
+            // every 10ms check if all nodes have been cleared, and then move on.
+            // this links the config provider shutdown with our core reconfig logic
+            .then(Flux.interval(Duration.ofMillis(10), coreContext.environment().scheduler()).takeUntil(i -> nodes.isEmpty()).then())
+            .doOnTerminate(() -> eventBus.publish(
+              new ShutdownCompletedEvent(start.elapsed(), coreContext)
+            ))
+            .then();
+        }
+        return Mono.empty();
+      })).timeout(timeout, coreContext.environment().scheduler());
   }
 
   /**
@@ -900,6 +909,11 @@ public class Core {
       default:
         throw new IllegalStateException("Unsupported ServiceType: " + serviceType);
     }
+  }
+
+  @Stability.Internal
+  public CoreTransactionsCleanup transactionsCleanup() {
+    return transactionsCleanup;
   }
 
   private static class ResponseMetricIdentifier {

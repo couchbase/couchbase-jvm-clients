@@ -27,6 +27,7 @@ import com.couchbase.client.core.transaction.util.SchedulerUtil;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
+import com.couchbase.client.java.transactions.internal.ErrorUtil;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
@@ -79,8 +80,8 @@ public class ReactiveTransactions {
      */
     public Mono<TransactionResult> run(Function<ReactiveTransactionAttemptContext, Mono<?>> transactionLogic,
                                                @Nullable TransactionOptions options) {
-        return internal.run((ctx) -> transactionLogic.apply(new ReactiveTransactionAttemptContext(ctx, serializer)), options.build())
-                .onErrorResume(this::convertTransactionFailedInternal)
+        return internal.run((ctx) -> transactionLogic.apply(new ReactiveTransactionAttemptContext(ctx, serializer)), options == null ? null : options.build())
+                .onErrorResume(ErrorUtil::convertTransactionFailedInternal)
                 .map(TransactionResult::new);
     }
 
@@ -113,22 +114,8 @@ public class ReactiveTransactions {
             });
 
             return internal.executeTransaction(createAttempt, merged, overall, newTransactionLogic, false)
-                    .onErrorResume(this::convertTransactionFailedInternal);
+                    .onErrorResume(ErrorUtil::convertTransactionFailedInternal);
         }).map(TransactionResult::new)
                 .publishOn(SchedulerUtil.schedulerBlocking).block();
-    }
-
-    private Mono<CoreTransactionResult> convertTransactionFailedInternal(Throwable err) {
-        Throwable out = err;
-
-        if (err instanceof CoreTransactionCommitAmbiguousException) {
-            out = new TransactionCommitAmbiguousException((CoreTransactionCommitAmbiguousException) err);
-        } else if (err instanceof CoreTransactionExpiredException) {
-            out = new TransactionExpiredException((CoreTransactionExpiredException) err);
-        } else if (err instanceof CoreTransactionFailedException) {
-            out = new TransactionFailedException((CoreTransactionFailedException) err);
-        }
-
-        return Mono.error(out);
     }
 }

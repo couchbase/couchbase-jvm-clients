@@ -17,11 +17,15 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentExistsException;
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.util.Arrays;
 import java.util.Optional;
+
+import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
 
 public class SubdocMutateResponse extends BaseResponse {
 
@@ -59,6 +63,17 @@ public class SubdocMutateResponse extends BaseResponse {
    */
   public Optional<CouchbaseException> error() {
     return error;
+  }
+
+  public CouchbaseException throwError(final SubdocMutateRequest request, final boolean insertDocument) {
+    final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, status());
+    if (insertDocument
+            && (status() == ResponseStatus.EXISTS || status() == ResponseStatus.NOT_STORED)) {
+      return new DocumentExistsException(ctx);
+    } else if (status() == ResponseStatus.SUBDOC_FAILURE && error().isPresent()) {
+      return error().get();
+    }
+    return keyValueStatusToException(request, this);
   }
 
   @Override

@@ -30,7 +30,7 @@ public class QueryResponse
   private final Flux<QueryChunkRow> rows;
   private final Mono<QueryChunkTrailer> trailer;
 
-  QueryResponse(final ResponseStatus status, final QueryChunkHeader header,
+  public QueryResponse(final ResponseStatus status, final QueryChunkHeader header,
                 final Flux<QueryChunkRow> rows, final Mono<QueryChunkTrailer> trailer) {
     super(status);
     this.header = header;

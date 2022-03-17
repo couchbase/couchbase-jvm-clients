@@ -37,6 +37,7 @@ import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.AbstractPooledEndpointServiceConfig;
+import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
@@ -123,6 +124,7 @@ public class CoreEnvironment {
   private final OrphanReporter orphanReporter;
   private final long maxNumRequestsInRetry;
   private final List<RequestCallback> requestCallbacks;
+  private final CoreTransactionsConfig transactionsConfig;
 
   public static CoreEnvironment create() {
     return builder().build();
@@ -161,6 +163,7 @@ public class CoreEnvironment {
     this.orphanReporterConfig = builder.orphanReporterConfig.build();
     this.thresholdLoggingTracerConfig = builder.thresholdLoggingTracerConfig.build();
     this.loggingMeterConfig = builder.loggingMeterConfig.build();
+    this.transactionsConfig = builder.transactionsConfig == null ? CoreTransactionsConfig.createDefault() : builder.transactionsConfig;
 
     if (eventBus instanceof OwnedSupplier) {
       eventBus.get().start().block();
@@ -399,6 +402,11 @@ public class CoreEnvironment {
     return maxNumRequestsInRetry;
   }
 
+  @Stability.Volatile
+  public CoreTransactionsConfig transactionsConfig() {
+    return transactionsConfig;
+  }
+
   /**
    * Shuts down this Environment with the default disconnect timeout.
    *
@@ -525,6 +533,8 @@ public class CoreEnvironment {
     input.put("scheduler", scheduler.get().getClass().getSimpleName());
     input.put("schedulerThreadCount", schedulerThreadCount);
 
+    input.put("transactionsConfig", transactionsConfig.exportAsMap());
+
     return format.apply(input);
   }
 
@@ -552,6 +562,7 @@ public class CoreEnvironment {
     private RetryStrategy retryStrategy = null;
     private long maxNumRequestsInRetry = DEFAULT_MAX_NUM_REQUESTS_IN_RETRY;
     private final List<RequestCallback> requestCallbacks = new ArrayList<>();
+    protected CoreTransactionsConfig transactionsConfig = null;
 
     protected Builder() { }
 

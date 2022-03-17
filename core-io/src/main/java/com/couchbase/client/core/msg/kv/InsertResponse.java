@@ -16,10 +16,14 @@
 
 package com.couchbase.client.core.msg.kv;
 
+import com.couchbase.client.core.error.DocumentExistsException;
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.util.Optional;
+
+import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
 
 public class InsertResponse extends BaseResponse {
 
@@ -38,5 +42,12 @@ public class InsertResponse extends BaseResponse {
 
   public Optional<MutationToken> mutationToken() {
     return mutationToken;
+  }
+
+  public RuntimeException errorIfNeeded(final InsertRequest request) {
+    if (status() == ResponseStatus.EXISTS) {
+      throw new DocumentExistsException(KeyValueErrorContext.completedRequest(request, status()));
+    }
+    return keyValueStatusToException(request, this);
   }
 }
