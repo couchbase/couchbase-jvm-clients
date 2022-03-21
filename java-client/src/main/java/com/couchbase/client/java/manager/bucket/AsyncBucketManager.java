@@ -72,7 +72,7 @@ public class AsyncBucketManager {
    * Creates a new bucket on the server.
    * <p>
    * The SDK will not perform any logical validation on correct combination of the settings - the server will return
-   * an error on invalid combinations. As an example, a magma bucket needs at least 256mb of bucket quota - otherwise
+   * an error on invalid combinations. As an example, a magma bucket needs at least 1024 MiB of bucket quota - otherwise
    * the server will reject it.
    *
    * @param settings the {@link BucketSettings} describing the properties of the bucket.
@@ -88,7 +88,7 @@ public class AsyncBucketManager {
    * Creates a new bucket on the server with custom options.
    * <p>
    * The SDK will not perform any logical validation on correct combination of the settings - the server will return
-   * an error on invalid combinations. As an example, a magma bucket needs at least 256mb of bucket quota - otherwise
+   * an error on invalid combinations. As an example, a magma bucket needs at least 1024 MiB of bucket quota - otherwise
    * the server will reject it.
    *
    * @param settings the {@link BucketSettings} describing the properties of the bucket.
@@ -115,7 +115,7 @@ public class AsyncBucketManager {
    * </ul>
    * <p>
    * The SDK will not perform any logical validation on correct combination of the settings - the server will return
-   * an error on invalid combinations. As an example, a magma bucket needs at least 256mb of bucket quota - otherwise
+   * an error on invalid combinations. As an example, a magma bucket needs at least 1024 MiB of bucket quota - otherwise
    * the server will reject it.
    *
    * @param settings the {@link BucketSettings} describing the properties of the bucket.
@@ -141,7 +141,7 @@ public class AsyncBucketManager {
    * </ul>
    * <p>
    * The SDK will not perform any logical validation on correct combination of the settings - the server will return
-   * an error on invalid combinations. As an example, a magma bucket needs at least 256mb of bucket quota - otherwise
+   * an error on invalid combinations. As an example, a magma bucket needs at least 1024 MiB of bucket quota - otherwise
    * the server will reject it.
    *
    * @param settings the {@link BucketSettings} describing the properties of the bucket.
