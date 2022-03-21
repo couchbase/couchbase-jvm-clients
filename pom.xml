@@ -195,6 +195,7 @@
                         <include>**/*Spec.class</include>
                         <include>**/*Test.java</include>
                     </includes>
+                    <excludedGroups>flaky</excludedGroups>
                 </configuration>
             </plugin>
             <plugin>

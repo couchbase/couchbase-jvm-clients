@@ -21,13 +21,14 @@ import com.couchbase.client.scala.kv.MutationState
 import com.couchbase.client.scala.manager.collection.CollectionSpec
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, Scope, TestUtils}
-import com.couchbase.client.test.{Capabilities, IgnoreWhen, Util}
+import com.couchbase.client.test.{Capabilities, Flaky, IgnoreWhen, Util}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
+@Flaky
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(missesCapabilities = Array(Capabilities.QUERY, Capabilities.COLLECTIONS))
 class ScopeLevelQuerySpec extends ScalaIntegrationTest {
@@ -50,6 +51,10 @@ class ScopeLevelQuerySpec extends ScalaIntegrationTest {
     bucket.collections.createScope(ScopeName).get
     Util.waitUntilCondition(() => {
       val result = bucket.collections.scopeExists(ScopeName)
+      val allScopes = bucket.collections.getAllScopes().get
+
+      println(s"Scope exists result: ${result}, all scopes = ${allScopes}")
+
       result.isSuccess && result.get
     })
 

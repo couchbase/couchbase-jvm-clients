@@ -189,13 +189,14 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
         val name = randomName()
         buckets.createBucket(
             name = name,
-            ramQuota = 256.mebibytes,
+            // Minimum RAM for Magma
+            ramQuota = 1024.mebibytes,
             bucketType = BucketType.COUCHBASE,
             storageBackend = StorageBackend.MAGMA,
         )
         check(name) {
             assertEquals(StorageBackend.MAGMA, storageBackend)
-            assertEquals(256.mebibytes, ramQuota)
+            assertEquals(1024.mebibytes, ramQuota)
         }
     }
 

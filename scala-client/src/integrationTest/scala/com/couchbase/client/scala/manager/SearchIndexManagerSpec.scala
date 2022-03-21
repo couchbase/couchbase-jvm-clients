@@ -18,7 +18,6 @@ package com.couchbase.client.scala.manager
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-
 import com.couchbase.client.core.error.IndexNotFoundException
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.json.JsonObject
@@ -32,6 +31,7 @@ import org.junit.jupiter.api._
 import scala.concurrent.duration._
 import scala.util.Failure
 
+@Flaky
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(missesCapabilities = Array(Capabilities.SEARCH))
 class SearchIndexManagerSpec extends ScalaIntegrationTest {

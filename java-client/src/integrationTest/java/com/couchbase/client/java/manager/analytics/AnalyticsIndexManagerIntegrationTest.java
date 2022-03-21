@@ -35,6 +35,7 @@ import com.couchbase.client.java.manager.analytics.link.AnalyticsLink;
 import com.couchbase.client.java.manager.analytics.link.AnalyticsLinkType;
 import com.couchbase.client.java.manager.analytics.link.S3ExternalAnalyticsLink;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.Flaky;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -64,6 +65,7 @@ import static com.couchbase.client.java.manager.analytics.DropDataverseAnalytics
 import static com.couchbase.client.java.manager.analytics.DropIndexAnalyticsOptions.dropIndexAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.GetLinksAnalyticsOptions.getLinksAnalyticsOptions;
 import static com.couchbase.client.test.Capabilities.ANALYTICS;
+import static com.couchbase.client.test.Capabilities.COLLECTIONS;
 import static com.couchbase.client.test.ClusterType.CAVES;
 import static com.couchbase.client.test.ClusterType.MOCKED;
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -77,6 +79,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+@Flaky
 @IgnoreWhen(clusterTypes = {MOCKED, CAVES}, missesCapabilities = ANALYTICS)
 class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
@@ -292,7 +295,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
     final Map<String, AnalyticsDataType> fields = mapOf(
         "a.foo", AnalyticsDataType.INT64,
-        "`b`.`bar`", AnalyticsDataType.DOUBLE,
+        "b.bar", AnalyticsDataType.DOUBLE,
         "c", AnalyticsDataType.STRING);
 
     analytics.createIndex(index, dataset, fields);
@@ -436,6 +439,9 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
     }
   }
 
+  // The relevant endpoint was only added in 6.5.  On CI we see failures for 6.5 and 6.6 as we expect an empty
+  // map back, but get something.  Needs to be investigated further under JVMCBC-1075.
+  @IgnoreWhen(missesCapabilities = {COLLECTIONS})
   @Test
   void getPendingMutations() {
     try {

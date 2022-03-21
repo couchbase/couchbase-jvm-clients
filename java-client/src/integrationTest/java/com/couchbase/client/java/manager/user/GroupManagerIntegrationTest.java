@@ -29,6 +29,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -51,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   missesCapabilities = {Capabilities.USER_GROUPS, Capabilities.ENTERPRISE_EDITION}
 )
 class GroupManagerIntegrationTest extends JavaIntegrationTest {
+  private static final Logger LOGGER = LoggerFactory.getLogger(GroupManagerIntegrationTest.class);
 
   private static Cluster cluster;
 
@@ -205,8 +208,15 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
     users.upsertGroup(users.getGroup(GROUP_A).roles(securityAdmin));
     users.upsertGroup(users.getGroup(GROUP_B).roles(securityAdmin));
 
-    Util.waitUntilCondition(() -> users.getGroup(GROUP_A).roles().size() == 1
-              && users.getGroup(GROUP_B).roles().size() == 1);
+    Util.waitUntilCondition(() -> {
+      Group groupA = users.getGroup(GROUP_A);
+      Group groupB = users.getGroup(GROUP_B);
+
+      LOGGER.info("Group A={} B={}", groupA, groupB);
+
+      return groupA.roles().size() == 1
+              && groupB.roles().size() == 1;
+    });
 
     userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
     assertEquals(setOf(securityAdmin, BUCKET_FULL_ACCESS_WILDCARD), userMeta.effectiveRoles());

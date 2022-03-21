@@ -215,7 +215,8 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     String name = UUID.randomUUID().toString();
     createBucket(BucketSettings.create(name)
           .bucketType(BucketType.COUCHBASE)
-          .ramQuotaMB(256)
+          // Minimum RAM for Magma
+          .ramQuotaMB(1024)
           .storageBackend(StorageBackend.MAGMA));
     BucketSettings settings = buckets.getBucket(name);
     assertEquals(StorageBackend.MAGMA, settings.storageBackend());

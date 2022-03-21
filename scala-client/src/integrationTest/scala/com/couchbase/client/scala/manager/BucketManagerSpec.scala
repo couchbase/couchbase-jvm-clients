@@ -270,7 +270,8 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     val name: String = UUID.randomUUID.toString
     val bucket = CreateBucketSettings(name, 110)
       .bucketType(BucketType.Couchbase)
-      .ramQuotaMB(256)
+      // Minimum RAM for Magma
+      .ramQuotaMB(1024)
       .storageBackend(StorageBackend.Magma)
 
     val found: BucketSettings = createGetAndDestroy(name, bucket)

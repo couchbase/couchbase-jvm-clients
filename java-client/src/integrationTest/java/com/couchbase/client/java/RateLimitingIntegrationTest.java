@@ -52,6 +52,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
 import java.nio.charset.StandardCharsets;
@@ -73,6 +75,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @IgnoreWhen(missesCapabilities = Capabilities.RATE_LIMITING)
 class RateLimitingIntegrationTest extends JavaIntegrationTest {
+  private static final Logger LOGGER = LoggerFactory.getLogger(RateLimitingIntegrationTest.class);
 
   private static final String RL_PASSWORD = "password";
 
@@ -535,6 +538,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> Flux
         .range(0, 50)
         .flatMap(i -> cluster.reactive().searchQuery("ratelimits", QueryStringQuery.queryString("a")))
+        .doOnError(err -> LOGGER.info("Got error " + err.toString()))
         .blockLast());
 
       assertTrue(ex.getMessage().contains("num_concurrent_requests"));
