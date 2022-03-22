@@ -17,6 +17,7 @@
 package com.couchbase.client.core.cnc;
 
 import java.time.Duration;
+import java.time.Instant;
 
 /**
  * This {@link Event} implementation can be used as a base event to inherit from.
@@ -27,7 +28,8 @@ public abstract class AbstractEvent implements Event {
   private final String category;
   private final Duration duration;
   private final Context context;
-  private final long createdAt;
+  private final Instant created = Instant.now();
+  private final long createdAt = System.nanoTime();
 
   protected AbstractEvent(Severity severity, Category category, Duration duration, Context context) {
     this(severity, category.path(), duration, context);
@@ -46,7 +48,6 @@ public abstract class AbstractEvent implements Event {
     this.category = category;
     this.duration = duration;
     this.context = context;
-    this.createdAt = System.nanoTime();
   }
 
   @Override
@@ -75,12 +76,17 @@ public abstract class AbstractEvent implements Event {
   }
 
   @Override
+  public Instant created() {
+    return created;
+  }
+
+  @Override
   public String toString() {
     return this.getClass().getSimpleName() + "{"
       + "severity=" + severity
       + ", category=" + category
       + ", duration=" + duration
-      + ", createdAt=" + createdAt
+      + ", created=" + created
       + ", description=" + description()
       + ", context=" + context.exportAsString(Context.ExportFormat.STRING)
       + ", cause=" + cause()

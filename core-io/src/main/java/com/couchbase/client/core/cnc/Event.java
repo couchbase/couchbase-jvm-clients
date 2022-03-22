@@ -17,6 +17,7 @@
 package com.couchbase.client.core.cnc;
 
 import java.time.Duration;
+import java.time.Instant;
 
 /**
  * The parent interface for all events pushed through the command and
@@ -25,11 +26,17 @@ import java.time.Duration;
 public interface Event {
 
   /**
-   * Contains a nano timestamp when the event was created.
+   * Returns the value of {@code System.nanoTime()} when the event was created.
    *
-   * @return the time this event got created.
+   * @deprecated Please use {@link #created} instead.
    */
+  @Deprecated
   long createdAt();
+
+  /**
+   * Returns the creation timestamp of this event.
+   */
+  Instant created();
 
   /**
    * The Severity of this event.
