@@ -450,6 +450,12 @@ public class CoreEnvironment {
         }
         return Mono.empty();
       }))
+      .then(Mono.defer(() -> {
+        if (meter instanceof OwnedSupplier) {
+          return meter.get().stop(timeout);
+        }
+        return Mono.empty();
+      }))
       .then(Mono.defer(orphanReporter::stop))
       .then(Mono.defer(() -> {
         if (scheduler instanceof OwnedSupplier) {
