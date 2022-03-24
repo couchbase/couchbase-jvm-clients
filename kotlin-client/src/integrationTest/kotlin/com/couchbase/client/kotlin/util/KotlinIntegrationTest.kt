@@ -31,6 +31,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Timeout
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -38,6 +39,7 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -62,8 +64,13 @@ internal open class KotlinIntegrationTest : ClusterAwareIntegrationTest() {
     private val nextIdBase = "integration-test-${System.currentTimeMillis()}-${UUID.randomUUID()}-"
     protected fun nextId() = nextIdBase + nextIdCounter.getAndIncrement()
 
+    @BeforeAll
+    fun beforeAll() {
+        bucket // initialize so we don't get "must open a bucket" errors on pre-6.5 clusters
+    }
+
     @AfterAll
-    fun afterAll() = runBlocking {
+    fun afterAll(): Unit = runBlocking {
         if (lazyCluster.isInitialized()) cluster.disconnect()
     }
 
@@ -159,5 +166,15 @@ internal fun <T> withSystemProperty(name: String, value: String, block: () -> T)
     } finally {
         if (previousValue == null) System.clearProperty(name)
         else System.setProperty(name, previousValue)
+    }
+}
+
+internal suspend fun waitUntil(
+    timeout: Duration = 1.minutes,
+    retryInterval: Duration = 50.milliseconds,
+    condition: suspend () -> Boolean,
+) {
+    withTimeout(timeout) {
+        while (!condition()) delay(retryInterval)
     }
 }

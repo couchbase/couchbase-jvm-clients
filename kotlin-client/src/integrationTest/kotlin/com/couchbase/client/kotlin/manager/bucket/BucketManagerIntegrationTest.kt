@@ -21,10 +21,10 @@ import com.couchbase.client.core.error.BucketNotFoundException
 import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.kotlin.util.StorageSize.Companion.mebibytes
+import com.couchbase.client.kotlin.util.waitUntil
 import com.couchbase.client.test.Capabilities
 import com.couchbase.client.test.ClusterType
 import com.couchbase.client.test.IgnoreWhen
-import com.couchbase.client.test.Util
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -47,21 +47,19 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
         bucketsToDrop.clear()
     }
 
-    private fun waitUntilHealthy(bucket: String) {
-        Util.waitUntilCondition {
+    private suspend fun waitUntilHealthy(bucket: String) {
+        waitUntil {
             try {
-                return@waitUntilCondition runBlocking { buckets.isHealthy(bucket) }
+                buckets.isHealthy(bucket)
             } catch (err: BucketNotFoundException) {
-                return@waitUntilCondition false
+                false
             }
         }
     }
 
-    private fun waitUntilDropped(bucket: String) {
-        Util.waitUntilCondition {
-            return@waitUntilCondition runBlocking {
-                buckets.getAllBuckets().none { it.name == bucket }
-            }
+    private suspend fun waitUntilDropped(bucket: String) {
+        waitUntil {
+            buckets.getAllBuckets().none { it.name == bucket }
         }
     }
 
@@ -263,9 +261,7 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
         collection.upsert(id, "value")
         assertTrue(collection.exists(id).exists)
         buckets.flushBucket(bucket.name)
-        Util.waitUntilCondition {
-            runBlocking { !collection.exists(id).exists }
-        }
+        waitUntil { !collection.exists(id).exists }
     }
 
     @Test
@@ -302,11 +298,7 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
                 ramQuota = newQuota,
             )
 
-            Util.waitUntilCondition {
-                runBlocking {
-                    buckets.getBucket(name).ramQuota == newQuota
-                }
-            }
+            waitUntil  { buckets.getBucket(name).ramQuota == newQuota }
         }
     }
 

@@ -258,7 +258,7 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
 
     users.upsertUser(userMeta.user().groups(emptySet()));
 
-    Util.waitUntilCondition(() -> users.getUser(LOCAL, USERNAME).externalGroups().isEmpty());
+    Util.waitUntilCondition(() -> users.getUser(LOCAL, USERNAME).user().groups().isEmpty());
 
     userMeta = users.getUser(AuthDomain.LOCAL, USERNAME);
     assertEquals(emptySet(), userMeta.effectiveRoles());

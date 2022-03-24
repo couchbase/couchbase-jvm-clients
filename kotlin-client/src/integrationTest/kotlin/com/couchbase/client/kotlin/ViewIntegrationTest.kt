@@ -20,6 +20,7 @@ import com.couchbase.client.kotlin.manager.view.DesignDocument
 import com.couchbase.client.kotlin.manager.view.View
 import com.couchbase.client.kotlin.manager.view.ViewIndexManager
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
+import com.couchbase.client.kotlin.util.waitUntil
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace.PRODUCTION
 import com.couchbase.client.kotlin.view.ViewScanConsistency.Companion.requestPlus
@@ -28,7 +29,6 @@ import com.couchbase.client.kotlin.view.execute
 import com.couchbase.client.test.ClusterType.CAVES
 import com.couchbase.client.test.ClusterType.MOCKED
 import com.couchbase.client.test.IgnoreWhen
-import com.couchbase.client.test.Util.waitUntilCondition
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -59,9 +59,7 @@ internal class ViewIntegrationTest : KotlinIntegrationTest() {
 
         runBlocking {
             viewIndexes.upsertDesignDocument(designDocument, PRODUCTION)
-            waitUntilCondition {
-                runBlocking { viewIndexes.getDesignDocumentOrNull(DDOC_NAME, PRODUCTION) != null }
-            }
+            waitUntil { viewIndexes.getDesignDocumentOrNull(DDOC_NAME, PRODUCTION) != null }
         }
     }
 
