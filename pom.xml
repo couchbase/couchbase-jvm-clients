@@ -59,6 +59,8 @@
 
         <gpg.keyname></gpg.keyname>
         <gpg.passphrase></gpg.passphrase>
+        <!-- Required to stop the exec-maven-plugin complaining  -->
+        <exec.mainClass>none</exec.mainClass>
     </properties>
 
     <distributionManagement>
@@ -185,6 +187,9 @@
         <module>tracing-opentelemetry</module>
         <module>metrics-opentelemetry</module>
         <module>metrics-micrometer</module>
+        <!-- Uncomment next line to include java-fit-performer.  Not included by defualt as it requires
+        a) an externally built lib and b) JDK 17 -->
+        <!-- <module>java-fit-performer</module> -->
     </modules>
 
     <build>
@@ -230,6 +235,7 @@
                 <configuration>
                     <headerLocation>config/checkstyle/checkstyle-header.txt</headerLocation>
                     <configLocation>config/checkstyle/checkstyle-basic.xml</configLocation>
+<!--                    <suppressionsLocation>config/checkstyle/checkstyle-suppressions.xml</suppressionsLocation>-->
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                     <linkXRef>false</linkXRef>
@@ -243,6 +249,17 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <!-- Want java-fit-performer to be executable.  Maven complains if use exec:java target as the dependencies of
+              module aren't executable.  The workaround appears to be this - disable execution by default. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.3.2</version>
+                <configuration>
+                    <skip>true</skip>
+                    <executable>java</executable>
+                </configuration>
             </plugin>
         </plugins>
     </build>

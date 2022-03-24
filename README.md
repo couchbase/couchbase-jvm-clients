@@ -21,7 +21,8 @@ This repository contains the following projects:
  - `tracing-opentracing`: module to integrate with [OpenTracing](https://opentracing.io/)
  - `tracing-opentelemetry`: module to integrate with [OpenTelemetry](https://opentelemetry.io/) tracing
  - `metrics-opentelemetry`: module to integrate with [OpenTelemetry](https://opentelemetry.io/) metrics
- - `metrics-micrometer`: module to integratr with [Micrometer](https://micrometer.io/) metrics
+ - `metrics-micrometer`: module to integrate with [Micrometer](https://micrometer.io/) metrics
+ - `java-fit-performer`: for internal testing of the java-client transactions implementation
 
 Other toplevel modules might be present which contain examples, experimental code or internal tooling and test infrastructure.
 

@@ -1,0 +1,17 @@
+<configuration debug="false">
+  <conversionRule conversionWord="seconds" converterClass="com.couchbase.logging.SecondsConverter"/>
+  <conversionRule conversionWord="myhighlight" converterClass="com.couchbase.logging.Highlighter"/>
+
+  <appender class="ch.qos.logback.core.ConsoleAppender" name="STDOUT">
+    <target>System.out</target>
+    <withJansi>true</withJansi>
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+  <root level="INFO">
+    <appender-ref ref="STDOUT"/>
+  </root>
+  <logger name="com.couchbase.transactions" level="DEBUG" />
+  <logger name="com.couchbase.transactions.cleanup" level="TRACE" />
+</configuration>
