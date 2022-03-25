@@ -119,6 +119,7 @@ public class CoreEnvironment {
   private final LoggerConfig loggerConfig;
   private final RetryStrategy retryStrategy;
   private final Supplier<Scheduler> scheduler;
+  private final int schedulerThreadCount;
   private final OrphanReporter orphanReporter;
   private final long maxNumRequestsInRetry;
   private final List<RequestCallback> requestCallbacks;
@@ -137,10 +138,11 @@ public class CoreEnvironment {
 
     this.userAgent = defaultUserAgent();
     this.maxNumRequestsInRetry = builder.maxNumRequestsInRetry;
+    this.schedulerThreadCount = builder.schedulerThreadCount;
     this.scheduler = Optional
       .ofNullable(builder.scheduler)
       .orElse(new OwnedSupplier<>(
-        Schedulers.newParallel("cb-comp", Schedulers.DEFAULT_POOL_SIZE, true))
+        Schedulers.newParallel("cb-comp", schedulerThreadCount, true))
       );
     this.eventBus = Optional
       .ofNullable(builder.eventBus)
@@ -520,6 +522,8 @@ public class CoreEnvironment {
     input.put("requestTracer", requestTracer.get().getClass().getSimpleName());
     input.put("meter", meter.get().getClass().getSimpleName());
     input.put("numRequestCallbacks", requestCallbacks.size());
+    input.put("scheduler", scheduler.get().getClass().getSimpleName());
+    input.put("schedulerThreadCount", schedulerThreadCount);
 
     return format.apply(input);
   }
@@ -542,6 +546,7 @@ public class CoreEnvironment {
     private LoggingMeterConfig.Builder loggingMeterConfig = LoggingMeterConfig.builder();
     private Supplier<EventBus> eventBus = null;
     private Supplier<Scheduler> scheduler = null;
+    private int schedulerThreadCount = Schedulers.DEFAULT_POOL_SIZE;
     private Supplier<RequestTracer> requestTracer = null;
     private Supplier<Meter> meter = null;
     private RetryStrategy retryStrategy = null;
@@ -827,6 +832,24 @@ public class CoreEnvironment {
     @Stability.Uncommitted
     public SELF scheduler(final Scheduler scheduler) {
       this.scheduler = new ExternalSupplier<>(notNull(scheduler, "Scheduler"));
+      return self();
+    }
+
+    /**
+     * Customizes the thread count for the {@link #scheduler()} if not customized by {@link #scheduler(Scheduler)}.
+     * <p>
+     * By default, {@link Schedulers#DEFAULT_POOL_SIZE} is used. Note that if the scheduler itself is customized, this
+     * value is ignored.
+     *
+     * @param schedulerThreadCount the number of threads to use for the scheduler.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    @Stability.Uncommitted
+    public SELF schedulerThreadCount(final int schedulerThreadCount) {
+      if (schedulerThreadCount < 1) {
+        throw InvalidArgumentException.fromMessage("SchedulerThreadCount cannot be smaller than 1");
+      }
+      this.schedulerThreadCount = schedulerThreadCount;
       return self();
     }
 
