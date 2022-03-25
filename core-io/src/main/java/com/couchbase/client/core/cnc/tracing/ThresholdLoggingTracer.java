@@ -27,6 +27,7 @@ import com.couchbase.client.core.error.TracerException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
+import com.couchbase.client.core.util.NanoTimestamp;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -75,7 +76,7 @@ public class ThresholdLoggingTracer implements RequestTracer {
   private final long viewThreshold;
   private final long searchThreshold;
   private final long analyticsThreshold;
-  private final long emitIntervalNanos;
+  private final Duration emitInterval;
   private final int sampleSize;
 
   /**
@@ -125,7 +126,7 @@ public class ThresholdLoggingTracer implements RequestTracer {
     viewThreshold = config.viewThreshold().toNanos();
     queryThreshold = config.queryThreshold().toNanos();
     sampleSize = config.sampleSize();
-    emitIntervalNanos = config.emitInterval().toNanos();
+    emitInterval = config.emitInterval();
     this.config = config;
 
     worker = new Thread(new Worker());
@@ -247,7 +248,7 @@ public class ThresholdLoggingTracer implements RequestTracer {
     private long ftsThresholdCount = 0;
     private long analyticsThresholdCount = 0;
 
-    private long lastThresholdLog;
+    private NanoTimestamp lastThresholdLog = NanoTimestamp.never();
     private boolean hasThresholdWritten;
 
     @Override
@@ -275,14 +276,13 @@ public class ThresholdLoggingTracer implements RequestTracer {
      * Helper method which drains the queue, handles the lists and logs if needed.
      */
     private void handleOverThresholdQueue() {
-      long now = System.nanoTime();
-      if (now > (lastThresholdLog + emitIntervalNanos)) {
+      if (lastThresholdLog.hasElapsed(emitInterval)) {
         if (newOutputFormat) {
           prepareAndlogOverThresholdNew();
         } else {
           prepareAndlogOverThresholdOld();
         }
-        lastThresholdLog = now;
+        lastThresholdLog = NanoTimestamp.now();
       }
 
       while (true) {
@@ -537,7 +537,7 @@ public class ThresholdLoggingTracer implements RequestTracer {
      * to assert against the output.
      */
     void logOverThreshold(final Map<String, Object> toLogNew, final List<Map<String, Object>> toLogOld) {
-      eventBus.publish(new OverThresholdRequestsRecordedEvent(Duration.ofNanos(emitIntervalNanos), toLogNew, toLogOld));
+      eventBus.publish(new OverThresholdRequestsRecordedEvent(emitInterval, toLogNew, toLogOld));
     }
 
     /**

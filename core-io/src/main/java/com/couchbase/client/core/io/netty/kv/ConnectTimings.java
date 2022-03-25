@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.deps.io.netty.channel.Channel;
+import com.couchbase.client.core.util.NanoTimestamp;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -145,7 +146,7 @@ public class ConnectTimings {
     /**
      * Stores the time when this timing is created.
      */
-    private final long start = System.nanoTime();
+    private final NanoTimestamp start = NanoTimestamp.now();
 
     /**
      * Holds the class which is responsible for the timing.
@@ -155,7 +156,7 @@ public class ConnectTimings {
     /**
      * Once complete, stores the time at end.
      */
-    private volatile long end;
+    private volatile NanoTimestamp end = NanoTimestamp.never();
 
     /**
      * Once completed, holds info if this timing timed out
@@ -180,7 +181,7 @@ public class ConnectTimings {
       if (!isComplete()) {
         throw new IllegalStateException("Incomplete Timing.");
       }
-      return Duration.ofNanos(end - start);
+      return end.minus(start);
     }
 
     /**
@@ -189,7 +190,7 @@ public class ConnectTimings {
      * @return true if complete.
      */
     boolean isComplete() {
-      return end != 0;
+      return !end.isNever();
     }
 
     /**
@@ -199,7 +200,7 @@ public class ConnectTimings {
      * @return returns the duration of the completed event.
      */
     Duration complete(boolean timeout) {
-      this.end = System.nanoTime();
+      this.end = NanoTimestamp.now();
       this.timeout = timeout;
       return latency();
     }
@@ -229,9 +230,9 @@ public class ConnectTimings {
 
     @Override
     public int hashCode() {
-      int result = (int) (start ^ (start >>> 32));
+      int result = start.hashCode();
       result = 31 * result + (clazz != null ? clazz.hashCode() : 0);
-      result = 31 * result + (int) (end ^ (end >>> 32));
+      result = 31 * result + end.hashCode();
       result = 31 * result + (timeout ? 1 : 0);
       return result;
     }

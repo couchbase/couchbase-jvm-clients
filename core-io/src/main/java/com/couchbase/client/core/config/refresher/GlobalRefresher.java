@@ -59,9 +59,9 @@ public class GlobalRefresher {
   private final Core core;
 
   /**
-   * Holds the allowable config poll interval in nanoseconds.
+   * Holds the allowable config poll interval.
    */
-  private final long configPollIntervalNanos;
+  private final Duration configPollInterval;
 
   /**
    * Stores the timeout used for config refresh requests, keeping it in reasonable bounds (between 1 and 5s).
@@ -94,8 +94,8 @@ public class GlobalRefresher {
   public GlobalRefresher(final ConfigurationProvider provider, final Core core) {
     this.provider = provider;
     this.core = core;
-    this.configPollIntervalNanos = core.context().environment().ioConfig().configPollInterval().toNanos();
-    this.configRequestTimeout = clampConfigRequestTimeout(configPollIntervalNanos);
+    this.configPollInterval = core.context().environment().ioConfig().configPollInterval();
+    this.configRequestTimeout = clampConfigRequestTimeout(configPollInterval);
     this.started = false;
 
     pollRegistration = Flux

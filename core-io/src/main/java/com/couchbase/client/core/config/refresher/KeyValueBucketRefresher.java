@@ -30,6 +30,7 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.NanoTimestamp;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -41,7 +42,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -101,7 +101,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
    * Holds all current registrations and their last timestamp when the bucket has been
    * updated.
    */
-  private final Map<String, Long> registrations = new ConcurrentHashMap<>();
+  private final Map<String, NanoTimestamp> registrations = new ConcurrentHashMap<>();
 
   /**
    * Holds all tainted bucket configs (those undergoing rebalance at the moment).
@@ -109,9 +109,9 @@ public class KeyValueBucketRefresher implements BucketRefresher {
   private final Set<String> tainted = ConcurrentHashMap.newKeySet();
 
   /**
-   * Holds the allowable config poll interval in nanoseconds.
+   * Holds the allowable config poll interval.
    */
-  private final long configPollIntervalNanos;
+  private final Duration configPollInterval;
 
   /**
    * Stores the timeout used for config refresh requests, keeping it in reasonable bounds (between 1 and 5s).
@@ -128,8 +128,8 @@ public class KeyValueBucketRefresher implements BucketRefresher {
     this.core = core;
     this.eventBus = core.context().environment().eventBus();
     this.provider = provider;
-    this.configPollIntervalNanos = core.context().environment().ioConfig().configPollInterval().toNanos();
-    this.configRequestTimeout = clampConfigRequestTimeout(configPollIntervalNanos);
+    this.configPollInterval = core.context().environment().ioConfig().configPollInterval();
+    this.configRequestTimeout = clampConfigRequestTimeout(configPollInterval);
 
     pollRegistration = Flux
       .interval(pollerInterval(), core.context().environment().scheduler())
@@ -159,17 +159,24 @@ public class KeyValueBucketRefresher implements BucketRefresher {
    * <p>The config poll interval is used, but the lower limit is set to 1 second and the upper limit
    * to 5 seconds to make sure it stays in "sane" bounds.</p>
    *
-   * @param configPollIntervalNanos the config poll interval is used to determine the bounds.
+   * @param configPollInterval the config poll interval is used to determine the bounds.
    * @return the duration for the config request timeout.
    */
-  static Duration clampConfigRequestTimeout(final long configPollIntervalNanos) {
-    if (configPollIntervalNanos > TimeUnit.SECONDS.toNanos(5)) {
-      return Duration.ofSeconds(5);
-    } else if (configPollIntervalNanos < TimeUnit.SECONDS.toNanos(1)) {
-      return Duration.ofSeconds(1);
-    } else {
-      return Duration.ofNanos(configPollIntervalNanos);
+  static Duration clampConfigRequestTimeout(final Duration configPollInterval) {
+    return constrainToRange(configPollInterval, Duration.ofSeconds(1), Duration.ofSeconds(5));
+  }
+
+  private static Duration constrainToRange(Duration d, Duration min, Duration max) {
+    if (min.compareTo(max) > 0) {
+      throw new IllegalArgumentException("min duration " + min + " must be <= max duration " + max);
     }
+    if (d.compareTo(min) < 0) {
+      return min;
+    }
+    if (d.compareTo(max) > 0) {
+      return max;
+    }
+    return d;
   }
 
   /**
@@ -182,14 +189,14 @@ public class KeyValueBucketRefresher implements BucketRefresher {
    * @return a {@link Mono} either with a new config or nothing to ignore.
    */
   private Mono<ProposedBucketConfigContext> maybeUpdateBucket(final String name) {
-    Long last = registrations.get(name);
-    boolean overInterval = last != null && (System.nanoTime() - last) >= configPollIntervalNanos;
+    NanoTimestamp last = registrations.get(name);
+    boolean overInterval = last != null && last.hasElapsed(configPollInterval);
     boolean allowed = tainted.contains(name) || overInterval;
 
     return allowed
       ? fetchConfigPerNode(name, filterEligibleNodes(name))
         .next()
-        .doOnSuccess(ctx -> registrations.replace(name, System.nanoTime()))
+        .doOnSuccess(ctx -> registrations.replace(name, NanoTimestamp.now()))
       : Mono.empty();
   }
 
@@ -295,7 +302,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
   @Override
   public Mono<Void> register(final String name) {
     return Mono.defer(() -> {
-      registrations.put(name, 0L);
+      registrations.put(name, NanoTimestamp.never());
       return Mono.empty();
     });
   }

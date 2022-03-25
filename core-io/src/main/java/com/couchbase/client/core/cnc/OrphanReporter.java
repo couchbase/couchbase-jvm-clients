@@ -28,6 +28,7 @@ import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
+import com.couchbase.client.core.util.NanoTimestamp;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -67,7 +68,7 @@ public class OrphanReporter {
   private final AtomicBoolean running = new AtomicBoolean(false);
   volatile Thread worker = null; // visible for testing
   private final Queue<Request<?>> orphanQueue;
-  private final long emitIntervalNanos;
+  private final Duration emitInterval;
   private final int sampleSize;
   private final EventBus eventBus;
   private final boolean enabled;
@@ -86,7 +87,7 @@ public class OrphanReporter {
   public OrphanReporter(final EventBus eventBus, final OrphanReporterConfig config) {
     this.eventBus = eventBus;
     this.orphanQueue = new MpscArrayQueue<>(config.queueLength());
-    this.emitIntervalNanos = config.emitInterval().toNanos();
+    this.emitInterval = config.emitInterval();
     this.sampleSize = config.sampleSize();
     this.enabled = config.enabled();
     this.config = config;
@@ -180,7 +181,7 @@ public class OrphanReporter {
       o -> o.context().logicalRequestLatency()
     );
 
-    private long lastThresholdLog;
+    private NanoTimestamp lastThresholdLog = NanoTimestamp.never();
     private boolean hasThresholdWritten;
 
     private final Queue<Request<?>> kvOrphans = new PriorityQueue<>(THRESHOLD_COMPARATOR);
@@ -212,14 +213,13 @@ public class OrphanReporter {
     }
 
     private void handleOrphanQueue() {
-      long now = System.nanoTime();
-      if ((now - lastThresholdLog) > emitIntervalNanos) {
+      if (lastThresholdLog.hasElapsed(emitInterval)) {
         if (newOutputFormat) {
           prepareAndLogOrphansNew();
         } else {
           prepareAndLogOrphansOld();
         }
-        lastThresholdLog = now;
+        lastThresholdLog = NanoTimestamp.now();
       }
 
       while (true) {
@@ -448,7 +448,7 @@ public class OrphanReporter {
      * to assert against the output.
      */
     void logOrphans(final Map<String, Object> toLogNew, final List<Map<String, Object>> toLogOld) {
-      eventBus.publish(new OrphansRecordedEvent(Duration.ofNanos(emitIntervalNanos), toLogNew, toLogOld));
+      eventBus.publish(new OrphansRecordedEvent(emitInterval, toLogNew, toLogOld));
     }
 
   }

@@ -19,6 +19,7 @@ package com.couchbase.client.core.cnc;
 import com.couchbase.client.core.deps.org.jctools.queues.MpscArrayQueue;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.util.CbCollections;
+import com.couchbase.client.core.util.NanoTimestamp;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
@@ -102,7 +103,7 @@ public class DefaultEventBus implements EventBus {
   /**
    * The interval at which overflowed events are printed.
    */
-  private final long overflowLogInterval;
+  private final Duration overflowLogInterval;
 
   /**
    * The scheduler used during i.e. shutdown.
@@ -117,7 +118,7 @@ public class DefaultEventBus implements EventBus {
   /**
    * The nano timestamp when the overflow log was last emitted.
    */
-  private volatile long overflowLogTimestamp = 0;
+  private volatile NanoTimestamp overflowLogTimestamp = NanoTimestamp.never();
 
   /**
    * This maps stores one event per event class so that it can be printed on overflow but does not
@@ -139,7 +140,7 @@ public class DefaultEventBus implements EventBus {
     errorLogging = builder.errorLogging.orElse(null);
     threadName = builder.threadName;
     idleSleepDuration = builder.idleSleepDuration;
-    overflowLogInterval = builder.overflowLogInterval.toNanos();
+    overflowLogInterval = builder.overflowLogInterval;
   }
 
   @Override
@@ -242,8 +243,7 @@ public class DefaultEventBus implements EventBus {
   private void maybePrintOverflow() {
     try {
       if (errorLogging != null && !overflowInfo.isEmpty()) {
-        long now = System.nanoTime();
-        if ((now - overflowLogTimestamp) > overflowLogInterval) {
+        if (overflowLogTimestamp.hasElapsed(overflowLogInterval)) {
 
           Map<String, Object> encodedEvents = new HashMap<>();
           for (Iterator<Map.Entry<Class<? extends Event>, SampleEventAndCount>> i = overflowInfo.entrySet().iterator(); i.hasNext(); ) {
@@ -257,7 +257,7 @@ public class DefaultEventBus implements EventBus {
           errorLogging.println("Some events could not be published because the queue was (likely " +
             "temporarily) over capacity: " + Mapper.encodeAsString(encodedEvents));
           overflowInfo.clear();
-          overflowLogTimestamp = now;
+          overflowLogTimestamp = NanoTimestamp.now();
         }
       }
     } catch (Exception ex) {

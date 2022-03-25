@@ -54,6 +54,7 @@ import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
@@ -365,7 +366,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
               .take(Math.min(index, currentSeedNodes().size()))
               .last()
               .flatMap(seed -> {
-                long start = System.nanoTime();
+                NanoTimestamp start = NanoTimestamp.now();
 
                 if (!currentSeedNodes().contains(seed)) {
                   // Since updating the seed nodes can race loading the global config, double check that the
@@ -377,7 +378,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
                 return globalLoader
                   .load(identifier, seed.kvPort().orElse(kvPort))
                   .doOnError(throwable -> core.context().environment().eventBus().publish(new IndividualGlobalConfigLoadFailedEvent(
-                    Duration.ofNanos(System.nanoTime() - start),
+                    start.elapsed(),
                     core.context(),
                     throwable,
                     seed.address()
@@ -545,7 +546,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     }
     collectionMapRefreshInProgress.add(identifier);
 
-    long start = System.nanoTime();
+    NanoTimestamp start = NanoTimestamp.now();
     GetCollectionIdRequest request = new GetCollectionIdRequest(
       core.context().environment().timeoutConfig().kvTimeout(),
       core.context(),
@@ -555,7 +556,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     core.send(request);
     request.response().whenComplete((response, throwable) -> {
       try {
-        final Duration duration = Duration.ofNanos(System.nanoTime() - start);
+        final Duration duration = start.elapsed();
         if (throwable != null) {
           eventBus.publish(new CollectionMapRefreshFailedEvent(
             duration,

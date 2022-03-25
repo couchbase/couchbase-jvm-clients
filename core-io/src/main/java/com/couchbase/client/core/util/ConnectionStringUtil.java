@@ -69,7 +69,7 @@ public class ConnectionStringUtil {
 
         if (dnsSrvEnabled && connectionString.isValidDnsSrv()) {
             String srvHostname = connectionString.hosts().get(0).hostname();
-            long start = System.nanoTime();
+            NanoTimestamp start = NanoTimestamp.now();
             try {
                 // Technically a hostname with the _couchbase._tcp. (and the tls equivalent) does not qualify for
                 // a connection string, but we can be good citizens and remove it so the user can still bootstrap.
@@ -83,7 +83,7 @@ public class ConnectionStringUtil {
                 if (foundNodes.isEmpty()) {
                     throw new IllegalStateException("The loaded DNS SRV list from " + srvHostname + " is empty!");
                 }
-                Duration took = Duration.ofNanos(System.nanoTime() - start);
+                Duration took = start.elapsed();
                 eventBus.publish(new DnsSrvRecordsLoadedEvent(took, foundNodes));
                 return foundNodes.stream().map(SeedNode::create).collect(Collectors.toSet());
 
@@ -91,7 +91,7 @@ public class ConnectionStringUtil {
                 throw t;
 
             } catch (Throwable t) {
-                Duration took = Duration.ofNanos(System.nanoTime() - start);
+                Duration took = start.elapsed();
                 if (t instanceof NameNotFoundException) {
                     eventBus.publish(new DnsSrvLookupFailedEvent(
                       Event.Severity.INFO,

@@ -68,6 +68,7 @@ import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.NanoTimestamp;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -389,7 +390,7 @@ public class Core {
    */
   @Stability.Internal
   public void initGlobalConfig() {
-    long start = System.nanoTime();
+    NanoTimestamp start = NanoTimestamp.now();
     configurationProvider
       .loadAndRefreshGlobalConfig()
       .subscribe(
@@ -414,7 +415,7 @@ public class Core {
           }
           eventBus.publish(new InitGlobalConfigFailedEvent(
             reason.severity(),
-            Duration.ofNanos(System.nanoTime() - start),
+            start.elapsed(),
             context(),
             reason,
             throwable
@@ -431,7 +432,7 @@ public class Core {
   public void openBucket(final String name) {
     eventBus.publish(new BucketOpenInitiatedEvent(coreContext, name));
 
-    long start = System.nanoTime();
+    NanoTimestamp start = NanoTimestamp.now();
     configurationProvider
       .openBucket(name)
       .subscribe(
@@ -443,13 +444,13 @@ public class Core {
           eventBus.publish(new BucketOpenFailedEvent(
             name,
             severity,
-            Duration.ofNanos(System.nanoTime() - start),
+            start.elapsed(),
             coreContext,
             t
           ));
         },
         () -> eventBus.publish(new BucketOpenedEvent(
-          Duration.ofNanos(System.nanoTime() - start),
+          start.elapsed(),
           coreContext,
           name
         )));
@@ -471,11 +472,11 @@ public class Core {
    */
   private Mono<Void> closeBucket(final String name) {
     return Mono.defer(() -> {
-      long start = System.nanoTime();
+      NanoTimestamp start = NanoTimestamp.now();
       return configurationProvider
         .closeBucket(name)
         .doOnSuccess(ignored -> eventBus.publish(new BucketClosedEvent(
-          Duration.ofNanos(System.nanoTime() - start),
+          start.elapsed(),
           coreContext,
           name
         )));
@@ -605,7 +606,7 @@ public class Core {
   @Stability.Internal
   public Mono<Void> shutdown(Duration timeout) {
     return Mono.defer(() -> {
-      long start = System.nanoTime();
+      NanoTimestamp start = NanoTimestamp.now();
       if (shutdown.compareAndSet(false, true)) {
         eventBus.publish(new ShutdownInitiatedEvent(coreContext));
         invalidStateWatchdog.dispose();
@@ -618,7 +619,7 @@ public class Core {
           // this links the config provider shutdown with our core reconfig logic
           .then(Flux.interval(Duration.ofMillis(10), coreContext.environment().scheduler()).takeUntil(i -> nodes.isEmpty()).then())
           .doOnTerminate(() -> eventBus.publish(
-            new ShutdownCompletedEvent(Duration.ofNanos(System.nanoTime() - start), coreContext)
+            new ShutdownCompletedEvent(start.elapsed(), coreContext)
           ))
           .then();
       }
@@ -645,7 +646,7 @@ public class Core {
         return;
       }
 
-      final long start = System.nanoTime();
+      final NanoTimestamp start = NanoTimestamp.now();
       Flux<BucketConfig> bucketConfigFlux = Flux
         .just(configForThisAttempt)
         .flatMap(cc -> Flux.fromIterable(cc.bucketConfigs().values()));
@@ -667,7 +668,7 @@ public class Core {
         () -> {
           clearReconfigureInProgress();
           eventBus.publish(new ReconfigurationCompletedEvent(
-            Duration.ofNanos(System.nanoTime() - start),
+            start.elapsed(),
             coreContext
           ));
         }
@@ -685,7 +686,7 @@ public class Core {
    * points to a shutdown/all buckets closed disconnect phase.</p>
    */
   private void reconfigureDisconnectAll() {
-    long start = System.nanoTime();
+    NanoTimestamp start = NanoTimestamp.now();
     Flux
       .fromIterable(new ArrayList<>(nodes))
       .flatMap(Node::disconnect)
@@ -699,7 +700,7 @@ public class Core {
         () -> {
           clearReconfigureInProgress();
           eventBus.publish(new ReconfigurationCompletedEvent(
-            Duration.ofNanos(System.nanoTime() - start),
+            start.elapsed(),
             coreContext
           ));
         }
