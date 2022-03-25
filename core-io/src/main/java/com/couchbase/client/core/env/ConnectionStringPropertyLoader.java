@@ -38,12 +38,31 @@ public class ConnectionStringPropertyLoader extends AbstractMapPropertyLoader<Co
   private final ConnectionString connectionString;
 
   /**
-   * Holds alias values from other connection string implementations (like libcouchbase)
+   * Holds alias values from other connection string implementations (like libcouchbase or the SDK 3 Foundation RFC)
    */
   private static final Map<String, String> COMPAT_ALIAS = new HashMap<>();
 
   static {
     COMPAT_ALIAS.put("certpath", "security.trustCertificate");
+    COMPAT_ALIAS.put("enable_tls", "security.enableTls");
+
+    COMPAT_ALIAS.put("kv_connect_timeout", "timeout.connectTimeout");
+    COMPAT_ALIAS.put("kv_timeout", "timeout.kvTimeout");
+    COMPAT_ALIAS.put("kv_durable_timeout", "timeout.kvDurableTimeout");
+    COMPAT_ALIAS.put("view_timeout", "timeout.viewTimeout");
+    COMPAT_ALIAS.put("query_timeout", "timeout.queryTimeout");
+    COMPAT_ALIAS.put("analytics_timeout", "timeout.analyticsTimeout");
+    COMPAT_ALIAS.put("search_timeout", "timeout.searchTimeout");
+    COMPAT_ALIAS.put("management_timeout", "timeout.managementTimeout");
+
+    COMPAT_ALIAS.put("enable_mutation_tokens", "io.enableMutationTokens");
+    COMPAT_ALIAS.put("tcp_keepalive_time", "io.tcpKeepAliveTime");
+    COMPAT_ALIAS.put("enable_tcp_keepalives", "io.enableTcpKeepAlives");
+    COMPAT_ALIAS.put("config_poll_interval", "io.configPollInterval");
+    COMPAT_ALIAS.put("config_idle_redial_timeout", "io.configIdleRedialTimeout");
+    COMPAT_ALIAS.put("num_kv_connections", "io.numKvConnections");
+    COMPAT_ALIAS.put("max_http_connections", "io.maxHttpConnections");
+    COMPAT_ALIAS.put("idle_http_connection_timeout", "io.idleHttpConnectionTimeout");
   }
 
   public ConnectionStringPropertyLoader(final String connectionString) {

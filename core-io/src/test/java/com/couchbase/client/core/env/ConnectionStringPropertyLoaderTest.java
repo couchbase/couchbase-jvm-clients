@@ -26,6 +26,7 @@ import java.time.Duration;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConnectionStringPropertyLoaderTest {
@@ -84,6 +85,22 @@ class ConnectionStringPropertyLoaderTest {
     } finally {
       Files.delete(Paths.get(certPath));
     }
+  }
+
+  @Test
+  void shouldParseVariousSdk3Compats() {
+    parse(
+      "couchbase://127.0.0.1?kv_connect_timeout=3s",
+      env -> assertEquals(Duration.ofSeconds(3), env.timeoutConfig().connectTimeout())
+    );
+    parse(
+      "couchbase://127.0.0.1?enable_mutation_tokens=false",
+      env -> assertFalse(env.ioConfig().mutationTokensEnabled())
+    );
+    parse(
+      "couchbase://127.0.0.1?num_kv_connections=4",
+      env -> assertEquals(4, env.ioConfig().numKvConnections())
+    );
   }
 
   /**
