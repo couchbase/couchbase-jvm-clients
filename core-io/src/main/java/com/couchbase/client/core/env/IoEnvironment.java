@@ -241,6 +241,13 @@ public class IoEnvironment {
    * If not manually overridden, a fair thread count is calculated, see {@link #fairThreadCount()} for more
    * information on the heuristics.
    * <p>
+   * It is important to understand that the event loops are asynchronous and non-blocking by nature, which means they
+   * can multiplex hundreds, if not thousands of connections. It is therefore not necessary (and in some cases even
+   * destructive to performance) to ramp up the number of threads to a high count (i.e. 100+). The value
+   * should only really be tuned higher if profiling indicates that the current pool size is exhausted with busy work (a
+   * RUNNABLE thread state alone is not indicative of this, since it might just be waiting on epoll/kqueue to be woken
+   * up). If in doubt, stick with the defaults.
+   * <p>
    * Note that the count provided will only be used by event loops that the SDK creates. If you configure a custom
    * event loop (i.e. through {@link #kvEventLoopGroup(EventLoopGroup)}) you are responsible for sizing it
    * appropriately on your own.
