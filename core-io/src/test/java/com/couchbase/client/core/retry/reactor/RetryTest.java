@@ -24,15 +24,15 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
 import java.util.function.Consumer;
 
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class RetryTest {
 
@@ -49,7 +49,7 @@ class RetryTest {
         .retryWhen(Retry.anyOf(Exception.class)
           .exponentialBackoffWithJitter(Duration.ofSeconds(minBackoff), Duration.ofSeconds(maxBackoff))
           .timeout(Duration.ofSeconds(timeout)).toReactorRetry())
-        .subscribeOn(Schedulers.elastic()))
+        .subscribeOn(Schedulers.boundedElastic()))
       .expectSubscription()
       .thenAwait(Duration.ofSeconds(timeout))
       .expectError(RetryExhaustedException.class)
@@ -114,26 +114,19 @@ class RetryTest {
   void fluxRetryExponentialBackoff() {
     Flux<Integer> flux = Flux.concat(Flux.range(0, 2), Flux.error(new IOException()))
       .retryWhen(Retry.any()
-        .exponentialBackoff(Duration.ofMillis(100), Duration.ofMillis(500))
-        .timeout(Duration.ofMillis(1500))
+        .exponentialBackoff(Duration.ofMillis(1), Duration.ofMillis(20))
+        .retryMax(4)
         .doOnRetry(onRetry())
         .toReactorRetry());
 
     StepVerifier.create(flux)
-      .expectNext(0, 1)
-      .expectNoEvent(Duration.ofMillis(50))  // delay=100
-      .expectNext(0, 1)
-      .expectNoEvent(Duration.ofMillis(150)) // delay=200
-      .expectNext(0, 1)
-      .expectNoEvent(Duration.ofMillis(250)) // delay=400
-      .expectNext(0, 1)
-      .expectNoEvent(Duration.ofMillis(450)) // delay=500
-      .expectNext(0, 1)
+      .expectNext(0, 1, 0, 1, 0, 1, 0, 1, 0, 1)
       .verifyErrorMatches(e -> isRetryExhausted(e, IOException.class));
 
     assertRetries(IOException.class, IOException.class, IOException.class, IOException.class);
-    RetryTestUtils.assertDelays(retries, 100L, 200L, 400L, 500L);
+    RetryTestUtils.assertDelays(retries, 1L, 2L, 4L, 8L);
   }
+
   @Test
   void monoRetryExponentialBackoff() {
     Mono<?> mono = Mono.error(new IOException())
@@ -159,7 +152,7 @@ class RetryTest {
   void fluxRetryRandomBackoff() {
     Flux<Integer> flux = Flux.concat(Flux.range(0, 2), Flux.error(new IOException()))
       .retryWhen(Retry.any()
-        .randomBackoff(Duration.ofMillis(100), Duration.ofMillis(2000))
+        .randomBackoff(Duration.ofMillis(1), Duration.ofMillis(20))
         .retryMax(4)
         .doOnRetry(onRetry())
         .toReactorRetry());
@@ -169,7 +162,7 @@ class RetryTest {
       .verifyErrorMatches(e -> isRetryExhausted(e, IOException.class));
 
     assertRetries(IOException.class, IOException.class, IOException.class, IOException.class);
-    RetryTestUtils.assertRandomDelays(retries, 100, 2000);
+    RetryTestUtils.assertRandomDelays(retries, 1, 20);
   }
 
   @Test
@@ -283,7 +276,7 @@ class RetryTest {
         needsRollback = false;
       }
       void run() {
-        assertFalse("Rollback not performed", needsRollback);
+        Assertions.assertFalse(needsRollback, "Rollback not performed");
         needsRollback = true;
       }
     }
@@ -292,7 +285,7 @@ class RetryTest {
       .retryMax(2)
       .doOnRetry(context -> {
         AppContext ac = context.applicationContext();
-        assertNotNull("Application context not propagated", ac);
+        Assertions.assertNotNull(ac, "Application context not propagated");
         ac.rollback();
       })
       .toReactorRetry();

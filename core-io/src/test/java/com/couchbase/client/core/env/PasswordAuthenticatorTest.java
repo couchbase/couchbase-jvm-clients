@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.endpoint.EndpointContext;
@@ -105,10 +106,10 @@ class PasswordAuthenticatorTest {
   void shouldOnlyNegotiatePlainWhenTlsEnabled() {
     PasswordAuthenticator authenticator = PasswordAuthenticator.create("user", "pass");
 
-    CoreEnvironment tlsEnvironment = CoreEnvironment.builder().securityConfig(SecurityConfig
-      .enableTls(true)
-      .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE)
-    ).build();
+    CoreEnvironment tlsEnvironment = CoreEnvironment.builder()
+      .eventBus(new SimpleEventBus(true)) // event bus swallows warnings from insecure trust manager
+      .securityConfig(SecurityConfig.enableTls(true).trustManagerFactory(InsecureTrustManagerFactory.INSTANCE))
+      .build();
 
     try {
       EndpointContext ctx = mock(EndpointContext.class);

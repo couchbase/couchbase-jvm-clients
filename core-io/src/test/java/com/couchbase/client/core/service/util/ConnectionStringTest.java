@@ -267,8 +267,6 @@ class ConnectionStringTest {
         SeedNode.create("both", Optional.of(123), Optional.of(456))
     )));
 
-    System.out.println(connectionString);
-
     assertEquals(
         "neither,onlyKvPort:123=kv,onlyManagerPort:456=manager,both:123=kv",
         connectionString.original()

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -48,9 +49,9 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
@@ -69,7 +70,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
    * Some tests raise warnings which are expected (i.e. auth failures), so we silence them
    * in the logs by using the simple event bus.
    */
-  private static SimpleEventBus eventBus = new SimpleEventBus(true);
+  private static final SimpleEventBus eventBus = new SimpleEventBus(true);
 
   @BeforeAll
   static void beforeAll() {
@@ -208,17 +209,16 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
    */
   private void assertAuthenticationFailure(final Bootstrap bootstrap, final String msg) throws Exception {
     CountDownLatch latch = new CountDownLatch(1);
+    AtomicReference<ChannelFuture> f = new AtomicReference<>();
     bootstrap.connect().addListener((ChannelFutureListener) future -> {
-      try {
-        assertFalse(future.isSuccess());
-        Throwable ex = future.cause();
-        assertTrue(ex instanceof AuthenticationFailureException);
-        assertEquals(msg, ex.getMessage());
-      } finally {
-        latch.countDown();
-      }
+      f.set(future);
+      latch.countDown();
     });
     latch.await();
+    assertFalse(f.get().isSuccess());
+    Throwable ex = f.get().cause();
+    assertTrue(ex instanceof AuthenticationFailureException);
+    assertTrue(ex.getMessage().contains(msg));
   }
 
 }
