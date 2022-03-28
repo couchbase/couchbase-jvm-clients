@@ -42,7 +42,8 @@ public class MutateInAccessor {
         }
 
         final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
-        if (insertDocument && response.status() == ResponseStatus.EXISTS) {
+        if (insertDocument
+                && (response.status() == ResponseStatus.EXISTS || response.status() == ResponseStatus.NOT_STORED)) {
           throw new DocumentExistsException(ctx);
         } else if (response.status() == ResponseStatus.SUBDOC_FAILURE && response.error().isPresent()) {
           throw response.error().get();
