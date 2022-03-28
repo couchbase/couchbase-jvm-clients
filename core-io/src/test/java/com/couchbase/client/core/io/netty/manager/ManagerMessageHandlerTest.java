@@ -165,7 +165,7 @@ class ManagerMessageHandlerTest {
     when(endpoint.context()).thenReturn(endpointContext);
     EmbeddedChannel channel = new EmbeddedChannel(new ManagerMessageHandler(endpoint, ctx));
 
-    BucketConfigStreamingRequest request = new BucketConfigStreamingRequest(Duration.ofSeconds(1), ctx,
+    BucketConfigStreamingRequest request = new BucketConfigStreamingRequest(Duration.ofMillis(200), ctx,
       BestEffortRetryStrategy.INSTANCE, "bucket", ctx.authenticator());
     channel.write(request);
 
@@ -204,7 +204,9 @@ class ManagerMessageHandlerTest {
    */
   @Test
   void disconnectsEndpointOnRedialTimeout() throws Exception {
-    CoreEnvironment env = CoreEnvironment.builder().ioConfig(IoConfig.configIdleRedialTimeout(Duration.ofSeconds(2))).build();
+    CoreEnvironment env = CoreEnvironment.builder()
+      .ioConfig(IoConfig.configIdleRedialTimeout(Duration.ofMillis(200)))
+      .build();
 
     try {
       CoreContext ctx = new CoreContext(mock(Core.class), 1, env, PasswordAuthenticator.create(USER, PASS));
