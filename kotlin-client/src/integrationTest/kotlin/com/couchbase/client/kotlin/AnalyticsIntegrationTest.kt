@@ -24,6 +24,7 @@ import com.couchbase.client.kotlin.analytics.execute
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.test.Capabilities.ANALYTICS
 import com.couchbase.client.test.ClusterType.MOCKED
+import com.couchbase.client.test.ClusterType.CAVES
 import com.couchbase.client.test.IgnoreWhen
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
@@ -33,7 +34,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.time.Duration
 
-@IgnoreWhen(clusterTypes = [MOCKED], missesCapabilities = [ANALYTICS])
+@IgnoreWhen(clusterTypes = [MOCKED, CAVES], missesCapabilities = [ANALYTICS])
 internal class AnalyticsIntegrationTest : KotlinIntegrationTest() {
 
     @Test

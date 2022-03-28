@@ -26,7 +26,6 @@ import com.couchbase.client.core.error.TimeoutException
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException
 import com.couchbase.client.core.error.subdoc.PathMismatchException
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.internal.toStringUtf8
 import com.couchbase.client.kotlin.kv.Durability.Companion.clientVerified
@@ -41,6 +40,7 @@ import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.insert
 import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.replace
 import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.upsert
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
+import com.couchbase.client.test.ClusterType.CAVES
 import com.couchbase.client.test.ClusterType
 import com.couchbase.client.test.IgnoreWhen
 import kotlinx.coroutines.flow.toList
@@ -239,6 +239,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         }
 
         @Test
+        @IgnoreWhen(clusterTypes = [CAVES])
         fun `projection fails when document is too deep`(): Unit = runBlocking {
             val id = nextId()
             collection.upsert(id, deeplyNested(128, "foo"))
@@ -246,6 +247,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         }
 
         @Test
+        @IgnoreWhen(clusterTypes = [CAVES])
         fun `projection fails when document is binary`(): Unit = runBlocking {
             val id = nextId()
             collection.upsert(id, Content.binary("xyzzy".toByteArray()))
@@ -714,6 +716,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         }
 
         @Test
+        @IgnoreWhen(clusterTypes = [CAVES])
         fun `can upsert macro`(): Unit = runBlocking {
             val id = nextId()
 

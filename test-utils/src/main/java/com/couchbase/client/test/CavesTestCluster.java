@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
 
 public class CavesTestCluster extends TestCluster {
 
-  private static final String CAVES_VERSION = "v0.0.1-47";
+  private static final String CAVES_VERSION = "v0.0.1-71";
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CavesTestCluster.class);
 
