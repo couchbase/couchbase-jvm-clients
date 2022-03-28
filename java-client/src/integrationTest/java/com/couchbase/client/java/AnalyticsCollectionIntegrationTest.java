@@ -38,6 +38,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.List;
@@ -65,14 +67,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   clusterTypes = ClusterType.CAVES
 )
 class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
+  private static final Logger LOGGER = LoggerFactory.getLogger(AnalyticsCollectionIntegrationTest.class);
 
   private static Cluster cluster;
 
   private static final String dataverse = "myDataverse";
   private static final String dataset = "myDataset";
-  private static final String index = "myIndex";
-  private static String scopeName = "myScope" + randomString();
-  private static String collectionName = "myCollection" + randomString();
+  private static final String scopeName = "myScope" + randomString();
+  private static final String collectionName = "myCollection" + randomString();
   private static String delimitedDataverseName;
 
 
@@ -248,6 +250,7 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
     AnalyticsResult result = scope.analyticsQuery("SELECT * FROM `" + bucket.name() + "`.`" + scopeName + "`.`" + collectionName + "` WHERE `" + collectionName + "`.foo=\"bar\"");
 
     List<JsonObject> rows = result.rowsAs(JsonObject.class);
+    LOGGER.info("Rows: " + rows.stream().map(JsonObject::toString).collect(Collectors.joining("; ")));
     assertFalse(rows.isEmpty());
   }
 

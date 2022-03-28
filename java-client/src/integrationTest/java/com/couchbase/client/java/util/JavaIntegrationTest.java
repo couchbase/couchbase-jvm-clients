@@ -38,6 +38,8 @@ import com.couchbase.client.test.ClusterAwareIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -58,6 +60,7 @@ import static com.couchbase.client.java.manager.query.CreatePrimaryQueryIndexOpt
 // Temporarily increased timeout to (possibly) workaround MB-37011 when Developer Preview enabled
 @Timeout(value = 10, unit = TimeUnit.MINUTES) // Safety timer so tests can't block CI executors
 public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
+  private static final Logger LOGGER = LoggerFactory.getLogger(JavaIntegrationTest.class);
 
   /**
    * Customizes a {@link ClusterEnvironment.Builder} to use appropriate
@@ -170,6 +173,10 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
           Thread.sleep(50);
         } catch (InterruptedException e) {
         }
+
+        LOGGER.info("Query keyspaces: " + rows.stream()
+                .map(v -> v.toString())
+                .collect(Collectors.joining(";")).toString());
       }
     }
 

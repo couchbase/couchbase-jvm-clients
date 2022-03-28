@@ -419,6 +419,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
           } catch (TimeoutException e) {
             // continue
           } catch (CouchbaseException e) {
+            LOGGER.info("Caught: " + e);
             if (e.getMessage().contains("no planPIndexes")) {
               continue;
             }
@@ -464,6 +465,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
           } catch (TimeoutException e) {
             // continue
           } catch (CouchbaseException e) {
+            LOGGER.info("Caught: " + e);
             if (e.getMessage().contains("no planPIndexes")) {
               continue;
             }
@@ -504,6 +506,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
           } catch (TimeoutException e) {
             // continue
           } catch (CouchbaseException e) {
+            LOGGER.info("Caught: " + e);
             if (e.getMessage().contains("no planPIndexes")) {
               continue;
             }

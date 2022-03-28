@@ -731,7 +731,8 @@ void testAgainstServer(String serverVersion,
         createIntegrationTestPropertiesFile('scala-client/src/integrationTest/resources/integration.properties', ip)
 
         // We need a bit more than the default 600 for out bucket management integration tests
-        def ramQuota = 1000
+        // Particularly Magma which requires min of 1GB
+        def ramQuota = 1500
 
         // Create the cluster
         if (!QUICK_TEST_MODE) {

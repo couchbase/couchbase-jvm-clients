@@ -66,6 +66,8 @@ import static com.couchbase.client.java.manager.analytics.DropIndexAnalyticsOpti
 import static com.couchbase.client.java.manager.analytics.GetLinksAnalyticsOptions.getLinksAnalyticsOptions;
 import static com.couchbase.client.test.Capabilities.ANALYTICS;
 import static com.couchbase.client.test.Capabilities.COLLECTIONS;
+import static com.couchbase.client.test.Capabilities.SUBDOC_REPLACE_BODY_WITH_XATTR;
+import static com.couchbase.client.test.Capabilities.SUBDOC_REVIVE_DOCUMENT;
 import static com.couchbase.client.test.ClusterType.CAVES;
 import static com.couchbase.client.test.ClusterType.MOCKED;
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -441,7 +443,8 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   // The relevant endpoint was only added in 6.5.  On CI we see failures for 6.5 and 6.6 as we expect an empty
   // map back, but get something.  Needs to be investigated further under JVMCBC-1075.
-  @IgnoreWhen(missesCapabilities = {COLLECTIONS})
+  // Using SUBDOC_REPLACE_BODY_WITH_XATTR as a stand-in for 7.0 support.
+  @IgnoreWhen(missesCapabilities = {SUBDOC_REPLACE_BODY_WITH_XATTR})
   @Test
   void getPendingMutations() {
     try {

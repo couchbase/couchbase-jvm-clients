@@ -73,6 +73,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
           return true;
         }
       }
+
       return false;
     });
     //Extra wait for service for CI test stability
@@ -156,7 +157,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
   /**
    * Regression test for JVMCBC-870
    */
-  @Flaky
+  @Flaky // Timing out on CI after 75s with ViewNotFoundException
   @Test
   void canQueryWithReduceEnabled() {
     int docsToWrite = 2;

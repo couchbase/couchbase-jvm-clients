@@ -31,6 +31,7 @@ import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.cnc.SimpleEventBus;
+import com.couchbase.client.test.Flaky;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -490,6 +491,8 @@ class PooledServiceTest {
    * Double check that terminated / disconnected connections (by the sdk) are also double checked and
    * cleaned up to prevent leaking.
    */
+  // Intermittently failing on CI as the final IDLE check timesout
+  @Flaky
   @Test
   void cleansDisconnectedEndpoints() {
     int minEndpoints = 0;

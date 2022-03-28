@@ -26,6 +26,7 @@ import com.couchbase.client.java.manager.bucket.BucketSettings;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.Flaky;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -128,6 +129,8 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
     }
   }
 
+  // Seeing this fail on CI on the upsert with timeouts due to repeated KV_TEMPORARY_FAILURE
+  @Flaky
   @RepeatedTest(3) // first time often succeeds regardless
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES })
   void waitsForNewlyCreatedBucket() {

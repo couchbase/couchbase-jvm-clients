@@ -90,6 +90,9 @@ class CouchbaseHttpClientIntegrationTest extends JavaIntegrationTest {
     return new NodeIdentifier(n.hostname(), n.ports().get(Services.MANAGER));
   }
 
+  // On 6.0 and below, fails with:
+  // Request failed with status code 400 and body: {"errors":{"roles":"The value must be supplied"}}
+  @IgnoreWhen(missesCapabilities = {Capabilities.CREATE_AS_DELETED})
   @Test
   void canIssueSuccessfulRequests() {
     // send all requests to same node
