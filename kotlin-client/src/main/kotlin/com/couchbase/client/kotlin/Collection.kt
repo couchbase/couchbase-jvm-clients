@@ -382,6 +382,8 @@ public class Collection internal constructor(
             }
         } catch (t: CasMismatchException) {
             throw DocumentExistsException(t.context())
+        } catch (t: DocumentNotFoundException) { // Map NOT_STORED
+            throw DocumentExistsException(t.context())
         }
     }
 
@@ -692,7 +694,8 @@ public class Collection internal constructor(
                     )
                 }
 
-                if (storeSemantics == StoreSemantics.Insert && response.status() == ResponseStatus.EXISTS) {
+                if (storeSemantics == StoreSemantics.Insert
+                        && (response.status() == ResponseStatus.EXISTS || response.status() == ResponseStatus.NOT_STORED)) {
                     throw DocumentExistsException(completedRequest(request, response.status()))
                 }
                 if (response.status() == SUBDOC_FAILURE) response.error().map { throw it }

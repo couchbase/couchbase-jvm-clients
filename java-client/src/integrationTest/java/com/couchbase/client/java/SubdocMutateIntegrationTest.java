@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -48,14 +49,17 @@ import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus.CAN_ONLY_REVIVE_DELETED_DOCUMENTS;
 import static com.couchbase.client.core.util.CbCollections.listOf;
@@ -1179,5 +1183,63 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         GetResult gr = coll.get(docId);
 
         assertEquals(gr.contentAsObject(), body);
+    }
+
+    // For MB-50742 - it's intermittent so run a few times
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES})
+    @RepeatedTest(10)
+    void concurrentInserts() throws InterruptedException {
+        String id = UUID.randomUUID().toString();
+
+        // These are the errors we expect
+        AtomicInteger errorCount = new AtomicInteger();
+
+        // Unexpected errors
+        AtomicInteger badErrorCount = new AtomicInteger();
+
+        Runnable r = () -> {
+            try {
+                coll.mutateIn(id, Arrays.asList(
+                                MutateInSpec.upsert("txn", JsonObject.create()).xattr().createPath(),
+                                MutateInSpec.upsert("txn.op.crc32", MutateInMacro.VALUE_CRC_32C).xattr()),
+                        mutateInOptions()
+                                .durability(DurabilityLevel.MAJORITY)
+                                .storeSemantics(StoreSemantics.INSERT)
+                                .accessDeleted(true)
+                                .createAsDeleted(true)
+                );
+            } catch (DocumentExistsException err) {
+                errorCount.incrementAndGet();
+            } catch (RuntimeException err) {
+                badErrorCount.incrementAndGet();
+            }
+        };
+
+        List<Thread> threads = new ArrayList<>();
+
+        // Change this to run more concurrency.  2 is enough to show the problem.
+        for (int i = 0; i < 2; i++) {
+            Thread thread = new Thread(r);
+            threads.add(thread);
+        }
+
+        for (Thread thread : threads) {
+            thread.start();
+        }
+
+        for (Thread thread : threads) {
+            thread.join();
+        }
+
+        // One thread should succeed, the rest should fail with DocumentExistsException
+        boolean recreatedError = threads.size() - 1 != errorCount.get();
+        if (recreatedError) {
+            fail();
+        }
+
+        // Make sure threads either succeeded or failed with DocumentExistsException
+        if (0 != badErrorCount.get()) {
+            fail("Got " + badErrorCount.get() + " unexpected errors, stopping");
+        }
     }
 }

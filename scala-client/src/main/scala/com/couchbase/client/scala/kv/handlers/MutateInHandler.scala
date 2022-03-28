@@ -185,6 +185,15 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
           }
         }
 
+      case ResponseStatus.NOT_STORED =>
+        document match {
+          case StoreSemantics.Insert => {
+            val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+            throw new DocumentExistsException(ctx)
+          }
+          case _ => throw DefaultErrors.throwOnBadResult(request, response)
+        }
+
       case ResponseStatus.EXISTS =>
         document match {
           case StoreSemantics.Insert => {

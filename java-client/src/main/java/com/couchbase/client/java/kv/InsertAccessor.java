@@ -41,7 +41,7 @@ public enum InsertAccessor {
       .thenApply(response -> {
         if (response.status().success()) {
           return new MutationResult(response.cas(), response.mutationToken());
-        } else if (response.status() == ResponseStatus.EXISTS) {
+        } else if (response.status() == ResponseStatus.EXISTS || response.status() == ResponseStatus.NOT_STORED) {
           throw new DocumentExistsException(KeyValueErrorContext.completedRequest(request, response.status()));
         }
         throw keyValueStatusToException(request, response);

@@ -108,7 +108,7 @@ private[scala] class InsertHandler(hp: HandlerParams)
       response: InsertResponse
   ): MutationResult = {
     response.status() match {
-      case ResponseStatus.EXISTS => {
+      case ResponseStatus.EXISTS | ResponseStatus.NOT_STORED => {
         val ctx = KeyValueErrorContext.completedRequest(request, response.status())
         throw new DocumentExistsException(ctx)
       }
