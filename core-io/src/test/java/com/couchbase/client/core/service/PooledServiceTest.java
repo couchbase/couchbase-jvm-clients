@@ -504,6 +504,7 @@ class PooledServiceTest {
     when(mock1.states()).thenReturn(states1);
     when(mock1.outstandingRequests()).thenReturn(1L);
     doReturn(now).when(mock1).lastResponseReceived(); // trying different format due to a CI error with mockito
+    when(mock1.receivedDisconnectSignal()).thenReturn(true);
 
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
@@ -511,8 +512,9 @@ class PooledServiceTest {
     when(mock2.states()).thenReturn(states2);
     when(mock2.outstandingRequests()).thenReturn(1L);
     doReturn(now).when(mock2).lastResponseReceived(); // trying different format due to a CI error with mockito
+    when(mock2.receivedDisconnectSignal()).thenReturn(true);
 
-    final List<Endpoint> mocks = Arrays.asList(mock1, mock2);
+    final List<Endpoint> mocks = Collections.unmodifiableList(Arrays.asList(mock1, mock2));
     final AtomicInteger invocation = new AtomicInteger();
     MockedService service = new MockedService(
       new MockedServiceConfig(minEndpoints, 2, Duration.ofMillis(500), false),
@@ -546,10 +548,6 @@ class PooledServiceTest {
     states2.onNext(EndpointState.CONNECTED);
 
     waitUntilCondition(() -> service.trackedEndpoints.size() == 2);
-
-    when(mock1.receivedDisconnectSignal()).thenReturn(true);
-    when(mock2.receivedDisconnectSignal()).thenReturn(true);
-
     waitUntilCondition(() -> service.state() == ServiceState.IDLE);
   }
 
@@ -748,7 +746,7 @@ class PooledServiceTest {
     }
 
     @Override
-    protected Endpoint createEndpoint() {
+    protected synchronized Endpoint createEndpoint() {
       Endpoint endpoint = endpointSupplier.get();
       trackedEndpoints.add(endpoint);
       return endpoint;
@@ -759,7 +757,7 @@ class PooledServiceTest {
       return endpointSelectionStrategy;
     }
 
-    List<Endpoint> trackedEndpoints() {
+    synchronized List<Endpoint> trackedEndpoints() {
       return trackedEndpoints;
     }
 
