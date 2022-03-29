@@ -98,7 +98,7 @@ public class CoreTransactionsReactive {
 
                 .flatMap(ctx -> transactionLogic.apply(ctx)
 
-                        .onErrorResume(err -> Mono.error(ctx.convertToOperationFailedIfNeeded(err)))
+                        .onErrorResume(err -> Mono.error(ctx.convertToOperationFailedIfNeeded(err, singleQueryTransactionMode)))
 
                         .then(ctx.implicitCommit(singleQueryTransactionMode))
 
@@ -108,7 +108,7 @@ public class CoreTransactionsReactive {
 
                         .then(ctx.lambdaEnd(core().transactionsCleanup(), null, singleQueryTransactionMode))
 
-                        .then(ctx.transactionEnd(null))
+                        .then(ctx.transactionEnd(null, singleQueryTransactionMode))
 
                         .onErrorResume(err -> {
                             if (err instanceof RetryTransactionException) {
@@ -119,7 +119,7 @@ public class CoreTransactionsReactive {
                                 return Mono.error(err);
                             }
 
-                            return ctx.transactionEnd(err);
+                            return ctx.transactionEnd(err, singleQueryTransactionMode);
                         })
 
                         .doOnNext(v -> overall.span().attribute(SpanWrapperUtil.DB_COUCHBASE_TRANSACTIONS + "retries", overall.numAttempts()).finish())
@@ -304,6 +304,11 @@ public class CoreTransactionsReactive {
                     .then(Mono.defer(() -> {
                         QueryResponse orig = qr.get();
 
+                        if (orig == null) {
+                            // It's a bug to reach here.  If the query errored then that should have been raised.
+                            return Mono.error(new CoreTransactionFailedException(new IllegalStateException("No query has been run"), overall.LOGGER, overall.transactionId()));
+                        }
+
                         Flux<QueryChunkRow> rows = orig.rows()
                                 .onErrorResume(err -> {
                                     // Will throw
@@ -388,7 +393,14 @@ public class CoreTransactionsReactive {
             });
 
             return executeTransaction(createAttempt, merged, overall, runLogic, true)
-                    .then(Mono.defer(() -> Mono.just(qr.get())));
+                    .then(Mono.defer(() -> {
+                        if (qr.get() != null) {
+                            return Mono.just(qr.get());
+                        }
+
+                        // It's a bug to reach here.  If the query errored then that should have been raised.
+                        return Mono.error(new CoreTransactionFailedException(new IllegalStateException("No query has been run"), overall.LOGGER, overall.transactionId()));
+                    }));
         });
     }
 }

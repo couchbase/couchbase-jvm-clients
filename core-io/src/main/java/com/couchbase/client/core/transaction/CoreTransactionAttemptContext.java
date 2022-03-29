@@ -4113,7 +4113,7 @@ public class CoreTransactionAttemptContext {
     }
 
     @Stability.Internal
-    Mono<CoreTransactionResult> transactionEnd(@Nullable Throwable err) {
+    Mono<CoreTransactionResult> transactionEnd(@Nullable Throwable err, boolean singleQueryTransactionMode) {
         return Mono.defer(() -> {
             boolean unstagingComplete = state == AttemptState.COMPLETED;
 
@@ -4131,19 +4131,26 @@ public class CoreTransactionAttemptContext {
             Throwable cause = null;
             if (err != null) {
                 if (!(err instanceof TransactionOperationFailedException)) {
-                    // A bug.  Only TransactionOperationFailedException is allowed to reach here.
-                    logger().info(attemptId, "Non-TransactionOperationFailedException '" + DebugUtil.dbg(err) + "' received, this is a bug");
+                    if (!singleQueryTransactionMode) {
+                        // A bug.  Only TransactionOperationFailedException is allowed to reach here.
+                        logger().info(attemptId, "Non-TransactionOperationFailedException '" + DebugUtil.dbg(err) + "' received, this is a bug");
+                    }
                 } else {
                     TransactionOperationFailedException e = (TransactionOperationFailedException) err;
                     cause = e.getCause();
                 }
             }
 
-            CoreTransactionFailedException ret = null;
+            Throwable ret = null;
 
             switch (finalError) {
                 case TRANSACTION_FAILED_POST_COMMIT:
+                    break;
+
                 case TRANSACTION_SUCCESS:
+                    if (singleQueryTransactionMode) {
+                        ret = err;
+                    }
                     break;
 
                 case TRANSACTION_EXPIRED: {
@@ -4162,7 +4169,8 @@ public class CoreTransactionAttemptContext {
             }
 
             if (ret != null) {
-                LOGGER.info(attemptId, "raising final error %s based on state bits %d masked %d", ret, sb, maskedFinalError);
+                LOGGER.info(attemptId, "raising final error %s based on state bits %d masked %d tximplicit %s",
+                        ret, sb, maskedFinalError, singleQueryTransactionMode);
 
                 return Mono.error(ret);
             }
@@ -4172,11 +4180,15 @@ public class CoreTransactionAttemptContext {
     }
 
     @Stability.Internal
-    TransactionOperationFailedException convertToOperationFailedIfNeeded(Throwable e) {
+    Throwable convertToOperationFailedIfNeeded(Throwable e, boolean singleQueryTransactionMode) {
         // If it's an TransactionOperationFailedException, the error originator has already chosen the error handling behaviour.  All
         // transaction internals will only raise this.
         if (e instanceof TransactionOperationFailedException) {
             return (TransactionOperationFailedException) e;
+        }
+        else if (singleQueryTransactionMode) {
+            logger().info(attemptId(), "Caught exception from application's lambda %s, not converting", DebugUtil.dbg(e));
+            return e;
         }
         else {
             // If we're here, it's an error thrown by the application's lambda, e.g. not from transactions internals

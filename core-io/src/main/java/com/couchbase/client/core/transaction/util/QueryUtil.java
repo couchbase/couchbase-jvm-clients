@@ -43,7 +43,11 @@ public class QueryUtil {
      */
     public static RuntimeException convertQueryError(Throwable err) {
         if (err instanceof TimeoutException) {
-            return new AttemptExpiredException(err);
+            return createError()
+                    .raiseException(TransactionOperationFailedException.FinalErrorToRaise.TRANSACTION_EXPIRED)
+                    .cause(err)
+                    .doNotRollbackAttempt()
+                    .build();
         }
         else if (err instanceof CouchbaseException) {
             // Errors https://issues.couchbase.com/browse/MB-42469
