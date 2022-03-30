@@ -772,7 +772,7 @@ void testAgainstServer(String serverVersion,
 
         // The --batch-mode hides download progress messages, very verbose
         if (!QUICK_TEST_MODE) {
-            shWithEcho("mvn --fail-at-end install --batch-mode -Dgroups=\!flaky")
+            shWithEcho("mvn --fail-at-end install --batch-mode -Dgroups=!flaky")
         } else {
             // This is for iteration during development, skips out some steps
             shWithEcho("mvn -pl '!scala-client,!scala-implicits' --fail-at-end install test --batch-mode")
