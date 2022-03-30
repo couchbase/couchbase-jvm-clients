@@ -43,7 +43,7 @@ class CouchbaseBufferSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
+    bucket.waitUntilReady(WaitUntilReadyDefault)
   }
 
   @AfterAll

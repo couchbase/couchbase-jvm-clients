@@ -84,7 +84,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     indexes = cluster.queryIndexes();
 
     Bucket bucket = cluster.bucket(bucketName);
-    bucket.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
     waitForService(bucket, ServiceType.QUERY);
     waitForQueryIndexerToHaveKeyspace(cluster, bucketName);
 

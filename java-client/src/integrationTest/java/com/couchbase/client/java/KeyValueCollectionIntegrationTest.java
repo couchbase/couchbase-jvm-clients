@@ -47,7 +47,7 @@ public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
   static void beforeAll() {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
     bucket = cluster.bucket(config().bucketname());
-    bucket.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
   }
 
   @AfterAll

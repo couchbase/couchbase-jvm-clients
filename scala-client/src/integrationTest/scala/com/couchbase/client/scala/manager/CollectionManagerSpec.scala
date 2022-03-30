@@ -45,7 +45,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     bucketName = ClusterAwareIntegrationTest.config().bucketname()
     val bucket = cluster.bucket(bucketName)
-    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
+    bucket.waitUntilReady(WaitUntilReadyDefault)
     collections = bucket.collections
     TestUtils.waitForNsServerToBeReady(cluster)
   }

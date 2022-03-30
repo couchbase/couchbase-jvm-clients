@@ -45,7 +45,7 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
     // Need to open a bucket until we have GCCCP support
     bucketName = ClusterAwareIntegrationTest.config().bucketname()
     val bucket = cluster.bucket(bucketName)
-    bucket.waitUntilReady(30 seconds)
+    bucket.waitUntilReady(WaitUntilReadyDefault)
     TestUtils.waitForService(bucket, ServiceType.SEARCH)
     indexes = cluster.searchIndexes
     indexes

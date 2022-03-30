@@ -746,6 +746,10 @@ void testAgainstServer(String serverVersion,
         // Make sure the cluster stays up during all tests (the finally block below ensures that it's always pulled down)
         shWithEcho("cbdyncluster refresh $clusterId 2h")
 
+        // Just for debugging, log some cluster details
+        shWithEcho("curl -v -u Administrator:password -d http://" + ip + ":8091/pools")
+        shWithEcho("curl -v -u Administrator:password -d http://" + ip + ":8091/pools/default")
+
         // Make the bucket flushable
         shWithEcho("curl -v -X POST -u Administrator:password -d flushEnabled=1 http://" + ip + ":8091/pools/default/buckets/default")
 
@@ -768,7 +772,7 @@ void testAgainstServer(String serverVersion,
 
         // The --batch-mode hides download progress messages, very verbose
         if (!QUICK_TEST_MODE) {
-            shWithEcho("mvn --fail-at-end install --batch-mode")
+            shWithEcho("mvn --fail-at-end install --batch-mode -Dgroups=\!flaky")
         } else {
             // This is for iteration during development, skips out some steps
             shWithEcho("mvn -pl '!scala-client,!scala-implicits' --fail-at-end install test --batch-mode")

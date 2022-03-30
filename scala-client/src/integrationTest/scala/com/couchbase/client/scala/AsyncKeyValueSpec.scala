@@ -39,7 +39,7 @@ class AsyncKeyValueSpec extends ScalaIntegrationTest {
     val bucket = cluster.bucket(config.bucketname)
     blocking = bucket.defaultCollection
     coll = blocking.async
-    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
+    bucket.waitUntilReady(WaitUntilReadyDefault)
   }
 
   @Test

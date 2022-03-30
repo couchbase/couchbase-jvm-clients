@@ -80,7 +80,7 @@ public class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
 
     // required for pre-GCCCP servers (< 6.5)
     Bucket bucket = cluster.bucket(bucketName);
-    bucket.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
     waitForService(bucket, ServiceType.QUERY);
     waitForQueryIndexerToHaveKeyspace(cluster, bucketName);
   }

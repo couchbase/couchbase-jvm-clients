@@ -62,6 +62,9 @@ import static com.couchbase.client.java.manager.query.CreatePrimaryQueryIndexOpt
 public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(JavaIntegrationTest.class);
 
+  // Timeouts seen on CI with values of 5 seconds.
+  public static Duration WAIT_UNTIL_READY_DEFAULT = Duration.ofSeconds(30);
+
   /**
    * Customizes a {@link ClusterEnvironment.Builder} to use appropriate
    * security settings for the test environment.
@@ -189,7 +192,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
    * Improve test stability by waiting for a given service to report itself ready.
    */
   protected static void waitForService(final Bucket bucket, final ServiceType serviceType) {
-    bucket.waitUntilReady(Duration.ofSeconds(30));
+    bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
     Util.waitUntilCondition(() -> {
       PingResult pingResult = bucket.ping(PingOptions.pingOptions().serviceTypes(Collections.singleton(serviceType)));

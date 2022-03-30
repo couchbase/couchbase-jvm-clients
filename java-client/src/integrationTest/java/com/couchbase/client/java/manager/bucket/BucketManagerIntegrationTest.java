@@ -68,7 +68,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     cluster = createCluster(env -> env.ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)));
     Bucket bucket = cluster.bucket(config().bucketname());
     buckets = cluster.buckets();
-    bucket.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
   }
 
   @AfterEach

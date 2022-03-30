@@ -50,7 +50,7 @@ class QuerySpec extends ScalaIntegrationTest {
   def beforeAll(): Unit = {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
-    bucket.waitUntilReady(30 seconds)
+    bucket.waitUntilReady(WaitUntilReadyDefault)
     coll = bucket.defaultCollection
 
     TestUtils.waitForService(bucket, ServiceType.QUERY)

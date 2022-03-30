@@ -44,7 +44,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
     users = cluster.users
-    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
+    bucket.waitUntilReady(WaitUntilReadyDefault)
     TestUtils.waitForNsServerToBeReady(cluster)
   }
 

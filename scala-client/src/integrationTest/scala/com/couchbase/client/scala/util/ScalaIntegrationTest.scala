@@ -17,21 +17,10 @@ package com.couchbase.client.scala.util
  */
 
 import java.util.concurrent.TimeUnit
-
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.scala.{Cluster, ClusterOptions, env}
-import com.couchbase.client.scala.env.{
-  ClusterEnvironment,
-  PasswordAuthenticator,
-  SecurityConfig,
-  SeedNode
-}
-import com.couchbase.client.test.{
-  ClusterAwareIntegrationTest,
-  Services,
-  TestClusterConfig,
-  TestNodeConfig
-}
+import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SecurityConfig, SeedNode}
+import com.couchbase.client.test.{ClusterAwareIntegrationTest, Services, TestClusterConfig, TestNodeConfig}
 import org.junit.jupiter.api.Timeout
 
 import scala.collection.JavaConverters
@@ -48,6 +37,9 @@ object ScalaIntegrationTest {}
 // Temporarily increased timeout to (possibly) workaround MB-37011 when Developer Preview enabled
 @Timeout(value = 10, unit = TimeUnit.MINUTES) // Safety timer so tests can't block CI executors
 trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
+
+  // Timeouts seen on CI with values of 5 seconds.
+  var WaitUntilReadyDefault = Duration(30, TimeUnit.SECONDS)
 
   /**
     * Creates a {@link ClusterEnvironment.Builder} which already has the seed nodes and

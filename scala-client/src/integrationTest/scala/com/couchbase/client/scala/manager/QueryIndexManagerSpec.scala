@@ -68,7 +68,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     })
     nonDefaultColl = bucket.scope(ScopeName).collection(CollectionName)
 
-    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
+    bucket.waitUntilReady(WaitUntilReadyDefault)
     TestUtils.waitForService(bucket, ServiceType.QUERY)
     TestUtils.waitForIndexerToHaveKeyspace(cluster, config.bucketname())
     TestUtils.waitForIndexerToHaveKeyspace(cluster, CollectionName)

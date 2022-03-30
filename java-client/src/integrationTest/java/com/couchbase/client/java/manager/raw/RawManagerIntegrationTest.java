@@ -52,7 +52,7 @@ class RawManagerIntegrationTest extends JavaIntegrationTest {
 
     // required for pre-GCCCP servers (< 6.5)
     Bucket bucket = cluster.bucket(config().bucketname());
-    bucket.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
   }
 
   @AfterAll

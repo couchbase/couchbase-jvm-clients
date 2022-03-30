@@ -111,7 +111,7 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
       });
 
       long start = System.nanoTime();
-      bucket.waitUntilReady(Duration.ofSeconds(30));
+      bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
       long end = System.nanoTime();
 
       Collection collection = bucket.defaultCollection();
@@ -147,7 +147,7 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
       cluster.waitUntilReady(Duration.ofSeconds(30));
       cluster.buckets().createBucket(BucketSettings.create(bucketName).ramQuotaMB(100));
       Bucket bucket = cluster.bucket(bucketName);
-      bucket.waitUntilReady(Duration.ofSeconds(30));
+      bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
       Collection collection = bucket.defaultCollection();
       collection.upsert("foo", "bar", UpsertOptions.upsertOptions().timeout(Duration.ofMillis(2500)));
     } finally {

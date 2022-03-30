@@ -94,7 +94,7 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
     bucket = cluster.bucket(config().bucketname());
     analytics = cluster.analyticsIndexes();
     collectionManager = bucket.collections();
-    bucket.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
     waitForService(bucket, ServiceType.ANALYTICS);
 
     collectionManager.createScope(scopeName);

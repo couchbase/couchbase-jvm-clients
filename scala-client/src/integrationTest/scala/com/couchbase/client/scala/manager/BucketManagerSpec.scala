@@ -53,7 +53,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     buckets = cluster.buckets
     bucketName = ClusterAwareIntegrationTest.config().bucketname()
     val bucket = cluster.bucket(bucketName)
-    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
+    bucket.waitUntilReady(WaitUntilReadyDefault)
   }
 
   @AfterAll

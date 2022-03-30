@@ -99,7 +99,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
     bucket = cluster.bucket(config().bucketname());
     analytics = cluster.analyticsIndexes();
-    bucket.waitUntilReady(Duration.ofSeconds(10));
+    bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
     waitForService(bucket, ServiceType.ANALYTICS);
   }
 

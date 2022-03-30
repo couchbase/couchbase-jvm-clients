@@ -46,7 +46,7 @@ public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
     cluster = createCluster(env -> env.ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)));
     Bucket bucket = cluster.bucket(config().bucketname());
     collections = bucket.collections();
-    bucket.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
   }
 
   @AfterAll
@@ -82,7 +82,7 @@ public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
 
     try {
       Bucket bucket = cluster.bucket(bucketName);
-      bucket.waitUntilReady(Duration.ofSeconds(10));
+      bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
       CollectionManager mgr = bucket.collections();
       assertThrows(FeatureNotAvailableException.class, () -> mgr.createScope("a"));

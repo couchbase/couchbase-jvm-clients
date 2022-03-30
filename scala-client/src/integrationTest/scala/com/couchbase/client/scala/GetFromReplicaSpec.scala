@@ -27,7 +27,7 @@ class GetFromReplicaSpec extends ScalaIntegrationTest {
     coll = bucket.defaultCollection
     reactive = coll.reactive
     async = coll.async
-    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
+    bucket.waitUntilReady(WaitUntilReadyDefault)
   }
 
   @AfterAll

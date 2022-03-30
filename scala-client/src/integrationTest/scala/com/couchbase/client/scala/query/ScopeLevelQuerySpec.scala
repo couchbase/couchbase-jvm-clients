@@ -44,9 +44,9 @@ class ScopeLevelQuerySpec extends ScalaIntegrationTest {
   def beforeAll(): Unit = {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
-    bucket.waitUntilReady(30 seconds)
+    bucket.waitUntilReady(WaitUntilReadyDefault)
 
-    println("Creating scope and waiting for it to exist")
+    println("Creating scope and waiting for it to exist.")
 
     bucket.collections.createScope(ScopeName).get
     Util.waitUntilCondition(() => {

@@ -47,7 +47,7 @@ class ViewSpec extends ScalaIntegrationTest {
 
     bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
+    bucket.waitUntilReady(WaitUntilReadyDefault)
 
     val designDoc = DesignDocument(
       DesignDocName,

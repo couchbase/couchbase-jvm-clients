@@ -67,7 +67,7 @@ class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
     Bucket bucket = cluster.bucket(config().bucketname());
     Collection collection = bucket.defaultCollection();
 
-    bucket.waitUntilReady(Duration.ofSeconds(5));
+    bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
     waitForService(bucket, ServiceType.QUERY);
     waitForQueryIndexerToHaveKeyspace(cluster, config().bucketname());
 

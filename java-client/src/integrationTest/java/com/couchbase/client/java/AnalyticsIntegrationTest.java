@@ -53,7 +53,7 @@ class AnalyticsIntegrationTest extends JavaIntegrationTest {
         cluster = Cluster.connect(seedNodes(), clusterOptions());
         Bucket bucket = cluster.bucket(config().bucketname());
 
-        cluster.waitUntilReady(Duration.ofSeconds(5));
+        cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
         waitForService(bucket, ServiceType.ANALYTICS);
     }
 

@@ -57,7 +57,7 @@ class CouchbaseQueueTest extends JavaIntegrationTest {
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
         options = QueueOptions.queueOptions();
-        bucket.waitUntilReady(Duration.ofSeconds(5));
+        bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
     }
 
     @AfterAll

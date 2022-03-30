@@ -55,7 +55,7 @@ class ViewIndexManagerSpec extends ScalaIntegrationTest {
     bucketName = ClusterAwareIntegrationTest.config().bucketname()
     val bucket = cluster.bucket(bucketName)
     views = bucket.viewIndexes
-    bucket.waitUntilReady(Duration(30, TimeUnit.SECONDS))
+    bucket.waitUntilReady(WaitUntilReadyDefault)
     TestUtils.waitForService(bucket, ServiceType.VIEWS)
   }
 

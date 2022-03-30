@@ -47,6 +47,7 @@ import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -112,7 +113,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     try {
       Bucket bucket = cluster.bucket(config().bucketname());
       Collection collection = bucket.defaultCollection();
-      bucket.waitUntilReady(Duration.ofSeconds(10));
+      bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
         for (int i = 0; i < 30; i++) {
@@ -140,7 +141,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     try {
       Bucket bucket = cluster.bucket(config().bucketname());
       Collection collection = bucket.defaultCollection();
-      bucket.waitUntilReady(Duration.ofSeconds(10));
+      bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
       collection.upsert("ratelimitingress", randomString(1024 * 512),
         UpsertOptions.upsertOptions().timeout(Duration.ofSeconds(5)));
@@ -171,7 +172,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     try {
       Bucket bucket = cluster.bucket(config().bucketname());
       Collection collection = bucket.defaultCollection();
-      bucket.waitUntilReady(Duration.ofSeconds(10));
+      bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
       collection.upsert("ratelimitegress", randomString(1024 * 512),
         UpsertOptions.upsertOptions().timeout(Duration.ofSeconds(5)));
@@ -201,7 +202,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
 
     try {
       Bucket bucket = cluster.bucket(config().bucketname());
-      bucket.waitUntilReady(Duration.ofSeconds(10));
+      bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
       Cluster cluster2 = createTestCluster(username);
       Bucket bucket2 = cluster2.bucket(config().bucketname());
@@ -588,8 +589,20 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       waitUntilCondition(() -> collectionExists(collectionManager, collectionSpec));
 
       waitForService(adminCluster.bucket(config().bucketname()), ServiceType.SEARCH);
-      adminCluster.searchIndexes().upsertIndex(new SearchIndex("ratelimits1", config().bucketname())
-        .params(params));
+      Util.waitUntilCondition(() -> {
+        try {
+          adminCluster.searchIndexes().upsertIndex(new SearchIndex("ratelimits1", config().bucketname())
+                  .params(params));
+        }
+        catch (CouchbaseException err) {
+          // See intermittent failures on CI:
+          // Unknown search error: {"error":"rest_create_index: error creating index: ratelimits1, err: manager_api: CreateIndex, Prepare failed, err: collection_utils: collection: 'searchCollection' doesn't belong to scope: 'ratelimitSearch' in bucket: "...
+          LOGGER.info("Got error upserting index: {}", err.toString());
+          return false;
+        }
+
+        return true;
+      });
       QuotaLimitedException ex = assertThrows(
         QuotaLimitedException.class,
         () -> adminCluster.searchIndexes().upsertIndex(new SearchIndex("ratelimits2", config().bucketname())

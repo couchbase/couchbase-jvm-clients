@@ -53,7 +53,7 @@ class ScopeLevelAnalyticsSpec extends ScalaIntegrationTest {
   def beforeAll(): Unit = {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
-    bucket.waitUntilReady(30 seconds)
+    bucket.waitUntilReady(WaitUntilReadyDefault)
 
     println("Creating scope and waiting for it to exist")
 
