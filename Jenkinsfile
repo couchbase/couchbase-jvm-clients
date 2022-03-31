@@ -747,8 +747,13 @@ void testAgainstServer(String serverVersion,
         shWithEcho("cbdyncluster refresh $clusterId 2h")
 
         // Just for debugging, log some cluster details
-        shWithEcho("curl -v -u Administrator:password -d http://" + ip + ":8091/pools")
-        shWithEcho("curl -v -u Administrator:password -d http://" + ip + ":8091/pools/default")
+        try {
+            shWithEcho("curl -u Administrator:password http://" + ip + ":8091/pools")
+            shWithEcho("curl -u Administrator:password http://" + ip + ":8091/pools/default")
+        }
+        catch (RuntimeException ex) {
+            echo "Exception while getting debugging info ${ex}"
+        }
 
         // Make the bucket flushable
         shWithEcho("curl -v -X POST -u Administrator:password -d flushEnabled=1 http://" + ip + ":8091/pools/default/buckets/default")
