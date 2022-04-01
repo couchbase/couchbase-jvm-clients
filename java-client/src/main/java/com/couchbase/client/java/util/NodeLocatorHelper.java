@@ -103,6 +103,30 @@ public class NodeLocatorHelper {
   }
 
   /**
+   * Returns all target replica nodes which are currently available on the bucket.
+   *
+   * @param id the document ID to check.
+   * @return the list of nodes for the given document ID.
+   */
+  public List<String> availableReplicaNodesForId(final String id) {
+    BucketConfig config = bucketConfig.get();
+
+    if (config instanceof CouchbaseBucketConfig) {
+      CouchbaseBucketConfig cbc = (CouchbaseBucketConfig) config;
+      List<String> replicas = new ArrayList<>();
+      for (int i = 1; i <= cbc.numberOfReplicas(); i++) {
+        String foundReplica = replicaNodeForId(id, i, false);
+        if (foundReplica != null) {
+          replicas.add(foundReplica);
+        }
+      }
+      return replicas;
+    } else {
+      throw new UnsupportedOperationException("Bucket type not supported: " + config.getClass().getName());
+    }
+  }
+
+  /**
    * Returns all target replica nodes addresses for a given document ID on the bucket.
    *
    * @param id the document id to convert.
@@ -130,7 +154,19 @@ public class NodeLocatorHelper {
    * @param replicaNum the replica number.
    * @return the node for the given document id.
    */
-  public String replicaNodeForId(final String id, int replicaNum) {
+  public String replicaNodeForId(final String id, final int replicaNum) {
+    return replicaNodeForId(id, replicaNum, true);
+  }
+
+  /**
+   * Returns the target replica node address for a given document ID and replica number on the bucket.
+   *
+   * @param id the document id to convert.
+   * @param replicaNum the replica number.
+   * @param throwOnNotAvailable if on -1 and -2 an exception should be thrown.
+   * @return the node for the given document id.
+   */
+  private String replicaNodeForId(final String id, final int replicaNum, final boolean throwOnNotAvailable) {
     if (replicaNum < 1 || replicaNum > 3) {
       throw new IllegalArgumentException("Replica number must be between 1 and 3.");
     }
@@ -142,10 +178,18 @@ public class NodeLocatorHelper {
       int partitionId = (int) hashId(id) & cbc.numberOfPartitions() - 1;
       int nodeId = cbc.nodeIndexForReplica(partitionId, replicaNum - 1, false);
       if (nodeId == -1) {
-        throw new IllegalStateException("No partition assigned to node for Document ID: " + id);
+        if (throwOnNotAvailable) {
+          throw new IllegalStateException("No partition assigned to node for Document ID: " + id);
+        } else {
+          return null;
+        }
       }
       if (nodeId == -2) {
-        throw new IllegalStateException("Replica not configured for this bucket.");
+        if (throwOnNotAvailable) {
+          throw new IllegalStateException("Replica not configured for this bucket.");
+        } else {
+          return null;
+        }
       }
       return cbc.nodeAtIndex(nodeId).hostname();
     }  else {
@@ -184,7 +228,7 @@ public class NodeLocatorHelper {
     return config.ketamaNodes().get(hash).hostname();
   }
 
-  private static long hashId(String id) {
+  private static long hashId(final String id) {
     CRC32 crc32 = new CRC32();
     crc32.update(id.getBytes(StandardCharsets.UTF_8));
     return (crc32.getValue() >> 16) & 0x7fff;
