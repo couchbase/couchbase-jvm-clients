@@ -33,11 +33,6 @@ pipeline {
     options {
         // Safety check, prevent the script running forever
         timeout(time: 300, unit: 'MINUTES')
-
-        // Normally stashes are cleared at the end of the run, but it can be helpful during debugging/development to
-        // keep the last stash around (though currently, this workflow doesn't work due to
-        // https://issues.jenkins-ci.org/browse/JENKINS-56766)
-        preserveStashes(buildCount: 5)
     }
 
     stages {
@@ -98,7 +93,7 @@ pipeline {
 
                     dir('couchbase-jvm-clients') {
                         // By default Java and Scala use mock for testing
-                        shWithEcho("mvn --fail-at-end test")
+                        shWithEcho("mvn --fail-at-end clean test")
 
                         // While iterating Jenkins development, this makes it much faster:
                         // shWithEcho("mvn package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
@@ -598,7 +593,7 @@ void test(Map args=[:],
         dir('couchbase-jvm-clients') {
             script { testAgainstServer(serverVersion, QUICK_TEST_MODE, includeAnalytics, includeEventing, enableDevelopPreview, ceMode, multiCerts) }
             shWithEcho("make deps-only")
-            shWithEcho("mvn install -Dmaven.test.skip --batch-mode")
+            shWithEcho("mvn clean install -Dmaven.test.skip --batch-mode")
         }
     }
 }
@@ -777,10 +772,10 @@ void testAgainstServer(String serverVersion,
 
         // The --batch-mode hides download progress messages, very verbose
         if (!QUICK_TEST_MODE) {
-            shWithEcho("mvn --fail-at-end install --batch-mode -Dgroups=!flaky")
+            shWithEcho("mvn --fail-at-end clean install --batch-mode -Dgroups=!flaky")
         } else {
             // This is for iteration during development, skips out some steps
-            shWithEcho("mvn -pl '!scala-client,!scala-implicits' --fail-at-end install test --batch-mode")
+            shWithEcho("mvn -pl '!scala-client,!scala-implicits' --fail-at-end clean install test --batch-mode")
 
             // Another iteration option, this runs just one test
             //shWithEcho("mvn package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
@@ -800,5 +795,5 @@ void testAgainstServer(String serverVersion,
 
 void testAgainstMock(boolean disableNativeIo = false) {
     shWithEcho("make deps-only")
-    shWithEcho("mvn --fail-at-end install --batch-mode ${disableNativeIo ? '-Dcom.couchbase.client.core.deps.io.netty.transport.noNative=true' : ''}")
+    shWithEcho("mvn --fail-at-end clean install --batch-mode ${disableNativeIo ? '-Dcom.couchbase.client.core.deps.io.netty.transport.noNative=true' : ''}")
 }
