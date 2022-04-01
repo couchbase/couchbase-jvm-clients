@@ -247,6 +247,12 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
     waitUntilCondition(() -> singletonMap(delimitedDataverseName, singletonMap(collectionName, 0L)).equals(analytics.getPendingMutations()));
 
     Scope scope = cluster.bucket(config().bucketname()).scope(scopeName);
+
+    // Purely for debugging CI intermittent failures:
+    List<JsonObject> rowsDebug = scope.analyticsQuery("SELECT * FROM `" + bucket.name() + "`.`" + scopeName + "`.`" + collectionName + "`")
+            .rowsAsObject();
+    LOGGER.info("Rows debug: " + rowsDebug.stream().map(JsonObject::toString).collect(Collectors.joining("; ")));
+
     AnalyticsResult result = scope.analyticsQuery("SELECT * FROM `" + bucket.name() + "`.`" + scopeName + "`.`" + collectionName + "` WHERE `" + collectionName + "`.foo=\"bar\"");
 
     List<JsonObject> rows = result.rowsAs(JsonObject.class);
@@ -263,6 +269,12 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
 
     //AnalyticsOptions opts = AnalyticsOptions.analyticsOptions();
     Scope scope = cluster.bucket(config().bucketname()).scope(scopeName);
+
+    // Purely for debugging CI intermittent failures:
+    List<JsonObject> rowsDebug = scope.analyticsQuery("SELECT * FROM `" + bucket.name() + "`.`" + scopeName + "`.`" + collectionName + "`")
+            .rowsAsObject();
+    LOGGER.info("Rows debug: " + rowsDebug.stream().map(JsonObject::toString).collect(Collectors.joining("; ")));
+
     AnalyticsResult result = scope.analyticsQuery("SELECT * FROM `" + collectionName + "` where `" + collectionName + "`.foo= \"bar\"");
 
     List<JsonObject> rows = result.rowsAs(JsonObject.class);

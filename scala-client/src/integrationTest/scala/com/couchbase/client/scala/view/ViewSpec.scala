@@ -24,7 +24,7 @@ import com.couchbase.client.scala.manager.view.{DesignDocument, View}
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.{Bucket, Cluster, Collection, TestUtils}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.test.{ClusterType, IgnoreWhen, Util}
+import com.couchbase.client.test.{ClusterType, Flaky, IgnoreWhen, Util}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 
@@ -141,6 +141,7 @@ class ViewSpec extends ScalaIntegrationTest {
     })
   }
 
+  @Flaky // See the final result contain no rows intermittently - though this should be impossible
   @Test
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   def canQueryWithKeysPresent(): Unit = {

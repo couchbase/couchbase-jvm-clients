@@ -215,6 +215,7 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
                     .accessDeleted(true));
   }
 
+  // Failing on CI as behaviour has changed on 7.1.  Checking with KV team if intentional.
   @Test
   @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void replaceTombstoneWithTxnXattrWithCASWhichHasChanged() {

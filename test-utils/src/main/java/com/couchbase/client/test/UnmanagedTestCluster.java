@@ -16,6 +16,8 @@
 
 package com.couchbase.client.test;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.shaded.okhttp3.Credentials;
 import org.testcontainers.shaded.okhttp3.FormBody;
 import org.testcontainers.shaded.okhttp3.OkHttpClient;
@@ -41,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class UnmanagedTestCluster extends TestCluster {
+  private static Logger logger = LoggerFactory.getLogger(UnmanagedTestCluster.class);
 
   private final OkHttpClient httpClient = new OkHttpClient.Builder()
           .connectTimeout(30, TimeUnit.SECONDS)
@@ -101,6 +104,8 @@ public class UnmanagedTestCluster extends TestCluster {
     .execute();
 
     String raw = getResponse.body().string();
+
+    logger.info("Bucket raw results: {}", raw);
 
     waitUntilAllNodesHealthy();
 

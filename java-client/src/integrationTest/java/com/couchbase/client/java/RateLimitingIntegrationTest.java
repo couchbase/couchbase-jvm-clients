@@ -100,6 +100,12 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
         .environment(environmentCustomizer().andThen(env -> env.eventBus(new SimpleEventBus(true)))));
   }
 
+  private boolean continueOnSearchError(CouchbaseException e) {
+    // These two errors are intermittently seen with FTS
+    return e.getMessage().contains("no planPIndexes")
+            || e.getMessage().contains("pindex_consistency mismatched partition");
+  }
+
   @Test
   void kvRateLimitMaxCommands() throws Exception {
     String username = "kvRateLimit";
@@ -421,7 +427,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
             // continue
           } catch (CouchbaseException e) {
             LOGGER.info("Caught: " + e);
-            if (e.getMessage().contains("no planPIndexes")) {
+            if (continueOnSearchError(e)) {
               continue;
             }
             throw e;
@@ -467,7 +473,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
             // continue
           } catch (CouchbaseException e) {
             LOGGER.info("Caught: " + e);
-            if (e.getMessage().contains("no planPIndexes")) {
+            if (continueOnSearchError(e)) {
               continue;
             }
             throw e;
@@ -508,7 +514,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
             // continue
           } catch (CouchbaseException e) {
             LOGGER.info("Caught: " + e);
-            if (e.getMessage().contains("no planPIndexes")) {
+            if (continueOnSearchError(e)) {
               continue;
             }
             throw e;

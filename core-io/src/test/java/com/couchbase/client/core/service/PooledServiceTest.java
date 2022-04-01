@@ -594,6 +594,7 @@ class PooledServiceTest {
     verify(mock1, never()).disconnect();
   }
 
+  @Flaky // Intermittently see complaints of "'send' is a *void method* and it *cannot* be stubbed with a *return value*!"
   @Test
   void cleansUpNeverUsedIdleConnections() {
     Endpoint mock1 = mock(Endpoint.class);

@@ -215,17 +215,21 @@ class EventingFunctionManagerSpec extends ScalaIntegrationTest {
       case x                                               => assert(false, s"Unexpected result ${x}")
     }
 
-    // see MB-47840 on why those are not EventingFunctionNotFoundException
+    // See MB-47840 on why those are not EventingFunctionNotFoundException
+    // Update: fixed in 7.1, so allow either result
     functions.dropFunction(funcName) match {
       case Failure(err: EventingFunctionNotDeployedException) =>
+      case Failure(err: EventingFunctionNotFoundException) =>
       case x                                                  => assert(false, s"Unexpected result ${x}")
     }
     functions.undeployFunction(funcName) match {
       case Failure(err: EventingFunctionNotDeployedException) =>
+      case Failure(err: EventingFunctionNotFoundException) =>
       case x                                                  => assert(false, s"Unexpected result ${x}")
     }
     functions.resumeFunction(funcName) match {
       case Failure(err: EventingFunctionNotDeployedException) =>
+      case Failure(err: EventingFunctionNotFoundException) =>
       case x                                                  => assert(false, s"Unexpected result ${x}")
     }
   }
