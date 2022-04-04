@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
 
 import java.time.Duration;
+import java.util.Objects;
 import java.util.UUID;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -244,9 +245,18 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
   }
 
   private boolean isState(String funcName, EventingFunctionStatus status) {
-    return functions.functionsStatus().functions().stream().anyMatch(state ->
-            state.name().equals(funcName) && state.status() == status
-    );
+    EventingStatus stat = functions.functionsStatus();
+
+    // All these requireNonNull because see intermittent NPE on CI
+    Objects.requireNonNull(stat);
+    Objects.requireNonNull(stat.functions());
+
+    return stat.functions().stream().anyMatch(state -> {
+      Objects.requireNonNull(state);
+      Objects.requireNonNull(state.name());
+      Objects.requireNonNull(state.status());
+      return state.name().equals(funcName) && state.status() == status;
+    });
   }
 
 }

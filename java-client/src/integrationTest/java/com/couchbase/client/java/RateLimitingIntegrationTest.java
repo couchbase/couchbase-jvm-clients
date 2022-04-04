@@ -101,9 +101,14 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
   }
 
   private boolean continueOnSearchError(CouchbaseException e) {
-    // These two errors are intermittently seen with FTS
-    return e.getMessage().contains("no planPIndexes")
-            || e.getMessage().contains("pindex_consistency mismatched partition");
+    // These errors are intermittently seen with FTS
+    boolean ret = e.getMessage().contains("no planPIndexes")
+            || e.getMessage().contains("pindex_consistency mismatched partition")
+            || e.getMessage().contains("pindex not available");
+
+    LOGGER.info("Continuing on search error: {}", ret);
+
+    return ret;
   }
 
   @Test

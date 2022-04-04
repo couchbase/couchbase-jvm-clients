@@ -55,7 +55,7 @@ class ScopeLevelAnalyticsSpec extends ScalaIntegrationTest {
     val bucket = cluster.bucket(config.bucketname)
     bucket.waitUntilReady(WaitUntilReadyDefault)
 
-    println("Creating scope and waiting for it to exist")
+    println("Creating scope and waiting for it to exist..")
 
     bucket.collections.createScope(scopeName).get
     Util.waitUntilCondition(() => {

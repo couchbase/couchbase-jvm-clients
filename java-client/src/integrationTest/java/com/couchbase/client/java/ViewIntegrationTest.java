@@ -136,6 +136,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
   /**
    * Regression test for JCBC-1664
    */
+  @Flaky // Intermittently timing out on CI after 75s with ViewNotFoundException, which should not be possible
   @Test
   void canQueryWithKeysPresent() {
     int docsToWrite = 2;
@@ -157,7 +158,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
   /**
    * Regression test for JVMCBC-870
    */
-  @Flaky // Timing out on CI after 75s with ViewNotFoundException
+  @Flaky // Intermittently timing out on CI after 75s with ViewNotFoundException, which should not be possible
   @Test
   void canQueryWithReduceEnabled() {
     int docsToWrite = 2;

@@ -34,6 +34,7 @@ import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -253,11 +254,15 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
             .rowsAsObject();
     LOGGER.info("Rows debug: " + rowsDebug.stream().map(JsonObject::toString).collect(Collectors.joining("; ")));
 
-    AnalyticsResult result = scope.analyticsQuery("SELECT * FROM `" + bucket.name() + "`.`" + scopeName + "`.`" + collectionName + "` WHERE `" + collectionName + "`.foo=\"bar\"");
+    // This loop here because CI intermittently does not find this doc.  Presumably the getPendingMutations check above
+    // is failing because analytics is not even aware there is a doc to add.. (the foo=bar doc is done with regular KV)
+    Util.waitUntilCondition(() -> {
+      AnalyticsResult result = scope.analyticsQuery("SELECT * FROM `" + bucket.name() + "`.`" + scopeName + "`.`" + collectionName + "` WHERE `" + collectionName + "`.foo=\"bar\"");
 
-    List<JsonObject> rows = result.rowsAs(JsonObject.class);
-    LOGGER.info("Rows: " + rows.stream().map(JsonObject::toString).collect(Collectors.joining("; ")));
-    assertFalse(rows.isEmpty());
+      List<JsonObject> rows = result.rowsAs(JsonObject.class);
+      LOGGER.info("Rows: " + rows.stream().map(JsonObject::toString).collect(Collectors.joining("; ")));
+      return !rows.isEmpty();
+    });
   }
 
   @Test
