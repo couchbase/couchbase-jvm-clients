@@ -36,6 +36,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
@@ -50,7 +51,7 @@ public class AnalyticsRequest
 
   public static final int NO_PRIORITY = 0;
 
-  private static final String URI = "/analytics/service";
+  private static final String SERVICE_URI = "/analytics/service";
   private final byte[] query;
   private final int priority;
   private final boolean idempotent;
@@ -58,14 +59,27 @@ public class AnalyticsRequest
   private final String statement;
   private final String bucket;
   private final String scope;
+  private final String uri;
+  private final HttpMethod httpMethod;
 
   private final Authenticator authenticator;
 
-  public AnalyticsRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                          final Authenticator authenticator, final byte[] query, int priority, boolean idempotent,
-                          final String contextId, final String statement, final RequestSpan span, final String bucket,
-                          final String scope) {
+  public AnalyticsRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
+                          final Authenticator authenticator, final byte[] query, final int priority,
+                          final boolean idempotent, final String contextId, final String statement,
+                          final RequestSpan span, final String bucket, final String scope) {
+    this(timeout, ctx, retryStrategy, authenticator, query, priority, idempotent, contextId, statement, span, bucket,
+      scope, SERVICE_URI, HttpMethod.POST);
+  }
+
+  public AnalyticsRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
+                          final Authenticator authenticator, @Nullable final byte[] query, final int priority,
+                          final boolean idempotent, final String contextId, final String statement,
+                          final RequestSpan span, final String bucket, final String scope, final String uri,
+                          final HttpMethod httpMethod) {
     super(timeout, ctx, retryStrategy, span);
+    this.uri = uri;
+    this.httpMethod = httpMethod;
     this.query = query;
     this.authenticator = authenticator;
     this.priority = priority;
@@ -100,18 +114,20 @@ public class AnalyticsRequest
 
   @Override
   public FullHttpRequest encode() {
-    ByteBuf content = Unpooled.wrappedBuffer(query);
-    FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-      URI, content);
+    ByteBuf content = query == null || query.length == 0 ? Unpooled.EMPTY_BUFFER : Unpooled.wrappedBuffer(query);
+    FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, httpMethod,
+      uri, content);
     request.headers()
       .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
     request.headers()
       .set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
     request.headers()
       .set(HttpHeaderNames.USER_AGENT, context().environment().userAgent().formattedLong());
+
     if (priority != NO_PRIORITY) {
       request.headers().set("Analytics-Priority", priority);
     }
+
     authenticator.authHttpRequest(serviceType(), request);
     return request;
   }
@@ -146,6 +162,8 @@ public class AnalyticsRequest
   public Map<String, Object> serviceContext() {
     Map<String, Object> ctx = new TreeMap<>();
     ctx.put("type", serviceType().ident());
+    ctx.put("uri", redactMeta(uri));
+    ctx.put("httpMethod", httpMethod.toString());
     ctx.put("operationId", redactMeta(operationId()));
     ctx.put("statement", redactUser(statement()));
     ctx.put("priority", priority);
