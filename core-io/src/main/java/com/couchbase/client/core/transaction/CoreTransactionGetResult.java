@@ -58,7 +58,7 @@ public class CoreTransactionGetResult {
     private final Optional<JsonNode> txnMeta;
 
     /**
-     * @param content will be nullable for tombstones
+     * @param content will be nullable for tombstones, and some niche cases like REMOVE to REPLACE on same doc
      */
     @Stability.Internal
     public CoreTransactionGetResult(String id,

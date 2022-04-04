@@ -81,6 +81,7 @@ import com.couchbase.client.core.transaction.components.DocumentGetter;
 import com.couchbase.client.core.transaction.components.DocumentMetadata;
 import com.couchbase.client.core.transaction.components.DurabilityLevelUtil;
 import com.couchbase.client.core.transaction.components.OperationTypes;
+import com.couchbase.client.core.transaction.components.TransactionLinks;
 import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibility;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibilityStage;
@@ -251,11 +252,11 @@ public class CoreTransactionAttemptContext {
         ArrayNode mutations = Mapper.createArrayNode();
         stagedMutationsLocked.forEach(sm -> {
            mutations.add(Mapper.createObjectNode()
-                   .put("scp", sm.doc.collection().scope().orElse(DEFAULT_SCOPE))
-                   .put("coll", sm.doc.collection().collection().orElse(DEFAULT_COLLECTION))
-                   .put("bkt", sm.doc.collection().bucket())
-                   .put("id", sm.doc.id())
-                   .put("cas", Long.toString(sm.doc.cas()))
+                   .put("scp", sm.collection.scope().orElse(DEFAULT_SCOPE))
+                   .put("coll", sm.collection.collection().orElse(DEFAULT_COLLECTION))
+                   .put("bkt", sm.collection.bucket())
+                   .put("id", sm.id)
+                   .put("cas", Long.toString(sm.cas))
                    .put("type", sm.type.name()));
         });
 
@@ -315,21 +316,17 @@ public class CoreTransactionAttemptContext {
     private Optional<StagedMutation> checkForOwnWriteLocked(CollectionIdentifier collection, String id) {
         assertLocked("checkForOwnWrite");
         assertNotQueryMode("checkForOwnWrite");
-        Optional<StagedMutation> ownReplace = stagedReplacesLocked().stream().filter(v -> {
-            return v.doc.collection().bucket().equals(collection.bucket())
-                    && v.doc.collection().scope().equals(collection.scope())
-                    && v.doc.collection().collection().equals(collection.collection()) && v.doc.id().equals(id);
-        }).findFirst();
+        Optional<StagedMutation> ownReplace = stagedReplacesLocked().stream()
+                .filter(v -> v.collection.equals(collection) && v.id.equals(id))
+                .findFirst();
 
         if (ownReplace.isPresent()) {
             return ownReplace;
         }
 
-        Optional<StagedMutation> ownInserted = stagedInsertsLocked().stream().filter(v -> {
-            return v.doc.collection().bucket().equals(collection.bucket())
-                    && v.doc.collection().scope().equals(collection.scope())
-                    && v.doc.collection().collection().equals(collection.collection()) && v.doc.id().equals(id);
-        }).findFirst();
+        Optional<StagedMutation> ownInserted = stagedInsertsLocked().stream()
+                .filter(v -> v.collection.equals(collection) && v.id.equals(id))
+                .findFirst();
 
         if (ownInserted.isPresent()) {
             return ownInserted;
@@ -399,18 +396,20 @@ public class CoreTransactionAttemptContext {
 
             Optional<StagedMutation> ownWrite = checkForOwnWriteLocked(collection, id);
             if (ownWrite.isPresent()) {
-                LOGGER.info(attemptId, "found own-write of mutated doc %s", DebugUtil.docId(collection, id));
-
-                return unlock(lockToken, "found own-write of mutation")
-                        .then(Mono.just(Optional.of(CoreTransactionGetResult.createFrom(ownWrite.get().doc,
-                                ownWrite.get().content))));
+                StagedMutation ow = ownWrite.get();
+                // Can only use if the content is there.  If not, we will read our own-write from KV instead.  This is just an optimisation.
+                boolean usable = ow.content != null;
+                LOGGER.info(attemptId, "found own-write of mutated doc %s, usable = %s", DebugUtil.docId(collection, id), usable);
+                if (usable) {
+                    // Use the staged content as the body.  The staged content in the output TransactionGetResult should not be used for anything so we are safe to pass null.
+                    return unlock(lockToken, "found own-write of mutation")
+                            .then(Mono.just(Optional.of(createTransactionGetResult(ow.operationId, collection, id, ow.content, null, ow.cas,
+                                    ow.documentMetadata, ow.type.toString()))));
+                }
             }
-
-            Optional<CoreTransactionGetResult> ownRemove = stagedRemovesLocked().stream().filter(v -> {
-                return v.doc.collection().bucket().equals(collection.bucket())
-                        && v.doc.collection().scope().equals(collection.scope())
-                        && v.doc.collection().collection().equals(collection.collection()) && v.doc.id().equals(id);
-            }).findFirst().map(v -> v.doc);
+            Optional<StagedMutation> ownRemove = stagedRemovesLocked().stream().filter(v -> {
+                return v.collection.equals(collection) && v.id.equals(id);
+            }).findFirst();
 
             if (ownRemove.isPresent()) {
                 LOGGER.info(attemptId, "found own-write of removed doc %s",
@@ -705,7 +704,9 @@ public class CoreTransactionAttemptContext {
                 .then(Mono.defer(() -> {
                     if (existing.isPresent() && existing.get().type == StagedMutationType.REMOVE) {
                         // Use the doc of the remove to ensure CAS
-                        return createStagedReplace(operationId, existing.get().doc, content, span, false);
+                        // It is ok to pass null for contentOfBody, since we are replacing a remove
+                        return createStagedReplace(operationId, existing.get().collection, existing.get().id, existing.get().cas,
+                                existing.get().documentMetadata, content, null, span, false);
                     } else {
                         return createStagedInsert(operationId, collection, id, content, span, Optional.empty());
                     }
@@ -1051,7 +1052,7 @@ public class CoreTransactionAttemptContext {
                                     return createStagedInsert(operationId, doc.collection(), doc.id(), content, pspan,
                                             Optional.of(doc.cas()));
                                 } else {
-                                    return createStagedReplace(operationId, doc, content, pspan, doc.links().isDeleted());
+                                    return createStagedReplace(operationId, doc.collection(), doc.id(), doc.cas(), doc.documentMetadata(), content, doc.contentAsBytes(), pspan, doc.links().isDeleted());
                                 }
                             }));
                 }));
@@ -1464,20 +1465,28 @@ public class CoreTransactionAttemptContext {
      * left unchanged.
      */
     private Mono<CoreTransactionGetResult>
-    createStagedReplace(String operationId, CoreTransactionGetResult doc, byte[] content, SpanWrapper pspan, boolean accessDeleted) {
+    createStagedReplace(String operationId,
+                        CollectionIdentifier collection,
+                        String id,
+                        long cas,
+                        Optional<DocumentMetadata> documentMetadata,
+                        byte[] contentToStage,
+                        byte[] contentOfBody,
+                        SpanWrapper pspan,
+                        boolean accessDeleted) {
         return Mono.defer(() -> {
             assertNotLocked("createStagedReplace");
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), doc.collection(), doc.id(), "staging.replace", pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "staging.replace", pspan);
 
-            byte[] txn = createDocumentMetadata(OperationTypes.REPLACE, operationId, doc);
+            byte[] txn = createDocumentMetadata(OperationTypes.REPLACE, operationId, documentMetadata);
 
-            return hooks.beforeStagedReplace.apply(this, doc.id()) // test hook
+            return hooks.beforeStagedReplace.apply(this, id) // test hook
 
-                    .then(TransactionKVHandler.mutateIn(core, doc.collection(), doc.id(), kvTimeoutMutating(),
-                            false, false, false, true, false, doc.cas(), durabilityLevel(), OptionsUtil.createClientContext("createStagedReplace"), span,
+                    .then(TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
+                            false, false, false, true, false, cas, durabilityLevel(), OptionsUtil.createClientContext("createStagedReplace"), span,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, "txn", txn, true, true, false, 0),
-                                    new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "txn.op.stgd", content, false, true, false, 1),
+                                    new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "txn.op.stgd", contentToStage, false, true, false, 1),
                                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "txn.op.crc32", serialize("${Mutation.value_crc32c}"), false, true, true, 2)
                             )))
 
@@ -1485,28 +1494,30 @@ public class CoreTransactionAttemptContext {
 
                     .doOnSubscribe(v -> {
                         LOGGER.info(attemptId, "about to replace doc %s with cas %d, accessDeleted=%s",
-                                DebugUtil.docId(doc), doc.cas(), accessDeleted);
+                                DebugUtil.docId(collection, id), cas, accessDeleted);
                     })
 
                     // Testing hook
-                    .flatMap(result -> hooks.afterStagedReplaceComplete.apply(this, doc.id()).map(x -> result))
+                    .flatMap(result -> hooks.afterStagedReplaceComplete.apply(this, id).map(x -> result))
 
-                    .flatMap(response -> {
+                    .doOnNext(updatedDoc -> {
                         long elapsed = span.finish();
-
-                        // Save the new CAS
-                        doc.cas(response.cas());
-
-                        LOGGER.info(attemptId, "replaced doc %s got new cas %d, in %dus",
-                                DebugUtil.docId(doc), response.cas(), elapsed);
-
-                        return addStagedMutation(new StagedMutation(operationId, doc, content, StagedMutationType.REPLACE));
+                        LOGGER.info(attemptId, "replaced doc %s got cas %s, in %dus",
+                                DebugUtil.docId(collection, id), updatedDoc.cas(), elapsed);
                     })
 
-                    .thenReturn(doc)
+                    // Save the new CAS
+                    .flatMap(updatedDoc -> {
+                        CoreTransactionGetResult out = createTransactionGetResult(operationId, collection, id, contentToStage, contentOfBody, updatedDoc.cas(), documentMetadata, OperationTypes.REPLACE);
+                        return addStagedMutation(new StagedMutation(operationId, id, collection, updatedDoc.cas(), documentMetadata, contentToStage, StagedMutationType.REPLACE))
+                                .thenReturn(out);
+                    })
 
                     .onErrorResume(err -> {
-                        return handleErrorOnStagedMutation("replacing", doc, err, span.elapsedMicros()).thenReturn(doc);
+                        return handleErrorOnStagedMutation("replacing", collection, id, err, span.elapsedMicros())
+                                // This line needed to make it compile.  It won't actually trigger - all results from
+                                // handleErrorOnStagedMutation already error.
+                                .then(Mono.error(err));
                     })
 
                     .doFinally(v -> span.finish())
@@ -1515,9 +1526,53 @@ public class CoreTransactionAttemptContext {
         });
     }
 
+    /**
+     * getWithKv: possibly created from StagedMutation, which may not have content. Could get chained to replace/remove later,
+     *     but these don't look at the staged content of the doc
+     * createStagedReplace: existing doc, preserve metadata, has body
+     * createStagedInsert: new doc, empty contents, all in links
+     */
+    private CoreTransactionGetResult createTransactionGetResult(String operationId,
+                                                                CollectionIdentifier collection,
+                                                                String id,
+                                                                @Nullable byte[] bodyContent,
+                                                                @Nullable byte[] stagedContent,
+                                                                long cas,
+                                                                Optional<DocumentMetadata> documentMetadata,
+                                                                String opType) {
+        String stagedContentAsStr = stagedContent == null ? null : new String(stagedContent, StandardCharsets.UTF_8);
+        TransactionLinks links = new TransactionLinks(
+                Optional.ofNullable(stagedContentAsStr),
+                atrId,
+                atrCollection.map(CollectionIdentifier::bucket),
+                atrCollection.flatMap(CollectionIdentifier::scope),
+                atrCollection.flatMap(CollectionIdentifier::collection),
+                Optional.of(transactionId()),
+                Optional.of(attemptId),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(opType),
+                true,
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(operationId)
+        );
+        CoreTransactionGetResult out = new CoreTransactionGetResult(id,
+                bodyContent,
+                cas,
+                collection,
+                links,
+                documentMetadata,
+                Optional.empty()
+        );
+
+        return out;
+    }
+
     private byte[] createDocumentMetadata(String opType,
-                                              String operationId,
-                                              @Nullable CoreTransactionGetResult doc) {
+                                          String operationId,
+                                          Optional<DocumentMetadata> documentMetadata) {
 
         ObjectNode op = Mapper.createObjectNode();
         op.put("type", opType);
@@ -1536,11 +1591,9 @@ public class CoreTransactionAttemptContext {
 
         ObjectNode restore = Mapper.createObjectNode();
 
-        if (doc != null) {
-            doc.documentMetadata().flatMap(DocumentMetadata::cas).ifPresent(v -> restore.put("CAS", v));
-            doc.documentMetadata().flatMap(DocumentMetadata::exptime).ifPresent(v -> restore.put("exptime", v));
-            doc.documentMetadata().flatMap(DocumentMetadata::revid).ifPresent(v -> restore.put("revid", v));
-        }
+        documentMetadata.flatMap(DocumentMetadata::cas).ifPresent(v -> restore.put("CAS", v));
+        documentMetadata.flatMap(DocumentMetadata::exptime).ifPresent(v -> restore.put("exptime", v));
+        documentMetadata.flatMap(DocumentMetadata::revid).ifPresent(v -> restore.put("revid", v));
 
         if (restore.size() > 0) {
             ret.set("restore", restore);
@@ -1561,7 +1614,7 @@ public class CoreTransactionAttemptContext {
         return Mono.defer(() -> {
             SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), doc.collection(), doc.id(), "staging.remove", pspan);
 
-            byte[] txn = createDocumentMetadata(OperationTypes.REMOVE, operationId, doc);
+            byte[] txn = createDocumentMetadata(OperationTypes.REMOVE, operationId, doc.documentMetadata());
 
             return hooks.beforeStagedRemove.apply(this, doc.id()) // testing hook
 
@@ -1588,12 +1641,12 @@ public class CoreTransactionAttemptContext {
                                 DebugUtil.docId(doc), response.cas(), elapsed);
                         // Save so the staged mutation can be committed/rolled back with the correct CAS
                         doc.cas(response.cas());
-                        return addStagedMutation(new StagedMutation(operationId, doc, null, StagedMutationType.REMOVE));
+                        return addStagedMutation(new StagedMutation(operationId, doc.id(), doc.collection(), doc.cas(), doc.documentMetadata(), null, StagedMutationType.REMOVE));
                     })
 
                     .then()
 
-                    .onErrorResume(err -> handleErrorOnStagedMutation("removing", doc, err, span.elapsedMicros()))
+                    .onErrorResume(err -> handleErrorOnStagedMutation("removing", doc.collection(), doc.id(), err, span.elapsedMicros()))
 
                     .doOnError(err -> failSpan(span, err))
                     .doFinally(v -> span.finish());
@@ -1615,20 +1668,20 @@ public class CoreTransactionAttemptContext {
 
     private Mono<Void> addStagedMutation(StagedMutation sm) {
         return Mono.defer(() -> {
-            return doUnderLock("addStagedMutation " + DebugUtil.docId(sm.doc), null,
+            return doUnderLock("addStagedMutation " + DebugUtil.docId(sm.collection, sm.id), null,
                     () -> Mono.fromRunnable(() -> {
-                        removeStagedMutationLocked(sm.doc);
+                        removeStagedMutationLocked(sm.collection, sm.id);
                         stagedMutationsLocked.add(sm);
                     }));
         });
     }
 
-    private Mono<Void> handleErrorOnStagedMutation(String stage, CoreTransactionGetResult doc, Throwable err, long elapsedMicros) {
+    private Mono<Void> handleErrorOnStagedMutation(String stage, CollectionIdentifier collection, String id, Throwable err, long elapsedMicros) {
         ErrorClass ec = classify(err);
         TransactionOperationFailedException.Builder out = createError().cause(err);
 
         LOGGER.info(attemptId, "error while %s doc %s in %dus: %s",
-                stage, DebugUtil.docId(doc), elapsedMicros, dbg(err));
+                stage, DebugUtil.docId(collection, id), elapsedMicros, dbg(err));
 
         if (expiryOvertimeMode) {
             LOGGER.warn(attemptId, "should not reach here in expiryOvertimeMode");
@@ -1645,6 +1698,9 @@ public class CoreTransactionAttemptContext {
         } else {
             return Mono.error(operationFailed(out.build()));
         }
+
+        // Note: all paths must return error. Logic in createStagedReplace depends on this (passes null otherwise which
+        // will fail).
     }
 
     private Optional<StagedMutation> findStagedMutationLocked(CoreTransactionGetResult doc) {
@@ -1653,23 +1709,14 @@ public class CoreTransactionAttemptContext {
 
     private Optional<StagedMutation> findStagedMutationLocked(CollectionIdentifier collection, String docId) {
         assertLocked("findStagedMutation");
-        return stagedMutationsLocked.stream().filter(v -> {
-            return v.doc.collection().bucket().equals(collection.bucket())
-                    && v.doc.collection().scope().equals(collection.scope())
-                    && v.doc.collection().collection().equals(collection.collection())
-                    && v.doc.id().equals(docId);
-        }).findFirst();
+        return stagedMutationsLocked.stream()
+                .filter(v -> v.collection.equals(collection) && v.id.equals(docId))
+                .findFirst();
     }
 
-    private void removeStagedMutationLocked(CoreTransactionGetResult doc) {
+    private void removeStagedMutationLocked(CollectionIdentifier collection, String id) {
         assertLocked("removeStagedMutation");
-        CollectionIdentifier collection = doc.collection();
-        stagedMutationsLocked.removeIf(v -> {
-            return v.doc.collection().bucket().equals(collection.bucket())
-                    && v.doc.collection().scope().equals(collection.scope())
-                    && v.doc.collection().collection().equals(collection.collection())
-                    && v.doc.id().equals(doc.id());
-        });
+        stagedMutationsLocked.removeIf(v -> v.collection.equals(collection) && v.id.equals(id));
     }
 
     private static LogDeferThrowable dbg(Throwable err) {
@@ -1736,7 +1783,7 @@ public class CoreTransactionAttemptContext {
                                                 LOGGER.info(attemptId, "%s doc %s has the same operation id, must be a resolved ambiguity, proceeding",
                                                         bp, DebugUtil.docId(collection, id));
 
-                                                return addStagedMutation(new StagedMutation(operationId, r, r.links().stagedContent().get().getBytes(StandardCharsets.UTF_8), StagedMutationType.INSERT))
+                                                return addStagedMutation(new StagedMutation(operationId, r.id(), r.collection(), r.cas(), r.documentMetadata(), r.links().stagedContent().get().getBytes(StandardCharsets.UTF_8), StagedMutationType.INSERT))
                                                         .thenReturn(r);
                                             }
 
@@ -1832,7 +1879,7 @@ public class CoreTransactionAttemptContext {
             assertNotLocked("createStagedInsert");
             SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "staging.insert", pspan);
 
-            byte[] txn = createDocumentMetadata(OperationTypes.INSERT, operationId, null);
+            byte[] txn = createDocumentMetadata(OperationTypes.INSERT, operationId, Optional.empty());
 
             return Mono.defer(() -> {
                 LOGGER.info(attemptId, "about to insert staged doc %s as shadow document, cas=%s, operationId=%s",
@@ -1871,7 +1918,8 @@ public class CoreTransactionAttemptContext {
                                 atrCollection.get().scope().get(),
                                 atrCollection.get().collection().get(),
                                 updatedDoc.cas());
-                        return addStagedMutation(new StagedMutation(operationId, out, content, StagedMutationType.INSERT))
+
+                        return addStagedMutation(new StagedMutation(operationId, out.id(), out.collection(), out.cas(), out.documentMetadata(), content, StagedMutationType.INSERT))
                                 .thenReturn(out);
                     })
 
@@ -1983,7 +2031,7 @@ public class CoreTransactionAttemptContext {
                     if (existingOpt.isPresent()) {
                         StagedMutation existing = existingOpt.get();
 
-                        if (existing.doc.cas() != doc.cas()) {
+                        if (existing.cas != doc.cas()) {
                             LOGGER.info(attemptId, "concurrent op race detected on doc %s: have read a document before a concurrent op wrote its stagedMutation", DebugUtil.docId(doc));
 
                             return Mono.error(operationFailed(createError()
@@ -2030,18 +2078,14 @@ public class CoreTransactionAttemptContext {
         }
     }
 
-    private byte[] listStagedToDocRecords(List<StagedMutation> docs) throws JsonProcessingException {
-        return listToDocRecords(docs.stream().map(v -> v.doc).collect(Collectors.toList()));
-    }
-
-    private byte[] listToDocRecords(List<CoreTransactionGetResult> docs) throws JsonProcessingException {
+    private byte[] listToDocRecords(List<StagedMutation> docs) throws JsonProcessingException {
         ArrayNode root = Mapper.createArrayNode();
         docs.forEach(doc -> {
             ObjectNode jn = Mapper.createObjectNode();
-            jn.set(TransactionFields.ATR_FIELD_PER_DOC_ID, Mapper.convertValue(doc.id(), JsonNode.class));
-            jn.set(TransactionFields.ATR_FIELD_PER_DOC_BUCKET, Mapper.convertValue(doc.collection().bucket(), JsonNode.class));
-            jn.set(TransactionFields.ATR_FIELD_PER_DOC_SCOPE, Mapper.convertValue(doc.collection().scope().orElse(DEFAULT_SCOPE), JsonNode.class));
-            jn.set(TransactionFields.ATR_FIELD_PER_DOC_COLLECTION, Mapper.convertValue(doc.collection().collection().orElse(DEFAULT_COLLECTION), JsonNode.class));
+            jn.set(TransactionFields.ATR_FIELD_PER_DOC_ID, Mapper.convertValue(doc.id, JsonNode.class));
+            jn.set(TransactionFields.ATR_FIELD_PER_DOC_BUCKET, Mapper.convertValue(doc.collection.bucket(), JsonNode.class));
+            jn.set(TransactionFields.ATR_FIELD_PER_DOC_SCOPE, Mapper.convertValue(doc.collection.scope().orElse(DEFAULT_SCOPE), JsonNode.class));
+            jn.set(TransactionFields.ATR_FIELD_PER_DOC_COLLECTION, Mapper.convertValue(doc.collection.collection().orElse(DEFAULT_COLLECTION), JsonNode.class));
             root.add(jn);
         });
 
@@ -2054,11 +2098,11 @@ public class CoreTransactionAttemptContext {
         try {
             return Arrays.asList(
                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, prefix + "." + TransactionFields.ATR_FIELD_DOCS_INSERTED,
-                            listStagedToDocRecords(stagedInsertsLocked()), false, true, false, baseIndex),
+                            listToDocRecords(stagedInsertsLocked()), false, true, false, baseIndex),
                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, prefix + "." + TransactionFields.ATR_FIELD_DOCS_REPLACED,
-                            listStagedToDocRecords(stagedReplacesLocked()), false, true, false, baseIndex + 1),
+                            listToDocRecords(stagedReplacesLocked()), false, true, false, baseIndex + 1),
                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, prefix + "." + TransactionFields.ATR_FIELD_DOCS_REMOVED,
-                            listStagedToDocRecords(stagedRemovesLocked()), false, true, false, baseIndex + 2)
+                            listToDocRecords(stagedRemovesLocked()), false, true, false, baseIndex + 2)
             );
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
@@ -2365,25 +2409,25 @@ public class CoreTransactionAttemptContext {
                 .cause(new AttemptExpiredException(err)).build()));
     }
 
-    private Mono<Void> removeDocLocked(SpanWrapper pspan, CoreTransactionGetResult doc, boolean ambiguityResolutionMode) {
+    private Mono<Void> removeDocLocked(SpanWrapper pspan, CollectionIdentifier collection, String id, boolean ambiguityResolutionMode) {
         return Mono.defer(() -> {
             assertLocked("removeDoc");
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), doc.collection(), doc.id(), "commit.remove", pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "commit.remove", pspan);
 
             return Mono.fromRunnable(() -> {
                 LOGGER.info(attemptId, "about to remove doc %s, ambiguityResolutionMode=%s",
-                        DebugUtil.docId(doc), ambiguityResolutionMode);
+                        DebugUtil.docId(collection, id), ambiguityResolutionMode);
 
                 // [EXP-COMMIT-OVERTIME]
-                checkExpiryDuringCommitOrRollbackLocked(CoreTransactionAttemptContextHooks.HOOK_REMOVE_DOC, Optional.of(doc.id()));
+                checkExpiryDuringCommitOrRollbackLocked(CoreTransactionAttemptContextHooks.HOOK_REMOVE_DOC, Optional.of(id));
             })
 
-                    .then(hooks.beforeDocRemoved.apply(this, doc.id())) // testing hook
+                    .then(hooks.beforeDocRemoved.apply(this, id)) // testing hook
 
                     // A normal (non-subdoc) remove will also remove a doc's user xattrs too
                     .then(TransactionKVHandler.remove(core,
-                                    doc.collection(),
-                                    doc.id(),
+                                    collection,
+                                    id,
                                     kvTimeoutNonMutating(),
                                     0,
                                     durabilityLevel(),
@@ -2391,13 +2435,13 @@ public class CoreTransactionAttemptContext {
                                     span))
 
                     // Testing hook (goes before onErrorResume)
-                    .flatMap(mutationResult -> hooks.afterDocRemovedPreRetry.apply(this, doc.id())
+                    .flatMap(mutationResult -> hooks.afterDocRemovedPreRetry.apply(this, id)
 
                             .thenReturn(mutationResult))
 
                     .doOnNext(mutationResult -> {
                         LOGGER.info(attemptId, "commit - removed doc %s, mt = %s",
-                                DebugUtil.docId(doc), mutationResult.mutationToken());
+                                DebugUtil.docId(collection, id), mutationResult.mutationToken());
                     })
 
                     .then()
@@ -2410,13 +2454,13 @@ public class CoreTransactionAttemptContext {
                                 .raiseException(FinalErrorToRaise.TRANSACTION_FAILED_POST_COMMIT);
 
                         LOGGER.info("got error while removing doc %s in %dus: %s",
-                                DebugUtil.docId(doc), span.elapsedMicros(), dbg(err));
+                                DebugUtil.docId(collection, id), span.elapsedMicros(), dbg(err));
 
                         if (expiryOvertimeMode) {
                             return mapErrorInOvertimeToExpired(true, CoreTransactionAttemptContextHooks.HOOK_REMOVE_DOC, err, FinalErrorToRaise.TRANSACTION_FAILED_POST_COMMIT);
                         } else if (ec == FAIL_AMBIGUOUS) {
                             return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, SchedulerUtil.scheduler)
-                                    .then(removeDocLocked(span, doc, true));
+                                    .then(removeDocLocked(span, collection, id, true));
                         } else if (ec == FAIL_DOC_NOT_FOUND) {
                             return Mono.error(operationFailed(e.build()));
                         } else if (ec == FAIL_HARD) {
@@ -2427,7 +2471,7 @@ public class CoreTransactionAttemptContext {
                     })
 
                     // Testing hook
-                    .then(hooks.afterDocRemovedPostRetry.apply(this, doc.id()))
+                    .then(hooks.afterDocRemovedPostRetry.apply(this, id))
 
                     .then()
 
@@ -2447,8 +2491,7 @@ public class CoreTransactionAttemptContext {
                     .publishOn(SchedulerUtil.scheduler)
 
                     .concatMap(staged -> {
-                        CoreTransactionGetResult doc = staged.doc;
-                        return commitDocWrapperLocked(span, staged, doc);
+                        return commitDocWrapperLocked(span, staged);
                     })
 
                     .then(Mono.defer(() -> {
@@ -2484,44 +2527,45 @@ public class CoreTransactionAttemptContext {
     }
 
     private Mono<Void> commitDocWrapperLocked(SpanWrapper pspan,
-                                              StagedMutation staged,
-                                              CoreTransactionGetResult doc) {
+                                              StagedMutation staged) {
         return Mono.defer(() -> {
             if (staged.type == StagedMutationType.REMOVE) {
-                return removeDocLocked(pspan, doc, false);
+                return removeDocLocked(pspan, staged.collection, staged.id, false);
             } else {
-                return commitDocLocked(pspan, staged, doc, false, staged.type == StagedMutationType.INSERT, false);
+                return commitDocLocked(pspan, staged, false, staged.type == StagedMutationType.INSERT, false);
             }
         });
     }
 
     private Mono<Void> commitDocLocked(SpanWrapper pspan,
                                        StagedMutation staged,
-                                       CoreTransactionGetResult doc,
                                        boolean casZeroMode,
                                        boolean insertMode,
                                        boolean ambiguityResolutionMode) {
         return Mono.defer(() -> {
             assertLocked("commitDoc");
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), doc.collection(), doc.id(), "commit.doc", pspan);
+            String id = staged.id;
+            CollectionIdentifier collection = staged.collection;
+            long cas = staged.cas;
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "commit.doc", pspan);
 
             return Mono.fromRunnable(() -> {
                 LOGGER.info(attemptId, "commit - committing doc %s, casZeroMode=%s, insertMode=%s, ambiguity-resolution=%s",
-                        DebugUtil.docId(doc), casZeroMode, insertMode, ambiguityResolutionMode);
+                        DebugUtil.docId(collection, id), casZeroMode, insertMode, ambiguityResolutionMode);
 
-                checkExpiryDuringCommitOrRollbackLocked(CoreTransactionAttemptContextHooks.HOOK_COMMIT_DOC, Optional.of(doc.id()));
+                checkExpiryDuringCommitOrRollbackLocked(CoreTransactionAttemptContextHooks.HOOK_COMMIT_DOC, Optional.of(id));
             })
 
-                    .then(hooks.beforeDocCommitted.apply(this, doc.id())) // testing hook
+                    .then(hooks.beforeDocCommitted.apply(this, id)) // testing hook
 
                     .then(Mono.defer(() -> {
                         if (insertMode) {
-                            return TransactionKVHandler.insert(core, doc.collection(), doc.id(), staged.content, kvTimeoutMutating(),
+                            return TransactionKVHandler.insert(core, collection, id, staged.content, kvTimeoutMutating(),
                                             durabilityLevel(), OptionsUtil.createClientContext("commitDocInsert"), span)
                                     .map(v -> v.cas());
                         } else {
-                            return TransactionKVHandler.mutateIn(core, doc.collection(), doc.id(), kvTimeoutMutating(),
-                                    false, false, false, false, false, casZeroMode ? 0 : doc.cas(), durabilityLevel(),
+                            return TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
+                                    false, false, false, false, false, casZeroMode ? 0 : cas, durabilityLevel(),
                                     OptionsUtil.createClientContext("commitDoc"), span,
                                     Arrays.asList(
                                             // Upsert this field to better handle illegal doc mutation.  E.g. run shadowDocSameTxnKVInsert without this,
@@ -2537,15 +2581,14 @@ public class CoreTransactionAttemptContext {
                     .publishOn(SchedulerUtil.scheduler)
 
                     // Testing hook
-                    .flatMap(v -> hooks.afterDocCommittedBeforeSavingCAS.apply(this, doc.id()).thenReturn(v))
+                    .flatMap(v -> hooks.afterDocCommittedBeforeSavingCAS.apply(this, id).thenReturn(v))
 
                     // Do checkExpiryDuringCommitOrRollback before doOnNext (which tests often make throw)
-                    .flatMap(cas -> {
-                        LOGGER.info(attemptId, "commit - committed doc %s got cas %d", DebugUtil.docId(doc), cas);
-                        doc.cas(cas);
+                    .flatMap(newCas -> {
+                        LOGGER.info(attemptId, "commit - committed doc %s got cas %d", DebugUtil.docId(collection, id), newCas);
 
                         // Testing hook
-                        return hooks.afterDocCommitted.apply(this, doc.id());
+                        return hooks.afterDocCommitted.apply(this, id);
                     })
 
                     .onErrorResume(err -> {
@@ -2555,52 +2598,52 @@ public class CoreTransactionAttemptContext {
                                 .raiseException(FinalErrorToRaise.TRANSACTION_FAILED_POST_COMMIT);
 
                         LOGGER.info(attemptId, "error while committing doc %s in %dus: %s",
-                                DebugUtil.docId(doc), span.elapsedMicros(), dbg(err));
+                                DebugUtil.docId(collection, id), span.elapsedMicros(), dbg(err));
 
                         if (expiryOvertimeMode) {
                             return mapErrorInOvertimeToExpired(true, CoreTransactionAttemptContextHooks.HOOK_COMMIT_DOC, err, FinalErrorToRaise.TRANSACTION_FAILED_POST_COMMIT).thenReturn(0);
                         } else if (ec == FAIL_AMBIGUOUS) {
                             // TXNJ-136: The operation may or may not have succeeded.  Retry in ambiguity-resolution mode.
                             LOGGER.warn(attemptId, "%s while committing doc %s: as op is ambiguously successful, retrying " +
-                                    "op in ambiguity-resolution mode", DebugUtil.dbg(err), DebugUtil.docId(doc));
+                                    "op in ambiguity-resolution mode", DebugUtil.dbg(err), DebugUtil.docId(collection, id));
 
-                            return commitDocLocked(span, staged, doc, casZeroMode, insertMode, true).thenReturn(0);
+                            return commitDocLocked(span, staged, casZeroMode, insertMode, true).thenReturn(0);
                         } else if (ec == FAIL_CAS_MISMATCH) {
                             if (ambiguityResolutionMode) {
                                 return Mono.error(operationFailed(e.build()));
                             } else {
                                 // See CASFailures.md
-                                String msg = msgDocChangedUnexpectedly(doc.collection(), doc.id());
+                                String msg = msgDocChangedUnexpectedly(collection, id);
                                 LOGGER.warn(attemptId, msg);
 
-                                LOGGER.eventBus().publish(new IllegalDocumentStateEvent(Event.Severity.WARN, msg, doc.id()));
+                                LOGGER.eventBus().publish(new IllegalDocumentStateEvent(Event.Severity.WARN, msg, id));
 
                                 // Pass on ambiguityResolutionMode to handle situation of
                                 // Ambiguous -> OtherFailure* -> CASMismatch
                                 return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, SchedulerUtil.scheduler)
-                                        .then(commitDocLocked(span, staged, doc, true, false, ambiguityResolutionMode)
+                                        .then(commitDocLocked(span, staged, true, false, ambiguityResolutionMode)
                                                 .thenReturn(0));
                             }
                         } else if (ec == FAIL_DOC_NOT_FOUND) {
-                            String msg = msgDocRemovedUnexpectedly(doc.collection(), doc.id());
+                            String msg = msgDocRemovedUnexpectedly(collection, id);
                             LOGGER.warn(attemptId, msg);
 
-                            LOGGER.eventBus().publish(new IllegalDocumentStateEvent(Event.Severity.WARN, msg, doc.id()));
+                            LOGGER.eventBus().publish(new IllegalDocumentStateEvent(Event.Severity.WARN, msg, id));
 
                             return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, SchedulerUtil.scheduler)
-                                    .then(commitDocLocked(span, staged, doc, false, true, ambiguityResolutionMode)
+                                    .then(commitDocLocked(span, staged, false, true, ambiguityResolutionMode)
                                             .thenReturn(0));
                         } else if (ec == ErrorClass.FAIL_DOC_ALREADY_EXISTS) {
                             if (ambiguityResolutionMode) {
                                 return Mono.error(operationFailed(e.build()));
                             } else {
-                                String msg = msgDocRemovedUnexpectedly(doc.collection(), doc.id());
+                                String msg = msgDocRemovedUnexpectedly(collection, id);
                                 LOGGER.warn(attemptId, msg);
 
-                                LOGGER.eventBus().publish(new IllegalDocumentStateEvent(Event.Severity.WARN, msg, doc.id()));
+                                LOGGER.eventBus().publish(new IllegalDocumentStateEvent(Event.Severity.WARN, msg, id));
 
                                 return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, SchedulerUtil.scheduler)
-                                        .then(commitDocLocked(span, staged, doc, true, false, ambiguityResolutionMode)
+                                        .then(commitDocLocked(span, staged, true, false, ambiguityResolutionMode)
                                                 .thenReturn(0));
                             }
                         } else if (ec == FAIL_HARD) {
@@ -3085,12 +3128,11 @@ public class CoreTransactionAttemptContext {
                     .publishOn(SchedulerUtil.scheduler)
 
                     .concatMap(staged -> {
-                        CoreTransactionGetResult doc = staged.doc;
                         switch (staged.type) {
                             case INSERT:
-                                return rollbackStagedInsertLocked(isAppRollback, span, doc);
+                                return rollbackStagedInsertLocked(isAppRollback, span, staged.collection, staged.id, staged.cas);
                             default:
-                                return rollbackStagedReplaceOrRemoveLocked(isAppRollback, span, doc);
+                                return rollbackStagedReplaceOrRemoveLocked(isAppRollback, span, staged.collection, staged.id, staged.cas);
                         }
                     })
 
@@ -3105,33 +3147,33 @@ public class CoreTransactionAttemptContext {
         });
     }
 
-    private Mono<Void> rollbackStagedReplaceOrRemoveLocked(boolean isAppRollback, SpanWrapper pspan, CoreTransactionGetResult doc) {
+    private Mono<Void> rollbackStagedReplaceOrRemoveLocked(boolean isAppRollback, SpanWrapper pspan, CollectionIdentifier collection, String id, long cas) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), doc.collection(), doc.id(), "rollback.doc", pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "rollback.doc", pspan);
 
             return Mono.defer(() -> {
                 LOGGER.info(attemptId, "rolling back doc %s with cas %d by removing staged mutation",
-                        DebugUtil.docId(doc), doc.cas());
-                return errorIfExpiredAndNotInExpiryOvertimeMode(CoreTransactionAttemptContextHooks.HOOK_ROLLBACK_DOC, Optional.of(doc.id()));
+                        DebugUtil.docId(collection, id), cas);
+                return errorIfExpiredAndNotInExpiryOvertimeMode(CoreTransactionAttemptContextHooks.HOOK_ROLLBACK_DOC, Optional.of(id));
             })
 
-                    .then(hooks.beforeDocRolledBack.apply(this, doc.id())) // testing hook
+                    .then(hooks.beforeDocRolledBack.apply(this, id)) // testing hook
 
-                    .then(TransactionKVHandler.mutateIn(core, doc.collection(), doc.id(), kvTimeoutMutating(),
-                            false, false, false, false, false, doc.cas(), durabilityLevel(), OptionsUtil.createClientContext("rollbackDoc"), span,
+                    .then(TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
+                            false, false, false, false, false, cas, durabilityLevel(), OptionsUtil.createClientContext("rollbackDoc"), span,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn", null, false, true, false, 0)
                             )))
 
                     .publishOn(SchedulerUtil.scheduler)
 
-                    .flatMap(updatedDoc -> hooks.afterRollbackReplaceOrRemove.apply(this, doc.id()) // Testing hook
+                    .flatMap(updatedDoc -> hooks.afterRollbackReplaceOrRemove.apply(this, id) // Testing hook
 
                             .thenReturn(updatedDoc))
 
                     .doOnNext(updatedDoc -> {
                         LOGGER.info(attemptId, "rolled back doc %s, got cas %d and mt %s",
-                                DebugUtil.docId(doc), updatedDoc.cas(), updatedDoc.mutationToken());
+                                DebugUtil.docId(collection, id), updatedDoc.cas(), updatedDoc.mutationToken());
                     })
 
                     .then()
@@ -3141,7 +3183,7 @@ public class CoreTransactionAttemptContext {
                         TransactionOperationFailedException.Builder builder = createError().doNotRollbackAttempt().cause(err);
 
                         logger().info(attemptId, "got error while rolling back doc %s in %dus: %s",
-                                DebugUtil.docId(doc), span.elapsedMicros(), dbg(err));
+                                DebugUtil.docId(collection, id), span.elapsedMicros(), dbg(err));
 
                         if (expiryOvertimeMode) {
                             return mapErrorInOvertimeToExpired(isAppRollback, CoreTransactionAttemptContextHooks.HOOK_ROLLBACK_DOC, err, FinalErrorToRaise.TRANSACTION_EXPIRED);
@@ -3152,7 +3194,7 @@ public class CoreTransactionAttemptContext {
                             LOGGER.info(attemptId,
                                     "got PATH_NOT_FOUND while cleaning up staged doc %s, it must have already been "
                                             + "rolled back, continuing",
-                                    DebugUtil.docId(doc));
+                                    DebugUtil.docId(collection, id));
                             return Mono.empty();
                         } else if (ec == FAIL_DOC_NOT_FOUND) {
                             return Mono.error(operationFailed(isAppRollback, builder.build()));
@@ -3176,20 +3218,22 @@ public class CoreTransactionAttemptContext {
 
     private Publisher<Void> rollbackStagedInsertLocked(boolean isAppRollback,
                                                        SpanWrapper pspan,
-                                                       CoreTransactionGetResult doc) {
+                                                       CollectionIdentifier collection,
+                                                       String id,
+                                                       long cas) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), doc.collection(), doc.id(), "rollback.insert", pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "rollback.insert", pspan);
 
             return Mono.defer(() -> {
                 LOGGER.info(attemptId, "rolling back staged insert %s with cas %d",
-                        DebugUtil.docId(doc), doc.cas());
-                return errorIfExpiredAndNotInExpiryOvertimeMode(CoreTransactionAttemptContextHooks.HOOK_DELETE_INSERTED, Optional.of(doc.id()));
+                        DebugUtil.docId(collection, id), cas);
+                return errorIfExpiredAndNotInExpiryOvertimeMode(CoreTransactionAttemptContextHooks.HOOK_DELETE_INSERTED, Optional.of(id));
             })
 
-                    .then(hooks.beforeRollbackDeleteInserted.apply(this, doc.id()))
+                    .then(hooks.beforeRollbackDeleteInserted.apply(this, id))
 
-                    .then(TransactionKVHandler.mutateIn(core, doc.collection(), doc.id(), kvTimeoutMutating(),
-                            false, false, false, true, false, doc.cas(), durabilityLevel(), OptionsUtil.createClientContext("rollbackStagedInsert"), span,
+                    .then(TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
+                            false, false, false, true, false, cas, durabilityLevel(), OptionsUtil.createClientContext("rollbackStagedInsert"), span,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn", null, false, true, false, 0)
                             )))
@@ -3197,13 +3241,13 @@ public class CoreTransactionAttemptContext {
                     .publishOn(SchedulerUtil.scheduler)
 
                     // Testing hook
-                    .flatMap(updatedDoc -> hooks.afterRollbackDeleteInserted.apply(this, doc.id())
+                    .flatMap(updatedDoc -> hooks.afterRollbackDeleteInserted.apply(this, id)
 
                             .thenReturn(updatedDoc))
 
                     .doOnNext(updatedDoc -> {
                         LOGGER.info(attemptId, "deleted inserted doc %s, mt %s",
-                                DebugUtil.docId(doc), updatedDoc.mutationToken());
+                                DebugUtil.docId(collection, id), updatedDoc.mutationToken());
                     })
 
                     .then()
@@ -3213,7 +3257,7 @@ public class CoreTransactionAttemptContext {
                         TransactionOperationFailedException.Builder builder = createError().cause(err);
 
                         LOGGER.info(attemptId, "error while rolling back inserted doc %s in %dus: %s",
-                                DebugUtil.docId(doc), span.elapsedMicros(), dbg(err));
+                                DebugUtil.docId(collection, id), span.elapsedMicros(), dbg(err));
 
                         if (expiryOvertimeMode) {
                             return mapErrorInOvertimeToExpired(isAppRollback, CoreTransactionAttemptContextHooks.HOOK_REMOVE_DOC, err, FinalErrorToRaise.TRANSACTION_EXPIRED);
@@ -3225,7 +3269,7 @@ public class CoreTransactionAttemptContext {
                             LOGGER.info(attemptId,
                                     "got %s while removing staged insert doc %s, it must "
                                             + "have already been rolled back, continuing",
-                                    ec, DebugUtil.docId(doc));
+                                    ec, DebugUtil.docId(collection, id));
                             return Mono.empty();
                         } else if (ec == FAIL_HARD) {
                             return Mono.error(operationFailed(isAppRollback, builder.doNotRollbackAttempt().build()));
@@ -3252,13 +3296,15 @@ public class CoreTransactionAttemptContext {
     private Mono<Void> removeStagedInsert(CoreTransactionGetResult doc, SpanWrapper pspan) {
         return Mono.defer(() -> {
             assertNotLocked("removeStagedInsert");
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), doc.collection(), doc.id(), "staging.remove_staged_insert", pspan);
+            CollectionIdentifier collection = doc.collection();
+            String id = doc.id();
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "staging.remove_staged_insert", pspan);
 
             return Mono.defer(() -> {
                 LOGGER.info(attemptId, "removing staged insert %s with cas %d",
-                        DebugUtil.docId(doc), doc.cas());
+                        DebugUtil.docId(collection, id), doc.cas());
 
-                if (hasExpiredClientSide(CoreTransactionAttemptContextHooks.HOOK_REMOVE_STAGED_INSERT, Optional.of(doc.id()))) {
+                if (hasExpiredClientSide(CoreTransactionAttemptContextHooks.HOOK_REMOVE_STAGED_INSERT, Optional.of(id))) {
                     return Mono.error(operationFailed(createError()
                             .raiseException(FinalErrorToRaise.TRANSACTION_EXPIRED)
                             .doNotRollbackAttempt()
@@ -3269,9 +3315,9 @@ public class CoreTransactionAttemptContext {
                 }
             })
 
-                    .then(hooks.beforeRemoveStagedInsert.apply(this, doc.id()))
+                    .then(hooks.beforeRemoveStagedInsert.apply(this, id))
 
-                    .then(TransactionKVHandler.mutateIn(core, doc.collection(), doc.id(), kvTimeoutMutating(),
+                    .then(TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
                             false, false, false, true, false, doc.cas(), durabilityLevel(), OptionsUtil.createClientContext("removeStagedInsert"), span,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn", null, false, true, false, 0)
@@ -3279,7 +3325,7 @@ public class CoreTransactionAttemptContext {
 
                     .publishOn(SchedulerUtil.scheduler)
 
-                    .flatMap(updatedDoc -> hooks.afterRemoveStagedInsert.apply(this, doc.id())
+                    .flatMap(updatedDoc -> hooks.afterRemoveStagedInsert.apply(this, id)
                             .thenReturn(updatedDoc))
 
                     .onErrorResume(err -> {
@@ -3289,7 +3335,7 @@ public class CoreTransactionAttemptContext {
                                 .cause(err);
 
                         LOGGER.info(attemptId, "error while removing staged insert doc %s in %dus: %s",
-                                DebugUtil.docId(doc), span.elapsedMicros(), dbg(err));
+                                DebugUtil.docId(collection, id), span.elapsedMicros(), dbg(err));
 
                         if (ec == TRANSACTION_OPERATION_FAILED) {
                             return Mono.error(err);
@@ -3304,11 +3350,11 @@ public class CoreTransactionAttemptContext {
                         // Save so the subsequent KV ops can be done with the correct CAS
                         doc.cas(v.cas());
                         long elapsed = span.finish();
-                        LOGGER.info(attemptId, "removed staged insert from doc %s in %dus", DebugUtil.docId(doc), elapsed);
+                        LOGGER.info(attemptId, "removed staged insert from doc %s in %dus", DebugUtil.docId(collection, id), elapsed);
 
-                        return doUnderLock("removeStagedInsert " + DebugUtil.docId(doc), null,
+                        return doUnderLock("removeStagedInsert " + DebugUtil.docId(collection, id), null,
                                 () -> Mono.fromRunnable(()-> {
-                                    removeStagedMutationLocked(doc);
+                                    removeStagedMutationLocked(doc.collection(), doc.id());
                                 }));
                     })
 
@@ -4030,10 +4076,10 @@ public class CoreTransactionAttemptContext {
 
     private List<DocRecord> toDocRecords(final List<StagedMutation> mutations) {
         return mutations.stream()
-                .map(m -> new DocRecord(m.doc.collection().bucket(),
-                        m.doc.collection().scope().orElse(DEFAULT_SCOPE),
-                        m.doc.collection().collection().orElse(DEFAULT_COLLECTION),
-                        m.doc.id()))
+                .map(m -> new DocRecord(m.collection.bucket(),
+                        m.collection.scope().orElse(DEFAULT_SCOPE),
+                        m.collection.collection().orElse(DEFAULT_COLLECTION),
+                        m.id))
                 .collect(Collectors.toList());
     }
 
