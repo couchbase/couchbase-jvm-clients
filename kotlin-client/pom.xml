@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>kotlin-client</artifactId>
-    <version>1.0.0-dp.7</version>
+    <version>1.0.0-dp.8-SNAPSHOT</version>
 
     <name>Couchbase Kotlin SDK</name>
     <description>The official Couchbase Kotlin SDK</description>
