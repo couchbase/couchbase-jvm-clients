@@ -198,6 +198,11 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
         }
 
         @Stability.Uncommitted
+        override fun schedulerThreadCount(schedulerThreadCount: Int): Builder {
+            return super.schedulerThreadCount(schedulerThreadCount)
+        }
+
+        @Stability.Uncommitted
         override fun requestTracer(requestTracer: RequestTracer?): Builder {
             return super.requestTracer(requestTracer)
         }
