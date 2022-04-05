@@ -18,10 +18,10 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.version>1.6.10</kotlin.version>
+        <kotlin.version>1.6.20</kotlin.version>
         <kotlin.coroutines.version>1.6.0</kotlin.coroutines.version>
         <kotlin.code.style>official</kotlin.code.style>
-        <dokka.version>1.6.0</dokka.version>
+        <dokka.version>1.6.10</dokka.version>
         <moshi.version>1.13.0</moshi.version>
     </properties>
 
