@@ -29,6 +29,7 @@ import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.Transcoder
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import reactor.core.scheduler.Scheduler
+import reactor.core.scheduler.Schedulers
 import kotlin.properties.Delegates.observable
 
 /**
@@ -128,6 +129,13 @@ public class ClusterEnvironmentDslBuilder {
     @UncommittedCouchbaseApi
     public var scheduler: Scheduler?
             by observable(null) { _, _, it -> wrapped.scheduler(it) }
+
+    /**
+     * @see CoreEnvironment.Builder.schedulerThreadCount
+     */
+    @UncommittedCouchbaseApi
+    public var schedulerThreadCount: Int
+            by observable(Schedulers.DEFAULT_POOL_SIZE) { _, _, it -> wrapped.schedulerThreadCount(it) }
 
     /**
      * @see CoreEnvironment.Builder.requestTracer
