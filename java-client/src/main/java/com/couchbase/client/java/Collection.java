@@ -582,12 +582,12 @@ public class Collection {
   }
 
   /**
-   * Returns a {@link CouchbaseArrayList<T>} backed by this collection, creating a
+   * Returns a {@link CouchbaseArrayList} backed by this collection, creating a
    * new empty one if none exists already
    *
    * @param id the list's document id.
    * @param entityType the class of the values contained in the set
-   * @return a {@link CouchbaseArrayList<T>}.
+   * @return a {@link CouchbaseArrayList}.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
@@ -596,13 +596,13 @@ public class Collection {
   }
 
   /**
-   * Returns a {@link CouchbaseArrayList<T>} backed by this collection, creating a
+   * Returns a {@link CouchbaseArrayList} backed by this collection, creating a
    * new empty one if none exists already
    *
    * @param id the list's document id.
    * @param entityType the class of the values contained in the set
    * @param options a {@link ArrayListOptions} to use for all operations on this instance of the list.
-   * @return a {@link CouchbaseArrayList<T>}.
+   * @return a {@link CouchbaseArrayList}.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
@@ -611,12 +611,12 @@ public class Collection {
   }
 
   /**
-   * Returns a {@link CouchbaseArraySet<T>} backed by this collection, create a new
+   * Returns a {@link CouchbaseArraySet} backed by this collection, create a new
    * empty one if none exists already.
    *
    * @param id the set's document id.
    * @param entityType the class of the values contained in the set
-   * @return a {@link CouchbaseArraySet<T>}.
+   * @return a {@link CouchbaseArraySet}.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
@@ -625,13 +625,13 @@ public class Collection {
   }
 
   /**
-   * Returns a {@link CouchbaseArraySet<T>} backed by this collection, create a new
+   * Returns a {@link CouchbaseArraySet} backed by this collection, create a new
    * empty one if none exists already.
    *
    * @param id the set's document id.
    * @param entityType the class of the values contained in the set
    * @param options a {@link ArraySetOptions} to use for all operations on this instance of the set.
-   * @return a {@link CouchbaseArraySet<T>}.
+   * @return a {@link CouchbaseArraySet}.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
@@ -640,13 +640,13 @@ public class Collection {
   }
 
   /**
-   * Returns a {@link CouchbaseMap<T>} backed by this collection, creating a new
+   * Returns a {@link CouchbaseMap} backed by this collection, creating a new
    * empty one if none exists already.  This map will have {@link String} keys, and
    * values of Class<T>
    *
    * @param id the map's document id.
    * @param entityType the class of the values contained the map, the keys are {@link String}s.
-   * @return a {@link CouchbaseMap<T>}.
+   * @return a {@link CouchbaseMap}.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
@@ -655,14 +655,14 @@ public class Collection {
   }
 
   /**
-   * Returns a {@link CouchbaseMap<T>} backed by this collection, creating a new
+   * Returns a {@link CouchbaseMap} backed by this collection, creating a new
    * empty one if none exists already.  This map will have {@link String} keys, and
    * values of Class<T>
    *
    * @param id the map's document id.
    * @param entityType the class of the values contained the map, the keys are {@link String}s.
    * @param options a {@link MapOptions} to use for all operations on this instance of the map.
-   * @return a {@link CouchbaseMap<T>}.
+   * @return a {@link CouchbaseMap}.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
@@ -671,12 +671,12 @@ public class Collection {
   }
 
   /**
-   * Returns a {@link CouchbaseQueue<T>} backed by this collection, creating a new
+   * Returns a {@link CouchbaseQueue} backed by this collection, creating a new
    * empty one if none exists.
    *
    * @param id the queue's document id.
    * @param entityType the class of the values contained in the queue.
-   * @return a {@link CouchbaseQueue<T>}.
+   * @return a {@link CouchbaseQueue}.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
@@ -685,13 +685,13 @@ public class Collection {
   }
 
   /**
-   * Returns a {@link CouchbaseQueue<T>} backed by this collection, creating a new
+   * Returns a {@link CouchbaseQueue} backed by this collection, creating a new
    * empty one if none exists.
    *
    * @param id the queue's document id.
    * @param entityType the class of the values contained in the queue.
    * @param options a {@link QueueOptions} to use for all operations on this instance of the queue.
-   * @return a {@link CouchbaseQueue<T>}.
+   * @return a {@link CouchbaseQueue}.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
