@@ -85,7 +85,10 @@ public class AnalyticsChunkResponseParser
       markHeaderComplete();
       status = v.readString();
     })
-    .doOnValue("/metrics", v -> metrics = v.readBytes())
+    .doOnValue("/metrics", v -> {
+      markHeaderComplete();
+      metrics = v.readBytes();
+    })
     .doOnValue("/errors", v -> {
       errors = v.readBytes();
       failRows(errorsToThrowable(errors, requestContext(), responseHeader().status()));
