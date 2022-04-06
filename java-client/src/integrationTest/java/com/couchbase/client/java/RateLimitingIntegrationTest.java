@@ -81,6 +81,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
   private static final String RL_PASSWORD = "password";
 
   private static Cluster adminCluster;
+  private static final int LOOP_GUARD = 100;
 
   @BeforeAll
   static void beforeAll() throws Exception {
@@ -107,6 +108,14 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
             || e.getMessage().contains("pindex not available");
 
     LOGGER.info("Continuing on search error: {}", ret);
+
+    if (ret) {
+      try {
+        Thread.sleep(50);
+      } catch (InterruptedException ex) {
+        throw new RuntimeException(ex);
+      }
+    }
 
     return ret;
   }
@@ -424,7 +433,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       cluster.waitUntilReady(Duration.ofSeconds(10));
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
-        for (int i = 0; i < 50; i++) {
+        for (int i = 0; i < LOOP_GUARD; i++) {
           try {
             cluster.searchQuery("ratelimits", QueryStringQuery.queryString("a"),
               SearchOptions.searchOptions().timeout(Duration.ofSeconds(1)));
@@ -469,7 +478,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
           UpsertOptions.upsertOptions().timeout(Duration.ofSeconds(10)));
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < LOOP_GUARD; i++) {
           try {
             cluster.searchQuery("ratelimits-egress", SearchQuery.wildcard("a*"),
               SearchOptions.searchOptions().timeout(Duration.ofSeconds(10)).fields("content")
@@ -511,7 +520,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       String content = repeatString(1024 * 1024, "a");
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < LOOP_GUARD; i++) {
           try {
             SearchResult res = cluster.searchQuery("ratelimits-ingress", QueryStringQuery.match(content),
               SearchOptions.searchOptions().timeout(Duration.ofSeconds(10)).limit(1));

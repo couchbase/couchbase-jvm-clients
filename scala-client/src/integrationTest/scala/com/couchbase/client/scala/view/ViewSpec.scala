@@ -118,6 +118,9 @@ class ViewSpec extends ScalaIntegrationTest {
     }
   }
 
+  // See this fail intermittently on CI as the returned docs don't equal what was just written - which should not be
+  // possible with RequestPlus.
+  @Flaky
   @Test
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   def returnsDataJustWritten(): Unit = {

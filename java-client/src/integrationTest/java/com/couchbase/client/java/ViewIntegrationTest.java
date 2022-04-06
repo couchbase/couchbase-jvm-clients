@@ -110,6 +110,9 @@ class ViewIntegrationTest extends JavaIntegrationTest {
     assertTrue(viewResult.metaData().debug().isPresent());
   }
 
+  // See this fail intermittently on CI as the returned docs don't equal what was just written - which should not be
+  // possible with RequestPlus.
+  @Flaky
   @Test
   void returnsDataJustWritten() {
     int docsToWrite = 10;
