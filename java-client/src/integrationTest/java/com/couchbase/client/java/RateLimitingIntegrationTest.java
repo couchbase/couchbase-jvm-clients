@@ -46,6 +46,7 @@ import com.couchbase.client.java.search.queries.QueryStringQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
+import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
@@ -75,7 +76,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Verifies rate and quota limits against clusters which support the "rate limiting" feature.
  */
-@IgnoreWhen(missesCapabilities = Capabilities.RATE_LIMITING)
+@IgnoreWhen(missesCapabilities = Capabilities.RATE_LIMITING, clusterTypes = ClusterType.CAPELLA)
 class RateLimitingIntegrationTest extends JavaIntegrationTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(RateLimitingIntegrationTest.class);
 
@@ -86,7 +87,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void beforeAll() throws Exception {
-    adminCluster = Cluster.connect(seedNodes(), clusterOptions());
+    adminCluster = createCluster();
     adminCluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
     enforceRateLimits();
@@ -98,7 +99,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
   }
 
   private static Cluster createTestCluster(String username) {
-    return Cluster.connect(seedNodes(), ClusterOptions.clusterOptions(username, RL_PASSWORD)
+    return Cluster.connect(connectionString(), ClusterOptions.clusterOptions(username, RL_PASSWORD)
         .environment(environmentCustomizer().andThen(env -> env.eventBus(new SimpleEventBus(true)))));
   }
 

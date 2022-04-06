@@ -36,7 +36,7 @@ class NodeLocatorHelperIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void beforeAll() {
-    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    cluster = createCluster();
     bucket = cluster.bucket(config().bucketname());
 
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);

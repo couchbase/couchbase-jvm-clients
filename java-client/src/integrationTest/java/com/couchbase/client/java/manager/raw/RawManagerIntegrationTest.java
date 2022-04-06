@@ -48,7 +48,7 @@ class RawManagerIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void setup() {
-    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    cluster = createCluster();
 
     // required for pre-GCCCP servers (< 6.5)
     Bucket bucket = cluster.bucket(config().bucketname());

@@ -88,7 +88,7 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES })
+  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA })
   void handlesCreatingBucketDuringWaitUntilReady()  {
     ExecutorService es = Executors.newFixedThreadPool(1);
     String bucketName = UUID.randomUUID().toString();
@@ -137,7 +137,7 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES })
   void waitsForNewlyCreatedBucket() {
     String bucketName = UUID.randomUUID().toString();
-    Cluster cluster = Cluster.connect(connectionString(), config().adminUsername(), config().adminPassword());
+    Cluster cluster = createCluster();
 
     if (!config().capabilities().contains(Capabilities.GLOBAL_CONFIG)) {
       // We need to open the "other" bucket to make sure the test passes in clusters pre 6.5

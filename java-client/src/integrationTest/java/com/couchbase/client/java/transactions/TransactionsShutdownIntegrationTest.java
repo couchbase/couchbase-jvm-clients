@@ -61,7 +61,7 @@ public class TransactionsShutdownIntegrationTest extends JavaIntegrationTest {
     }
 
     private Cluster createClusterAndRunTransaction() {
-        Cluster cluster = Cluster.connect(seedNodes(), clusterOptions());
+        Cluster cluster = createCluster();
         Bucket bucket = cluster.bucket(config().bucketname());
         Collection collection = bucket.defaultCollection();
 

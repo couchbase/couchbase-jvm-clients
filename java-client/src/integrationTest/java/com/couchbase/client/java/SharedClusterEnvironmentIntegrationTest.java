@@ -35,8 +35,8 @@ class SharedClusterEnvironmentIntegrationTest extends JavaIntegrationTest {
     ClusterEnvironment env = envBuilder.build();
 
     ClusterOptions options = ClusterOptions.clusterOptions(authenticator()).environment(env);
-    Cluster cluster1 = Cluster.connect(seedNodes(), options);
-    Cluster cluster2 = Cluster.connect(seedNodes(), options);
+    Cluster cluster1 = Cluster.connect(connectionString(), options);
+    Cluster cluster2 = Cluster.connect(connectionString(), options);
 
     try {
       assertSame(

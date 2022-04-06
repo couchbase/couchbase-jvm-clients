@@ -92,7 +92,7 @@ class CouchbaseHttpClientIntegrationTest extends JavaIntegrationTest {
 
   // On 6.0 and below, fails with:
   // Request failed with status code 400 and body: {"errors":{"roles":"The value must be supplied"}}
-  @IgnoreWhen(missesCapabilities = {Capabilities.CREATE_AS_DELETED})
+  @IgnoreWhen(missesCapabilities = {Capabilities.CREATE_AS_DELETED}, clusterTypes = ClusterType.CAPELLA)
   @Test
   void canIssueSuccessfulRequests() {
     // send all requests to same node

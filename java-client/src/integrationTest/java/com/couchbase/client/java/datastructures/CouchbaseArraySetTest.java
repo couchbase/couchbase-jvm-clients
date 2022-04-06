@@ -52,7 +52,7 @@ class CouchbaseArraySetTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void setup() {
-        cluster = Cluster.connect(seedNodes(), clusterOptions());
+        cluster = createCluster();
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = cluster.bucket(config().bucketname()).defaultCollection();
         options = ArraySetOptions.arraySetOptions();

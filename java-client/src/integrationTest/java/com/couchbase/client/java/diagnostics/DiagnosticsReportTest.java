@@ -39,7 +39,7 @@ public class DiagnosticsReportTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void setup() {
-        cluster = Cluster.connect(seedNodes(), clusterOptions());
+        cluster = createCluster();
         Bucket bucket = cluster.bucket(config().bucketname());
         bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
     }

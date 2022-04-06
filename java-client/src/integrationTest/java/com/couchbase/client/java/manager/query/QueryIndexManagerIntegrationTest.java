@@ -74,7 +74,7 @@ public class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void setup() {
-    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    cluster = createCluster();
     bucketName = config().bucketname();
     indexes = cluster.queryIndexes();
 

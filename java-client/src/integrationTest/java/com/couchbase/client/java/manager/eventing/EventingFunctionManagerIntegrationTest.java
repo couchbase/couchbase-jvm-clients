@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES }, missesCapabilities = {Capabilities.COLLECTIONS, Capabilities.EVENTING})
+@IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES , ClusterType.CAPELLA}, missesCapabilities = {Capabilities.COLLECTIONS, Capabilities.EVENTING})
 public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest {
   private static Logger LOGGER = LoggerFactory.getLogger(EventingFunctionManagerIntegrationTest.class);
 
@@ -52,7 +52,7 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
 
   @BeforeAll
   static void setup() {
-    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    cluster = createCluster();
     functions = cluster.eventingFunctions();
     cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 

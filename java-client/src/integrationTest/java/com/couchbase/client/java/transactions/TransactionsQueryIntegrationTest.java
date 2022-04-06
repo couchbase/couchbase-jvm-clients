@@ -47,8 +47,7 @@ public class TransactionsQueryIntegrationTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void beforeAll() {
-        cluster = Cluster.connect(seedNodes(), ClusterOptions
-                .clusterOptions(authenticator()));
+        cluster = createCluster();
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
 

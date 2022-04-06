@@ -64,7 +64,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void beforeAll() {
-    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    cluster = createCluster();
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);

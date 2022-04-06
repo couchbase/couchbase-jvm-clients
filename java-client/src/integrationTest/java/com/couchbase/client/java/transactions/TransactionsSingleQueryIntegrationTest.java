@@ -42,7 +42,7 @@ public class TransactionsSingleQueryIntegrationTest extends JavaIntegrationTest 
 
     @BeforeAll
     static void beforeAll() {
-        cluster = Cluster.connect(seedNodes(), clusterOptions());
+        cluster = createCluster();
     }
 
     @AfterAll

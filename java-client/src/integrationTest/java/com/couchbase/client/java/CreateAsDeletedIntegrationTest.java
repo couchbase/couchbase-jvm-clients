@@ -59,7 +59,7 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void setup() {
-    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    cluster = createCluster();
     Bucket bucket = cluster.bucket(config().bucketname());
     coll = bucket.defaultCollection();
     // no waitUntilReady check, to (sometimes) trigger the bucketConfig null check logic in `mutateInRequest`

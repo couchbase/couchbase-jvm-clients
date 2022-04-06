@@ -96,7 +96,8 @@ public class MockTestCluster extends TestCluster {
 
         nodeConfigs.add(new TestNodeConfig(
           server.getHostname(),
-          ports
+          ports,
+          false
         ));
       }
     }

@@ -33,6 +33,7 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@IgnoreWhen(clusterTypes = ClusterType.CAPELLA)
 class ViewErrorIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;
@@ -42,7 +43,7 @@ class ViewErrorIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void beforeAll() {
-    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    cluster = createCluster();
     bucket = cluster.bucket(config().bucketname());
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
     DesignDocument designDocument = new DesignDocument(designDocName);

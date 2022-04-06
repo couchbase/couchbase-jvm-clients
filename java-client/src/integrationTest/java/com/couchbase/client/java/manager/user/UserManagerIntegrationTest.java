@@ -57,7 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES})
+@IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA})
 class UserManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
@@ -72,7 +72,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void setup() {
-    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    cluster = createCluster();
     Bucket bucket = cluster.bucket(config().bucketname());
     users = cluster.users();
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);

@@ -19,6 +19,7 @@ package com.couchbase.client.java.util;
 import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.diagnostics.PingState;
 import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.SeedNode;
@@ -67,7 +68,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
 
   /**
    * Customizes a {@link ClusterEnvironment.Builder} to use appropriate
-   * security settings for the test environment.
+   * settings for the test environment.
    */
   protected static Consumer<ClusterEnvironment.Builder> environmentCustomizer() {
     return env -> {
@@ -78,6 +79,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
             .orElseThrow(() -> new IllegalStateException("expected cluster certs")))
         );
       }
+      env.ioConfig(IoConfig.enableDnsSrv(config().nodes().get(0).isDns()));
     };
   }
 
@@ -87,6 +89,9 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
   }
 
   protected static Cluster createCluster(Consumer<ClusterEnvironment.Builder> environmentCustomizer) {
+    if (config().nodes().get(0).isDns()) {
+      return Cluster.connect(connectionString(), clusterOptions(environmentCustomizer));
+    }
     return Cluster.connect(seedNodes(), clusterOptions(environmentCustomizer));
   }
 
@@ -96,6 +101,9 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
    * @return the connection string to connect.
    */
   protected static String connectionString() {
+    if (config().nodes().get(0).isDns()) {
+      return config().nodes().get(0).hostname();
+    }
     return seedNodes().stream().map(s -> {
       if (s.kvPort().isPresent()) {
         return s.address() + ":" + s.kvPort().get();

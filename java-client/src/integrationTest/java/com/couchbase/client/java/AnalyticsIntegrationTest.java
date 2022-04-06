@@ -50,7 +50,7 @@ class AnalyticsIntegrationTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void setup() {
-        cluster = Cluster.connect(seedNodes(), clusterOptions());
+        cluster = createCluster();
         Bucket bucket = cluster.bucket(config().bucketname());
 
         cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);

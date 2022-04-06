@@ -165,7 +165,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       if (services.containsKey("eventingSSL")) {
         ports.put(Services.EVENTING_TLS, services.get("eventingSSL"));
       }
-      result.add(new TestNodeConfig(hostname, ports));
+      result.add(new TestNodeConfig(hostname, ports, false));
     }
     return result;
   }

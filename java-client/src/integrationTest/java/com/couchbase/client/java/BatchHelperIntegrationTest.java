@@ -48,7 +48,7 @@ public class BatchHelperIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void beforeAll() {
-    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    cluster = createCluster();
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 

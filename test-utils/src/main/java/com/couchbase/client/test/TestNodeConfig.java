@@ -20,12 +20,13 @@ import java.util.Map;
 public class TestNodeConfig {
 
   private final String hostname;
-
   private final Map<Services, Integer> ports;
+  private final boolean dns;
 
-  public TestNodeConfig(String hostname, Map<Services, Integer> ports) {
+  public TestNodeConfig(String hostname, Map<Services, Integer> ports, boolean dns) {
     this.hostname = hostname;
     this.ports = ports;
+    this.dns = dns;
   }
 
   public String hostname() {
@@ -34,6 +35,10 @@ public class TestNodeConfig {
 
   public Map<Services, Integer> ports() {
     return ports;
+  }
+
+  public boolean isDns() {
+    return dns;
   }
 
   @Override

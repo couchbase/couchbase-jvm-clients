@@ -24,9 +24,15 @@ import org.testcontainers.shaded.okhttp3.OkHttpClient;
 import org.testcontainers.shaded.okhttp3.Request;
 import org.testcontainers.shaded.okhttp3.Response;
 
+import javax.naming.NamingException;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -40,24 +46,23 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static com.couchbase.client.test.DnsSrvUtil.fromDnsSrv;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class UnmanagedTestCluster extends TestCluster {
   private static Logger logger = LoggerFactory.getLogger(UnmanagedTestCluster.class);
 
-  private final OkHttpClient httpClient = new OkHttpClient.Builder()
-          .connectTimeout(30, TimeUnit.SECONDS)
-          .readTimeout(30, TimeUnit.SECONDS)
-          .writeTimeout(30, TimeUnit.SECONDS)
-          .build();
+  private final OkHttpClient httpClient;
   private final String seedHost;
   private final int seedPort;
+  private final boolean isDnsSrv;
   private final String adminUsername;
   private final String adminPassword;
   private volatile String bucketname;
   private final int numReplicas;
   private final String certsFile;
   private volatile boolean runWithTLS;
+  private final String baseUrl;
 
   UnmanagedTestCluster(final Properties properties) {
     seedHost = properties.getProperty("cluster.unmanaged.seed").split(":")[0];
@@ -66,42 +71,49 @@ public class UnmanagedTestCluster extends TestCluster {
     adminPassword = properties.getProperty("cluster.adminPassword");
     numReplicas = Integer.parseInt(properties.getProperty("cluster.unmanaged.numReplicas"));
     certsFile = properties.getProperty("cluster.unmanaged.certsFile");
-    runWithTLS = Boolean.parseBoolean(properties.getProperty("cluster.unmanaged.runWithTLS"));
+    runWithTLS = Boolean.parseBoolean(properties.getProperty("cluster.unmanaged.runWithTLS")) || seedPort == 18091;
+    isDnsSrv = Boolean.parseBoolean(properties.getProperty("cluster.unmanaged.dnsSrv"));
+    bucketname = Optional.ofNullable(properties.getProperty("cluster.unmanaged.bucket")).orElse("");
+    httpClient = setupHttpClient(runWithTLS);
+    baseUrl = (runWithTLS ? "https://" : "http://") + getNodeUrl(isDnsSrv, seedHost, runWithTLS) + ":" + seedPort;
   }
 
   @Override
   ClusterType type() {
-    return ClusterType.UNMANAGED;
+    //Assuming running against Capella when provided with a DNS SRV hostname, and a pre-created bucket
+    return isDnsSrv && !bucketname.isEmpty() ? ClusterType.CAPELLA : ClusterType.UNMANAGED;
   }
 
   @Override
   TestClusterConfig _start() throws Exception {
-    bucketname = UUID.randomUUID().toString();
+    if (bucketname.isEmpty()) {
+      bucketname = UUID.randomUUID().toString();
 
-    Response postResponse = httpClient.newCall(new Request.Builder()
-      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-      .url("http://" + seedHost + ":" + seedPort + "/pools/default/buckets")
-      .post(new FormBody.Builder()
-        .add("name", bucketname)
-        .add("bucketType", "membase")
-        .add("ramQuotaMB", "100")
-        .add("replicaNumber", Integer.toString(numReplicas))
-        .add("flushEnabled", "1")
+      Response postResponse = httpClient.newCall(new Request.Builder()
+        .header("Authorization", Credentials.basic(adminUsername, adminPassword))
+        .url(baseUrl + "/pools/default/buckets")
+        .post(new FormBody.Builder()
+          .add("name", bucketname)
+          .add("bucketType", "membase")
+          .add("ramQuotaMB", "100")
+          .add("replicaNumber", Integer.toString(numReplicas))
+          .add("flushEnabled", "1")
+          .build())
         .build())
-      .build())
-      .execute();
+        .execute();
 
-    if (postResponse.code() != 202) {
-      throw new Exception("Could not create bucket: "
-        + postResponse + ", Reason: "
-        + postResponse.body().string());
+      if (postResponse.code() != 202) {
+        throw new Exception("Could not create bucket: "
+          + postResponse + ", Reason: "
+          + postResponse.body().string());
+      }
     }
 
     Response getResponse = httpClient.newCall(new Request.Builder()
       .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-      .url("http://" + seedHost + ":" + seedPort + "/pools/default/b/" + bucketname)
+      .url(baseUrl + "/pools/default/b/" + bucketname)
       .build())
-    .execute();
+      .execute();
 
     String raw = getResponse.body().string();
 
@@ -110,10 +122,10 @@ public class UnmanagedTestCluster extends TestCluster {
     waitUntilAllNodesHealthy();
 
     Response getClusterVersionResponse = httpClient.newCall(new Request.Builder()
-            .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-            .url("http://" + seedHost + ":" + seedPort + "/pools")
-            .build())
-            .execute();
+      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
+      .url(baseUrl + "/pools")
+      .build())
+      .execute();
 
     ClusterVersion clusterVersion = parseClusterVersion(getClusterVersionResponse);
 
@@ -124,11 +136,20 @@ public class UnmanagedTestCluster extends TestCluster {
       runWithTLS = true;
     }
 
-      return new TestClusterConfig(
+    List<TestNodeConfig> nodeConfigs;
+    if (isDnsSrv) {
+      // Use DNS SRV connection string in tests
+      nodeConfigs = new ArrayList<>();
+      nodeConfigs.add(new TestNodeConfig(seedHost, null, true));
+    } else {
+      nodeConfigs = nodesFromRaw(seedHost, raw);
+    }
+
+    return new TestClusterConfig(
       bucketname,
       adminUsername,
       adminPassword,
-      nodesFromRaw(seedHost, raw),
+      nodeConfigs,
       replicasFromRaw(raw),
       certs,
       capabilitiesFromRaw(raw, clusterVersion),
@@ -141,7 +162,7 @@ public class UnmanagedTestCluster extends TestCluster {
     try {
       Response getResponse = httpClient.newCall(new Request.Builder()
         .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-        .url("http://" + seedHost + ":" + seedPort + "/pools/default/certificate")
+        .url(baseUrl + "/pools/default/certificate")
         .build())
         .execute();
 
@@ -176,7 +197,7 @@ public class UnmanagedTestCluster extends TestCluster {
     while(true) {
       Response getResponse = httpClient.newCall(new Request.Builder()
         .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-        .url("http://" + seedHost + ":" + seedPort + "/pools/default/")
+        .url(baseUrl + "/pools/default/")
         .build())
         .execute();
 
@@ -210,11 +231,60 @@ public class UnmanagedTestCluster extends TestCluster {
     try {
       httpClient.newCall(new Request.Builder()
         .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-        .url("http://" + seedHost + ":" + seedPort + "/pools/default/buckets/"+bucketname)
+        .url(baseUrl + "/pools/default/buckets/" + bucketname)
         .delete()
         .build()).execute();
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }
+  }
+
+  private OkHttpClient setupHttpClient(boolean useTLS) {
+    OkHttpClient.Builder builder =  new OkHttpClient().newBuilder()
+      .connectTimeout(30, TimeUnit.SECONDS)
+      .readTimeout(30, TimeUnit.SECONDS)
+      .writeTimeout(30, TimeUnit.SECONDS);
+
+    //NB: Not secure - ok for testing purposes only
+    TrustManager[] trustAllCerts = new TrustManager[]{
+      new X509TrustManager() {
+        @Override
+        public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+        }
+
+        @Override
+        public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+        }
+
+        @Override
+        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+          return new java.security.cert.X509Certificate[]{};
+        }
+      }
+    };
+
+    if (useTLS) {
+      try {
+        SSLContext sslContext = SSLContext.getInstance("SSL");
+        sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+        builder
+          .sslSocketFactory(sslContext.getSocketFactory(), (X509TrustManager) trustAllCerts[0])
+          .hostnameVerifier((hostname, session) -> true);
+      } catch (NoSuchAlgorithmException | KeyManagementException e) {
+        logger.warn("Couldn't create secure http/s client, using basic http", e);
+      }
+    }
+    return builder.build();
+  }
+
+  private String getNodeUrl(boolean isDnsSrv, String seedHost, boolean runWithTLS) {
+    if (isDnsSrv) {
+      try {
+        return fromDnsSrv(seedHost, false, runWithTLS, null).get(0);
+      } catch (NamingException e) {
+        logger.warn("Failed to resolve DNS SRV records, attempting to run with seed host", e);
+      }
+    }
+    return seedHost;
   }
 }

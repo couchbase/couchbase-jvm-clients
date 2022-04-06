@@ -79,7 +79,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
 
   @BeforeAll
   static void setup() throws Exception {
-    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    cluster = createCluster();
     bucketName = config().bucketname();
     indexes = cluster.queryIndexes();
 

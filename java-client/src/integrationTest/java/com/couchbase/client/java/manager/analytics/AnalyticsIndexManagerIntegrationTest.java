@@ -98,7 +98,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void setup() {
-    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    cluster = createCluster();
     bucket = cluster.bucket(config().bucketname());
     analytics = cluster.analyticsIndexes();
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);

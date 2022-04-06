@@ -85,7 +85,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void setup() {
-      cluster = Cluster.connect(seedNodes(), clusterOptions());
+      cluster = createCluster();
       Bucket bucket = cluster.bucket(config().bucketname());
       coll = bucket.defaultCollection();
       bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
@@ -153,7 +153,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         assertFalse(getContent(docId).containsKey("foo"));
     }
 
-    @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAPELLA})
     @Test
     void removeFullDocAndSetSystemXattr() {
         JsonObject content = JsonObject.create().put("foo", "bar");

@@ -53,7 +53,7 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void setup() {
-    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    cluster = createCluster();
     Bucket bucket = cluster.bucket(config().bucketname());
     indexes = cluster.searchIndexes();
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);

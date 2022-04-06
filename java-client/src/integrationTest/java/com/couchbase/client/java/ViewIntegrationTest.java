@@ -58,7 +58,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void setup() {
-    cluster = Cluster.connect(seedNodes(), clusterOptions());
+    cluster = createCluster();
     bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
