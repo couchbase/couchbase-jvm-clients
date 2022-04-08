@@ -120,7 +120,12 @@ public enum Extension {
     /**
      * @since 3.3.0
      */
-    EXT_SDK_INTEGRATION("SI")
+    EXT_SDK_INTEGRATION("SI"),
+
+    /**
+     * @since 3.3.0
+     */
+    EXT_MOBILE_INTEROP("MI"),
     ;
 
     private String value;

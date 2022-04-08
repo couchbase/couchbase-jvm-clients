@@ -27,34 +27,35 @@ import java.util.Optional;
  */
 @Stability.Internal
 public class DocumentMetadata {
-    private final Optional<String> cas;
-    private final Optional<String> revid;
-    private final Optional<Long> exptime;
-    private final Optional<String> crc32;
+    private final String cas;
+    private final String revid;
+    private final Long exptime;
 
-    public DocumentMetadata(Optional<String> cas,
-                            Optional<String> revid,
-                            Optional<Long> exptime,
-                            Optional<String> crc32) {
-        this.cas = Objects.requireNonNull(cas);
-        this.revid = Objects.requireNonNull(revid);
-        this.exptime = Objects.requireNonNull(exptime);
-        this.crc32 = Objects.requireNonNull(crc32);
+    public DocumentMetadata(String cas,
+                            String revid,
+                            Long exptime) {
+        this.cas = cas;
+        this.revid = revid;
+        this.exptime = exptime;
     }
 
-    public Optional<String> cas() {
+    public String cas() {
         return cas;
     }
 
-    public Optional<String> revid() {
+    public String revid() {
         return revid;
     }
 
-    public Optional<Long> exptime() {
+    public Long exptime() {
         return exptime;
     }
-
-    public Optional<String> crc32() {
-        return crc32;
+    @Override
+    public String toString() {
+        return "DocumentMetadata{" +
+                "cas=" + cas +
+                ", revid=" + revid +
+                ", exptime=" + exptime +
+                '}';
     }
 }

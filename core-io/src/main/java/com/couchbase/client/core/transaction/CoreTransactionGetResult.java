@@ -45,8 +45,15 @@ public class CoreTransactionGetResult {
     private final @Nullable
     TransactionLinks links;
 
-    // This is needed for provide {BACKUP-FIELDS}.  It is only needed from the get to the staged mutation, hence Optional.
+    // This is needed for provide {BACKUP-FIELDS}.
+    // It is not available if fetch (or any operation) from query. Or on createFromInsert.  Or dehydrating serialized transaction.
     private final Optional<DocumentMetadata> documentMetadata;
+
+    // CRC32 of body of document, at time of the most recent fetch.  (Could have get -> replace -> replace, and it would
+    // be the CRC32 from the get).
+    // It is stored separately from DocumentMetadata as it may come either from $document.value_crc32c or from query.
+    // There are many times this will not be available - see getDocChanged for a list.
+    private final Optional<String> crc32OfGet;
 
     // This is always JSON
     private byte[] content;
@@ -67,7 +74,8 @@ public class CoreTransactionGetResult {
                                     CollectionIdentifier collection,
                                     @Nullable TransactionLinks links,
                                     Optional<DocumentMetadata> documentMetadata,
-                                    Optional<JsonNode> txnMeta) {
+                                    Optional<JsonNode> txnMeta,
+                                    Optional<String> crc32OfGet) {
         this.id = Objects.requireNonNull(id);
         this.content = content;
         this.cas = cas;
@@ -75,6 +83,7 @@ public class CoreTransactionGetResult {
         this.links = links;
         this.documentMetadata = Objects.requireNonNull(documentMetadata);
         this.txnMeta = Objects.requireNonNull(txnMeta);
+        this.crc32OfGet = Objects.requireNonNull(crc32OfGet);
     }
 
     @Override
@@ -129,6 +138,10 @@ public class CoreTransactionGetResult {
         this.cas = cas;
         return this;
     }
+
+    public Optional<String> crc32OfGet() {
+        return crc32OfGet;
+    }
     
     @Stability.Internal
     static CoreTransactionGetResult createFromInsert(CollectionIdentifier collection,
@@ -166,6 +179,7 @@ public class CoreTransactionGetResult {
                 collection,
                 links,
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty()
         );
 
@@ -199,7 +213,8 @@ public class CoreTransactionGetResult {
                 doc.collection,
                 links,
                 doc.documentMetadata,
-                Optional.empty()
+                Optional.empty(),
+                doc.crc32OfGet
         );
 
         return out;
@@ -225,12 +240,6 @@ public class CoreTransactionGetResult {
         Optional<String> casPreTxn = Optional.empty();
         Optional<String> revidPreTxn = Optional.empty();
         Optional<Long> exptimePreTxn = Optional.empty();
-
-        // Read from $document
-        Optional<String> casFromDocument = Optional.empty();
-        Optional<String> revidFromDocument = Optional.empty();
-        Optional<Long> exptimeFromDocument = Optional.empty();
-        Optional<String> crc32FromDocument = Optional.empty();
 
         Optional<String> op = Optional.empty();
 
@@ -290,20 +299,21 @@ public class CoreTransactionGetResult {
 
         // "txn.fc"
         if (doc.values()[6].status().success()) {
-            JsonNode json  = MAPPER.readValue(doc.values()[6].value(), JsonNode.class);
+            JsonNode json = MAPPER.readValue(doc.values()[6].value(), JsonNode.class);
             ForwardCompatibility fc = new ForwardCompatibility(json);
             forwardCompatibility = Optional.of(fc);
         }
 
-        // "$document"
-        if (doc.values()[7].status().success()) {
-            JsonNode restore  = MAPPER.readValue(doc.values()[7].value(), JsonNode.class);
-            casFromDocument = Optional.ofNullable(restore.path("CAS").textValue());
-            // Only present in 6.5+
-            revidFromDocument = Optional.ofNullable(restore.path("revid").textValue());
-            exptimeFromDocument = Optional.of(restore.path("exptime").asLong());
-            crc32FromDocument = Optional.ofNullable(restore.path("value_crc32c").textValue());
+        if (!doc.values()[7].status().success()) {
+            throw new IllegalStateException("$document requested but not received");
         }
+        // Read from $document
+        JsonNode restore = MAPPER.readValue(doc.values()[7].value(), JsonNode.class);
+        String casFromDocument = restore.path("CAS").textValue();
+        // Only present in 6.5+
+        String revidFromDocument = restore.path("revid").textValue();
+        Long exptimeFromDocument = restore.path("exptime").longValue();
+        String crc32FromDocument = restore.path("value_crc32c").textValue();
 
         byte[] content;
 
@@ -335,8 +345,7 @@ public class CoreTransactionGetResult {
         DocumentMetadata md = new DocumentMetadata(
                 casFromDocument,
                 revidFromDocument,
-                exptimeFromDocument,
-                crc32FromDocument);
+                exptimeFromDocument);
 
         CoreTransactionGetResult out = new CoreTransactionGetResult(documentId,
                 content,
@@ -344,7 +353,8 @@ public class CoreTransactionGetResult {
                 collection,
                 links,
                 Optional.of(md),
-                Optional.empty());
+                Optional.empty(),
+                Optional.of(crc32FromDocument));
 
         return out;
     }

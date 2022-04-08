@@ -106,7 +106,7 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                 .block();
     }
 
-    private Mono<Void> performOperation(ClusterConnection connection,
+    private Mono<?> performOperation(ClusterConnection connection,
                                   ReactiveTransactionAttemptContext ctx,
                                   TransactionCommand op,
                                   @Nullable StreamObserver<TransactionStreamPerformerToDriver> toTest) {
@@ -131,6 +131,11 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                 () -> {
                     if (request.getUseStashedResult()) {
                         throw new IllegalStateException("Concept of stashed result does not apply in batch/async mode");
+                    } else if (request.hasUseStashedSlot()) {
+                        if (!stashedGetMap.containsKey(request.getUseStashedSlot())) {
+                            throw new IllegalStateException("Do not have a stashed get in slot " + request.getUseStashedSlot());
+                        }
+                        return ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content);
                     } else {
                         final Collection collection = connection.collection(request.getDocId());
                         logger.info("Performing replace operation on docId {} to new content {} on collection {}",
@@ -147,6 +152,11 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                 () -> {
                     if (request.getUseStashedResult()) {
                         throw new IllegalStateException("Concept of stashed result does not apply in batch/async mode");
+                    } else if (request.hasUseStashedSlot()) {
+                        if (!stashedGetMap.containsKey(request.getUseStashedSlot())) {
+                            throw new IllegalStateException("Do not have a stashed get in slot " + request.getUseStashedSlot());
+                        }
+                        return ctx.remove(stashedGetMap.get(request.getUseStashedSlot()));
                     } else {
                         final Collection collection = connection.collection(request.getDocId());
 
@@ -291,12 +301,12 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
         }
     }
 
-    private Mono<Void> performOperation(Mono<Void> preOp,
+    private Mono<?> performOperation(Mono<Void> preOp,
                                         String opDebug,
                                         ReactiveTransactionAttemptContext ctx,
                                         List<ExpectedResult> expectedResults,
                                         boolean doNotPropagateError,
-                                        Supplier<Mono<Void>> op) {
+                                        Supplier<Mono<?>> op) {
         return Mono.defer(() -> {
             long now = System.currentTimeMillis();
 

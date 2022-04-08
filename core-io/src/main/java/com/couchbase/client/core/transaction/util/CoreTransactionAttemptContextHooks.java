@@ -40,6 +40,9 @@ public class CoreTransactionAttemptContextHooks {
     public static String HOOK_CREATE_STAGED_INSERT = "createdStagedInsert";
     public static String HOOK_REMOVE_DOC = "removeDoc";
     public static String HOOK_COMMIT_DOC = "commitDoc";
+    public static String HOOK_COMMIT_DOC_CHANGED = "commitDocChanged";
+    public static String HOOK_STAGING_DOC_CHANGED = "stagingDocChanged";
+    public static String HOOK_ROLLBACK_DOC_CHANGED = "rollbackDocChanged";
     public static String HOOK_QUERY = "query";
     public static String HOOK_QUERY_BEGIN_WORK = "queryBeginWork";
     public static String HOOK_QUERY_COMMIT = "queryCommit";
@@ -103,4 +106,7 @@ public class CoreTransactionAttemptContextHooks {
     public BiFunction<CoreTransactionAttemptContext, String, Mono<Integer>> beforeUnlockReplace = (ctx, x) -> Mono.just(1);
     public BiFunction<CoreTransactionAttemptContext, String, Mono<Integer>> beforeUnlockRemove = (ctx, x) -> Mono.just(1);
     public BiFunction<CoreTransactionAttemptContext, String, Mono<Integer>> beforeUnlockQuery = (ctx, x) -> Mono.just(1);
+    public BiFunction<CoreTransactionAttemptContext, String, Mono<Integer>> beforeDocChangedDuringStaging = (ctx, x) -> Mono.just(1);
+    public BiFunction<CoreTransactionAttemptContext, String, Mono<Integer>> beforeDocChangedDuringCommit = (ctx, x) -> Mono.just(1);
+    public BiFunction<CoreTransactionAttemptContext, String, Mono<Integer>> beforeDocChangedDuringRollback = (ctx, x) -> Mono.just(1);
 }

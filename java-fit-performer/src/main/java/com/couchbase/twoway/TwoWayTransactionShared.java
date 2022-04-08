@@ -58,7 +58,9 @@ import reactor.core.scheduler.Schedulers;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -97,6 +99,7 @@ public abstract class TwoWayTransactionShared {
     // We may need something more complex later with multiple stashed variables, but this will likely be enough for 90%
     // of cases.
     protected final AtomicReference<TransactionGetResult> stashedGet = new AtomicReference<>();
+    protected final Map<Integer, TransactionGetResult> stashedGetMap = new HashMap<>();
     protected final static ExpectedResult EXPECT_SUCCESS = ExpectedResult.newBuilder().setSuccess(true).build();
 
     //Class names for the QueryOptions and TransactionQueryOptions
@@ -288,6 +291,10 @@ public abstract class TwoWayTransactionShared {
 
     protected void handleGetResult(CommandGet request, TransactionGetResult getResult, ClusterConnection cc) {
         stashedGet.set(getResult);
+
+        if (request.hasStashInSlot()) {
+            stashedGetMap.put(request.getStashInSlot(), getResult);
+        }
 
         if (!request.getExpectedContentJson().isEmpty()) {
             JsonObject expected = JsonObject.fromJson(request.getExpectedContentJson());
@@ -485,7 +492,7 @@ public abstract class TwoWayTransactionShared {
         CountDownLatch latch = new CountDownLatch(request.getCommandsCount());
 
         return Flux.fromIterable(request.getCommandsList())
-                .doOnSubscribe(s -> logger.info("Running {} operations in parallel, concurrency={}",
+                .doOnSubscribe(s -> logger.info("Running {} operations, concurrency={}",
                         request.getCommandsCount(), request.getParallelism()))
                 .parallel(request.getParallelism())
                 .runOn(Schedulers.elastic())
@@ -520,9 +527,9 @@ public abstract class TwoWayTransactionShared {
                 .doOnError(v -> logger.info("Parallel ops have errored"));
     }
 
-    protected Mono<Void> performCommandBatch(CommandBatch request, Function<TransactionCommand, Mono<Void>> call) {
+    protected Mono<?> performCommandBatch(CommandBatch request, Function<TransactionCommand, Mono<?>> call) {
         return Flux.fromIterable(request.getCommandsList())
-                .doOnSubscribe(s -> logger.info("Running {} operations in parallel, concurrency={}",
+                .doOnSubscribe(s -> logger.info("Running {} operations, concurrency={}",
                         request.getCommandsCount(), request.getParallelism()))
                 .parallel(request.getParallelism())
                 .runOn(Schedulers.elastic())

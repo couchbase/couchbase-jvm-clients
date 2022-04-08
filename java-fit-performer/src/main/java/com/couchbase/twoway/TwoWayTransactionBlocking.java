@@ -156,6 +156,11 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                         logger.info("Performing replace operation on stashed get {} to new content {}",
                                 stashedGet.get(), request.getContentJson());
                         ctx.replace(stashedGet.get(), content);
+                    } else if (request.hasUseStashedSlot()) {
+                        if (!stashedGetMap.containsKey(request.getUseStashedSlot())) {
+                            throw new IllegalStateException("Do not have a stashed get in slot " + request.getUseStashedSlot());
+                        }
+                        ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content);
                     } else {
                         final Collection collection = connection.collection(request.getDocId());
                         logger.info("Performing replace operation on docId {} to new content {} on collection {}",
@@ -176,6 +181,11 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
 
                         logger.info("Performing remove operation on stashed get {}", stashedGet.get());
                         ctx.remove(stashedGet.get());
+                    } else if (request.hasUseStashedSlot()) {
+                        if (!stashedGetMap.containsKey(request.getUseStashedSlot())) {
+                            throw new IllegalStateException("Do not have a stashed get in slot " + request.getUseStashedSlot());
+                        }
+                        ctx.remove(stashedGetMap.get(request.getUseStashedSlot()));
                     } else {
                         final Collection collection = connection.collection(request.getDocId());
                         logger.info("Performing remove operation on docId on {}", request.getDocId().getDocId());

@@ -103,7 +103,6 @@ import com.couchbase.client.core.transaction.util.MonoBridge;
 import com.couchbase.client.core.transaction.util.QueryUtil;
 import com.couchbase.client.core.transaction.util.ReactiveLock;
 import com.couchbase.client.core.transaction.util.ReactiveWaitGroup;
-import com.couchbase.client.core.transaction.util.SchedulerUtil;
 import com.couchbase.client.core.transaction.util.TransactionKVHandler;
 import com.couchbase.client.core.transaction.util.TriFunction;
 import com.couchbase.client.core.transaction.error.internal.ErrorClass;
@@ -130,6 +129,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -140,6 +140,7 @@ import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE;
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.FAIL_AMBIGUOUS;
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.FAIL_ATR_FULL;
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.FAIL_CAS_MISMATCH;
+import static com.couchbase.client.core.transaction.error.internal.ErrorClass.FAIL_DOC_ALREADY_EXISTS;
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.FAIL_DOC_NOT_FOUND;
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.FAIL_EXPIRY;
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.FAIL_HARD;
@@ -148,6 +149,10 @@ import static com.couchbase.client.core.transaction.error.internal.ErrorClass.FA
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.FAIL_TRANSIENT;
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.TRANSACTION_OPERATION_FAILED;
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.classify;
+import static com.couchbase.client.core.transaction.util.CoreTransactionAttemptContextHooks.HOOK_COMMIT_DOC_CHANGED;
+import static com.couchbase.client.core.transaction.util.CoreTransactionAttemptContextHooks.HOOK_ROLLBACK_DOC_CHANGED;
+import static com.couchbase.client.core.transaction.util.CoreTransactionAttemptContextHooks.HOOK_STAGING_DOC_CHANGED;
+import static com.couchbase.client.core.transaction.util.SchedulerUtil.scheduler;
 
 /**
  * Provides methods to allow an application's transaction logic to read, mutate, insert and delete documents, as well
@@ -404,7 +409,7 @@ public class CoreTransactionAttemptContext {
                     // Use the staged content as the body.  The staged content in the output TransactionGetResult should not be used for anything so we are safe to pass null.
                     return unlock(lockToken, "found own-write of mutation")
                             .then(Mono.just(Optional.of(createTransactionGetResult(ow.operationId, collection, id, ow.content, null, ow.cas,
-                                    ow.documentMetadata, ow.type.toString()))));
+                                    ow.documentMetadata, ow.type.toString(), ow.crc32))));
                 }
             }
             Optional<StagedMutation> ownRemove = stagedRemovesLocked().stream().filter(v -> {
@@ -435,7 +440,7 @@ public class CoreTransactionAttemptContext {
                             pspan,
                             resolvingMissingATREntry))
 
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
@@ -563,6 +568,7 @@ public class CoreTransactionAttemptContext {
                             long cas = Long.parseLong(scas);
                             // Will only be present if doc was in a transaction
                             JsonNode txnMeta = row.path("txnMeta");
+                            Optional<String> crc32 = Optional.ofNullable(row.path("crc32").textValue());
 
                             logger().info(attemptId, "got doc %s from query with scas=%s meta=%s",
                                 DebugUtil.docId(collection, id), scas, txnMeta.isMissingNode() ? "null" : txnMeta.textValue());
@@ -573,7 +579,8 @@ public class CoreTransactionAttemptContext {
                                     collection,
                                     null,
                                     Optional.empty(),
-                                    txnMeta.isMissingNode() ? Optional.empty() : Optional.of(txnMeta)));
+                                    txnMeta.isMissingNode() ? Optional.empty() : Optional.of(txnMeta),
+                                    crc32));
                         }
                         return ret;
                     })
@@ -706,7 +713,7 @@ public class CoreTransactionAttemptContext {
                         // Use the doc of the remove to ensure CAS
                         // It is ok to pass null for contentOfBody, since we are replacing a remove
                         return createStagedReplace(operationId, existing.get().collection, existing.get().id, existing.get().cas,
-                                existing.get().documentMetadata, content, null, span, false);
+                                existing.get().documentMetadata, existing.get().crc32, content, null, span, false);
                     } else {
                         return createStagedInsert(operationId, collection, id, content, span, Optional.empty());
                     }
@@ -922,7 +929,7 @@ public class CoreTransactionAttemptContext {
             return lockAndIncKVOps(lockDebug)
 
                     // In case the user has selected some scheduler inside the lambda, move to our own
-                    .subscribeOn(SchedulerUtil.scheduler)
+                    .subscribeOn(scheduler)
 
                     .flatMap(lockTokens ->
                             Mono.defer(() -> {
@@ -982,7 +989,7 @@ public class CoreTransactionAttemptContext {
                 return lock(lockDebug)
 
                         // In case the user has selected some scheduler inside the lambda, move to our own
-                        .subscribeOn(SchedulerUtil.scheduler)
+                        .subscribeOn(scheduler)
 
                         .flatMap(lockToken -> {
                             // Query is done under lock, except for BEGIN WORK which needs to relock.  Since this changes the lock
@@ -1052,7 +1059,8 @@ public class CoreTransactionAttemptContext {
                                     return createStagedInsert(operationId, doc.collection(), doc.id(), content, pspan,
                                             Optional.of(doc.cas()));
                                 } else {
-                                    return createStagedReplace(operationId, doc.collection(), doc.id(), doc.cas(), doc.documentMetadata(), content, doc.contentAsBytes(), pspan, doc.links().isDeleted());
+                                    return createStagedReplace(operationId, doc.collection(), doc.id(), doc.cas(),
+                                            doc.documentMetadata(), doc.crc32OfGet(), content, doc.contentAsBytes(), pspan, doc.links().isDeleted());
                                 }
                             }));
                 }));
@@ -1160,6 +1168,7 @@ public class CoreTransactionAttemptContext {
                         String scas = row.path("scas").textValue();
                         long cas = Long.parseLong(scas);
                         JsonNode updatedDoc = row.path("doc");
+                        Optional<String> crc32 = Optional.ofNullable(row.path("crc32").textValue());
 
                         return new CoreTransactionGetResult(doc.id(),
                                 content,
@@ -1167,7 +1176,8 @@ public class CoreTransactionAttemptContext {
                                 doc.collection(),
                                 null,
                                 Optional.empty(),
-                                Optional.empty());
+                                Optional.empty(),
+                                crc32);
                     })
 
                     .onErrorResume(err -> {
@@ -1309,7 +1319,7 @@ public class CoreTransactionAttemptContext {
                         .exponentialBackoff(Duration.ofMillis(50), Duration.ofMillis(500))
                         .timeout(Duration.ofSeconds(1))
                         .toReactorRetry())
-                .publishOn(SchedulerUtil.scheduler) // after retryWhen triggers, it's on parallel scheduler
+                .publishOn(scheduler) // after retryWhen triggers, it's on parallel scheduler
 
                 .onErrorResume(err -> {
                     if (err instanceof RetryExhaustedException) {
@@ -1402,7 +1412,7 @@ public class CoreTransactionAttemptContext {
                                             new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", new byte[]{0}, false, false, false, 4)
                                             ), logger()))
 
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     // Testing hook
                     .flatMap(v -> hooks.afterAtrPending.apply(this).map(x -> v))
@@ -1433,7 +1443,7 @@ public class CoreTransactionAttemptContext {
                         } else if (ec == FAIL_AMBIGUOUS) {
                             LOGGER.info(attemptId, "retrying the op on %s to resolve ambiguity", ec);
 
-                            return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, SchedulerUtil.scheduler)
+                            return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, scheduler)
                                     .then(atrPendingLocked(collection, span));
                         } else if (ec == FAIL_PATH_ALREADY_EXISTS) {
                             LOGGER.info(attemptId, "assuming this is caused by resolved ambiguity, and proceeding as though successful", ec);
@@ -1463,6 +1473,7 @@ public class CoreTransactionAttemptContext {
     /*
      * Stage a replace on a document, putting the staged mutation into the doc's xattrs.  The document's content is
      * left unchanged.
+     * documentMetadata is optional to handle insert->replace case
      */
     private Mono<CoreTransactionGetResult>
     createStagedReplace(String operationId,
@@ -1470,6 +1481,7 @@ public class CoreTransactionAttemptContext {
                         String id,
                         long cas,
                         Optional<DocumentMetadata> documentMetadata,
+                        Optional<String> crc32OfGet,
                         byte[] contentToStage,
                         byte[] contentOfBody,
                         SpanWrapper pspan,
@@ -1490,7 +1502,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "txn.op.crc32", serialize("${Mutation.value_crc32c}"), false, true, true, 2)
                             )))
 
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     .doOnSubscribe(v -> {
                         LOGGER.info(attemptId, "about to replace doc %s with cas %d, accessDeleted=%s",
@@ -1508,16 +1520,16 @@ public class CoreTransactionAttemptContext {
 
                     // Save the new CAS
                     .flatMap(updatedDoc -> {
-                        CoreTransactionGetResult out = createTransactionGetResult(operationId, collection, id, contentToStage, contentOfBody, updatedDoc.cas(), documentMetadata, OperationTypes.REPLACE);
-                        return addStagedMutation(new StagedMutation(operationId, id, collection, updatedDoc.cas(), documentMetadata, contentToStage, StagedMutationType.REPLACE))
+                        CoreTransactionGetResult out = createTransactionGetResult(operationId, collection, id, contentToStage,
+                                contentOfBody, updatedDoc.cas(), documentMetadata, OperationTypes.REPLACE, crc32OfGet);
+                        return addStagedMutation(new StagedMutation(operationId, id, collection, updatedDoc.cas(), documentMetadata, crc32OfGet, contentToStage, StagedMutationType.REPLACE))
                                 .thenReturn(out);
                     })
 
                     .onErrorResume(err -> {
-                        return handleErrorOnStagedMutation("replacing", collection, id, err, span.elapsedMicros())
-                                // This line needed to make it compile.  It won't actually trigger - all results from
-                                // handleErrorOnStagedMutation already error.
-                                .then(Mono.error(err));
+                        return handleErrorOnStagedMutation("replacing", collection, id, err, span, crc32OfGet,
+                                (newCas) -> createStagedReplace(operationId, collection, id, newCas, documentMetadata,
+                                        crc32OfGet, contentToStage, contentOfBody, pspan, accessDeleted));
                     })
 
                     .doFinally(v -> span.finish())
@@ -1539,7 +1551,8 @@ public class CoreTransactionAttemptContext {
                                                                 @Nullable byte[] stagedContent,
                                                                 long cas,
                                                                 Optional<DocumentMetadata> documentMetadata,
-                                                                String opType) {
+                                                                String opType,
+                                                                Optional<String> crc32OfFetch) {
         String stagedContentAsStr = stagedContent == null ? null : new String(stagedContent, StandardCharsets.UTF_8);
         TransactionLinks links = new TransactionLinks(
                 Optional.ofNullable(stagedContentAsStr),
@@ -1564,7 +1577,8 @@ public class CoreTransactionAttemptContext {
                 collection,
                 links,
                 documentMetadata,
-                Optional.empty()
+                Optional.empty(),
+                crc32OfFetch
         );
 
         return out;
@@ -1591,9 +1605,9 @@ public class CoreTransactionAttemptContext {
 
         ObjectNode restore = Mapper.createObjectNode();
 
-        documentMetadata.flatMap(DocumentMetadata::cas).ifPresent(v -> restore.put("CAS", v));
-        documentMetadata.flatMap(DocumentMetadata::exptime).ifPresent(v -> restore.put("exptime", v));
-        documentMetadata.flatMap(DocumentMetadata::revid).ifPresent(v -> restore.put("revid", v));
+        documentMetadata.map(DocumentMetadata::cas).ifPresent(v -> restore.put("CAS", v));
+        documentMetadata.map(DocumentMetadata::exptime).ifPresent(v -> restore.put("exptime", v));
+        documentMetadata.map(DocumentMetadata::revid).ifPresent(v -> restore.put("revid", v));
 
         if (restore.size() > 0) {
             ret.set("restore", restore);
@@ -1610,27 +1624,24 @@ public class CoreTransactionAttemptContext {
      * Stage a remove on a document.  This involves putting a marker into the document's xattrs.  The document's
      * content is left unchanged.
      */
-    private Mono<Void> createStagedRemove(String operationId, CoreTransactionGetResult doc, SpanWrapper pspan, boolean accessDeleted) {
+    private Mono<Void> createStagedRemove(String operationId, CoreTransactionGetResult doc, long cas, SpanWrapper pspan, boolean accessDeleted) {
         return Mono.defer(() -> {
             SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), doc.collection(), doc.id(), "staging.remove", pspan);
+
+            LOGGER.info(attemptId, "about to remove doc %s with cas %d", DebugUtil.docId(doc), cas);
 
             byte[] txn = createDocumentMetadata(OperationTypes.REMOVE, operationId, doc.documentMetadata());
 
             return hooks.beforeStagedRemove.apply(this, doc.id()) // testing hook
 
-                    .doOnSubscribe(x -> {
-                        LOGGER.info(attemptId, "about to remove doc %s with cas %d",
-                                DebugUtil.docId(doc), doc.cas());
-                    })
-
                     .then(TransactionKVHandler.mutateIn(core, doc.collection(), doc.id(), kvTimeoutMutating(),
-                            false, false, false, accessDeleted, false, doc.cas(), durabilityLevel(), OptionsUtil.createClientContext("createStagedReplace"), span,
+                            false, false, false, accessDeleted, false, cas, durabilityLevel(), OptionsUtil.createClientContext("createStagedReplace"), span,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, "txn", txn, true, true, false, 0),
                                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "txn.op.crc32", serialize("${Mutation.value_crc32c}"), false, true, true, 2)
                             )))
 
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     .flatMap(updatedDoc -> hooks.afterStagedRemoveComplete.apply(this, doc.id()) // Testing hook
                             .thenReturn(updatedDoc))
@@ -1641,12 +1652,14 @@ public class CoreTransactionAttemptContext {
                                 DebugUtil.docId(doc), response.cas(), elapsed);
                         // Save so the staged mutation can be committed/rolled back with the correct CAS
                         doc.cas(response.cas());
-                        return addStagedMutation(new StagedMutation(operationId, doc.id(), doc.collection(), doc.cas(), doc.documentMetadata(), null, StagedMutationType.REMOVE));
+                        return addStagedMutation(new StagedMutation(operationId, doc.id(), doc.collection(), doc.cas(),
+                                doc.documentMetadata(), doc.crc32OfGet(), null, StagedMutationType.REMOVE));
                     })
 
                     .then()
 
-                    .onErrorResume(err -> handleErrorOnStagedMutation("removing", doc.collection(), doc.id(), err, span.elapsedMicros()))
+                    .onErrorResume(err -> handleErrorOnStagedMutation("removing", doc.collection(), doc.id(), err, span, doc.crc32OfGet(),
+                            (newCas) -> createStagedRemove(operationId, doc, newCas, span, accessDeleted)))
 
                     .doOnError(err -> failSpan(span, err))
                     .doFinally(v -> span.finish());
@@ -1676,12 +1689,13 @@ public class CoreTransactionAttemptContext {
         });
     }
 
-    private Mono<Void> handleErrorOnStagedMutation(String stage, CollectionIdentifier collection, String id, Throwable err, long elapsedMicros) {
+    private <T> Mono<T> handleErrorOnStagedMutation(String stage, CollectionIdentifier collection, String id, Throwable err, SpanWrapper pspan,
+                                                Optional<String> crc32FromGet, Function<Long, Mono<T>> callback) {
         ErrorClass ec = classify(err);
         TransactionOperationFailedException.Builder out = createError().cause(err);
 
         LOGGER.info(attemptId, "error while %s doc %s in %dus: %s",
-                stage, DebugUtil.docId(collection, id), elapsedMicros, dbg(err));
+                stage, DebugUtil.docId(collection, id), pspan.elapsedMicros(), dbg(err));
 
         if (expiryOvertimeMode) {
             LOGGER.warn(attemptId, "should not reach here in expiryOvertimeMode");
@@ -1689,7 +1703,9 @@ public class CoreTransactionAttemptContext {
 
         if (ec == FAIL_EXPIRY) {
             return setExpiryOvertimeModeAndFail(err, stage, ec);
-        } else if (ec == FAIL_DOC_NOT_FOUND || ec == FAIL_CAS_MISMATCH) {
+        } else if (ec == FAIL_CAS_MISMATCH) {
+            return handleDocChangedDuringStaging(pspan, id, collection, crc32FromGet, callback);
+        } else if (ec == FAIL_DOC_NOT_FOUND) {
             return Mono.error(operationFailed(createError().retryTransaction().build()));
         } else if (ec == FAIL_AMBIGUOUS || ec == FAIL_TRANSIENT) {
             return Mono.error(operationFailed(out.retryTransaction().build()));
@@ -1734,7 +1750,7 @@ public class CoreTransactionAttemptContext {
 
                 .then(DocumentGetter.justGetDoc(core, collection, id, kvTimeoutNonMutating(),  pspan, true, logger()))
 
-                .publishOn(SchedulerUtil.scheduler)
+                .publishOn(scheduler)
 
                 .doOnSubscribe(x -> LOGGER.info(attemptId, "%s getting doc (which may be a tombstone)", bp))
 
@@ -1783,7 +1799,8 @@ public class CoreTransactionAttemptContext {
                                                 LOGGER.info(attemptId, "%s doc %s has the same operation id, must be a resolved ambiguity, proceeding",
                                                         bp, DebugUtil.docId(collection, id));
 
-                                                return addStagedMutation(new StagedMutation(operationId, r.id(), r.collection(), r.cas(), r.documentMetadata(), r.links().stagedContent().get().getBytes(StandardCharsets.UTF_8), StagedMutationType.INSERT))
+                                                return addStagedMutation(new StagedMutation(operationId, r.id(), r.collection(), r.cas(),
+                                                        r.documentMetadata(), r.crc32OfGet(), r.links().stagedContent().get().getBytes(StandardCharsets.UTF_8), StagedMutationType.INSERT))
                                                         .thenReturn(r);
                                             }
 
@@ -1897,7 +1914,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, "txn.op.crc32", serialize("${Mutation.value_crc32c}"), false, true, true, 2)
                             )))
 
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     .flatMap(response -> hooks.afterStagedInsertComplete.apply(this, id).thenReturn(response)) // testing hook
 
@@ -1919,7 +1936,8 @@ public class CoreTransactionAttemptContext {
                                 atrCollection.get().collection().get(),
                                 updatedDoc.cas());
 
-                        return addStagedMutation(new StagedMutation(operationId, out.id(), out.collection(), out.cas(), out.documentMetadata(), content, StagedMutationType.INSERT))
+                        return addStagedMutation(new StagedMutation(operationId, out.id(), out.collection(), out.cas(),
+                                out.documentMetadata(), Optional.empty(), content, StagedMutationType.INSERT))
                                 .thenReturn(out);
                     })
 
@@ -1939,13 +1957,13 @@ public class CoreTransactionAttemptContext {
                             } else if (ec == FAIL_EXPIRY) {
                                 return setExpiryOvertimeModeAndFail(err, CoreTransactionAttemptContextHooks.HOOK_CREATE_STAGED_INSERT, ec);
                             } else if (ec == FAIL_AMBIGUOUS) {
-                                return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, SchedulerUtil.scheduler)
+                                return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, scheduler)
                                         .then(createStagedInsert(operationId, collection, id, content, span, cas));
                             } else if (ec == FAIL_TRANSIENT) {
                                 return Mono.error(operationFailed(out.retryTransaction().build()));
                             } else if (ec == FAIL_HARD) {
                                 return Mono.error(operationFailed(out.doNotRollbackAttempt().build()));
-                            } else if (ec == ErrorClass.FAIL_DOC_ALREADY_EXISTS
+                            } else if (ec == FAIL_DOC_ALREADY_EXISTS
                                     || ec == FAIL_CAS_MISMATCH) {
                                 return handleDocExistsDuringStagedInsert(operationId, collection, id, content, span);
                             } else {
@@ -2011,7 +2029,7 @@ public class CoreTransactionAttemptContext {
 
                                 .then(initATRIfNeeded(mayNeedToWriteATR, doc.collection(), doc.id(), span))
 
-                                .then(createStagedRemove(operationId, doc, span, doc.links().isDeleted()));
+                                .then(createStagedRemove(operationId, doc, doc.cas(), span, doc.links().isDeleted()));
                     }));
                 });
     }
@@ -2237,7 +2255,7 @@ public class CoreTransactionAttemptContext {
                     return commitActualLocked(span);
                 }
             }
-        }).subscribeOn(SchedulerUtil.scheduler);
+        }).subscribeOn(scheduler);
     }
 
     private Mono<Void> commitActualLocked(SpanWrapper span) {
@@ -2356,7 +2374,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, prefix, null, false, true, false, 0)
                             )))
 
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     .flatMap(v -> hooks.afterAtrComplete.apply(this))  // Testing hook
 
@@ -2459,7 +2477,7 @@ public class CoreTransactionAttemptContext {
                         if (expiryOvertimeMode) {
                             return mapErrorInOvertimeToExpired(true, CoreTransactionAttemptContextHooks.HOOK_REMOVE_DOC, err, FinalErrorToRaise.TRANSACTION_FAILED_POST_COMMIT);
                         } else if (ec == FAIL_AMBIGUOUS) {
-                            return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, SchedulerUtil.scheduler)
+                            return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, scheduler)
                                     .then(removeDocLocked(span, collection, id, true));
                         } else if (ec == FAIL_DOC_NOT_FOUND) {
                             return Mono.error(operationFailed(e.build()));
@@ -2488,7 +2506,7 @@ public class CoreTransactionAttemptContext {
 
             // TXNJ-64 - commit in the order the docs were staged
             return Flux.fromIterable(stagedMutationsLocked)
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     .concatMap(staged -> {
                         return commitDocWrapperLocked(span, staged);
@@ -2513,45 +2531,50 @@ public class CoreTransactionAttemptContext {
     private static String msgDocChangedUnexpectedly(CollectionIdentifier collection, String id) {
         return "Tried committing document " + DebugUtil.docId(collection, id) + ", but found that it has " +
                 "been modified by another party in-between staging and committing.  The application must ensure that " +
-                "non-transactional writes cannot happen at the same time as transactional writes on a document.  The " +
-                "change will be committed with CAS=0, which will overwrite the other change. " +
+                "non-transactional writes cannot happen at the same time as transactional writes on a document." +
                 " This document may need manual review to verify that no changes have been lost.";
     }
 
-    private static String msgDocRemovedUnexpectedly(CollectionIdentifier collection, String id) {
-        return "Tried committing document " + DebugUtil.docId(collection, id) + ", but found that it has " +
-                "been removed by another party in-between replacing and committing.  " +
-                "The " + "application must ensure " + "that non-transactional writes cannot happen at" +
-                " " + "the" + " same time as transactional writes" + " on a document.  The document " +
-                "will be left removed, and the transaction's changes will not be written to this document.";
+    private static String msgDocRemovedUnexpectedly(CollectionIdentifier collection, String id, boolean willBeWritten) {
+        if (willBeWritten) {
+            return "Tried committing document " + DebugUtil.docId(collection, id) + ", but found that it has " +
+                    "been removed by another party in-between staging and committing.  " +
+                    "The application must ensure that non-transactional writes cannot happen at" +
+                    " the same time as transactional writes on a document.  The document will be written.";
+        }
+        else {
+            return "Tried committing document " + DebugUtil.docId(collection, id) + ", but found that it has " +
+                    "been removed by another party in-between staging and committing.  " +
+                    "The application must ensure that non-transactional writes cannot happen at" +
+                    " the same time as transactional writes on a document.  The document " +
+                    "will be left removed, and the transaction's changes will not be written to this document";
+        }
     }
-
     private Mono<Void> commitDocWrapperLocked(SpanWrapper pspan,
                                               StagedMutation staged) {
         return Mono.defer(() -> {
             if (staged.type == StagedMutationType.REMOVE) {
                 return removeDocLocked(pspan, staged.collection, staged.id, false);
             } else {
-                return commitDocLocked(pspan, staged, false, staged.type == StagedMutationType.INSERT, false);
+                return commitDocLocked(pspan, staged, staged.cas,staged.type == StagedMutationType.INSERT, false);
             }
         });
     }
 
     private Mono<Void> commitDocLocked(SpanWrapper pspan,
                                        StagedMutation staged,
-                                       boolean casZeroMode,
+                                       long cas,
                                        boolean insertMode,
                                        boolean ambiguityResolutionMode) {
         return Mono.defer(() -> {
             assertLocked("commitDoc");
             String id = staged.id;
             CollectionIdentifier collection = staged.collection;
-            long cas = staged.cas;
             SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "commit.doc", pspan);
 
             return Mono.fromRunnable(() -> {
-                LOGGER.info(attemptId, "commit - committing doc %s, casZeroMode=%s, insertMode=%s, ambiguity-resolution=%s",
-                        DebugUtil.docId(collection, id), casZeroMode, insertMode, ambiguityResolutionMode);
+                LOGGER.info(attemptId, "commit - committing doc %s, cas=%d, insertMode=%s, ambiguity-resolution=%s",
+                        DebugUtil.docId(collection, id), cas, insertMode, ambiguityResolutionMode);
 
                 checkExpiryDuringCommitOrRollbackLocked(CoreTransactionAttemptContextHooks.HOOK_COMMIT_DOC, Optional.of(id));
             })
@@ -2565,7 +2588,7 @@ public class CoreTransactionAttemptContext {
                                     .map(v -> v.cas());
                         } else {
                             return TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
-                                    false, false, false, false, false, casZeroMode ? 0 : cas, durabilityLevel(),
+                                    false, false, false, false, false, cas, durabilityLevel(),
                                     OptionsUtil.createClientContext("commitDoc"), span,
                                     Arrays.asList(
                                             // Upsert this field to better handle illegal doc mutation.  E.g. run shadowDocSameTxnKVInsert without this,
@@ -2578,7 +2601,7 @@ public class CoreTransactionAttemptContext {
                         }
                     }))
 
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     // Testing hook
                     .flatMap(v -> hooks.afterDocCommittedBeforeSavingCAS.apply(this, id).thenReturn(v))
@@ -2607,43 +2630,21 @@ public class CoreTransactionAttemptContext {
                             LOGGER.warn(attemptId, "%s while committing doc %s: as op is ambiguously successful, retrying " +
                                     "op in ambiguity-resolution mode", DebugUtil.dbg(err), DebugUtil.docId(collection, id));
 
-                            return commitDocLocked(span, staged, casZeroMode, insertMode, true).thenReturn(0);
+                            return commitDocLocked(span, staged, cas, insertMode, true).thenReturn(0);
                         } else if (ec == FAIL_CAS_MISMATCH) {
+                            return handleDocChangedDuringCommit(pspan, staged, insertMode).thenReturn(0);
+                        } else if (ec == FAIL_DOC_NOT_FOUND) {
+                            return handleDocMissingDuringCommit(pspan, staged);
+                        } else if (ec == FAIL_DOC_ALREADY_EXISTS) { // includes CannotReviveAliveDocumentException
                             if (ambiguityResolutionMode) {
-                                return Mono.error(operationFailed(e.build()));
+                                return Mono.error(e.build());
                             } else {
-                                // See CASFailures.md
                                 String msg = msgDocChangedUnexpectedly(collection, id);
                                 LOGGER.warn(attemptId, msg);
-
                                 LOGGER.eventBus().publish(new IllegalDocumentStateEvent(Event.Severity.WARN, msg, id));
-
-                                // Pass on ambiguityResolutionMode to handle situation of
-                                // Ambiguous -> OtherFailure* -> CASMismatch
-                                return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, SchedulerUtil.scheduler)
-                                        .then(commitDocLocked(span, staged, true, false, ambiguityResolutionMode)
-                                                .thenReturn(0));
-                            }
-                        } else if (ec == FAIL_DOC_NOT_FOUND) {
-                            String msg = msgDocRemovedUnexpectedly(collection, id);
-                            LOGGER.warn(attemptId, msg);
-
-                            LOGGER.eventBus().publish(new IllegalDocumentStateEvent(Event.Severity.WARN, msg, id));
-
-                            return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, SchedulerUtil.scheduler)
-                                    .then(commitDocLocked(span, staged, false, true, ambiguityResolutionMode)
-                                            .thenReturn(0));
-                        } else if (ec == ErrorClass.FAIL_DOC_ALREADY_EXISTS) {
-                            if (ambiguityResolutionMode) {
-                                return Mono.error(operationFailed(e.build()));
-                            } else {
-                                String msg = msgDocRemovedUnexpectedly(collection, id);
-                                LOGGER.warn(attemptId, msg);
-
-                                LOGGER.eventBus().publish(new IllegalDocumentStateEvent(Event.Severity.WARN, msg, id));
-
-                                return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, SchedulerUtil.scheduler)
-                                        .then(commitDocLocked(span, staged, true, false, ambiguityResolutionMode)
+                                // Redo as a replace, which will of course fail on CAS.
+                                return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION)
+                                        .then(commitDocLocked(span, staged, cas, false, ambiguityResolutionMode)
                                                 .thenReturn(0));
                             }
                         } else if (ec == FAIL_HARD) {
@@ -2657,6 +2658,290 @@ public class CoreTransactionAttemptContext {
 
                     .doOnError(err -> failSpan(span, err))
                     .doFinally(v -> span.finish());
+        });
+    }
+
+    private Mono<Integer> handleDocMissingDuringCommit(SpanWrapper pspan,
+                                                       StagedMutation staged) {
+        return Mono.defer(() -> {
+            String msg = msgDocRemovedUnexpectedly(staged.collection, staged.id, true);
+            LOGGER.warn(attemptId, msg);
+            LOGGER.eventBus().publish(new IllegalDocumentStateEvent(Event.Severity.WARN, msg, staged.id));
+            return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION)
+                    .then(commitDocLocked(pspan, staged, 0, true, false)
+                            .thenReturn(0));
+        });
+    }
+
+    static class DocChanged {
+        public final boolean unclearIfBodyHasChanged;
+        public final boolean bodyHasChanged;
+        public final boolean inDifferentTransaction;
+        public final boolean notInTransaction;
+
+        public DocChanged(boolean unclearIfBodyHasChanged, boolean bodyHasChanged, boolean inDifferentTransaction, boolean notInTransaction) {
+            this.unclearIfBodyHasChanged = unclearIfBodyHasChanged;
+            this.bodyHasChanged = bodyHasChanged;
+            this.inDifferentTransaction = inDifferentTransaction;
+            this.notInTransaction = notInTransaction;
+        }
+
+        public boolean inSameTransaction() {
+            return !notInTransaction && !inDifferentTransaction;
+        }
+    }
+    /**
+     * Called after fetching a document, to determine what parts of it have changed.
+     *
+     * @param crc32Then the CRC32 at time of older fetch. Could be from ctx.get(), or the one written at time of staging.
+     *                  There are many times where this is unavailable, hence it being optional.  e.g. if CAS conflict
+     *                  between get and replace, or if the get was with a version of query that doesn't return CRC, or if the
+     *                  first op was an insert (no body to create a CRC32 from).
+     * @param crc32Now the CRC32 now, e.g. what has just been fetched.
+     */
+    private DocChanged getDocChanged(CoreTransactionGetResult gr, String stage, Optional<String> crc32Then, String crc32Now) {
+        // Note that in some cases we're not sure if body has changed,
+        boolean unclearIfBodyHasChanged = !crc32Then.isPresent();
+        boolean bodyHasChanged = crc32Then.isPresent()
+                && !crc32Now.equals(crc32Then.get());
+        boolean inDifferentTransaction = gr.links() != null
+                && gr.links().stagedAttemptId().isPresent()
+                && !gr.links().stagedAttemptId().get().equals(attemptId);
+        boolean notInTransaction = gr.links() == null
+                || !gr.links().isDocumentInTransaction();
+        DocChanged out = new DocChanged(unclearIfBodyHasChanged, bodyHasChanged, inDifferentTransaction, notInTransaction);
+
+        LOGGER.info(attemptId, "handling doc changed during %s fetched doc %s, unclearIfBodyHasChanged = %s, bodyHasChanged = %s, inDifferentTransaction = %s, notInTransaction = %s, inSameTransaction = %s links = %s metadata = %s cas = %s crc32Then = %s, crc32Now = %s",
+                stage, DebugUtil.docId(gr.collection(), gr.id()), unclearIfBodyHasChanged, bodyHasChanged,
+                inDifferentTransaction, notInTransaction, out.inSameTransaction(), gr.links(), gr.documentMetadata(), gr.cas(), crc32Then, crc32Now);
+
+        return out;
+    }
+
+    // No need to pass ambiguityResolutionMode - we are about to resolve the ambiguity
+    private Mono<Void> handleDocChangedDuringCommit(SpanWrapper pspan,
+                                                    StagedMutation staged,
+                                                    boolean insertMode) {
+        return Mono.defer(() -> {
+            String id = staged.id;
+            CollectionIdentifier collection = staged.collection;
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "commit.doc_changed", pspan);
+            return Mono.fromRunnable(() -> {
+                        LOGGER.info(attemptId, "commit - handling doc changed %s, insertMode=%s",
+                                DebugUtil.docId(collection, id), insertMode);
+                        if (hasExpiredClientSide(HOOK_COMMIT_DOC_CHANGED, Optional.of(staged.id))) {
+                            LOGGER.info(attemptId, "has expired in stage %s", HOOK_COMMIT_DOC_CHANGED);
+                            throw operationFailed(createError()
+                                    .raiseException(FinalErrorToRaise.TRANSACTION_FAILED_POST_COMMIT)
+                                    .doNotRollbackAttempt()
+                                    .cause(new AttemptExpiredException("Attempt has expired in stage " + HOOK_COMMIT_DOC_CHANGED))
+                                    .build());
+                        }
+                    })
+                    .then(hooks.beforeDocChangedDuringCommit.apply(this, id)) // testing hook
+                    .then(DocumentGetter.getAsync(core, LOGGER, staged.collection, config, staged.id, attemptId, true, span, Optional.empty()))
+                    .publishOn(scheduler)
+                    .onErrorResume(err -> {
+                        ErrorClass ec = classify(err);
+                        LOGGER.info(attemptId, "commit - handling doc changed %s, got error %s",
+                                DebugUtil.docId(collection, id), dbg(err));
+                        if (ec == TRANSACTION_OPERATION_FAILED) {
+                            return Mono.error(err);
+                        } else if (ec == FAIL_TRANSIENT) {
+                            return Mono.error(new RetryOperationException());
+                        } else {
+                            return Mono.error(operationFailed(createError()
+                                    .doNotRollbackAttempt()
+                                    .raiseException(FinalErrorToRaise.TRANSACTION_FAILED_POST_COMMIT)
+                                    .cause(err)
+                                    .build()));
+                        }
+                        // FAIL_DOC_NOT_FOUND handled elsewhere in this function
+                    })
+                    .flatMap(doc -> {
+                        if (doc.isPresent()) {
+                            CoreTransactionGetResult gr = doc.get();
+                            DocChanged dc = getDocChanged(gr,
+                                    "commit",
+                                    // This will usually be present, from staging. But could have got an ERR_AMBIG while committing the doc, and it actually succeeded.  In which case this will be empty.
+                                    gr.links().crc32OfStaging(),
+                                    gr.crc32OfGet().get()        // this must be present as just fetched with $document
+                            );
+                            return forwardCompatibilityCheck(ForwardCompatibilityStage.CAS_MISMATCH_DURING_COMMIT, gr.links().forwardCompatibility())
+                                    .then(Mono.defer(() -> {
+                                        if (dc.inDifferentTransaction || dc.notInTransaction) {
+                                            return Mono.empty();
+                                        } else {
+                                            // Doc is still in same attempt
+                                            if (dc.bodyHasChanged) {
+                                                String msg = msgDocChangedUnexpectedly(staged.collection, staged.id);
+                                                LOGGER.warn(attemptId, msg);
+                                                LOGGER.eventBus().publish(new IllegalDocumentStateEvent(Event.Severity.WARN, msg, staged.id));
+                                            }
+                                            // Retry committing the doc, with the new CAS
+                                            return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION)
+                                                    .then(commitDocLocked(span, staged, gr.cas(), insertMode, false));
+                                        }
+                                    }));
+                        } else {
+                            return handleDocMissingDuringCommit(span, staged);
+                        }
+                    })
+                    .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY_WITH_FIXED_RETRY)
+                    .doFinally(v -> span.finish())
+                    .then();
+        });
+    }
+
+    private <T> Mono<T> handleDocChangedDuringStaging(SpanWrapper pspan,
+                                                      String id,
+                                                      CollectionIdentifier collection,
+                                                      Optional<String> crc32FromGet,
+                                                      Function<Long, Mono<T>> callback) {
+        return Mono.defer(() -> {
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "staging.doc_changed", pspan);
+            return Mono.fromRunnable(() -> {
+                        LOGGER.info(attemptId, "handling doc changed during staging %s",
+                                DebugUtil.docId(collection, id));
+                        throwIfExpired(id, HOOK_STAGING_DOC_CHANGED);
+                    })
+                    .then(hooks.beforeDocChangedDuringStaging.apply(this, id)) // testing hook
+                    .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty()))
+                    .publishOn(scheduler)
+                    .onErrorResume(err -> {
+                        ErrorClass ec = classify(err);
+                        LOGGER.info(attemptId, "handling doc changed during staging %s, got error %s",
+                                DebugUtil.docId(collection, id), dbg(err));
+                        if (ec == TRANSACTION_OPERATION_FAILED) {
+                            return Mono.error(err);
+                        } else if (ec == FAIL_TRANSIENT) {
+                            return Mono.error(new RetryOperationException());
+                        } else if (ec == FAIL_HARD) {
+                            return Mono.error(operationFailed(createError()
+                                    .doNotRollbackAttempt()
+                                    .raiseException(FinalErrorToRaise.TRANSACTION_FAILED)
+                                    .cause(err)
+                                    .build()));
+                        } else {
+                            return Mono.error(operationFailed(createError()
+                                    .retryTransaction()
+                                    .raiseException(FinalErrorToRaise.TRANSACTION_FAILED)
+                                    .cause(err)
+                                    .build()));
+                        }
+                        // FAIL_DOC_NOT_FOUND handled elsewhere in this function
+                    })
+                    .flatMap(doc -> {
+                        if (doc.isPresent()) {
+                            CoreTransactionGetResult gr = doc.get();
+                            DocChanged dc = getDocChanged(gr,
+                                    "staging",
+                                    crc32FromGet,         // this may or may not be present - see getDocChanged for list
+                                    gr.crc32OfGet().get() // this must be present as doc just fetched
+                            );
+                            return forwardCompatibilityCheck(ForwardCompatibilityStage.CAS_MISMATCH_DURING_STAGING, gr.links().forwardCompatibility())
+                                    .then(Mono.defer(() -> {
+                                        if (dc.inDifferentTransaction) {
+                                            return checkAndHandleBlockingTxn(gr, span, ForwardCompatibilityStage.CAS_MISMATCH_DURING_STAGING, Optional.empty())
+                                                    .then(Mono.error(new RetryOperationException()));
+                                        } else { // must be bodyHasChanged || notInTransaction || unclearIfBodyHasChanged
+                                            if (dc.bodyHasChanged || dc.unclearIfBodyHasChanged) {
+                                                return Mono.error(operationFailed(createError()
+                                                        .retryTransaction()
+                                                        .build()));
+                                            } else {
+                                                // Retry the operation, with the new CAS
+                                                return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION)
+                                                        .then(callback.apply(gr.cas()));
+                                            }
+                                        }
+                                    }));
+                        }
+                        else {
+                            return Mono.error(operationFailed(createError()
+                                    .retryTransaction()
+                                    .cause(new DocumentNotFoundException(null))
+                                    .build()));
+                        }
+                    })
+                    .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY_WITH_FIXED_RETRY)
+                    .doFinally(v -> span.finish());
+        });
+    }
+
+    private void throwIfExpired(String id, String stage) {
+        if (hasExpiredClientSide(stage, Optional.of(id))) {
+            LOGGER.info(attemptId, "has expired in stage %s", stage);
+            throw operationFailed(createError()
+                    .raiseException(FinalErrorToRaise.TRANSACTION_EXPIRED)
+                    .doNotRollbackAttempt()
+                    .cause(new AttemptExpiredException("Attempt has expired in stage " + stage))
+                    .build());
+        }
+    }
+
+    private Mono<Void> handleDocChangedDuringRollback(SpanWrapper pspan,
+                                                      String id,
+                                                      CollectionIdentifier collection,
+                                                      Function<Long, Mono<Void>> callback) {
+        return Mono.defer(() -> {
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "rollback.doc_changed", pspan);
+            return Mono.fromRunnable(() -> {
+                        LOGGER.info(attemptId, "handling doc changed during rollback %s",
+                                DebugUtil.docId(collection, id));
+                        throwIfExpired(id, HOOK_ROLLBACK_DOC_CHANGED);
+                    })
+                    .then(hooks.beforeDocChangedDuringRollback.apply(this, id)) // testing hook
+                    .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty()))
+                    .publishOn(scheduler)
+                    .onErrorResume(err -> {
+                        ErrorClass ec = classify(err);
+                        LOGGER.info(attemptId, "handling doc changed during rollback %s, got error %s",
+                                DebugUtil.docId(collection, id), dbg(err));
+                        if (ec == TRANSACTION_OPERATION_FAILED) {
+                            return Mono.error(err);
+                        } else if (ec == FAIL_TRANSIENT) {
+                            return Mono.error(new RetryOperationException());
+                        } else if (ec == FAIL_HARD) {
+                            return Mono.error(operationFailed(createError()
+                                    .doNotRollbackAttempt()
+                                    .raiseException(FinalErrorToRaise.TRANSACTION_FAILED)
+                                    .cause(err)
+                                    .build()));
+                        } else {
+                            return Mono.error(operationFailed(createError()
+                                    .doNotRollbackAttempt()
+                                    .raiseException(FinalErrorToRaise.TRANSACTION_FAILED)
+                                    .cause(err)
+                                    .build()));
+                        }
+                        // FAIL_DOC_NOT_FOUND handled elsewhere in this function
+                    })
+                    .flatMap(doc -> {
+                        if (doc.isPresent()) {
+                            CoreTransactionGetResult gr = doc.get();
+                            DocChanged dc = getDocChanged(gr,
+                                    "rollback",
+                                    gr.links().crc32OfStaging(),   // this should be present from staging
+                                    gr.crc32OfGet().get()          // this must be present as doc just fetched
+                            );
+                            return forwardCompatibilityCheck(ForwardCompatibilityStage.CAS_MISMATCH_DURING_ROLLBACK, gr.links().forwardCompatibility())
+                                    .then(Mono.defer(() -> {
+                                        if (dc.inDifferentTransaction || dc.notInTransaction) {
+                                            return Mono.empty();
+                                        } else {
+                                            // In same attempt, body may or may not have changed
+                                            return callback.apply(gr.cas());
+                                        }
+                                    }));
+                        }
+                        else {
+                            return Mono.empty();
+                        }
+                    })
+                    .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY_WITH_FIXED_RETRY)
+                    .doFinally(v -> span.finish())
+                    .then();
         });
     }
 
@@ -2691,6 +2976,7 @@ public class CoreTransactionAttemptContext {
                             Arrays.asList(
                                     new SubdocGetRequest.Command(SubdocCommandType.GET, "attempts." + attemptId + "." + TransactionFields.ATR_FIELD_STATUS, true, 0)
                             )))
+                    .publishOn(scheduler)
 
                     .flatMap(result -> {
                         String status = null;
@@ -2766,7 +3052,7 @@ public class CoreTransactionAttemptContext {
 
                     // Retry RetryOperation() exceptions
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY_WITH_FIXED_RETRY)
-                    .publishOn(SchedulerUtil.scheduler) // after retryWhen triggers, it's on parallel scheduler
+                    .publishOn(scheduler) // after retryWhen triggers, it's on parallel scheduler
 
                     .doOnError(err -> failSpan(span, err))
                     .doFinally(v -> span.finish());
@@ -2796,7 +3082,7 @@ public class CoreTransactionAttemptContext {
                     .then(TransactionKVHandler.mutateIn(core, atrCollection.get(), atrId.get(), kvTimeoutMutating(),
                             false, false, false, false, false, 0, durabilityLevel(), OptionsUtil.createClientContext("atrCommit"), span, specs))
 
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     // Testing hook
                     .flatMap(v -> hooks.afterAtrCommit.apply(this))
@@ -2883,7 +3169,7 @@ public class CoreTransactionAttemptContext {
 
                     // Retry RetryOperation() exceptions
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY)
-                    .publishOn(SchedulerUtil.scheduler) // after retryWhen triggers, it's on parallel scheduler
+                    .publishOn(scheduler) // after retryWhen triggers, it's on parallel scheduler
 
                     .doOnError(err -> failSpan(span, err))
                     .doFinally(v -> span.finish());
@@ -2960,7 +3246,7 @@ public class CoreTransactionAttemptContext {
             } else {
                 return rollbackWithKVLocked(isAppRollback, span);
             }
-        }).subscribeOn(SchedulerUtil.scheduler);
+        }).subscribeOn(scheduler);
     }
 
     private Mono<Void> rollbackWithKVLocked(boolean isAppRollback, SpanWrapper span) {
@@ -3060,7 +3346,7 @@ public class CoreTransactionAttemptContext {
             SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), atrCollection.orElse(null), atrId.orElse(null), "atr.rollback_complete", pspan);
 
             return Mono.defer(() -> {
-                        LOGGER.info(attemptId, "marking ATR %s as rollback complete", getAtrDebug(atrCollection, atrId));
+                        LOGGER.info(attemptId, "removing ATR %s as rollback complete", getAtrDebug(atrCollection, atrId));
 
                         return errorIfExpiredAndNotInExpiryOvertimeMode(CoreTransactionAttemptContextHooks.HOOK_ATR_ROLLBACK_COMPLETE, Optional.empty());
                     })
@@ -3073,7 +3359,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, prefix, null, false, true, false, 0)
                                     )))
 
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     .flatMap(v -> hooks.afterAtrRolledBack.apply(this)) // testing hook
 
@@ -3111,7 +3397,7 @@ public class CoreTransactionAttemptContext {
 
                     // Retry RetryOperation() exceptions
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY)
-                    .publishOn(SchedulerUtil.scheduler) // after retryWhen triggers, it's on parallel scheduler
+                    .publishOn(scheduler) // after retryWhen triggers, it's on parallel scheduler
 
                     .then()
 
@@ -3125,7 +3411,7 @@ public class CoreTransactionAttemptContext {
             SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, "rollback.docs", pspan);
 
             return Flux.fromIterable(stagedMutationsLocked)
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     .concatMap(staged -> {
                         switch (staged.type) {
@@ -3165,7 +3451,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn", null, false, true, false, 0)
                             )))
 
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     .flatMap(updatedDoc -> hooks.afterRollbackReplaceOrRemove.apply(this, id) // Testing hook
 
@@ -3197,9 +3483,11 @@ public class CoreTransactionAttemptContext {
                                     DebugUtil.docId(collection, id));
                             return Mono.empty();
                         } else if (ec == FAIL_DOC_NOT_FOUND) {
-                            return Mono.error(operationFailed(isAppRollback, builder.build()));
+                            // Ultimately rollback has happened here
+                            return Mono.empty();
                         } else if (ec == FAIL_CAS_MISMATCH) {
-                            return Mono.error(operationFailed(isAppRollback, builder.build()));
+                            return handleDocChangedDuringRollback(span, id, collection,
+                                    (newCas) -> rollbackStagedReplaceOrRemoveLocked(isAppRollback, span, collection, id, newCas));
                         } else if (ec == FAIL_HARD) {
                             return Mono.error(operationFailed(isAppRollback, builder.doNotRollbackAttempt().build()));
                         } else {
@@ -3209,14 +3497,14 @@ public class CoreTransactionAttemptContext {
 
                     // Retry RetryOperation() exceptions
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY)
-                    .publishOn(SchedulerUtil.scheduler) // after retryWhen triggers, it's on parallel scheduler
+                    .publishOn(scheduler) // after retryWhen triggers, it's on parallel scheduler
 
                     .doOnError(err -> failSpan(span, err))
                     .doFinally(v -> span.finish());
         });
     }
 
-    private Publisher<Void> rollbackStagedInsertLocked(boolean isAppRollback,
+    private Mono<Void> rollbackStagedInsertLocked(boolean isAppRollback,
                                                        SpanWrapper pspan,
                                                        CollectionIdentifier collection,
                                                        String id,
@@ -3238,7 +3526,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn", null, false, true, false, 0)
                             )))
 
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     // Testing hook
                     .flatMap(updatedDoc -> hooks.afterRollbackDeleteInserted.apply(this, id)
@@ -3274,7 +3562,8 @@ public class CoreTransactionAttemptContext {
                         } else if (ec == FAIL_HARD) {
                             return Mono.error(operationFailed(isAppRollback, builder.doNotRollbackAttempt().build()));
                         } else if (ec == FAIL_CAS_MISMATCH) {
-                            return Mono.error(operationFailed(isAppRollback, builder.doNotRollbackAttempt().build()));
+                            return handleDocChangedDuringRollback(span, id, collection,
+                                    (newCas) -> rollbackStagedInsertLocked(isAppRollback, span, collection, id, newCas));
                         } else {
                             return Mono.error(new RetryOperationException());
                         }
@@ -3282,7 +3571,7 @@ public class CoreTransactionAttemptContext {
 
                     // Retry RetryOperation() exceptions
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY)
-                    .publishOn(SchedulerUtil.scheduler) // after retryWhen triggers, it's on parallel scheduler
+                    .publishOn(scheduler) // after retryWhen triggers, it's on parallel scheduler
 
                     .doOnError(err -> failSpan(span, err))
                     .doFinally(v -> span.finish());
@@ -3323,7 +3612,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn", null, false, true, false, 0)
                             )))
 
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     .flatMap(updatedDoc -> hooks.afterRemoveStagedInsert.apply(this, id)
                             .thenReturn(updatedDoc))
@@ -3388,7 +3677,7 @@ public class CoreTransactionAttemptContext {
                     .then(TransactionKVHandler.mutateIn(core, atrCollection.get(), atrId.get(), kvTimeoutMutating(),
                             false, false, false, false, false, 0, durabilityLevel(), OptionsUtil.createClientContext("atrAbort"), span, specs))
 
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(scheduler)
 
                     // Debug hook
                     .then(hooks.afterAtrAborted.apply(this))
@@ -3427,7 +3716,7 @@ public class CoreTransactionAttemptContext {
 
                     // Will retry RetryOperation errors
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY)
-                    .publishOn(SchedulerUtil.scheduler) // after retryWhen triggers, it's on parallel scheduler
+                    .publishOn(scheduler) // after retryWhen triggers, it's on parallel scheduler
 
                     .doOnError(err -> failSpan(span, err))
                     .doFinally(v -> span.finish());

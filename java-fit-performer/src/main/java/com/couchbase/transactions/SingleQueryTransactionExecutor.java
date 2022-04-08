@@ -133,6 +133,9 @@ public class SingleQueryTransactionExecutor {
         catch (CouchbaseException err) {
             causeDuringStreaming.set(ResultsUtil.convertTransactionFailedCause(err));
         }
+        catch (RuntimeException err) {
+            throw new InternalPerformerFailure(new IllegalArgumentException("Single query raised an illegal non-TransactionFailed error " + err));
+        }
 
         if (errorDuringStreaming.get() == null) {
             if (!rowValidationPerformed.get()) {

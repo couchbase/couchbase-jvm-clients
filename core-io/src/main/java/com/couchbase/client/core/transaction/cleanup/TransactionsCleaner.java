@@ -313,8 +313,8 @@ public class TransactionsCleaner {
                             // This field is only present if cleaning up a protocol 2 transaction.
                             if (requireCrc32ToMatchStaging && doc.links().crc32OfStaging().isPresent()) {
                                 String crc32WhenStaging = doc.links().crc32OfStaging().get();
-                                // This field should always be present
-                                String crc32Now = doc.documentMetadata().get().crc32().get();
+                                // This field must always be present since the doc has just been fetched.
+                                String crc32Now = doc.crc32OfGet().get();
 
                                 perEntryLog.debug(attemptId, "checking whether document %s has changed since staging, crc32 then %s now %s",
                                         DebugUtil.docId(doc), crc32WhenStaging, crc32Now);

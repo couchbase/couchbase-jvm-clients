@@ -30,6 +30,7 @@ public class StagedMutation {
     public final CollectionIdentifier collection;
     public final long cas;
     public final Optional<DocumentMetadata> documentMetadata;
+    public final Optional<String> crc32;
     // The staged content.  Will be null iff cluster does not support ReplaceBodyWithXattr
     public final @Nullable byte[] content;
     public final StagedMutationType type;
@@ -39,6 +40,7 @@ public class StagedMutation {
                           CollectionIdentifier collection,
                           long cas,
                           Optional<DocumentMetadata> documentMetadata,
+                          Optional<String> crc32,
                           byte[] content,
                           StagedMutationType type) {
         this.operationId = operationId;
@@ -46,6 +48,7 @@ public class StagedMutation {
         this.collection = collection;
         this.cas = cas;
         this.documentMetadata = documentMetadata;
+        this.crc32 = crc32;
         this.content = content;
         this.type = type;
     }

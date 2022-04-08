@@ -529,6 +529,16 @@ public class HooksUtil {
                                 (ctx, query) -> configureHook(ctx, callCount, hook, clusterConn, query));
                         break;
 
+                    case BEFORE_DOC_CHANGED_DURING_ROLLBACK:
+                        setHookIfExists(hook, mock, "beforeDocChangedDuringRollback",
+                                (ctx, query) -> configureHook(ctx, callCount, hook, clusterConn, query));
+                        break;
+
+                    case BEFORE_DOC_CHANGED_DURING_STAGING:
+                        setHookIfExists(hook, mock, "beforeDocChangedDuringStaging",
+                                (ctx, query) -> configureHook(ctx, callCount, hook, clusterConn, query));
+                        break;
+
                     case CLEANUP_BEFORE_ATR_REMOVE:
                     case CLEANUP_BEFORE_COMMIT_DOC:
                     case CLEANUP_BEFORE_DOC_GET:

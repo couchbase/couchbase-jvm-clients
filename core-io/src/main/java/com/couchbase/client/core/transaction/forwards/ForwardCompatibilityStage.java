@@ -32,7 +32,10 @@ public enum ForwardCompatibilityStage {
     WRITE_WRITE_CONFLICT_INSERTING_GET("WW_IG"),
     GETS("G"),
     GETS_READING_ATR("G_A"),
-    CLEANUP_ENTRY("CL_E");
+    CLEANUP_ENTRY("CL_E"),
+    CAS_MISMATCH_DURING_COMMIT("CM_C"),
+    CAS_MISMATCH_DURING_ROLLBACK("CM_R"),
+    CAS_MISMATCH_DURING_STAGING("CM_S");
 
     private final String value;
 
