@@ -69,10 +69,16 @@ public class EndpointDiagnostics {
      */
     private final Optional<String> namespace;
 
+    /**
+     * If present, the last connect failure of this endpoint.
+     */
+    private final Optional<Throwable> lastConnectAttemptFailure;
+
     @Stability.Internal
     public EndpointDiagnostics(final ServiceType type, final EndpointState state, final String local,
                                final String remote, final Optional<String> namespace,
-                               final Optional<Long> lastActivityUs, final Optional<String> id) {
+                               final Optional<Long> lastActivityUs, final Optional<String> id,
+                               final Optional<Throwable> lastConnectAttemptFailure) {
         this.type = type;
         this.state = state;
         this.id = id;
@@ -80,6 +86,7 @@ public class EndpointDiagnostics {
         this.remote = remote;
         this.lastActivityUs = lastActivityUs;
         this.namespace = namespace;
+        this.lastConnectAttemptFailure = lastConnectAttemptFailure;
     }
 
     /**
@@ -131,6 +138,16 @@ public class EndpointDiagnostics {
         return namespace;
     }
 
+    /**
+     * If present, returns the last connect failure of this endpoint.
+     *
+     * @return the last connect failure, if any.
+     */
+    @Stability.Volatile
+    public Optional<Throwable> lastConnectAttemptFailure() {
+        return lastConnectAttemptFailure;
+    }
+
     Map<String, Object> toMap() {
         Map<String, Object> map = new HashMap<>();
         if (remote != null) {
@@ -143,6 +160,7 @@ public class EndpointDiagnostics {
         lastActivityUs.ifPresent(a -> map.put("last_activity_us", a));
         id.ifPresent(id -> map.put("id", id));
         namespace.ifPresent(n -> map.put("namespace", n));
+        lastConnectAttemptFailure.ifPresent(e -> map.put("lastConnectAttemptFailure", e.getMessage()));
         return map;
     }
 
@@ -156,6 +174,7 @@ public class EndpointDiagnostics {
           ", lastActivityUs=" + lastActivityUs +
           ", id='" + id + '\'' +
           ", namespace=" + namespace +
+          ", lastConnectAttemptFailure=" + lastConnectAttemptFailure.map(Throwable::getMessage).orElse(null) +
           '}';
     }
 
@@ -170,11 +189,12 @@ public class EndpointDiagnostics {
           Objects.equals(remote, that.remote) &&
           Objects.equals(lastActivityUs, that.lastActivityUs) &&
           Objects.equals(id, that.id) &&
-          Objects.equals(namespace, that.namespace);
+          Objects.equals(namespace, that.namespace) &&
+          Objects.equals(lastConnectAttemptFailure, that.lastConnectAttemptFailure);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, state, local, remote, lastActivityUs, id, namespace);
+        return Objects.hash(type, state, local, remote, lastActivityUs, id, namespace, lastConnectAttemptFailure);
     }
 }

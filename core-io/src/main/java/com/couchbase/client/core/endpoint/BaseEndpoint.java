@@ -17,8 +17,6 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.AbstractContext;
-import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionAbortedEvent;
@@ -79,7 +77,6 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -170,6 +167,13 @@ public abstract class BaseEndpoint implements Endpoint {
    * Holds the timestamp this endpoint was last successfully connected.
    */
   private volatile long lastConnectedAt;
+
+  /**
+   * Holds the reason why the last connect attempt failed, if any.
+   * <p>
+   * Note that once the endpoint connects successfully, this error is discarded.
+   */
+  private volatile Throwable lastConnectAttemptFailure;
 
   /**
    * Constructor to create a new endpoint, usually called by subclasses.
@@ -369,14 +373,15 @@ public abstract class BaseEndpoint implements Endpoint {
             ? endpointContext.environment().timeoutConfig().connectTimeout()
             : Duration.ofNanos(System.nanoTime() - attemptStart.get());
 
-          ex = annotateConnectException(ex);
+          ex = trimNettyFromStackTrace(annotateConnectException(ex));
+          lastConnectAttemptFailure = ex;
 
           endpointContext.environment().eventBus().publish(new EndpointConnectionFailedEvent(
             severity,
             duration,
             endpointContext,
             retryContext.iteration(),
-            trimNettyFromStackTrace(ex)
+            ex
           ));
         })
         .toReactorRetry()
@@ -392,6 +397,7 @@ public abstract class BaseEndpoint implements Endpoint {
             ));
             closeChannel(channel);
           } else {
+            this.lastConnectAttemptFailure = null;
             this.channel = channel;
 
             Optional<HostAndPort> localSocket = Optional.empty();
@@ -735,7 +741,12 @@ public abstract class BaseEndpoint implements Endpoint {
 
     final Optional<String> id = Optional.ofNullable(channel).map(c -> "0x" + c.id().asShortText());
     return new EndpointDiagnostics(context().serviceType(), state(), local, remote, context().bucket(),
-      lastActivity, id);
+      lastActivity, id, Optional.ofNullable(lastConnectAttemptFailure()));
+  }
+
+  @Override
+  public Throwable lastConnectAttemptFailure() {
+    return lastConnectAttemptFailure;
   }
 
 }

@@ -120,4 +120,11 @@ public interface Endpoint extends Stateful<EndpointState> {
    */
   int remotePort();
 
+  /**
+   * Returns the failure reason of the last connect attempt, if any.
+   *
+   * @return returns the last failure reason, or null if connected properly or never attempted.
+   */
+  Throwable lastConnectAttemptFailure();
+
 }
