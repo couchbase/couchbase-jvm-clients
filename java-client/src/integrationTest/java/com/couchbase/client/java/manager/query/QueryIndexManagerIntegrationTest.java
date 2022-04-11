@@ -17,7 +17,6 @@
 package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.error.IndexExistsException;
-import com.couchbase.client.core.error.IndexFailureException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
@@ -44,6 +43,7 @@ import static com.couchbase.client.java.manager.query.CreatePrimaryQueryIndexOpt
 import static com.couchbase.client.java.manager.query.CreateQueryIndexOptions.createQueryIndexOptions;
 import static com.couchbase.client.java.manager.query.DropPrimaryQueryIndexOptions.dropPrimaryQueryIndexOptions;
 import static com.couchbase.client.java.manager.query.DropQueryIndexOptions.dropQueryIndexOptions;
+import static com.couchbase.client.java.manager.query.GetAllQueryIndexesOptions.getAllQueryIndexesOptions;
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
 import static com.couchbase.client.java.manager.query.WatchQueryIndexesOptions.watchQueryIndexesOptions;
 import static com.couchbase.client.test.Capabilities.QUERY;
@@ -163,6 +163,22 @@ public class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
 
     Set<String> expectedRoundTripFields = setOf("(`fieldB`.`foo`)", "(`fieldB`.`bar`)");
     assertEquals(expectedRoundTripFields, roundTripFields);
+  }
+
+  @Test
+  void getAllIndexesReturnsIndexesOnDefaultCollection() {
+    indexes.createPrimaryIndex(bucketName);
+
+    assertEquals(1, indexes.getAllIndexes(bucketName).size());
+
+    assertEquals(1, indexes.getAllIndexes(bucketName, getAllQueryIndexesOptions()
+            .scopeName("_default"))
+        .size());
+
+    assertEquals(1, indexes.getAllIndexes(bucketName, getAllQueryIndexesOptions()
+            .scopeName("_default")
+            .collectionName("_default"))
+        .size());
   }
 
   private static QueryIndex getIndex(String name) {

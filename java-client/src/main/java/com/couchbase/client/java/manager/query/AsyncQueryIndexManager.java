@@ -23,16 +23,19 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexFailureException;
+import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.IndexesNotReadyException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.QueryException;
-import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.manager.CoreQueryIndexManager;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.json.JsonArray;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.json.JsonValue;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 import reactor.core.publisher.Mono;
@@ -245,27 +248,11 @@ public class AsyncQueryIndexManager {
     notNull(options, "Options");
     final GetAllQueryIndexesOptions.Built builtOpts = options.build();
 
-    String statement;
-    JsonArray params;
-    if (builtOpts.scopeName().isPresent() && builtOpts.collectionName().isPresent()) {
-      statement = "SELECT idx.* FROM system:indexes AS idx" +
-        " WHERE keyspace_id = ? AND bucket_id = ? AND scope_id = ?" +
-        " AND `using` = \"gsi\"" +
-        " ORDER BY is_primary DESC, name ASC";
-      params = JsonArray.from(builtOpts.collectionName().get(), bucketName, builtOpts.scopeName().get());
-    } else if (builtOpts.scopeName().isPresent()) {
-      statement = "SELECT idx.* FROM system:indexes AS idx" +
-        " WHERE bucket_id = ? AND scope_id = ?" +
-        " AND `using` = \"gsi\"" +
-        " ORDER BY is_primary DESC, name ASC";
-      params = JsonArray.from(bucketName, builtOpts.scopeName().get());
-    } else {
-      statement = "SELECT idx.* FROM system:indexes AS idx" +
-        " WHERE ((bucket_id IS MISSING AND keyspace_id = ?) OR bucket_id = ?)" +
-        " AND `using` = \"gsi\"" +
-        " ORDER BY is_primary DESC, name ASC";
-      params = JsonArray.from(bucketName, bucketName);
-    }
+    String scope = builtOpts.scopeName().orElse(null);
+    String collection = builtOpts.collectionName().orElse(null);
+
+    String statement = CoreQueryIndexManager.getStatementForGetAllIndexes(bucketName, scope, collection);
+    JsonObject params = JsonObject.from(CoreQueryIndexManager.getNamedParamsForGetAllIndexes(bucketName, scope, collection));
 
     return exec(READ_ONLY, statement, builtOpts, TracingIdentifiers.SPAN_REQUEST_MQ_GET_ALL_INDEXES, bucketName, params)
         .thenApply(result -> result.rowsAsObject().stream()
@@ -570,7 +557,7 @@ public class AsyncQueryIndexManager {
 
   private CompletableFuture<QueryResult> exec(QueryType queryType, CharSequence statement, Map<String, Object> with,
                                               CommonOptions<?>.BuiltCommonOptions options, String spanName, String bucketName,
-                                              JsonArray parameters) {
+                                              JsonValue parameters) {
     return with.isEmpty()
         ? exec(queryType, statement, options, spanName, bucketName, parameters)
         : exec(queryType, statement + " WITH " + Mapper.encodeAsString(with), options, spanName, bucketName, parameters);
@@ -578,13 +565,11 @@ public class AsyncQueryIndexManager {
 
   private CompletableFuture<QueryResult> exec(QueryType queryType, CharSequence statement,
                                               CommonOptions<?>.BuiltCommonOptions options, String spanName, String bucketName,
-                                              JsonArray parameters) {
+                                              JsonValue parameters) {
     QueryOptions queryOpts = toQueryOptions(options)
         .readonly(requireNonNull(queryType) == READ_ONLY);
 
-    if (parameters != null && !parameters.isEmpty()) {
-      queryOpts.parameters(parameters);
-    }
+    setParameters(queryOpts, parameters);
 
     RequestSpan parent = cluster.environment().requestTracer().requestSpan(spanName, options.parentSpan().orElse(null));
     parent.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
@@ -600,6 +585,25 @@ public class AsyncQueryIndexManager {
         throw translateException(t);
       })
       .whenComplete((r, t) -> parent.end());
+  }
+
+  private static void setParameters(QueryOptions queryOpts, JsonValue parameters) {
+    if (parameters == null) {
+      return;
+    }
+    if (parameters instanceof JsonArray) {
+      JsonArray positional = (JsonArray) parameters;
+      if (!positional.isEmpty()) {
+        queryOpts.parameters(positional);
+      }
+    } else if (parameters instanceof JsonObject) {
+      JsonObject named = (JsonObject) parameters;
+      if (!named.isEmpty()) {
+        queryOpts.parameters(named);
+      }
+    } else {
+      throw new IllegalArgumentException("Expected JsonObject or JsonArray, but got " + parameters.getClass());
+    }
   }
 
   private static QueryOptions toQueryOptions(CommonOptions<?>.BuiltCommonOptions options) {

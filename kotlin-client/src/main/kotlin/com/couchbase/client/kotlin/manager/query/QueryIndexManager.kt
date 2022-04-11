@@ -28,6 +28,7 @@ import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.logging.RedactableArgument.redactMeta
+import com.couchbase.client.core.manager.CoreQueryIndexManager
 import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.Keyspace
@@ -199,41 +200,9 @@ public class QueryIndexManager internal constructor(
         @SinceCouchbase("7.0") collection: String? = null,
         common: CommonOptions = CommonOptions.Default,
     ): List<QueryIndex> {
-        require(collection == null || scope != null) { "When collection is non-null, scope must also be non-null." }
-
-        val params = QueryParameters.named(
-            "bucketName" to bucket,
-            "scopeName" to scope,
-            "collectionName" to collection,
-        )
-
-        val bucketCondition = "(bucket_id = \$bucketName)"
-        val scopeCondition = "($bucketCondition AND scope_id = \$scopeName)"
-        val collectionCondition = "($scopeCondition AND keyspace_id = \$collectionName)"
-
-        var whereCondition = when {
-            collection != null -> collectionCondition
-            scope != null -> scopeCondition
-            else -> bucketCondition
-        }
-
-        // If indexes on the default collection should be included in the results,
-        // modify the query to match the irregular structure of those indexes.
-        if (collection == DEFAULT_COLLECTION || collection == null) {
-            val defaultCollectionCondition = "(bucket_id IS MISSING AND keyspace_id = \$bucketName)"
-            whereCondition = "($whereCondition OR $defaultCollectionCondition)"
-        }
-
-        val statement = """
-            SELECT idx.* FROM system:indexes AS idx
-            WHERE $whereCondition
-            AND `using` = "gsi"
-            ORDER BY is_primary DESC, name ASC
-        """.trimIndent()
-
         return cluster.query(
-            statement = statement,
-            parameters = params,
+            statement = CoreQueryIndexManager.getStatementForGetAllIndexes(bucket, scope, collection),
+            parameters = QueryParameters.named(CoreQueryIndexManager.getNamedParamsForGetAllIndexes(bucket, scope, collection)),
             readonly = true,
             common = common,
         ).execute().rows.map { QueryIndex.parse(it.content) }
