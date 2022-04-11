@@ -210,16 +210,18 @@ public class QueryIndexManager internal constructor(
         val bucketCondition = "(bucket_id = \$bucketName)"
         val scopeCondition = "($bucketCondition AND scope_id = \$scopeName)"
         val collectionCondition = "($scopeCondition AND keyspace_id = \$collectionName)"
-        val defaultCollectionCondition = "(bucket_id IS MISSING AND keyspace_id = \$bucketName)"
 
-        val whereCondition = when {
-            // special cases to ensure indexes on the default collection are included
-            scope == DEFAULT_SCOPE && collection == DEFAULT_COLLECTION -> "($collectionCondition OR $defaultCollectionCondition)"
-            scope == DEFAULT_SCOPE && collection == null -> "($scopeCondition OR $defaultCollectionCondition)"
-
-            scope != null && collection != null -> collectionCondition
+        var whereCondition = when {
+            collection != null -> collectionCondition
             scope != null -> scopeCondition
-            else -> "($bucketCondition OR $defaultCollectionCondition)"
+            else -> bucketCondition
+        }
+
+        // If indexes on the default collection should be included in the results,
+        // modify the query to match the irregular structure of those indexes.
+        if (collection == DEFAULT_COLLECTION || collection == null) {
+            val defaultCollectionCondition = "(bucket_id IS MISSING AND keyspace_id = \$bucketName)"
+            whereCondition = "($whereCondition OR $defaultCollectionCondition)"
         }
 
         val statement = """
