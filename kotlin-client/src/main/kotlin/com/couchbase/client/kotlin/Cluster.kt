@@ -55,6 +55,7 @@ import com.couchbase.client.kotlin.internal.putIfNotEmpty
 import com.couchbase.client.kotlin.internal.putIfNotNull
 import com.couchbase.client.kotlin.internal.putIfTrue
 import com.couchbase.client.kotlin.manager.bucket.BucketManager
+import com.couchbase.client.kotlin.manager.query.QueryIndexManager
 import com.couchbase.client.kotlin.manager.user.UserManager
 import com.couchbase.client.kotlin.query.QueryFlowItem
 import com.couchbase.client.kotlin.query.QueryMetadata
@@ -195,6 +196,11 @@ public class Cluster internal constructor(
      * A manager for administering users (create, update, drop, etc.)
      */
     public val users: UserManager = UserManager(core, httpClient)
+
+    /**
+     * A manager for administering N1QL indexes
+     */
+    public val queryIndexes: QueryIndexManager = QueryIndexManager(this)
 
     /**
      * Pings the Couchbase cluster's global services.

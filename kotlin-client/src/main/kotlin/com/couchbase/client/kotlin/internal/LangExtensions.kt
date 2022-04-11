@@ -16,9 +16,15 @@
 
 package com.couchbase.client.kotlin.internal
 
+import com.couchbase.client.core.error.TimeoutException
+import com.couchbase.client.core.util.CbThrowables
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.withTimeout
 import reactor.core.publisher.Mono
 import java.nio.charset.StandardCharsets.UTF_8
+import kotlin.time.Duration
 
 internal fun ByteArray.toStringUtf8() = toString(UTF_8)
 
@@ -48,6 +54,22 @@ internal fun MutableMap<String, Any?>.putIfNotNull(key: String, value: Any?) {
 
 internal fun MutableMap<String, Any?>.putIfNotZero(key: String, value: Int) {
     if (value != 0) put(key, value)
+}
+
+/**
+ * Walks the causal chain of the throwable (starting with the throwable itself)
+ * and returns the first throwable that is an instance of [T].
+ */
+internal inline fun <reified T : Throwable> Throwable.findCause(): T? {
+    return CbThrowables.findCause(this, T::class.java).orElse(null)
+}
+
+/**
+ * Returns true if the throwable or any throwable in its causal chain
+ * is an instance of [T].
+ */
+internal inline fun <reified T : Throwable> Throwable.hasCause(): Boolean {
+    return findCause<T>() != null
 }
 
 /**

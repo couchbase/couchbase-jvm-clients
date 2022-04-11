@@ -87,6 +87,9 @@ public class Collection internal constructor(
     public val name: String,
     public val scope: Scope,
 ) {
+    @VolatileCouchbaseApi
+    public val keyspace: Keyspace = Keyspace(scope.bucket.name, scope.name, name)
+
     internal val collectionId: CollectionIdentifier =
         CollectionIdentifier(scope.bucket.name, scope.name.toOptional(), name.toOptional())
 
@@ -330,7 +333,7 @@ public class Collection internal constructor(
         return try {
             remove(id, common, durability, cas)
         } catch (_: DocumentNotFoundException) {
-            null;
+            null
         }
     }
 
@@ -522,7 +525,7 @@ public class Collection internal constructor(
         id: String,
         cas: Long,
         common: CommonOptions = CommonOptions.Default,
-    ): Unit {
+    ) {
         if (cas == 0L) throw InvalidArgumentException("Unlock CAS must be non-zero.", null, ReducedKeyValueErrorContext.create(id, collectionId))
 
         val request = UnlockRequest(
