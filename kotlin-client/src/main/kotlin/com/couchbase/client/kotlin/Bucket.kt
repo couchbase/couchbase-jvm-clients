@@ -24,6 +24,7 @@ import com.couchbase.client.core.diagnostics.HealthPinger
 import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper
 import com.couchbase.client.core.error.UnambiguousTimeoutException
 import com.couchbase.client.core.error.ViewNotFoundException
+import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE
 import com.couchbase.client.core.msg.view.ViewRequest
 import com.couchbase.client.core.service.ServiceType
@@ -76,7 +77,7 @@ public class Bucket internal constructor(
     /**
      * Returns the default collection in this bucket's default scope.
      */
-    public fun defaultCollection(): Collection = defaultScope().defaultCollection()
+    public fun defaultCollection(): Collection = collection(DEFAULT_COLLECTION)
 
     /**
      * Returns the requested collection in the bucket's default scope.

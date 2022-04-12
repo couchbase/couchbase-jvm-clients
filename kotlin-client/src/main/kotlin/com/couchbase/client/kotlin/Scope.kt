@@ -70,8 +70,6 @@ public class Scope(
         }
     }
 
-    public fun defaultCollection(): Collection = collection(DEFAULT_COLLECTION)
-
     /**
      * Returns a Flow which may be collected to execute a scope-level
      * N1QL query and process the results.
