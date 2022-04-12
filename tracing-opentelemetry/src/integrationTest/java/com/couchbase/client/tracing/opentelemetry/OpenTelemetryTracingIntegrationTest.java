@@ -37,7 +37,7 @@ import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.assertThat;
 
-class OpenTelemetryIntegrationTest extends ClusterAwareIntegrationTest {
+class OpenTelemetryTracingIntegrationTest extends ClusterAwareIntegrationTest {
 
   private static Cluster cluster;
   private static Collection collection;
@@ -81,26 +81,26 @@ class OpenTelemetryIntegrationTest extends ClusterAwareIntegrationTest {
 
     waitUntilCondition(() -> {
       otelTesting.assertTraces()
-          .hasTracesSatisfyingExactly(
-              trace -> trace.hasSpansSatisfyingExactly(
-                  span -> span
-                      .hasName("test")
-                      .hasKind(SpanKind.SERVER),
-                  span -> span
-                      .hasName("get")
-                      .hasParentSpanId(parent.getSpanContext().getSpanId())
-                      .hasKind(SpanKind.INTERNAL)
-                      .hasAttributesSatisfying(attributes -> assertThat(attributes)
-                          .containsEntry("db.system", "couchbase")
-                          .containsEntry("db.operation", "get")
-                          .containsEntry("db.couchbase.service", "kv")
-                          .containsEntry("db.couchbase.collection", "_default")
-                          .containsEntry("db.couchbase.scope", "_default")),
-                  span -> span
-                      .hasName("dispatch_to_server")
-                      .hasKind(SpanKind.INTERNAL)
-                      .hasAttributesSatisfying(attributes -> assertThat(attributes)
-                          .containsEntry("db.system", "couchbase"))
+        .hasTracesSatisfyingExactly(
+          trace -> trace.hasSpansSatisfyingExactly(
+            span -> span
+              .hasName("test")
+              .hasKind(SpanKind.SERVER),
+            span -> span
+              .hasName("get")
+              .hasParentSpanId(parent.getSpanContext().getSpanId())
+              .hasKind(SpanKind.INTERNAL)
+              .hasAttributesSatisfying(attributes -> assertThat(attributes)
+                .containsEntry("db.system", "couchbase")
+                .containsEntry("db.operation", "get")
+                .containsEntry("db.couchbase.service", "kv")
+                .containsEntry("db.couchbase.collection", "_default")
+                .containsEntry("db.couchbase.scope", "_default")),
+            span -> span
+              .hasName("dispatch_to_server")
+              .hasKind(SpanKind.INTERNAL)
+              .hasAttributesSatisfying(attributes -> assertThat(attributes)
+                .containsEntry("db.system", "couchbase"))
           ));
       return true;
     });

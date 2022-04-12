@@ -17,18 +17,21 @@
 package com.couchbase.client.metrics.opentelemetry;
 
 import com.couchbase.client.core.cnc.ValueRecorder;
-import io.opentelemetry.api.metrics.BoundDoubleHistogram;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.metrics.DoubleHistogram;
 
-public class OpenTelemetryValueRecorder  implements ValueRecorder {
+public class OpenTelemetryValueRecorder implements ValueRecorder {
 
-  private final BoundDoubleHistogram valueRecorder;
+  private final DoubleHistogram valueRecorder;
+  private final Attributes attributes;
 
-  public OpenTelemetryValueRecorder(BoundDoubleHistogram valueRecorder) {
+  public OpenTelemetryValueRecorder(final DoubleHistogram valueRecorder, final Attributes attributes) {
     this.valueRecorder = valueRecorder;
+    this.attributes = attributes;
   }
 
   @Override
-  public void recordValue(long value) {
-    valueRecorder.record(value);
+  public void recordValue(final long value) {
+    valueRecorder.record(value, attributes);
   }
 }

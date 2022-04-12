@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.metrics.NameAndTags;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.MeterException;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.metrics.DoubleHistogram;
 import io.opentelemetry.api.metrics.LongCounter;
@@ -71,6 +72,11 @@ public class OpenTelemetryMeter implements Meter {
   private final Map<NameAndTags, OpenTelemetryValueRecorder> valueRecorders = new ConcurrentHashMap<>();
 
   @Stability.Volatile
+  public static OpenTelemetryMeter wrap(final OpenTelemetry openTelemetry) {
+    return new OpenTelemetryMeter(openTelemetry.getMeterProvider());
+  }
+
+  @Stability.Volatile
   public static OpenTelemetryMeter wrap(final MeterProvider meterProvider) {
     return new OpenTelemetryMeter(meterProvider);
   }
@@ -97,7 +103,7 @@ public class OpenTelemetryMeter implements Meter {
         for (Map.Entry<String, String> tag : tags.entrySet()) {
           builder.put(tag.getKey(), tag.getValue());
         }
-        return new OpenTelemetryCounter(counter.bind(builder.build()));
+        return new OpenTelemetryCounter(counter, builder.build());
       });
     } catch (Exception ex) {
       throw new MeterException("Failed to create/access Counter", ex);
@@ -113,7 +119,7 @@ public class OpenTelemetryMeter implements Meter {
         for (Map.Entry<String, String> tag : tags.entrySet()) {
           builder.put(tag.getKey(), tag.getValue());
         }
-        return new OpenTelemetryValueRecorder(vc.bind(builder.build()));
+        return new OpenTelemetryValueRecorder(vc, builder.build());
       });
     } catch (Exception ex) {
       throw new MeterException("Failed to create/access ValueRecorder", ex);

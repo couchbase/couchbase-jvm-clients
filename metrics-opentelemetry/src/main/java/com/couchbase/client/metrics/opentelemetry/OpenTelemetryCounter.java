@@ -17,17 +17,22 @@
 package com.couchbase.client.metrics.opentelemetry;
 
 import com.couchbase.client.core.cnc.Counter;
-import io.opentelemetry.api.metrics.BoundLongCounter;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.metrics.LongCounter;
 
 public class OpenTelemetryCounter implements Counter {
 
-  private final BoundLongCounter counter;
-  public OpenTelemetryCounter(BoundLongCounter counter) {
+  private final LongCounter counter;
+  private final Attributes attributes;
+
+  public OpenTelemetryCounter(final LongCounter counter, final Attributes attributes) {
     this.counter = counter;
+    this.attributes = attributes;
   }
+
   @Override
-  public void incrementBy(long number) {
-    counter.add(number);
+  public void incrementBy(final long number) {
+    counter.add(number, attributes);
   }
 
 }
