@@ -29,6 +29,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -41,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES }, missesCapabilities = {Capabilities.COLLECTIONS, Capabilities.EVENTING})
 public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest {
+  private static Logger LOGGER = LoggerFactory.getLogger(EventingFunctionManagerIntegrationTest.class);
 
   private static Cluster cluster;
   private static Collection sourceCollection;
@@ -255,6 +258,9 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
       Objects.requireNonNull(state);
       Objects.requireNonNull(state.name());
       Objects.requireNonNull(state.status());
+
+      LOGGER.info("Function {} waiting for {}:{}", state, funcName, status);
+
       return state.name().equals(funcName) && state.status() == status;
     });
   }

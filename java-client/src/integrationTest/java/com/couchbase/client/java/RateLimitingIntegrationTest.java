@@ -56,6 +56,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -560,9 +561,16 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       cluster.waitUntilReady(Duration.ofSeconds(10));
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> Flux
-        .range(0, 50)
+        .range(0, LOOP_GUARD)
         .flatMap(i -> cluster.reactive().searchQuery("ratelimits", QueryStringQuery.queryString("a")))
-        .doOnError(err -> LOGGER.info("Got error " + err.toString()))
+        .onErrorResume(err -> {
+          LOGGER.info("Got error " + err.toString());
+          if (err instanceof CouchbaseException
+                  && continueOnSearchError((CouchbaseException) err)) {
+            return Mono.empty();
+          }
+          return Mono.error(err);
+        })
         .blockLast());
 
       assertTrue(ex.getMessage().contains("num_concurrent_requests"));

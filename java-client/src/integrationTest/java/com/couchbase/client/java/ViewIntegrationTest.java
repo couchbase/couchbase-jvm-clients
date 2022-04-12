@@ -94,6 +94,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
     bucket.viewIndexes().upsertDesignDocument(designDocument, DesignDocumentNamespace.PRODUCTION);
   }
 
+  @Flaky // Intermittently timing out on CI after 75s with ViewNotFoundException, which should not be possible
   @Test
   void succeedsWithNoRowsReturned() {
     ViewResult viewResult = bucket.viewQuery(DDOC_NAME, VIEW_NAME, viewOptions().limit(0));
@@ -104,6 +105,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
   /**
    * Regression test for JCBC-1798
    */
+  @Flaky // Intermittently timing out on CI after 75s with ViewNotFoundException, which should not be possible
   @Test
   void canReadDebugInfo() {
     ViewResult viewResult = bucket.viewQuery(DDOC_NAME, VIEW_NAME, viewOptions().debug(true));

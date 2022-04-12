@@ -51,6 +51,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -76,6 +78,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * Ported from the Scala SubdocMutateSpec tests.  Please keep in sync.
  */
 class SubdocMutateIntegrationTest extends JavaIntegrationTest {
+    private static Logger LOGGER = LoggerFactory.getLogger(SubdocMutateIntegrationTest.class);
 
     private static Cluster cluster;
     private static Collection coll;
@@ -1185,8 +1188,10 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         assertEquals(gr.contentAsObject(), body);
     }
 
-    // For MB-50742 - it's intermittent so run a few times
-    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES})
+    // For MB-50742 and MB-50425 - it's intermittent so run a few times
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES},
+        // 7.1.0-2216 is required for the MB-50425 fix.  Use this capability as a stand-in for 7.1.
+        missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
     @RepeatedTest(10)
     void concurrentInserts() throws InterruptedException {
         String id = UUID.randomUUID().toString();
@@ -1209,8 +1214,10 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
                                 .createAsDeleted(true)
                 );
             } catch (DocumentExistsException err) {
+                LOGGER.info(err.toString());
                 errorCount.incrementAndGet();
             } catch (RuntimeException err) {
+                LOGGER.info(err.toString());
                 badErrorCount.incrementAndGet();
             }
         };
