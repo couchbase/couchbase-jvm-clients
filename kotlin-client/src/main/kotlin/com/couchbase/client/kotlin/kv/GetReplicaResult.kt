@@ -32,7 +32,7 @@ public class GetReplicaResult internal constructor(
     id,
     r.response.cas(),
     Content(r.response.content(), r.response.flags()),
-    null,
+    Expiry.Unknown,
     defaultTranscoder,
 ) {
     /**

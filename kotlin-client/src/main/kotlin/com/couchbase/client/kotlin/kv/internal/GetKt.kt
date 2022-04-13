@@ -33,7 +33,7 @@ internal class SubdocGetResult(
     val cas: Long,
     val content: ByteArray,
     val flags: Int,
-    val expiry: Expiry?,
+    val expiry: Expiry,
 )
 
 internal suspend fun Collection.subdocGet(
@@ -88,8 +88,8 @@ internal fun Collection.validateProjections(id: String, projections: List<String
     }
 }
 
-private fun parseExpiry(expiryBytes: ByteArray?): Expiry? {
-    if (expiryBytes == null) return null
-    val epochSecond = String(expiryBytes, StandardCharsets.UTF_8).toLong()
+private fun parseExpiry(expiryBytes: ByteArray?): Expiry {
+    if (expiryBytes == null) return Expiry.Unknown
+    val epochSecond = String(expiryBytes).toLong()
     return if (epochSecond == 0L) Expiry.None else Expiry.Absolute(Instant.ofEpochSecond(epochSecond))
 }

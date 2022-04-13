@@ -40,8 +40,8 @@ import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.insert
 import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.replace
 import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.upsert
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
-import com.couchbase.client.test.ClusterType.CAVES
 import com.couchbase.client.test.ClusterType
+import com.couchbase.client.test.ClusterType.CAVES
 import com.couchbase.client.test.IgnoreWhen
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -197,7 +197,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
 
             collection.upsert(id, Content.binary(contentBytes))
             assertEquals(Expiry.none(), collection.get(id, withExpiry = true).expiry)
-            assertNull(collection.get(id).expiry)
+            assertEquals(Expiry.Unknown, collection.get(id).expiry)
         }
 
         @Test
@@ -205,7 +205,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
             val id = nextId()
             collection.upsert(id, "foo")
 
-            assertNull(collection.get(id).expiry)
+            assertEquals(Expiry.Unknown, collection.get(id).expiry)
             assertEquals(Expiry.none(), collection.get(id, withExpiry = true).expiry)
 
             collection.upsert(id, "foo", expiry = nearFutureExpiry)
@@ -536,6 +536,14 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
             assertNotEquals(insertResult.cas, updateResult.cas)
             assertNotEquals(insertResult.mutationToken, updateResult.mutationToken)
             assertEquals(mapOf("foo" to false), collection.get(id).contentAs<Any>())
+        }
+
+        @Test
+        fun `unknown expiry is illegal argument`(): Unit = runBlocking {
+            val e = assertThrows<IllegalArgumentException> {
+                collection.upsert(nextId(), "foo", expiry = Expiry.Unknown)
+            }
+            assertTrue((e.message?:"").contains("Expiry.Unknown"))
         }
     }
 

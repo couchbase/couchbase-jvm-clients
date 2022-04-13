@@ -42,13 +42,13 @@ public open class GetResult internal constructor(
     public val content: Content,
 
     /**
-     * A null value means the expiry is unknown because the
+     * A value of [Expiry.Unknown] means the expiry is unknown because the
      * `withExpiry` argument was `false` when getting the document.
      *
      * If the expiry is known, it will be either [Expiry.None]
      * or [Expiry.Absolute].
      */
-    public val expiry: Expiry?,
+    public val expiry: Expiry,
 
     @property:PublishedApi
     internal val defaultTranscoder: Transcoder,
@@ -78,6 +78,6 @@ public open class GetResult internal constructor(
         ) = GetResult(id, cas, content, expiry, defaultTranscoder)
 
         fun withUnknownExpiry(id: String, cas: Long, content: Content, defaultTranscoder: Transcoder) =
-            GetResult(id, cas, content, null, defaultTranscoder)
+            GetResult(id, cas, content, Expiry.Unknown, defaultTranscoder)
     }
 }

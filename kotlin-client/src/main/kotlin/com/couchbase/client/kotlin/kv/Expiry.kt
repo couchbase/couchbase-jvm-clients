@@ -29,7 +29,19 @@ public sealed class Expiry {
         override fun toString(): String = "None"
     }
 
-    public data class Absolute internal constructor(public val instant: Instant) : Expiry() {
+    /**
+     * This is a "null object" that cannot be used to set the expiry of a document.
+     *
+     * Expiry.Unknown exists so [GetResult.expiry] can always be non-null.
+     */
+    public object Unknown : Expiry() {
+        override fun encode() = throw IllegalArgumentException(
+            "Expiry.Unknown cannot be used to set a document's expiry. " +
+                    "To get a usable Expiry instance, pass `withExpiry = true` when getting the document.")
+        override fun toString(): String = "Unknown (To know expiry, pass `withExpiry = true` when calling `get`)"
+    }
+
+    public class Absolute internal constructor(public val instant: Instant) : Expiry() {
         init {
             // If we were to require the instant be in the future, it could cause problems
             // when creating the Absolute object for a GetResult with expiry.
@@ -52,9 +64,28 @@ public sealed class Expiry {
         }
 
         override fun encode() = instant.epochSecond
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Absolute
+
+            if (instant != other.instant) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            return instant.hashCode()
+        }
+
+        override fun toString(): String {
+            return "Absolute(instant=$instant)"
+        }
     }
 
-    public data class Relative internal constructor(val duration: Duration) : Expiry() {
+    public class Relative internal constructor(public val duration: Duration) : Expiry() {
         init {
             val seconds = duration.inWholeSeconds
             require(seconds > 0L) {
@@ -76,6 +107,25 @@ public sealed class Expiry {
             // Otherwise we need to do the conversion on the client.
             return if (seconds < RELATIVE_EXPIRY_CUTOFF_SECONDS) seconds
             else currentTimeSeconds() + seconds
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Relative
+
+            if (duration != other.duration) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            return duration.hashCode()
+        }
+
+        override fun toString(): String {
+            return "Relative(duration=$duration)"
         }
     }
 
