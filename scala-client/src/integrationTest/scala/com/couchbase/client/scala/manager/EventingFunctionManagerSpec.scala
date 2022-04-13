@@ -377,11 +377,14 @@ class EventingFunctionManagerSpec extends ScalaIntegrationTest {
   }
 
   private def isState(funcName: String, status: EventingFunctionStatus): Boolean = {
-    functions
+    val funcs = functions
       .functionsStatus()
       .get
       .functions
-      .exists(state => state.name == funcName && (state.status == status))
+
+    println(s"Func ${funcName} status ${status} funcs ${funcs}")
+
+    funcs.exists(state => state.name == funcName && (state.status == status))
   }
 
 }

@@ -562,15 +562,15 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> Flux
         .range(0, LOOP_GUARD)
-        .flatMap(i -> cluster.reactive().searchQuery("ratelimits", QueryStringQuery.queryString("a")))
-        .onErrorResume(err -> {
-          LOGGER.info("Got error " + err.toString());
-          if (err instanceof CouchbaseException
-                  && continueOnSearchError((CouchbaseException) err)) {
-            return Mono.empty();
-          }
-          return Mono.error(err);
-        })
+        .flatMap(i -> cluster.reactive().searchQuery("ratelimits", QueryStringQuery.queryString("a"))
+                .onErrorResume(err -> {
+                  LOGGER.info("Got error " + err.toString());
+                  if (err instanceof CouchbaseException
+                          && continueOnSearchError((CouchbaseException) err)) {
+                    return Mono.empty();
+                  }
+                  return Mono.error(err);
+                }))
         .blockLast());
 
       assertTrue(ex.getMessage().contains("num_concurrent_requests"));

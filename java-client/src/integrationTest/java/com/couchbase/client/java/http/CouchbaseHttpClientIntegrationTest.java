@@ -48,7 +48,7 @@ class CouchbaseHttpClientIntegrationTest extends JavaIntegrationTest {
     httpClient = cluster.httpClient();
 
     // need to wait, otherwise targeting a specific node fails
-    cluster.bucket(config().bucketname()).waitUntilReady(Duration.ofSeconds(10));
+    cluster.bucket(config().bucketname()).waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
   }
 
   @AfterAll

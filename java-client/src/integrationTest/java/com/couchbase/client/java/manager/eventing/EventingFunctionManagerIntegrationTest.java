@@ -80,6 +80,30 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
         }
         return false;
       }));
+
+    // On CI seeing CollectionNotFoundException intermittently.  Wait until we can successfully create a function
+    // on the newly-created collection.
+    waitUntilCanCreateFunction();
+  }
+
+  private static void waitUntilCanCreateFunction() {
+    waitUntilCondition(() -> {
+      String funcName = UUID.randomUUID().toString();
+      EventingFunction function = EventingFunction.create(
+              funcName,
+              "function OnUpdate(doc, meta) {}",
+              EventingFunctionKeyspace.create(sourceCollection.bucketName(), sourceCollection.scopeName(), sourceCollection.name()),
+              EventingFunctionKeyspace.create(metaCollection.bucketName(), metaCollection.scopeName(), metaCollection.name())
+      );
+      try {
+        functions.upsertFunction(function);
+      }
+      catch (RuntimeException err) {
+        LOGGER.info("Waiting until can create function, got error {}", err.toString());
+        return false;
+      }
+      return true;
+    });
   }
 
   @AfterAll

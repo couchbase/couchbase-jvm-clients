@@ -47,8 +47,8 @@ class SharedClusterEnvironmentIntegrationTest extends JavaIntegrationTest {
       Bucket bucket1 = cluster1.bucket(config().bucketname());
       Bucket bucket2 = cluster2.bucket(config().bucketname());
 
-      bucket1.waitUntilReady(Duration.ofSeconds(10));
-      bucket2.waitUntilReady(Duration.ofSeconds(10));
+      bucket1.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
+      bucket2.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
       String documentId = UUID.randomUUID().toString();
 
