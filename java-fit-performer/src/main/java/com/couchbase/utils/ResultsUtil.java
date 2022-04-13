@@ -16,10 +16,12 @@
 package com.couchbase.utils;
 
 import com.couchbase.InternalPerformerFailure;
+import com.couchbase.client.core.error.AmbiguousTimeoutException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.ParsingFailureException;
+import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.transaction.ActiveTransactionRecordEntryNotFoundException;
 import com.couchbase.client.core.error.transaction.ActiveTransactionRecordFullException;
 import com.couchbase.client.core.error.transaction.ActiveTransactionRecordNotFoundException;
@@ -192,72 +194,14 @@ public class ResultsUtil {
         else if (ex instanceof TransactionAlreadyCommittedException) {
             return ExternalException.TransactionAlreadyCommitted;
         }
-        else if (ex instanceof com.couchbase.client.core.error.CouchbaseException) {
-            return ExternalException.CouchbaseException;
+        else if (ex instanceof UnambiguousTimeoutException) {
+            return ExternalException.UnambiguousTimeoutException;
         }
-        else {
-            return ExternalException.Unknown;
-        }
-    }
-
-    public static ExternalException convertTransactionFailedCause(@Nullable Throwable ex) {
-        if (ex == null) {
-            return ExternalException.NotSet;
-        }
-        else if (ex instanceof ActiveTransactionRecordEntryNotFoundException) {
-            return ExternalException.ActiveTransactionRecordEntryNotFound;
-        }
-        else if (ex instanceof ActiveTransactionRecordFullException) {
-
-            return ExternalException.ActiveTransactionRecordFull;
-        }
-        else if (ex instanceof ActiveTransactionRecordNotFoundException) {
-            return ExternalException.ActiveTransactionRecordNotFound;
-        }
-        else if (ex instanceof DocumentAlreadyInTransactionException) {
-            return ExternalException.DocumentAlreadyInTransaction;
-        }
-        else if (ex instanceof DocumentExistsException) {
-            return ExternalException.DocumentExistsException;
-        }
-        else if (ex instanceof DocumentNotFoundException) {
-            return ExternalException.DocumentNotFoundException;
-        }
-        else if (ex instanceof FeatureNotAvailableException) {
-            return ExternalException.FeatureNotAvailableException;
-        }
-        else if (ex instanceof PreviousOperationFailedException) {
-            return ExternalException.PreviousOperationFailed;
-        }
-        else if (ex instanceof ForwardCompatibilityFailureException) {
-            return ExternalException.ForwardCompatibilityFailure;
-        }
-        else if (ex instanceof ParsingFailureException) {
-            return ExternalException.ParsingFailure;
-        }
-        else if (ex instanceof IllegalStateException) {
-            return ExternalException.IllegalStateException;
-        }
-        else if (ex instanceof com.couchbase.client.core.error.ServiceNotAvailableException) {
-            return ExternalException.ServiceNotAvailableException;
+        else if (ex instanceof AmbiguousTimeoutException) {
+            return ExternalException.AmbiguousTimeoutException;
         }
         else if (ex instanceof com.couchbase.client.core.error.CouchbaseException) {
             return ExternalException.CouchbaseException;
-        }
-        else if (ex.getClass().getSimpleName().equals("ConcurrentOperationsDetectedOnSameDocument")) {
-            return ExternalException.ConcurrentOperationsDetectedOnSameDocument;
-        }
-        else if (ex.getClass().getSimpleName().equals("CommitNotPermitted")) {
-            return ExternalException.CommitNotPermitted;
-        }
-        else if (ex.getClass().getSimpleName().equals("RollbackNotPermitted")) {
-            return ExternalException.RollbackNotPermitted;
-        }
-        else if (ex.getClass().getSimpleName().equals("TransactionAlreadyAborted")) {
-            return ExternalException.TransactionAlreadyAborted;
-        }
-        else if (ex.getClass().getSimpleName().equals("TransactionAlreadyCommitted")) {
-            return ExternalException.TransactionAlreadyCommitted;
         }
         else {
             return ExternalException.Unknown;

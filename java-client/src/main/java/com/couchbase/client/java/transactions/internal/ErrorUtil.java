@@ -16,6 +16,7 @@
 package com.couchbase.client.java.transactions.internal;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionCommitAmbiguousException;
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionExpiredException;
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionFailedException;
@@ -42,7 +43,18 @@ public class ErrorUtil {
         return Mono.error(out);
     }
 
+    public static Mono<?> convertTransactionFailedSingleQueryMono(Throwable err) {
+        return convertTransactionFailedInternal(err)
+                .onErrorResume(ex -> {
+                    // From a cluster.query() transaction the user will be expecting the traditional SDK errors
+                    if (ex instanceof TransactionExpiredException) {
+                        return Mono.error(new UnambiguousTimeoutException(ex.getMessage(), null));
+                    }
+                    return Mono.error(ex);
+                });
+    }
+
     public static void convertTransactionFailedSingleQuery(RuntimeException err) {
-        convertTransactionFailedInternal(err).block();
+        convertTransactionFailedSingleQueryMono(err).block();
     }
 }

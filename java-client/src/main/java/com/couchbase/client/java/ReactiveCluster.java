@@ -284,7 +284,7 @@ public class ReactiveCluster {
     notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
     if (opts.asTransaction()) {
-      return SingleQueryTransactions.singleQueryTransactionStreaming(core(), environment(), statement, null, null, opts, (err) -> ErrorUtil.convertTransactionFailedSingleQuery(err));
+      return SingleQueryTransactions.singleQueryTransactionStreaming(core(), environment(), statement, null, null, opts, ErrorUtil::convertTransactionFailedSingleQuery);
     }
     else {
       JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();

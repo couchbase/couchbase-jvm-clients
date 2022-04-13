@@ -19,6 +19,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.EncodingFailureException;
+import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.transaction.CoreTransactionsReactive;
 import com.couchbase.client.core.transaction.config.CoreSingleQueryTransactionOptions;
@@ -29,6 +30,7 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.ReactiveQueryResult;
+import com.couchbase.client.java.transactions.error.TransactionExpiredException;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
@@ -66,7 +68,14 @@ public class SingleQueryTransactions {
 
             return tri.queryBlocking(statement, bucketName, scopeName, converted, opts.parentSpan())
                     .map(qr -> new QueryResult(qr.header, qr.rows, qr.trailer, serializer))
-                    .onErrorResume(ErrorUtil::convertTransactionFailedInternal);
+                    .onErrorResume(ErrorUtil::convertTransactionFailedInternal)
+                    .onErrorResume(ex -> {
+                        // From a cluster.query() transaction the user will be expecting the traditional SDK errors
+                        if (ex instanceof TransactionExpiredException) {
+                            return Mono.error(new UnambiguousTimeoutException(ex.getMessage(), null));
+                        }
+                        return Mono.error(ex);
+                    });
         } catch (IOException e) {
             return Mono.error(new EncodingFailureException(e));
         }

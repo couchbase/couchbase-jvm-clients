@@ -66,13 +66,13 @@ public class SingleQueryTransactionExecutor {
         } catch (TransactionFailedException err) {
             return TransactionSingleQueryResponse.newBuilder()
                     .setException(ResultsUtil.convertTransactionFailed(err))
-                    .setExceptionCause(ResultsUtil.convertTransactionFailedCause(err.getCause()))
+                    .setExceptionCause(ResultsUtil.mapCause(err.getCause()))
                     .addAllLog(err.logs().stream().map(TransactionLogEvent::toString).collect(Collectors.toList()))
                     .build();
         } catch (CouchbaseException err) {
             return TransactionSingleQueryResponse.newBuilder()
-                    .setException(TransactionException.NO_EXCEPTION_THROWN)
-                    .setExceptionCause(ResultsUtil.convertTransactionFailedCause(err))
+                    .setException(TransactionException.EXCEPTION_UNKNOWN)
+                    .setExceptionCause(ResultsUtil.mapCause(err))
                     .build();
         }
     }
@@ -128,10 +128,10 @@ public class SingleQueryTransactionExecutor {
         }
         catch (TransactionFailedException err) {
             errorDuringStreaming.set(ResultsUtil.convertTransactionFailed((Exception) err));
-            causeDuringStreaming.set(ResultsUtil.convertTransactionFailedCause(err.getCause()));
+            causeDuringStreaming.set(ResultsUtil.mapCause(err.getCause()));
         }
         catch (CouchbaseException err) {
-            causeDuringStreaming.set(ResultsUtil.convertTransactionFailedCause(err));
+            causeDuringStreaming.set(ResultsUtil.mapCause(err));
         }
         catch (RuntimeException err) {
             throw new InternalPerformerFailure(new IllegalArgumentException("Single query raised an illegal non-TransactionFailed error " + err));
