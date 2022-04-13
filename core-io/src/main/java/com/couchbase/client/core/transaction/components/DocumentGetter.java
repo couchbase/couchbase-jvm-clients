@@ -212,12 +212,16 @@ public class DocumentGetter {
                     if (!atrDocOpt.isPresent()) {
                         return Mono.error(new ActiveTransactionRecordEntryNotFoundException(atrId, attemptIdOfDoc));
                     } else {
-                        return atrFound(doc, byAttemptId, atrDocOpt.get(), logger);
+                        return atrFound(core, doc, byAttemptId, atrDocOpt.get(), logger);
                     }
                 });
     }
 
-    private static Mono<Optional<CoreTransactionGetResult>> atrFound(CoreTransactionGetResult doc, String byAttemptId, ActiveTransactionRecordEntry entry, CoreTransactionLogger logger) {
+    private static Mono<Optional<CoreTransactionGetResult>> atrFound(Core core,
+                                                                     CoreTransactionGetResult doc,
+                                                                     String byAttemptId,
+                                                                     ActiveTransactionRecordEntry entry,
+                                                                     CoreTransactionLogger logger) {
         if (doc.links().stagedAttemptId().isPresent()
                 && entry.attemptId().equals(byAttemptId)) {
             // Attempt is reading its own writes
@@ -230,7 +234,7 @@ public class DocumentGetter {
                         doc.links().stagedContent().get().getBytes(UTF_8))));
             }
         } else {
-            return ForwardCompatibility.check(ForwardCompatibilityStage.GETS_READING_ATR, entry.forwardCompatibility(), logger, Supported.SUPPORTED)
+            return ForwardCompatibility.check(core, ForwardCompatibilityStage.GETS_READING_ATR, entry.forwardCompatibility(), logger, Supported.SUPPORTED)
 
                     .then(Mono.defer(() -> {
                         logger.info(byAttemptId, "found ATR for MAV read in state: %s", entry);

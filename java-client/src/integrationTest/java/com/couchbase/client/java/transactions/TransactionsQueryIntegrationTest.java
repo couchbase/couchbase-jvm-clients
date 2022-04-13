@@ -88,10 +88,9 @@ public class TransactionsQueryIntegrationTest extends JavaIntegrationTest {
     @Test
     void insert() {
         String docId = UUID.randomUUID().toString();
-        collection.upsert(docId, JsonObject.create());
 
         cluster.transactions().run((ctx) -> {
-            TransactionQueryResult qr = ctx.query("INSERT INTO `default` VALUES ($1, $2)",
+            TransactionQueryResult qr = ctx.query("INSERT INTO `" + config().bucketname() + "` VALUES ($1, $2)",
                     TransactionQueryOptions.queryOptions().parameters(JsonArray.from(docId, JsonObject.create())));
             assertEquals(1, qr.metaData().metrics().get().mutationCount());
         });

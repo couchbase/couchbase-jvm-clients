@@ -95,10 +95,10 @@ public class ReactiveLock {
             // Have not locked, are waiting
             // Making sure to do it outside synchronization for safety.
             return waiter.notifier.asMono()
-                    .publishOn(SchedulerUtil.scheduler)
+                    .publishOn(ctx.scheduler())
 
                     .timeout(timeout)
-                    .publishOn(SchedulerUtil.scheduler) // timeout happens on parallel scheduler
+                    .publishOn(ctx.scheduler()) // timeout happens on parallel scheduler
                     .onErrorResume(err -> {
                         if (err instanceof TimeoutException) {
                             // timeout is only set if we do not immediately hold the lock after .lock() ends

@@ -120,7 +120,7 @@ public class ReactiveWaitGroup {
                             .collect(Collectors.toList()))
 
                     .timeout(timeout)
-                    .publishOn(SchedulerUtil.scheduler) // timeout is on parallel
+                    .publishOn(ctx.scheduler()) // timeout is on parallel
                     .onErrorResume(err -> {
                         if (err instanceof TimeoutException) {
                             String msg = String.format("Attempt expired while waiting for %d - %s", waiters.size(),

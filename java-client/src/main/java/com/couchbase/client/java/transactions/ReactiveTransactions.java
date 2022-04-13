@@ -23,7 +23,7 @@ import com.couchbase.client.core.transaction.CoreTransactionContext;
 import com.couchbase.client.core.transaction.CoreTransactionsReactive;
 import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
 import com.couchbase.client.core.transaction.config.CoreTransactionOptions;
-import com.couchbase.client.core.transaction.util.SchedulerUtil;
+import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
@@ -116,6 +116,6 @@ public class ReactiveTransactions {
             return internal.executeTransaction(createAttempt, merged, overall, newTransactionLogic, false)
                     .onErrorResume(ErrorUtil::convertTransactionFailedInternal);
         }).map(TransactionResult::new)
-                .publishOn(SchedulerUtil.schedulerBlocking).block();
+                .publishOn(internal.core().context().environment().transactionsSchedulers().schedulerBlocking()).block();
     }
 }

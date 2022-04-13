@@ -24,7 +24,7 @@ import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
 import com.couchbase.client.core.cnc.events.transaction.CleanupFailedEvent;
 import com.couchbase.client.core.transaction.log.SimpleEventBusLogger;
-import com.couchbase.client.core.transaction.util.SchedulerUtil;
+import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -125,7 +125,7 @@ public class CoreTransactionsCleanup {
         LOGGER_REGULAR.info("Starting background cleanup thread to find transactions from this client");
 
         // Periodically check and drain the cleanupQueue
-        Flux.interval(Duration.ofMillis(100), SchedulerUtil.schedulerCleanup)
+        Flux.interval(Duration.ofMillis(100), core.context().environment().transactionsSchedulers().schedulerCleanup())
 
                 .flatMap(v -> {
                     if (stop) {
@@ -150,7 +150,7 @@ public class CoreTransactionsCleanup {
                     while (head != null);
 
                     return Flux.fromIterable(requests)
-                            .publishOn(SchedulerUtil.schedulerCleanup);
+                            .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup());
                 })
 
                 .flatMap(req -> {
@@ -213,11 +213,8 @@ public class CoreTransactionsCleanup {
     }
 
     public Mono<Void> shutdown(Duration timeout) {
-        return Mono.fromRunnable(() -> stopBackgroundProcesses(timeout))
-                // That's a blocking call and we're currently on the cb-comp pool which doesn't allow blocking
-                .subscribeOn(SchedulerUtil.schedulerCleanup)
-                // But closing the scheduler (presumably) shouldn't be done on that same scheduler, so switch here.
-                .publishOn(Schedulers.parallel())
-                .then(Mono.fromRunnable(SchedulerUtil::shutdown));
+        return Mono.fromRunnable(() -> stopBackgroundProcesses(timeout));
+        // Note we don't shutdown the schedulers here - those are part of the CoreEnvironment, which may be
+        // shared by multiple Clusters.
     }
 }

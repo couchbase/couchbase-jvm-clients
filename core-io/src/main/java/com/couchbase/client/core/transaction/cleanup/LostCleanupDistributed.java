@@ -38,7 +38,7 @@ import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemp
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupEndRunEvent;
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupStartRunEvent;
 import com.couchbase.client.core.transaction.util.DebugUtil;
-import com.couchbase.client.core.transaction.util.SchedulerUtil;
+import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -237,7 +237,7 @@ public class LostCleanupDistributed {
                     span.attribute("db.couchbase.transactions.cleanup.atr.num_expired", stats.expired);
 
                     return Flux.fromIterable(expired)
-                            .publishOn(SchedulerUtil.schedulerCleanup);
+                            .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup());
                 })
 
                 .concatMap(atrEntry -> {
@@ -316,7 +316,7 @@ public class LostCleanupDistributed {
                 .concatMap(v -> Flux.fromIterable(cleanupSet))
                 // In practice this does not create one thread per bucket, it will just create threads as needed.  Since
                 // this is IO-bound, that will often be just 1.
-                .publishOn(SchedulerUtil.schedulerCleanup)
+                .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup())
                 .flatMap(this::createThreadForCollectionIfNeeded)
                 .doOnCancel(() -> {
                     LOGGER.info(String.format("%s has been told to cancel", bp));
@@ -390,7 +390,7 @@ public class LostCleanupDistributed {
                     // Similar if the first ATR takes > 1 second, the next should execute instantly.
                     return Flux.zip(Flux.fromIterable(atrsHandledByThisClient),
                                     Flux.interval(Duration.ofNanos(checkAtrEveryNNanos)))
-                            .publishOn(SchedulerUtil.schedulerCleanup)
+                            .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup())
 
                         // Where the ATR cleanup magic happens
                         // TXNJ-402: Use flatMap rather than concatMap to partially avoid issues with dropped ticks

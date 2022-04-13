@@ -38,6 +38,7 @@ import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.AbstractPooledEndpointServiceConfig;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
+import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
@@ -125,6 +126,7 @@ public class CoreEnvironment {
   private final long maxNumRequestsInRetry;
   private final List<RequestCallback> requestCallbacks;
   private final CoreTransactionsConfig transactionsConfig;
+  private final CoreTransactionsSchedulers transactionsSchedulers = new CoreTransactionsSchedulers();
 
   public static CoreEnvironment create() {
     return builder().build();
@@ -408,6 +410,14 @@ public class CoreEnvironment {
   }
 
   /**
+   * The schedulers used for any transactional operations.
+   */
+  @Stability.Volatile
+  public CoreTransactionsSchedulers transactionsSchedulers() {
+    return transactionsSchedulers;
+  }
+
+  /**
    * Shuts down this Environment with the default disconnect timeout.
    *
    * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
@@ -473,6 +483,7 @@ public class CoreEnvironment {
         }
         return Mono.empty();
       }))
+      .then(Mono.fromRunnable(() -> transactionsSchedulers().shutdown()))
       .then()
       .timeout(timeout); // this timeout cannot be on our scheduler, since our scheduler is already shut down
   }

@@ -19,30 +19,44 @@ import com.couchbase.client.core.annotation.Stability;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
+/**
+ * Mainly to aid debugging, transactions use their own pool of schedulers.  Though the underlying KV and query operations
+ * are done using the standard SDK schedulers.
+ */
 @Stability.Internal
-public class SchedulerUtil {
-    private SchedulerUtil() {}
-
+public class CoreTransactionsSchedulers {
     // Same as BoundedElasticScheduler.DEFAULT_TTL_SECONDS, which is private
     private final static int DEFAULT_TTL_SECONDS = 60;
 
-    // 100 is arbitrary.  There should be nothing blocking happening on this scheduler so only a handful of threads should be
+    // 100 is arbritary.  There should be nothing blocking happening on this scheduler so only a handful of threads should be
     // created and used in practice
-    public final static Scheduler scheduler = createScheduler(100, "cb-txn");
-    public final static Scheduler schedulerCleanup = createScheduler(100, "cb-txn-cleanup");
+    private final Scheduler scheduler = createScheduler(100, "cb-txn");
+    private final Scheduler schedulerCleanup = createScheduler(100, "cb-txn-cleanup");
 
     // AttemptContext will block on all operations, tying up a thread each time.  So, we don't (realistically) limit the thread pool.
-    // The two schedulers are separated to help with diagnosing blocking problems.
-    public final static Scheduler schedulerBlocking = createScheduler(100_000, "cb-txn-blocking");
+    // The two main schedulers are separated to help with diagnosing blocking problems.
+    private final Scheduler schedulerBlocking = createScheduler(100_000, "cb-txn-blocking");
 
-    private static Scheduler createScheduler(int threadCap, String name) {
-        // Create daemon threads, so we don't block the JVM from exiting if the user forgets cluster.disconnect()
+    private Scheduler createScheduler(int threadCap, String name) {
+        // Create daemon threads so we don't block the JVM from exiting if the user forgets cluster.disconnect()
         return Schedulers.newBoundedElastic(threadCap, Integer.MAX_VALUE, name, DEFAULT_TTL_SECONDS, true);
     }
-    public static void shutdown() {
-        // TODO ESI
-//        SchedulerUtil.schedulerCleanup.dispose();
-//        SchedulerUtil.scheduler.dispose();
-//        SchedulerUtil.schedulerBlocking.dispose();
+
+    public Scheduler scheduler() {
+        return scheduler;
+    }
+
+    public Scheduler schedulerCleanup() {
+        return schedulerCleanup;
+    }
+
+    public Scheduler schedulerBlocking() {
+        return schedulerBlocking;
+    }
+
+    public void shutdown() {
+        schedulerCleanup.dispose();
+        scheduler.dispose();
+        schedulerBlocking.dispose();
     }
 }

@@ -37,7 +37,7 @@ import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
 import com.couchbase.client.core.transaction.util.CoreTransactionAttemptContextHooks;
 import com.couchbase.client.core.transaction.util.DebugUtil;
 import com.couchbase.client.core.transaction.util.QueryUtil;
-import com.couchbase.client.core.transaction.util.SchedulerUtil;
+import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import com.couchbase.client.core.error.transaction.RetryTransactionException;
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionFailedException;
 import reactor.core.publisher.Flux;
@@ -81,7 +81,7 @@ public class CoreTransactionsReactive {
         return createAttempt
 
                 // TXNJ-50: Make sure we run user's blocking logic on a scheduler that can take it
-                .publishOn(SchedulerUtil.scheduler)
+                .publishOn(core.context().environment().transactionsSchedulers().scheduler())
 
                 .doOnSubscribe(v -> {
                     if (startTime.get() == null) startTime.set(System.nanoTime());

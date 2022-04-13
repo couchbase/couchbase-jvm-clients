@@ -108,10 +108,10 @@ import com.couchbase.client.core.transaction.util.TriFunction;
 import com.couchbase.client.core.transaction.error.internal.ErrorClass;
 import com.couchbase.client.core.cnc.events.transaction.IllegalDocumentStateEvent;
 import com.couchbase.client.core.util.CbPreconditions;
-import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
+import reactor.core.scheduler.Scheduler;
 import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
@@ -152,7 +152,6 @@ import static com.couchbase.client.core.transaction.error.internal.ErrorClass.cl
 import static com.couchbase.client.core.transaction.util.CoreTransactionAttemptContextHooks.HOOK_COMMIT_DOC_CHANGED;
 import static com.couchbase.client.core.transaction.util.CoreTransactionAttemptContextHooks.HOOK_ROLLBACK_DOC_CHANGED;
 import static com.couchbase.client.core.transaction.util.CoreTransactionAttemptContextHooks.HOOK_STAGING_DOC_CHANGED;
-import static com.couchbase.client.core.transaction.util.SchedulerUtil.scheduler;
 
 /**
  * Provides methods to allow an application's transaction logic to read, mutate, insert and delete documents, as well
@@ -283,6 +282,14 @@ public class CoreTransactionAttemptContext {
         }
 
         return out;
+    }
+
+    public Core core() {
+        return core;
+    }
+    
+    public Scheduler scheduler() {
+        return core.context().environment().transactionsSchedulers().scheduler();
     }
 
     /**
@@ -440,7 +447,7 @@ public class CoreTransactionAttemptContext {
                             pspan,
                             resolvingMissingATREntry))
 
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
@@ -929,7 +936,7 @@ public class CoreTransactionAttemptContext {
             return lockAndIncKVOps(lockDebug)
 
                     // In case the user has selected some scheduler inside the lambda, move to our own
-                    .subscribeOn(scheduler)
+                    .subscribeOn(scheduler())
 
                     .flatMap(lockTokens ->
                             Mono.defer(() -> {
@@ -989,7 +996,7 @@ public class CoreTransactionAttemptContext {
                 return lock(lockDebug)
 
                         // In case the user has selected some scheduler inside the lambda, move to our own
-                        .subscribeOn(scheduler)
+                        .subscribeOn(scheduler())
 
                         .flatMap(lockToken -> {
                             // Query is done under lock, except for BEGIN WORK which needs to relock.  Since this changes the lock
@@ -1260,7 +1267,7 @@ public class CoreTransactionAttemptContext {
 
     private Mono<Void> forwardCompatibilityCheck(ForwardCompatibilityStage stage,
                                                  Optional<ForwardCompatibility> fc) {
-        return ForwardCompatibility.check(stage, fc, logger(), Supported.SUPPORTED)
+        return ForwardCompatibility.check(core, stage, fc, logger(), Supported.SUPPORTED)
                 .onErrorResume(err -> {
                     TransactionOperationFailedException.Builder error = createError()
                             .cause(new ForwardCompatibilityFailureException());
@@ -1319,7 +1326,7 @@ public class CoreTransactionAttemptContext {
                         .exponentialBackoff(Duration.ofMillis(50), Duration.ofMillis(500))
                         .timeout(Duration.ofSeconds(1))
                         .toReactorRetry())
-                .publishOn(scheduler) // after retryWhen triggers, it's on parallel scheduler
+                .publishOn(scheduler()) // after retryWhen triggers, it's on parallel scheduler
 
                 .onErrorResume(err -> {
                     if (err instanceof RetryExhaustedException) {
@@ -1412,7 +1419,7 @@ public class CoreTransactionAttemptContext {
                                             new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", new byte[]{0}, false, false, false, 4)
                                             ), logger()))
 
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     // Testing hook
                     .flatMap(v -> hooks.afterAtrPending.apply(this).map(x -> v))
@@ -1443,7 +1450,7 @@ public class CoreTransactionAttemptContext {
                         } else if (ec == FAIL_AMBIGUOUS) {
                             LOGGER.info(attemptId, "retrying the op on %s to resolve ambiguity", ec);
 
-                            return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, scheduler)
+                            return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, scheduler())
                                     .then(atrPendingLocked(collection, span));
                         } else if (ec == FAIL_PATH_ALREADY_EXISTS) {
                             LOGGER.info(attemptId, "assuming this is caused by resolved ambiguity, and proceeding as though successful", ec);
@@ -1502,7 +1509,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "txn.op.crc32", serialize("${Mutation.value_crc32c}"), false, true, true, 2)
                             )))
 
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     .doOnSubscribe(v -> {
                         LOGGER.info(attemptId, "about to replace doc %s with cas %d, accessDeleted=%s",
@@ -1641,7 +1648,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "txn.op.crc32", serialize("${Mutation.value_crc32c}"), false, true, true, 2)
                             )))
 
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     .flatMap(updatedDoc -> hooks.afterStagedRemoveComplete.apply(this, doc.id()) // Testing hook
                             .thenReturn(updatedDoc))
@@ -1750,7 +1757,7 @@ public class CoreTransactionAttemptContext {
 
                 .then(DocumentGetter.justGetDoc(core, collection, id, kvTimeoutNonMutating(),  pspan, true, logger()))
 
-                .publishOn(scheduler)
+                .publishOn(scheduler())
 
                 .doOnSubscribe(x -> LOGGER.info(attemptId, "%s getting doc (which may be a tombstone)", bp))
 
@@ -1914,7 +1921,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, "txn.op.crc32", serialize("${Mutation.value_crc32c}"), false, true, true, 2)
                             )))
 
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     .flatMap(response -> hooks.afterStagedInsertComplete.apply(this, id).thenReturn(response)) // testing hook
 
@@ -1957,7 +1964,7 @@ public class CoreTransactionAttemptContext {
                             } else if (ec == FAIL_EXPIRY) {
                                 return setExpiryOvertimeModeAndFail(err, CoreTransactionAttemptContextHooks.HOOK_CREATE_STAGED_INSERT, ec);
                             } else if (ec == FAIL_AMBIGUOUS) {
-                                return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, scheduler)
+                                return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, scheduler())
                                         .then(createStagedInsert(operationId, collection, id, content, span, cas));
                             } else if (ec == FAIL_TRANSIENT) {
                                 return Mono.error(operationFailed(out.retryTransaction().build()));
@@ -2255,7 +2262,7 @@ public class CoreTransactionAttemptContext {
                     return commitActualLocked(span);
                 }
             }
-        }).subscribeOn(scheduler);
+        }).subscribeOn(scheduler());
     }
 
     private Mono<Void> commitActualLocked(SpanWrapper span) {
@@ -2374,7 +2381,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, prefix, null, false, true, false, 0)
                             )))
 
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     .flatMap(v -> hooks.afterAtrComplete.apply(this))  // Testing hook
 
@@ -2477,7 +2484,7 @@ public class CoreTransactionAttemptContext {
                         if (expiryOvertimeMode) {
                             return mapErrorInOvertimeToExpired(true, CoreTransactionAttemptContextHooks.HOOK_REMOVE_DOC, err, FinalErrorToRaise.TRANSACTION_FAILED_POST_COMMIT);
                         } else if (ec == FAIL_AMBIGUOUS) {
-                            return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, scheduler)
+                            return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, scheduler())
                                     .then(removeDocLocked(span, collection, id, true));
                         } else if (ec == FAIL_DOC_NOT_FOUND) {
                             return Mono.error(operationFailed(e.build()));
@@ -2506,7 +2513,7 @@ public class CoreTransactionAttemptContext {
 
             // TXNJ-64 - commit in the order the docs were staged
             return Flux.fromIterable(stagedMutationsLocked)
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     .concatMap(staged -> {
                         return commitDocWrapperLocked(span, staged);
@@ -2601,7 +2608,7 @@ public class CoreTransactionAttemptContext {
                         }
                     }))
 
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     // Testing hook
                     .flatMap(v -> hooks.afterDocCommittedBeforeSavingCAS.apply(this, id).thenReturn(v))
@@ -2740,7 +2747,7 @@ public class CoreTransactionAttemptContext {
                     })
                     .then(hooks.beforeDocChangedDuringCommit.apply(this, id)) // testing hook
                     .then(DocumentGetter.getAsync(core, LOGGER, staged.collection, config, staged.id, attemptId, true, span, Optional.empty()))
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         LOGGER.info(attemptId, "commit - handling doc changed %s, got error %s",
@@ -2807,7 +2814,7 @@ public class CoreTransactionAttemptContext {
                     })
                     .then(hooks.beforeDocChangedDuringStaging.apply(this, id)) // testing hook
                     .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty()))
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         LOGGER.info(attemptId, "handling doc changed during staging %s, got error %s",
@@ -2893,7 +2900,7 @@ public class CoreTransactionAttemptContext {
                     })
                     .then(hooks.beforeDocChangedDuringRollback.apply(this, id)) // testing hook
                     .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty()))
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         LOGGER.info(attemptId, "handling doc changed during rollback %s, got error %s",
@@ -2976,7 +2983,7 @@ public class CoreTransactionAttemptContext {
                             Arrays.asList(
                                     new SubdocGetRequest.Command(SubdocCommandType.GET, "attempts." + attemptId + "." + TransactionFields.ATR_FIELD_STATUS, true, 0)
                             )))
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     .flatMap(result -> {
                         String status = null;
@@ -3052,7 +3059,7 @@ public class CoreTransactionAttemptContext {
 
                     // Retry RetryOperation() exceptions
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY_WITH_FIXED_RETRY)
-                    .publishOn(scheduler) // after retryWhen triggers, it's on parallel scheduler
+                    .publishOn(scheduler()) // after retryWhen triggers, it's on parallel scheduler
 
                     .doOnError(err -> failSpan(span, err))
                     .doFinally(v -> span.finish());
@@ -3082,7 +3089,7 @@ public class CoreTransactionAttemptContext {
                     .then(TransactionKVHandler.mutateIn(core, atrCollection.get(), atrId.get(), kvTimeoutMutating(),
                             false, false, false, false, false, 0, durabilityLevel(), OptionsUtil.createClientContext("atrCommit"), span, specs))
 
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     // Testing hook
                     .flatMap(v -> hooks.afterAtrCommit.apply(this))
@@ -3169,7 +3176,7 @@ public class CoreTransactionAttemptContext {
 
                     // Retry RetryOperation() exceptions
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY)
-                    .publishOn(scheduler) // after retryWhen triggers, it's on parallel scheduler
+                    .publishOn(scheduler()) // after retryWhen triggers, it's on parallel scheduler
 
                     .doOnError(err -> failSpan(span, err))
                     .doFinally(v -> span.finish());
@@ -3246,7 +3253,7 @@ public class CoreTransactionAttemptContext {
             } else {
                 return rollbackWithKVLocked(isAppRollback, span);
             }
-        }).subscribeOn(scheduler);
+        }).subscribeOn(scheduler());
     }
 
     private Mono<Void> rollbackWithKVLocked(boolean isAppRollback, SpanWrapper span) {
@@ -3359,7 +3366,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, prefix, null, false, true, false, 0)
                                     )))
 
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     .flatMap(v -> hooks.afterAtrRolledBack.apply(this)) // testing hook
 
@@ -3397,7 +3404,7 @@ public class CoreTransactionAttemptContext {
 
                     // Retry RetryOperation() exceptions
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY)
-                    .publishOn(scheduler) // after retryWhen triggers, it's on parallel scheduler
+                    .publishOn(scheduler()) // after retryWhen triggers, it's on parallel scheduler
 
                     .then()
 
@@ -3411,7 +3418,7 @@ public class CoreTransactionAttemptContext {
             SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, "rollback.docs", pspan);
 
             return Flux.fromIterable(stagedMutationsLocked)
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     .concatMap(staged -> {
                         switch (staged.type) {
@@ -3451,7 +3458,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn", null, false, true, false, 0)
                             )))
 
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     .flatMap(updatedDoc -> hooks.afterRollbackReplaceOrRemove.apply(this, id) // Testing hook
 
@@ -3497,7 +3504,7 @@ public class CoreTransactionAttemptContext {
 
                     // Retry RetryOperation() exceptions
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY)
-                    .publishOn(scheduler) // after retryWhen triggers, it's on parallel scheduler
+                    .publishOn(scheduler()) // after retryWhen triggers, it's on parallel scheduler
 
                     .doOnError(err -> failSpan(span, err))
                     .doFinally(v -> span.finish());
@@ -3526,7 +3533,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn", null, false, true, false, 0)
                             )))
 
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     // Testing hook
                     .flatMap(updatedDoc -> hooks.afterRollbackDeleteInserted.apply(this, id)
@@ -3571,7 +3578,7 @@ public class CoreTransactionAttemptContext {
 
                     // Retry RetryOperation() exceptions
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY)
-                    .publishOn(scheduler) // after retryWhen triggers, it's on parallel scheduler
+                    .publishOn(scheduler()) // after retryWhen triggers, it's on parallel scheduler
 
                     .doOnError(err -> failSpan(span, err))
                     .doFinally(v -> span.finish());
@@ -3612,7 +3619,7 @@ public class CoreTransactionAttemptContext {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn", null, false, true, false, 0)
                             )))
 
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     .flatMap(updatedDoc -> hooks.afterRemoveStagedInsert.apply(this, id)
                             .thenReturn(updatedDoc))
@@ -3677,7 +3684,7 @@ public class CoreTransactionAttemptContext {
                     .then(TransactionKVHandler.mutateIn(core, atrCollection.get(), atrId.get(), kvTimeoutMutating(),
                             false, false, false, false, false, 0, durabilityLevel(), OptionsUtil.createClientContext("atrAbort"), span, specs))
 
-                    .publishOn(scheduler)
+                    .publishOn(scheduler())
 
                     // Debug hook
                     .then(hooks.afterAtrAborted.apply(this))
@@ -3716,7 +3723,7 @@ public class CoreTransactionAttemptContext {
 
                     // Will retry RetryOperation errors
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY)
-                    .publishOn(scheduler) // after retryWhen triggers, it's on parallel scheduler
+                    .publishOn(scheduler()) // after retryWhen triggers, it's on parallel scheduler
 
                     .doOnError(err -> failSpan(span, err))
                     .doFinally(v -> span.finish());

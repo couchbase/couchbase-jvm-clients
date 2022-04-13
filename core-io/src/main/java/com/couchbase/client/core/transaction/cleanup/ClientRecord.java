@@ -41,7 +41,7 @@ import com.couchbase.client.core.transaction.CoreTransactionsReactive;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
 import com.couchbase.client.core.transaction.log.SimpleEventBusLogger;
 import com.couchbase.client.core.transaction.util.DebugUtil;
-import com.couchbase.client.core.transaction.util.SchedulerUtil;
+import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import com.couchbase.client.core.util.Bytes;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -113,7 +113,7 @@ public class ClientRecord {
     public Flux<Void> removeClientFromCleanupSet(String clientUuid, Duration timeout, Set<CollectionIdentifier> cleanupSet) {
         return Flux.fromIterable(cleanupSet)
 
-                .subscribeOn(SchedulerUtil.schedulerCleanup)
+                .subscribeOn(core.context().environment().transactionsSchedulers().schedulerCleanup())
 
                 .concatMap(collection -> beforeRemoveClient(this) // testing hook
 

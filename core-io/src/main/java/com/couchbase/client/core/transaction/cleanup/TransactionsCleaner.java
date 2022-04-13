@@ -40,7 +40,7 @@ import com.couchbase.client.core.transaction.error.internal.ErrorClass;
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.core.transaction.util.DebugUtil;
-import com.couchbase.client.core.transaction.util.SchedulerUtil;
+import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import com.couchbase.client.core.transaction.util.TransactionKVHandler;
 import com.couchbase.client.core.transaction.util.TriFunction;
 import com.couchbase.client.core.util.Bytes;
@@ -262,7 +262,7 @@ public class TransactionsCleaner {
                                 boolean requireCrc32ToMatchStaging,
                                 TriFunction<CollectionIdentifier, CoreTransactionGetResult, SubdocGetResponse, Mono<Void>> perDoc) {
         return Flux.fromIterable(docs)
-                .publishOn(SchedulerUtil.schedulerCleanup)
+                .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup())
                 .concatMap(docRecord -> {
                     CollectionIdentifier collection = new CollectionIdentifier(docRecord.bucketName(),
                             Optional.of(docRecord.scopeName()), Optional.of(docRecord.collectionName()));
@@ -411,7 +411,7 @@ public class TransactionsCleaner {
 
             Mono<Object> cleanupEntry = removeATREntry(req.state(), atrCollection, atrId, attemptId, perEntryLog, span, req);
 
-            return ForwardCompatibility.check(ForwardCompatibilityStage.CLEANUP_ENTRY, req.forwardCompatibility(), perEntryLog, Supported.SUPPORTED)
+            return ForwardCompatibility.check(core, ForwardCompatibilityStage.CLEANUP_ENTRY, req.forwardCompatibility(), perEntryLog, Supported.SUPPORTED)
 
                     .then(cleanupDocs)
                     .then(cleanupEntry)

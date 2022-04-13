@@ -15,12 +15,13 @@
  */
 package com.couchbase.client.core.transaction.forwards;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.error.transaction.ForwardCompatibilityFailureException;
 import com.couchbase.client.core.error.transaction.internal.ForwardCompatibilityRequiresRetryException;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
-import com.couchbase.client.core.transaction.util.SchedulerUtil;
+import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
@@ -160,7 +161,8 @@ public class ForwardCompatibility {
      * Throws ForwardCompatibilityRequiresRetry if the 'thing' (transaction or cleanup attempt) should be retried
      * Throws ForwardCompatibilityFailure else if the 'thing' should fast-fail
      */
-    public static Mono<Void> check(ForwardCompatibilityStage fc,
+    public static Mono<Void> check(Core core,
+                                   ForwardCompatibilityStage fc,
                                    Optional<ForwardCompatibility> forwardCompatibility,
                                    @Nullable CoreTransactionLogger logger,
                                    Supported supported) {
@@ -181,7 +183,7 @@ public class ForwardCompatibility {
                     }
 
                     if (behaviour.retryAfterMillis.isPresent()) {
-                        return Mono.delay(Duration.ofMillis(behaviour.retryAfterMillis.get()), SchedulerUtil.scheduler)
+                        return Mono.delay(Duration.ofMillis(behaviour.retryAfterMillis.get()), core.context().environment().transactionsSchedulers().scheduler())
                                 .then(Mono.error(toThrow));
                     } else {
                         return Mono.error(toThrow);
