@@ -41,11 +41,11 @@ pipeline {
         stage('prepare and validate') {
             agent { label LINUX_AGENTS }
             steps {
-                cleanWs()
                 dir('couchbase-jvm-clients') {
-                    checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
+                    // On CI seeing issues with stale code being used - but only for some source.  Trying to delete
+                    // everything.
+                    deleteDir()
                 }
-                stash includes: 'couchbase-jvm-clients/', name: 'couchbase-jvm-clients', useDefaultExcludes: false
             }
         }
 
@@ -87,11 +87,11 @@ pipeline {
             }
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
 
                     dir('couchbase-jvm-clients') {
+                        deleteDir()
+                        checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
                         // By default Java and Scala use mock for testing
                         shWithEcho("mvn --fail-at-end clean test")
 
@@ -226,8 +226,8 @@ pipeline {
             }
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
                     dir('colossus') {
+                        deleteDir()
                         checkout([$class: 'GitSCM',
                                   branches: [[name: 'colossus']],
                                   userRemoteConfigs: [[url: '$REPO']]])
@@ -335,8 +335,8 @@ pipeline {
             }
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanWs()
                     dir('colossus') {
+                        deleteDir()
                         checkout([$class: 'GitSCM',
                                   branches: [[name: 'colossus']],
                                   userRemoteConfigs: [[url: '$REPO']]])
@@ -466,14 +466,13 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                // Temporary: there are known cbas crashes preventing this from passing currently, do not fail build
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     installJDKIfNeeded(platform, OPENJDK, OPENJDK_11)
                     // qe-grav2-amzn2 doesn't have maven
                     shWithEcho("cbdep install -d deps maven 3.5.2-cb6")
                     dir('couchbase-jvm-clients') {
+                        deleteDir()
+                        checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
                         // Advice from builds team: cbdyncluster cannot be contacted from qe-grav2-amzn2, so testing
                         // against mocks only for now
                         script { testAgainstMock() }
@@ -499,10 +498,10 @@ pipeline {
             }
             steps {
                  catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    cleanWs()
-                    unstash 'couchbase-jvm-clients'
                     installJDKIfNeeded(platform, OPENJDK, OPENJDK_11_M1)
                     dir('couchbase-jvm-clients') {
+                        deleteDir()
+                        checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
                         // Mock testing only, with native IO disabled - check JVMCBC-942 for details
                         script { testAgainstMock(true) }
                     }
@@ -549,11 +548,12 @@ pipeline {
 //         }
 
         stage('package') {
+            agent { label 'sdkqe-centos7' }
             steps {
-                cleanWs()
-                unstash 'couchbase-jvm-clients'
-
                 dir('couchbase-jvm-clients') {
+                    deleteDir()
+                    checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
+                    shWithEcho("mvn clean install -Dmaven.test.skip --batch-mode")
                     shWithEcho("find . -iname *.jar")
                     // archiveArtifacts artifacts: 'couchbase-jvm-clients/', fingerprint: true
                     archiveArtifacts artifacts: 'java-client/target/*.jar', fingerprint: true
@@ -586,11 +586,11 @@ void test(Map args=[:],
     boolean multiCerts = args.containsKey("multiCerts") ? args.get("multiCerts") : false
 
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-        cleanWs()
-        unstash 'couchbase-jvm-clients'
         installJDKIfNeeded(platform, jdk, jdkVersion)
 
         dir('couchbase-jvm-clients') {
+            deleteDir()
+            checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
             script { testAgainstServer(serverVersion, QUICK_TEST_MODE, includeAnalytics, includeEventing, enableDevelopPreview, ceMode, multiCerts) }
             shWithEcho("make deps-only")
             shWithEcho("mvn clean install -Dmaven.test.skip --batch-mode")
@@ -604,11 +604,11 @@ void buildScala(String jdk,
                 String scalaCompatVersion,
                 String scalaLibraryVersion) {
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-        cleanWs()
-        unstash 'couchbase-jvm-clients'
         installJDKIfNeeded(platform, jdk, jdkVersion)
 
         dir('couchbase-jvm-clients') {
+            deleteDir()
+            checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
             shWithEcho("make deps-only")
             shWithEcho("mvn -Dmaven.test.skip --batch-mode -Dscala.compat.version=${scalaCompatVersion} -Dscala.compat.library.version=${scalaLibraryVersion} clean compile")
         }
