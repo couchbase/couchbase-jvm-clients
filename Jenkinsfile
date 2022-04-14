@@ -36,19 +36,6 @@ pipeline {
     }
 
     stages {
-        // Validations are intended to make sure that the commit is sane.  Things like code-formatting rules and basic
-        // sanity tests go here.
-        stage('prepare and validate') {
-            agent { label LINUX_AGENTS }
-            steps {
-                dir('couchbase-jvm-clients') {
-                    // On CI seeing issues with stale code being used - but only for some source.  Trying to delete
-                    // everything.
-                    deleteDir()
-                }
-            }
-        }
-
         // Scala 2.11 & 2.13 aren't officially distributed or supported, but we have community depending on it so check
         // they at least compile
         stage('build Scala 2.11') {
@@ -87,10 +74,10 @@ pipeline {
             }
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanupWorkspace()
                     installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
 
                     dir('couchbase-jvm-clients') {
-                        deleteDir()
                         checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
                         // By default Java and Scala use mock for testing
                         shWithEcho("mvn --fail-at-end clean test")
@@ -226,8 +213,8 @@ pipeline {
             }
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanupWorkspace()
                     dir('colossus') {
-                        deleteDir()
                         checkout([$class: 'GitSCM',
                                   branches: [[name: 'colossus']],
                                   userRemoteConfigs: [[url: '$REPO']]])
@@ -335,8 +322,8 @@ pipeline {
             }
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanupWorkspace()
                     dir('colossus') {
-                        deleteDir()
                         checkout([$class: 'GitSCM',
                                   branches: [[name: 'colossus']],
                                   userRemoteConfigs: [[url: '$REPO']]])
@@ -467,11 +454,11 @@ pipeline {
             }
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanupWorkspace()
                     installJDKIfNeeded(platform, OPENJDK, OPENJDK_11)
                     // qe-grav2-amzn2 doesn't have maven
                     shWithEcho("cbdep install -d deps maven 3.5.2-cb6")
                     dir('couchbase-jvm-clients') {
-                        deleteDir()
                         checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
                         // Advice from builds team: cbdyncluster cannot be contacted from qe-grav2-amzn2, so testing
                         // against mocks only for now
@@ -498,9 +485,9 @@ pipeline {
             }
             steps {
                  catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    cleanupWorkspace()
                     installJDKIfNeeded(platform, OPENJDK, OPENJDK_11_M1)
                     dir('couchbase-jvm-clients') {
-                        deleteDir()
                         checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
                         // Mock testing only, with native IO disabled - check JVMCBC-942 for details
                         script { testAgainstMock(true) }
@@ -550,8 +537,8 @@ pipeline {
         stage('package') {
             agent { label 'sdkqe-centos7' }
             steps {
+                cleanupWorkspace()
                 dir('couchbase-jvm-clients') {
-                    deleteDir()
                     checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
                     shWithEcho("mvn clean install -Dmaven.test.skip --batch-mode")
                     shWithEcho("find . -iname *.jar")
@@ -586,10 +573,10 @@ void test(Map args=[:],
     boolean multiCerts = args.containsKey("multiCerts") ? args.get("multiCerts") : false
 
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+        cleanupWorkspace()
         installJDKIfNeeded(platform, jdk, jdkVersion)
 
         dir('couchbase-jvm-clients') {
-            deleteDir()
             checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
             script { testAgainstServer(serverVersion, QUICK_TEST_MODE, includeAnalytics, includeEventing, enableDevelopPreview, ceMode, multiCerts) }
             shWithEcho("make deps-only")
@@ -604,10 +591,10 @@ void buildScala(String jdk,
                 String scalaCompatVersion,
                 String scalaLibraryVersion) {
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+        cleanupWorkspace()
         installJDKIfNeeded(platform, jdk, jdkVersion)
 
         dir('couchbase-jvm-clients') {
-            deleteDir()
             checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
             shWithEcho("make deps-only")
             shWithEcho("mvn -Dmaven.test.skip --batch-mode -Dscala.compat.version=${scalaCompatVersion} -Dscala.compat.library.version=${scalaLibraryVersion} clean compile")
@@ -796,4 +783,31 @@ void testAgainstServer(String serverVersion,
 void testAgainstMock(boolean disableNativeIo = false) {
     shWithEcho("make deps-only")
     shWithEcho("mvn --fail-at-end clean install --batch-mode ${disableNativeIo ? '-Dcom.couchbase.client.core.deps.io.netty.transport.noNative=true' : ''}")
+}
+
+void cleanupWorkspace() {
+    dir("${workspace}") {
+        sh 'ls'
+    }
+
+    // This _might_ clean the workspace now, or it may clean it after the build: the docs are unclear: one place says
+    // "Delete workspace when build is done", another indicates it's an imperative command.
+    // So, also doing the deleteDir() steps below, perhaps redundantly.
+    cleanWs()
+
+    dir("${workspace}") {
+        sh 'ls'
+        deleteDir()
+        sh 'ls'
+    }
+
+    // Per https://stackoverflow.com/questions/37468455/jenkins-pipeline-wipe-out-workspace, there are directories the
+    // above will not delete
+    dir("${workspace}@tmp") {
+        deleteDir()
+    }
+
+    dir("${workspace}@script") {
+        deleteDir()
+    }
 }
