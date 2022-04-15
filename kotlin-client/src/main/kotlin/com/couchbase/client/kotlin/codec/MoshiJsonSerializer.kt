@@ -38,7 +38,7 @@ import okio.Buffer
  * in reflection mode:
  *```
  * val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
- * val cluster = Cluster.connect("localhost", "Administrator", "password") {
+ * val cluster = Cluster.connect(connectionString, username, password) {
  *     jsonSerializer = MoshiJsonSerializer(moshi)
  * }
  * ```
