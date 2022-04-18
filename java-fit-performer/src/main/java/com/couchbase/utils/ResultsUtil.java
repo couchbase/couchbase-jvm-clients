@@ -17,6 +17,7 @@ package com.couchbase.utils;
 
 import com.couchbase.InternalPerformerFailure;
 import com.couchbase.client.core.error.AmbiguousTimeoutException;
+import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
@@ -199,6 +200,9 @@ public class ResultsUtil {
         }
         else if (ex instanceof AmbiguousTimeoutException) {
             return ExternalException.AmbiguousTimeoutException;
+        }
+        else if (ex instanceof AuthenticationFailureException) {
+            return ExternalException.AuthenticationFailureException;
         }
         else if (ex instanceof com.couchbase.client.core.error.CouchbaseException) {
             return ExternalException.CouchbaseException;
