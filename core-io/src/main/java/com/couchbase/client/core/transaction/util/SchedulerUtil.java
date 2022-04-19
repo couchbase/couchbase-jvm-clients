@@ -21,17 +21,24 @@ import reactor.core.scheduler.Schedulers;
 
 @Stability.Internal
 public class SchedulerUtil {
-    SchedulerUtil() {}
+    private SchedulerUtil() {}
 
-    // 100 is arbritary.  There should be nothing blocking happening on this scheduler so only a handful of threads should be
+    // Same as BoundedElasticScheduler.DEFAULT_TTL_SECONDS, which is private
+    private final static int DEFAULT_TTL_SECONDS = 60;
+
+    // 100 is arbitrary.  There should be nothing blocking happening on this scheduler so only a handful of threads should be
     // created and used in practice
-    public final static Scheduler scheduler = Schedulers.newBoundedElastic(100, Integer.MAX_VALUE, "cb-txn");
-    public final static Scheduler schedulerCleanup = Schedulers.newBoundedElastic(100, Integer.MAX_VALUE, "cb-txn-cleanup");
+    public final static Scheduler scheduler = createScheduler(100, "cb-txn");
+    public final static Scheduler schedulerCleanup = createScheduler(100, "cb-txn-cleanup");
 
     // AttemptContext will block on all operations, tying up a thread each time.  So, we don't (realistically) limit the thread pool.
     // The two schedulers are separated to help with diagnosing blocking problems.
-    public final static Scheduler schedulerBlocking = Schedulers.newBoundedElastic(100_000, Integer.MAX_VALUE, "cb-txn-blocking");
+    public final static Scheduler schedulerBlocking = createScheduler(100_000, "cb-txn-blocking");
 
+    private static Scheduler createScheduler(int threadCap, String name) {
+        // Create daemon threads, so we don't block the JVM from exiting if the user forgets cluster.disconnect()
+        return Schedulers.newBoundedElastic(threadCap, Integer.MAX_VALUE, name, DEFAULT_TTL_SECONDS, true);
+    }
     public static void shutdown() {
         // TODO ESI
 //        SchedulerUtil.schedulerCleanup.dispose();
