@@ -17,7 +17,10 @@ package com.couchbase.client.scala.manager
 
 import com.couchbase.client.core.error._
 import com.couchbase.client.scala.Cluster
-import com.couchbase.client.scala.manager.analytics.AnalyticsLink.{CouchbaseRemoteAnalyticsLink, S3ExternalAnalyticsLink}
+import com.couchbase.client.scala.manager.analytics.AnalyticsLink.{
+  CouchbaseRemoteAnalyticsLink,
+  S3ExternalAnalyticsLink
+}
 import com.couchbase.client.scala.manager.analytics._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{Capabilities, Flaky, IgnoreWhen}

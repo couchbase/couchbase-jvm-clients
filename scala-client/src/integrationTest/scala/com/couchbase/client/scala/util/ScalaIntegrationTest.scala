@@ -19,8 +19,18 @@ package com.couchbase.client.scala.util
 import java.util.concurrent.TimeUnit
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.scala.{Cluster, ClusterOptions, env}
-import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SecurityConfig, SeedNode}
-import com.couchbase.client.test.{ClusterAwareIntegrationTest, Services, TestClusterConfig, TestNodeConfig}
+import com.couchbase.client.scala.env.{
+  ClusterEnvironment,
+  PasswordAuthenticator,
+  SecurityConfig,
+  SeedNode
+}
+import com.couchbase.client.test.{
+  ClusterAwareIntegrationTest,
+  Services,
+  TestClusterConfig,
+  TestNodeConfig
+}
 import org.junit.jupiter.api.Timeout
 
 import scala.collection.JavaConverters

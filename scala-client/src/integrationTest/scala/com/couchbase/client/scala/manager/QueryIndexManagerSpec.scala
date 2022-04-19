@@ -42,7 +42,10 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), missesCapabilities = Array(Capabilities.COLLECTIONS))
+@IgnoreWhen(
+  clusterTypes = Array(ClusterType.MOCKED),
+  missesCapabilities = Array(Capabilities.COLLECTIONS)
+)
 class QueryIndexManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster           = _
   private var coll: Collection           = _
