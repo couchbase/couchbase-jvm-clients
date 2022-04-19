@@ -66,7 +66,6 @@ public class WatchQueryIndexesOptions {
    * @param scopeName the name of the scope.
    * @return this options class for chaining purposes.
    */
-  @Stability.Uncommitted
   public WatchQueryIndexesOptions scopeName(final String scopeName) {
     this.scopeName = notNullOrEmpty(scopeName, "ScopeName");
     return this;
@@ -80,7 +79,6 @@ public class WatchQueryIndexesOptions {
    * @param collectionName the name of the collection.
    * @return this options class for chaining purposes.
    */
-  @Stability.Uncommitted
   public WatchQueryIndexesOptions collectionName(final String collectionName) {
     this.collectionName = notNullOrEmpty(collectionName, "CollectionName");
     return this;

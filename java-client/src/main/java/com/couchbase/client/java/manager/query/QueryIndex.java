@@ -169,7 +169,6 @@ public class QueryIndex {
    *
    * @return the name of the scope, if present.
    */
-  @Stability.Uncommitted
   public Optional<String> scopeName() {
     return scopeName;
   }
@@ -179,7 +178,6 @@ public class QueryIndex {
    *
    * @return the name of the bucket, if present.
    */
-  @Stability.Uncommitted
   public String bucketName() {
     return bucketName.orElse(keyspace);
   }
@@ -189,7 +187,6 @@ public class QueryIndex {
    *
    * @return the name of the collection, if present.
    */
-  @Stability.Uncommitted
   public Optional<String> collectionName() {
     return bucketName.isPresent() && scopeName.isPresent() ? Optional.of(keyspace) : Optional.empty();
   }

@@ -243,7 +243,6 @@ public class BucketSettings {
   /**
    * Returns the storage backend for the bucket.
    */
-  @Stability.Uncommitted
   public StorageBackend storageBackend() {
     return storageBackend;
   }
@@ -393,7 +392,6 @@ public class BucketSettings {
    * @param storageBackend the backend to use.
    * @return this {@link BucketSettings} instance for chaining purposes.
    */
-  @Stability.Uncommitted
   public BucketSettings storageBackend(final StorageBackend storageBackend) {
     this.storageBackend = notNull(storageBackend, "storageBackend");
     return this;

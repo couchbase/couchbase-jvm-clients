@@ -52,7 +52,6 @@ public class BuildQueryIndexOptions extends CommonOptions<BuildQueryIndexOptions
    * @param scopeName the name of the scope.
    * @return this options class for chaining purposes.
    */
-  @Stability.Uncommitted
   public BuildQueryIndexOptions scopeName(final String scopeName) {
     this.scopeName = notNullOrEmpty(scopeName, "ScopeName");
     return this;
@@ -66,7 +65,6 @@ public class BuildQueryIndexOptions extends CommonOptions<BuildQueryIndexOptions
    * @param collectionName the name of the collection.
    * @return this options class for chaining purposes.
    */
-  @Stability.Uncommitted
   public BuildQueryIndexOptions collectionName(final String collectionName) {
     this.collectionName = notNullOrEmpty(collectionName, "CollectionName");
     return this;

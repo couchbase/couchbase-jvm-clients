@@ -389,7 +389,6 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * @return the same {@link QueryOptions} for chaining purposes.
    */
   @SinceCouchbase("7.1")
-  @Stability.Uncommitted
   public QueryOptions preserveExpiry(final boolean preserveExpiry) {
     this.preserveExpiry = preserveExpiry;
     return this;

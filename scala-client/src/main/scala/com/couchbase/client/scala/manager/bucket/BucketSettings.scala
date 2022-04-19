@@ -301,7 +301,7 @@ case class BucketSettings(
     @upickle.implicits.key("durabilityMinLevel")
     minimumDurabilityLevel: Durability,
     @Internal private[scala] val healthy: Boolean,
-    @Uncommitted storageBackend: Option[StorageBackend] = None
+    storageBackend: Option[StorageBackend] = None
 ) {
   def toCreateBucketSettings: CreateBucketSettings = {
     CreateBucketSettings(
@@ -402,16 +402,13 @@ object BucketSettings {
 
 /** Specifies the underlying storage backend.
   */
-@Uncommitted
 sealed trait StorageBackend
 
 object StorageBackend {
-  @Uncommitted
   case object Couchstore extends StorageBackend
 
   /** The Magma storage backend is an Enterprise Edition feature.
     */
-  @Uncommitted
   case object Magma extends StorageBackend
   @Internal
   implicit val rw: CouchbasePickler.ReadWriter[StorageBackend] = CouchbasePickler

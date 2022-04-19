@@ -263,7 +263,6 @@ case class QueryOptions(
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  @Stability.Uncommitted
   @SinceCouchbase("7.1")
   def preserveExpiry(preserveExpiry: Boolean): QueryOptions = {
     copy(preserveExpiry = Some(preserveExpiry))

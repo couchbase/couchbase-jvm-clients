@@ -110,7 +110,6 @@ public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptio
    * @param scopeName the name of the scope.
    * @return this options class for chaining purposes.
    */
-  @Stability.Uncommitted
   public CreateQueryIndexOptions scopeName(final String scopeName) {
     this.scopeName = notNullOrEmpty(scopeName, "ScopeName");
     return this;
@@ -124,7 +123,6 @@ public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptio
    * @param collectionName the name of the collection.
    * @return this options class for chaining purposes.
    */
-  @Stability.Uncommitted
   public CreateQueryIndexOptions collectionName(final String collectionName) {
     this.collectionName = notNullOrEmpty(collectionName, "CollectionName");
     return this;

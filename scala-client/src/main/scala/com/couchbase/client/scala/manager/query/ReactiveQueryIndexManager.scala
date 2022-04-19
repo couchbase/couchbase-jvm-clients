@@ -67,9 +67,7 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): SFlux[QueryIndex] = {
     val (statement: String, options: QueryOptions) = AsyncQueryIndexManager.getStatementAndOptions(
@@ -110,9 +108,7 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
@@ -152,9 +148,7 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
@@ -188,9 +182,7 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
@@ -221,9 +213,7 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
@@ -255,9 +245,7 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       timeout: Duration,
       watchPrimary: Boolean = false,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
@@ -285,9 +273,7 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): SMono[Unit] = {
     SMono.fromFuture(

@@ -78,9 +78,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Future[collection.Seq[QueryIndex]] = {
     if (collectionName.isDefined && scopeName.isEmpty) {
@@ -123,9 +121,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Future[Unit] = {
 
@@ -178,9 +174,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Future[Unit] = {
 
@@ -234,9 +228,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Future[Unit] = {
     val statement: Try[String] = scopeName match {
@@ -283,9 +275,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Future[Unit] = {
     val statement: Try[String] = for {
@@ -325,9 +315,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       timeout: Duration,
       watchPrimary: Boolean = false,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Future[Unit] = {
 
@@ -402,9 +390,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Future[Unit] = {
     val ret: Try[(String, QueryOptions)] = scopeName match {
@@ -617,11 +603,9 @@ case class QueryIndex(
   def keyspaceId: String = keyspace_id
 
   /** If this is a collection-level index then this will be the collection's scope's name, otherwise empty. */
-  @Stability.Uncommitted
   def scopeName: Option[String] = scope_id
 
   /** The name of the bucket the index is on. */
-  @Stability.Uncommitted
   def bucketName: String = scope_id match {
     case Some(_) => bucket_id.get // .get is ok, must be present
     case _       => keyspace_id

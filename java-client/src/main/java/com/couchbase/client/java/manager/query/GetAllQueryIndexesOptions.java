@@ -53,7 +53,6 @@ public class GetAllQueryIndexesOptions extends CommonOptions<GetAllQueryIndexesO
    * @param scopeName the name of the scope.
    * @return this options class for chaining purposes.
    */
-  @Stability.Uncommitted
   public GetAllQueryIndexesOptions scopeName(final String scopeName) {
     this.scopeName = notNullOrEmpty(scopeName, "ScopeName");
     return this;
@@ -67,7 +66,6 @@ public class GetAllQueryIndexesOptions extends CommonOptions<GetAllQueryIndexesO
    * @param collectionName the name of the collection.
    * @return this options class for chaining purposes.
    */
-  @Stability.Uncommitted
   public GetAllQueryIndexesOptions collectionName(final String collectionName) {
     this.collectionName = notNullOrEmpty(collectionName, "CollectionName");
     return this;

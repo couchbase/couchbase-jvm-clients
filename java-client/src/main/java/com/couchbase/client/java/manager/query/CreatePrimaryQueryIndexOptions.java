@@ -123,7 +123,6 @@ public class CreatePrimaryQueryIndexOptions extends CommonOptions<CreatePrimaryQ
    * @param scopeName the name of the scope.
    * @return this options class for chaining purposes.
    */
-  @Stability.Uncommitted
   public CreatePrimaryQueryIndexOptions scopeName(final String scopeName) {
     this.scopeName = notNullOrEmpty(scopeName, "ScopeName");
     return this;
@@ -137,7 +136,6 @@ public class CreatePrimaryQueryIndexOptions extends CommonOptions<CreatePrimaryQ
    * @param collectionName the name of the collection.
    * @return this options class for chaining purposes.
    */
-  @Stability.Uncommitted
   public CreatePrimaryQueryIndexOptions collectionName(final String collectionName) {
     this.collectionName = notNullOrEmpty(collectionName, "CollectionName");
     return this;

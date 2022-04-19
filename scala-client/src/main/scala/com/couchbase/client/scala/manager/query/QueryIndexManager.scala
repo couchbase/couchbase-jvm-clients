@@ -65,9 +65,7 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Try[collection.Seq[QueryIndex]] = {
     Collection.block(
@@ -97,9 +95,7 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Try[Unit] = {
     Collection.block(
@@ -139,9 +135,7 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Try[Unit] = {
     Collection.block(
@@ -174,9 +168,7 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Try[Unit] = {
     Collection.block(
@@ -207,9 +199,7 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Try[Unit] = {
     Collection.block(
@@ -241,9 +231,7 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       timeout: Duration,
       watchPrimary: Boolean = false,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Try[Unit] = {
     Collection.block(
@@ -271,9 +259,7 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      @Stability.Uncommitted
       scopeName: Option[String] = None,
-      @Stability.Uncommitted
       collectionName: Option[String] = None
   ): Try[Unit] = {
     Collection.block(
