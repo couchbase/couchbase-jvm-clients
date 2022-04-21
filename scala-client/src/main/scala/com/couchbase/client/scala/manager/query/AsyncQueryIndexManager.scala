@@ -19,6 +19,7 @@ import java.util.concurrent.TimeoutException
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.error.{IndexExistsException, IndexNotFoundException}
 import com.couchbase.client.core.logging.RedactableArgument.redactMeta
+import com.couchbase.client.core.manager.CoreQueryIndexManager
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.retry.reactor.{Retry, RetryContext, RetryExhaustedException}
 import com.couchbase.client.core.util.CbThrowables.hasCause
@@ -538,48 +539,14 @@ object AsyncQueryIndexManager {
       scopeName: Option[String],
       collectionName: Option[String]
   ) = {
-    val (statement, options) = scopeName match {
-      case Some(sn) =>
-        collectionName match {
-          case Some(cn) =>
-            val statement =
-              s"""SELECT idx.* FROM system:indexes AS idx WHERE bucket_id = ?
-                 | AND scope_id = ? and keyspace_id = ?
-                 | AND `using`="gsi" ORDER BY is_primary
-                 | DESC, name ASC""".stripMargin
-            val options = QueryOptions()
-              .readonly(true)
-              .timeout(timeout)
-              .retryStrategy(retryStrategy)
-              .parameters(QueryParameters.Positional(bucketName, sn, cn))
-            (statement, options)
-
-          case _ =>
-            val statement =
-              s"""SELECT idx.* FROM system:indexes AS idx WHERE bucket_id = ?
-                 | AND scope_id = ?
-                 | AND `using`="gsi" ORDER BY is_primary
-                 | DESC, name ASC""".stripMargin
-            val options = QueryOptions()
-              .readonly(true)
-              .timeout(timeout)
-              .retryStrategy(retryStrategy)
-              .parameters(QueryParameters.Positional(bucketName, sn))
-            (statement, options)
-        }
-      case _ =>
-        val statement =
-          s"""SELECT idx.* FROM system:indexes AS idx
-             | WHERE ((bucket_id IS MISSING AND keyspace_id = ?) OR bucket_id = ?)
-             | AND `using`="gsi" ORDER BY is_primary
-             | DESC, name ASC""".stripMargin
-        val options = QueryOptions()
-          .readonly(true)
-          .timeout(timeout)
-          .retryStrategy(retryStrategy)
-          .parameters(QueryParameters.Positional(bucketName, bucketName))
-        (statement, options)
-    }
+    val statement = CoreQueryIndexManager.getStatementForGetAllIndexes(bucketName, scopeName.orNull, collectionName.orNull)
+    val params = CoreQueryIndexManager.getNamedParamsForGetAllIndexes(bucketName, scopeName.orNull, collectionName.orNull)
+    import scala.jdk.CollectionConverters._
+    val options = QueryOptions()
+      .readonly(true)
+      .timeout(timeout)
+      .retryStrategy(retryStrategy)
+      .parameters(QueryParameters.Named(params.asScala))
     (statement, options)
   }
 }

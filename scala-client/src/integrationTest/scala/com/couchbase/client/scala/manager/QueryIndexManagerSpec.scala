@@ -559,4 +559,12 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
       states == Set("online")
     })
   }
+
+  @Test
+  def getAllIndexesReturnsIndexesOnDefaultCollection(): Unit = {
+    createPrimaryIndex()
+    assert(cluster.queryIndexes.getAllIndexes(bucketName).get.size == 1)
+    assert(cluster.queryIndexes.getAllIndexes(bucketName, scopeName = Some("_default")).get.size == 1)
+    assert(cluster.queryIndexes.getAllIndexes(bucketName, scopeName = Some("_default"), collectionName = Some("_default")).get.size == 1)
+  }
 }
