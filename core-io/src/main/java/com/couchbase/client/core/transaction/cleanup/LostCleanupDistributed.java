@@ -102,13 +102,12 @@ public class LostCleanupDistributed {
      */
     private final Supplier<TransactionsCleaner> cleanerSupplier;
     private volatile boolean stop = false;
-    private CountDownLatch stopLatch;
     private Disposable cleanupThreadLauncher;
     private final Duration actualCleanupWindow;
     private final String clientUuid = UUID.randomUUID().toString();
     private final String bp;
     private final Set<CollectionIdentifier> cleanupSet = ConcurrentHashMap.newKeySet();
-    private final Set<CollectionIdentifier> actuallyBeingCleaned = ConcurrentHashMap.newKeySet();
+    private final Map<CollectionIdentifier, Disposable> actuallyBeingCleaned = new ConcurrentHashMap<>();
 
     // A client can have both the lost and regular cleanup threads running.  Try to avoid them stepping on each
     // other's toes by making the lost thread require a little extra safety time before regarding an attempt as
@@ -139,20 +138,21 @@ public class LostCleanupDistributed {
     public void shutdown(Duration timeout) {
         synchronized (this) {
             // Prevent new threads starting.
-            // This also appears to cancel any threads created by it.
+            // This also appears to cancel any threads created by it, though that should be zero
+            // now that perCollectionThread has been moved to background threads.
             if (cleanupThreadLauncher != null) {
                 cleanupThreadLauncher.dispose();
             }
             // Prevent in-flight threads from adding themselves.
             this.stop = true;
             int numThreads = actuallyBeingCleaned.size();
-//            LOGGER.info(String.format("%s stopping lost cleanup process, waiting for %d threads to end", bp, numThreads));
             LOGGER.info(String.format("%s stopping lost cleanup process, %d threads running", bp, numThreads));
-//            stopLatch = new CountDownLatch(numThreads);
         }
 
+        // Should now be impossible for new cleanup threads to be added
+
         // This is the most important part of transaction cleanup shutdown (though still optional), so do it first
-        clientRecord.removeClientFromCleanupSet(clientUuid, actuallyBeingCleaned)
+        clientRecord.removeClientFromCleanupSet(clientUuid, actuallyBeingCleaned.keySet())
 
                 // TXNJ-96
                 .onErrorResume(err -> {
@@ -161,6 +161,8 @@ public class LostCleanupDistributed {
                 })
 
                 .blockLast();
+
+        actuallyBeingCleaned.forEach((key, value) -> value.dispose());
 
         LOGGER.info(String.format("%s stopped lost cleanup process and removed client from client records", bp));
     }
@@ -283,41 +285,46 @@ public class LostCleanupDistributed {
 
     Mono<Void> createThreadForCollectionIfNeeded(CollectionIdentifier coll) {
         return Mono.defer(() -> {
-            boolean wasNotTracking;
-
             synchronized (this) {
                 if (stop) {
                     return Mono.empty();
                 }
 
-                wasNotTracking = actuallyBeingCleaned.add(coll);
+                LOGGER.info("{} checking {}", bp, coll);
+
+                if (!actuallyBeingCleaned.containsKey(coll)) {
+                    String collDebug = redactMeta(coll.bucket() + "." + coll.scope().orElse("-") + "." + coll.collection().orElse("-")).toString();
+                    LOGGER.info("{} will start cleaning lost transactions on collection {}", bp, collDebug);
+
+                    // Spawn as a background thread, since perCollectionThread is blocking
+                    Disposable thread = perCollectionThread(coll)
+
+                            .onErrorResume(err -> {
+                                // Remove it so that it will be retried later
+                                actuallyBeingCleaned.remove(coll);
+
+                                LOGGER.warn("{} {} lost transactions thread has ended on error {} (will be retried)", bp, collDebug, DebugUtil.dbg(err));
+                                return Mono.empty();
+                            })
+
+                            .subscribe();
+
+                    actuallyBeingCleaned.put(coll, thread);
+                }
             }
 
-            if (wasNotTracking) {
-                LOGGER.info(String.format("%s will start cleaning lost transactions on collection %s", bp, coll));
-
-                        return perCollectionThread(coll)
-
-                                .onErrorResume(err -> {
-                                    // Remove it so that it will be retried later
-                                    actuallyBeingCleaned.remove(coll);
-
-                                    LOGGER.warn(String.format("%s %s lost transactions thread has ended on error %s (will be retried)", bp, coll, DebugUtil.dbg(err)));
-                                    return Mono.error(err);
-                                });
-            } else {
-                return Mono.empty();
-            }
+            return Mono.empty();
         });
     }
 
     private void periodicallyCheckCleanupSet() {
-        cleanupThreadLauncher = Flux.interval(Duration.ZERO, Duration.ofSeconds(1))
+        cleanupThreadLauncher = Flux.interval(Duration.ZERO, Duration.ofSeconds(1), core.context().environment().transactionsSchedulers().schedulerCleanup())
+                .doOnNext(v -> LOGGER.info(v.toString() + " " + cleanupSet.size()))
                 .concatMap(v -> Flux.fromIterable(cleanupSet))
                 // In practice this does not create one thread per bucket, it will just create threads as needed.  Since
                 // this is IO-bound, that will often be just 1.
                 .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup())
-                .flatMap(this::createThreadForCollectionIfNeeded)
+                .concatMap(this::createThreadForCollectionIfNeeded)
                 .doOnCancel(() -> {
                     LOGGER.info(String.format("%s has been told to cancel", bp));
                 })
@@ -484,7 +491,6 @@ public class LostCleanupDistributed {
             synchronized (this) {
                 if (stop) {
                     LOGGER.info(String.format("%s Stopping background cleanup thread for lost transactions on %s", bp, collection));
-                    stopLatch.countDown();
                     return Mono.error(new ThreadStopRequestedException());
                 } else {
                     return Mono.empty();
