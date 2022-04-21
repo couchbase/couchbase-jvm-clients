@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.test;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 
 import java.lang.annotation.ElementType;
@@ -30,5 +31,6 @@ import java.lang.annotation.Target;
 @Target({ ElementType.TYPE, ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 @Tag("flaky")
+@Disabled("Temporarily disabled as flaky on CI")
 public @interface Flaky {
 }
