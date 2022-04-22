@@ -4,9 +4,6 @@
 // - Can do it with scripted pipeline, but anything inside a node {} block won't trigger the post block, so can't gather junit results
 // So, for now, everything is hard-coded.  It's unlikely to change often.
 // TODO: stashing the junit file after its generated and unstashing it in post, may work
-PLATFORMS = ["ubuntu16", "ubuntu20"]
-DEFAULT_PLATFORM = PLATFORMS[0]
-platform = DEFAULT_PLATFORM
 LINUX_AGENTS = 'centos6||centos7||ubuntu16||ubuntu14||ubuntu20'
 QUICK_TEST_MODE = false // enable to support quicker development iteration
 
@@ -25,7 +22,7 @@ def CORRETTO_8 = "8.232.09.1"     // available versions: https://docs.aws.amazon
 def CORRETTO_11 = "11.0.5.10.1"   // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-11-ug/doc-history.html
 
 // The lucky spammees
-EMAILS = ['graham.pople@couchbase.com', 'michael.nitschinger@couchbase.com', 'david.kelly@couchbase.com', 'david.nault@couchbase.com']
+EMAILS = ['graham.pople@couchbase.com', 'michael.nitschinger@couchbase.com', 'david.nault@couchbase.com']
 
 pipeline {
     agent none
@@ -39,10 +36,15 @@ pipeline {
         // Scala 2.11 & 2.13 aren't officially distributed or supported, but we have community depending on it so check
         // they at least compile
         stage('build Scala 2.11') {
-            agent { label DEFAULT_PLATFORM }
+            agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
+            }
+            when {
+                beforeAgent true;
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
                 // 2.11 must be built with JDK 8
@@ -51,10 +53,15 @@ pipeline {
         }
 
         stage('build Scala 2.13') {
-            agent { label DEFAULT_PLATFORM }
+            agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
+            }
+            when {
+                beforeAgent true;
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
                 buildScala(OPENJDK, OPENJDK_11, "2.13", "2.13.7")
@@ -63,19 +70,20 @@ pipeline {
 
         // Test against mock - this skips a lot of tests, and is intended for quick validation
         stage('validation testing (mock, Oracle JDK 8)') {
-            agent { label LINUX_AGENTS }
+            agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == true }
             }
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     cleanupWorkspace()
-                    installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                    installJDKIfNeeded(ORACLE_JDK, ORACLE_JDK_8)
 
                     dir('couchbase-jvm-clients') {
                         checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
@@ -98,12 +106,13 @@ pipeline {
         // JDK combination tests
 
         stage('testing (Linux, cbdyncluster 7.0-release, openjdk 17)') {
-            agent { label 'sdkqe-centos7' }
+            agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
@@ -118,12 +127,13 @@ pipeline {
         }
 
         stage('testing (Linux, cbdyncluster 6.5, Amazon Corretto 8)') {
-            agent { label 'sdkqe-centos7' }
+            agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}"
                 PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
@@ -138,12 +148,13 @@ pipeline {
         }
 
         stage('testing (Linux, cbdyncluster 6.5, Amazon Corretto 11)') {
-            agent { label 'sdkqe-centos7' }
+            agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}"
                 PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
@@ -158,12 +169,13 @@ pipeline {
         }
 
         stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 11)') {
-             agent { label 'sdkqe-centos7' }
+             agent { label "sdkqe" }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
                  PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
              }
              when {
+                 beforeAgent true;
                  expression
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
@@ -178,17 +190,18 @@ pipeline {
          }
 
          stage('testing (Linux, cbdyncluster 6.5, AdoptOpenJDK 8)') {
-             agent { label 'sdkqe-centos7' }
+             agent { label "sdkqe" }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
                  PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
              }
              when {
+                 beforeAgent true;
                  expression
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
              steps {
-                 test(OPENJDK, OPENJDK_8, "6.5-release")
+                test(OPENJDK, OPENJDK_8, "6.5-release")
              }
              post {
                  always {
@@ -202,12 +215,13 @@ pipeline {
         // Test against cbdyncluster - do for nightly tests
         // One day can get all these cbdyncluster tests running in parallel: https://jenkins.io/blog/2017/09/25/declarative-1/
         stage('testing (Linux, cbdyncluster 6.5-release, colossus, Oracle JDK 8)') {
-            agent { label 'sdkqe-centos7' }
-            environment {
+           agent { label "sdkqe" }
+           environment {
                 JAVA_HOME = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                 PATH = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
@@ -218,7 +232,7 @@ pipeline {
                         checkout([$class: 'GitSCM',
                                   branches: [[name: 'colossus']],
                                   userRemoteConfigs: [[url: '$REPO']]])
-                        installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                        installJDKIfNeeded(ORACLE_JDK, ORACLE_JDK_8)
                         script { testAgainstServer("6.5-release", QUICK_TEST_MODE) }
                     }
                 }
@@ -231,12 +245,13 @@ pipeline {
         }
 
         stage('testing  (Linux, cbdyncluster 6.5-release, Oracle JDK 8)') {
-            agent { label 'sdkqe-centos7' }
+            agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
@@ -251,12 +266,13 @@ pipeline {
         }
 
         stage('testing  (Linux, cbdyncluster 6.0-release, Oracle JDK 8)') {
-             agent { label 'sdkqe-centos7' }
+             agent { label "sdkqe" }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                  PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
              }
              when {
+                 beforeAgent true;
                  expression
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
@@ -271,12 +287,13 @@ pipeline {
          }
 
         stage('testing  (Linux, cbdyncluster 5.5-release, Oracle JDK 8)') {
-             agent { label 'sdkqe-centos7' }
+             agent { label "sdkqe" }
              environment {
                  JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                  PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
              }
              when {
+                 beforeAgent true;
                  expression
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
@@ -291,12 +308,13 @@ pipeline {
          }
 
         stage('testing  (Linux, cbdyncluster 6.6-release, Oracle JDK 8)') {
-            agent { label 'sdkqe-centos7' }
+            agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
@@ -311,12 +329,13 @@ pipeline {
         }
 
         stage('testing (Linux, cbdyncluster 6.6-release, colossus, Oracle JDK 8)') {
-            agent { label 'sdkqe-centos7' }
+            agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                 PATH = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
@@ -327,7 +346,7 @@ pipeline {
                         checkout([$class: 'GitSCM',
                                   branches: [[name: 'colossus']],
                                   userRemoteConfigs: [[url: '$REPO']]])
-                        installJDKIfNeeded(platform, ORACLE_JDK, ORACLE_JDK_8)
+                        installJDKIfNeeded(ORACLE_JDK, ORACLE_JDK_8)
                         script { testAgainstServer("6.6-release", QUICK_TEST_MODE) }
                     }
                 }
@@ -340,12 +359,13 @@ pipeline {
         }
 
         stage('testing  (Linux, cbdyncluster 7.0-release, Oracle JDK 8)') {
-            agent { label 'sdkqe-centos7' }
+            agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
@@ -360,12 +380,13 @@ pipeline {
         }
 
         stage('testing  (Linux, cbdyncluster 7.1-stable, Oracle JDK 8)') {
-            agent { label 'sdkqe-centos7' }
+            agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
@@ -380,12 +401,13 @@ pipeline {
         }
 
         stage('testing  (Linux, cbdyncluster 7.1-stable with multi certs, Oracle JDK 8)') {
-            agent { label 'sdkqe-centos7' }
+            agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
@@ -399,18 +421,20 @@ pipeline {
             }
         }
 
-        stage('testing  (Linux, cbdyncluster 7.0-release, Oracle JDK 8, CE)') {
-            agent { label 'sdkqe-centos7' }
+        // 7.0.3 does not and will not have a CE build.
+        stage('testing  (Linux, cbdyncluster 7.0.2, Oracle JDK 8, CE)') {
+            agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "7.0-release", ceMode : true)
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.0.2", ceMode : true)
             }
             post {
                 always {
@@ -427,6 +451,7 @@ pipeline {
                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11_M1}/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
@@ -449,13 +474,14 @@ pipeline {
                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:${WORKSPACE}/deps/maven-3.5.2-cb6/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     cleanupWorkspace()
-                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_11)
+                    installJDKIfNeeded(OPENJDK, OPENJDK_11)
                     // qe-grav2-amzn2 doesn't have maven
                     shWithEcho("cbdep install -d deps maven 3.5.2-cb6")
                     dir('couchbase-jvm-clients') {
@@ -480,13 +506,14 @@ pipeline {
                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11_M1}/bin:$PATH"
             }
             when {
+                beforeAgent true;
                 expression
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
                  catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                     cleanupWorkspace()
-                    installJDKIfNeeded(platform, OPENJDK, OPENJDK_11_M1)
+                    installJDKIfNeeded(OPENJDK, OPENJDK_11_M1)
                     dir('couchbase-jvm-clients') {
                         checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
                         // Mock testing only, with native IO disabled - check JVMCBC-942 for details
@@ -533,26 +560,6 @@ pipeline {
 //                 }
 //             }
 //         }
-
-        stage('package') {
-            agent { label 'sdkqe-centos7' }
-            steps {
-                cleanupWorkspace()
-                dir('couchbase-jvm-clients') {
-                    checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
-                    shWithEcho("mvn clean install -Dmaven.test.skip --batch-mode")
-                    shWithEcho("find . -iname *.jar")
-                    // archiveArtifacts artifacts: 'couchbase-jvm-clients/', fingerprint: true
-                    archiveArtifacts artifacts: 'java-client/target/*.jar', fingerprint: true
-                    archiveArtifacts artifacts: 'scala-client/target/*.jar', fingerprint: true
-                    archiveArtifacts artifacts: 'core-io/target/*.jar', fingerprint: true
-                    archiveArtifacts artifacts: 'java-examples/target/*.jar', fingerprint: true
-                    archiveArtifacts artifacts: 'tracing-opentelemetry/target/*.jar', fingerprint: true
-                    archiveArtifacts artifacts: 'tracing-opentracing/target/*.jar', fingerprint: true
-                    archiveArtifacts artifacts: '**/pom.xml', fingerprint: true
-                }
-            }
-        }
     }
     post {
         failure { emailFailure() }
@@ -574,7 +581,7 @@ void test(Map args=[:],
 
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
         cleanupWorkspace()
-        installJDKIfNeeded(platform, jdk, jdkVersion)
+        installJDKIfNeeded(jdk, jdkVersion)
 
         dir('couchbase-jvm-clients') {
             checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
@@ -592,7 +599,7 @@ void buildScala(String jdk,
                 String scalaLibraryVersion) {
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
         cleanupWorkspace()
-        installJDKIfNeeded(platform, jdk, jdkVersion)
+        installJDKIfNeeded(jdk, jdkVersion)
 
         dir('couchbase-jvm-clients') {
             checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
@@ -637,7 +644,7 @@ void shIgnoreFailure(String command) {
 }
 
 // Installs JDK to the workspace using cbdep tool
-String installJDKIfNeeded(platform, javaPackage, javaVersion) {
+String installJDKIfNeeded(javaPackage, javaVersion) {
     def install = false
 
     echo "checking install"
