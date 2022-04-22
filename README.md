@@ -1,12 +1,15 @@
 [**Issues**](https://issues.couchbase.com)
-| [**Discussion**](https://forums.couchbase.com)
+| [**Forums**](https://forums.couchbase.com)
+| [**Discord**](https://discord.com/invite/sQ5qbPZuTh)
 | [**Documentation**](https://docs.couchbase.com/home/sdk.html)
 
 # Couchbase JVM Clients
 
 [![license](https://img.shields.io/github/license/couchbase/couchbase-jvm-clients?color=brightgreen)](https://opensource.org/licenses/Apache-2.0)
+
 [![java-client](https://img.shields.io/maven-central/v/com.couchbase.client/java-client?color=brightgreen&label=java-client)](https://search.maven.org/artifact/com.couchbase.client/java-client)
 [![scala-client](https://img.shields.io/maven-central/v/com.couchbase.client/scala-client_2.12?color=brightgreen&label=scala-client)](https://search.maven.org/artifact/com.couchbase.client/scala-client_2.12)
+[![kotlin-client](https://img.shields.io/maven-central/v/com.couchbase.client/kotlin-client?color=brightgreen&label=kotlin-client)](https://search.maven.org/artifact/com.couchbase.client/kotlin-client)
 
 This repository contains the third generation of the Couchbase SDKs on the JVM ("SDK 3").
 
