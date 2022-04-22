@@ -20,13 +20,15 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
-@IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
+@IgnoreWhen(clusterTypes = {ClusterType.MOCKED},
+        missesCapabilities = {Capabilities.CREATE_AS_DELETED})
 public class TransactionsShutdownIntegrationTest extends JavaIntegrationTest {
     /**
      * Sanity test that a basic app still quits if cluster.disconnect() not called.
