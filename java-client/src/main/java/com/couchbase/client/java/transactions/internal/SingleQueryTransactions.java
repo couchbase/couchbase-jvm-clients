@@ -35,11 +35,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.io.IOException;
-import java.util.Optional;
 import java.util.function.Consumer;
-
-import static com.couchbase.client.core.transaction.config.CoreTransactionsConfig.DEFAULT_TRANSACTION_DURABILITY_LEVEL;
-import static com.couchbase.client.core.transaction.config.CoreTransactionsConfig.DEFAULT_TRANSACTION_TIMEOUT;
 
 @Stability.Internal
 public class SingleQueryTransactions {
@@ -54,12 +50,7 @@ public class SingleQueryTransactions {
             throw new IllegalArgumentException("Cannot specify retryStrategy() if using asTransaction() on QueryOptions");
         }
 
-        CoreSingleQueryTransactionOptions queryOpts = opts.asTransactionOptions();
-        CoreTransactionsReactive tri = new CoreTransactionsReactive(core,
-                CoreTransactionsConfig.createForSingleQueryTransactions(queryOpts == null ? DEFAULT_TRANSACTION_DURABILITY_LEVEL : queryOpts.durabilityLevel().orElse(DEFAULT_TRANSACTION_DURABILITY_LEVEL),
-                        opts.timeout().orElse(DEFAULT_TRANSACTION_TIMEOUT),
-                        queryOpts == null ? null : queryOpts.attemptContextFactory().orElse(null),
-                        queryOpts == null ? Optional.empty() : queryOpts.metadataCollection()));
+        CoreTransactionsReactive tri = configureTransactions(core, opts);
         final JsonObject json = JsonObject.create();
         opts.injectParams(json);
         try {
@@ -81,6 +72,16 @@ public class SingleQueryTransactions {
         }
     }
 
+    private static CoreTransactionsReactive configureTransactions(Core core, QueryOptions.Built opts) {
+        CoreSingleQueryTransactionOptions queryOpts = opts.asTransactionOptions();
+        CoreTransactionsConfig transactionsConfig = core.context().environment().transactionsConfig();
+        return new CoreTransactionsReactive(core,
+                CoreTransactionsConfig.createForSingleQueryTransactions(queryOpts == null ? transactionsConfig.durabilityLevel() : queryOpts.durabilityLevel().orElse(transactionsConfig.durabilityLevel()),
+                        opts.timeout().orElse(transactionsConfig.transactionExpirationTime()),
+                        queryOpts == null ? null : queryOpts.attemptContextFactory().orElse(transactionsConfig.attemptContextFactory()),
+                        queryOpts == null ? transactionsConfig.metadataCollection() : queryOpts.metadataCollection()));
+    }
+
 
     public static Mono<ReactiveQueryResult> singleQueryTransactionStreaming(Core core,
                                                                             ClusterEnvironment environment,
@@ -94,12 +95,7 @@ public class SingleQueryTransactions {
             throw new IllegalArgumentException("Cannot specify retryStrategy() if using asTransaction() on QueryOptions");
         }
 
-        CoreSingleQueryTransactionOptions queryOpts = opts.asTransactionOptions();
-        CoreTransactionsReactive tri = new CoreTransactionsReactive(core,
-                CoreTransactionsConfig.createForSingleQueryTransactions(queryOpts == null ? DEFAULT_TRANSACTION_DURABILITY_LEVEL : queryOpts.durabilityLevel().orElse(DEFAULT_TRANSACTION_DURABILITY_LEVEL),
-                        opts.timeout().orElse(DEFAULT_TRANSACTION_TIMEOUT),
-                        queryOpts == null ? null : queryOpts.attemptContextFactory().orElse(null),
-                        queryOpts == null ? Optional.empty() : queryOpts.metadataCollection()));
+        CoreTransactionsReactive tri = configureTransactions(core, opts);
         final JsonObject json = JsonObject.create();
         opts.injectParams(json);
         try {
