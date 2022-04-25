@@ -290,8 +290,6 @@ public class LostCleanupDistributed {
                     return Mono.empty();
                 }
 
-                LOGGER.info("{} checking {}", bp, coll);
-
                 if (!actuallyBeingCleaned.containsKey(coll)) {
                     String collDebug = redactMeta(coll.bucket() + "." + coll.scope().orElse("-") + "." + coll.collection().orElse("-")).toString();
                     LOGGER.info("{} will start cleaning lost transactions on collection {}", bp, collDebug);
@@ -319,7 +317,6 @@ public class LostCleanupDistributed {
 
     private void periodicallyCheckCleanupSet() {
         cleanupThreadLauncher = Flux.interval(Duration.ZERO, Duration.ofSeconds(1), core.context().environment().transactionsSchedulers().schedulerCleanup())
-                .doOnNext(v -> LOGGER.info(v.toString() + " " + cleanupSet.size()))
                 .concatMap(v -> Flux.fromIterable(cleanupSet))
                 // In practice this does not create one thread per bucket, it will just create threads as needed.  Since
                 // this is IO-bound, that will often be just 1.
