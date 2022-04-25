@@ -17,6 +17,8 @@
 package com.couchbase.client.kotlin.search
 
 import com.couchbase.client.core.annotation.SinceCouchbase
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference
+import com.couchbase.client.core.json.Mapper
 
 /**
  * Specifies the page to be returned by a search query.
@@ -83,5 +85,19 @@ public class SearchPage internal constructor(
  * Identifies a row in the result set, for use with keyset pagination.
  */
 public class SearchKeyset internal constructor(internal val components: List<String>) {
-    override fun toString(): String = components.toString()
+    public companion object {
+        /**
+         * Returns the deserialized form of [serialized].
+         */
+        public fun deserialize(serialized: String): SearchKeyset {
+            return SearchKeyset(Mapper.decodeInto(serialized, object : TypeReference<List<String>>() {}))
+        }
+    }
+
+    /**
+     * Returns a string you can pass to [deserialize] later to get an equivalent SearchKeyset.
+     */
+    public fun serialize(): String = Mapper.encodeAsString(components)
+
+    override fun toString(): String = serialize()
 }
