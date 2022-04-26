@@ -76,7 +76,7 @@ public class SearchSort internal constructor(private val components: List<Search
     public companion object {
 
         public fun byScore(
-            direction: Direction = Direction.ASCENDING,
+            direction: Direction = Direction.DESCENDING,
         ): SearchSort = SearchSort(SearchSortScore(direction))
 
         public fun byId(
