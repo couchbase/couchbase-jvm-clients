@@ -49,14 +49,14 @@ public class NameValuePairs {
   }
 
   /**
-   * Returns a new instance that may have repeated names (for example, "number=1&number=2").
+   * Returns a new instance that may have repeated names (for example, "number=1&amp;number=2").
    */
   public static NameValuePairs of(NameValuePair... pairs) {
     return of(Arrays.asList(pairs));
   }
 
   /**
-   * Returns a new instance that may have repeated names (for example, "number=1&number=2").
+   * Returns a new instance that may have repeated names (for example, "number=1&amp;number=2").
    */
   public static NameValuePairs of(List<NameValuePair> pairs) {
     return new NameValuePairs(
