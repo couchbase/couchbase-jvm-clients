@@ -284,6 +284,7 @@ public sealed class SearchQuery {
         ): SearchQuery = build { put("query", queryString) }
 
         /**
+         * A [Boolean Field query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-boolean-field-query.html).
          * Searches for documents where [field] has the value [bool].
          */
         public fun booleanField(
@@ -295,6 +296,7 @@ public sealed class SearchQuery {
         }
 
         /**
+         * A [DocId query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-DocID-query.html).
          * Searches for documents whose ID is one of [ids].
          */
         public fun documentId(
@@ -436,7 +438,7 @@ public sealed class SearchQuery {
         ): DisjunctionQuery = DisjunctionQuery(disjuncts, min)
 
         /**
-         * A [Boolean query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-boolean-field-query.html)
+         * A [Boolean query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-boolean-query.html)
          *
          * Searches for documents that match all of the [must] conditions and
          * none of the [mustNot] conditions, giving precedence to documents
