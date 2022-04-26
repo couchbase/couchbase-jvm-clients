@@ -120,14 +120,14 @@ public class SearchSort internal constructor(private val components: List<Search
 
         /**
          * Specifies the sort order using strings.
-         * Syntax is described by [Sorting With Strings](https://docs.couchbase.com/server/current/fts/fts-sorting.html#sorting-with-strings)
+         * Syntax is described by [Sorting With Strings](https://docs.couchbase.com/server/current/fts/fts-search-response.html#sorting-with-strings)
          */
         public fun by(firstSort: String, vararg remainingSorts: String): SearchSort =
             by(listOf(firstSort, *remainingSorts))
 
         /**
          * Specifies the sort order using strings.
-         * Syntax is described by [Sorting With Strings](https://docs.couchbase.com/server/current/fts/fts-sorting.html#sorting-with-strings)
+         * Syntax is described by [Sorting With Strings](https://docs.couchbase.com/server/current/fts/fts-search-response.html#sorting-with-strings)
          */
         public fun by(sorts: List<String>): SearchSort =
             SearchSort(sorts.map { SearchSortFromString(it) })
