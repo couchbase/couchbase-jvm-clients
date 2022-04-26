@@ -539,8 +539,16 @@ object AsyncQueryIndexManager {
       scopeName: Option[String],
       collectionName: Option[String]
   ) = {
-    val statement = CoreQueryIndexManager.getStatementForGetAllIndexes(bucketName, scopeName.orNull, collectionName.orNull)
-    val params = CoreQueryIndexManager.getNamedParamsForGetAllIndexes(bucketName, scopeName.orNull, collectionName.orNull)
+    val statement = CoreQueryIndexManager.getStatementForGetAllIndexes(
+      bucketName,
+      scopeName.orNull,
+      collectionName.orNull
+    )
+    val params = CoreQueryIndexManager.getNamedParamsForGetAllIndexes(
+      bucketName,
+      scopeName.orNull,
+      collectionName.orNull
+    )
     import scala.jdk.CollectionConverters._
     val options = QueryOptions()
       .readonly(true)
