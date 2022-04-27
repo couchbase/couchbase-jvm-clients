@@ -60,7 +60,7 @@ public class SearchRow internal constructor(
 
     /**
      * Bytes of JSON Object explaining how the score was calculated,
-     * or null if the `explain` parameter was false.
+     * or an empty array if the `explain` parameter was false.
      */
     public val explanation: ByteArray,
 
