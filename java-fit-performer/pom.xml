@@ -33,7 +33,8 @@
         <dependency>
             <groupId>com.txn.gRPC</groupId>
             <artifactId>gRPC</artifactId>
-            <version>1.0</version>
+            <!-- The SNAPSHOT here should not be removed. This package is internal to FIT and will never release -->
+            <version>1.0-SNAPSHOT</version>
         </dependency>
 
         <dependency>
