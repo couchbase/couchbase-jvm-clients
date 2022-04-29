@@ -49,7 +49,7 @@ class EventingFunctionManagerSpec extends ScalaIntegrationTest {
   def setup(): Unit = {
     cluster = connectToCluster()
     val bucket = cluster.bucket(ClusterAwareIntegrationTest.config().bucketname())
-    cluster.waitUntilReady(Duration(30, TimeUnit.SECONDS))
+    cluster.waitUntilReady(WaitUntilReadyDefault)
     functions = cluster.eventingFunctions
     bucket.collections.createScope("eventing")
     bucket.collections.createCollection(CollectionSpec("source", "eventing"))

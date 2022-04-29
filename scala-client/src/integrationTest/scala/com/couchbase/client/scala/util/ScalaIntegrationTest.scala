@@ -48,8 +48,8 @@ object ScalaIntegrationTest {}
 @Timeout(value = 10, unit = TimeUnit.MINUTES) // Safety timer so tests can't block CI executors
 trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
 
-  // Timeouts seen on CI with values of 5 seconds.
-  var WaitUntilReadyDefault = Duration(30, TimeUnit.SECONDS)
+  // Timeouts seen on CI with values of 30 seconds.
+  val WaitUntilReadyDefault = Duration(60, TimeUnit.SECONDS)
 
   /**
     * Creates a {@link ClusterEnvironment.Builder} which already has the seed nodes and
@@ -120,7 +120,7 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
 
   protected def connectToCluster(): Cluster = {
     val out = Cluster.connect(connectionString, clusterOptions).get
-    out.waitUntilReady(10.seconds)
+    out.waitUntilReady(WaitUntilReadyDefault)
     out
   }
 }

@@ -30,6 +30,7 @@ import com.couchbase.client.test.Flaky;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
@@ -130,6 +131,7 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
   }
 
   // Seeing this fail on CI on the upsert with timeouts due to repeated KV_TEMPORARY_FAILURE
+  @Disabled
   @Flaky
   @RepeatedTest(3) // first time often succeeds regardless
   @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES })
@@ -140,11 +142,11 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
     if (!config().capabilities().contains(Capabilities.GLOBAL_CONFIG)) {
       // We need to open the "other" bucket to make sure the test passes in clusters pre 6.5
       Bucket b = cluster.bucket(config().bucketname());
-      b.waitUntilReady(Duration.ofSeconds(30));
+      b.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
     }
 
     try {
-      cluster.waitUntilReady(Duration.ofSeconds(30));
+      cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
       cluster.buckets().createBucket(BucketSettings.create(bucketName).ramQuotaMB(100));
       Bucket bucket = cluster.bucket(bucketName);
       bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);

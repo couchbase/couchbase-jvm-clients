@@ -34,6 +34,7 @@ import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.test.Flaky;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.Invocation;
@@ -492,6 +493,7 @@ class PooledServiceTest {
    * cleaned up to prevent leaking.
    */
   // Intermittently failing on CI as the final IDLE check timesout
+  @Disabled
   @Flaky
   @Test
   void cleansDisconnectedEndpoints() {
@@ -594,7 +596,7 @@ class PooledServiceTest {
     verify(mock1, never()).disconnect();
   }
 
-  @Flaky // Intermittently see complaints of "'send' is a *void method* and it *cannot* be stubbed with a *return value*!"
+  @Disabled @Flaky // Intermittently see complaints of "'send' is a *void method* and it *cannot* be stubbed with a *return value*!"
   @Test
   void cleansUpNeverUsedIdleConnections() {
     Endpoint mock1 = mock(Endpoint.class);

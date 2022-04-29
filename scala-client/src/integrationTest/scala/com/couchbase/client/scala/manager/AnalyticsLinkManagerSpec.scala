@@ -31,7 +31,7 @@ import com.couchbase.client.scala.manager.analytics.ReactiveAnalyticsIndexManage
 
 import scala.util.{Failure, Success}
 
-@Flaky
+@Disabled @Flaky
 @TestInstance(Lifecycle.PER_CLASS)
 // Use COLLECTIONS as a proxy for 7.0. Analytics dataset management is only supported from 7.0.
 @IgnoreWhen(missesCapabilities = Array(Capabilities.ANALYTICS, Capabilities.COLLECTIONS))

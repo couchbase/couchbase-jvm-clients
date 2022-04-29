@@ -62,8 +62,8 @@ import static com.couchbase.client.java.manager.query.CreatePrimaryQueryIndexOpt
 public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(JavaIntegrationTest.class);
 
-  // Timeouts seen on CI with values of 5 seconds.
-  public static Duration WAIT_UNTIL_READY_DEFAULT = Duration.ofSeconds(30);
+  // Timeouts seen on CI with values of 30 seconds.
+  public static Duration WAIT_UNTIL_READY_DEFAULT = Duration.ofSeconds(60);
 
   /**
    * Customizes a {@link ClusterEnvironment.Builder} to use appropriate

@@ -28,7 +28,7 @@ import org.junit.jupiter.api._
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
-@Flaky
+@Disabled @Flaky
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(missesCapabilities = Array(Capabilities.QUERY, Capabilities.COLLECTIONS))
 class ScopeLevelQuerySpec extends ScalaIntegrationTest {

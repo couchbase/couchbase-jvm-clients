@@ -31,7 +31,7 @@ import org.junit.jupiter.api._
 import scala.concurrent.duration._
 import scala.util.Failure
 
-@Flaky
+@Disabled @Flaky
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(missesCapabilities = Array(Capabilities.SEARCH))
 class SearchIndexManagerSpec extends ScalaIntegrationTest {

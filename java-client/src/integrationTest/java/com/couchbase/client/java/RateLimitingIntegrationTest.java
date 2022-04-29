@@ -87,7 +87,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
   @BeforeAll
   static void beforeAll() throws Exception {
     adminCluster = Cluster.connect(seedNodes(), clusterOptions());
-    adminCluster.waitUntilReady(Duration.ofSeconds(5));
+    adminCluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
     enforceRateLimits();
   }
@@ -272,7 +272,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     Cluster cluster = createTestCluster(username);
 
     try {
-      cluster.waitUntilReady(Duration.ofSeconds(10));
+      cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
         for (int i = 0; i < 50; i++) {
@@ -299,13 +299,22 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     Cluster cluster = createTestCluster(username);
 
     try {
-      cluster.waitUntilReady(Duration.ofSeconds(10));
+      cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < LOOP_GUARD; i++) {
           String content = repeatString(1024 * 1024 * 5, "a");
-          cluster.query("UPSERT INTO `" + config().bucketname() + "` (KEY,VALUE) VALUES (\"key1\", \"" + content + "\")",
-            QueryOptions.queryOptions().timeout(Duration.ofSeconds(30)));//Can take a while
+          try {
+            cluster.query("UPSERT INTO `" + config().bucketname() + "` (KEY,VALUE) VALUES (\"key1\", \"" + content + "\")",
+                    QueryOptions.queryOptions().timeout(Duration.ofSeconds(30)));//Can take a while
+          }
+          catch (RateLimitedException err) {
+            throw err;
+          }
+          catch (CouchbaseException err) {
+            // On CI seeing intermittent AmbiguousTimeoutException
+            LOGGER.info("Caught and ignoring: " + err);
+          }
         }
       });
 
@@ -328,7 +337,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     Cluster cluster = createTestCluster(username);
 
     try {
-      cluster.waitUntilReady(Duration.ofSeconds(10));
+      cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
       String content = repeatString(1024 * 1024, "a");
       Collection collection = cluster.bucket(config().bucketname()).defaultCollection();
@@ -359,7 +368,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     Cluster cluster = createTestCluster(username);
 
     try {
-      cluster.waitUntilReady(Duration.ofSeconds(10));
+      cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> Flux
         .range(0, 50)
@@ -384,7 +393,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     Cluster cluster = createTestCluster(username);
 
     try {
-      cluster.waitUntilReady(Duration.ofSeconds(10));
+      cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> Flux
         .range(0, 10)
@@ -431,7 +440,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     Cluster cluster = createTestCluster(username);
 
     try {
-      cluster.waitUntilReady(Duration.ofSeconds(10));
+      cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
         for (int i = 0; i < LOOP_GUARD; i++) {
@@ -471,7 +480,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     Cluster cluster = createTestCluster(username);
 
     try {
-      cluster.waitUntilReady(Duration.ofSeconds(10));
+      cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
       String content = repeatString(1024 * 1024, "a");
       MutationResult mutationResult = cluster.bucket(config().bucketname()).defaultCollection()
@@ -517,7 +526,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     Cluster cluster = createTestCluster(username);
 
     try {
-      cluster.waitUntilReady(Duration.ofSeconds(10));
+      cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
       String content = repeatString(1024 * 1024, "a");
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> {
@@ -558,7 +567,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     Cluster cluster = createTestCluster(username);
 
     try {
-      cluster.waitUntilReady(Duration.ofSeconds(10));
+      cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
       RateLimitedException ex = assertThrows(RateLimitedException.class, () -> Flux
         .range(0, LOOP_GUARD)

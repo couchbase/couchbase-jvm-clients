@@ -73,7 +73,7 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
   static void setup() {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
     users = cluster.users();
-    cluster.waitUntilReady(Duration.ofSeconds(5));
+    cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
   }
 
   @AfterAll

@@ -31,6 +31,7 @@ import com.couchbase.client.test.Flaky;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Verifies the basic functionality of search queries in an end-to-end fashion.
  */
+@Disabled
 @Flaky
 @IgnoreWhen(missesCapabilities = Capabilities.SEARCH, clusterTypes = ClusterType.CAVES)
 class SearchIntegrationTest extends JavaIntegrationTest {

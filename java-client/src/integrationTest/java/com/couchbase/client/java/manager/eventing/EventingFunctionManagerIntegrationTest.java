@@ -54,7 +54,7 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
   static void setup() {
     cluster = Cluster.connect(seedNodes(), clusterOptions());
     functions = cluster.eventingFunctions();
-    cluster.waitUntilReady(Duration.ofSeconds(5));
+    cluster.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
     Bucket bucket = cluster.bucket(config().bucketname());
 

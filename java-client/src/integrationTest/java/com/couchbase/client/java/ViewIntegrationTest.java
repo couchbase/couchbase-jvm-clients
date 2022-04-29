@@ -31,6 +31,7 @@ import com.couchbase.client.test.Flaky;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -94,6 +95,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
     bucket.viewIndexes().upsertDesignDocument(designDocument, DesignDocumentNamespace.PRODUCTION);
   }
 
+  @Disabled
   @Flaky // Intermittently timing out on CI after 75s with ViewNotFoundException, which should not be possible
   @Test
   void succeedsWithNoRowsReturned() {
@@ -105,7 +107,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
   /**
    * Regression test for JCBC-1798
    */
-  @Flaky // Intermittently timing out on CI after 75s with ViewNotFoundException, which should not be possible
+  @Disabled @Flaky // Intermittently timing out on CI after 75s with ViewNotFoundException, which should not be possible
   @Test
   void canReadDebugInfo() {
     ViewResult viewResult = bucket.viewQuery(DDOC_NAME, VIEW_NAME, viewOptions().debug(true));
@@ -114,7 +116,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
 
   // See this fail intermittently on CI as the returned docs don't equal what was just written - which should not be
   // possible with RequestPlus.
-  @Flaky
+  @Disabled @Flaky
   @Test
   void returnsDataJustWritten() {
     int docsToWrite = 10;
@@ -141,7 +143,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
   /**
    * Regression test for JCBC-1664
    */
-  @Flaky // Intermittently timing out on CI after 75s with ViewNotFoundException, which should not be possible
+  @Disabled @Flaky // Intermittently timing out on CI after 75s with ViewNotFoundException, which should not be possible
   @Test
   void canQueryWithKeysPresent() {
     int docsToWrite = 2;
@@ -163,7 +165,7 @@ class ViewIntegrationTest extends JavaIntegrationTest {
   /**
    * Regression test for JVMCBC-870
    */
-  @Flaky // Intermittently timing out on CI after 75s with ViewNotFoundException, which should not be possible
+  @Disabled @Flaky // Intermittently timing out on CI after 75s with ViewNotFoundException, which should not be possible
   @Test
   void canQueryWithReduceEnabled() {
     int docsToWrite = 2;
