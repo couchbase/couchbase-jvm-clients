@@ -18,6 +18,7 @@ package com.couchbase.client.kotlin.codec
 
 import com.couchbase.client.kotlin.internal.toStringUtf8
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jsonMapper
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -78,5 +79,10 @@ internal class JacksonJsonSerializerTest {
         assertEquals("{\"x\":\"alakazam\"}", encoded.toStringUtf8())
 
         assertEquals(testSubject, serializer.deserialize<SerializeMeDifferently>(encoded))
+    }
+
+    @Test
+    fun `can create from ObjectMapper`() {
+        JacksonJsonSerializer(ObjectMapper())
     }
 }

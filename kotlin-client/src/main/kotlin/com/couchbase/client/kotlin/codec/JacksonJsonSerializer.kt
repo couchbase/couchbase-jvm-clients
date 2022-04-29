@@ -17,9 +17,14 @@
 package com.couchbase.client.kotlin.codec
 
 import com.fasterxml.jackson.databind.JavaType
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.json.JsonMapper
 
-public class JacksonJsonSerializer(private val mapper: JsonMapper) : JsonSerializer {
+public class JacksonJsonSerializer(private val mapper: ObjectMapper) : JsonSerializer {
+
+    // For binary compatibility with 1.0.0, which only worked with JsonMapper
+    public constructor(mapper: JsonMapper) : this(mapper as ObjectMapper)
+
     override fun <T> serialize(value: T, type: TypeRef<T>): ByteArray = mapper.writeValueAsBytes(value)
 
     override fun <T> deserialize(json: ByteArray, type: TypeRef<T>): T {
