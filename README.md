@@ -20,7 +20,7 @@ This repository contains the following projects:
  - `core-io`: the foundational library for all language bindings
  - `java-client`: the Java language binding
  - `scala-client`: the Scala language binding
- - `kotlin-client`: the Kotlin language binding (in Developer Preview at present)
+ - `kotlin-client`: the Kotlin language binding
  - `tracing-opentracing`: module to integrate with [OpenTracing](https://opentracing.io/)
  - `tracing-opentelemetry`: module to integrate with [OpenTelemetry](https://opentelemetry.io/) tracing
  - `metrics-opentelemetry`: module to integrate with [OpenTelemetry](https://opentelemetry.io/) metrics
