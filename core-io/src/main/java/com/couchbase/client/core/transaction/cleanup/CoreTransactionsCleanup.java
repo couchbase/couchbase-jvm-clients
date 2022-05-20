@@ -122,7 +122,7 @@ public class CoreTransactionsCleanup {
     private void runRegularAttemptsCleanupThread() {
         Objects.requireNonNull(LOGGER);
 
-        LOGGER_REGULAR.info("Starting background cleanup thread to find transactions from this client");
+        LOGGER_REGULAR.debug("Starting background cleanup thread to find transactions from this client");
 
         // Periodically check and drain the cleanupQueue
         Flux.interval(Duration.ofMillis(100), core.context().environment().transactionsSchedulers().schedulerCleanup())
