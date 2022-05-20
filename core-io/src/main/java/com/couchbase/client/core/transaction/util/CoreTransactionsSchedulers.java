@@ -28,22 +28,19 @@ public class CoreTransactionsSchedulers {
     // Same as BoundedElasticScheduler.DEFAULT_TTL_SECONDS, which is private
     private final static int DEFAULT_TTL_SECONDS = 60;
 
-    // 100 is arbritary.  There should be nothing blocking happening on this scheduler so only a handful of threads should be
-    // created and used in practice
-    private final Scheduler scheduler = createScheduler(100, "cb-txn");
     private final Scheduler schedulerCleanup = createScheduler(100, "cb-txn-cleanup");
 
-    // AttemptContext will block on all operations, tying up a thread each time.  So, we don't (realistically) limit the thread pool.
-    // The two main schedulers are separated to help with diagnosing blocking problems.
-    private final Scheduler schedulerBlocking = createScheduler(100_000, "cb-txn-blocking");
+    // The scheduler we run the lambda on.  In blocking mode, this will use up one thread per transaction.
+    // Applications performing large numbers of concurrent transactions should therefore prefer the reactive API.
+    //
+    // The other key benefit to this scheduler is we run anything in 'user space' (e.g. including when passing back
+    // control the lambda in reactive API) on this scheduler, rather than on a limited SDK one.  This lets the
+    // user accidentally block, without deadlocking the SDK.
+    private final Scheduler schedulerBlocking = createScheduler(100_000, "cb-txn");
 
     private Scheduler createScheduler(int threadCap, String name) {
         // Create daemon threads so we don't block the JVM from exiting if the user forgets cluster.disconnect()
         return Schedulers.newBoundedElastic(threadCap, Integer.MAX_VALUE, name, DEFAULT_TTL_SECONDS, true);
-    }
-
-    public Scheduler scheduler() {
-        return scheduler;
     }
 
     public Scheduler schedulerCleanup() {
@@ -56,7 +53,6 @@ public class CoreTransactionsSchedulers {
 
     public void shutdown() {
         schedulerCleanup.dispose();
-        scheduler.dispose();
         schedulerBlocking.dispose();
     }
 }

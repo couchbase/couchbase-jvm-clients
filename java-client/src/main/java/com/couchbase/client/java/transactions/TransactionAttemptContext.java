@@ -24,7 +24,6 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
-import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.Scope;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -77,7 +76,6 @@ public class TransactionAttemptContext {
     public TransactionGetResult get(Collection collection, String id) {
         return internal.get(makeCollectionIdentifier(collection.async()), id)
                 .map(result -> new TransactionGetResult(result, serializer()))
-                .publishOn(internal.core().context().environment().transactionsSchedulers().schedulerBlocking())
                 .block();
     }
 
@@ -104,7 +102,6 @@ public class TransactionAttemptContext {
         byte[] encoded = serializer().serialize(content);
         return internal.replace(doc.internal(), encoded)
                 .map(result -> new TransactionGetResult(result, serializer()))
-                .publishOn(internal.core().context().environment().transactionsSchedulers().schedulerBlocking())
                 .block();
     }
 
@@ -132,7 +129,6 @@ public class TransactionAttemptContext {
         byte[] encoded = serializer().serialize(content);
         return internal.insert(makeCollectionIdentifier(collection.async()), id, encoded)
                 .map(result -> new TransactionGetResult(result, serializer()))
-                .publishOn(internal.core().context().environment().transactionsSchedulers().schedulerBlocking())
                 .block();
     }
 
@@ -152,7 +148,6 @@ public class TransactionAttemptContext {
      */
     public void remove(TransactionGetResult doc) {
         internal.remove(doc.internal())
-                .publishOn(internal.core().context().environment().transactionsSchedulers().schedulerBlocking())
                 .block();
     }
 

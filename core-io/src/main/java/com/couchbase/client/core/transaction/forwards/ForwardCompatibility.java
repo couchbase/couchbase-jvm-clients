@@ -21,7 +21,6 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.error.transaction.ForwardCompatibilityFailureException;
 import com.couchbase.client.core.error.transaction.internal.ForwardCompatibilityRequiresRetryException;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
-import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
@@ -183,7 +182,7 @@ public class ForwardCompatibility {
                     }
 
                     if (behaviour.retryAfterMillis.isPresent()) {
-                        return Mono.delay(Duration.ofMillis(behaviour.retryAfterMillis.get()), core.context().environment().transactionsSchedulers().scheduler())
+                        return Mono.delay(Duration.ofMillis(behaviour.retryAfterMillis.get()), core.context().environment().transactionsSchedulers().schedulerBlocking())
                                 .then(Mono.error(toThrow));
                     } else {
                         return Mono.error(toThrow);
