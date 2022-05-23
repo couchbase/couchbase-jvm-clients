@@ -362,6 +362,27 @@ pipeline {
             }
         }
 
+        stage('testing  (Linux, cbdyncluster 7.1, OpenJDK JDK 17, CE)') {
+            agent { label "sdkqe" }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
+                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}/bin:$PATH"
+            }
+            when {
+                beforeAgent true;
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                test(OPENJDK, OPENJDK_17, "7.1.0", ceMode : true)
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
         // 7.0.3 does not and will not have a CE build.
         stage('testing  (Linux, cbdyncluster 7.0.2, Oracle JDK 8, CE)') {
             agent { label "sdkqe" }
@@ -383,6 +404,7 @@ pipeline {
                 }
             }
         }
+
 
         stage('testing (M1, cbdyncluster 7.1-stable, openjdk 11)') {
             agent { label 'm1' }
@@ -514,10 +536,10 @@ void test(Map args=[:],
             String jdkVersion,
             String serverVersion) {
 
-    boolean includeAnalytics = args.containsKey("includeAnalytics") ? args.get("includeAnalytics") : true
+    boolean ceMode = args.containsKey("ceMode") ? args.get("ceMode") : false
+    boolean includeAnalytics = args.containsKey("includeAnalytics") ? args.get("includeAnalytics") : !ceMode // CE doesn't have analytics
     boolean includeEventing = args.containsKey("includeEventing") ? args.get("includeEventing") : false
     boolean enableDevelopPreview = args.containsKey("enableDevelopPreview") ? args.get("enableDevelopPreview") : false
-    boolean ceMode = args.containsKey("ceMode") ? args.get("ceMode") : false
     boolean multiCerts = args.containsKey("multiCerts") ? args.get("multiCerts") : false
 
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
