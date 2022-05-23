@@ -266,6 +266,15 @@
                             com.couchbase.client.*
                         </Export-Package>
                         <Import-Package>
+                            javax.security.cert,
+                            javax.naming,
+                            javax.security.sasl,
+                            javax.security.auth.*,
+                            javax.crypto,
+                            javax.crypto.*,
+                            reactor.core,
+                            reactor.core.*,
+                            reactor.util.*,
                             org.slf4j,
                             org.slf4j.*,
                             reactor.*,

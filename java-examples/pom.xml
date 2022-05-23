@@ -83,16 +83,6 @@
                         </Export-Package>
                         <Import-Package>
                             org.osgi.framework,
-                            javax.security.cert,
-                            javax.naming,
-                            javax.security.sasl,
-                            javax.security.auth.*,
-                            javax.crypto,
-                            javax.crypto.*,
-                            reactor.core,
-                            reactor.core.*,
-                            reactor.util.*,
-                            org.reactivestreams.*,
                             org.slf4j,
                             org.slf4j.*,
                             com.couchbase.client.java.*,

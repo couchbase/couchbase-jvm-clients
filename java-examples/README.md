@@ -6,7 +6,7 @@ Start by building everything:
 
 $ mkdir sdk
 # cd sdk
-$ git clone git@github.com:aaronjwhiteside/spring-data-couchbase.git
+$ git clone git@github.com:couchbase/couchbase-jvm-clients.git
 $ cd core-io-deps
 $ mvn install
 $ cd ..
@@ -14,54 +14,41 @@ $ mvn install
 $ 
 
 In the following instructions for karaf,  specify the same version numbers that were just built.
-Pay special attention to versions with the suffix "-SNAPSHOT" (Or ".SNAPSHOT").
 
-The bundle includes an Activator which saves and gets a document 
-to "travel-sample" on Couchbase Server running on localhost
+The bundle includes an Activator which saves and then gets a document 
+from "travel-sample" on Couchbase Server running on localhost
 
 Create bucket "travel-sample" in the Couchbase console either manually or from Settings -> Sample Buckets
 
-Download and install karaf
+Download and install karaf 4.3.7 (or other compatible version)
 
-Add the following to org.osgi.framework.bootdelegation in <karaf>/etc/config.properties
-     javax.crypto, \
-     javax.crypto.*, \
-     javax.security.sasl, \
-     javax.security.auth.*, \
-     javax.security.cert, \
-     javax.security.cert.*, \
 
-Add the feature repository to etc/org.apache.karaf.features.repos.cfg
+Add the feature repository to etc/org.apache.karaf.features.repos.cfg:
 
-osgi-feature=mvn:com.couchbase.client/osgi-feature/1.2.0.SNAPSHOT/xml/features
+  osgi-feature=mvn:com.couchbase.client/osgi-feature/3.3.1-SNAPSHOT/xml/features
 
-Add the feature to etc/org.apache.karaf.features.cfg featureRepositories:
+Add the feature to featureRepositories in etc/org.apache.karaf.features.cfg:
 
-  mvn:com.couchbase.client/osgi-feature/1.2.0.SNAPSHOT/xml/features
+  mvn:com.couchbase.client/osgi-feature/3.3.1-SNAPSHOT/xml/features
 
-In this directory there are sample files:
+Add the feature to featuresBoot in etc/org.apache.karaf.features.cfg:
 
-	java-examples/config.properties
-	java-examples/org.apache.karaf.features.cfg
-	java-examples/org.apache.karaf.features.repos.cfg
+  osgi-feature/3.3.1-SNAPSHOT
+
 
 Clear the karaf cache.  Do this whenever you have new jars.
 It will also uninstall installed features and unbundles.
 
 $ rm -r <karaf-dir>/data/cache
 
+The log file for karaf is <karaf-dir>/data/log/karaf.log
+
 $ karaf
 karaf@root()> stack-traces-print
-karaf@root()> feature:install osgi-feature
-# if karaf exits at this point with "java.io.IOException: Stream Closed",
-# simply restart karaf and continue
-$ karaf
-karaf@root()> stack-traces-print
-karaf@root()> install mvn:com.couchbase.client/java-examples/1.2.0-SNAPSHOT
+karaf@root()> install mvn:com.couchbase.client/java-examples/1.3.1-SNAPSHOT
 Bundle ID: 302
 start 302
 Hello world.
-HOME: /Users/username
 log4j.configuration file:///Users/username/log4j.properties
 Cluster.connect...
 GetResult{content={"name":"MyName"}, flags=0x2000000, cas=0x167aa6e785c60000, expiry=Optional.empty}
@@ -92,8 +79,8 @@ install mvn:com.couchbase.client/core-io/2.1.4-SNAPSHOT
 #
 $ karaf
 stack-traces-print
-install mvn:com.couchbase.client/java-client/3.1.4-SNAPSHOT
-install mvn:com.couchbase.client/java-examples/1.1.4-SNAPSHOT
+install mvn:com.couchbase.client/java-client/3.3.1-SNAPSHOT
+install mvn:com.couchbase.client/java-examples/1.3.1-SNAPSHOT
 Bundle ID: 302
 karaf@root()> start 302
 Hello world.
