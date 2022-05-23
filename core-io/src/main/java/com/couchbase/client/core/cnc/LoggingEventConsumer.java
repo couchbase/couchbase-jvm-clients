@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Level;
-import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
@@ -247,10 +246,7 @@ public class LoggingEventConsumer implements Consumer<Event> {
       return false;
     }
     Slf4JLogger l = new Slf4JLogger("test");
-    if (l.getImplementation().getClass().getName().equals("org.ops4j.pax.logging.slf4j.Slf4jLogger")) {
-      return true;
-    }
-    return false;
+    return l.getImplementation().getClass().getName().equals("org.ops4j.pax.logging.slf4j.Slf4jLogger");
   }
 
   /**
@@ -282,20 +278,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     void trace(String msg);
 
     /**
-     * Log a message at the TRACE level according to the specified format
-     * and arguments.
-     *
-     * <p>This form avoids superfluous string concatenation when the logger
-     * is disabled for the TRACE level. However, this variant incurs the hidden
-     * (and relatively small) cost of creating an <code>Object[]</code> before invoking the method,
-     * even if this logger is disabled for TRACE.</p>
-     *
-     * @param format    the format string
-     * @param arguments a list of 3 or more arguments
-     */
-    void trace(String format, Object... arguments);
-
-    /**
      * Log an exception (throwable) at the TRACE level with an
      * accompanying message.
      *
@@ -318,20 +300,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
      * @param msg the message string to be logged
      */
     void debug(String msg);
-
-    /**
-     * Log a message at the DEBUG level according to the specified format
-     * and arguments.
-     *
-     * <p>This form avoids superfluous string concatenation when the logger
-     * is disabled for the DEBUG level. However, this variant incurs the hidden
-     * (and relatively small) cost of creating an <code>Object[]</code> before invoking the method,
-     * even if this logger is disabled for DEBUG. </p>
-     *
-     * @param format    the format string
-     * @param arguments a list of 3 or more arguments
-     */
-    void debug(String format, Object... arguments);
 
     /**
      * Log an exception (throwable) at the DEBUG level with an
@@ -358,20 +326,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     void info(String msg);
 
     /**
-     * Log a message at the INFO level according to the specified format
-     * and arguments.
-     *
-     * <p>This form avoids superfluous string concatenation when the logger
-     * is disabled for the INFO level. However, this variant incurs the hidden
-     * (and relatively small) cost of creating an <code>Object[]</code> before invoking the method,
-     * even if this logger is disabled for INFO. </p>
-     *
-     * @param format    the format string
-     * @param arguments a list of 3 or more arguments
-     */
-    void info(String format, Object... arguments);
-
-    /**
      * Log an exception (throwable) at the INFO level with an
      * accompanying message.
      *
@@ -396,20 +350,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     void warn(String msg);
 
     /**
-     * Log a message at the WARN level according to the specified format
-     * and arguments.
-     *
-     * <p>This form avoids superfluous string concatenation when the logger
-     * is disabled for the WARN level. However, this variant incurs the hidden
-     * (and relatively small) cost of creating an <code>Object[]</code> before invoking the method,
-     * even if this logger is disabled for WARN. </p>
-     *
-     * @param format    the format string
-     * @param arguments a list of 3 or more arguments
-     */
-    void warn(String format, Object... arguments);
-
-    /**
      * Log an exception (throwable) at the WARN level with an
      * accompanying message.
      *
@@ -432,20 +372,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
      * @param msg the message string to be logged
      */
     void error(String msg);
-
-    /**
-     * Log a message at the ERROR level according to the specified format
-     * and arguments.
-     *
-     * <p>This form avoids superfluous string concatenation when the logger
-     * is disabled for the ERROR level. However, this variant incurs the hidden
-     * (and relatively small) cost of creating an <code>Object[]</code> before invoking the method,
-     * even if this logger is disabled for ERROR. </p>
-     *
-     * @param format    the format string
-     * @param arguments a list of 3 or more arguments
-     */
-    void error(String format, Object... arguments);
 
     /**
      * Log an exception (throwable) at the ERROR level with an
@@ -498,11 +424,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     @Override
-    public void trace(String format, Object... arguments) {
-      logger.trace(format, arguments);
-    }
-
-    @Override
     public void trace(String msg, Throwable t) {
       logger.trace(msg, t);
     }
@@ -515,11 +436,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     @Override
     public void debug(String msg) {
       logger.debug(msg);
-    }
-
-    @Override
-    public void debug(String format, Object... arguments) {
-      logger.debug(format, arguments);
     }
 
     @Override
@@ -538,11 +454,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     @Override
-    public void info(String format, Object... arguments) {
-      logger.info(format, arguments);
-    }
-
-    @Override
     public void info(String msg, Throwable t) {
       logger.info(msg, t);
     }
@@ -558,11 +469,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     @Override
-    public void warn(String format, Object... arguments) {
-      logger.warn(format, arguments);
-    }
-
-    @Override
     public void warn(String msg, Throwable t) {
       logger.warn(msg, t);
     }
@@ -575,11 +481,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     @Override
     public void error(String msg) {
       logger.error(msg);
-    }
-
-    @Override
-    public void error(String format, Object... arguments) {
-      logger.error(format, arguments);
     }
 
     @Override
@@ -637,11 +538,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     @Override
-    public void trace(String format, Object... arguments) {
-      logger.log(Level.FINEST, formatHelper(format, arguments));
-    }
-
-    @Override
     public void trace(String msg, Throwable t) {
       logger.log(Level.FINEST, msg, t);
     }
@@ -654,11 +550,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     @Override
     public void debug(String msg) {
       logger.log(Level.FINE, msg);
-    }
-
-    @Override
-    public void debug(String format, Object... arguments) {
-      logger.log(Level.FINE, formatHelper(format, arguments));
     }
 
     @Override
@@ -677,11 +568,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     @Override
-    public void info(String format, Object... arguments) {
-      logger.log(Level.INFO, formatHelper(format, arguments));
-    }
-
-    @Override
     public void info(String msg, Throwable t) {
       logger.log(Level.INFO, msg, t);
     }
@@ -697,11 +583,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     @Override
-    public void warn(String format, Object... arguments) {
-      logger.log(Level.WARNING, formatHelper(format, arguments));
-    }
-
-    @Override
     public void warn(String msg, Throwable t) {
       logger.log(Level.WARNING, msg, t);
     }
@@ -714,11 +595,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     @Override
     public void error(String msg) {
       logger.log(Level.SEVERE, msg);
-    }
-
-    @Override
-    public void error(String format, Object... arguments) {
-      logger.log(Level.SEVERE, formatHelper(format, arguments));
     }
 
     @Override
@@ -767,12 +643,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     @Override
-    public synchronized void trace(String format, Object... arguments) {
-      this.log.format("[TRACE] (%s) %s%n", Thread.currentThread().getName(),
-        formatHelper(format, arguments));
-    }
-
-    @Override
     public synchronized void trace(String msg, Throwable t) {
       this.log.format("[TRACE] (%s) %s - %s%n", Thread.currentThread().getName(), msg, t);
       t.printStackTrace(this.log);
@@ -786,12 +656,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     @Override
     public synchronized void debug(String msg) {
       this.log.format("[DEBUG] (%s) %s%n", Thread.currentThread().getName(), msg);
-    }
-
-    @Override
-    public synchronized void debug(String format, Object... arguments) {
-      this.log.format("[DEBUG] (%s) %s%n", Thread.currentThread().getName(),
-        formatHelper(format, arguments));
     }
 
     @Override
@@ -811,12 +675,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     @Override
-    public synchronized void info(String format, Object... arguments) {
-      this.log.format("[ INFO] (%s) %s%n", Thread.currentThread().getName(),
-        formatHelper(format, arguments));
-    }
-
-    @Override
     public synchronized void info(String msg, Throwable t) {
       this.log.format("[ INFO] (%s) %s - %s%n", Thread.currentThread().getName(), msg, t);
       t.printStackTrace(this.log);
@@ -830,12 +688,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     @Override
     public synchronized void warn(String msg) {
       this.err.format("[ WARN] (%s) %s%n", Thread.currentThread().getName(), msg);
-    }
-
-    @Override
-    public synchronized void warn(String format, Object... arguments) {
-      this.err.format("[ WARN] (%s) %s%n", Thread.currentThread().getName(),
-        formatHelper(format, arguments));
     }
 
     @Override
@@ -855,38 +707,10 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     @Override
-    public synchronized void error(String format, Object... arguments) {
-      this.err.format("[ERROR] (%s) %s%n", Thread.currentThread().getName(),
-        formatHelper(format, arguments));
-    }
-
-    @Override
     public synchronized void error(String msg, Throwable t) {
       this.err.format("[ERROR] (%s) %s - %s%n", Thread.currentThread().getName(), msg, t);
       t.printStackTrace(this.err);
     }
-  }
-
-  /**
-   * Helper method to compute the formatted arguments.
-   *
-   * @param from      the original string
-   * @param arguments the arguments to replace
-   * @return the formatted string.
-   */
-  private static String formatHelper(final String from, final Object... arguments) {
-    if (from != null) {
-      String computed = from;
-      if (arguments != null && arguments.length != 0) {
-        for (Object argument : arguments) {
-          computed = computed.replaceFirst(
-            "\\{\\}", Matcher.quoteReplacement(argument.toString())
-          );
-        }
-      }
-      return computed;
-    }
-    return null;
   }
 
 }
