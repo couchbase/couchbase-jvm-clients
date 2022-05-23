@@ -166,10 +166,9 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
 
   protected static void waitForQueryIndexerToHaveKeyspace(final Cluster cluster, final String keyspaceName) {
     boolean ready = false;
-    int guard = 100;
+    long start = System.nanoTime();
 
-    while (!ready && guard != 0) {
-      guard -= 1;
+    while (!ready && (Duration.ofNanos(System.nanoTime() - start).toMillis() < 60_000)) {
       String statement =
               "SELECT COUNT(*) > 0 as present FROM system:keyspaces where name = '" + keyspaceName + "';";
 
@@ -191,7 +190,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
       }
     }
 
-    if (guard == 0) {
+    if (!ready) {
       throw new IllegalStateException("Query indexer is still not aware of keyspaceName " + keyspaceName);
     }
   }
