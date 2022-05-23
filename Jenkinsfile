@@ -214,35 +214,6 @@ pipeline {
 
         // Test against cbdyncluster - do for nightly tests
         // One day can get all these cbdyncluster tests running in parallel: https://jenkins.io/blog/2017/09/25/declarative-1/
-        stage('testing (Linux, cbdyncluster 6.5-release, colossus, Oracle JDK 8)') {
-           agent { label "sdkqe" }
-           environment {
-                JAVA_HOME = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
-            when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanupWorkspace()
-                    dir('colossus') {
-                        checkout([$class: 'GitSCM',
-                                  branches: [[name: 'colossus']],
-                                  userRemoteConfigs: [[url: '$REPO']]])
-                        installJDKIfNeeded(ORACLE_JDK, ORACLE_JDK_8)
-                        script { testAgainstServer("6.5-release", QUICK_TEST_MODE) }
-                    }
-                }
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-            }
-        }
 
         stage('testing  (Linux, cbdyncluster 6.5-release, Oracle JDK 8)') {
             agent { label "sdkqe" }
@@ -320,36 +291,6 @@ pipeline {
             }
             steps {
                 test(ORACLE_JDK, ORACLE_JDK_8, "6.6-release")
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-            }
-        }
-
-        stage('testing (Linux, cbdyncluster 6.6-release, colossus, Oracle JDK 8)') {
-            agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/colossus/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
-            when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    cleanupWorkspace()
-                    dir('colossus') {
-                        checkout([$class: 'GitSCM',
-                                  branches: [[name: 'colossus']],
-                                  userRemoteConfigs: [[url: '$REPO']]])
-                        installJDKIfNeeded(ORACLE_JDK, ORACLE_JDK_8)
-                        script { testAgainstServer("6.6-release", QUICK_TEST_MODE) }
-                    }
-                }
             }
             post {
                 always {
