@@ -17,11 +17,15 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.LoggerFormatter;
+import com.couchbase.client.core.cnc.DefaultLoggerFormatter;
 import com.couchbase.client.core.cnc.LoggingEventConsumer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
  * The {@link LoggerConfig} allows to customize various aspects of the SDKs logging behavior.
@@ -35,6 +39,7 @@ public class LoggerConfig {
     public static final String DEFAULT_LOGGER_NAME = "CouchbaseLogger";
     public static final boolean DEFAULT_DIAGNOSTIC_CONTEXT_ENABLED = false;
     public static final Level DEFAULT_CONSOLE_LOG_LEVEL = Level.INFO;
+    public static final LoggerFormatter DEFAULT_CONSOLE_LOGGER_FORMATTER = DefaultLoggerFormatter.INSTANCE;
   }
 
   private final LoggingEventConsumer.Logger customLogger;
@@ -43,6 +48,7 @@ public class LoggerConfig {
   private final String loggerName;
   private final boolean diagnosticContextEnabled;
   private final Level consoleLogLevel;
+  private final LoggerFormatter consoleLoggerFormatter;
 
   private LoggerConfig(final Builder builder) {
     customLogger = builder.customLogger;
@@ -51,6 +57,7 @@ public class LoggerConfig {
     fallbackToConsole = builder.fallbackToConsole;
     diagnosticContextEnabled = builder.diagnosticContextEnabled;
     consoleLogLevel = builder.consoleLogLevel;
+    consoleLoggerFormatter = builder.consoleLoggerFormatter;
   }
 
   /**
@@ -149,6 +156,23 @@ public class LoggerConfig {
   }
 
   /**
+   * Allows to customize the format when the console logger is used.
+   *
+   * Please note that this DOES NOT AFFECT any other logging infrastructure (so neither the java.util.logging, nor
+   * the SLF4J setup which is the default!). It will only affect the log level if {@link #fallbackToConsole(boolean)}
+   * is set to true at the same time.
+   * <p>
+   * If only a custom timestamp needs to be added, it is recommended to override the {@link DefaultLoggerFormatter}
+   * for ease of use. If a completely custom line is needed, the interface can be implemented from scratch.
+   *
+   * @param loggerFormatter the custom formatter to be used.
+   * @return a {@link Builder} for chaining purposes.
+   */
+  public Builder consoleLoggerFormatter(final LoggerFormatter loggerFormatter) {
+    return builder().consoleLoggerFormatter(loggerFormatter);
+  }
+
+  /**
    * Returns a custom logger if configured for testing.
    */
   @Stability.Internal
@@ -195,6 +219,15 @@ public class LoggerConfig {
   }
 
   /**
+   * Returns the logger formatter used for the console logger.
+   *
+   * @return the logger formatter.
+   */
+  public LoggerFormatter consoleLoggerFormatter() {
+    return consoleLoggerFormatter;
+  }
+
+  /**
    * Returns this config as a map so it can be exported into i.e. JSON for display.
    */
   @Stability.Volatile
@@ -203,6 +236,7 @@ public class LoggerConfig {
     export.put("customLogger", customLogger == null ? null : customLogger.getClass().getSimpleName());
     export.put("fallbackToConsole", fallbackToConsole);
     export.put("consoleLogLevel", consoleLogLevel);
+    export.put("consoleLoggerFormatter", consoleLoggerFormatter == null ? null : consoleLoggerFormatter.getClass().getSimpleName());
     export.put("disableSlf4j", disableSlf4J);
     export.put("loggerName", loggerName);
     export.put("diagnosticContextEnabled", diagnosticContextEnabled);
@@ -216,6 +250,7 @@ public class LoggerConfig {
     private String loggerName = Defaults.DEFAULT_LOGGER_NAME;
     private boolean diagnosticContextEnabled = Defaults.DEFAULT_DIAGNOSTIC_CONTEXT_ENABLED;
     private Level consoleLogLevel = Defaults.DEFAULT_CONSOLE_LOG_LEVEL;
+    private LoggerFormatter consoleLoggerFormatter = Defaults.DEFAULT_CONSOLE_LOGGER_FORMATTER;
 
     /**
      * Allows to specify a custom logger. This is used for testing only.
@@ -299,6 +334,24 @@ public class LoggerConfig {
      */
     public Builder consoleLogLevel(final Level consoleLogLevel) {
       this.consoleLogLevel = consoleLogLevel;
+      return this;
+    }
+
+    /**
+     * Allows to customize the format when the console logger is used.
+     *
+     * Please note that this DOES NOT AFFECT any other logging infrastructure (so neither the java.util.logging, nor
+     * the SLF4J setup which is the default!). It will only affect the log level if {@link #fallbackToConsole(boolean)}
+     * is set to true at the same time.
+     * <p>
+     * If only a custom timestamp needs to be added, it is recommended to override the {@link DefaultLoggerFormatter}
+     * for ease of use. If a completely custom line is needed, the interface can be implemented from scratch.
+     *
+     * @param loggerFormatter the custom formatter to be used.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public Builder consoleLoggerFormatter(final LoggerFormatter loggerFormatter) {
+      this.consoleLoggerFormatter = notNull(loggerFormatter, "LoggerFormatter");
       return this;
     }
 

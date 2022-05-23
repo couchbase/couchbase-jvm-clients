@@ -82,7 +82,7 @@ public class LoggingEventConsumer implements Consumer<Event> {
     } else if (SLF4J_AVAILABLE && !loggerConfig.disableSlf4J()) {
       logger = new Slf4JLogger(name);
     } else if (loggerConfig.fallbackToConsole()) {
-      logger = new ConsoleLogger(name, loggerConfig.consoleLogLevel());
+      logger = new ConsoleLogger(name, loggerConfig.consoleLogLevel(), loggerConfig.consoleLoggerFormatter());
     } else {
       logger = new JdkLogger(name);
     }
@@ -604,10 +604,13 @@ public class LoggingEventConsumer implements Consumer<Event> {
     private final boolean warnEnabled;
     private final boolean errorEnabled;
 
-    ConsoleLogger(String name, Level logLevel) {
+    private final LoggerFormatter formatter;
+
+    ConsoleLogger(String name, Level logLevel, LoggerFormatter formatter) {
       this.name = name;
       this.log = System.out;
       this.err = System.err;
+      this.formatter = formatter;
 
       traceEnabled = logLevel.intValue() <= Level.FINEST.intValue();
       debugEnabled = logLevel.intValue() <= Level.FINE.intValue();
@@ -627,14 +630,13 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     @Override
-    public synchronized void trace(String msg) {
-      this.log.format("[TRACE] (%s) %s%n", Thread.currentThread().getName(), msg);
+    public void trace(String msg) {
+      trace(msg, null);
     }
 
     @Override
     public synchronized void trace(String msg, Throwable t) {
-      this.log.format("[TRACE] (%s) %s - %s%n", Thread.currentThread().getName(), msg, t);
-      t.printStackTrace(this.log);
+      log.print(formatter.format(Level.FINEST, msg, t));
     }
 
     @Override
@@ -643,14 +645,13 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     @Override
-    public synchronized void debug(String msg) {
-      this.log.format("[DEBUG] (%s) %s%n", Thread.currentThread().getName(), msg);
+    public void debug(String msg) {
+      debug(msg, null);
     }
 
     @Override
     public synchronized void debug(String msg, Throwable t) {
-      this.log.format("[DEBUG] (%s) %s - %s%n", Thread.currentThread().getName(), msg, t);
-      t.printStackTrace(this.log);
+      log.print(formatter.format(Level.FINE, msg, t));
     }
 
     @Override
@@ -659,14 +660,13 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     @Override
-    public synchronized void info(String msg) {
-      this.log.format("[ INFO] (%s) %s%n", Thread.currentThread().getName(), msg);
+    public void info(String msg) {
+      info(msg, null);
     }
 
     @Override
     public synchronized void info(String msg, Throwable t) {
-      this.log.format("[ INFO] (%s) %s - %s%n", Thread.currentThread().getName(), msg, t);
-      t.printStackTrace(this.log);
+      log.print(formatter.format(Level.INFO, msg, t));
     }
 
     @Override
@@ -675,14 +675,13 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     @Override
-    public synchronized void warn(String msg) {
-      this.err.format("[ WARN] (%s) %s%n", Thread.currentThread().getName(), msg);
+    public void warn(String msg) {
+      warn(msg, null);
     }
 
     @Override
     public synchronized void warn(String msg, Throwable t) {
-      this.err.format("[ WARN] (%s) %s - %s%n", Thread.currentThread().getName(), msg, t);
-      t.printStackTrace(this.err);
+      err.print(formatter.format(Level.WARNING, msg, t));
     }
 
     @Override
@@ -691,14 +690,13 @@ public class LoggingEventConsumer implements Consumer<Event> {
     }
 
     @Override
-    public synchronized void error(String msg) {
-      this.err.format("[ERROR] (%s) %s%n", Thread.currentThread().getName(), msg);
+    public void error(String msg) {
+      error(msg, null);
     }
 
     @Override
     public synchronized void error(String msg, Throwable t) {
-      this.err.format("[ERROR] (%s) %s - %s%n", Thread.currentThread().getName(), msg, t);
-      t.printStackTrace(this.err);
+      err.print(formatter.format(Level.SEVERE, msg, t));
     }
   }
 

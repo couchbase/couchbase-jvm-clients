@@ -152,7 +152,8 @@ class LoggingEventConsumerTest {
 
   @Test
   void verifyConsoleLoggerLogLevelEnablement() {
-    LoggingEventConsumer.ConsoleLogger logger = new LoggingEventConsumer.ConsoleLogger("logger", Level.INFO);
+    LoggingEventConsumer.ConsoleLogger logger = new LoggingEventConsumer.ConsoleLogger("logger", Level.INFO,
+      DefaultLoggerFormatter.INSTANCE);
 
     assertFalse(logger.isTraceEnabled());
     assertFalse(logger.isDebugEnabled());
