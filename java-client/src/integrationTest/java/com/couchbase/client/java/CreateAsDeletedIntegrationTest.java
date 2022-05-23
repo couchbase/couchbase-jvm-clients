@@ -215,10 +215,10 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
                     .accessDeleted(true));
   }
 
-  // Failing on CI as behaviour has changed on 7.1.  Checking with KV team if intentional.
+  // See comment in replaceTombstoneWithTxnXattrWithCASWhichHasChanged_71Plus for why we split this test.
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
-  void replaceTombstoneWithTxnXattrWithCASWhichHasChanged() {
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES, hasCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+  void replaceTombstoneWithTxnXattrWithCASWhichHasChanged_pre71() {
     String id = docId();
     insertTombstoneWithTxnXattr(coll, id, JsonObject.create());
 
@@ -237,6 +237,21 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
               MutateInOptions.mutateInOptions()
                       .cas(result.cas()) // note using the original CAS not the changed one
                       .accessDeleted(true));
+    });
+  }
+
+  @Test
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES, missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+  void replaceTombstoneWithTxnXattrWithCASWhichHasChanged_71Plus() {
+    String id = docId();
+    insertTombstoneWithTxnXattr(coll, id, JsonObject.create());
+
+    assertIsTombstone(coll, id);
+
+    // Behaviour changed on 7.1: previously this would succeed.
+    // Checking with KV team if intentional.
+    assertThrows(DocumentExistsException.class, () -> {
+      upsertEmptyTombstone(coll, id);
     });
   }
 
