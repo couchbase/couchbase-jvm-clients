@@ -32,6 +32,7 @@ import com.couchbase.client.core.msg.kv.GetResponse;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.InsertResponse;
 import com.couchbase.client.core.util.CoreIntegrationTest;
+import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
@@ -107,6 +108,7 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     }
   }
 
+  @IgnoreWhen(missesCapabilities = {Capabilities.ENTERPRISE_EDITION})
   @Test
   void performsKeyValueWithServerCert() throws Exception {
     if (!config().clusterCerts().isPresent()) {

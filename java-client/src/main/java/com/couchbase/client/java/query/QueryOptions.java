@@ -172,6 +172,9 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    * Note that you only want to tune this if you want to gather profiling/performance metrics for debugging. Turning
    * this on in production (depending on the level) will likely have performance impact on the server query engine
    * as a whole and on this query in particular!
+   * <p>
+   * This is an Enterprise Edition feature.  On Community Edition the parameter will be accepted, but no profiling
+   * information returned.
    *
    * @param profile the custom query profile level for this query.
    * @return the same {@link QueryOptions} for chaining purposes.

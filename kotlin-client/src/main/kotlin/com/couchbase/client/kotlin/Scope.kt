@@ -121,7 +121,9 @@ public class Scope(
      * the response (access via [QueryMetadata.profile]). Profiling is
      * relatively expensive, and can impact the performance of the server
      * query engine. Not recommended for use in production, unless you're
-     * diagnosing a specific issue.
+     * diagnosing a specific issue.  Note this is an Enterprise Edition feature.
+     * On Community Edition the parameter will be accepted, but no profiling
+     * information returned.
      *
      * @param maxParallelism Specifies the maximum parallelism for the query.
      *

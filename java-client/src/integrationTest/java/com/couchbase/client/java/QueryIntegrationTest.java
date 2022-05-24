@@ -214,6 +214,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertFalse(result.metaData().profile().isPresent());
     }
 
+    @IgnoreWhen(missesCapabilities = {Capabilities.ENTERPRISE_EDITION})
     @Test
     void getProfileWhenRequested() {
         String id = insertDoc();

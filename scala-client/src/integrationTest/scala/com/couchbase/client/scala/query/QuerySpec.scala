@@ -282,6 +282,7 @@ class QuerySpec extends ScalaIntegrationTest {
     )
   }
 
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.ENTERPRISE_EDITION))
   @Test
   def options_profile(): Unit = {
     cluster.query(

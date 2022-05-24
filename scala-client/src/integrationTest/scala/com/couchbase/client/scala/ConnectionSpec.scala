@@ -20,7 +20,7 @@ import com.couchbase.client.scala.env.{ClusterEnvironment, SecurityConfig}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.UpsertOptions
 import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.test.{ClusterType, IgnoreWhen}
+import com.couchbase.client.test.{Capabilities, ClusterType, IgnoreWhen}
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import org.junit.Assert.fail
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -54,7 +54,7 @@ class ConnectionSpec extends ScalaIntegrationTest {
     cluster.bucket(config.bucketname()).defaultCollection.upsert(id, JsonObject.create).get
   }
 
-  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), missesCapabilities = Array(Capabilities.ENTERPRISE_EDITION))
   @Test
   def performsKeyValueWithServerCert(): Unit = {
     if (!config.clusterCerts.isPresent) fail("Cluster Certificate must be present for this test!")

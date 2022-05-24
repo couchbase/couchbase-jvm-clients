@@ -153,6 +153,9 @@ case class QueryOptions(
 
   /** Set the profiling information level for query execution
     *
+    * This is an Enterprise Edition feature.  On Community Edition the parameter will be accepted, but no profiling
+    * information returned.
+    *
     * @param profile the query profile level to be used
     *
     * @return a copy of this with the change applied, for chaining.
