@@ -271,7 +271,7 @@ public class TransactionQueryOptions {
   }
 
   @Stability.Internal
-  QueryOptions builder() {
+  public QueryOptions builder() {
     return builder;
   }
 }

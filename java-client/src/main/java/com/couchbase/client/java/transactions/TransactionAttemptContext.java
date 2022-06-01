@@ -29,6 +29,7 @@ import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.Scope;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.transactions.internal.OptionsUtil;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -190,26 +191,15 @@ public class TransactionAttemptContext {
     public TransactionQueryResult query(Scope scope,
                              String statement,
                              TransactionQueryOptions options) {
-        JsonObject json = JsonObject.create();
-        if (scope != null) {
-            json.put("query_context", QueryRequest.queryContext(scope.bucketName(), scope.name()));
-        }
-        if (options != null) {
-            options.builder().build().injectParams(json);
-        }
-        try {
-            ObjectNode opts = Mapper.reader().readValue(json.toBytes(), ObjectNode.class);
-            return internal.queryBlocking(statement,
-                            scope == null ? null : scope.bucketName(),
-                            scope == null ? null : scope.name(),
-                            opts,
-                            false)
-                    .publishOn(internal.core().context().environment().transactionsSchedulers().schedulerBlocking())
-                    .map(response -> new TransactionQueryResult(response.header, response.rows, response.trailer, serializer()))
-                    .block();
-        } catch (IOException e) {
-            throw new EncodingFailureException(e);
-        }
+        ObjectNode opts = OptionsUtil.createTransactionOptions(scope == null ? null : scope.reactive(), statement, options);
+        return internal.queryBlocking(statement,
+                        scope == null ? null : scope.bucketName(),
+                        scope == null ? null : scope.name(),
+                        opts,
+                        false)
+                .publishOn(internal.core().context().environment().transactionsSchedulers().schedulerBlocking())
+                .map(response -> new TransactionQueryResult(response.header, response.rows, response.trailer, serializer()))
+                .block();
     }
 
     /**

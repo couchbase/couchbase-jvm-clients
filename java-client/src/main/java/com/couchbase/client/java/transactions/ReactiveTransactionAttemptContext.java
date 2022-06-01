@@ -27,6 +27,7 @@ import com.couchbase.client.java.ReactiveCollection;
 import com.couchbase.client.java.ReactiveScope;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.transactions.internal.OptionsUtil;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
@@ -164,24 +165,12 @@ public class ReactiveTransactionAttemptContext {
     public Mono<TransactionQueryResult> query(final ReactiveScope scope,
                                               final String statement,
                                               final TransactionQueryOptions options) {
-        JsonObject json = JsonObject.create()
-                .put("statement", statement);
-        if (scope != null) {
-            json.put("query_context", QueryRequest.queryContext(scope.bucketName(), scope.name()));
-        }
-        if (options != null) {
-            options.builder().build().injectParams(json);
-        }
-        try {
-            ObjectNode opts = Mapper.reader().readValue(json.toBytes(), ObjectNode.class);
-            return internal.queryBlocking(statement,
-                            scope == null ? null : scope.bucketName(),
-                            scope == null ? null : scope.name(),
-                            opts,
-                            false)
-                    .map(response -> new TransactionQueryResult(response.header, response.rows, response.trailer, serializer()));
-        } catch (IOException e) {
-            throw new EncodingFailureException(e);
-        }
+        ObjectNode opts = OptionsUtil.createTransactionOptions(scope, statement, options);
+        return internal.queryBlocking(statement,
+                        scope == null ? null : scope.bucketName(),
+                        scope == null ? null : scope.name(),
+                        opts,
+                        false)
+                .map(response -> new TransactionQueryResult(response.header, response.rows, response.trailer, serializer()));
     }
 }

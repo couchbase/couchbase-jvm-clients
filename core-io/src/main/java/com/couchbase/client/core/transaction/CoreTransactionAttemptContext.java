@@ -3883,7 +3883,7 @@ public class CoreTransactionAttemptContext {
      *
      * If !updateInternalState, the internal state bits are not changed.
      */
-    TransactionOperationFailedException operationFailed(boolean updateInternalState, TransactionOperationFailedException err) {
+    public TransactionOperationFailedException operationFailed(boolean updateInternalState, TransactionOperationFailedException err) {
         if (updateInternalState) {
             return operationFailed(err);
         }
@@ -3891,7 +3891,7 @@ public class CoreTransactionAttemptContext {
         return err;
     }
 
-    TransactionOperationFailedException operationFailed(TransactionOperationFailedException err) {
+    public TransactionOperationFailedException operationFailed(TransactionOperationFailedException err) {
         int sb = TRANSACTION_STATE_BIT_COMMIT_NOT_ALLOWED;
 
         if (!err.autoRollbackAttempt()) {
