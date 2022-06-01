@@ -19,13 +19,18 @@ package com.couchbase.client.core.util;
 import org.junit.jupiter.api.Test;
 
 import javax.naming.CommunicationException;
+import javax.naming.NameNotFoundException;
+import javax.naming.NamingException;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -57,6 +62,18 @@ class DnsSrvTest {
   }
 
   @Test
+  void throwsNameNotFoundWhenMissingSrvRecord() throws Exception {
+    NamingException e = assertThrows(NamingException.class, () -> DnsSrv.fromDnsSrv("localhost", true, false));
+    if (e instanceof CommunicationException) {
+      // this is fine, prevents failing this test when run without internet connection
+      ignoreTest("Failed to contact DNS server.");
+    }
+    if (!(e instanceof NameNotFoundException)) {
+      fail("Expected NameNotFoundException but got " + e.getClass());
+    }
+  }
+
+  @Test
   void bootstrapFromDnsSrv() throws Exception {
     try {
       String demoService = "_xmpp-server._tcp.gmail.com";
@@ -65,7 +82,12 @@ class DnsSrvTest {
       assertTrue(strings.size() > 0);
     } catch (CommunicationException ex) {
       // this is fine, prevents failing this test when run without internet connection
+      ignoreTest("Failed to contact DNS server.");
     }
+  }
+
+  private static void ignoreTest(String message) {
+    assumeTrue(false, message);
   }
 
 }

@@ -18,8 +18,10 @@ package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
 
+import javax.naming.NameNotFoundException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
@@ -108,7 +110,11 @@ public class DnsSrv {
    */
   static List<String> loadDnsRecords(final String serviceName, final DirContext ctx) throws NamingException {
     Attributes attrs = ctx.getAttributes(serviceName, new String[] { "SRV" });
-    NamingEnumeration<?> servers = attrs.get("srv").getAll();
+    Attribute srv = attrs.get("srv");
+    if (srv == null) {
+      throw new NameNotFoundException();
+    }
+    NamingEnumeration<?> servers = srv.getAll();
     List<String> records = new ArrayList<>();
     while (servers.hasMore()) {
       DnsRecord record = DnsRecord.fromString((String) servers.next());

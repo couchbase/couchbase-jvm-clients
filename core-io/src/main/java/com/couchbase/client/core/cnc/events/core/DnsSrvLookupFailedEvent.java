@@ -42,7 +42,11 @@ public class DnsSrvLookupFailedEvent extends AbstractEvent {
     } else if (reason != null) {
       cause = " (" + reason.identifier() + ")";
     }
-    return "DNS SRV lookup failed"+ cause +", trying to bootstrap from given hostname directly.";
+    return "DNS SRV lookup failed"+ cause +"." +
+        " This is expected if the there is no DNS SRV record associated with the hostname in the connection string." +
+        " Will now try to bootstrap directly from the given hostname." +
+        " To suppress this message, specify an IP address instead of a hostname (for example: 127.0.0.1 instead of localhost)," +
+        " specify more than one hostname, or set the `io.enableDnsSrv` client setting to false.";
   }
 
   @Override
