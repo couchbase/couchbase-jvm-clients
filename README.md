@@ -85,6 +85,7 @@ These trains are named after historic computers for your delight.
 Tags in each branch are named `branchname-ga` for the initial GA release, and then subsequently `branchname-sr-n` for
 each service release. See the tag information for specifics of what's in there.
 
+ - [Eos](https://nvidianews.nvidia.com/news/nvidia-announces-dgx-h100-systems-worlds-most-advanced-enterprise-ai-infrastructure) (Initial Release 2022-03-26)
  - [Colossus](https://en.wikipedia.org/wiki/Colossus_computer) (Initial Release 2020-01-10)
  - [Pegasus](https://en.wikipedia.org/wiki/Ferranti_Pegasus) (Initial Release 2020-12-02)
  - [Hopper](https://en.wikipedia.org/wiki/Grace_Hopper) (Initial Release 2021-07-20)
@@ -94,6 +95,7 @@ each service release. See the tag information for specifics of what's in there.
 | colossus      | 3.0.x       | 1.0.x        | 2.0.x   | 0.2.x                 | 0.2.x               | -                     | -                  |
 | pegasus       | 3.1.x       | 1.1.x        | 2.1.x   | 0.3.x                 | 0.3.x               | 0.1.x                 | 0.1.x              |
 | hopper        | 3.2.x       | 1.2.x        | 2.2.x   | 1.0.x                 | 1.0.x               | 0.2.x                 | 0.2.x              |
+| eos           | 3.3.x       | 1.3.x        | 2.3.x   | 1.1.x                 | 1.2.x               | 0.3.x                 | 0.3.x              |
 
 ### Testing Info
 
@@ -109,12 +111,12 @@ Also to have maximum service coverage use a cluster which has all services enabl
 ### Building Documentation
 Documentation will be built automatically by the `mvn install` command above.
 
-According to the Maven standard, the file is named artifact-version-javadoc.jar (i.e. java-client-3.0.4-javadoc.jar).
+According to the Maven standard, the file is named artifact-version-javadoc.jar (i.e. java-client-3.3.1-javadoc.jar).
 
 This file can be extracted (jars are like zip files) with the following command:
 
 ```
-jar xvf java-client-3.0.4-javadoc.jar
+jar xvf java-client-3.3.1-javadoc.jar
 ```
 
 This will extract the contents of the javadoc file into the current directory. After the original jar is removed it can be uploaded to s3.
