@@ -383,6 +383,27 @@ pipeline {
             }
         }
 
+        stage('testing  (Linux, cbdyncluster 7.2-stable, Oracle JDK 8)') {
+            agent { label "sdkqe" }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                beforeAgent true;
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.2-stable", includeEventing : true)
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
         // 7.0.3 does not and will not have a CE build.
         stage('testing  (Linux, cbdyncluster 7.0.2, Oracle JDK 8, CE)') {
             agent { label "sdkqe" }
