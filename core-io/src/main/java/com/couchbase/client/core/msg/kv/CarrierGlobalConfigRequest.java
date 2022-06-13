@@ -101,4 +101,10 @@ public class CarrierGlobalConfigRequest
     return "carrier_global_config";
   }
 
+  @Override
+  public String toString() {
+    return "CarrierGlobalConfigRequest{" +
+      "target=" + redactSystem(target.address()) +
+      '}';
+  }
 }

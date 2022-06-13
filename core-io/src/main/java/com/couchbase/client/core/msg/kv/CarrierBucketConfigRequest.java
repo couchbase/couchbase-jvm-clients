@@ -33,6 +33,7 @@ import java.time.Duration;
 import java.util.Map;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
 public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucketConfigResponse> implements TargetedRequest, UnmonitoredRequest {
@@ -84,4 +85,11 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
     return "carrier_bucket_config";
   }
 
+  @Override
+  public String toString() {
+    return "CarrierBucketConfigRequest{" +
+      "target=" + redactSystem(target.address()) +
+      ", bucket=" + redactMeta(collectionIdentifier().bucket()) +
+      '}';
+  }
 }
