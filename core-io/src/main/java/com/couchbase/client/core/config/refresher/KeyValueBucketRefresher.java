@@ -73,7 +73,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
   /**
    * The number of config fetches in parallel at maximum per interval.
    */
-  static final int MAX_PARALLEL_FETCH = 3;
+  static final int MAX_PARALLEL_FETCH = 1;
 
   /**
    * Holds the core as a reference.
