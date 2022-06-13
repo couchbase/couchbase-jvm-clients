@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import javax.naming.CommunicationException;
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingException;
+import javax.naming.ServiceUnavailableException;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
@@ -64,9 +65,9 @@ class DnsSrvTest {
   @Test
   void throwsNameNotFoundWhenMissingSrvRecord() throws Exception {
     NamingException e = assertThrows(NamingException.class, () -> DnsSrv.fromDnsSrv("localhost", true, false));
-    if (e instanceof CommunicationException) {
-      // this is fine, prevents failing this test when run without internet connection
-      ignoreTest("Failed to contact DNS server.");
+    if (e instanceof CommunicationException || e instanceof ServiceUnavailableException) {
+      // this is fine, prevents failing this test when run without internet connection or in weird CI environment
+      ignoreTest("Failed to contact DNS server: " + e);
     }
     if (!(e instanceof NameNotFoundException)) {
       fail("Expected NameNotFoundException but got " + e.getClass());
@@ -80,9 +81,9 @@ class DnsSrvTest {
       String publicNameServer = "8.8.8.8"; //google's public DNS
       List<String> strings = DnsSrv.fromDnsSrv(demoService, true, false, publicNameServer);
       assertTrue(strings.size() > 0);
-    } catch (CommunicationException ex) {
-      // this is fine, prevents failing this test when run without internet connection
-      ignoreTest("Failed to contact DNS server.");
+    } catch (CommunicationException | ServiceUnavailableException ex) {
+      // this is fine, prevents failing this test when run without internet connection or in weird CI environment
+      ignoreTest("Failed to contact DNS server: " + ex);
     }
   }
 
