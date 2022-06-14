@@ -23,6 +23,8 @@ import com.couchbase.client.core.transaction.CoreTransactionContext;
 import com.couchbase.client.core.transaction.CoreTransactionsReactive;
 import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
 import com.couchbase.client.core.transaction.config.CoreTransactionOptions;
+import com.couchbase.client.core.transaction.threadlocal.TransactionMarker;
+import com.couchbase.client.core.transaction.threadlocal.TransactionMarkerOwner;
 import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
@@ -110,7 +112,17 @@ public class ReactiveTransactions {
 
             Function<CoreTransactionAttemptContext, Mono<Void>> newTransactionLogic = (ctx) -> Mono.defer(() -> {
                 TransactionAttemptContext ctxBlocking = new TransactionAttemptContext(ctx, serializer);
-                return Mono.fromRunnable(() -> transactionLogic.accept(ctxBlocking)).then();
+                return Mono.fromRunnable(() -> {
+                            TransactionMarkerOwner.set(new TransactionMarker(ctx));
+                            try {
+                                transactionLogic.accept(ctxBlocking);
+                            }
+                            finally {
+                                TransactionMarkerOwner.clear();
+                            }
+                        })
+                        .subscribeOn(internal.core().context().environment().transactionsSchedulers().schedulerBlocking())
+                        .then();
             });
 
             return internal.executeTransaction(createAttempt, merged, overall, newTransactionLogic, false)

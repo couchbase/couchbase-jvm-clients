@@ -19,12 +19,14 @@ import com.couchbase.InternalPerformerFailure;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.transaction.internal.TestFailOtherException;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
+import com.couchbase.client.core.transaction.threadlocal.TransactionMarkerOwner;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.Scope;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.transactions.TransactionAttemptContext;
 import com.couchbase.client.java.transactions.TransactionGetResult;
 import com.couchbase.client.java.transactions.TransactionQueryResult;
+import com.couchbase.client.java.transactions.TransactionResult;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
 import com.couchbase.grpc.protocol.API;
 import com.couchbase.grpc.protocol.CommandBatch;
@@ -86,7 +88,7 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
 
         TransactionOptions ptcb = OptionsUtil.makeTransactionOptions(connection, req);
 
-        return connection.cluster().transactions().run((ctx) -> {
+        TransactionResult out = connection.cluster().transactions().run((ctx) -> {
             if (testFailure.get() != null) {
                 logger.info("Test failure is set at start of new attempt, fast failing transaction");
                 throw testFailure.get();
@@ -104,6 +106,12 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
 
             logger.info("Reached end of all operations and lambda");
         }, ptcb);
+
+        if (TransactionMarkerOwner.get().block().isPresent()) {
+            throw new InternalPerformerFailure(new IllegalStateException("Still in blocking transaction context after completion"));
+        }
+
+        return out;
     }
 
     private static CoreTransactionLogger getLogger(TransactionAttemptContext ctx) {

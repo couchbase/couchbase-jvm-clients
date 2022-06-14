@@ -34,6 +34,7 @@ import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
 import com.couchbase.client.core.transaction.forwards.Supported;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
+import com.couchbase.client.core.transaction.threadlocal.TransactionMarker;
 import com.couchbase.client.core.transaction.util.CoreTransactionAttemptContextHooks;
 import com.couchbase.client.core.transaction.util.DebugUtil;
 import com.couchbase.client.core.transaction.util.QueryUtil;
@@ -97,6 +98,14 @@ public class CoreTransactionsReactive {
                 })
 
                 .flatMap(ctx -> transactionLogic.apply(ctx)
+
+                        // Remember that contextWrite is subscribe based so it will only be 'seen' by operators above
+                        // this point in the code - e.g. the lambda.  We don't have to unset the context after this point
+                        // as it effectively doesn't exist.
+                        .contextWrite(reactiveContext -> {
+                            TransactionMarker marker = new TransactionMarker(ctx);
+                            return reactiveContext.put(TransactionMarker.class, marker);
+                        })
 
                         .onErrorResume(err -> Mono.error(ctx.convertToOperationFailedIfNeeded(err, singleQueryTransactionMode)))
 
