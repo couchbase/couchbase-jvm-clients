@@ -50,6 +50,11 @@ public class ReactiveTransactionAttemptContext {
         this.serializer = Objects.requireNonNull(serializer);
     }
 
+    @Stability.Internal
+    CoreTransactionAttemptContext ctx() {
+        return internal;
+    }
+
     /**
      * Gets a document with the specified <code>id</code> and from the specified Couchbase <code>bucket</code>.
      * <p>

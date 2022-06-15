@@ -54,6 +54,7 @@ public class TransactionAttemptContext {
         this.serializer = Objects.requireNonNull(serializer);
     }
 
+    @Stability.Internal
     CoreTransactionAttemptContext ctx() {
         return internal;
     }
