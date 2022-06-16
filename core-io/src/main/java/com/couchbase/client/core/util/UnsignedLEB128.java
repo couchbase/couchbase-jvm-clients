@@ -25,7 +25,7 @@ import java.util.function.IntSupplier;
 
 /**
  * Encodes and decodes the unsigned LEB128 (Little Endian Base 128) format.
- * See https://en.wikipedia.org/wiki/LEB128
+ * See <a href="https://en.wikipedia.org/wiki/LEB128">LEB128</a>.
  */
 public class UnsignedLEB128 {
   private UnsignedLEB128() {
@@ -52,7 +52,7 @@ public class UnsignedLEB128 {
 
   /**
    * Advances the buffer's reader index past the unsigned LEB128 value at the reader index.
-   * If this methods throws an exception the reader index will be unchanged.
+   * If this method throws an exception, the reader index will be unchanged.
    *
    * @return the number of bytes skipped.
    * @throws IndexOutOfBoundsException if the buffer's readable bytes do not contain a complete value.
@@ -61,12 +61,9 @@ public class UnsignedLEB128 {
     final int readerMark = buf.readerIndex();
     int bytesSkipped = 0;
     try {
-      while (true) {
+      do {
         bytesSkipped++;
-        if ((buf.readByte() & 0x80) == 0) {
-          break;
-        }
-      }
+      } while ((buf.readByte() & 0x80) != 0);
     } catch (Exception e) {
       buf.readerIndex(readerMark);
       throw e;
