@@ -82,6 +82,15 @@ public class DocumentGetter {
                                 return Mono.just(Optional.of(r));
                             }
                         }
+                        else if (r.links().stagedAttemptId().get().equals(byAttemptId)) {
+                            LOGGER.info(byAttemptId, "doc %s is in our own transaction attempt - RYOW", DebugUtil.docId(collection, docId));
+                            if (r.links().op().get().equals(OperationTypes.REMOVE)) {
+                                return Mono.just(Optional.empty());
+                            }
+                            else {
+                                return Mono.just(Optional.of(CoreTransactionGetResult.createFrom(r, r.links().stagedContent().get().getBytes(UTF_8))));
+                            }
+                        }
                         else if (resolvingMissingATREntry.equals(r.links().stagedAttemptId())) {
 
                             if (r.links().op().isPresent() && r.links().op().get().equals(INSERT)) {

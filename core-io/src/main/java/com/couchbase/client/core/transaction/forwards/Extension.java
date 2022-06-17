@@ -126,6 +126,11 @@ public enum Extension {
      * @since 3.3.0
      */
     EXT_MOBILE_INTEROP("MI"),
+
+    /**
+     * @since 3.3.4
+     */
+    EXT_REPLACE_BODY_WITH_XATTR("RX"),
     ;
 
     private String value;

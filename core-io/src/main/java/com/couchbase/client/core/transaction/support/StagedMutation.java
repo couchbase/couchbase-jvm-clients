@@ -57,4 +57,8 @@ public class StagedMutation {
     public String toString() {
         return type.toString() + " " + DebugUtil.docId(collection, id);
     }
+
+    public boolean supportsReplaceBodyWithXattr() {
+        return content == null;
+    }
 }

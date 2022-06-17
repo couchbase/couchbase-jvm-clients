@@ -56,10 +56,12 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.logging.RedactableArgument;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
+import com.couchbase.client.core.msg.kv.InsertResponse;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
+import com.couchbase.client.core.msg.kv.SubdocMutateResponse;
 import com.couchbase.client.core.msg.query.CoreQueryAccessor;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
@@ -108,6 +110,7 @@ import com.couchbase.client.core.transaction.util.TransactionKVHandler;
 import com.couchbase.client.core.transaction.util.TriFunction;
 import com.couchbase.client.core.transaction.error.internal.ErrorClass;
 import com.couchbase.client.core.cnc.events.transaction.IllegalDocumentStateEvent;
+import com.couchbase.client.core.util.BucketConfigUtil;
 import com.couchbase.client.core.util.CbPreconditions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -119,6 +122,7 @@ import reactor.util.function.Tuple2;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -134,6 +138,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.config.BucketCapabilities.SUBDOC_REVIVE_DOCUMENT;
 import static com.couchbase.client.core.error.transaction.TransactionOperationFailedException.Builder.createError;
 import static com.couchbase.client.core.error.transaction.TransactionOperationFailedException.FinalErrorToRaise;
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION;
@@ -1530,8 +1535,9 @@ public class CoreTransactionAttemptContext {
                     .flatMap(updatedDoc -> {
                         CoreTransactionGetResult out = createTransactionGetResult(operationId, collection, id, contentToStage,
                                 contentOfBody, updatedDoc.cas(), documentMetadata, OperationTypes.REPLACE, crc32OfGet);
-                        return addStagedMutation(new StagedMutation(operationId, id, collection, updatedDoc.cas(), documentMetadata, crc32OfGet, contentToStage, StagedMutationType.REPLACE))
-                                .thenReturn(out);
+                        return supportsReplaceBodyWithXattr(collection.bucket())
+                                .flatMap(supports -> addStagedMutation(new StagedMutation(operationId, id, collection, updatedDoc.cas(), documentMetadata, crc32OfGet, supports ? null : contentToStage, StagedMutationType.REPLACE))
+                                        .thenReturn(out));
                     })
 
                     .onErrorResume(err -> {
@@ -1890,6 +1896,11 @@ public class CoreTransactionAttemptContext {
         });
     }
 
+    private Mono<Boolean> supportsReplaceBodyWithXattr(String bucketName) {
+        return BucketConfigUtil.waitForBucketConfig(core, bucketName, Duration.of(expiryRemainingMillis(), ChronoUnit.MILLIS))
+                .map(bc -> bc.bucketCapabilities().contains(SUBDOC_REVIVE_DOCUMENT));
+    }
+
     /*
      * Stage an insert on a document, putting the staged mutation into the doc's xattrs.  The document is created
      * with an empty body.
@@ -1944,9 +1955,10 @@ public class CoreTransactionAttemptContext {
                                 atrCollection.get().collection().get(),
                                 updatedDoc.cas());
 
-                        return addStagedMutation(new StagedMutation(operationId, out.id(), out.collection(), out.cas(),
-                                out.documentMetadata(), Optional.empty(), content, StagedMutationType.INSERT))
-                                .thenReturn(out);
+                        return supportsReplaceBodyWithXattr(collection.bucket())
+                                .flatMap(supports -> addStagedMutation(new StagedMutation(operationId, out.id(), out.collection(), out.cas(),
+                                        out.documentMetadata(), Optional.empty(), supports ? null : content, StagedMutationType.INSERT))
+                                        .thenReturn(out));
                     })
 
                     .onErrorResume(err -> {
@@ -2581,8 +2593,8 @@ public class CoreTransactionAttemptContext {
             SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "commit.doc", pspan);
 
             return Mono.fromRunnable(() -> {
-                LOGGER.info(attemptId, "commit - committing doc %s, cas=%d, insertMode=%s, ambiguity-resolution=%s",
-                        DebugUtil.docId(collection, id), cas, insertMode, ambiguityResolutionMode);
+                LOGGER.info(attemptId, "commit - committing doc %s, cas=%d, insertMode=%s, ambiguity-resolution=%s supportsReplaceBodyWithXattr=%s",
+                        DebugUtil.docId(collection, id), cas, insertMode, ambiguityResolutionMode, staged.supportsReplaceBodyWithXattr());
 
                 checkExpiryDuringCommitOrRollbackLocked(CoreTransactionAttemptContextHooks.HOOK_COMMIT_DOC, Optional.of(id));
             })
@@ -2591,21 +2603,41 @@ public class CoreTransactionAttemptContext {
 
                     .then(Mono.defer(() -> {
                         if (insertMode) {
-                            return TransactionKVHandler.insert(core, collection, id, staged.content, kvTimeoutMutating(),
-                                            durabilityLevel(), OptionsUtil.createClientContext("commitDocInsert"), span)
-                                    .map(v -> v.cas());
+                            if (staged.supportsReplaceBodyWithXattr()) {
+                                return TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(), false, false, true, true, false,
+                                        cas, durabilityLevel(), OptionsUtil.createClientContext("commitDocInsert"), span, Arrays.asList(
+                                                new SubdocMutateRequest.Command(SubdocCommandType.REPLACE_BODY_WITH_XATTR, TransactionFields.STAGED_DATA, null, false, true, false, 0),
+                                                new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, null, false, true, false, 1)
+                                        ))
+                                        .map(SubdocMutateResponse::cas);
+                            }
+                            else {
+                                return TransactionKVHandler.insert(core, collection, id, staged.content, kvTimeoutMutating(),
+                                                durabilityLevel(), OptionsUtil.createClientContext("commitDocInsert"), span)
+                                        .map(InsertResponse::cas);
+                            }
                         } else {
-                            return TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
-                                    false, false, false, false, false, cas, durabilityLevel(),
-                                    OptionsUtil.createClientContext("commitDoc"), span,
-                                    Arrays.asList(
-                                            // Upsert this field to better handle illegal doc mutation.  E.g. run shadowDocSameTxnKVInsert without this,
-                                            // fails at this point as path has been removed.  Could also handle with a spec change to handle that.
-                                            new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, serialize(null), false, true, false, 0),
-                                            new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, null, false, true, false, 1),
-                                            new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", staged.content, false, false, false, 2)
-                                    ))
-                                    .map(v -> v.cas());
+                            if (staged.supportsReplaceBodyWithXattr()) {
+                                return TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(), false, false, false, false, false,
+                                                cas, durabilityLevel(), OptionsUtil.createClientContext("commitDoc"), span, Arrays.asList(
+                                                        new SubdocMutateRequest.Command(SubdocCommandType.REPLACE_BODY_WITH_XATTR, TransactionFields.STAGED_DATA, null, false, true, false, 0),
+                                                        new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, null, false, true, false, 1)
+                                                ))
+                                        .map(SubdocMutateResponse::cas);
+                            }
+                            else {
+                                return TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
+                                                false, false, false, false, false, cas, durabilityLevel(),
+                                                OptionsUtil.createClientContext("commitDoc"), span,
+                                                Arrays.asList(
+                                                        // Upsert this field to better handle illegal doc mutation.  E.g. run shadowDocSameTxnKVInsert without this,
+                                                        // fails at this point as path has been removed.  Could also handle with a spec change to handle that.
+                                                        new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, serialize(null), false, true, false, 0),
+                                                        new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, null, false, true, false, 1),
+                                                        new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", staged.content, false, false, false, 2)
+                                                ))
+                                        .map(SubdocMutateResponse::cas);
+                            }
                         }
                     }))
 
@@ -2650,10 +2682,17 @@ public class CoreTransactionAttemptContext {
                                 String msg = msgDocChangedUnexpectedly(collection, id);
                                 LOGGER.warn(attemptId, msg);
                                 LOGGER.eventBus().publish(new IllegalDocumentStateEvent(Event.Severity.WARN, msg, id));
-                                // Redo as a replace, which will of course fail on CAS.
-                                return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION)
-                                        .then(commitDocLocked(span, staged, cas, false, ambiguityResolutionMode)
-                                                .thenReturn(0));
+
+                                if (staged.supportsReplaceBodyWithXattr()) {
+                                    // There's nothing can be done, the document data is lost
+                                    return Mono.empty();
+                                }
+                                else {
+                                    // Redo as a replace, which will of course fail on CAS.
+                                    return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION)
+                                            .then(commitDocLocked(span, staged, cas, false, ambiguityResolutionMode)
+                                                    .thenReturn(0));
+                                }
                             }
                         } else if (ec == FAIL_HARD) {
                             return Mono.error(operationFailed(e.build()));
