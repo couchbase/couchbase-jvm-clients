@@ -83,6 +83,7 @@ public abstract class CommonDatastructureOptions<SELF extends CommonDatastructur
             c.retryStrategy(this.retryStrategy().orElse(null));
             c.timeout(this.timeout().orElse(null));
             c.clientContext(this.clientContext());
+            c.casMismatchRetries(this.casMismatchRetries());
         }
     }
 }
