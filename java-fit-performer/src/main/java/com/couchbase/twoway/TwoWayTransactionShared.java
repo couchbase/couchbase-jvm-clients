@@ -453,24 +453,25 @@ public abstract class TwoWayTransactionShared {
                         opDebug, tofRaisedFromSDK.build(), err.getMessage());
             }
         }
+        // Raised a non-TOF error
         else {
             boolean ok = false;
 
             for (ExpectedResult er : expectedResults) {
-                ExternalException ee = ResultsUtil.mapCause(err);
-                ExternalException expected = er.getException();
-                if (expected != ExternalException.Unknown && ee.equals(expected)) {
-                    logger.info("Operation '{}' failed with {} as expected", opDebug, ee);
-                    ok = true;
-                    break;
+                if (er.hasException()) {
+                    ExternalException raisedFromSDK = ResultsUtil.mapCause(err);
+                    ExternalException expected = er.getException();
+                    if (expected != ExternalException.Unknown && raisedFromSDK.equals(expected)) {
+                        logger.info("Operation '{}' failed with {} as expected", opDebug, raisedFromSDK);
+                        ok = true;
+                        break;
+                    }
                 }
             }
 
             if (!ok) {
-                // A stage can only raise an TransactionOperationFailedException
-                // Update: As of ExtQuery and ExtSDKIntegration, that is no longer the case.
-                String msg = String.format("Command %s raised error '%s', but require TransactionOperationFailedException",
-                        opDebug, err);
+                String msg = String.format("Operation '%s' failed unexpectedly, was expecting %s but got %s: %s",
+                        opDebug, dbg(expectedResults), err, err.getMessage());
                 logger.warn(msg);
                 dump.run();
                 RuntimeException error = new InternalPerformerFailure(

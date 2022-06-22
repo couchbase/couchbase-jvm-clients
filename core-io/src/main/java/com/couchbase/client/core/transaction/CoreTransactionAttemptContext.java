@@ -1843,11 +1843,9 @@ public class CoreTransactionAttemptContext {
                                         return createStagedInsert(operationId, collection, id, content, pspan, Optional.of(r.cas()));
                                     } else if (!r.links().isDocumentInTransaction()) {
                                         LOGGER.info(attemptId, "%s doc %s exists but is not in txn, raising " +
-                                                "DocumentAlreadyExistsException", bp, DebugUtil.docId(collection, id));
+                                                "DocumentExistsException", bp, DebugUtil.docId(collection, id));
 
-                                        return Mono.error(operationFailed(createError()
-                                                .cause(new DocumentExistsException(ReducedKeyValueErrorContext.create(id)))
-                                                .build()));
+                                        return Mono.error(new DocumentExistsException(ReducedKeyValueErrorContext.create(id)));
                                     } else {
                                         if (r.links().stagedAttemptId().get().equals(attemptId)) {
                                             // stagedOperationId must be present as this transaction is writing it
@@ -1871,11 +1869,9 @@ public class CoreTransactionAttemptContext {
                                         // BF-CBD-3787
                                         if (!r.links().op().get().equals(OperationTypes.INSERT)) {
                                             LOGGER.info(attemptId, "%s doc %s is in a txn but is not a staged insert, raising " +
-                                                    "DocumentAlreadyExistsException", bp, DebugUtil.docId(collection, id));
+                                                    "DocumentExistsException", bp, DebugUtil.docId(collection, id));
 
-                                            return Mono.error(operationFailed(createError()
-                                                    .cause(new DocumentExistsException(ReducedKeyValueErrorContext.create(id)))
-                                                    .build()));
+                                            return Mono.error(new DocumentExistsException(ReducedKeyValueErrorContext.create(id)));
                                         }
 
                                         // Will return Mono.empty if it's safe to overwrite, Mono.error otherwise

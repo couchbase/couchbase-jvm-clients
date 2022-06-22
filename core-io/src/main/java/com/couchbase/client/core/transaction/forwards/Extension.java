@@ -133,6 +133,11 @@ public enum Extension {
     EXT_REPLACE_BODY_WITH_XATTR("RX"),
 
     /**
+     * @since 3.4.0
+     */
+    EXT_INSERT_EXISTING("IX"),
+
+    /**
      * @since ?
      */
     EXT_OBSERVABILITY("OB")
