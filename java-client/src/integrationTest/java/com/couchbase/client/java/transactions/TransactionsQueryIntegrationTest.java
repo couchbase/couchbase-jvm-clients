@@ -21,6 +21,7 @@ import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.transactions.error.TransactionFailedException;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
@@ -28,6 +29,8 @@ import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -41,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         // Using COLLECTIONS as a proxy for 7.0+, which is when query added support for transactions
         missesCapabilities = {Capabilities.CREATE_AS_DELETED, Capabilities.COLLECTIONS, Capabilities.QUERY})
 public class TransactionsQueryIntegrationTest extends JavaIntegrationTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(TransactionsQueryIntegrationTest.class);
 
     static private Cluster cluster;
     static private Collection collection;
@@ -59,18 +63,32 @@ public class TransactionsQueryIntegrationTest extends JavaIntegrationTest {
         cluster.disconnect();
     }
 
+    private static void logFailed(Runnable runnable) {
+        try {
+            runnable.run();
+        }
+        catch (TransactionFailedException err) {
+            err.logs().forEach(log -> LOGGER.info(log.toString()));
+            throw err;
+        }
+    }
+
     @Test
     void basic() {
-        cluster.transactions().run((ctx) -> {
-            ctx.query("SELECT 'Hello World' AS Greeting");
+        logFailed(() -> {
+            cluster.transactions().run((ctx) -> {
+                ctx.query("SELECT 'Hello World' AS Greeting");
+            });
         });
     }
 
     @Test
     void reactive() {
-        cluster.reactive().transactions().run((ctx) ->
-                ctx.query("SELECT 'Hello World' AS Greeting"))
-                .block();
+        logFailed(() -> {
+            cluster.reactive().transactions().run((ctx) ->
+                            ctx.query("SELECT 'Hello World' AS Greeting"))
+                    .block();
+        });
     }
 
     @Test
