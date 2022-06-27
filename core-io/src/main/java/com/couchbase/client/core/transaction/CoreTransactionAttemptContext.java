@@ -51,6 +51,7 @@ import com.couchbase.client.core.error.transaction.internal.CoreTransactionFaile
 import com.couchbase.client.core.error.transaction.internal.ForwardCompatibilityRequiresRetryException;
 import com.couchbase.client.core.error.transaction.internal.RetryAtrCommitException;
 import com.couchbase.client.core.error.transaction.internal.RetryOperationException;
+import com.couchbase.client.core.error.transaction.internal.WrappedTransactionOperationFailedException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.logging.RedactableArgument;
@@ -4527,6 +4528,9 @@ public class CoreTransactionAttemptContext {
         // transaction internals will only raise this.
         if (e instanceof TransactionOperationFailedException) {
             return (TransactionOperationFailedException) e;
+        }
+        else if (e instanceof WrappedTransactionOperationFailedException) {
+            return ((WrappedTransactionOperationFailedException) e).wrapped();
         }
         else if (singleQueryTransactionMode) {
             logger().info(attemptId(), "Caught exception from application's lambda %s, not converting", DebugUtil.dbg(e));
