@@ -15,12 +15,15 @@
  */
 package com.couchbase.client.java.transactions;
 
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.query.QueryOptions;
+import com.couchbase.client.java.transactions.config.TransactionsConfig;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
@@ -51,11 +54,15 @@ public class TransactionsQueryIntegrationTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void beforeAll() {
-        cluster = createCluster();
+        // On CI seeing transactions expire as a basic "SELECT 'Hello World' AS Greeting" query is taking 20 seconds+.
+        // Use a long timeout and try to ensure query is warmed up first.
+        cluster = createCluster(env -> env.transactionsConfig(TransactionsConfig.timeout(Duration.ofMinutes(1))));
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
 
         bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
+        waitForService(bucket, ServiceType.QUERY);
+        cluster.query("SELECT 'Hello World' AS Greeting", QueryOptions.queryOptions().timeout(Duration.ofMinutes(1)));
     }
 
     @AfterAll
