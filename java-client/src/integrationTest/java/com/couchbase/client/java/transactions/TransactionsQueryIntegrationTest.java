@@ -29,6 +29,7 @@ import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -62,7 +63,21 @@ public class TransactionsQueryIntegrationTest extends JavaIntegrationTest {
 
         bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
         waitForService(bucket, ServiceType.QUERY);
-        cluster.query("SELECT 'Hello World' AS Greeting", QueryOptions.queryOptions().timeout(Duration.ofMinutes(1)));
+
+        Util.waitUntilCondition(() -> {
+            try {
+                cluster.query("SELECT 'Hello World' AS Greeting", QueryOptions.queryOptions().timeout(Duration.ofMinutes(1)));
+
+                cluster.transactions().run((ctx) -> {
+                    ctx.query("SELECT 'Hello World' AS Greeting");
+                });
+                return true;
+            }
+            catch (RuntimeException err) {
+                LOGGER.info("Ignoring failure {}", err.toString());
+                return false;
+            }
+        }, Duration.ofMinutes(2));
     }
 
     @AfterAll
