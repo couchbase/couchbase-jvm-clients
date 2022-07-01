@@ -30,6 +30,8 @@ import java.util.stream.Collectors;
 @Stability.Internal
 public class CoreTransactionsCleanupConfig {
     public static final Duration DEFAULT_TRANSACTION_CLEANUP_WINDOW = Duration.ofSeconds(60);
+    public static final String TRANSACTIONS_CLEANUP_LOST_PROPERTY = "com.couchbase.transactions.cleanup.lost.enabled";
+    public static final String TRANSACTIONS_CLEANUP_REGULAR_PROPERTY = "com.couchbase.transactions.cleanup.regular.enabled";
 
     private final boolean runLostAttemptsCleanupThread;
     private final boolean runRegularAttemptsCleanupThread;
@@ -49,8 +51,8 @@ public class CoreTransactionsCleanupConfig {
     @Stability.Internal
     public static CoreTransactionsCleanupConfig createDefault() {
         return new CoreTransactionsCleanupConfig(
-                true,
-                true,
+                Boolean.parseBoolean(System.getProperty(TRANSACTIONS_CLEANUP_LOST_PROPERTY, "true")),
+                Boolean.parseBoolean(System.getProperty(TRANSACTIONS_CLEANUP_REGULAR_PROPERTY, "true")),
                 DEFAULT_TRANSACTION_CLEANUP_WINDOW,
                 new HashSet<>());
     }

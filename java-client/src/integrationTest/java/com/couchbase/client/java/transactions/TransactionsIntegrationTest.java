@@ -15,12 +15,16 @@
  */
 package com.couchbase.client.java.transactions;
 
+import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.SimpleEventBus;
+import com.couchbase.client.core.cnc.events.transaction.TransactionsStartedEvent;
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
@@ -33,6 +37,7 @@ import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,8 +45,12 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import static com.couchbase.client.core.transaction.config.CoreTransactionsCleanupConfig.TRANSACTIONS_CLEANUP_LOST_PROPERTY;
+import static com.couchbase.client.core.transaction.config.CoreTransactionsCleanupConfig.TRANSACTIONS_CLEANUP_REGULAR_PROPERTY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Transactions are heavily tested by FIT, these are some basic sanity tests for KV-only transactions.
@@ -78,7 +87,8 @@ public class TransactionsIntegrationTest extends JavaIntegrationTest {
                         .analyticsCircuitBreakerConfig(CircuitBreakerConfig.enabled(true)))
                 .transactionsConfig(TransactionsConfig.durabilityLevel(DurabilityLevel.NONE)
                         .metadataCollection(TransactionKeyspace.create("bkt", "scp", "coll"))
-                        .cleanupConfig(TransactionsCleanupConfig.cleanupClientAttempts(false)
+                        .cleanupConfig(TransactionsCleanupConfig
+                                .cleanupClientAttempts(false)
                                 .cleanupLostAttempts(false)
                                 .cleanupWindow(Duration.ofSeconds(10))
                                 .addCollection(TransactionKeyspace.create("bkt", "scp", "coll")))
@@ -199,6 +209,41 @@ public class TransactionsIntegrationTest extends JavaIntegrationTest {
             collection.get(docId);
             Assertions.fail();
         } catch (DocumentNotFoundException ignored) {
+        }
+    }
+
+    @Test
+    void cleanupDisabled() {
+        try {
+            System.setProperty(TRANSACTIONS_CLEANUP_LOST_PROPERTY, "false");
+            System.setProperty(TRANSACTIONS_CLEANUP_REGULAR_PROPERTY, "false");
+
+            SimpleEventBus eb = new SimpleEventBus(false);
+
+            Cluster cluster1 = createCluster(env -> env.eventBus(eb));
+            cluster1.waitUntilReady(Duration.ofSeconds(30));
+
+            assertFalse(cluster1.environment().transactionsConfig().cleanupConfig().runRegularAttemptsCleanupThread());
+            assertFalse(cluster1.environment().transactionsConfig().cleanupConfig().runLostAttemptsCleanupThread());
+
+            Util.waitUntilCondition(() -> {
+                AtomicBoolean received = new AtomicBoolean(false);
+
+                eb.publishedEvents().forEach(event -> {
+                    if (event instanceof TransactionsStartedEvent) {
+                        received.set(true);
+                        TransactionsStartedEvent ev = (TransactionsStartedEvent) event;
+                        assertFalse(ev.runningLostAttemptsCleanupThread());
+                        assertFalse(ev.runningRegularAttemptsCleanupThread());
+                    }
+                });
+
+                return received.get();
+            });
+        }
+        finally {
+            System.clearProperty(TRANSACTIONS_CLEANUP_LOST_PROPERTY);
+            System.clearProperty(TRANSACTIONS_CLEANUP_REGULAR_PROPERTY);
         }
     }
 }

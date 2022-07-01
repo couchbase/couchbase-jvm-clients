@@ -27,13 +27,14 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.couchbase.client.core.transaction.config.CoreTransactionsCleanupConfig.TRANSACTIONS_CLEANUP_LOST_PROPERTY;
+import static com.couchbase.client.core.transaction.config.CoreTransactionsCleanupConfig.TRANSACTIONS_CLEANUP_REGULAR_PROPERTY;
 import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
  * Provides all configurable parameters for Couchbase transactions cleanup.
  */
 public class TransactionsCleanupConfig {
-    private static final boolean RUN_BACKGROUND_CLEANUP_THREAD = true;
     private static final Duration CLEANUP_WINDOW_SECS = Duration.of(60, ChronoUnit.SECONDS);
 
 
@@ -110,8 +111,8 @@ public class TransactionsCleanupConfig {
         @Stability.Internal
         public CoreTransactionsCleanupConfig build() {
             return new CoreTransactionsCleanupConfig(
-                    cleanupLostAttempts.orElse(RUN_BACKGROUND_CLEANUP_THREAD),
-                    cleanupClientAttempts.orElse(RUN_BACKGROUND_CLEANUP_THREAD),
+                    cleanupLostAttempts.orElse(Boolean.parseBoolean(System.getProperty(TRANSACTIONS_CLEANUP_LOST_PROPERTY, "true"))),
+                    cleanupClientAttempts.orElse(Boolean.parseBoolean(System.getProperty(TRANSACTIONS_CLEANUP_REGULAR_PROPERTY, "true"))),
                     cleanupWindow.orElse(CLEANUP_WINDOW_SECS),
                     cleanupSet
             );

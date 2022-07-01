@@ -37,4 +37,12 @@ public class TransactionsStartedEvent extends TransactionEvent {
     return "Transactions successfully initialised, regular cleanup enabled="
             + runRegularAttemptsCleanupThread + ", lost cleanup enabled=" + runLostAttemptsCleanupThread;
   }
+
+  public boolean runningLostAttemptsCleanupThread() {
+    return runLostAttemptsCleanupThread;
+  }
+
+  public boolean runningRegularAttemptsCleanupThread() {
+    return runRegularAttemptsCleanupThread;
+  }
 }
