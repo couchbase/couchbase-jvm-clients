@@ -48,4 +48,7 @@ public @interface IgnoreWhen {
    * have failed - an example would be a cluster bug that only happens in a specific version.
    */
   String clusterVersionEquals() default "";
+
+  String clusterVersionIsBelow() default "";
+  String clusterVersionIsEqualToOrAbove() default "";
 }

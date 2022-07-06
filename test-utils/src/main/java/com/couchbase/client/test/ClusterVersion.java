@@ -56,12 +56,12 @@ public class ClusterVersion {
     }
 
     public boolean isGreaterThan(ClusterVersion other) {
-        if (other.majorVersion > majorVersion) return true;
-        if (other.majorVersion < majorVersion) return false;
-        if (other.minorVersion > minorVersion) return true;
-        if (other.minorVersion < minorVersion) return false;
-        if (other.patchVersion > patchVersion) return true;
-        return false;
+        if (other.majorVersion > majorVersion) return false;
+        if (other.majorVersion < majorVersion) return true;
+        if (other.minorVersion > minorVersion) return false;
+        if (other.minorVersion < minorVersion) return true;
+        if (other.patchVersion > patchVersion) return false;
+        return true;
     }
 
     @Override

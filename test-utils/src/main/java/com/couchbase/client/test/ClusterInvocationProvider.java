@@ -128,7 +128,23 @@ public class ClusterInvocationProvider
         // TODO remove temporary debug for why this doesn't work on CI
         System.out.println("Looking for cluster-version '" + found.clusterVersionEquals() + "' or " + lookingFor + ", found " + testCluster.config().clusterVersion());
         if (lookingFor.equals(testCluster.config().clusterVersion())) {
-          return ConditionEvaluationResult.disabled("Test disabled because cluster version is " +
+          return ConditionEvaluationResult.disabled("Test disabled because cluster version is == " +
+                  lookingFor + " on @IgnoreWhen");
+        }
+      }
+
+      if (!found.clusterVersionIsBelow().isEmpty()) {
+        ClusterVersion lookingFor = ClusterVersion.parseString(found.clusterVersionIsBelow());
+        if (lookingFor.isGreaterThan(testCluster.config().clusterVersion())) {
+          return ConditionEvaluationResult.disabled("Test disabled because cluster version is < " +
+                  lookingFor + " on @IgnoreWhen");
+        }
+      }
+
+      if (!found.clusterVersionIsEqualToOrAbove().isEmpty()) {
+        ClusterVersion lookingFor = ClusterVersion.parseString(found.clusterVersionIsEqualToOrAbove());
+        if (lookingFor.equals(testCluster.config().clusterVersion()) || testCluster.config().clusterVersion().isGreaterThan(lookingFor)) {
+          return ConditionEvaluationResult.disabled("Test disabled because cluster version is >= " +
                   lookingFor + " on @IgnoreWhen");
         }
       }
