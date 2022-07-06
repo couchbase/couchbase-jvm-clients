@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.couchbase.client</groupId>
     <artifactId>couchbase-jvm-clients</artifactId>
-    <version>1.12.2-SNAPSHOT</version>
+    <version>1.12.2</version>
     <packaging>pom</packaging>
 
     <name>Couchbase JVM Client Parent</name>
@@ -16,12 +16,12 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <osgi-feature.version>3.3.2-SNAPSHOT</osgi-feature.version>
-        <java-examples.version>1.3.2-SNAPSHOT</java-examples.version>
-        <java-client.version>3.3.2-SNAPSHOT</java-client.version>
-        <core-io.version>2.3.2-SNAPSHOT</core-io.version>
-        <core-io-deps.version>1.3.2-SNAPSHOT</core-io-deps.version>
-        <scala-client.version>1.3.2-SNAPSHOT</scala-client.version>
+        <osgi-feature.version>3.3.2</osgi-feature.version>
+        <java-examples.version>1.3.2</java-examples.version>
+        <java-client.version>3.3.2</java-client.version>
+        <core-io.version>2.3.2</core-io.version>
+        <core-io-deps.version>1.3.2</core-io-deps.version>
+        <scala-client.version>1.3.2</scala-client.version>
 
         <junit.version>5.8.2</junit.version>
         <assertj.version>3.22.0</assertj.version>
@@ -119,12 +119,12 @@
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>test-utils</artifactId>
-                <version>1.3.2-SNAPSHOT</version>
+                <version>1.3.2</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>tracing-opentelemetry</artifactId>
-                <version>1.1.2-SNAPSHOT</version>
+                <version>1.1.2</version>
             </dependency>
             <dependency>
                 <groupId>io.projectreactor.tools</groupId>

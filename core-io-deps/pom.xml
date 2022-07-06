@@ -5,7 +5,7 @@
 
     <groupId>com.couchbase.client</groupId>
     <artifactId>core-io-deps</artifactId>
-    <version>1.3.2-SNAPSHOT</version> <!-- this cannot use variable ${core-io-deps.version} -->
+    <version>1.3.2</version> <!-- this cannot use variable ${core-io-deps.version} -->
     <packaging>jar</packaging>
 
     <name>Couchbase JVM Core IO Dependencies</name>
