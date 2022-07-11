@@ -33,7 +33,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoProcessor;
+import reactor.core.publisher.Sinks;
 
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -72,7 +72,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
   /**
    * Holds the current associated trailer.
    */
-  private MonoProcessor<T> trailer;
+  private Sinks.One<T> trailer;
 
   /**
    * Holds the current associated rows.
@@ -169,7 +169,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
     cleanup();
     parser = parserBuilder().build(scratchBuffer, new CopyingStreamWindow(channelConfig.getAllocator()));
     this.channelConfig = channelConfig;
-    this.trailer = MonoProcessor.create();
+    this.trailer = Sinks.one();
     this.requested.set(0);
     this.rows = EmitterProcessor.create();
     this.rowSink = this.rows
@@ -190,7 +190,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
 
   @Override
   public Mono<T> trailer() {
-    return trailer;
+    return trailer.asMono();
   }
 
   @Override
@@ -259,7 +259,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
    * Fails the trailer mono with the given message.
    */
   private void failTrailer(Throwable t) {
-    this.trailer.onError(t);
+    this.trailer.tryEmitError(t);
   }
 
   /**
@@ -268,8 +268,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
    * @param trailer the trailer value to be fed into the mono.
    */
   protected void completeTrailer(T trailer) {
-    this.trailer.onNext(trailer);
-    this.trailer.onComplete();
+    this.trailer.tryEmitValue(trailer);
   }
 
 }
