@@ -54,7 +54,10 @@ class ConnectionSpec extends ScalaIntegrationTest {
     cluster.bucket(config.bucketname()).defaultCollection.upsert(id, JsonObject.create).get
   }
 
-  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), missesCapabilities = Array(Capabilities.ENTERPRISE_EDITION))
+  @IgnoreWhen(
+    clusterTypes = Array(ClusterType.MOCKED),
+    missesCapabilities = Array(Capabilities.ENTERPRISE_EDITION)
+  )
   @Test
   def performsKeyValueWithServerCert(): Unit = {
     if (!config.clusterCerts.isPresent) fail("Cluster Certificate must be present for this test!")

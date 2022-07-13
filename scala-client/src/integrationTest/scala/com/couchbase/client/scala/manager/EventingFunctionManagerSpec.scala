@@ -38,8 +38,10 @@ import scala.concurrent.duration.Duration
 import scala.util.{Failure, Try}
 
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(missesCapabilities = Array(Capabilities.COLLECTIONS, Capabilities.EVENTING),
-  clusterVersionIsBelow = "7.1.2") // MB-52649
+@IgnoreWhen(
+  missesCapabilities = Array(Capabilities.COLLECTIONS, Capabilities.EVENTING),
+  clusterVersionIsBelow = "7.1.2"
+) // MB-52649
 class EventingFunctionManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster                   = _
   private var sourceCollection: Collection       = _
