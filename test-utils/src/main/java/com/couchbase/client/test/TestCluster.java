@@ -256,8 +256,11 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     if (bucketCapabilities.contains("subdoc.ReviveDocument")) {
       capabilities.add(Capabilities.SUBDOC_REVIVE_DOCUMENT);
     }
-    if (clusterVersion.majorVersion() >= 7 && clusterVersion.minorVersion() >= 1) {
+    if (clusterVersion.majorVersion() == 7 && clusterVersion.minorVersion() == 1) {
+      //Rate limiting only available on 7.1
       capabilities.add(Capabilities.RATE_LIMITING);
+    }
+    if (clusterVersion.majorVersion() >= 7 && clusterVersion.minorVersion() >= 1) {
       capabilities.add(Capabilities.QUERY_PRESERVE_EXPIRY);
 
       if (!clusterVersion.isCommunityEdition()) {
