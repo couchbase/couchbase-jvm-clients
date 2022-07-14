@@ -38,7 +38,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.Invocation;
-import reactor.core.publisher.DirectProcessor;
+import reactor.core.publisher.Sinks;
 
 import java.time.Duration;
 import java.util.*;
@@ -122,10 +122,10 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTING);
-    when(mock1.states()).thenReturn(DirectProcessor.create());
+    when(mock1.states()).thenReturn(Sinks.many().multicast().<EndpointState>directBestEffort().asFlux());
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTING);
-    when(mock2.states()).thenReturn(DirectProcessor.create());
+    when(mock2.states()).thenReturn(Sinks.many().multicast().<EndpointState>directBestEffort().asFlux());
 
     final List<Endpoint> mocks = Arrays.asList(mock1, mock2);
     final AtomicInteger invocation = new AtomicInteger();
@@ -158,10 +158,10 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock1.states()).thenReturn(DirectProcessor.create());
+    when(mock1.states()).thenReturn(Sinks.many().multicast().<EndpointState>directBestEffort().asFlux());
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock2.states()).thenReturn(DirectProcessor.create());
+    when(mock2.states()).thenReturn(Sinks.many().multicast().<EndpointState>directBestEffort().asFlux());
 
     final List<Endpoint> mocks = Arrays.asList(mock1, mock2);
     final AtomicInteger invocation = new AtomicInteger();
@@ -197,11 +197,11 @@ class PooledServiceTest {
     int minEndpoints = 2;
 
     Endpoint mock1 = mock(Endpoint.class);
-    when(mock1.states()).thenReturn(DirectProcessor.create());
+    when(mock1.states()).thenReturn(Sinks.many().multicast().<EndpointState>directBestEffort().asFlux());
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock2.states()).thenReturn(DirectProcessor.create());
+    when(mock2.states()).thenReturn(Sinks.many().multicast().<EndpointState>directBestEffort().asFlux());
 
     final List<Endpoint> mocks = Arrays.asList(mock1, mock2);
     final AtomicInteger invocation = new AtomicInteger();
@@ -227,11 +227,11 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock1.states()).thenReturn(DirectProcessor.create());
+    when(mock1.states()).thenReturn(Sinks.many().multicast().<EndpointState>directBestEffort().asFlux());
     when(mock1.outstandingRequests()).thenReturn(0L);
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock2.states()).thenReturn(DirectProcessor.create());
+    when(mock2.states()).thenReturn(Sinks.many().multicast().<EndpointState>directBestEffort().asFlux());
 
     final List<Endpoint> mocks = Arrays.asList(mock1, mock2);
     final AtomicInteger invocation = new AtomicInteger();
@@ -259,11 +259,11 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock1.states()).thenReturn(DirectProcessor.create());
+    when(mock1.states()).thenReturn(Sinks.many().multicast().<EndpointState>directBestEffort().asFlux());
 
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock2.states()).thenReturn(DirectProcessor.create());
+    when(mock2.states()).thenReturn(Sinks.many().multicast().<EndpointState>directBestEffort().asFlux());
 
     final List<Endpoint> mocks = Arrays.asList(mock1, mock2);
     final AtomicInteger invocation = new AtomicInteger();
@@ -289,8 +289,8 @@ class PooledServiceTest {
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
 
-    DirectProcessor<EndpointState> states = DirectProcessor.create();
-    when(mock1.states()).thenReturn(states);
+    Sinks.Many<EndpointState> states = Sinks.many().multicast().directBestEffort();
+    when(mock1.states()).thenReturn(states.asFlux());
     when(mock1.outstandingRequests()).thenReturn(0L);
 
     final List<Endpoint> mocks = Collections.singletonList(mock1);
@@ -313,8 +313,8 @@ class PooledServiceTest {
     service.send(request);
 
     // Simulate the connecting and connected
-    states.onNext(EndpointState.CONNECTING);
-    states.onNext(EndpointState.CONNECTED);
+    states.tryEmitNext(EndpointState.CONNECTING);
+    states.tryEmitNext(EndpointState.CONNECTED);
 
     waitUntilCondition(() -> !service.trackedEndpoints.isEmpty());
     assertEquals(1, service.trackedEndpoints().size());
@@ -343,9 +343,8 @@ class PooledServiceTest {
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
     when(mock1.outstandingRequests()).thenReturn(1L);
 
-    DirectProcessor<EndpointState> states = DirectProcessor.create();
-    when(mock1.states()).thenReturn(states);
-
+    Sinks.Many<EndpointState> states = Sinks.many().multicast().directBestEffort();
+    when(mock1.states()).thenReturn(states.asFlux());
 
     final List<Endpoint> mocks = Collections.singletonList(mock1);
     final AtomicInteger invocation = new AtomicInteger();
@@ -380,8 +379,8 @@ class PooledServiceTest {
     assertTrue(request2.context().retryAttempts() > 0);
 
     // Simulate the connecting and connected
-    states.onNext(EndpointState.CONNECTING);
-    states.onNext(EndpointState.CONNECTED);
+    states.tryEmitNext(EndpointState.CONNECTING);
+    states.tryEmitNext(EndpointState.CONNECTED);
 
     waitUntilCondition(() -> {
       Collection<Invocation> invocations = Mockito.mockingDetails(mock1).getInvocations();
@@ -404,7 +403,7 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock1.states()).thenReturn(DirectProcessor.create());
+    when(mock1.states()).thenReturn(Sinks.many().multicast().<EndpointState>directBestEffort().asFlux());
     when(mock1.outstandingRequests()).thenReturn(1L);
 
     final List<Endpoint> mocks = Collections.singletonList(mock1);
@@ -437,14 +436,14 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
-    DirectProcessor<EndpointState> states = DirectProcessor.create();
-    when(mock1.states()).thenReturn(states);
+    Sinks.Many<EndpointState> states = Sinks.many().multicast().directBestEffort();
+    when(mock1.states()).thenReturn(states.asFlux());
     when(mock1.outstandingRequests()).thenReturn(1L);
     when(mock1.lastResponseReceived()).thenReturn(now);
 
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock2.states()).thenReturn(DirectProcessor.create());
+    when(mock2.states()).thenReturn(Sinks.many().multicast().<EndpointState>directBestEffort().asFlux());
     when(mock2.outstandingRequests()).thenReturn(1L);
     when(mock2.lastResponseReceived()).thenReturn(now);
 
@@ -477,8 +476,8 @@ class PooledServiceTest {
     waitUntilCondition(() -> service.trackedEndpoints.size() == 2);
 
     // Simulate the connecting and connected
-    states.onNext(EndpointState.CONNECTING);
-    states.onNext(EndpointState.CONNECTED);
+    states.tryEmitNext(EndpointState.CONNECTING);
+    states.tryEmitNext(EndpointState.CONNECTED);
 
     when(mock1.outstandingRequests()).thenReturn(0L);
 
@@ -502,16 +501,16 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
-    DirectProcessor<EndpointState> states1 = DirectProcessor.create();
-    when(mock1.states()).thenReturn(states1);
+    Sinks.Many<EndpointState> states1 = Sinks.many().multicast().directBestEffort();
+    when(mock1.states()).thenReturn(states1.asFlux());
     when(mock1.outstandingRequests()).thenReturn(1L);
     doReturn(now).when(mock1).lastResponseReceived(); // trying different format due to a CI error with mockito
     when(mock1.receivedDisconnectSignal()).thenReturn(true);
 
     Endpoint mock2 = mock(Endpoint.class);
     when(mock2.state()).thenReturn(EndpointState.CONNECTED);
-    DirectProcessor<EndpointState> states2 = DirectProcessor.create();
-    when(mock2.states()).thenReturn(states2);
+    Sinks.Many<EndpointState> states2 = Sinks.many().multicast().directBestEffort();
+    when(mock2.states()).thenReturn(states2.asFlux());
     when(mock2.outstandingRequests()).thenReturn(1L);
     doReturn(now).when(mock2).lastResponseReceived(); // trying different format due to a CI error with mockito
     when(mock2.receivedDisconnectSignal()).thenReturn(true);
@@ -535,8 +534,8 @@ class PooledServiceTest {
     );
     service.send(request1);
 
-    states1.onNext(EndpointState.CONNECTING);
-    states1.onNext(EndpointState.CONNECTED);
+    states1.tryEmitNext(EndpointState.CONNECTING);
+    states1.tryEmitNext(EndpointState.CONNECTED);
 
     NoopRequest request2 = new NoopRequest(
       Duration.ofSeconds(1),
@@ -546,8 +545,8 @@ class PooledServiceTest {
     );
     service.send(request2);
 
-    states2.onNext(EndpointState.CONNECTING);
-    states2.onNext(EndpointState.CONNECTED);
+    states2.tryEmitNext(EndpointState.CONNECTING);
+    states2.tryEmitNext(EndpointState.CONNECTED);
 
     waitUntilCondition(() -> service.trackedEndpoints.size() == 2);
     waitUntilCondition(() -> service.state() == ServiceState.IDLE);
@@ -565,7 +564,7 @@ class PooledServiceTest {
 
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
-    when(mock1.states()).thenReturn(DirectProcessor.create());
+    when(mock1.states()).thenReturn(Sinks.many().multicast().<EndpointState>directBestEffort().asFlux());
     when(mock1.outstandingRequests()).thenReturn(0L);
     when(mock1.lastResponseReceived()).thenReturn(0L);
     when(mock1.lastConnectedAt()).thenReturn(now);
@@ -601,8 +600,8 @@ class PooledServiceTest {
   void cleansUpNeverUsedIdleConnections() {
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
-    DirectProcessor<EndpointState> states = DirectProcessor.create();
-    when(mock1.states()).thenReturn(states);
+    Sinks.Many<EndpointState> states = Sinks.many().multicast().directBestEffort();
+    when(mock1.states()).thenReturn(states.asFlux());
     when(mock1.outstandingRequests()).thenReturn(0L);
     when(mock1.lastResponseReceived()).thenReturn(0L);
     when(mock1.lastConnectedAt()).thenReturn(0L);
@@ -627,8 +626,8 @@ class PooledServiceTest {
     service.send(request1);
 
     // Simulate the connecting and connected
-    states.onNext(EndpointState.CONNECTING);
-    states.onNext(EndpointState.CONNECTED);
+    states.tryEmitNext(EndpointState.CONNECTING);
+    states.tryEmitNext(EndpointState.CONNECTED);
 
     when(mock1.lastConnectedAt()).thenReturn(System.nanoTime());
     waitUntilCondition(() -> service.trackedEndpoints.size() == 1);
@@ -650,8 +649,8 @@ class PooledServiceTest {
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.DISCONNECTED);
 
-    DirectProcessor<EndpointState> states = DirectProcessor.create();
-    when(mock1.states()).thenReturn(states);
+    Sinks.Many<EndpointState> states = Sinks.many().multicast().directBestEffort();
+    when(mock1.states()).thenReturn(states.asFlux());
     when(mock1.outstandingRequests()).thenReturn(0L);
 
     final List<Endpoint> mocks = Collections.singletonList(mock1);
@@ -674,8 +673,8 @@ class PooledServiceTest {
     service.send(request);
 
     // Simulate the connecting and connected
-    states.onNext(EndpointState.CONNECTING);
-    states.onNext(EndpointState.DISCONNECTED);
+    states.tryEmitNext(EndpointState.CONNECTING);
+    states.tryEmitNext(EndpointState.DISCONNECTED);
 
     waitUntilCondition(() -> !service.trackedEndpoints.isEmpty());
     assertEquals(1, service.trackedEndpoints().size());
@@ -696,8 +695,8 @@ class PooledServiceTest {
     Endpoint mock1 = mock(Endpoint.class);
     when(mock1.state()).thenReturn(EndpointState.CONNECTED);
 
-    DirectProcessor<EndpointState> states = DirectProcessor.create();
-    when(mock1.states()).thenReturn(states);
+    Sinks.Many<EndpointState> states = Sinks.many().multicast().directBestEffort();
+    when(mock1.states()).thenReturn(states.asFlux());
     when(mock1.outstandingRequests()).thenReturn(0L);
 
     final List<Endpoint> mocks = Collections.singletonList(mock1);
@@ -722,8 +721,8 @@ class PooledServiceTest {
     service.disconnect();
 
     // Simulate the connecting and connected
-    states.onNext(EndpointState.CONNECTING);
-    states.onNext(EndpointState.DISCONNECTED);
+    states.tryEmitNext(EndpointState.CONNECTING);
+    states.tryEmitNext(EndpointState.DISCONNECTED);
 
     waitUntilCondition(() -> request.context().retryAttempts() >= 1);
     verify(mock1, never()).send(request);

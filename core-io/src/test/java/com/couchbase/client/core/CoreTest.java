@@ -35,9 +35,9 @@ import com.couchbase.client.core.cnc.SimpleEventBus;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -82,9 +82,9 @@ class CoreTest {
   @SuppressWarnings({"unchecked"})
   void addNodesAndServicesOnNewConfig() {
     final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
-    DirectProcessor<ClusterConfig> configs = DirectProcessor.create();
+    Sinks.Many<ClusterConfig> configs = Sinks.many().multicast().directBestEffort();
     ClusterConfig clusterConfig = new ClusterConfig();
-    when(configProvider.configs()).thenReturn(configs);
+    when(configProvider.configs()).thenReturn(configs.asFlux());
     when(configProvider.config()).thenReturn(clusterConfig);
 
     Node mock101 = mock(Node.class);
@@ -120,7 +120,7 @@ class CoreTest {
         return mocks.get(target.address());
       }
     };
-    configs.onNext(clusterConfig);
+    configs.tryEmitNext(clusterConfig);
 
     BucketConfig oneNodeConfig = BucketConfigParser.parse(
       readResource("one_node_config.json", CoreTest.class),
@@ -128,7 +128,7 @@ class CoreTest {
       LOCALHOST
     );
     clusterConfig.setBucketConfig(oneNodeConfig);
-    configs.onNext(clusterConfig);
+    configs.tryEmitNext(clusterConfig);
 
     verify(mock101, times(1))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
@@ -151,7 +151,7 @@ class CoreTest {
       LOCALHOST
     );
     clusterConfig.setBucketConfig(twoNodeConfig);
-    configs.onNext(clusterConfig);
+    configs.tryEmitNext(clusterConfig);
 
 
     verify(mock101, times(2))
@@ -177,9 +177,9 @@ class CoreTest {
   @SuppressWarnings("unchecked")
   void addServicesOnNewConfig() {
     final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
-    DirectProcessor<ClusterConfig> configs = DirectProcessor.create();
+    Sinks.Many<ClusterConfig> configs = Sinks.many().multicast().directBestEffort();
     ClusterConfig clusterConfig = new ClusterConfig();
-    when(configProvider.configs()).thenReturn(configs);
+    when(configProvider.configs()).thenReturn(configs.asFlux());
     when(configProvider.config()).thenReturn(clusterConfig);
 
     Node mock101 = mock(Node.class);
@@ -216,7 +216,7 @@ class CoreTest {
         return mocks.get(target.address());
       }
     };
-    configs.onNext(clusterConfig);
+    configs.tryEmitNext(clusterConfig);
 
     BucketConfig twoNodesConfig = BucketConfigParser.parse(
       readResource("two_nodes_config.json", CoreTest.class),
@@ -224,7 +224,7 @@ class CoreTest {
       LOCALHOST
     );
     clusterConfig.setBucketConfig(twoNodesConfig);
-    configs.onNext(clusterConfig);
+    configs.tryEmitNext(clusterConfig);
 
     verify(mock101, times(1))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
@@ -250,7 +250,7 @@ class CoreTest {
       LOCALHOST
     );
     clusterConfig.setBucketConfig(twoNodesConfigMore);
-    configs.onNext(clusterConfig);
+    configs.tryEmitNext(clusterConfig);
 
     verify(mock101, times(2))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
@@ -278,9 +278,9 @@ class CoreTest {
   @SuppressWarnings("unchecked")
   void removeNodesAndServicesOnNewConfig() {
     final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
-    DirectProcessor<ClusterConfig> configs = DirectProcessor.create();
+    Sinks.Many<ClusterConfig> configs = Sinks.many().multicast().directBestEffort();
     ClusterConfig clusterConfig = new ClusterConfig();
-    when(configProvider.configs()).thenReturn(configs);
+    when(configProvider.configs()).thenReturn(configs.asFlux());
     when(configProvider.config()).thenReturn(clusterConfig);
 
     Node mock101 = mock(Node.class);
@@ -316,7 +316,7 @@ class CoreTest {
         return mocks.get(target.address());
       }
     };
-    configs.onNext(clusterConfig);
+    configs.tryEmitNext(clusterConfig);
 
     BucketConfig twoNodesConfig = BucketConfigParser.parse(
       readResource("two_nodes_config_more_services.json", CoreTest.class),
@@ -324,7 +324,7 @@ class CoreTest {
       LOCALHOST
     );
     clusterConfig.setBucketConfig(twoNodesConfig);
-    configs.onNext(clusterConfig);
+    configs.tryEmitNext(clusterConfig);
 
     verify(mock101, times(1))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
@@ -352,7 +352,7 @@ class CoreTest {
       LOCALHOST
     );
     clusterConfig.setBucketConfig(twoNodesLessServices);
-    configs.onNext(clusterConfig);
+    configs.tryEmitNext(clusterConfig);
 
     verify(mock102, times(1))
       .removeService(ServiceType.SEARCH, Optional.empty());
@@ -362,9 +362,9 @@ class CoreTest {
   @SuppressWarnings("unchecked")
   void removesNodeIfNotPresentInConfigAnymore() {
     final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
-    DirectProcessor<ClusterConfig> configs = DirectProcessor.create();
+    Sinks.Many<ClusterConfig> configs = Sinks.many().multicast().directBestEffort();
     ClusterConfig clusterConfig = new ClusterConfig();
-    when(configProvider.configs()).thenReturn(configs);
+    when(configProvider.configs()).thenReturn(configs.asFlux());
     when(configProvider.config()).thenReturn(clusterConfig);
 
     Node mock101 = mock(Node.class);
@@ -399,7 +399,7 @@ class CoreTest {
         return mocks.get(target.address());
       }
     };
-    configs.onNext(clusterConfig);
+    configs.tryEmitNext(clusterConfig);
 
     BucketConfig twoNodesConfig = BucketConfigParser.parse(
       readResource("two_nodes_config_more_services.json", CoreTest.class),
@@ -407,7 +407,7 @@ class CoreTest {
       LOCALHOST
     );
     clusterConfig.setBucketConfig(twoNodesConfig);
-    configs.onNext(clusterConfig);
+    configs.tryEmitNext(clusterConfig);
 
     verify(mock101, times(1))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
@@ -435,7 +435,7 @@ class CoreTest {
       LOCALHOST
     );
     clusterConfig.setBucketConfig(twoNodesLessServices);
-    configs.onNext(clusterConfig);
+    configs.tryEmitNext(clusterConfig);
 
     verify(mock102, times(1)).disconnect();
   }
@@ -448,9 +448,9 @@ class CoreTest {
   @SuppressWarnings("unchecked")
   void addsSecondNodeIfBothSameHostname() {
     final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
-    DirectProcessor<ClusterConfig> configs = DirectProcessor.create();
+    Sinks.Many<ClusterConfig> configs = Sinks.many().multicast().directBestEffort();
     ClusterConfig clusterConfig = new ClusterConfig();
-    when(configProvider.configs()).thenReturn(configs);
+    when(configProvider.configs()).thenReturn(configs.asFlux());
     when(configProvider.config()).thenReturn(clusterConfig);
 
     Node mock101 = mock(Node.class);
@@ -486,7 +486,7 @@ class CoreTest {
         return mocks.get(target.address() + ":" + target.managerPort());
       }
     };
-    configs.onNext(clusterConfig);
+    configs.tryEmitNext(clusterConfig);
 
     BucketConfig oneNodeConfig = BucketConfigParser.parse(
       readResource("cluster_run_two_nodes.json", CoreTest.class),
@@ -494,7 +494,7 @@ class CoreTest {
       LOCALHOST
     );
     clusterConfig.setBucketConfig(oneNodeConfig);
-    configs.onNext(clusterConfig);
+    configs.tryEmitNext(clusterConfig);
 
     verify(mock101, times(1))
       .addService(ServiceType.VIEWS, 9500, Optional.empty());

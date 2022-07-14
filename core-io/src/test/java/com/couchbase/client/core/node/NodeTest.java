@@ -41,7 +41,7 @@ import com.couchbase.client.core.cnc.SimpleEventBus;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.DirectProcessor;
+import reactor.core.publisher.Sinks;
 
 import java.util.Collections;
 import java.util.List;
@@ -102,7 +102,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.IDLE);
-        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
         return s;
       }
     };
@@ -127,7 +127,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.CONNECTED);
-        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
         when(s.type()).thenReturn(serviceType);
         return s;
       }
@@ -155,7 +155,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.CONNECTED);
-        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
         when(s.type()).thenReturn(serviceType);
         return s;
       }
@@ -180,7 +180,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.CONNECTED);
-        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
         return s;
       }
     };
@@ -201,7 +201,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.CONNECTED);
-        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
         return s;
       }
     };
@@ -229,7 +229,7 @@ class NodeTest {
         when(s.state()).thenReturn(counter.incrementAndGet() % 2 == 0
           ? ServiceState.IDLE
           : ServiceState.CONNECTED);
-        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
         return s;
       }
     };
@@ -261,7 +261,7 @@ class NodeTest {
         when(s.state()).thenReturn(counter.incrementAndGet() > 1
           ? ServiceState.CONNECTED
           : ServiceState.DISCONNECTED);
-        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
         return s;
       }
     };
@@ -294,7 +294,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.CONNECTING);
-        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
         return s;
       }
     };
@@ -319,7 +319,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.DISCONNECTING);
-        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
         return s;
       }
     };
@@ -344,7 +344,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         Service s = mock(Service.class);
         when(s.state()).thenReturn(ServiceState.CONNECTED);
-        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
         when(s.type()).thenReturn(serviceType);
         return s;
       }
@@ -374,14 +374,13 @@ class NodeTest {
   }
 
   @Test
-  @SuppressWarnings({"unchecked"})
   void sendsToFoundLocalService() {
     final Service s = mock(Service.class);
     Node node = new Node(CTX, mock(NodeIdentifier.class), NO_ALTERNATE) {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         when(s.state()).thenReturn(ServiceState.CONNECTED);
-        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
         when(s.type()).thenReturn(serviceType);
         return s;
       }
@@ -389,7 +388,7 @@ class NodeTest {
 
     node.addService(ServiceType.KV, 11210, Optional.of("bucket")).block();
 
-    KeyValueRequest r = mock(KeyValueRequest.class);
+    KeyValueRequest<?> r = mock(KeyValueRequest.class);
     when(r.serviceType()).thenReturn(ServiceType.KV);
     when(r.bucket()).thenReturn("bucket");
     when(r.context()).thenReturn(new RequestContext(CTX, r));
@@ -406,7 +405,7 @@ class NodeTest {
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         when(s.state()).thenReturn(ServiceState.CONNECTED);
         when(s.type()).thenReturn(serviceType);
-        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
         return s;
       }
     };
@@ -422,7 +421,6 @@ class NodeTest {
   }
 
   @Test
-  @SuppressWarnings({"unchecked"})
   void retriesIfLocalServiceNotFound() {
     final Service s = mock(Service.class);
     final AtomicReference<Request<?>> retried = new AtomicReference<>();
@@ -430,7 +428,7 @@ class NodeTest {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         when(s.state()).thenReturn(ServiceState.CONNECTED);
-        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
         when(s.type()).thenReturn(serviceType);
         return s;
       }
@@ -443,7 +441,7 @@ class NodeTest {
 
     node.addService(ServiceType.KV, 11210, Optional.of("bucket")).block();
 
-    KeyValueRequest r = mock(KeyValueRequest.class);
+    KeyValueRequest<?> r = mock(KeyValueRequest.class);
     when(r.serviceType()).thenReturn(ServiceType.KV);
     when(r.bucket()).thenReturn("other_bucket");
     node.send(r);
@@ -460,7 +458,7 @@ class NodeTest {
       @Override
       protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
         when(s.state()).thenReturn(ServiceState.CONNECTED);
-        when(s.states()).thenReturn(DirectProcessor.create());
+        when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
         when(s.type()).thenReturn(serviceType);
         return s;
       }
@@ -495,7 +493,7 @@ class NodeTest {
         protected Service createService(ServiceType serviceType, int port, Optional<String> bucket) {
           Service s = mock(Service.class);
           when(s.type()).thenReturn(serviceType);
-          when(s.states()).thenReturn(DirectProcessor.create());
+          when(s.states()).thenReturn(Sinks.many().multicast().<ServiceState>directBestEffort().asFlux());
           when(s.state()).thenReturn(ServiceState.IDLE);
           return s;
         }

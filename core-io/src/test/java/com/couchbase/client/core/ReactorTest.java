@@ -18,29 +18,19 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.NoopResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
 import org.junit.jupiter.api.Test;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 import reactor.core.Disposable;
-import reactor.core.publisher.DirectProcessor;
-import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 
-import static com.couchbase.client.test.Util.waitUntilCondition;
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -126,56 +116,10 @@ class ReactorTest {
     assertFalse(request.response().isDone());
   }
 
-  /**
-   * The DirectProcessor is non thread-safe, this is tested in the next test.
-   */
-  @Test
-  void directProcessorHasExpectedSemantics() {
-    DirectProcessor<Integer> processor = DirectProcessor.create();
-
-    processor.onNext(1);
-
-    List<Integer> consumed = new ArrayList<>();
-    processor.subscribe(consumed::add);
-
-    processor.onNext(2);
-    processor.onNext(3);
-
-    assertEquals(2, consumed.size());
-    assertEquals(2, (int) consumed.get(0));
-    assertEquals(3, (int) consumed.get(1));
-  }
-
-  @Test
-  void threadSafeSinkWorksForDirectProcessor() {
-    ExecutorService service = Executors.newCachedThreadPool();
-    DirectProcessor<Integer> processor = DirectProcessor.create();
-    final FluxSink<Integer> sink = processor.sink();
-
-    List<Integer> consumed = new ArrayList<>();
-    processor.subscribe(consumed::add);
-
-    int actors = 16;
-    for (int i = 0; i < actors; i++) {
-      final int v = i;
-      service.submit(() -> {
-        sink.next(v);
-      });
-    }
-
-    waitUntilCondition(() -> consumed.size() == actors);
-    assertEquals(actors, consumed.size());
-
-    service.shutdownNow();
-
-  }
-
   @Test
   void noErrorDroppedWhenCancelledViaCompletionException() {
     AtomicInteger droppedErrors = new AtomicInteger(0);
-    Hooks.onErrorDropped(v -> {
-      droppedErrors.incrementAndGet();
-    });
+    Hooks.onErrorDropped(v -> droppedErrors.incrementAndGet());
 
     NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class),
             mock(RetryStrategy.class), mock(CollectionIdentifier.class));
@@ -198,9 +142,7 @@ class ReactorTest {
   @Test
   void noErrorDroppedWhenCancelledViaRequestCanceledException() {
     AtomicInteger droppedErrors = new AtomicInteger(0);
-    Hooks.onErrorDropped(v -> {
-      droppedErrors.incrementAndGet();
-    });
+    Hooks.onErrorDropped(v -> droppedErrors.incrementAndGet());
 
     NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class),
             mock(RetryStrategy.class), mock(CollectionIdentifier.class));

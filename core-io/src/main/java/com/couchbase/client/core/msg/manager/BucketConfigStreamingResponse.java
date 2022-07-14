@@ -19,12 +19,9 @@ package com.couchbase.client.core.msg.manager;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.ReplayProcessor;
-
-import java.util.concurrent.ExecutorService;
 
 public class BucketConfigStreamingResponse extends BaseResponse {
 
