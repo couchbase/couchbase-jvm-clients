@@ -28,10 +28,7 @@ import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.chunk.ChunkHeader;
 import com.couchbase.client.core.msg.chunk.ChunkRow;
 import com.couchbase.client.core.msg.chunk.ChunkTrailer;
-import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxProcessor;
-import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
@@ -79,12 +76,12 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
   /**
    * Holds the current associated rows.
    */
-  private FluxProcessor<ROW, ROW> rows;
+  private Flux<ROW> rows;
 
   /**
    * Holds the current associated row sink.
    */
-  private FluxSink<ROW> rowSink;
+  private Sinks.Many<ROW> rowSink;
 
   /**
    * Holds the currently user-requested rows for backpressure handling.
@@ -134,7 +131,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
 
   /**
    * Only for use by subclasses. External collaborators should call
-   * {@link ChunkResponseParser#header()} to see if the header is ready.
+   * {@link ChunkResponseParser#header(boolean)} to see if the header is ready.
    */
   protected boolean isHeaderComplete() {
     return headerComplete;
@@ -173,16 +170,20 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
     this.channelConfig = channelConfig;
     this.trailer = Sinks.one();
     this.requested.set(0);
-    this.rows = EmitterProcessor.create();
-    this.rowSink = this.rows
-      .sink(FluxSink.OverflowStrategy.BUFFER)
-      .onRequest(v -> {
+
+    this.rowSink = Sinks.many().unicast().onBackpressureBuffer();
+    this.rows = rowSink
+      .asFlux()
+      .doOnRequest(v -> {
         requested.addAndGet(v);
         if (!channelConfig.isAutoRead()) {
           channelConfig.setAutoRead(true);
         }
       })
-      .onDispose(() -> channelConfig.setAutoRead(true));
+      .doOnTerminate(() -> channelConfig.setAutoRead(true))
+      .doOnCancel(() -> channelConfig.setAutoRead(true))
+      .publish()
+      .refCount();
   }
 
   @Override
@@ -234,9 +235,9 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
    * @param row the row to emit.
    */
   protected void emitRow(final ROW row) {
-    rowSink.next(row);
+    rowSink.emitNext(row, emitFailureHandler());
     requested.decrementAndGet();
-    if (requested.get() <= 0 && channelConfig.isAutoRead() && rows.downstreamCount() > 0) {
+    if (requested.get() <= 0 && channelConfig.isAutoRead() && rowSink.currentSubscriberCount() > 0) {
       channelConfig.setAutoRead(false);
     }
   }
@@ -247,14 +248,14 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
    * @param t the throwable with which to fail the rows.
    */
   protected void failRows(Throwable t) {
-    rowSink.error(t);
+    rowSink.emitError(t, emitFailureHandler());
   }
 
   /**
    * Completes the row flux.
    */
   protected void completeRows() {
-    rowSink.complete();
+    rowSink.emitComplete(emitFailureHandler());
   }
 
   /**
