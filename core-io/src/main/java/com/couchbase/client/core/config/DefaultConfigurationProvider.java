@@ -58,9 +58,8 @@ import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.ReplayProcessor;
+import reactor.core.publisher.Sinks;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
@@ -124,8 +123,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private final GlobalLoader globalLoader;
   private final GlobalRefresher globalRefresher;
 
-  private final ReplayProcessor<ClusterConfig> configs = ReplayProcessor.cacheLast();
-  private final FluxSink<ClusterConfig> configsSink = configs.sink();
+  private final Sinks.Many<ClusterConfig> configsSink = Sinks.many().replay().latest();
+  private final Flux<ClusterConfig> configs = configsSink.asFlux();
   private final ClusterConfig currentConfig = new ClusterConfig();
 
   private final AtomicBoolean shutdown = new AtomicBoolean(false);
@@ -145,8 +144,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    * Stores the current seed nodes used to bootstrap buckets and global configs.
    */
   private final AtomicReference<Set<SeedNode>> currentSeedNodes;
-  private final ReplayProcessor<Set<SeedNode>> seedNodes = ReplayProcessor.cacheLast();
-  private final FluxSink<Set<SeedNode>> seedNodesSink = seedNodes.sink();
+  private final Sinks.Many<Set<SeedNode>> seedNodesSink = Sinks.many().replay().latest();
+  private final Flux<Set<SeedNode>> seedNodes = seedNodesSink.asFlux();
 
   /**
    * Creates a new configuration provider.
@@ -169,7 +168,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     globalRefresher = new GlobalRefresher(this, core);
 
     // Start with pushing the current config into the sink for all subscribers currently attached.
-    configsSink.next(currentConfig);
+    configsSink.tryEmitNext(currentConfig);
   }
 
   @Override
@@ -520,7 +519,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             // make sure to push a final, empty config before complete to give downstream
             // consumers a chance to clean up
             pushConfig();
-            configsSink.complete();
+            configsSink.tryEmitComplete();
           })
           .then(keyValueRefresher.shutdown())
           .then(clusterManagerRefresher.shutdown())
@@ -848,10 +847,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   }
 
   /**
-   * Pushes out a the current configuration to all config subscribers.
+   * Pushes out the current configuration to all config subscribers.
    */
   private void pushConfig() {
-    configsSink.next(currentConfig);
+    configsSink.tryEmitNext(currentConfig);
   }
 
   /**
@@ -904,7 +903,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   private void setSeedNodes(Set<SeedNode> seedNodes) {
     currentSeedNodes.set(seedNodes);
-    seedNodesSink.next(seedNodes);
+    seedNodesSink.tryEmitNext(seedNodes);
   }
 
   /**

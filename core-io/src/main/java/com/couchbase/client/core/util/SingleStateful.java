@@ -17,8 +17,7 @@
 package com.couchbase.client.core.util;
 
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
-import reactor.core.publisher.ReplayProcessor;
+import reactor.core.publisher.Sinks;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -30,8 +29,8 @@ import static com.couchbase.client.core.util.Validators.notNull;
  */
 public class SingleStateful<S> implements Stateful<S> {
 
-  private final ReplayProcessor<S> states = ReplayProcessor.cacheLast();
-  private final FluxSink<S> statesSink = states.sink();
+  private final Sinks.Many<S> statesSink = Sinks.many().replay().latest();
+  private final Flux<S> states = statesSink.asFlux();
   private final AtomicReference<S> currentState;
   private final BiConsumer<S, S> beforeTransitionCallback;
 
@@ -41,7 +40,7 @@ public class SingleStateful<S> implements Stateful<S> {
 
     this.currentState = new AtomicReference<>(initialState);
     this.beforeTransitionCallback = beforeTransitionCallback;
-    statesSink.next(initialState);
+    statesSink.tryEmitNext(initialState);
   }
 
   /**
@@ -87,7 +86,7 @@ public class SingleStateful<S> implements Stateful<S> {
     if (!currentState.get().equals(newState)) {
       beforeTransitionCallback.accept(currentState.get(), newState);
       currentState.set(newState);
-      statesSink.next(newState);
+      statesSink.tryEmitNext(newState);
     }
   }
 
@@ -104,7 +103,7 @@ public class SingleStateful<S> implements Stateful<S> {
 
     if (currentState.compareAndSet(expectedState, newState)) {
       beforeTransitionCallback.accept(expectedState, newState);
-      statesSink.next(newState);
+      statesSink.tryEmitNext(newState);
       return true;
     }
     return false;
@@ -114,7 +113,7 @@ public class SingleStateful<S> implements Stateful<S> {
    * Doesn't have to be called, added for good measure.
    */
   public void close() {
-    statesSink.complete();
+    statesSink.tryEmitComplete();
   }
 
 }

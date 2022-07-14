@@ -20,13 +20,12 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
-import reactor.core.publisher.ReplayProcessor;
+import reactor.core.publisher.Sinks;
 
 public class BucketConfigStreamingResponse extends BaseResponse {
 
-  private final ReplayProcessor<String> configs = ReplayProcessor.cacheLast();
-  private final FluxSink<String> configsSink = configs.sink();
+  private final Sinks.Many<String> configsSink = Sinks.many().replay().latest();
+  private final Flux<String> configs = configsSink.asFlux();
   private final String address;
 
   BucketConfigStreamingResponse(final ResponseStatus status, final String address) {
@@ -36,17 +35,17 @@ public class BucketConfigStreamingResponse extends BaseResponse {
 
   @Stability.Internal
   public void pushConfig(final String config) {
-    configsSink.next(config);
+    configsSink.tryEmitNext(config);
   }
 
   @Stability.Internal
   public void completeStream() {
-    configsSink.complete();
+    configsSink.tryEmitComplete();
   }
 
   @Stability.Internal
   public void failStream(final Throwable e) {
-    configsSink.error(e);
+    configsSink.tryEmitError(e);
   }
 
   public Flux<String> configs() {

@@ -22,7 +22,6 @@ import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.ReplayProcessor;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -31,6 +30,7 @@ import static org.mockito.Mockito.when;
 class AsyncScopeTest {
 
   @Test
+  @SuppressWarnings("unchecked")
   void shouldReuseAsyncCollection() {
     Core core = mock(Core.class);
     ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
