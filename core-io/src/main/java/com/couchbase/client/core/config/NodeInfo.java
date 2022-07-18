@@ -23,6 +23,7 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
+import reactor.util.annotation.Nullable;
 
 import java.net.URI;
 import java.util.Collections;
@@ -95,7 +96,17 @@ public class NodeInfo {
         this.alternateAddresses = alternateAddresses == null
             ? Collections.emptyMap()
             : alternateAddresses;
-        this.nodeIdentifier = new NodeIdentifier(this.hostname, directServices.get(ServiceType.MANAGER));
+
+        Integer directManagerPort = directServices.get(ServiceType.MANAGER);
+        Integer sslManagerPort = sslServices.get(ServiceType.MANAGER);
+        if (directManagerPort != null) {
+            this.nodeIdentifier = new NodeIdentifier(this.hostname, directManagerPort);
+        } else if (sslManagerPort != null) {
+            this.nodeIdentifier = new NodeIdentifier(this.hostname, sslManagerPort);
+        } else {
+            throw new IllegalStateException("A config must have at least a non-ssl or a ssl manager port defined!");
+        }
+
     }
 
     public String hostname() {
@@ -118,19 +129,25 @@ public class NodeInfo {
         return alternateAddresses;
     }
 
-    private Map<ServiceType, Integer> parseDirectServices(final String viewUri, final Map<String, Integer> input) {
+    private Map<ServiceType, Integer> parseDirectServices(@Nullable final String viewUri,
+                                                          @Nullable final Map<String, Integer> input) {
         Map<ServiceType, Integer> services = new HashMap<>();
-        for (Map.Entry<String, Integer> entry : input.entrySet()) {
-            String type = entry.getKey();
-            Integer port = entry.getValue();
-            if (type.equals("direct")) {
-                services.put(ServiceType.KV, port);
+        services.put(ServiceType.MANAGER, configPort);
+
+        if (input != null) {
+            for (Map.Entry<String, Integer> entry : input.entrySet()) {
+                String type = entry.getKey();
+                Integer port = entry.getValue();
+                if (type.equals("direct")) {
+                    services.put(ServiceType.KV, port);
+                }
             }
         }
-        services.put(ServiceType.MANAGER, configPort);
+
         if (viewUri != null) {
             services.put(ServiceType.VIEWS, URI.create(viewUri).getPort());
         }
+
         return services;
     }
 

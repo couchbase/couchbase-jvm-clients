@@ -150,12 +150,14 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
             }
             for (NodeInfo nodeInfo : nodeInfos) {
                 // Make sure we only take into account nodes which contain KV
-                if (!nodeInfo.services().containsKey(ServiceType.KV)) {
+                boolean directPortEnabled = nodeInfo.services().containsKey(ServiceType.KV);
+                boolean sslPortEnabled = nodeInfo.sslServices().containsKey(ServiceType.KV);
+                if (!directPortEnabled && !sslPortEnabled) {
                     continue;
                 }
 
-                if (nodeInfo.hostname().equals(convertedHost) &&
-                        (nodeInfo.services().get(ServiceType.KV) == directPort || directPort == 0)) {
+                boolean hostMatches = nodeInfo.hostname().equals(convertedHost);
+                if (hostMatches && !partitionHosts.contains(nodeInfo)) {
                     partitionHosts.add(nodeInfo);
                 }
             }

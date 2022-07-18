@@ -20,6 +20,7 @@ import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -204,6 +205,49 @@ class CouchbaseBucketConfigTest {
                 assertTrue(port > 0);
             }
         }
+    }
+
+    @Test
+    void shouldParseElixirConfig() {
+        CouchbaseBucketConfig config = readConfig("cloud_tls_only.json");
+        assertEquals("database_hSeAfu", config.name());
+        assertEquals(64, config.numberOfPartitions());
+        assertEquals(0, config.numberOfReplicas());
+
+        assertEquals(12, config.nodes().size());
+
+        Set<String> kvNodes = new HashSet<>();
+        Set<String> queryNodes = new HashSet<>();
+        for (NodeInfo ni : config.nodes()) {
+            assertTrue(ni.services().isEmpty());
+
+            Map<ServiceType, Integer> sslServices = ni.sslServices();
+            assertTrue(sslServices.get(ServiceType.MANAGER) > 0);
+
+            Integer kvPort = sslServices.get(ServiceType.KV);
+            if (kvPort != null) {
+                kvNodes.add(ni.hostname() + ":" + kvPort);
+                assertTrue(kvPort > 0);
+            }
+
+            Integer queryPort = sslServices.get(ServiceType.QUERY);
+            if (queryPort != null) {
+                queryNodes.add(ni.hostname() + ":" + queryPort);
+                assertTrue(queryPort > 0);
+            }
+        }
+
+        Set<String> expectedKv = new HashSet<>();
+        expectedKv.add("i-041c154dd0246354e.sdk.dev.cloud.couchbase.com:11207");
+        expectedKv.add("i-041c154dd0246354e.sdk.dev.cloud.couchbase.com:21001");
+        expectedKv.add("i-041c154dd0246354e.sdk.dev.cloud.couchbase.com:21002");
+        assertEquals(expectedKv, kvNodes);
+
+        Set<String> expectedQuery = new HashSet<>();
+        expectedQuery.add("i-041c154dd0246354e.sdk.dev.cloud.couchbase.com:18093");
+        expectedQuery.add("i-041c154dd0246354e.sdk.dev.cloud.couchbase.com:23001");
+        expectedQuery.add("i-041c154dd0246354e.sdk.dev.cloud.couchbase.com:23002");
+        assertEquals(expectedQuery, queryNodes);
     }
 
     private static CouchbaseBucketConfig readConfig(final String path) {
