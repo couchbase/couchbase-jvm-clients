@@ -28,11 +28,10 @@
         <log4j-slf4j-impl.version>2.17.2</log4j-slf4j-impl.version>
 
         <!-- realign back with the normal jackson version once they all align again -->
-        <jackson-databind.version>2.13.2.2</jackson-databind.version>
-        <jackson.version>2.13.2</jackson.version>
+        <jackson.version>2.13.3</jackson.version>
 
-        <reactor.version>3.4.17</reactor.version>
-        <reactive-streams.version>1.0.3</reactive-streams.version>
+        <reactor.version>3.4.21</reactor.version>
+        <reactive-streams.version>1.0.4</reactive-streams.version>
         <blockhound.version>1.0.6.RELEASE</blockhound.version>
         <log4j.version>1.2.17</log4j.version>
         <slf4j.version>1.7.36</slf4j.version>

@@ -41,7 +41,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>${jackson-databind.version}</version>
+            <version>${jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>org.awaitility</groupId>
@@ -51,7 +51,7 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
-            <version>4.1.77.Final</version>
+            <version>4.1.79.Final</version>
         </dependency>
     </dependencies>
 
