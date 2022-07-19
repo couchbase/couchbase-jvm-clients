@@ -38,6 +38,8 @@ import reactor.core.publisher.Sinks;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.couchbase.client.core.Reactor.emitFailureHandler;
+
 /**
  * Provides a common, abstract implementation of the {@link ChunkResponseParser} interface.
  */
@@ -259,7 +261,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
    * Fails the trailer mono with the given message.
    */
   private void failTrailer(Throwable t) {
-    this.trailer.tryEmitError(t);
+    this.trailer.emitError(t, emitFailureHandler());
   }
 
   /**
@@ -268,7 +270,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
    * @param trailer the trailer value to be fed into the mono.
    */
   protected void completeTrailer(T trailer) {
-    this.trailer.tryEmitValue(trailer);
+    this.trailer.emitValue(trailer, emitFailureHandler());
   }
 
 }

@@ -28,8 +28,10 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.core.publisher.SignalType;
+import reactor.core.publisher.Sinks;
 import reactor.util.context.Context;
 
+import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -43,6 +45,9 @@ import java.util.function.Supplier;
  * @since 2.0.0
  */
 public class Reactor {
+
+  public static final Duration DEFAULT_EMIT_BUSY_DURATION = Duration.ofSeconds(1);
+
   private Reactor() {
     throw new AssertionError("not instantiable");
   }
@@ -201,6 +206,25 @@ public class Reactor {
     static <T> Mono<T> callOnAssembly(Mono<T> source) {
       return onAssembly(source);
     }
+  }
+
+  /**
+   * Constructs a new EmitFailureHandler with the default busy wait duration.
+   *
+   * @return a new emit failure handler, busy looping for {@link #DEFAULT_EMIT_BUSY_DURATION}.
+   */
+  public static Sinks.EmitFailureHandler emitFailureHandler() {
+    return emitFailureHandler(DEFAULT_EMIT_BUSY_DURATION);
+  }
+
+  /**
+   * Constructs a new EmitFailureHandler with a custom busy wait duration.
+   *
+   * @param duration the duration to busy loop until failure.
+   * @return a new emit failure handler, busy looping for the given duration.
+   */
+  public static Sinks.EmitFailureHandler emitFailureHandler(final Duration duration) {
+    return Sinks.EmitFailureHandler.busyLooping(duration);
   }
 
 }

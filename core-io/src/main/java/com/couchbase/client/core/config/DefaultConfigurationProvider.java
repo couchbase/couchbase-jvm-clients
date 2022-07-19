@@ -24,9 +24,11 @@ import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEve
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshSucceededEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
+import com.couchbase.client.core.cnc.events.config.ConfigPushFailedEvent;
 import com.couchbase.client.core.cnc.events.config.GlobalConfigRetriedEvent;
 import com.couchbase.client.core.cnc.events.config.GlobalConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.IndividualGlobalConfigLoadFailedEvent;
+import com.couchbase.client.core.cnc.events.config.SeedNodesUpdateFailedEvent;
 import com.couchbase.client.core.cnc.events.config.SeedNodesUpdatedEvent;
 import com.couchbase.client.core.config.loader.ClusterManagerBucketLoader;
 import com.couchbase.client.core.config.loader.GlobalLoader;
@@ -75,6 +77,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.couchbase.client.core.Reactor.emitFailureHandler;
 import static com.couchbase.client.core.util.CbCollections.copyToUnmodifiableSet;
 import static java.util.Collections.unmodifiableSet;
 
@@ -168,7 +171,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     globalRefresher = new GlobalRefresher(this, core);
 
     // Start with pushing the current config into the sink for all subscribers currently attached.
-    configsSink.tryEmitNext(currentConfig);
+    configsSink.emitNext(currentConfig, emitFailureHandler());
   }
 
   @Override
@@ -519,7 +522,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             // make sure to push a final, empty config before complete to give downstream
             // consumers a chance to clean up
             pushConfig();
-            configsSink.tryEmitComplete();
+            configsSink.emitComplete(emitFailureHandler());
           })
           .then(keyValueRefresher.shutdown())
           .then(clusterManagerRefresher.shutdown())
@@ -848,9 +851,16 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   /**
    * Pushes out the current configuration to all config subscribers.
+   * <p>
+   * Implementation Note: This method needs to be synchronized in order to prevent
+   * {@link reactor.core.publisher.Sinks.EmitResult#FAIL_NON_SERIALIZED} from happening. All other results
+   * should not be happening, but just to be sure we log them as WARN, so we have a chance to debug them in the field.
    */
-  private void pushConfig() {
-    configsSink.tryEmitNext(currentConfig);
+  private synchronized void pushConfig() {
+    Sinks.EmitResult emitResult = configsSink.tryEmitNext(currentConfig);
+    if (emitResult != Sinks.EmitResult.OK) {
+      eventBus.publish(new ConfigPushFailedEvent(core.context(), emitResult));
+    }
   }
 
   /**
@@ -901,9 +911,20 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     return currentSeedNodes.get();
   }
 
-  private void setSeedNodes(Set<SeedNode> seedNodes) {
+  /**
+   * Pushes out the current seed nodes to all seed node subscribers.
+   * <p>
+   * Implementation Note: This method needs to be synchronized in order to prevent
+   * {@link reactor.core.publisher.Sinks.EmitResult#FAIL_NON_SERIALIZED} from happening. All other results
+   * should not be happening, but just to be sure we log them as WARN, so we have a chance to debug them in the field.
+   */
+  private synchronized void setSeedNodes(Set<SeedNode> seedNodes) {
     currentSeedNodes.set(seedNodes);
-    seedNodesSink.tryEmitNext(seedNodes);
+    Sinks.EmitResult emitResult = seedNodesSink.tryEmitNext(seedNodes);
+
+    if (emitResult != Sinks.EmitResult.OK) {
+      eventBus.publish(new SeedNodesUpdateFailedEvent(core.context(), emitResult));
+    }
   }
 
   /**

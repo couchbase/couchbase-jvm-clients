@@ -22,6 +22,7 @@ import reactor.core.publisher.Sinks;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
+import static com.couchbase.client.core.Reactor.emitFailureHandler;
 import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
@@ -40,7 +41,7 @@ public class SingleStateful<S> implements Stateful<S> {
 
     this.currentState = new AtomicReference<>(initialState);
     this.beforeTransitionCallback = beforeTransitionCallback;
-    statesSink.tryEmitNext(initialState);
+    statesSink.emitNext(initialState, emitFailureHandler());
   }
 
   /**
@@ -86,7 +87,7 @@ public class SingleStateful<S> implements Stateful<S> {
     if (!currentState.get().equals(newState)) {
       beforeTransitionCallback.accept(currentState.get(), newState);
       currentState.set(newState);
-      statesSink.tryEmitNext(newState);
+      statesSink.emitNext(newState, emitFailureHandler());
     }
   }
 
@@ -103,7 +104,7 @@ public class SingleStateful<S> implements Stateful<S> {
 
     if (currentState.compareAndSet(expectedState, newState)) {
       beforeTransitionCallback.accept(expectedState, newState);
-      statesSink.tryEmitNext(newState);
+      statesSink.emitNext(newState, emitFailureHandler());
       return true;
     }
     return false;
@@ -113,7 +114,7 @@ public class SingleStateful<S> implements Stateful<S> {
    * Doesn't have to be called, added for good measure.
    */
   public void close() {
-    statesSink.tryEmitComplete();
+    statesSink.emitComplete(emitFailureHandler());
   }
 
 }
