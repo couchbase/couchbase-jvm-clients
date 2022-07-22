@@ -20,7 +20,6 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.core.WaitUntilReadyCompletedEvent;
-import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -45,7 +44,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -76,21 +74,6 @@ public class WaitUntilReadyHelper {
         || (bucketName.isPresent() && core.configurationProvider().collectionRefreshInProgress())
         || (bucketName.isPresent() && core.clusterConfig().bucketConfig(bucketName.get()) == null))
       )
-      .filter(i -> {
-        // If we do bucket-level check, we need to make sure that the number of kv nodes reported
-        // in nodesExt is the same as in the actual nodes list, so we know they are ready to be used.
-        // There could be a mismatch during rebalance or (more likely) when a bucket has just been
-        // created.
-        if (bucketName.isPresent()) {
-          state.transition(WaitUntilReadyStage.BUCKET_CONFIG_READY);
-          BucketConfig bucketConfig = core.clusterConfig().bucketConfig(bucketName.get());
-          long extNodes = bucketConfig.portInfos().stream().filter(p -> p.ports().containsKey(ServiceType.KV)).count();
-          long visibleNodes = bucketConfig.nodes().stream().filter(n -> n.services().containsKey(ServiceType.KV)).count();
-          return extNodes > 0 && extNodes == visibleNodes;
-        } else  {
-          return true;
-        }
-      })
       .flatMap(i -> {
         if (bucketName.isPresent()) {
           state.transition(WaitUntilReadyStage.BUCKET_NODES_HEALTHY);
@@ -283,10 +266,6 @@ public class WaitUntilReadyHelper {
      * Waits until all global and bucket level configs are loaded.
      */
     CONFIG_LOAD,
-    /**
-     * Waits until the bucket config is ready and contains kv nodes.
-     */
-    BUCKET_CONFIG_READY,
     /**
      * Waits until all the nodes in a bucket config are healthy.
      */
