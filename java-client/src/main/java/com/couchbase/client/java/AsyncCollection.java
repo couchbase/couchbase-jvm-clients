@@ -24,15 +24,20 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.env.TimeoutConfig;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.kv.CoreRangeScanItem;
+import com.couchbase.client.core.kv.RangeScanOrchestrator;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
 import com.couchbase.client.core.msg.kv.GetMetaRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
+import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.core.msg.kv.ReplaceRequest;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
@@ -72,11 +77,17 @@ import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.kv.PersistTo;
+import com.couchbase.client.java.kv.RangeScan;
 import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.SamplingScan;
+import com.couchbase.client.java.kv.ScanOptions;
+import com.couchbase.client.java.kv.ScanResult;
+import com.couchbase.client.java.kv.ScanType;
 import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.kv.TouchAccessor;
 import com.couchbase.client.java.kv.TouchOptions;
@@ -84,13 +95,18 @@ import com.couchbase.client.java.kv.UnlockAccessor;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
+import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.StreamSupport;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -166,6 +182,11 @@ public class AsyncCollection {
   private final CollectionIdentifier collectionIdentifier;
 
   /**
+   * Holds the orchestrator for range scans.
+   */
+  private final RangeScanOrchestrator rangeScanOrchestrator;
+
+  /**
    * Creates a new {@link AsyncCollection}.
    *
    * @param name the name of the collection.
@@ -183,6 +204,7 @@ public class AsyncCollection {
     this.bucket = bucket;
     this.collectionIdentifier = new CollectionIdentifier(bucket, Optional.of(scopeName), Optional.of(name));
     this.asyncBinaryCollection = new AsyncBinaryCollection(core, environment, collectionIdentifier);
+    this.rangeScanOrchestrator = new RangeScanOrchestrator(core, collectionIdentifier);
   }
 
   /**
@@ -191,6 +213,11 @@ public class AsyncCollection {
   @Stability.Volatile
   public Core core() {
     return core;
+  }
+
+  @Stability.Internal
+  RangeScanOrchestrator rangeScanOrchestrator() {
+    return rangeScanOrchestrator;
   }
 
   /**
@@ -1022,6 +1049,79 @@ public class AsyncCollection {
                       opts.storeSemantics() == StoreSemantics.INSERT,
                       environment.jsonSerializer()
               ));
+  }
+
+
+  /**
+   * Returns a stream of {@link ScanResult ScanResults} performing a Key-Value range scan with default options.
+   *
+   * @param scanType the type or range scan to perform.
+   * @return a CompletableFuture of a list of {@link ScanResult ScanResults} (potentially empty).
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public CompletableFuture<List<ScanResult>> scan(final ScanType scanType) {
+    return scan(scanType, ScanOptions.scanOptions());
+  }
+
+  /**
+   * Returns a stream of {@link ScanResult ScanResults} performing a Key-Value range scan with custom options.
+   *
+   * @param scanType the type or range scan to perform.
+   * @param options a {@link ScanOptions} to customize the behavior of the scan operation.
+   * @return a CompletableFuture of a list of {@link ScanResult ScanResults} (potentially empty).
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public CompletableFuture<List<ScanResult>> scan(final ScanType scanType, final ScanOptions options) {
+    return scanRequest(scanType, options).collectList().toFuture();
+  }
+
+  /**
+   * Internal helper method to create and run the KV range scan request.
+   *
+   * @param scanType the type or range scan to perform.
+   * @param options a {@link ScanOptions} to customize the behavior of the scan operation.
+   * @return the flux stream of converted scan results.
+   */
+  Flux<ScanResult> scanRequest(final ScanType scanType, final ScanOptions options) {
+    notNull(scanType, "ScanType");
+    notNull(options, "Options");
+
+    ScanOptions.Built opts = options.build();
+    Duration timeout = opts.timeout().orElse(environment().timeoutConfig().kvScanTimeout());
+
+
+    Map<Short, MutationToken> consistencyTokens = opts.consistentWith().map(ms -> {
+      Map<Short, MutationToken> tokens = new HashMap<>();
+      for (MutationToken mt : ms) {
+        tokens.put(mt.partitionID(), mt);
+      }
+      return tokens;
+    }).orElse(Collections.emptyMap());
+
+    Flux<CoreRangeScanItem> coreScanStream;
+
+    if (scanType instanceof RangeScan) {
+      RangeScan rs = (RangeScan) scanType;
+      coreScanStream = rangeScanOrchestrator.rangeScan(rs.from().id(), rs.from().exclusive(), rs.to().id(),
+        rs.to().exclusive(), timeout, opts.batchItemLimit(), opts.batchByteLimit(), opts.withoutContent(),
+        opts.sort().intoCore(), opts.parentSpan(), consistencyTokens
+      );
+    } else if (scanType instanceof SamplingScan) {
+      SamplingScan ss = (SamplingScan) scanType;
+      coreScanStream = rangeScanOrchestrator.samplingScan(ss.limit(), ss.seed(), timeout, opts.batchItemLimit(),
+        opts.batchByteLimit(), opts.withoutContent(), opts.sort().intoCore(), opts.parentSpan(), consistencyTokens
+      );
+    } else {
+      return Flux.error(InvalidArgumentException.fromMessage("Unsupported ScanType: " + scanType));
+    }
+
+    return coreScanStream.map(item -> new ScanResult(opts.withoutContent(), item.key(), item.value(), item.flags(),
+      item.cas(), Optional.ofNullable(item.expiry()), opts.transcoder())
+    );
   }
 
   /**

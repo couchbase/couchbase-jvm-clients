@@ -100,7 +100,8 @@ public class KeyValueEndpoint extends BaseEndpoint {
         ServerFeature.SYNC_REPLICATION,
         ServerFeature.COLLECTIONS,
         ServerFeature.TRACING,
-        ServerFeature.PRESERVE_TTL
+        ServerFeature.PRESERVE_TTL,
+        ServerFeature.JSON
       );
 
       if (ctx.environment().ioConfig().mutationTokensEnabled()) {

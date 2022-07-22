@@ -75,7 +75,7 @@ public class GetReplicaResult extends GetResult {
   @Override
   public String toString() {
     return "GetReplicaResult{" +
-      "content=" + redactUser(convertContentToString()) +
+      "content=" + redactUser(convertContentToString(content, flags)) +
       ", flags=0x" + Integer.toHexString(flags) +
       ", cas=0x" + Long.toHexString(cas()) +
       ", expiry=" + expiryTime() +

@@ -267,6 +267,9 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
         capabilities.add(Capabilities.STORAGE_BACKEND);
       }
     }
+    if (bucketCapabilities.contains("rangeScan")) {
+      capabilities.add(Capabilities.RANGE_SCAN);
+    }
     return capabilities;
   }
 

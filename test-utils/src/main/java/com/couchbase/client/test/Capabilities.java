@@ -95,5 +95,9 @@ public enum Capabilities {
   /**
    * The cluster can modify a document with Queries without changing its expiry.
    */
-  QUERY_PRESERVE_EXPIRY
+  QUERY_PRESERVE_EXPIRY,
+  /**
+   * Supports KV Range Scan operations.
+   */
+  RANGE_SCAN
 }

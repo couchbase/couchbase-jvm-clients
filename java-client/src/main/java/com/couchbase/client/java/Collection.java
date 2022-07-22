@@ -52,6 +52,9 @@ import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.QueueOptions;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.ScanOptions;
+import com.couchbase.client.java.kv.ScanResult;
+import com.couchbase.client.java.kv.ScanType;
 import com.couchbase.client.java.kv.TouchOptions;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertOptions;
@@ -697,6 +700,33 @@ public class Collection {
    */
   public <T> Queue<T> queue(final String id, final Class<T> entityType, QueueOptions options) {
     return new CouchbaseQueue<>(id, this, entityType, options);
+  }
+
+  /**
+   * Returns a stream of {@link ScanResult ScanResults} performing a Key-Value range scan with default options.
+   *
+   * @param scanType the type or range scan to perform.
+   * @return a stream of {@link ScanResult ScanResults} (potentially empty).
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public Stream<ScanResult> scan(final ScanType scanType) {
+    return scan(scanType, ScanOptions.scanOptions());
+  }
+
+  /**
+   * Returns a stream of {@link ScanResult ScanResults} performing a Key-Value range scan with custom options.
+   *
+   * @param scanType the type or range scan to perform.
+   * @param options a {@link ScanOptions} to customize the behavior of the scan operation.
+   * @return a stream of {@link ScanResult ScanResults} (potentially empty).
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public Stream<ScanResult> scan(final ScanType scanType, final ScanOptions options) {
+    return asyncCollection.scanRequest(scanType, options).toStream();
   }
 
 }

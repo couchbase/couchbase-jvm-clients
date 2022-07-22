@@ -81,6 +81,22 @@ public class Validators {
     }
   }
 
+  public static byte[] notNullOrEmpty(final byte[] input, final String identifier) {
+    if (input == null || input.length == 0) {
+      throw InvalidArgumentException.fromMessage(identifier + " cannot be null or empty");
+    }
+    return input;
+  }
+
+  public static byte[] notNullOrEmpty(final byte[] input, final String identifier,
+                                           final Supplier<ErrorContext> errorContext) {
+    try {
+      return notNullOrEmpty(input, identifier);
+    } catch (Exception cause) {
+      throw new InvalidArgumentException("Argument validation failed", cause, errorContext.get());
+    }
+  }
+
   public static <T> List<T> notNullOrEmpty(final List<T> input, final String identifier) {
     if (input == null || input.isEmpty()) {
       throw InvalidArgumentException.fromMessage(identifier + " cannot be null or empty");

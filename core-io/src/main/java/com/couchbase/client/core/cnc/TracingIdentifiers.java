@@ -133,6 +133,9 @@ public class TracingIdentifiers {
 
   public static final String SPAN_REQUEST_KV_OBSERVE = "observe";
 
+  public static final String SPAN_REQUEST_KV_RANGE_SCAN_CREATE = "range_scan_create";
+
+  public static final String SPAN_REQUEST_KV_RANGE_SCAN_CONTINUE = "range_scan_continue";
   public static final String SPAN_GET_ALL_REPLICAS = "get_all_replicas";
 
   public static final String SPAN_GET_ANY_REPLICA = "get_any_replica";

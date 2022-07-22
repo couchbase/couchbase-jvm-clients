@@ -158,7 +158,33 @@ public enum ResponseStatus {
   /**
    * The server reports that it is not initialized yet.
    */
-  NOT_INITIALIZED;
+  NOT_INITIALIZED,
+
+  /**
+   * Indicating more items on a "one request N responses" operation.
+   */
+  CONTINUE,
+
+  /**
+   * Indicating no more items on a "one request N responses" operation.
+   */
+  COMPLETE,
+
+  /**
+   * Indicating a canceled request on a "one request N responses" operation.
+   */
+  CANCELED,
+
+  /**
+   * When sampling, this error indicates the collection does not have enough keys
+   * to satisfy the requested sample size.
+   */
+  RANGE_ERROR,
+
+  /**
+   * The vbuuid as part of the snapshot requirements does not align with the server.
+   */
+  VBUUID_NOT_EQUAL;
 
   public boolean success() {
     return this == ResponseStatus.SUCCESS;

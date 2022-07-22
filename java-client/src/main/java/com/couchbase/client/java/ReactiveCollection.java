@@ -20,7 +20,11 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
+import com.couchbase.client.core.kv.CoreRangeScanItem;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
 import com.couchbase.client.core.msg.kv.GetMetaRequest;
@@ -59,10 +63,15 @@ import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.RangeScan;
 import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.java.kv.SamplingScan;
+import com.couchbase.client.java.kv.ScanOptions;
+import com.couchbase.client.java.kv.ScanResult;
+import com.couchbase.client.java.kv.ScanType;
 import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.kv.TouchAccessor;
 import com.couchbase.client.java.kv.TouchOptions;
@@ -73,6 +82,7 @@ import com.couchbase.client.java.kv.UpsertOptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -647,6 +657,33 @@ public class ReactiveCollection {
                           MutateInAccessor.mutateIn(core, request, id, opts.persistTo(), opts.replicateTo(), opts.storeSemantics() == StoreSemantics.INSERT, environment().jsonSerializer()),
                           true));
     });
+  }
+
+  /**
+   * Returns a stream of {@link ScanResult ScanResults} performing a Key-Value range scan with default options.
+   *
+   * @param scanType the type or range scan to perform.
+   * @return a Flux of {@link ScanResult ScanResults} (potentially empty).
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public Flux<ScanResult> scan(final ScanType scanType) {
+    return scan(scanType, ScanOptions.scanOptions());
+  }
+
+  /**
+   * Returns a stream of {@link ScanResult ScanResults} performing a Key-Value range scan with custom options.
+   *
+   * @param scanType the type or range scan to perform.
+   * @param options a {@link ScanOptions} to customize the behavior of the scan operation.
+   * @return a Flux of {@link ScanResult ScanResults} (potentially empty).
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public Flux<ScanResult> scan(final ScanType scanType, final ScanOptions options) {
+    return asyncCollection.scanRequest(scanType, options);
   }
 
 }

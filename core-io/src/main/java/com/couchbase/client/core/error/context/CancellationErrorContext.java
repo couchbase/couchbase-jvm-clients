@@ -19,6 +19,7 @@ package com.couchbase.client.core.error.context;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.AbstractContext;
 import com.couchbase.client.core.diagnostics.WaitUntilReadyContext;
+import com.couchbase.client.core.kv.RangeScanContext;
 import com.couchbase.client.core.msg.RequestContext;
 
 import java.util.Map;
@@ -68,6 +69,13 @@ public class CancellationErrorContext extends ErrorContext {
    */
   public WaitUntilReadyContext getWaitUntilReadyContext() {
     return (WaitUntilReadyContext) context;
+  }
+
+  /**
+   * Returns the context for a RangeScan operation.
+   */
+  public RangeScanContext getRangeScanContext() {
+    return (RangeScanContext) context;
   }
 
 }

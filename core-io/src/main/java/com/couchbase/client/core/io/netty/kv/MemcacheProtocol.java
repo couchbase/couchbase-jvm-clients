@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.cnc.events.io.DurabilityTimeoutCoercedEvent;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
@@ -803,6 +804,16 @@ public enum MemcacheProtocol {
       return ResponseStatus.RATE_LIMITED;
     } else if (status == Status.SCOPE_SIZE_LIMIT_EXCEEDED.status) {
       return ResponseStatus.QUOTA_LIMITED;
+    } else if (status == Status.RANGE_SCAN_MORE.status) {
+      return ResponseStatus.CONTINUE;
+    } else if (status == Status.RANGE_SCAN_COMPLETE.status) {
+      return ResponseStatus.COMPLETE;
+    } else if (status == Status.RANGE_SCAN_CANCELLED.status) {
+      return ResponseStatus.CANCELED;
+    } else if (status == Status.RANGE_ERROR.status) {
+       return ResponseStatus.RANGE_ERROR;
+    } else if (status == Status.VBUUID_NOT_EQUAL.status) {
+       return ResponseStatus.VBUUID_NOT_EQUAL;
     } else {
       return ResponseStatus.UNKNOWN;
     }
@@ -1173,7 +1184,22 @@ public enum MemcacheProtocol {
     /**
      * Fetches metadata for a document
      */
-    GET_META((byte) 0xa0);
+    GET_META((byte) 0xa0),
+    /**
+     * Create a new range scan.
+     */
+    @SinceCouchbase("7.2")
+    RANGE_SCAN_CREATE((byte) 0xda),
+    /**
+     * Get more results from a range scan.
+     */
+    @SinceCouchbase("7.2")
+    RANGE_SCAN_CONTINUE((byte) 0xdb),
+    /**
+     * Cancel a range scan. (Not required if scan completes normally.)
+     */
+    @SinceCouchbase("7.2")
+    RANGE_SCAN_CANCEL((byte) 0xdc);
 
     private final byte opcode;
 
@@ -1299,6 +1325,10 @@ public enum MemcacheProtocol {
      * Authentication error.
      */
     AUTH_ERROR((short) 0x20),
+    /**
+     * When sampling, this error indicates the collection does not have enough keys to satisfy the requested sample size.
+     */
+    RANGE_ERROR((short) 0x22),
     /**
      * Access problem.
      */
@@ -1455,6 +1485,26 @@ public enum MemcacheProtocol {
      * <p>it may Succeed or Fail; but the final value is not yet known.</p>
      */
     SYNC_WRITE_AMBIGUOUS((short) 0xa3),
+
+    /**
+     * The scan was cancelled whilst returning data. This could be the only status
+     * if the cancel was noticed before a key/value was loaded.
+     */
+    RANGE_SCAN_CANCELLED((short) 0xa5),
+    /**
+     * Scan has not reached the end key; more data maybe available.
+     * Client should issue another range scan continue request.
+     */
+    RANGE_SCAN_MORE((short) 0xa6),
+    /**
+     * Scan has reached the end of the range.
+     */
+    RANGE_SCAN_COMPLETE((short) 0xa7),
+
+    /**
+     * The vbuuid as part of the snapshot requirements does not align with the server.
+     */
+    VBUUID_NOT_EQUAL((short) 0xa8),
 
     /**
      * The collection ID provided is unknown, maybe it changed or got dropped.
@@ -1641,6 +1691,12 @@ public enum MemcacheProtocol {
   }
 
   public enum Datatype {
+
+    /**
+     * The JSON datatype.
+     */
+    JSON((byte) 0x01),
+
     /**
      * Snappy datatype used to signal compression.
      */

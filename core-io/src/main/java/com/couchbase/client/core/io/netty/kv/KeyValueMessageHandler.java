@@ -47,6 +47,8 @@ import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.RangeScanIdFailureException;
+import com.couchbase.client.core.error.RangeScanPartitionFailedException;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.TracingUtils;
@@ -54,6 +56,8 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
+import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
+import com.couchbase.client.core.msg.kv.RangeScanContinueResponse;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
@@ -66,6 +70,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.deps.io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
 import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchSpanAttributes;
 import static com.couchbase.client.core.io.netty.TracingUtils.setCommonKVSpanAttributes;
@@ -296,7 +301,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
   @Override
   public void channelInactive(final ChannelHandlerContext ctx) {
-    for (KeyValueRequest<Response> request : writtenRequests.values()) {
+    for (KeyValueRequest<? extends  Response> request : writtenRequests.values()) {
       RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT);
     }
     ctx.fireChannelInactive();
@@ -317,7 +322,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       return;
     }
 
-    completeRequestTimings(request, response, opaque);
+    long originalStart = completeRequestTimings(request, response, opaque);
 
     short statusCode = MemcacheProtocol.status(response);
     ResponseStatus status = MemcacheProtocol.decodeStatus(statusCode);
@@ -339,7 +344,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       ioContext.environment().eventBus().publish(new UnknownResponseStatusReceivedEvent(ioContext, statusCode));
     }
 
-    if (status == ResponseStatus.NOT_MY_VBUCKET) {
+    boolean isRangeScanContinue = (Request<?>) request instanceof RangeScanContinueRequest;
+
+    if (status == ResponseStatus.NOT_MY_VBUCKET && !isRangeScanContinue) {
       handleNotMyVbucket(request, response);
     } else if (status == ResponseStatus.UNKNOWN_COLLECTION) {
       handleOutdatedCollection(request, RetryReason.KV_COLLECTION_OUTDATED);
@@ -348,7 +355,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     } else if (statusIndicatesInvalidChannel(status)) {
       closeChannelWithReason(ioContext, ctx, ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION);
     } else {
-      retryOrComplete(request, response, status);
+      retryOrComplete(request, response, status, isRangeScanContinue, originalStart);
     }
   }
 
@@ -361,13 +368,18 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param status the parsed status code.
    */
   private void retryOrComplete(final KeyValueRequest<Response> request, final ByteBuf response,
-                               final ResponseStatus status) {
+                               final ResponseStatus status, final boolean isRangeScanContinue, final long start) {
     RetryReason retryReason = statusCodeIndicatesRetry(status, request);
     if (retryReason == null) {
-      if (!request.completed()) {
-        decodeAndComplete(request, response);
+      if (isRangeScanContinue) {
+        decodeAndCompleteRangeScanContinue(request, response, start);
+        // TODO: where to orphan?
       } else {
-        ioContext.environment().orphanReporter().report(request);
+        if (!request.completed()) {
+          decodeAndComplete(request, response);
+        } else {
+          ioContext.environment().orphanReporter().report(request);
+        }
       }
     } else {
       RetryOrchestrator.maybeRetry(ioContext, request, retryReason);
@@ -381,7 +393,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param response the response to complete.
    * @param opaque the opaque for the request.
    */
-  private void completeRequestTimings(final KeyValueRequest<Response> request, final ByteBuf response,
+  private long completeRequestTimings(final KeyValueRequest<Response> request, final ByteBuf response,
                                       final int opaque) {
     long serverTime = MemcacheProtocol.parseServerDurationFromResponse(response);
     request.context().serverLatency(serverTime);
@@ -396,6 +408,8 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       }
       dispatchSpan.end();
     }
+
+    return start;
   }
 
   /**
@@ -412,6 +426,41 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       request.succeed(decoded);
     } catch (Throwable t) {
       request.fail(new DecodingFailureException(t));
+    }
+  }
+
+  private void decodeAndCompleteRangeScanContinue(final KeyValueRequest<Response> request, final ByteBuf response,
+                                                  long originalStart) {
+    RangeScanContinueResponse decoded = (RangeScanContinueResponse) request.decode(response, channelContext);
+    if (!request.completed()) {
+      request.succeed(decoded);
+    }
+
+    ResponseStatus status = decoded.status();
+
+    boolean expectedStatus = status == ResponseStatus.COMPLETE
+      || status == ResponseStatus.CONTINUE
+      || status == ResponseStatus.SUCCESS;
+
+    if (!expectedStatus) {
+      // (daschl): I don't think failing the stream here makes a big difference for i.e. NMVB responses since
+      // the outer request is already completed above with the status code. I still thought it makes sense to
+      // properly close the item stream just in case someone is streaming from it, and we have a chance to debug
+      // this scenario.
+      decoded.failFeed(new RangeScanPartitionFailedException(
+        "Stream continue failed with non-successful response status",
+        status
+      ));
+      return;
+    }
+
+    boolean hasLastItem = status == ResponseStatus.COMPLETE;
+    boolean completeStream = hasLastItem || status == ResponseStatus.CONTINUE;
+    decoded.feedItems(MemcacheProtocol.body(response).orElse(EMPTY_BUFFER), hasLastItem, completeStream);
+
+    if (decoded.status() == ResponseStatus.SUCCESS) {
+      writtenRequests.put(request.opaque(), request);
+      writtenRequestDispatchTimings.put(request.opaque(), (Long) originalStart);
     }
   }
 
@@ -524,7 +573,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param request the request to retry.
    * @param response the response to extract the config from, potentially.
    */
-  private void handleNotMyVbucket(final KeyValueRequest<Response> request, final ByteBuf response) {
+  private void handleNotMyVbucket(final KeyValueRequest<? extends Response> request, final ByteBuf response) {
     request.indicateRejectedWithNotMyVbucket();
 
     eventBus.publish(new NotMyVbucketReceivedEvent(ioContext, request.partition()));
@@ -545,7 +594,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    *
    * @param request the request to retry.
    */
-  private void handleOutdatedCollection(final KeyValueRequest<Response> request, final RetryReason retryReason) {
+  private void handleOutdatedCollection(final KeyValueRequest<? extends Response> request, final RetryReason retryReason) {
     eventBus.publish(new CollectionOutdatedHandledEvent(
       request.collectionIdentifier(),
       retryReason,

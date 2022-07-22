@@ -31,6 +31,7 @@ import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.ObserveViaSeqnoRequest;
+import com.couchbase.client.core.msg.kv.PredeterminedPartitionRequest;
 import com.couchbase.client.core.msg.kv.ReplicaGetRequest;
 import com.couchbase.client.core.msg.kv.SyncDurabilityRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
@@ -130,8 +131,13 @@ public class KeyValueLocator implements Locator {
       return;
     }
 
-    int partitionId = partitionForKey(request.key(), config.numberOfPartitions());
-    request.partition((short) partitionId);
+    int partitionId;
+    if (request instanceof PredeterminedPartitionRequest) {
+      partitionId = request.partition();
+    } else {
+      partitionId = partitionForKey(request.key(), config.numberOfPartitions());
+      request.partition((short) partitionId);
+    }
 
     int nodeId = calculateNodeId(partitionId, request, config);
     if (nodeId < 0) {

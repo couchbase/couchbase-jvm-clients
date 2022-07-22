@@ -42,7 +42,8 @@ public enum BucketCapabilities {
     DURABLE_WRITE("durableWrite"),
     CREATE_AS_DELETED("tombstonedUserXAttrs"),
     SUBDOC_REPLACE_BODY_WITH_XATTR("subdoc.ReplaceBodyWithXattr"),
-    SUBDOC_REVIVE_DOCUMENT("subdoc.ReviveDocument");
+    SUBDOC_REVIVE_DOCUMENT("subdoc.ReviveDocument"),
+    RANGE_SCAN("rangeScan");
 
     private final String raw;
 

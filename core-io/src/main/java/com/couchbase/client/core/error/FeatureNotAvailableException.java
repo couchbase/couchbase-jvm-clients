@@ -65,4 +65,9 @@ public class FeatureNotAvailableException extends CouchbaseException {
       "Edition (CE) of Couchbase Server.");
   }
 
+  public static FeatureNotAvailableException rangeScan() {
+    return new FeatureNotAvailableException("The cluster does not support the scan operation " +
+      "(Only supported with Couchbase Server 7.2 and later).");
+  }
+
 }

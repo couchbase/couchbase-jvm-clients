@@ -28,6 +28,7 @@ public class TimeoutConfig {
 
   public static final Duration DEFAULT_KV_TIMEOUT = Duration.ofMillis(2500);
   public static final Duration DEFAULT_KV_DURABLE_TIMEOUT = Duration.ofSeconds(10);
+  public static final Duration DEFAULT_KV_SCAN_TIMEOUT = Duration.ofSeconds(75);
   public static final Duration DEFAULT_MANAGEMENT_TIMEOUT = Duration.ofSeconds(75);
   public static final Duration DEFAULT_QUERY_TIMEOUT = Duration.ofSeconds(75);
   public static final Duration DEFAULT_VIEW_TIMEOUT = Duration.ofSeconds(75);
@@ -42,6 +43,7 @@ public class TimeoutConfig {
 
   private final Duration kvTimeout;
   private final Duration kvDurableTimeout;
+  private final Duration kvScanTimeout;
   private final Duration managementTimeout;
   private final Duration queryTimeout;
   private final Duration viewTimeout;
@@ -55,6 +57,7 @@ public class TimeoutConfig {
   private TimeoutConfig(final Builder builder) {
     kvTimeout = Optional.ofNullable(builder.kvTimeout).orElse(DEFAULT_KV_TIMEOUT);
     kvDurableTimeout = Optional.ofNullable(builder.kvDurableTimeout).orElse(DEFAULT_KV_DURABLE_TIMEOUT);
+    kvScanTimeout = Optional.ofNullable(builder.kvScanTimeout).orElse(DEFAULT_KV_SCAN_TIMEOUT);
     managementTimeout = Optional.ofNullable(builder.managementTimeout).orElse(DEFAULT_MANAGEMENT_TIMEOUT);
     queryTimeout = Optional.ofNullable(builder.queryTimeout).orElse(DEFAULT_QUERY_TIMEOUT);
     viewTimeout = Optional.ofNullable(builder.viewTimeout).orElse(DEFAULT_VIEW_TIMEOUT);
@@ -81,6 +84,11 @@ public class TimeoutConfig {
   @Stability.Volatile
   public static Builder kvDurableTimeout(Duration kvDurableTimeout) {
     return builder().kvDurableTimeout(kvDurableTimeout);
+  }
+
+  @Stability.Volatile
+  public static Builder kvScanTimeout(Duration kvScanTimeout) {
+    return builder().kvScanTimeout(kvScanTimeout);
   }
 
   public static Builder managementTimeout(Duration managementTimeout) {
@@ -129,6 +137,11 @@ public class TimeoutConfig {
     return kvDurableTimeout;
   }
 
+  @Stability.Volatile
+  public Duration kvScanTimeout() {
+    return kvScanTimeout;
+  }
+
   public Duration managementTimeout() {
     return managementTimeout;
   }
@@ -175,6 +188,7 @@ public class TimeoutConfig {
 
     export.put("kvMs", kvTimeout.toMillis());
     export.put("kvDurableMs", kvDurableTimeout.toMillis());
+    export.put("kvScanMs", kvScanTimeout.toMillis());
     export.put("managementMs", managementTimeout.toMillis());
     export.put("queryMs", queryTimeout.toMillis());
     export.put("viewMs", viewTimeout.toMillis());
@@ -193,6 +207,7 @@ public class TimeoutConfig {
 
     private Duration kvTimeout = null;
     private Duration kvDurableTimeout = null;
+    private Duration kvScanTimeout = null;
     private Duration managementTimeout = null;
     private Duration queryTimeout = null;
     private Duration viewTimeout = null;
@@ -228,6 +243,19 @@ public class TimeoutConfig {
      */
     public Builder kvDurableTimeout(Duration kvDurableTimeout) {
       this.kvDurableTimeout = kvDurableTimeout;
+      return this;
+    }
+
+
+    /**
+     * Sets the timeout to use for key-value scan operations.
+     *
+     * <p>The default is 75 seconds.</p>
+     *
+     * @return this, for chaining
+     */
+    public Builder kvScanTimeout(Duration kvScanTimeout) {
+      this.kvScanTimeout = kvScanTimeout;
       return this;
     }
 
