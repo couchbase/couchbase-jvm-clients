@@ -76,6 +76,16 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
   private final Tracer tracer;
 
   /**
+   * Wraps the global OpenTelemetry obtained through {@link GlobalOpenTelemetry#get()} and returns a datatype that can 
+   * be passed into the requestTracer method of the environment.
+   *
+   * @return the wrapped global OpenTelemetry ready to be passed in.
+   */
+  public static OpenTelemetryRequestTracer wrapGlobal() {
+    return wrap(GlobalOpenTelemetry.get());
+  }
+  
+  /**
    * Wraps OpenTelemetry and returns a datatype that can be passed into the requestTracer method of the
    * environment.
    *
