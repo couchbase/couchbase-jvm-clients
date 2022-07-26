@@ -85,13 +85,27 @@ public class ClusterConfig {
     return !bucketConfigs.isEmpty() || globalConfig() != null;
   }
 
+  /**
+   * Dynamically aggregates all node addresses from global and bucket configs into a set (no duplicates).
+   *
+   * @return all node addresses found in global and bucket configs without duplicates.
+   */
   public Set<String> allNodeAddresses() {
     Set<String> nodes = new HashSet<>();
+
+    GlobalConfig gc = globalConfig.get();
+    if (gc != null) {
+      for (PortInfo ni : gc.portInfos()) {
+        nodes.add(ni.hostname());
+      }
+    }
+
     for (BucketConfig bc : bucketConfigs().values()) {
       for (NodeInfo ni : bc.nodes()) {
         nodes.add(ni.hostname());
       }
     }
+
     return nodes;
   }
 
