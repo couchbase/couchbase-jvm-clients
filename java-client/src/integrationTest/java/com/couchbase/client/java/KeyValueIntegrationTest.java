@@ -843,7 +843,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     for (int i = 0; i < 400000; i++) {
       content.put(UUID.randomUUID().toString(), UUID.randomUUID().toString());
     }
-    assertThrows(ValueTooLargeException.class, () -> collection.upsert(id, content));
+    assertThrows(ValueTooLargeException.class, () -> collection.upsert(id, content, upsertOptions().timeout(Duration.ofSeconds(30))));
   }
 
   @IgnoreWhen(hasCapabilities = Capabilities.CREATE_AS_DELETED)

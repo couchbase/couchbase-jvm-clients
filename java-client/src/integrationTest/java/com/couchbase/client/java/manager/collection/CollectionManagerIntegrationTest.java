@@ -188,7 +188,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
       CollectionSpec collectionSpec = CollectionSpec.create(String.valueOf(collectionsPerScope + i), scopeName);
       collections.createCollection(collectionSpec);
       waitUntilCondition(() -> collectionExists(collections, collectionSpec));
-      assertTrue(collections.getAllScopes().stream().anyMatch(ss -> ss.collections().contains(collectionSpec)));
+      waitUntilCondition(() -> collections.getAllScopes().stream().anyMatch(ss -> ss.collections().contains(collectionSpec)));
     }
   }
 

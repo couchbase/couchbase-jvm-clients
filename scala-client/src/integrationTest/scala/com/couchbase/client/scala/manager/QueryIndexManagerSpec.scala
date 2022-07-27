@@ -382,12 +382,12 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def canWatchZeroIndexes(): Unit = {
-    indexes.watchIndexes(bucketName, Seq(), 3.seconds).get
+    indexes.watchIndexes(bucketName, Seq(), 30.seconds).get
   }
 
   @Test
   def watchingAbsentIndexThrowsException(): Unit = {
-    indexes.watchIndexes(bucketName, Seq("doesNotExist"), 3.seconds) match {
+    indexes.watchIndexes(bucketName, Seq("doesNotExist"), 30.seconds) match {
       case Success(value)                       => assert(false)
       case Failure(err: IndexNotFoundException) =>
       case Failure(err)                         => assert(false)
@@ -396,7 +396,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
 
   @Test
   def watchingAbsentPrimaryIndexThrowsException(): Unit = {
-    indexes.watchIndexes(bucketName, Seq(), 3.seconds, watchPrimary = true) match {
+    indexes.watchIndexes(bucketName, Seq(), 30.seconds, watchPrimary = true) match {
       case Success(value)                       => assert(false)
       case Failure(err: IndexNotFoundException) =>
       case Failure(err)                         => assert(false)
@@ -406,13 +406,13 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
   @Test
   def canWatchAlreadyBuiltIndex(): Unit = {
     createIndex(bucketName, "myIndex", Seq("someField"))
-    indexes.watchIndexes(bucketName, Seq("myIndex"), 3.seconds).get
+    indexes.watchIndexes(bucketName, Seq("myIndex"), 30.seconds).get
   }
 
   @Test
   def watchTimesOutIfOneIndexStaysDeferred(): Unit = {
     createIndex(bucketName, "indexOne", Seq("someField"))
-    indexes.watchIndexes(bucketName, Seq("indexOne"), 3.seconds).get
+    indexes.watchIndexes(bucketName, Seq("indexOne"), 30.seconds).get
     createDeferredIndex("indexTwo")
     indexes.watchIndexes(bucketName, Seq("indexOne", "indexTwo"), 0.seconds) match {
       case Success(value)                 => assert(false)
@@ -444,7 +444,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     val indexNames = Seq("indexOne", "indexTwo", "indexThree")
 
     // watchPrimary redundant, since the primary index was explicitly named; make sure it works anyway
-    indexes.watchIndexes(bucketName, indexNames, 10.seconds, watchPrimary = true).get
+    indexes.watchIndexes(bucketName, indexNames, 30.seconds, watchPrimary = true).get
 
     assertAllIndexesAlreadyOnline(bucketName)
   }
