@@ -103,20 +103,24 @@ public class CoreTransactionsCleanup {
         return lostCleanup != null ? lostCleanup.cleanupSet() : new HashSet<>();
     }
 
-    void stopBackgroundProcesses(Duration timeout) {
-        stop = true;
-        LOGGER.info(String.format("Waiting for %d regular background threads to exit", stopLatch.getCount()));
-        try {
-            if (!stopLatch.await(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
-                LOGGER.info("Background threads did not stop in expected time {}", timeout);
+    Mono<Void> stopBackgroundProcesses(Duration timeout) {
+        return Mono.defer(() -> {
+            stop = true;
+            LOGGER.info(String.format("Waiting for %d regular background threads to exit", stopLatch.getCount()));
+            try {
+                if (!stopLatch.await(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                    LOGGER.info("Background threads did not stop in expected time {}", timeout);
+                }
+            } catch (InterruptedException e) {
+                LOGGER.warn("Interrupted while waiting for background threads " + e);
             }
-        } catch (InterruptedException e) {
-            LOGGER.warn("Interrupted while waiting for background threads " + e);
-        }
-        if (lostCleanup != null) {
-            lostCleanup.shutdown(timeout);
-        }
-        LOGGER.info("Background threads have exitted");
+            if (lostCleanup != null) {
+                return lostCleanup.shutdown(timeout);
+            }
+            else {
+                return Mono.empty();
+            }
+        }).doOnTerminate(() -> LOGGER.info("Background threads have exitted"));
     }
 
     private void runRegularAttemptsCleanupThread() {
@@ -213,7 +217,7 @@ public class CoreTransactionsCleanup {
     }
 
     public Mono<Void> shutdown(Duration timeout) {
-        return Mono.fromRunnable(() -> stopBackgroundProcesses(timeout));
+        return stopBackgroundProcesses(timeout);
         // Note we don't shutdown the schedulers here - those are part of the CoreEnvironment, which may be
         // shared by multiple Clusters.
     }

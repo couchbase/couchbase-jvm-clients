@@ -25,6 +25,7 @@ import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.logging.RedactableArgument;
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecord;
 import com.couchbase.client.core.transaction.support.OptionsUtil;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
@@ -41,7 +42,6 @@ import com.couchbase.client.core.transaction.CoreTransactionsReactive;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
 import com.couchbase.client.core.transaction.log.SimpleEventBusLogger;
 import com.couchbase.client.core.transaction.util.DebugUtil;
-import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import com.couchbase.client.core.util.Bytes;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -103,24 +103,25 @@ public class ClientRecord {
         this.core = Objects.requireNonNull(core);
     }
 
-    public Flux<Void> removeClientFromCleanupSet(String clientUuid, Set<CollectionIdentifier> cleanupSet) {
-        return removeClientFromCleanupSet(clientUuid, TIMEOUT, cleanupSet);
+    public Flux<Void> removeClientFromClientRecord(String clientUuid, Set<CollectionIdentifier> cleanupSet) {
+        return removeClientFromClientRecord(clientUuid, TIMEOUT, cleanupSet);
     }
 
     /**
      * Called on shutdown to cleanly remove a client from the client-record.
      */
-    public Flux<Void> removeClientFromCleanupSet(String clientUuid, Duration timeout, Set<CollectionIdentifier> cleanupSet) {
-        return Flux.fromIterable(cleanupSet)
+    public Flux<Void> removeClientFromClientRecord(String clientUuid, Duration timeout, Set<CollectionIdentifier> collections) {
+        return Flux.fromIterable(collections)
 
                 .subscribeOn(core.context().environment().transactionsSchedulers().schedulerCleanup())
+
+                .doOnNext(v -> LOGGER.info("{} removing from client record on collection {}", clientUuid, RedactableArgument.redactUser(v)))
 
                 .concatMap(collection -> beforeRemoveClient(this) // testing hook
 
                         // Use default timeout+durability here.  App is probably shutting down, let's not
                         // hold it up.  Not mission critical if record doesn't get removed, it will get
                         // cleaned up when it expires.
-                        // Ok to use default collection here, as this method is only called when not using a custom metadata collection
                         .then(TransactionKVHandler.mutateIn(core, collection, CLIENT_RECORD_DOC_ID, mutatingTimeout(),
                                 false, false, false,
                                 false, false, 0,
@@ -131,16 +132,16 @@ public class ClientRecord {
                         .onErrorResume(err -> {
                             switch (ErrorClass.classify(err)) {
                                 case FAIL_DOC_NOT_FOUND:
-                                    LOGGER.debug(String.format("%s/%s remove skipped as client record does not exist",
-                                            collection, clientUuid));
+                                    LOGGER.info(String.format("%s/%s remove skipped as client record does not exist",
+                                            RedactableArgument.redactUser(collection), clientUuid));
                                     return Mono.empty();
                                 case FAIL_PATH_NOT_FOUND:
-                                    LOGGER.debug(String.format("%s/%s remove skipped as client record entry does not exist",
-                                            collection, clientUuid));
+                                    LOGGER.info(String.format("%s/%s remove skipped as client record entry does not exist",
+                                            RedactableArgument.redactUser(collection), clientUuid));
                                     return Mono.empty();
                                 default:
-                                    LOGGER.debug(String.format("%s/%s got error while removing client from client record: %s",
-                                            collection, clientUuid, DebugUtil.dbg(err)));
+                                    LOGGER.info(String.format("%s/%s got error while removing client from client record: %s",
+                                            RedactableArgument.redactUser(collection), clientUuid, DebugUtil.dbg(err)));
                                     return Mono.error(err);
                             }
                         })
@@ -150,7 +151,7 @@ public class ClientRecord {
                                 .exponentialBackoff(BACKOFF_START, BACKOFF_END)
                                 .doOnRetry(v -> {
                                     LOGGER.info(String.format("%s/%s retrying removing client from record on error %s",
-                                            collection, clientUuid, DebugUtil.dbg(v.exception())));
+                                            RedactableArgument.redactUser(collection), clientUuid, DebugUtil.dbg(v.exception())));
                                 })
                                 .toReactorRetry())
 
@@ -158,7 +159,7 @@ public class ClientRecord {
 
                         .doOnNext(v -> {
                             LOGGER.info(String.format("%s/%s removed from client record",
-                                    collection, clientUuid));
+                                    RedactableArgument.redactUser(collection), clientUuid));
                         })
 
                         .doOnError(err -> {
