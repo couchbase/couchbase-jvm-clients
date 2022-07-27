@@ -69,7 +69,7 @@ public class TransactionsCleaner {
     private final Core core;
     private final CleanerHooks hooks;
 
-    private final static int BEING_LOGGING_FAILED_CLEANUPS_AT_WARN_AFTER_X_MINUTES = 60 * 24 * 2;
+    private final static int BEING_LOGGING_FAILED_CLEANUPS_AT_WARN_AFTER_X_MINUTES = 60 * 2;
 
     public TransactionsCleaner(Core core, CleanerHooks hooks) {
         this.core = Objects.requireNonNull(core);
