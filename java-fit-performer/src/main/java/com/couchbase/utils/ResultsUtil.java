@@ -16,6 +16,7 @@
 package com.couchbase.utils;
 
 import com.couchbase.InternalPerformerFailure;
+import com.couchbase.PerformerService;
 import com.couchbase.client.core.error.AmbiguousTimeoutException;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.DocumentExistsException;
@@ -42,10 +43,10 @@ import com.couchbase.client.core.transaction.support.AttemptState;
 import com.couchbase.client.java.transactions.error.TransactionCommitAmbiguousException;
 import com.couchbase.client.java.transactions.error.TransactionExpiredException;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
-import com.couchbase.grpc.protocol.DocId;
-import com.couchbase.grpc.protocol.ExternalException;
-import com.couchbase.grpc.protocol.TransactionException;
-import com.couchbase.grpc.protocol.TransactionResult;
+import com.couchbase.client.protocol.transactions.DocId;
+import com.couchbase.client.protocol.transactions.ExternalException;
+import com.couchbase.client.protocol.transactions.TransactionException;
+import com.couchbase.client.protocol.transactions.TransactionResult;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -98,7 +99,7 @@ public class ResultsUtil {
                     response.addLog(l.toString()));
         }
 
-        String globalError = com.couchbase.PerformerTransactionService.globalError.getAndSet(null);
+        String globalError = PerformerService.globalError.getAndSet(null);
         if (globalError != null) {
             response.setPerformerSpecificValidation(globalError);
         }
@@ -118,24 +119,24 @@ public class ResultsUtil {
         }
     }
 
-    public static com.couchbase.grpc.protocol.AttemptStates mapState(AttemptState state) {
+    public static com.couchbase.client.protocol.transactions.AttemptStates mapState(AttemptState state) {
         switch (state) {
             case ABORTED:
-                return com.couchbase.grpc.protocol.AttemptStates.ABORTED;
+                return com.couchbase.client.protocol.transactions.AttemptStates.ABORTED;
             case COMMITTED:
-                return com.couchbase.grpc.protocol.AttemptStates.COMMITTED;
+                return com.couchbase.client.protocol.transactions.AttemptStates.COMMITTED;
             case NOT_STARTED:
                 // NOTHING_WRITTEN is a better name than NOT_STARTED, as it could in fact be a completed
                 // read-only transaction, but the enum has been published now.
-                return com.couchbase.grpc.protocol.AttemptStates.NOTHING_WRITTEN;
+                return com.couchbase.client.protocol.transactions.AttemptStates.NOTHING_WRITTEN;
             case COMPLETED:
-                return com.couchbase.grpc.protocol.AttemptStates.COMPLETED;
+                return com.couchbase.client.protocol.transactions.AttemptStates.COMPLETED;
             case PENDING:
-                return com.couchbase.grpc.protocol.AttemptStates.PENDING;
+                return com.couchbase.client.protocol.transactions.AttemptStates.PENDING;
             case ROLLED_BACK:
-                return com.couchbase.grpc.protocol.AttemptStates.ROLLED_BACK;
+                return com.couchbase.client.protocol.transactions.AttemptStates.ROLLED_BACK;
             default:
-                return com.couchbase.grpc.protocol.AttemptStates.UNKNOWN;
+                return com.couchbase.client.protocol.transactions.AttemptStates.UNKNOWN;
         }
     }
 
@@ -212,10 +213,10 @@ public class ResultsUtil {
         }
     }
 
-    public static com.couchbase.grpc.protocol.TransactionCleanupAttempt mapCleanupAttempt(TransactionCleanupAttemptEvent result,
+    public static com.couchbase.client.protocol.transactions.TransactionCleanupAttempt mapCleanupAttempt(TransactionCleanupAttemptEvent result,
                                                                                           Optional<ActiveTransactionRecordEntry> atrEntry) {
 
-        com.couchbase.grpc.protocol.TransactionCleanupAttempt.Builder builder = com.couchbase.grpc.protocol.TransactionCleanupAttempt.newBuilder()
+        var builder = com.couchbase.client.protocol.transactions.TransactionCleanupAttempt.newBuilder()
                 .setSuccess(result.success())
                 .setAttemptId(result.attemptId())
                 .addAllLogs(result.logs().stream().map(TransactionLogEvent::toString).collect(Collectors.toList()))

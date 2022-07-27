@@ -19,8 +19,8 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.transactions.TransactionQueryResult;
-import com.couchbase.grpc.protocol.CommandQuery;
-import com.couchbase.grpc.protocol.ExpectedResult;
+import com.couchbase.client.protocol.transactions.CommandQuery;
+import com.couchbase.client.protocol.transactions.ExpectedResult;
 import com.couchbase.twoway.TestFailure;
 import reactor.core.publisher.Mono;
 

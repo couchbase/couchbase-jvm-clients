@@ -37,8 +37,8 @@ import com.couchbase.client.core.transaction.util.TestTransactionAttemptContextF
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.codec.RawJsonTranscoder;
 import com.couchbase.client.java.kv.UpsertOptions;
-import com.couchbase.grpc.protocol.Hook;
-import com.couchbase.grpc.protocol.HookAction;
+import com.couchbase.client.protocol.hooks.transactions.Hook;
+import com.couchbase.client.protocol.hooks.transactions.HookAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;

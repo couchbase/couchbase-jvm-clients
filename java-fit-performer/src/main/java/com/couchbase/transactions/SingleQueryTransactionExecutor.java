@@ -30,11 +30,11 @@ import com.couchbase.client.java.query.QueryScanConsistency;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.transactions.config.SingleQueryTransactionOptions;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
-import com.couchbase.grpc.protocol.API;
-import com.couchbase.grpc.protocol.ExternalException;
-import com.couchbase.grpc.protocol.TransactionException;
-import com.couchbase.grpc.protocol.TransactionSingleQueryRequest;
-import com.couchbase.grpc.protocol.TransactionSingleQueryResponse;
+import com.couchbase.client.protocol.shared.API;
+import com.couchbase.client.protocol.transactions.ExternalException;
+import com.couchbase.client.protocol.transactions.TransactionException;
+import com.couchbase.client.protocol.transactions.TransactionSingleQueryRequest;
+import com.couchbase.client.protocol.transactions.TransactionSingleQueryResponse;
 import com.couchbase.utils.ClusterConnection;
 import com.couchbase.utils.HooksUtil;
 import com.couchbase.utils.ResultValidation;
@@ -156,7 +156,7 @@ public class SingleQueryTransactionExecutor {
     private static QueryOptions setSingleQueryTransactionOptions(TransactionSingleQueryRequest request, ClusterConnection clusterConnection) {
 
         if (request.hasQueryOptions()) {
-            com.couchbase.grpc.protocol.QueryOptions grpcQueryOptions = request.getQueryOptions();
+            com.couchbase.client.protocol.sdk.query.QueryOptions grpcQueryOptions = request.getQueryOptions();
             com.couchbase.client.java.query.QueryOptions queryOptions = com.couchbase.client.java.query.QueryOptions.queryOptions();
 
             if (grpcQueryOptions.hasScanConsistency()) {
@@ -212,7 +212,7 @@ public class SingleQueryTransactionExecutor {
             }
 
             if (grpcQueryOptions.hasSingleQueryTransactionOptions()) {
-                com.couchbase.grpc.protocol.SingleQueryTransactionOptions grpcSingleQueryOptions = grpcQueryOptions.getSingleQueryTransactionOptions();
+                com.couchbase.client.protocol.sdk.query.SingleQueryTransactionOptions grpcSingleQueryOptions = grpcQueryOptions.getSingleQueryTransactionOptions();
                 SingleQueryTransactionOptions singleQueryOptions = SingleQueryTransactionOptions.singleQueryTransactionOptions();
 
                 if (grpcSingleQueryOptions.hasDurability()) {

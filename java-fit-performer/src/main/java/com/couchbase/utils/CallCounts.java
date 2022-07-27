@@ -15,7 +15,7 @@
  */
 package com.couchbase.utils;
 
-import com.couchbase.grpc.protocol.HookPoint;
+import com.couchbase.client.protocol.hooks.transactions.HookPoint;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 

@@ -29,33 +29,32 @@ import com.couchbase.client.core.transaction.forwards.Supported;
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.java.transactions.config.TransactionsConfig;
-import com.couchbase.grpc.protocol.API;
-import com.couchbase.grpc.protocol.CleanupSet;
-import com.couchbase.grpc.protocol.CleanupSetFetchRequest;
-import com.couchbase.grpc.protocol.CleanupSetFetchResponse;
-import com.couchbase.grpc.protocol.ClientRecordProcessRequest;
-import com.couchbase.grpc.protocol.ClientRecordProcessResponse;
-import com.couchbase.grpc.protocol.ClusterConnectionCloseRequest;
-import com.couchbase.grpc.protocol.ClusterConnectionCloseResponse;
-import com.couchbase.grpc.protocol.ClusterConnectionCreateRequest;
-import com.couchbase.grpc.protocol.ClusterConnectionCreateResponse;
-import com.couchbase.grpc.protocol.Collection;
-import com.couchbase.grpc.protocol.DisconnectConnectionsRequest;
-import com.couchbase.grpc.protocol.DisconnectConnectionsResponse;
-import com.couchbase.grpc.protocol.EchoRequest;
-import com.couchbase.grpc.protocol.EchoResponse;
-import com.couchbase.grpc.protocol.PerformerCaps;
-import com.couchbase.grpc.protocol.PerformerCapsFetchRequest;
-import com.couchbase.grpc.protocol.PerformerCapsFetchResponse;
-import com.couchbase.grpc.protocol.PerformerTransactionServiceGrpc.PerformerTransactionServiceImplBase;
-import com.couchbase.grpc.protocol.TransactionCleanupAttempt;
-import com.couchbase.grpc.protocol.TransactionCleanupRequest;
-import com.couchbase.grpc.protocol.TransactionCreateRequest;
-import com.couchbase.grpc.protocol.TransactionResult;
-import com.couchbase.grpc.protocol.TransactionSingleQueryRequest;
-import com.couchbase.grpc.protocol.TransactionSingleQueryResponse;
-import com.couchbase.grpc.protocol.TransactionStreamDriverToPerformer;
-import com.couchbase.grpc.protocol.TransactionStreamPerformerToDriver;
+import com.couchbase.client.protocol.PerformerServiceGrpc;
+import com.couchbase.client.protocol.performer.PerformerCapsFetchRequest;
+import com.couchbase.client.protocol.performer.PerformerCapsFetchResponse;
+import com.couchbase.client.protocol.shared.API;
+import com.couchbase.client.protocol.shared.ClusterConnectionCloseRequest;
+import com.couchbase.client.protocol.shared.ClusterConnectionCloseResponse;
+import com.couchbase.client.protocol.shared.ClusterConnectionCreateRequest;
+import com.couchbase.client.protocol.shared.ClusterConnectionCreateResponse;
+import com.couchbase.client.protocol.shared.Collection;
+import com.couchbase.client.protocol.shared.DisconnectConnectionsRequest;
+import com.couchbase.client.protocol.shared.DisconnectConnectionsResponse;
+import com.couchbase.client.protocol.shared.EchoRequest;
+import com.couchbase.client.protocol.shared.EchoResponse;
+import com.couchbase.client.protocol.transactions.CleanupSet;
+import com.couchbase.client.protocol.transactions.CleanupSetFetchRequest;
+import com.couchbase.client.protocol.transactions.CleanupSetFetchResponse;
+import com.couchbase.client.protocol.transactions.ClientRecordProcessRequest;
+import com.couchbase.client.protocol.transactions.ClientRecordProcessResponse;
+import com.couchbase.client.protocol.transactions.TransactionCleanupAttempt;
+import com.couchbase.client.protocol.transactions.TransactionCleanupRequest;
+import com.couchbase.client.protocol.transactions.TransactionCreateRequest;
+import com.couchbase.client.protocol.transactions.TransactionResult;
+import com.couchbase.client.protocol.transactions.TransactionSingleQueryRequest;
+import com.couchbase.client.protocol.transactions.TransactionSingleQueryResponse;
+import com.couchbase.client.protocol.transactions.TransactionStreamDriverToPerformer;
+import com.couchbase.client.protocol.transactions.TransactionStreamPerformerToDriver;
 import com.couchbase.transactions.SingleQueryTransactionExecutor;
 import com.couchbase.twoway.TwoWayTransactionBlocking;
 import com.couchbase.twoway.TwoWayTransactionMarshaller;
@@ -86,28 +85,28 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION;
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE;
 
-public class PerformerTransactionService extends PerformerTransactionServiceImplBase {
-    private static final Logger logger = LoggerFactory.getLogger(PerformerTransactionService.class);
+public class PerformerService extends PerformerServiceGrpc.PerformerServiceImplBase {
+    private static final Logger logger = LoggerFactory.getLogger(PerformerService.class);
     private static final ConcurrentHashMap<String, ClusterConnection> clusterConnections = new ConcurrentHashMap<String, ClusterConnection>();
 
     // Allows capturing various errors so we can notify the driver of problems.
     public static AtomicReference<String> globalError = new AtomicReference<>();
 
     public void performerCapsFetch(PerformerCapsFetchRequest request,
-                                 StreamObserver<PerformerCapsFetchResponse> responseObserver) {
+                                   StreamObserver<PerformerCapsFetchResponse> responseObserver) {
         try {
             var response = PerformerCapsFetchResponse.newBuilder();
 
-            response.setPerformerLibraryVersion(VersionUtil.introspectSDKVersion());
+            response.setLibraryVersion(VersionUtil.introspectSDKVersion());
 
             for (Extension ext : Extension.SUPPORTED) {
                 try {
-                    PerformerCaps pc = PerformerCaps.valueOf(ext.name());
-                    response.addPerformerCaps(pc);
+                    var pc = com.couchbase.client.protocol.transactions.Caps.valueOf(ext.name());
+                    response.addTransactionImplementationsCaps(pc);
                 } catch (IllegalArgumentException err) {
                     // FIT and Java have used slightly different names for this
                     if (ext.name().equals("EXT_CUSTOM_METADATA")) {
-                        response.addPerformerCaps(PerformerCaps.EXT_CUSTOM_METADATA_COLLECTION);
+                        response.addTransactionImplementationsCaps(com.couchbase.client.protocol.transactions.Caps.EXT_CUSTOM_METADATA_COLLECTION);
                     } else {
                         logger.warn("Could not find FIT extension for " + ext.name());
                     }
@@ -117,7 +116,7 @@ public class PerformerTransactionService extends PerformerTransactionServiceImpl
             var supported = new Supported();
             var protocolVersion = supported.protocolMajor + "." + supported.protocolMinor;
 
-            response.setProtocolVersion(protocolVersion);
+            response.setTransactionsProtocolVersion(protocolVersion);
             response.addSupportedApis(API.DEFAULT);
             response.addSupportedApis(API.ASYNC);
             response.setPerformerUserAgent("java-sdk");
@@ -233,7 +232,7 @@ public class PerformerTransactionService extends PerformerTransactionServiceImpl
         return marshaller.run(toTest);
     }
 
-    private static CollectionIdentifier collectionIdentifierFor(com.couchbase.grpc.protocol.DocId doc) {
+    private static CollectionIdentifier collectionIdentifierFor(com.couchbase.client.protocol.transactions.DocId doc) {
         return new CollectionIdentifier(doc.getBucketName(), Optional.of(doc.getScopeName()), Optional.of(doc.getCollectionName()));
     }
 
@@ -431,7 +430,7 @@ public class PerformerTransactionService extends PerformerTransactionServiceImpl
         LogRedaction.setRedactionLevel(RedactionLevel.PARTIAL);
 
         Server server = ServerBuilder.forPort(port)
-                .addService(new PerformerTransactionService())
+                .addService(new PerformerService())
                 .build();
         server.start();
         logger.info("Server Started at {}", server.getPort());

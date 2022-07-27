@@ -28,24 +28,24 @@ import com.couchbase.client.java.transactions.TransactionGetResult;
 import com.couchbase.client.java.transactions.TransactionQueryResult;
 import com.couchbase.client.java.transactions.TransactionResult;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
-import com.couchbase.grpc.protocol.API;
-import com.couchbase.grpc.protocol.CommandBatch;
-import com.couchbase.grpc.protocol.CommandGet;
-import com.couchbase.grpc.protocol.CommandGetOptional;
-import com.couchbase.grpc.protocol.CommandInsert;
-import com.couchbase.grpc.protocol.CommandInsertRegularKV;
-import com.couchbase.grpc.protocol.CommandQuery;
-import com.couchbase.grpc.protocol.CommandRemove;
-import com.couchbase.grpc.protocol.CommandRemoveRegularKV;
-import com.couchbase.grpc.protocol.CommandReplace;
-import com.couchbase.grpc.protocol.CommandReplaceRegularKV;
-import com.couchbase.grpc.protocol.CommandSetLatch;
-import com.couchbase.grpc.protocol.CommandWaitOnLatch;
-import com.couchbase.grpc.protocol.ExpectedResult;
-import com.couchbase.grpc.protocol.TransactionAttemptRequest;
-import com.couchbase.grpc.protocol.TransactionCommand;
-import com.couchbase.grpc.protocol.TransactionCreateRequest;
-import com.couchbase.grpc.protocol.TransactionStreamPerformerToDriver;
+import com.couchbase.client.protocol.shared.API;
+import com.couchbase.client.protocol.transactions.CommandBatch;
+import com.couchbase.client.protocol.transactions.CommandGet;
+import com.couchbase.client.protocol.transactions.CommandGetOptional;
+import com.couchbase.client.protocol.transactions.CommandInsert;
+import com.couchbase.client.protocol.transactions.CommandInsertRegularKV;
+import com.couchbase.client.protocol.transactions.CommandQuery;
+import com.couchbase.client.protocol.transactions.CommandRemove;
+import com.couchbase.client.protocol.transactions.CommandRemoveRegularKV;
+import com.couchbase.client.protocol.transactions.CommandReplace;
+import com.couchbase.client.protocol.transactions.CommandReplaceRegularKV;
+import com.couchbase.client.protocol.transactions.CommandSetLatch;
+import com.couchbase.client.protocol.transactions.CommandWaitOnLatch;
+import com.couchbase.client.protocol.transactions.ExpectedResult;
+import com.couchbase.client.protocol.transactions.TransactionAttemptRequest;
+import com.couchbase.client.protocol.transactions.TransactionCommand;
+import com.couchbase.client.protocol.transactions.TransactionCreateRequest;
+import com.couchbase.client.protocol.transactions.TransactionStreamPerformerToDriver;
 import com.couchbase.utils.ClusterConnection;
 import com.couchbase.utils.OptionsUtil;
 import com.couchbase.utils.ResultValidation;
@@ -65,7 +65,7 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
     /**
      * Starts a transaction that will run until completion.
      */
-    public static com.couchbase.grpc.protocol.TransactionResult run(
+    public static com.couchbase.client.protocol.transactions.TransactionResult run(
             ClusterConnection connection,
             TransactionCreateRequest req) {
         TwoWayTransactionBlocking txn = new TwoWayTransactionBlocking();

@@ -30,11 +30,11 @@ import com.couchbase.client.java.transactions.TransactionKeyspace;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
 import com.couchbase.client.java.transactions.config.TransactionsCleanupConfig;
 import com.couchbase.client.java.transactions.config.TransactionsConfig;
-import com.couchbase.grpc.protocol.ClusterConnectionCreateRequest;
-import com.couchbase.grpc.protocol.CommandQuery;
-import com.couchbase.grpc.protocol.Durability;
-import com.couchbase.grpc.protocol.TransactionCreateRequest;
-import com.couchbase.grpc.protocol.TransactionQueryOptions;
+import com.couchbase.client.protocol.shared.ClusterConnectionCreateRequest;
+import com.couchbase.client.protocol.transactions.CommandQuery;
+import com.couchbase.client.protocol.shared.Durability;
+import com.couchbase.client.protocol.transactions.TransactionCreateRequest;
+import com.couchbase.client.protocol.transactions.TransactionQueryOptions;
 
 import javax.annotation.Nullable;
 import java.time.Duration;
@@ -206,7 +206,7 @@ public class OptionsUtil {
             }
 
             if (to.hasMetadataCollection()) {
-                com.couchbase.grpc.protocol.Collection mc = to.getMetadataCollection();
+                com.couchbase.client.protocol.shared.Collection mc = to.getMetadataCollection();
                 ptcb.metadataCollection(connection.cluster().bucket(mc.getBucketName())
                         .scope(mc.getScopeName())
                         .collection(mc.getCollectionName()));

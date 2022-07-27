@@ -23,7 +23,7 @@ import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.tracing.opentelemetry.OpenTelemetryRequestTracer;
-import com.couchbase.grpc.protocol.DocId;
+import com.couchbase.client.protocol.transactions.DocId;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 
 import javax.annotation.Nullable;

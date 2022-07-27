@@ -31,22 +31,22 @@ import com.couchbase.client.java.codec.JsonValueSerializerWrapper;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.transactions.TransactionGetResult;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
-import com.couchbase.grpc.protocol.BroadcastToOtherConcurrentTransactionsRequest;
-import com.couchbase.grpc.protocol.CommandBatch;
-import com.couchbase.grpc.protocol.CommandGet;
-import com.couchbase.grpc.protocol.CommandGetOptional;
-import com.couchbase.grpc.protocol.CommandSetLatch;
-import com.couchbase.grpc.protocol.CommandWaitOnLatch;
-import com.couchbase.grpc.protocol.DocStatus;
-import com.couchbase.grpc.protocol.ErrorWrapper;
-import com.couchbase.grpc.protocol.Event;
-import com.couchbase.grpc.protocol.EventType;
-import com.couchbase.grpc.protocol.ExpectedCause;
-import com.couchbase.grpc.protocol.ExpectedResult;
-import com.couchbase.grpc.protocol.ExternalException;
-import com.couchbase.grpc.protocol.TransactionCommand;
-import com.couchbase.grpc.protocol.TransactionCreateRequest;
-import com.couchbase.grpc.protocol.TransactionStreamPerformerToDriver;
+import com.couchbase.client.protocol.transactions.BroadcastToOtherConcurrentTransactionsRequest;
+import com.couchbase.client.protocol.transactions.CommandBatch;
+import com.couchbase.client.protocol.transactions.CommandGet;
+import com.couchbase.client.protocol.transactions.CommandGetOptional;
+import com.couchbase.client.protocol.transactions.CommandSetLatch;
+import com.couchbase.client.protocol.transactions.CommandWaitOnLatch;
+import com.couchbase.client.protocol.transactions.DocStatus;
+import com.couchbase.client.protocol.transactions.ErrorWrapper;
+import com.couchbase.client.protocol.transactions.Event;
+import com.couchbase.client.protocol.transactions.EventType;
+import com.couchbase.client.protocol.transactions.ExpectedCause;
+import com.couchbase.client.protocol.transactions.ExpectedResult;
+import com.couchbase.client.protocol.transactions.ExternalException;
+import com.couchbase.client.protocol.transactions.TransactionCommand;
+import com.couchbase.client.protocol.transactions.TransactionCreateRequest;
+import com.couchbase.client.protocol.transactions.TransactionStreamPerformerToDriver;
 import com.couchbase.utils.ClusterConnection;
 import com.couchbase.utils.ResultsUtil;
 import io.grpc.stub.StreamObserver;
@@ -130,7 +130,7 @@ public abstract class TwoWayTransactionShared {
             @Nullable StreamObserver<TransactionStreamPerformerToDriver> toTest
     );
 
-    public com.couchbase.grpc.protocol.TransactionResult run(
+    public com.couchbase.client.protocol.transactions.TransactionResult run(
             ClusterConnection connection,
             TransactionCreateRequest req,
             @Nullable StreamObserver<TransactionStreamPerformerToDriver> toTest

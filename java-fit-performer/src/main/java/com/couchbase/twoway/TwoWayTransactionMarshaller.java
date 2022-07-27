@@ -16,14 +16,14 @@
 package com.couchbase.twoway;
 
 import com.couchbase.InternalPerformerFailure;
-import com.couchbase.grpc.protocol.API;
-import com.couchbase.grpc.protocol.BroadcastToOtherConcurrentTransactionsRequest;
-import com.couchbase.grpc.protocol.CommandSetLatch;
-import com.couchbase.grpc.protocol.TransactionCreateRequest;
-import com.couchbase.grpc.protocol.TransactionCreated;
-import com.couchbase.grpc.protocol.TransactionResult;
-import com.couchbase.grpc.protocol.TransactionStreamDriverToPerformer;
-import com.couchbase.grpc.protocol.TransactionStreamPerformerToDriver;
+import com.couchbase.client.protocol.shared.API;
+import com.couchbase.client.protocol.transactions.BroadcastToOtherConcurrentTransactionsRequest;
+import com.couchbase.client.protocol.transactions.CommandSetLatch;
+import com.couchbase.client.protocol.transactions.TransactionCreateRequest;
+import com.couchbase.client.protocol.transactions.TransactionCreated;
+import com.couchbase.client.protocol.transactions.TransactionResult;
+import com.couchbase.client.protocol.transactions.TransactionStreamDriverToPerformer;
+import com.couchbase.client.protocol.transactions.TransactionStreamPerformerToDriver;
 import com.couchbase.utils.ClusterConnection;
 import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
