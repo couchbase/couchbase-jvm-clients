@@ -425,9 +425,10 @@ public class PerformerService extends CorePerformer {
 
         // Setup global error handlers
         Hooks.onErrorDropped(err -> {
-            // Temporarily swallowing CompletionException, as they are known error TXNJ-457 and are not adding signal
-            if (!(err instanceof CompletionException)) {
-                globalError.set("Hook dropped (raised async so could have been in an earlier test): " + err + " cause: " + (err.getCause() != null ? err.getCause().getMessage() : "-"));
+            globalError.set("Hook dropped (raised async so could have been in an earlier test): " + err + " cause: " + (err.getCause() != null ? err.getCause().getMessage() : "-"));
+            logger.warn(err.toString());
+            for (var ex : err.getStackTrace()) {
+                logger.warn(ex.toString());
             }
         });
 
