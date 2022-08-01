@@ -383,7 +383,7 @@ pipeline {
             }
         }
 
-        stage('testing  (Linux, cbdyncluster 7.2-stable, Oracle JDK 8)') {
+        stage('testing  (Linux, cbdyncluster 7.2-stable Serverless mode, Oracle JDK 8)') {
             agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
@@ -395,7 +395,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "7.2-stable", includeEventing : true)
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.2-stable", includeEventing : true, serverlessMode: true)
             }
             post {
                 always {
@@ -513,6 +513,7 @@ pipeline {
         }
 
 
+
         // Commented for now as sdk-integration-test-win temporarily down
 //         stage('testing (Windows, cbdyncluster 6.5, Oracle JDK 8)') {
 //             agent { label 'sdk-integration-test-win' }
@@ -562,6 +563,7 @@ void test(Map args=[:],
     boolean includeEventing = args.containsKey("includeEventing") ? args.get("includeEventing") : false
     boolean enableDevelopPreview = args.containsKey("enableDevelopPreview") ? args.get("enableDevelopPreview") : false
     boolean multiCerts = args.containsKey("multiCerts") ? args.get("multiCerts") : false
+    boolean serverlessMode = args.containsKey("serverlessMode") ? args.get("serverlessMode") : false
 
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
         cleanupWorkspace()
@@ -569,7 +571,7 @@ void test(Map args=[:],
 
         dir('couchbase-jvm-clients') {
             checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
-            script { testAgainstServer(serverVersion, QUICK_TEST_MODE, includeAnalytics, includeEventing, enableDevelopPreview, ceMode, multiCerts) }
+            script { testAgainstServer(serverVersion, QUICK_TEST_MODE, includeAnalytics, includeEventing, enableDevelopPreview, ceMode, multiCerts, serverlessMode) }
             shWithEcho("make deps-only")
             shWithEcho("mvn clean install -Dmaven.test.skip --batch-mode")
         }
@@ -672,7 +674,8 @@ void testAgainstServer(String serverVersion,
                        boolean includeEventing = false,
                        boolean enableDevelopPreview = false,
                        boolean ceMode = false,
-                       boolean multiCerts = false) {
+                       boolean multiCerts = false,
+                       boolean serverlessMode = false) {
     def clusterId = null
     try {
         // For debugging
@@ -689,6 +692,9 @@ void testAgainstServer(String serverVersion,
 
         // Allocate the cluster
         def script = "cbdyncluster allocate --num-nodes=3 ${ceMode ? ' --use-ce=true' : ''} --server-version=${serverVersion}"
+        if (serverlessMode) {
+            script += " --serverless-mode"
+       }
         echo "Running " + script
         clusterId = sh(script: script, returnStdout: true).trim()
         echo "Got cluster ID $clusterId"
