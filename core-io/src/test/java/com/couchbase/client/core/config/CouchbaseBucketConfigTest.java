@@ -103,6 +103,11 @@ class CouchbaseBucketConfigTest {
         assertEquals(9000, (int)config.nodes().get(0).services().get(ServiceType.MANAGER));
         assertEquals("192.168.1.194", config.nodes().get(1).hostname());
         assertEquals(9001, (int)config.nodes().get(1).services().get(ServiceType.MANAGER));
+
+        assertEquals("192.168.1.194", config.nodeAtIndex(0).hostname());
+        assertEquals(12000, config.nodeAtIndex(0).services().get(ServiceType.KV));
+        assertEquals("192.168.1.194", config.nodeAtIndex(1).hostname());
+        assertEquals(12002, config.nodeAtIndex(1).services().get(ServiceType.KV));
     }
 
     @Test
@@ -116,6 +121,11 @@ class CouchbaseBucketConfigTest {
         assertTrue(config.nodes().get(0).services().containsKey(ServiceType.KV));
         assertTrue(config.nodes().get(1).services().containsKey(ServiceType.KV));
         assertFalse(config.nodes().get(2).services().containsKey(ServiceType.KV));
+
+        assertEquals("192.168.0.102", config.nodeAtIndex(0).hostname());
+        assertEquals(12000, config.nodeAtIndex(0).services().get(ServiceType.KV));
+        assertEquals("127.0.0.1", config.nodeAtIndex(1).hostname());
+        assertEquals(12002, config.nodeAtIndex(1).services().get(ServiceType.KV));
     }
 
     @Test
@@ -128,6 +138,11 @@ class CouchbaseBucketConfigTest {
 
         assertEquals(1, config.numberOfReplicas());
         assertEquals(1024, config.numberOfPartitions());
+
+        assertEquals("fd63:6f75:6368:2068:1471:75ff:fe25:a8be", config.nodeAtIndex(0).hostname());
+        assertEquals(11210, config.nodeAtIndex(0).services().get(ServiceType.KV));
+        assertEquals("fd63:6f75:6368:2068:c490:b5ff:fe86:9cf7", config.nodeAtIndex(1).hostname());
+        assertEquals(11210, config.nodeAtIndex(1).services().get(ServiceType.KV));
     }
 
     @Test
@@ -248,6 +263,13 @@ class CouchbaseBucketConfigTest {
         expectedQuery.add("i-041c154dd0246354e.sdk.dev.cloud.couchbase.com:23001");
         expectedQuery.add("i-041c154dd0246354e.sdk.dev.cloud.couchbase.com:23002");
         assertEquals(expectedQuery, queryNodes);
+
+        assertEquals("i-041c154dd0246354e.sdk.dev.cloud.couchbase.com", config.nodeAtIndex(0).hostname());
+        assertEquals(21001, config.nodeAtIndex(0).sslServices().get(ServiceType.KV));
+        assertEquals("i-041c154dd0246354e.sdk.dev.cloud.couchbase.com", config.nodeAtIndex(1).hostname());
+        assertEquals(21002, config.nodeAtIndex(1).sslServices().get(ServiceType.KV));
+        assertEquals("i-041c154dd0246354e.sdk.dev.cloud.couchbase.com", config.nodeAtIndex(2).hostname());
+        assertEquals(11207, config.nodeAtIndex(2).sslServices().get(ServiceType.KV));
     }
 
     private static CouchbaseBucketConfig readConfig(final String path) {

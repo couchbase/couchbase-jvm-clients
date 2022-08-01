@@ -102,21 +102,20 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
     }
 
     /**
-     * Helper method to reference the partition hosts from the raw node list.
+     * Builds a list of nodes that are used for KV partition lookups.
      *
-     * @param nodeInfos the node infos.
-     * @param partitionInfo the partition info.
-     * @return a ordered reference list for the partition hosts.
+     * @param nodeInfos all nodes participating in the cluster which may not have the KV service enabled.
+     * @param partitionInfo the raw partition info to check against the nodes list.
+     * @return an ordered reference list for the partition hosts.
      */
-    private static List<NodeInfo> buildPartitionHosts(List<NodeInfo> nodeInfos, PartitionInfo partitionInfo) {
+    private static List<NodeInfo> buildPartitionHosts(final List<NodeInfo> nodeInfos,
+                                                      final PartitionInfo partitionInfo) {
         List<NodeInfo> partitionHosts = new ArrayList<>();
         for (String rawHost : partitionInfo.partitionHosts()) {
             String convertedHost;
-            int directPort;
             try {
                 String[] parts = rawHost.split(":");
                 String host = "";
-                String port = parts[parts.length - 1];
                 if (parts.length > 2) {
                     // Handle IPv6 syntax
                     for (int i = 0; i < parts.length - 1; i++) {
@@ -139,12 +138,6 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
                 }
 
                 convertedHost = host;
-                try {
-                    directPort = Integer.parseInt(port);
-                } catch (NumberFormatException e) {
-                    // TODO: LOGGER.warn("Could not parse port from the node address: {}, fallback to 0", system(rawHost));
-                    directPort = 0;
-                }
             } catch (Exception e) {
                 throw new ConfigException("Could not resolve " + rawHost + "on config building.", e);
             }

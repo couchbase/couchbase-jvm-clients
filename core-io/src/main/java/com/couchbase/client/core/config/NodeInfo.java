@@ -29,6 +29,9 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
 /**
  * Default implementation of {@link NodeInfo}.
@@ -182,12 +185,30 @@ public class NodeInfo {
     @Override
     public String toString() {
         return "NodeInfo{" +
-            "host=" + hostname +
-            ", ports=" + directServices +
-            ", securePorts=" + sslServices +
-            ", aa=" + alternateAddresses +
-            ", configPort=" + configPort +
-            ", nodeIdentifier=" + nodeIdentifier +
+            "host=" + redactSystem(hostname) +
+            ", ports=" + redactSystem(directServices) +
+            ", securePorts=" + redactSystem(sslServices) +
+            ", aa=" + redactSystem(alternateAddresses) +
+            ", configPort=" + redactSystem(configPort) +
+            ", nodeIdentifier=" + redactSystem(nodeIdentifier) +
             '}';
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        NodeInfo nodeInfo = (NodeInfo) o;
+        return configPort == nodeInfo.configPort && Objects.equals(hostname, nodeInfo.hostname)
+          && Objects.equals(directServices, nodeInfo.directServices)
+          && Objects.equals(sslServices, nodeInfo.sslServices)
+          && Objects.equals(alternateAddresses, nodeInfo.alternateAddresses)
+          && Objects.equals(nodeIdentifier, nodeInfo.nodeIdentifier);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(hostname, directServices, sslServices, alternateAddresses, nodeIdentifier, configPort);
+    }
+
 }
