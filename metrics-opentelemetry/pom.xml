@@ -16,9 +16,7 @@
     <description>Provides interoperability with OpenTelemetry Metrics</description>
 
     <properties>
-        <opentelemetry.version>1.13.0</opentelemetry.version>
-        <!-- once metrics is stable, only use one version -->
-        <opentelemetry-sdk.version>1.13.0-alpha</opentelemetry-sdk.version>
+        <opentelemetry.version>1.16.0</opentelemetry.version>
     </properties>
 
     <dependencies>
@@ -34,8 +32,8 @@
 
         <dependency>
             <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-sdk-metrics-testing</artifactId>
-            <version>${opentelemetry-sdk.version}</version>
+            <artifactId>opentelemetry-sdk-testing</artifactId>
+            <version>${opentelemetry.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
