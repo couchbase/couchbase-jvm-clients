@@ -13,18 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// [skip:<3.3.0]
-package com.couchbase.client.core.transaction;
+package com.couchbase.utils;
 
-import java.util.Optional;
+import com.couchbase.client.java.kv.ReplaceOptions;
+import com.couchbase.client.protocol.sdk.Caps;
 
-/**
- * These methods need to access package-private methods.
- */
-public class ExpiryUtil {
-    private ExpiryUtil() {}
+import java.util.ArrayList;
+import java.util.List;
 
-    public static boolean hasExpired(CoreTransactionAttemptContext ctx, String stage, Optional<String> docId) {
-        return ctx.hasExpiredClientSide(stage, docId);
+public class Capabilities {
+    public static List<Caps> sdkImplementationCaps() {
+        var out = new ArrayList<Caps>();
+
+        // [start:1.1.5]
+        out.add(Caps.SDK_PRESERVE_EXPIRY);
+        // [end:1.1.5]
+
+        return out;
     }
 }

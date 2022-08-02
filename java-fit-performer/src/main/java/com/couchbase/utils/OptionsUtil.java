@@ -17,19 +17,21 @@ package com.couchbase.utils;
 
 import com.couchbase.InternalPerformerFailure;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.core.transaction.cleanup.CleanerFactory;
-import com.couchbase.client.core.transaction.cleanup.CleanerMockFactory;
-import com.couchbase.client.core.transaction.cleanup.ClientRecordFactory;
-import com.couchbase.client.core.transaction.support.TransactionAttemptContextFactory;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.QueryProfile;
 import com.couchbase.client.java.query.QueryScanConsistency;
+// [start:3.3.0]
+import com.couchbase.client.core.transaction.cleanup.CleanerFactory;
+import com.couchbase.client.core.transaction.cleanup.CleanerMockFactory;
+import com.couchbase.client.core.transaction.cleanup.ClientRecordFactory;
+import com.couchbase.client.core.transaction.support.TransactionAttemptContextFactory;
 import com.couchbase.client.java.transactions.TransactionKeyspace;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
 import com.couchbase.client.java.transactions.config.TransactionsCleanupConfig;
 import com.couchbase.client.java.transactions.config.TransactionsConfig;
+// [end:3.3.0]
 import com.couchbase.client.protocol.shared.ClusterConnectionCreateRequest;
 import com.couchbase.client.protocol.transactions.CommandQuery;
 import com.couchbase.client.protocol.shared.Durability;
@@ -56,6 +58,7 @@ public class OptionsUtil {
                 clusterEnvironment.jsonSerializer(new CustomSerializer());
             }
 
+            // [start:3.3.0]
             if (request.getClusterConfig().hasTransactionsConfig()) {
                 var tc = request.getClusterConfig().getTransactionsConfig();
                 var builder = TransactionsConfig.builder();
@@ -114,6 +117,7 @@ public class OptionsUtil {
 
                 clusterEnvironment.transactionsConfig(builder);
             }
+            // [end:3.3.0]
         }
 
         return clusterEnvironment;
@@ -138,6 +142,7 @@ public class OptionsUtil {
         return durabilityLevel;
     }
 
+    // [start:3.3.0]
     public static com.couchbase.client.java.transactions.TransactionQueryOptions transactionQueryOptions(CommandQuery request) {
         com.couchbase.client.java.transactions.TransactionQueryOptions queryOptions = null;
         if (request.hasQueryOptions()) {
@@ -230,4 +235,5 @@ public class OptionsUtil {
         }
         return ptcb;
     }
+    // [end:3.3.0]
 }

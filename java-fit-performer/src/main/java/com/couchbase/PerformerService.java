@@ -18,6 +18,7 @@ package com.couchbase;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.logging.LogRedaction;
 import com.couchbase.client.core.logging.RedactionLevel;
+// [start:3.3.0]
 import com.couchbase.client.core.transaction.cleanup.TransactionsCleaner;
 import com.couchbase.client.core.transaction.cleanup.ClientRecord;
 import com.couchbase.client.core.transaction.cleanup.ClientRecordDetails;
@@ -29,19 +30,7 @@ import com.couchbase.client.core.transaction.forwards.Supported;
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.java.transactions.config.TransactionsConfig;
-import com.couchbase.client.protocol.PerformerServiceGrpc;
-import com.couchbase.client.protocol.performer.PerformerCapsFetchRequest;
-import com.couchbase.client.protocol.performer.PerformerCapsFetchResponse;
-import com.couchbase.client.protocol.shared.API;
-import com.couchbase.client.protocol.shared.ClusterConnectionCloseRequest;
-import com.couchbase.client.protocol.shared.ClusterConnectionCloseResponse;
-import com.couchbase.client.protocol.shared.ClusterConnectionCreateRequest;
-import com.couchbase.client.protocol.shared.ClusterConnectionCreateResponse;
 import com.couchbase.client.protocol.shared.Collection;
-import com.couchbase.client.protocol.shared.DisconnectConnectionsRequest;
-import com.couchbase.client.protocol.shared.DisconnectConnectionsResponse;
-import com.couchbase.client.protocol.shared.EchoRequest;
-import com.couchbase.client.protocol.shared.EchoResponse;
 import com.couchbase.client.protocol.transactions.CleanupSet;
 import com.couchbase.client.protocol.transactions.CleanupSetFetchRequest;
 import com.couchbase.client.protocol.transactions.CleanupSetFetchResponse;
@@ -59,10 +48,25 @@ import com.couchbase.transactions.SingleQueryTransactionExecutor;
 import com.couchbase.twoway.TwoWayTransactionBlocking;
 import com.couchbase.twoway.TwoWayTransactionMarshaller;
 import com.couchbase.twoway.TwoWayTransactionReactive;
-import com.couchbase.utils.ClusterConnection;
-import com.couchbase.utils.HooksUtil;
-import com.couchbase.utils.OptionsUtil;
 import com.couchbase.utils.ResultsUtil;
+import com.couchbase.utils.HooksUtil;
+// [end:3.3.0]
+import com.couchbase.client.performer.core.CorePerformer;
+import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
+import com.couchbase.client.performer.core.perf.Counters;
+import com.couchbase.client.protocol.performer.PerformerCapsFetchResponse;
+import com.couchbase.client.protocol.shared.API;
+import com.couchbase.client.protocol.shared.ClusterConnectionCloseRequest;
+import com.couchbase.client.protocol.shared.ClusterConnectionCloseResponse;
+import com.couchbase.client.protocol.shared.ClusterConnectionCreateRequest;
+import com.couchbase.client.protocol.shared.ClusterConnectionCreateResponse;
+import com.couchbase.client.protocol.shared.DisconnectConnectionsRequest;
+import com.couchbase.client.protocol.shared.DisconnectConnectionsResponse;
+import com.couchbase.client.protocol.shared.EchoRequest;
+import com.couchbase.client.protocol.shared.EchoResponse;
+import com.couchbase.utils.Capabilities;
+import com.couchbase.utils.ClusterConnection;
+import com.couchbase.utils.OptionsUtil;
 import com.couchbase.utils.VersionUtil;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -71,7 +75,6 @@ import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Hooks;
-import reactor.tools.agent.ReactorDebugAgent;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -85,51 +88,50 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION;
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE;
 
-public class PerformerService extends PerformerServiceGrpc.PerformerServiceImplBase {
+public class PerformerService extends CorePerformer {
     private static final Logger logger = LoggerFactory.getLogger(PerformerService.class);
     private static final ConcurrentHashMap<String, ClusterConnection> clusterConnections = new ConcurrentHashMap<String, ClusterConnection>();
 
     // Allows capturing various errors so we can notify the driver of problems.
     public static AtomicReference<String> globalError = new AtomicReference<>();
 
-    public void performerCapsFetch(PerformerCapsFetchRequest request,
-                                   StreamObserver<PerformerCapsFetchResponse> responseObserver) {
-        try {
-            var response = PerformerCapsFetchResponse.newBuilder();
+    @Override
+    protected SdkCommandExecutor executor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters) {
+        var connection = clusterConnections.get(workloads.getClusterConnectionId());
+        return new JavaSdkCommandExecutor(connection, counters);
+    }
 
-            response.setLibraryVersion(VersionUtil.introspectSDKVersion());
+    @Override
+    protected void customisePerformerCaps(PerformerCapsFetchResponse.Builder response) {
+        response.addAllSdkImplementationCaps(Capabilities.sdkImplementationCaps());
+        response.setLibraryVersion(VersionUtil.introspectSDKVersion());
 
-            for (Extension ext : Extension.SUPPORTED) {
-                try {
-                    var pc = com.couchbase.client.protocol.transactions.Caps.valueOf(ext.name());
-                    response.addTransactionImplementationsCaps(pc);
-                } catch (IllegalArgumentException err) {
-                    // FIT and Java have used slightly different names for this
-                    if (ext.name().equals("EXT_CUSTOM_METADATA")) {
-                        response.addTransactionImplementationsCaps(com.couchbase.client.protocol.transactions.Caps.EXT_CUSTOM_METADATA_COLLECTION);
-                    } else {
-                        logger.warn("Could not find FIT extension for " + ext.name());
-                    }
+        // [start:3.3.0]
+        for (Extension ext : Extension.SUPPORTED) {
+            try {
+                var pc = com.couchbase.client.protocol.transactions.Caps.valueOf(ext.name());
+                response.addTransactionImplementationsCaps(pc);
+            } catch (IllegalArgumentException err) {
+                // FIT and Java have used slightly different names for this
+                if (ext.name().equals("EXT_CUSTOM_METADATA")) {
+                    response.addTransactionImplementationsCaps(com.couchbase.client.protocol.transactions.Caps.EXT_CUSTOM_METADATA_COLLECTION);
+                } else {
+                    logger.warn("Could not find FIT extension for " + ext.name());
                 }
             }
-
-            var supported = new Supported();
-            var protocolVersion = supported.protocolMajor + "." + supported.protocolMinor;
-
-            response.setTransactionsProtocolVersion(protocolVersion);
-            response.addSupportedApis(API.DEFAULT);
-            response.addSupportedApis(API.ASYNC);
-            response.setPerformerUserAgent("java-sdk");
-
-            logger.info("Performer implements protocol {} with caps {}",
-                    protocolVersion, response.getPerformerCapsList());
-
-            responseObserver.onNext(response.build());
-            responseObserver.onCompleted();
-        } catch (RuntimeException err) {
-            logger.error("Operation failed during performerCapsFetch due to : " + err);
-            responseObserver.onError(Status.ABORTED.withDescription(err.toString()).asException());
         }
+
+        var supported = new Supported();
+        var protocolVersion = supported.protocolMajor + "." + supported.protocolMinor;
+
+        response.setTransactionsProtocolVersion(protocolVersion);
+
+        logger.info("Performer implements protocol {} with caps {}",
+            protocolVersion, response.getPerformerCapsList());
+        // [end:3.3.0]
+        response.addSupportedApis(API.DEFAULT);
+        response.addSupportedApis(API.ASYNC);
+        response.setPerformerUserAgent("java-sdk");
     }
 
     @Override
@@ -144,10 +146,14 @@ public class PerformerService extends PerformerServiceGrpc.PerformerServiceImplB
             var connection = new ClusterConnection(request.getClusterHostname(),
                     request.getClusterUsername(),
                     request.getClusterPassword(),
-                    Optional.empty(), clusterEnvironment);
+                    clusterEnvironment);
             clusterConnections.put(clusterConnectionId, connection);
             logger.info("Created cluster connection {} for user {}, now have {}",
                     clusterConnectionId, request.getClusterUsername(), clusterConnections.size());
+
+            // Fine to have a default and a per-test connection open, any more suggests a leak
+            logger.info("Dumping {} cluster connections for resource leak troubleshooting:", clusterConnections.size());
+            clusterConnections.forEach((key, value) -> logger.info("Cluster connection {} {}", key, value.username));
 
             responseObserver.onNext(ClusterConnectionCreateResponse.newBuilder()
                     .setClusterConnectionCount(clusterConnections.size())
@@ -170,6 +176,7 @@ public class PerformerService extends PerformerServiceGrpc.PerformerServiceImplB
         responseObserver.onCompleted();
     }
 
+    // [start:3.3.0]
     @Override
     public void transactionCreate(TransactionCreateRequest request,
                                   StreamObserver<TransactionResult> responseObserver) {
@@ -195,6 +202,7 @@ public class PerformerService extends PerformerServiceGrpc.PerformerServiceImplB
             responseObserver.onError(Status.ABORTED.withDescription(err.toString()).asException());
         }
     }
+    // [end:3.3.0]
 
     @Override
     public  void echo(EchoRequest request , StreamObserver<EchoResponse> responseObserver){
@@ -224,6 +232,7 @@ public class PerformerService extends PerformerServiceGrpc.PerformerServiceImplB
         }
     }
 
+    // [start:3.3.0]
     @Override
     public StreamObserver<TransactionStreamDriverToPerformer> transactionStream(
             StreamObserver<TransactionStreamPerformerToDriver> toTest) {
@@ -231,11 +240,13 @@ public class PerformerService extends PerformerServiceGrpc.PerformerServiceImplB
 
         return marshaller.run(toTest);
     }
+    // [end:3.3.0]
 
     private static CollectionIdentifier collectionIdentifierFor(com.couchbase.client.protocol.transactions.DocId doc) {
         return new CollectionIdentifier(doc.getBucketName(), Optional.of(doc.getScopeName()), Optional.of(doc.getCollectionName()));
     }
 
+    // [start:3.3.0]
     @Override
     public void transactionCleanup(TransactionCleanupRequest request,
                                    StreamObserver<TransactionCleanupAttempt> responseObserver) {
@@ -388,12 +399,15 @@ public class PerformerService extends PerformerServiceGrpc.PerformerServiceImplB
             responseObserver.onError(Status.ABORTED.withDescription(err.toString()).asException());
         }
     }
+    // [end:3.3.0]
 
     public static void main(String[] args) throws IOException, InterruptedException {
         int port = 8060;
 
         // Better reactor stack traces for low cost
-        ReactorDebugAgent.init();
+        // Unfortunately we cannot have this without pulling in reactor-tools, which can then pill in an incompatible
+        // reactor-core when we are building old versions of the SDK.
+        // ReactorDebugAgent.init();
 
         // Control ultra-verbose logging
         System.setProperty("com.couchbase.transactions.debug.lock", "true");
@@ -439,12 +453,6 @@ public class PerformerService extends PerformerServiceGrpc.PerformerServiceImplB
 
 
     public static ClusterConnection getClusterConnection(@Nullable String clusterConnectionId) {
-        if (clusterConnections.size() > 2) {
-            // Fine to have a default and a per-test connection open, any more suggests a leak
-            logger.info("Dumping {} cluster connections for resource leak troubleshooting:", clusterConnections.size());
-            clusterConnections.forEach((key, value) -> logger.info("Cluster connection {} {}", key, value.username));
-        }
-
         return clusterConnections.get(clusterConnectionId);
     }
 }

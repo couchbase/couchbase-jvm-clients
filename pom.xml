@@ -36,6 +36,8 @@
         <log4j.version>1.2.17</log4j.version>
         <slf4j.version>1.7.36</slf4j.version>
         <karaf.version>4.3.3</karaf.version>
+        <logback.version>1.2.6</logback.version>
+        <gson.version>2.9.1</gson.version>
 
         <scala.reactor-core-extensions.version>0.8.0</scala.reactor-core-extensions.version>
         <scala.circe.version>0.14.1</scala.circe.version>
@@ -185,9 +187,12 @@
         <module>tracing-opentelemetry</module>
         <module>metrics-opentelemetry</module>
         <module>metrics-micrometer</module>
-        <!-- Uncomment next line to include java-fit-performer.  Not included by defualt as it requires
+        <!-- Uncomment next lines to include the FIT performers.  They are not included by default as they require
         a) an externally built lib and b) JDK 17 -->
-        <!-- <module>java-fit-performer</module> -->
+<!--         <module>core-fit-performer</module>-->
+<!--         <module>java-fit-performer</module>-->
+<!--         <module>kotlin-fit-performer</module>-->
+<!--         <module>scala-fit-performer</module>-->
     </modules>
 
     <build>

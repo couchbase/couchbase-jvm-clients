@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// [skip:<3.3.0]
 package com.couchbase.twoway;
 
 import com.couchbase.InternalPerformerFailure;

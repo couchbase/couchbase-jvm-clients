@@ -22,9 +22,8 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.tracing.opentelemetry.OpenTelemetryRequestTracer;
+import com.couchbase.client.protocol.shared.DocLocation;
 import com.couchbase.client.protocol.transactions.DocId;
-import io.opentelemetry.sdk.trace.SdkTracerProvider;
 
 import javax.annotation.Nullable;
 import java.time.Duration;
@@ -39,16 +38,8 @@ public class ClusterConnection {
     public ClusterConnection(String hostname,
                              String username,
                              String password,
-                             Optional<SdkTracerProvider> tracerProvider,
                              @Nullable ClusterEnvironment.Builder config)  {
         this.username = username;
-
-        if (tracerProvider.isPresent()) {
-            if (config == null) {
-                config = ClusterEnvironment.builder();
-            }
-            config.requestTracer(OpenTelemetryRequestTracer.wrap(tracerProvider.get()));
-        }
 
         var co = ClusterOptions.clusterOptions(username, password);
         if (config != null) {
@@ -75,6 +66,28 @@ public class ClusterConnection {
         return cluster.bucket(docId.getBucketName())
                 .scope(docId.getScopeName())
                 .collection(docId.getCollectionName());
+    }
+
+    public Collection collection(DocLocation loc) {
+        com.couchbase.client.protocol.shared.Collection coll = null;
+
+        if (loc.hasPool()) {
+            coll = loc.getPool().getCollection();
+        }
+        else if (loc.hasSpecific()) {
+            coll = loc.getSpecific().getCollection();
+        }
+        else if (loc.hasUuid()) {
+            coll = loc.getUuid().getCollection();
+        }
+        else {
+            throw new UnsupportedOperationException("Unknown DocLocation type");
+        }
+
+        var bucket = cluster.bucket(coll.getBucketName());
+        return bucket
+                .scope(coll.getScopeName())
+                .collection(coll.getCollectionName());
     }
 
     public void close() {
