@@ -243,11 +243,9 @@ public class ReactiveQueryIndexManager {
   }
 
   /**
-   * Builds all currently deferred indexes.
+   * Builds all currently deferred indexes in the bucket's default collection.
    * <p>
-   * By default, this method will build the indexes on the bucket. If the indexes should be built on a collection,
-   * both {@link BuildQueryIndexOptions#scopeName(String)} and
-   * {@link BuildQueryIndexOptions#collectionName(String)} must be set.
+   * To target a different collection, see {@link #buildDeferredIndexes(String, BuildQueryIndexOptions)}.
    *
    * @param bucketName the name of the bucket to build deferred indexes for.
    * @return a {@link Mono} completing when the operation is applied or failed with an error.
@@ -258,11 +256,12 @@ public class ReactiveQueryIndexManager {
   }
 
   /**
-   * Builds all currently deferred indexes.
+   * Builds all currently deferred indexes in a collection.
    * <p>
-   * By default, this method will build the indexes on the bucket. If the indexes should be built on a collection,
-   * both {@link BuildQueryIndexOptions#scopeName(String)} and
-   * {@link BuildQueryIndexOptions#collectionName(String)} must be set.
+   * By default, this method targets the bucket's default collection.
+   * To target a different collection, specify both 
+   * {@link BuildQueryIndexOptions#scopeName(String)} and
+   * {@link BuildQueryIndexOptions#collectionName(String)}.
    *
    * @param bucketName the name of the bucket to build deferred indexes for.
    * @param options the custom options to apply.

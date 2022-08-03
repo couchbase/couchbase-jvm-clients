@@ -17,7 +17,6 @@
 package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.error.IndexExistsException;
-import com.couchbase.client.core.error.IndexFailureException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
@@ -191,11 +190,18 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     assertEquals(expectedRoundTripFields, roundTripFields);
   }
 
-  private static QueryIndex getIndex(String name) {
-    return indexes.getAllIndexes(bucketName, enrich(getAllQueryIndexesOptions())).stream()
-      .filter(index -> name.equals(index.name()))
+  private static QueryIndex getIndex(String indexName) {
+    return getIndex(indexName, scopeName, collectionName);
+  }
+
+  private static QueryIndex getIndex(String indexName, String scope, String collection) {
+    return indexes.getAllIndexes(bucketName, getAllQueryIndexesOptions()
+        .scopeName(scope)
+        .collectionName(collection))
+      .stream()
+      .filter(it -> it.name().equals(indexName))
       .findFirst()
-      .orElseThrow(() -> new AssertionError("Index '" + name + "' not found."));
+      .orElseThrow(() -> new AssertionError("Index '" + indexName + "' not found in scope '" + scope + "' collection '" + collection + "'"));
   }
 
   @Test
@@ -264,6 +270,30 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
   @Test
   void buildDeferredIndexOnAbsentBucket() {
     indexes.buildDeferredIndexes("noSuchBucket", enrich(buildDeferredQueryIndexesOptions()));
+  }
+
+  @Test
+  void buildDeferredIndexesInDifferentCollections() {
+    // deferred index in default collection
+    indexes.createIndex(bucketName, "indexOne", setOf("someField"), createQueryIndexOptions().deferred(true));
+
+    // deferred index in scope/collection managed by this test suite
+    createDeferredIndex("indexTwo");
+
+    // both should initially be deferred
+    assertEquals("deferred", getIndex("indexOne", "_default", "_default").state());
+    assertEquals("deferred", getIndex("indexTwo").state());
+
+    // build in default collection
+    indexes.buildDeferredIndexes(bucketName);
+    assertAllIndexesComeOnline(bucketName, "_default", "_default");
+
+    // index in other collection should still be deferred
+    assertEquals("deferred", getIndex("indexTwo").state());
+
+    // build the index in the scope/collection managed by this test suite
+    indexes.buildDeferredIndexes(bucketName, enrich(buildDeferredQueryIndexesOptions()));
+    assertAllIndexesComeOnline(bucketName);
   }
 
   @Test
@@ -388,16 +418,24 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
   }
 
   private static void assertAllIndexesComeOnline(String bucketName) {
-    Util.waitUntilCondition(() -> indexes.getAllIndexes(bucketName, enrich(getAllQueryIndexesOptions())).stream()
-      .map(QueryIndex::state)
-      .collect(toSet())
-      .equals(setOf("online")));
+    assertAllIndexesComeOnline(bucketName, scopeName, collectionName);
+  }
+
+  private static void assertAllIndexesComeOnline(String bucketName, String scopeName, String collectionName) {
+    Util.waitUntilCondition(() -> indexStates(bucketName, scopeName, collectionName).equals(setOf("online")));
   }
 
   private static void assertAllIndexesAlreadyOnline(String bucketName) {
-    assertEquals(setOf("online"), indexes.getAllIndexes(bucketName, enrich(getAllQueryIndexesOptions())).stream()
-      .map(QueryIndex::state)
-      .collect(toSet()));
+    assertEquals(setOf("online"), indexStates(bucketName, scopeName, collectionName));
+  }
+
+  private static Set<String> indexStates(String bucketName, String scopeName, String collectionName) {
+    return indexes.getAllIndexes(bucketName, getAllQueryIndexesOptions()
+            .scopeName(scopeName)
+            .collectionName(collectionName))
+        .stream()
+        .map(QueryIndex::state)
+        .collect(toSet());
   }
 
   private static <T> T enrich(T options) {

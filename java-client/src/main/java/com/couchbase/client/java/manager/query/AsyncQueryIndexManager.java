@@ -55,6 +55,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION;
+import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.util.CbThrowables.findCause;
 import static com.couchbase.client.core.util.CbThrowables.hasCause;
@@ -366,11 +368,9 @@ public class AsyncQueryIndexManager {
   }
 
   /**
-   * Builds all currently deferred indexes.
+   * Builds all currently deferred indexes in the bucket's default collection.
    * <p>
-   * By default, this method will build the indexes on the bucket. If the indexes should be built on a collection,
-   * both {@link BuildQueryIndexOptions#scopeName(String)} and
-   * {@link BuildQueryIndexOptions#collectionName(String)} must be set.
+   * To target a different collection, see {@link #buildDeferredIndexes(String, BuildQueryIndexOptions)}.
    *
    * @param bucketName the name of the bucket to build deferred indexes for.
    * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
@@ -381,11 +381,12 @@ public class AsyncQueryIndexManager {
   }
 
   /**
-   * Builds all currently deferred indexes.
+   * Builds all currently deferred indexes in a collection.
    * <p>
-   * By default, this method will build the indexes on the bucket. If the indexes should be built on a collection,
-   * both {@link BuildQueryIndexOptions#scopeName(String)} and
-   * {@link BuildQueryIndexOptions#collectionName(String)} must be set.
+   * By default, this method targets the bucket's default collection.
+   * To target a different collection, specify both 
+   * {@link BuildQueryIndexOptions#scopeName(String)} and
+   * {@link BuildQueryIndexOptions#collectionName(String)}.
    *
    * @param bucketName the name of the bucket to build deferred indexes for.
    * @param options the custom options to apply.
@@ -397,10 +398,11 @@ public class AsyncQueryIndexManager {
     notNull(options, "Options");
     final BuildQueryIndexOptions.Built builtOpts = options.build();
 
-
+    // Always specify a non-null scope and collection when building the options for getAllQueryIndexes,
+    // otherwise it returns indexes from all collections in the bucket.
     GetAllQueryIndexesOptions getAllOptions = getAllQueryIndexesOptions();
-    builtOpts.collectionName().ifPresent(getAllOptions::collectionName);
-    builtOpts.scopeName().ifPresent(getAllOptions::scopeName);
+    getAllOptions.scopeName(builtOpts.scopeName().orElse(DEFAULT_SCOPE));
+    getAllOptions.collectionName(builtOpts.collectionName().orElse(DEFAULT_COLLECTION));
     builtOpts.timeout().ifPresent(getAllOptions::timeout);
 
     return Reactor
