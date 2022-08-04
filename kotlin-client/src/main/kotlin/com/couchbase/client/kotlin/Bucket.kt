@@ -30,6 +30,7 @@ import com.couchbase.client.core.msg.view.ViewRequest
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.BucketConfigUtil
 import com.couchbase.client.core.util.UrlQueryStringBuilder
+import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.typeRef
@@ -37,6 +38,7 @@ import com.couchbase.client.kotlin.diagnostics.PingResult
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.internal.toStringUtf8
+import com.couchbase.client.kotlin.manager.collection.CollectionManager
 import com.couchbase.client.kotlin.manager.view.ViewIndexManager
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace
 import com.couchbase.client.kotlin.view.DesignDocumentNamespace.DEVELOPMENT
@@ -73,6 +75,12 @@ public class Bucket internal constructor(
 
     @Deprecated(level = WARNING, message = viewsDeprecationMessage)
     public val viewIndexes: ViewIndexManager = ViewIndexManager(this)
+
+    /**
+     * A manager for administering Scopes and Collections within this bucket.
+     */
+    @UncommittedCouchbaseApi
+    public val collections: CollectionManager = CollectionManager(this)
 
     /**
      * Returns the default collection in this bucket's default scope.
