@@ -31,7 +31,7 @@ public class VersionUtil {
     }
 
     public static
-    String introspectSDKVersion() {
+    @Nullable String introspectSDKVersion() {
         try {
             Enumeration<URL> resources = VersionUtil.class.getClassLoader().getResources(JarFile.MANIFEST_NAME);
             while (resources.hasMoreElements()) {
@@ -54,7 +54,8 @@ public class VersionUtil {
             // TODO ESI throw new InternalPerformerFailure(new RuntimeException("Unable to introspect library version"));
             return "3.3.0";
         } catch (IOException err) {
-            throw new InternalPerformerFailure(new RuntimeException(err));
+            // Sometimes see "NoSuchFileException: /proc/136/fd/4" on performance runs
+            return null;
         }
     }
 }
