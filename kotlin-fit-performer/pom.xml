@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.couchbase.client</groupId>
         <artifactId>couchbase-jvm-clients</artifactId>
-        <version>1.12.3-SNAPSHOT</version>
+        <version>1.12.4-SNAPSHOT</version>
     </parent>
 
     <artifactId>fit-performer-kotlin</artifactId>
@@ -30,8 +30,6 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>kotlin-client</artifactId>
-            <version>1.0.2</version>
-            <scope>compile</scope>
         </dependency>
 
         <dependency>

@@ -22,6 +22,7 @@
         <core-io.version>2.3.4-SNAPSHOT</core-io.version>
         <core-io-deps.version>1.3.4-SNAPSHOT</core-io-deps.version>
         <scala-client.version>1.3.4-SNAPSHOT</scala-client.version>
+        <kotlin-client.version>1.0.4-SNAPSHOT</kotlin-client.version>
 
         <junit.version>5.8.2</junit.version>
         <assertj.version>3.22.0</assertj.version>
@@ -116,6 +117,11 @@
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>scala-client_2.13</artifactId>
                 <version>${scala-client.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.couchbase.client</groupId>
+                <artifactId>kotlin-client</artifactId>
+                <version>${kotlin-client.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
