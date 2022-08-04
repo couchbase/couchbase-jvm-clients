@@ -55,7 +55,7 @@ public class VersionUtil {
             return "3.3.0";
         } catch (IOException err) {
             // Sometimes see "NoSuchFileException: /proc/136/fd/4" on performance runs
-            return null;
+            return "3.3.0";
         }
     }
 }
