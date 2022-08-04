@@ -20,7 +20,9 @@ import com.couchbase.InternalPerformerFailure;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.transaction.internal.TestFailOtherException;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
+// [start:3.3.2]
 import com.couchbase.client.core.transaction.threadlocal.TransactionMarkerOwner;
+// [end:3.3.2]
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.transactions.ReactiveTransactionAttemptContext;
@@ -103,13 +105,17 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                     .concatMap(command -> performOperation(connection, ctx, command, toTest))
                     .then();
         }, ptcb)
-                .flatMap(result -> TransactionMarkerOwner.get()
-                        .doOnNext(v -> {
-                            if (v.isPresent()) {
-                                throw new InternalPerformerFailure(new IllegalStateException("Still in reactive transaction context after completion"));
-                            }
-                        })
-                        .thenReturn(result))
+                // [start:3.3.2]
+                .flatMap(result -> {
+                    return TransactionMarkerOwner.get()
+                            .doOnNext(v -> {
+                                if (v.isPresent()) {
+                                    throw new InternalPerformerFailure(new IllegalStateException("Still in reactive transaction context after completion"));
+                                }
+                            })
+                            .thenReturn(result);
+                })
+                // [end:3.3.2]
                 // Use a unique scheduler so can find the thread in the debugger
                 .subscribeOn(Schedulers.newBoundedElastic(4, Integer.MAX_VALUE, "java-performer"))
                 .block();

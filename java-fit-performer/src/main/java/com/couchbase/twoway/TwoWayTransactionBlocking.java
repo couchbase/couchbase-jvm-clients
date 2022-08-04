@@ -20,7 +20,9 @@ import com.couchbase.InternalPerformerFailure;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.transaction.internal.TestFailOtherException;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
+// [start:3.3.2]
 import com.couchbase.client.core.transaction.threadlocal.TransactionMarkerOwner;
+// [end:3.3.2]
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.Scope;
 import com.couchbase.client.java.json.JsonObject;
@@ -108,9 +110,11 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
             logger.info("Reached end of all operations and lambda");
         }, ptcb);
 
+        // [start:3.3.2]
         if (TransactionMarkerOwner.get().block().isPresent()) {
             throw new InternalPerformerFailure(new IllegalStateException("Still in blocking transaction context after completion"));
         }
+        // [end:3.3.2]
 
         return out;
     }
