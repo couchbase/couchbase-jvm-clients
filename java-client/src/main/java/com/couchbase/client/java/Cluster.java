@@ -47,6 +47,7 @@ import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.transactions.Transactions;
 
+import java.io.Closeable;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
@@ -104,7 +105,7 @@ import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
  * The SDK will only work against Couchbase Server 5.0 and later, because RBAC (role-based access control) is a first
  * class concept since 3.0 and therefore required.
  */
-public class Cluster {
+public class Cluster implements Closeable {
 
   /**
    * Holds the underlying async cluster reference.
@@ -593,5 +594,16 @@ public class Cluster {
   public Transactions transactions() {
     return new Transactions(core(), environment().jsonSerializer());
   }
+
+  /**
+   * Implementing the {@link Closeable} interface for try-with-resources support.
+   * <p>
+   * Calls {@link #disconnect()} and as such behaves with similar semantics.
+   */
+  @Override
+  public void close() {
+    disconnect();
+  }
+
 }
 
