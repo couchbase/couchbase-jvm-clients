@@ -6,6 +6,7 @@ Welcome, and thanks for lending a hand! Before we get started, please read the
 ## Discussion
 
 We'd love for you to join us on the [Couchbase Forum](https://forums.couchbase.com).
+ For more interactive discussions we have `#java`, `#scala` and `#kotlin` channels on our [Discord](https://discord.com/invite/sQ5qbPZuTh).
 
 ## Reporting Issues
 
@@ -35,9 +36,9 @@ You can start by submitting a pull request to the GitHub repo. A bot will
 comment on your PR and prompt you to register for a Gerrit account and sign
 a Contributor License Agreement (CLA).
 
-  1. Visit [http://review.couchbase.org](http://review.couchbase.org) and register for an account.
-  2. Review our [Contributor Licence Agreement (CLA)](http://review.couchbase.org/static/individual_agreement.html).
-  3. Agree to the CLA by visiting [http://review.couchbase.org/#/settings/agreements](http://review.couchbase.org/#/settings/agreements)
+  1. Visit [https://review.couchbase.org](https://review.couchbase.org) and register for an account.
+  2. Review our [Contributor Licence Agreement (CLA)](https://review.couchbase.org/static/individual_agreement.html).
+  3. Agree to the CLA by visiting [https://review.couchbase.org/settings/#Agreements](https://review.couchbase.org/settings/#Agreements)
      Otherwise, you won't be able to push changes to Gerrit (instead getting a "`Upload denied for project`" message).
 
 If you need any help along the way, please contact us on the [Couchbase Forum](https://forums.couchbase.com).
