@@ -32,6 +32,7 @@ import com.couchbase.client.java.codec.JsonValueSerializerWrapper;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.transactions.TransactionGetResult;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
+import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
 import com.couchbase.client.protocol.transactions.BroadcastToOtherConcurrentTransactionsRequest;
 import com.couchbase.client.protocol.transactions.CommandBatch;
 import com.couchbase.client.protocol.transactions.CommandGet;
@@ -47,6 +48,7 @@ import com.couchbase.client.protocol.transactions.ExpectedResult;
 import com.couchbase.client.protocol.transactions.ExternalException;
 import com.couchbase.client.protocol.transactions.TransactionCommand;
 import com.couchbase.client.protocol.transactions.TransactionCreateRequest;
+import com.couchbase.client.protocol.transactions.TransactionException;
 import com.couchbase.client.protocol.transactions.TransactionStreamPerformerToDriver;
 import com.couchbase.utils.ClusterConnection;
 import com.couchbase.utils.ResultsUtil;
@@ -102,16 +104,14 @@ public abstract class TwoWayTransactionShared {
     protected final AtomicReference<TransactionGetResult> stashedGet = new AtomicReference<>();
     protected final Map<Integer, TransactionGetResult> stashedGetMap = new HashMap<>();
     protected final static ExpectedResult EXPECT_SUCCESS = ExpectedResult.newBuilder().setSuccess(true).build();
+    protected final @Nullable TransactionCommandExecutor executor;
+    private static com.couchbase.client.protocol.transactions.TransactionResult MINIMAL_SUCCESS_RESULT = com.couchbase.client.protocol.transactions.TransactionResult.newBuilder()
+            .setException(TransactionException.NO_EXCEPTION_THROWN)
+            .build();
 
-    //Class names for the QueryOptions and TransactionQueryOptions
-    public final static String CLASSNAME_QUERY_OPTIONS ="com.couchbase.client.java.query.QueryOptions";
-    public final static String CLASSNAME_TRANSACTION_QUERY_OPTIONS ="com.couchbase.transactions.TransactionQueryOptions";
-    public final static String CLASSNAME_SINGLE_QUERY_TRANSACTION_CONFIG_BUILDER = "com.couchbase.transactions.config.SingleQueryTransactionConfigBuilder";
-    public final static String CLASSNAME_SINGLE_QUERY_TRANSACTION_CONFIG = "com.couchbase.transactions.config.SingleQueryTransactionConfig";
-    public final static String CLASSNAME_SINGLE_QUERY_TRANSACTION_RESULT = "com.couchbase.transactions.SingleQueryTransactionResult";
-    public final static String CLASSNAME_SCOPE = "com.couchbase.client.java.Scope";
-
-
+    public TwoWayTransactionShared(@Nullable TransactionCommandExecutor executor) {
+        this.executor = executor;
+    }
 
     /**
      * There are a handful of cases where a InternalDriverFailure won't be propagated through into the final
@@ -128,14 +128,15 @@ public abstract class TwoWayTransactionShared {
     abstract protected com.couchbase.client.java.transactions.TransactionResult runInternal(
             ClusterConnection connection,
             TransactionCreateRequest req,
-            @Nullable StreamObserver<TransactionStreamPerformerToDriver> toTest
+            @Nullable StreamObserver<TransactionStreamPerformerToDriver> toTest,
+            boolean performanceMode
     );
 
     public com.couchbase.client.protocol.transactions.TransactionResult run(
             ClusterConnection connection,
             TransactionCreateRequest req,
-            @Nullable StreamObserver<TransactionStreamPerformerToDriver> toTest
-    ) {
+            @Nullable StreamObserver<TransactionStreamPerformerToDriver> toTest,
+            boolean performanceMode) {
         this.name = req.getName();
         this.bp = this.name + ": ";
         logger = LoggerFactory.getLogger(this.name);
@@ -143,7 +144,7 @@ public abstract class TwoWayTransactionShared {
         final ConcurrentLinkedQueue<TransactionEvent> transactionEvents = new ConcurrentLinkedQueue<>();
         EventSubscription eventBusSubscription = null;
 
-        if (req.getExpectedEventsCount() != 0) {
+        if (!performanceMode && req.getExpectedEventsCount() != 0) {
             eventBusSubscription = connection.cluster().environment().eventBus().subscribe(event -> {
                 if (event instanceof TransactionEvent) {
                     transactionEvents.add((TransactionEvent) event);
@@ -152,7 +153,7 @@ public abstract class TwoWayTransactionShared {
         }
 
         try {
-            com.couchbase.client.java.transactions.TransactionResult result = runInternal(connection, req, toTest);
+            com.couchbase.client.java.transactions.TransactionResult result = runInternal(connection, req, toTest, performanceMode);
 
             Optional<Exception> e = Optional.empty();
             if (testFailure.get() != null) {
@@ -165,10 +166,15 @@ public abstract class TwoWayTransactionShared {
                 throw testFailure.get();
             }
 
-            assertExpectedEvents(req, transactionEvents);
+            if (!performanceMode) {
+                assertExpectedEvents(req, transactionEvents);
+            }
 
             Optional<Integer> cleanupQueueLength = cleanupQueueLength(connection);
 
+            if (performanceMode) {
+                return MINIMAL_SUCCESS_RESULT;
+            }
             return ResultsUtil.createResult(e,
                     result,
                     cleanupQueueLength);
@@ -182,7 +188,9 @@ public abstract class TwoWayTransactionShared {
             }
 
             logger.info("Error while executing an operation: {}", err.toString());
-            assertExpectedEvents(req, transactionEvents);
+            if (!performanceMode) {
+                assertExpectedEvents(req, transactionEvents);
+            }
 
             Optional<Integer> cleanupQueueLength = cleanupQueueLength(connection);
 

@@ -16,11 +16,12 @@
 package com.couchbase.client.performer.scala
 
 import com.couchbase.client.performer.core.CorePerformer
-import com.couchbase.client.performer.core.commands.SdkCommandExecutor
+import com.couchbase.client.performer.core.commands.{SdkCommandExecutor, TransactionCommandExecutor}
 import com.couchbase.client.performer.core.perf.Counters
 import com.couchbase.client.protocol.shared._
 import com.couchbase.client.performer.scala.util.{Capabilities, ClusterConnection}
 import com.couchbase.client.protocol.performer.PerformerCapsFetchResponse
+import com.couchbase.client.protocol.run.Workloads
 import com.couchbase.client.protocol.shared.{ClusterConnectionCreateRequest, ClusterConnectionCreateResponse}
 import io.grpc.stub.StreamObserver
 import io.grpc.{ServerBuilder, Status}
@@ -103,4 +104,6 @@ class ScalaPerformer extends CorePerformer {
   override protected def executor(workloads: com.couchbase.client.protocol.run.Workloads, counters: Counters): SdkCommandExecutor = {
     new ScalaSdkCommandExecutor(clusterConnections(workloads.getClusterConnectionId), counters)
   }
+
+  override protected def transactionsExecutor(workloads: Workloads, counters: Counters): TransactionCommandExecutor = null
 }

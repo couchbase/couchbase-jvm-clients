@@ -19,25 +19,32 @@ import com.couchbase.client.performer.core.bounds.BoundsExecutor;
 import com.couchbase.client.performer.core.bounds.BoundsCounterBased;
 import com.couchbase.client.performer.core.bounds.BoundsForTime;
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
+import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
 import com.couchbase.client.protocol.shared.Bounds;
+import com.couchbase.client.protocol.transactions.TransactionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class HorizontalScalingThread extends Thread {
     private final Logger logger;
     private final SdkCommandExecutor sdkCommandExecutor;
+    private final @Nullable TransactionCommandExecutor transactionsCommandExecutor;
     private final PerHorizontalScaling per;
     AtomicInteger operationsSuccessful = new AtomicInteger(0);
     AtomicInteger operationsFailed = new AtomicInteger(0);
 
-    public HorizontalScalingThread(PerHorizontalScaling per, SdkCommandExecutor sdkCommandExecutor) {
+    public HorizontalScalingThread(PerHorizontalScaling per,
+                                   SdkCommandExecutor sdkCommandExecutor,
+                                   @Nullable TransactionCommandExecutor transactionsCommandExecutor) {
         super("perf-runner");
         logger = LoggerFactory.getLogger("runner-" + per.runnerIndex());
         this.sdkCommandExecutor = sdkCommandExecutor;
         this.per = per;
+        this.transactionsCommandExecutor = transactionsCommandExecutor;
     }
 
     private BoundsExecutor getBounds(boolean hasBounds, Bounds bounds) {
@@ -76,6 +83,25 @@ public class HorizontalScalingThread extends Thread {
         }
     }
 
+    private void executeTransactionWorkload(com.couchbase.client.protocol.transactions.Workload workload) {
+        var bounds = getBounds(workload.hasBounds(), workload.getBounds());
+
+        long executed = 0;
+        while (bounds.canExecute()) {
+            var nextCommand = workload.getCommand((int) (executed % workload.getCommandCount()));
+            ++ executed;
+            var result = transactionsCommandExecutor.run(nextCommand, workload.getPerformanceMode());
+            per.consumer().accept(result);
+            if (result.hasTransaction()) {
+                if (result.getTransaction().getException() == TransactionException.NO_EXCEPTION_THROWN) {
+                    operationsSuccessful.incrementAndGet();
+                } else {
+                    operationsFailed.incrementAndGet();
+                }
+            }
+        }
+    }
+
     private void executeGrpcWorkload(com.couchbase.client.protocol.meta.Workload workload) {
         var bounds = getBounds(workload.hasBounds(), workload.getBounds());
 
@@ -101,8 +127,13 @@ public class HorizontalScalingThread extends Thread {
             for (var workload : per.perThread().getWorkloadsList()) {
                 if (workload.hasSdk()) {
                     executeSdkWorkload(workload.getSdk());
+                } else if (workload.hasTransaction()) {
+                    executeTransactionWorkload(workload.getTransaction());
                 } else if (workload.hasGrpc()) {
                     executeGrpcWorkload(workload.getGrpc());
+                }
+                else {
+                    throw new UnsupportedOperationException();
                 }
             }
         }

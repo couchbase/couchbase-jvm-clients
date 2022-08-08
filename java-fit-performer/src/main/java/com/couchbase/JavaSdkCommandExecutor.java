@@ -212,9 +212,12 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 .setGetResult(builder));
     }
 
-    private static String content(Content content) {
+    public static Object content(Content content) {
         if (content.hasPassthroughString()) {
             return content.getPassthroughString();
+        }
+        else if (content.hasConvertToJson()) {
+            return JsonObject.fromJson(content.getConvertToJson().toByteArray());
         }
         throw new UnsupportedOperationException("Unknown content type");
     }
@@ -365,7 +368,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         }
     }
 
-    private static Transcoder convertTranscoder(com.couchbase.client.protocol.shared.Transcoder transcoder) {
+    public static Transcoder convertTranscoder(com.couchbase.client.protocol.shared.Transcoder transcoder) {
         if (transcoder.hasRawJson()) return RawJsonTranscoder.INSTANCE;
         if (transcoder.hasJson()) return JSON_TRANSCODER;
         if (transcoder.hasLegacy()) return LEGACY_TRANSCODER;

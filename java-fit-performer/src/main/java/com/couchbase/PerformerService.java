@@ -30,6 +30,8 @@ import com.couchbase.client.core.transaction.forwards.Supported;
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.java.transactions.config.TransactionsConfig;
+import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
+import com.couchbase.client.protocol.performer.Caps;
 import com.couchbase.client.protocol.shared.Collection;
 import com.couchbase.client.protocol.transactions.CleanupSet;
 import com.couchbase.client.protocol.transactions.CleanupSetFetchRequest;
@@ -102,6 +104,12 @@ public class PerformerService extends CorePerformer {
     }
 
     @Override
+    protected TransactionCommandExecutor transactionsExecutor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters) {
+        var connection = clusterConnections.get(workloads.getClusterConnectionId());
+        return new JavaTransactionCommandExecutor(connection, counters);
+    }
+
+    @Override
     protected void customisePerformerCaps(PerformerCapsFetchResponse.Builder response) {
         response.addAllSdkImplementationCaps(Capabilities.sdkImplementationCaps());
         response.setLibraryVersion(VersionUtil.introspectSDKVersion());
@@ -131,6 +139,8 @@ public class PerformerService extends CorePerformer {
         // [end:3.3.0]
         response.addSupportedApis(API.DEFAULT);
         response.addSupportedApis(API.ASYNC);
+        response.addPerformerCaps(Caps.TRANSACTIONS_WORKLOAD_1);
+        response.addPerformerCaps(Caps.CLUSTER_CONFIG_1);
         response.setPerformerUserAgent("java-sdk");
     }
 
@@ -188,7 +198,7 @@ public class PerformerService extends CorePerformer {
 
             TransactionResult response;
             if (request.getApi() == API.DEFAULT) {
-                response = TwoWayTransactionBlocking.run(connection, request);
+                response = TwoWayTransactionBlocking.run(connection, request, (TransactionCommandExecutor) null, false);
             }
             else {
                 response = TwoWayTransactionReactive.run(connection, request);

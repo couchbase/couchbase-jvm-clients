@@ -77,7 +77,7 @@ public class TwoWayTransactionMarshaller {
 
                     Thread t = new Thread(() -> {
                         if (req.getApi() == API.DEFAULT) {
-                            twoWay = new TwoWayTransactionBlocking();
+                            twoWay = new TwoWayTransactionBlocking(null);
                         }
                         else {
                             twoWay = new TwoWayTransactionReactive();
@@ -104,7 +104,8 @@ public class TwoWayTransactionMarshaller {
 
                         TransactionResult result = twoWay.run(clusterConnections.get(req.getClusterConnectionId()),
                                 req,
-                                toTest);
+                                toTest,
+                                false);
 
                         logger.info("Transaction has finished, completing stream and ending thread");
 

@@ -17,10 +17,12 @@ package com.couchbase.client.performer.kotlin
 
 import com.couchbase.client.performer.core.CorePerformer
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
+import com.couchbase.client.performer.core.commands.TransactionCommandExecutor
 import com.couchbase.client.performer.core.perf.Counters
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
 import com.couchbase.client.protocol.*
 import com.couchbase.client.protocol.performer.PerformerCapsFetchResponse
+import com.couchbase.client.protocol.run.Workloads
 import com.couchbase.client.protocol.shared.*
 import io.grpc.ServerBuilder
 import io.grpc.Status
@@ -89,6 +91,10 @@ class KotlinPerformer : CorePerformer() {
 
     override fun executor(workloads: com.couchbase.client.protocol.run.Workloads, counters: Counters): SdkCommandExecutor {
         return KotlinSdkCommandExecutor(clusterConnections.get(workloads.clusterConnectionId)!!, counters)
+    }
+
+    override fun transactionsExecutor(workloads: Workloads?, counters: Counters?): TransactionCommandExecutor? {
+        return null
     }
 }
 

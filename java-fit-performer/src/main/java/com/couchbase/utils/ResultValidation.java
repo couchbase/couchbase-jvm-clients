@@ -95,7 +95,7 @@ public class ResultValidation {
     }
 
     public static boolean anythingAllowed(List<ExpectedResult> expectedResults) {
-        return expectedResults.contains(ANYTHING_ALLOWED);
+        return expectedResults.isEmpty() || expectedResults.contains(ANYTHING_ALLOWED);
     }
 
     public static String dbg(List<ExpectedResult> expectedResults) {

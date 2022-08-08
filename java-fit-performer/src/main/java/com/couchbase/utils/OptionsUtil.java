@@ -16,6 +16,9 @@
 package com.couchbase.utils;
 
 import com.couchbase.InternalPerformerFailure;
+import com.couchbase.JavaSdkCommandExecutor;
+import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
@@ -118,6 +121,78 @@ public class OptionsUtil {
                 clusterEnvironment.transactionsConfig(builder);
             }
             // [end:3.3.0]
+            IoConfig.Builder ioConfig = null;
+            TimeoutConfig.Builder timeoutConfig = null;
+
+            if (cc.hasKvConnectTimeoutSecs()) {
+                if (timeoutConfig == null) timeoutConfig = TimeoutConfig.builder();
+                timeoutConfig.connectTimeout(Duration.ofSeconds(cc.getKvConnectTimeoutSecs()));
+            }
+            if (cc.hasKvTimeoutMillis()) {
+                if (timeoutConfig == null) timeoutConfig = TimeoutConfig.builder();
+                timeoutConfig.kvTimeout(Duration.ofMillis(cc.getKvTimeoutMillis()));
+            }
+            if (cc.hasKvDurableTimeoutMillis()) {
+                if (timeoutConfig == null) timeoutConfig = TimeoutConfig.builder();
+                timeoutConfig.kvDurableTimeout(Duration.ofMillis(cc.getKvDurableTimeoutMillis()));
+            }
+            if (cc.hasViewTimeoutSecs()) {
+                if (timeoutConfig == null) timeoutConfig = TimeoutConfig.builder();
+                timeoutConfig.viewTimeout(Duration.ofSeconds(cc.getViewTimeoutSecs()));
+            }
+            if (cc.hasQueryTimeoutSecs()) {
+                if (timeoutConfig == null) timeoutConfig = TimeoutConfig.builder();
+                timeoutConfig.queryTimeout(Duration.ofSeconds(cc.getQueryTimeoutSecs()));
+            }
+            if (cc.hasAnalyticsTimeoutSecs()) {
+                if (timeoutConfig == null) timeoutConfig = TimeoutConfig.builder();
+                timeoutConfig.analyticsTimeout(Duration.ofSeconds(cc.getAnalyticsTimeoutSecs()));
+            }
+            if (cc.hasSearchTimeoutSecs()) {
+                if (timeoutConfig == null) timeoutConfig = TimeoutConfig.builder();
+                timeoutConfig.searchTimeout(Duration.ofSeconds(cc.getSearchTimeoutSecs()));
+            }
+            if (cc.hasManagementTimeoutSecs()) {
+                if (timeoutConfig == null) timeoutConfig = TimeoutConfig.builder();
+                timeoutConfig.managementTimeout(Duration.ofSeconds(cc.getManagementTimeoutSecs()));
+            }
+            if (cc.hasTranscoder()) {
+                clusterEnvironment.transcoder(JavaSdkCommandExecutor.convertTranscoder(cc.getTranscoder()));
+            }
+            if (cc.hasEnableMutationTokens()) {
+                if (ioConfig == null) ioConfig = IoConfig.builder();
+                ioConfig.enableMutationTokens(cc.getEnableMutationTokens());
+            }
+            if (cc.hasTcpKeepAliveTimeMillis()) {
+                if (ioConfig == null) ioConfig = IoConfig.builder();
+                ioConfig.tcpKeepAliveTime(Duration.ofMillis(cc.getTcpKeepAliveTimeMillis()));
+            }
+            if (cc.getForceIPV4()) {
+                throw new UnsupportedOperationException();
+            }
+            if (cc.hasConfigPollIntervalSecs()) {
+                if (ioConfig == null) ioConfig = IoConfig.builder();
+                ioConfig.configPollInterval(Duration.ofSeconds(cc.getConfigPollIntervalSecs()));
+            }
+            if (cc.hasConfigPollFloorIntervalSecs()) {
+                throw new UnsupportedOperationException();
+            }
+            if (cc.hasConfigIdleRedialTimeoutSecs()) {
+                if (ioConfig == null) ioConfig = IoConfig.builder();
+                ioConfig.configIdleRedialTimeout(Duration.ofSeconds(cc.getConfigIdleRedialTimeoutSecs()));
+            }
+            if (cc.hasNumKvConnections()) {
+                if (ioConfig == null) ioConfig = IoConfig.builder();
+                ioConfig.numKvConnections(cc.getNumKvConnections());
+            }
+            if (cc.hasMaxHttpConnections()) {
+                if (ioConfig == null) ioConfig = IoConfig.builder();
+                ioConfig.maxHttpConnections(cc.getMaxHttpConnections());
+            }
+            if (cc.hasIdleHttpConnectionTimeoutSecs()) {
+                if (ioConfig == null) ioConfig = IoConfig.builder();
+                ioConfig.idleHttpConnectionTimeout(Duration.ofSeconds(cc.getIdleHttpConnectionTimeoutSecs()));
+            }
         }
 
         return clusterEnvironment;

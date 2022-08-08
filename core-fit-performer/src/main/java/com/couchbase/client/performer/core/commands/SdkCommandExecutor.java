@@ -16,23 +16,15 @@
 package com.couchbase.client.performer.core.commands;
 
 import com.couchbase.client.performer.core.perf.Counters;
-import com.couchbase.client.protocol.shared.DocLocation;
-import com.couchbase.client.protocol.shared.RandomDistribution;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
-
-import static com.couchbase.client.performer.core.util.ErrorUtil.convertException;
-
-public abstract class SdkCommandExecutor {
+public abstract class SdkCommandExecutor extends Executor {
     protected final Logger logger = LoggerFactory.getLogger(SdkCommandExecutor.class);
-    private final ThreadLocalRandom random = ThreadLocalRandom.current();
-    private final Counters counters;
 
     public SdkCommandExecutor(Counters counters) {
-        this.counters = counters;
+
+        super(counters);
     }
 
     abstract protected com.couchbase.client.protocol.run.Result performOperation(com.couchbase.client.protocol.sdk.Command op);
@@ -50,40 +42,6 @@ public abstract class SdkCommandExecutor {
                     .setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
                             .setException(convertException(err)))
                     .build();
-        }
-    }
-
-    protected String getDocId(DocLocation location) {
-        if (location.hasSpecific()) {
-            return location.getSpecific().getId();
-        }
-        else if (location.hasUuid()) {
-            return UUID.randomUUID().toString();
-        }
-        else if (location.hasPool()) {
-            var pool = location.getPool();
-
-            int next;
-            if (pool.hasRandom()) {
-                if (pool.getRandom().getDistribution() == RandomDistribution.RANDOM_DISTRIBUTION_UNIFORM) {
-                    next = random.nextInt((int) pool.getPoolSize());
-                }
-                else {
-                    throw new UnsupportedOperationException("Unrecognised random distribution");
-                }
-            }
-            else if (pool.hasCounter()) {
-                var counter = counters.getCounter(pool.getCounter().getCounter());
-                next = counter.getAndIncrement() % (int) pool.getPoolSize();
-            }
-            else {
-                throw new UnsupportedOperationException("Unrecognised pool selection strategy");
-            }
-
-            return pool.getIdPreface() + next;
-        }
-        else {
-            throw new UnsupportedOperationException("Unknown doc location type");
         }
     }
 }

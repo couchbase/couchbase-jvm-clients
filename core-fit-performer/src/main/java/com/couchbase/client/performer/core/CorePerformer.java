@@ -16,6 +16,7 @@
 package com.couchbase.client.performer.core;
 
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
+import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
 import com.couchbase.client.performer.core.metrics.MetricsReporter;
 import com.couchbase.client.performer.core.perf.Counters;
 import com.couchbase.client.performer.core.perf.HorizontalScalingThread;
@@ -31,8 +32,14 @@ import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
+
 abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServiceImplBase {
     abstract protected SdkCommandExecutor executor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters);
+
+    // Can return null if the performer does not support transactions.
+    abstract protected @Nullable TransactionCommandExecutor transactionsExecutor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters);
+
     abstract protected void customisePerformerCaps(PerformerCapsFetchResponse.Builder response);
     private final Logger logger = LoggerFactory.getLogger(CorePerformer.class);
 
@@ -59,6 +66,7 @@ abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServic
 
             var counters = new Counters();
             var executor = executor(request.getWorkloads(), counters);
+            var transactionsExecutor = transactionsExecutor(request.getWorkloads(), counters);
 
             var writer = new WorkloadStreamingThread(responseObserver, request.getConfig());
             writer.start();
@@ -73,7 +81,7 @@ abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServic
 
             WorkloadsRunner.run(request.getWorkloads(),
                     (x) -> writer.enqueue(x),
-                    (x) -> new HorizontalScalingThread(x, executor),
+                    (x) -> new HorizontalScalingThread(x, executor, transactionsExecutor),
                     counters);
 
             if (metrics != null) {
