@@ -34,6 +34,7 @@ import com.couchbase.client.core.cnc.events.core.ReconfigurationIgnoredEvent;
 import com.couchbase.client.core.cnc.events.core.ServiceReconfigurationFailedEvent;
 import com.couchbase.client.core.cnc.events.core.ShutdownCompletedEvent;
 import com.couchbase.client.core.cnc.events.core.ShutdownInitiatedEvent;
+import com.couchbase.client.core.cnc.events.core.TooManyInstancesDetectedEvent;
 import com.couchbase.client.core.cnc.events.core.WatchdogInvalidStateIdentifiedEvent;
 import com.couchbase.client.core.cnc.events.core.WatchdogRunFailedEvent;
 import com.couchbase.client.core.config.AlternateAddress;
@@ -52,6 +53,7 @@ import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
+import com.couchbase.client.core.error.TooManyInstancesException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
@@ -105,6 +107,21 @@ import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
  */
 @Stability.Volatile
 public class Core {
+
+  /**
+   * Holds the number of max allowed instances initialized at any point in time.
+   */
+  private static volatile int maxAllowedInstances = 1;
+
+  /**
+   * Holds the currently initialized number of instances.
+   */
+  private static final AtomicInteger NUM_INSTANCES = new AtomicInteger(0);
+
+  /**
+   * If the core should fail or warn if the configured instance limit is reached.
+   */
+  private static volatile boolean failIfInstanceLimitReached = false;
 
   /**
    * A reasonably unique instance ID.
@@ -235,6 +252,26 @@ public class Core {
   }
 
   /**
+   * Configures the maximum allowed core instances before warning/failing.
+   *
+   * @param maxAllowedInstances the number of max allowed core instances.
+   */
+  @Stability.Volatile
+  public static void maxAllowedInstances(final int maxAllowedInstances) {
+    Core.maxAllowedInstances = maxAllowedInstances;
+  }
+
+  /**
+   * Configures if the SDK should fail to create instead of warn if the instance limit is reached.
+   *
+   * @param failIfInstanceLimitReached true if it should throw an exception instead of warn.
+   */
+  @Stability.Volatile
+  public static void failIfInstanceLimitReached(final boolean failIfInstanceLimitReached) {
+    Core.failIfInstanceLimitReached = failIfInstanceLimitReached;
+  }
+
+  /**
    * Creates a new Core.
    *
    * @param environment the environment for this core.
@@ -245,6 +282,8 @@ public class Core {
     } else if (!environment.securityConfig().tlsEnabled() && !authenticator.supportsNonTls()) {
       throw new InvalidArgumentException("TLS not enabled but the Authenticator does only support TLS!", null, null);
     }
+
+    incrementAndVerifyNumInstances(environment.eventBus());
 
     this.seedNodes = seedNodes;
     this.coreContext = new CoreContext(this, createInstanceId(), environment, authenticator);
@@ -264,7 +303,7 @@ public class Core {
       .map(c -> (BeforeSendRequestCallback) c)
       .collect(Collectors.toList());
 
-    eventBus.publish(new CoreCreatedEvent(coreContext, environment, seedNodes));
+    eventBus.publish(new CoreCreatedEvent(coreContext, environment, seedNodes, NUM_INSTANCES.get()));
 
     long watchdogInterval = INVALID_STATE_WATCHDOG_INTERVAL.getSeconds();
     if (watchdogInterval <= 1) {
@@ -278,6 +317,25 @@ public class Core {
     this.transactionsCleanup = new CoreTransactionsCleanup(this, environment.transactionsConfig());
     context().environment().eventBus().publish(new TransactionsStartedEvent(environment.transactionsConfig().cleanupConfig().runLostAttemptsCleanupThread(),
             environment.transactionsConfig().cleanupConfig().runRegularAttemptsCleanupThread()));
+  }
+
+  /**
+   * Checks that the number of running instances never gets over the configured limit and takes action if needed.
+   */
+  private static synchronized void incrementAndVerifyNumInstances(final EventBus eventBus) {
+    if (NUM_INSTANCES.get() >= maxAllowedInstances) {
+      String msg = "The number of created instances (" + NUM_INSTANCES + ") has " +
+        "reached the configured instance limit (" + maxAllowedInstances + "). It is recommended to only create " +
+        "one instance and reuse it across the application lifetime. Also, make sure to disconnect clients if they " +
+        "are not used anymore.";
+
+      if (failIfInstanceLimitReached) {
+        throw new TooManyInstancesException(msg);
+      } else {
+        eventBus.publish(new TooManyInstancesDetectedEvent(msg));
+      }
+    }
+    NUM_INSTANCES.incrementAndGet();
   }
 
   /**
@@ -612,7 +670,7 @@ public class Core {
    * Shuts down this core and all associated, owned resources.
    */
   @Stability.Internal
-  public Mono<Void> shutdown(Duration timeout) {
+  public Mono<Void> shutdown(final Duration timeout) {
     return transactionsCleanup.shutdown(timeout)
       .then(Mono.defer(() -> {
         NanoTimestamp start = NanoTimestamp.now();
@@ -627,9 +685,10 @@ public class Core {
             // every 10ms check if all nodes have been cleared, and then move on.
             // this links the config provider shutdown with our core reconfig logic
             .then(Flux.interval(Duration.ofMillis(10), coreContext.environment().scheduler()).takeUntil(i -> nodes.isEmpty()).then())
-            .doOnTerminate(() -> eventBus.publish(
-              new ShutdownCompletedEvent(start.elapsed(), coreContext)
-            ))
+            .doOnTerminate(() -> {
+              NUM_INSTANCES.decrementAndGet();
+              eventBus.publish(new ShutdownCompletedEvent(start.elapsed(), coreContext));
+            })
             .then();
         }
         return Mono.empty();

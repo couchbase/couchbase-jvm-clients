@@ -36,13 +36,18 @@ import java.util.stream.Collectors;
 public class CoreCreatedEvent extends AbstractEvent {
 
   private final CoreEnvironment environment;
+  private final int numCoreInstances;
 
-  public CoreCreatedEvent(final CoreContext context, final CoreEnvironment environment, final Set<SeedNode> seedNodes) {
-    super(Severity.INFO, Category.CORE, Duration.ZERO, attachSeedNodes(context, seedNodes));
+  public CoreCreatedEvent(final CoreContext context, final CoreEnvironment environment, final Set<SeedNode> seedNodes,
+                          final int numCoreInstances) {
+    super(Severity.INFO, Category.CORE, Duration.ZERO, attachSeedNodes(context, seedNodes, numCoreInstances));
     this.environment = environment;
+    this.numCoreInstances = numCoreInstances;
+
   }
 
-  private static Context attachSeedNodes(final CoreContext context, final Set<SeedNode> seedNodes) {
+  private static Context attachSeedNodes(final CoreContext context, final Set<SeedNode> seedNodes,
+                                         final int numCoreInstances) {
     return new CoreContext(context.core(), context.id(), context.environment(), context.authenticator()) {
       @Override
       public void injectExportableParams(final Map<String, Object> input) {
@@ -55,6 +60,8 @@ public class CoreCreatedEvent extends AbstractEvent {
           seedNode.clusterManagerPort().ifPresent(p -> mapped.put("mgmtPort", p));
           return mapped;
         }).collect(Collectors.toSet()));
+
+        input.put("numCoreInstances", numCoreInstances);
       }
     };
   }

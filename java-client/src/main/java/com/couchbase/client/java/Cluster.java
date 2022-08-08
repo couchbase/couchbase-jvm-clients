@@ -290,6 +290,26 @@ public class Cluster implements Closeable {
   }
 
   /**
+   * Configures the maximum allowed core instances before warning/failing.
+   *
+   * @param maxAllowedInstances the number of max allowed core instances.
+   */
+  @Stability.Uncommitted
+  public static void maxAllowedInstances(final int maxAllowedInstances) {
+    Core.maxAllowedInstances(maxAllowedInstances);
+  }
+
+  /**
+   * Configures if the SDK should fail to create instead of warn if the instance limit is reached.
+   *
+   * @param failIfInstanceLimitReached true if it should throw an exception instead of warn.
+   */
+  @Stability.Uncommitted
+  public static void failIfInstanceLimitReached(final boolean failIfInstanceLimitReached) {
+    Core.failIfInstanceLimitReached(failIfInstanceLimitReached);
+  }
+
+  /**
    * Creates a new cluster from a {@link ClusterEnvironment}.
    *
    * @param environment the environment to use.
