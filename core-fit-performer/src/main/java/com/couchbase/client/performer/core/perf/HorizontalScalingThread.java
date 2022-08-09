@@ -47,9 +47,9 @@ public class HorizontalScalingThread extends Thread {
         this.transactionsCommandExecutor = transactionsCommandExecutor;
     }
 
-    private BoundsExecutor getBounds(boolean hasBounds, Bounds bounds) {
+    private BoundsExecutor getBounds(boolean hasBounds, Bounds bounds, int numCommands) {
         if (!hasBounds) {
-            return new BoundsCounterBased(new AtomicInteger(1));
+            return new BoundsCounterBased(new AtomicInteger(numCommands));
         }
 
         if (bounds.hasCounter()) {
@@ -65,7 +65,7 @@ public class HorizontalScalingThread extends Thread {
     }
 
     private void executeSdkWorkload(com.couchbase.client.protocol.sdk.Workload workload) {
-        var bounds = getBounds(workload.hasBounds(), workload.getBounds());
+        var bounds = getBounds(workload.hasBounds(), workload.getBounds(), workload.getCommandCount());
 
         long executed = 0;
         while (bounds.canExecute()) {
@@ -84,7 +84,7 @@ public class HorizontalScalingThread extends Thread {
     }
 
     private void executeTransactionWorkload(com.couchbase.client.protocol.transactions.Workload workload) {
-        var bounds = getBounds(workload.hasBounds(), workload.getBounds());
+        var bounds = getBounds(workload.hasBounds(), workload.getBounds(), workload.getCommandCount());
 
         long executed = 0;
         while (bounds.canExecute()) {
@@ -103,7 +103,7 @@ public class HorizontalScalingThread extends Thread {
     }
 
     private void executeGrpcWorkload(com.couchbase.client.protocol.meta.Workload workload) {
-        var bounds = getBounds(workload.hasBounds(), workload.getBounds());
+        var bounds = getBounds(workload.hasBounds(), workload.getBounds(), 1);
 
         while (bounds.canExecute()) {
             if (!workload.getCommand().hasPing()) {

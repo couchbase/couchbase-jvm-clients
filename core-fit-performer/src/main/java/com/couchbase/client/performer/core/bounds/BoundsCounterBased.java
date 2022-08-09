@@ -26,6 +26,6 @@ public class BoundsCounterBased implements BoundsExecutor {
 
     @Override
     public boolean canExecute() {
-        return counter.decrementAndGet() > 0;
+        return counter.getAndDecrement() > 0;
     }
 }
