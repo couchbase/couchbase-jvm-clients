@@ -20,11 +20,14 @@ import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
+import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.error.GroupNotFoundException
 import com.couchbase.client.core.error.UserNotFoundException
 import com.couchbase.client.core.json.Mapper
+import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.CommonOptions
+import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.http.CouchbaseHttpClient
 import com.couchbase.client.kotlin.http.CouchbaseHttpResponse
 import com.couchbase.client.kotlin.http.HttpBody
@@ -219,6 +222,26 @@ public class UserManager(
 
         val array = Mapper.decodeIntoTree(json) as ArrayNode
         return array.map { RoleAndDescription(it as ObjectNode) }
+    }
+
+    /**
+     * Changes the password for the currently authenticated user.
+     *
+     * **NOTE**: This causes subsequent request to fail due to authentication errors,
+     * unless [Cluster.connect] was given a [PasswordAuthenticator] that dynamically
+     * supplies the new password (see [PasswordAuthenticator.builder]).
+     */
+    @UncommittedCouchbaseApi
+    public suspend fun changePassword(
+        newPassword: String,
+        common: CommonOptions = CommonOptions.Default,
+    ) {
+        httpClient.post(
+            common = common,
+            target = HttpTarget.manager(),
+            path = "/controller/changePassword",
+            body = HttpBody.form("password" to newPassword)
+        ).check()
     }
 }
 

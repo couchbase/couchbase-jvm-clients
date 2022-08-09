@@ -18,8 +18,11 @@ package com.couchbase.client.kotlin.manager.user
 
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.error.UserNotFoundException
+import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.manager.user.RoleAndOrigins.Origin
+import com.couchbase.client.kotlin.retry
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
+import com.couchbase.client.kotlin.util.use
 import com.couchbase.client.kotlin.util.waitUntil
 import com.couchbase.client.test.Capabilities.COLLECTIONS
 import com.couchbase.client.test.Capabilities.ENTERPRISE_EDITION
@@ -40,6 +43,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import kotlin.time.Duration.Companion.minutes
 
 @IgnoreWhen(clusterTypes = [ClusterType.MOCKED, ClusterType.CAVES])
 internal class UserManagerIntegrationTest : KotlinIntegrationTest() {
@@ -141,6 +145,36 @@ internal class UserManagerIntegrationTest : KotlinIntegrationTest() {
         assertEquals("Renamed", userMeta.user.displayName)
         assertEquals(setOf(readOnlyAdmin, bucketFullAccessWildcard), userMeta.effectiveRoles)
         checkRoleOrigins(userMeta, readOnlyAdmin.withOrigins(Origin("user")), bucketFullAccessWildcard.withOrigins(Origin("user")))
+    }
+
+    @Test
+    fun `user can change their own password`(): Unit = runBlocking {
+        val origPassword = "password"
+        val newPassword = "newPassword"
+
+        upsert(
+            User(
+                username = USERNAME,
+                roles = setOf(Role("data_reader", bucket.name)),
+                password = origPassword,
+            )
+        )
+
+        assertCanAuthenticate(USERNAME, origPassword)
+        assertCannotAuthenticate(USERNAME, newPassword)
+
+        Cluster.connect(connectionString, USERNAME, origPassword).use {
+            it.waitUntilReady(1.minutes).users.changePassword(newPassword)
+        }
+
+        retry {
+            assertCanAuthenticate(USERNAME, newPassword)
+            assertCannotAuthenticate(USERNAME, origPassword)
+        }
+    }
+
+    private fun assertCannotAuthenticate(username: String, password: String) {
+        assertTrue(runCatching { assertCanAuthenticate(username, password) }.isFailure)
     }
 
     // asserts the password is what we think it should be
