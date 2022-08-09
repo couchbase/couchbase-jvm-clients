@@ -25,6 +25,7 @@ import com.couchbase.client.protocol.shared.*
 import io.grpc.ServerBuilder
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import kotlin.Exception
 
@@ -57,6 +58,9 @@ class KotlinPerformer : CorePerformer() {
         responseObserver: StreamObserver<ClusterConnectionCloseResponse>
     ) {
         try {
+            runBlocking {
+                clusterConnections.get(request.clusterConnectionId)!!.cluster.disconnect()
+            }
             clusterConnections.remove(request.clusterConnectionId)
             responseObserver.onNext(ClusterConnectionCloseResponse.newBuilder()
                 .setClusterConnectionCount(clusterConnections.size)
@@ -71,6 +75,13 @@ class KotlinPerformer : CorePerformer() {
         request: DisconnectConnectionsRequest?,
         responseObserver: StreamObserver<DisconnectConnectionsResponse?>
     ) {
+        runBlocking {
+            clusterConnections.forEach { t, u ->
+                runBlocking {
+                    u.cluster.disconnect()
+                }
+            }
+        }
         clusterConnections.clear()
         responseObserver.onNext(DisconnectConnectionsResponse.newBuilder().build())
         responseObserver.onCompleted()

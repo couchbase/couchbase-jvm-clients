@@ -26,7 +26,7 @@ class ClusterConnection(req: ClusterConnectionCreateRequest) {
   private val hostname = "couchbase://" + req.getClusterHostname
   logger.info("Attempting connection to cluster " + hostname)
 
-  private val cluster = Cluster.connect(hostname, req.getClusterUsername, req.getClusterPassword).get
+  val cluster = Cluster.connect(hostname, req.getClusterUsername, req.getClusterPassword).get
   private val bucketCache = scala.collection.mutable.Map.empty[String, Bucket]
 
   // SCBC-365: hit performance problems when repeatedly opening a scope or collection.  99% of the time we'll be

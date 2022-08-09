@@ -79,6 +79,7 @@ class ScalaPerformer extends CorePerformer {
 
   override def clusterConnectionClose(request: ClusterConnectionCloseRequest, responseObserver: StreamObserver[ClusterConnectionCloseResponse]): Unit = {
     try {
+      clusterConnections(request.getClusterConnectionId).cluster.disconnect()
       clusterConnections.remove(request.getClusterConnectionId)
       ClusterConnectionCreateRequest.getDefaultInstance.newBuilderForType
       responseObserver.onNext(ClusterConnectionCloseResponse.newBuilder
@@ -93,6 +94,7 @@ class ScalaPerformer extends CorePerformer {
   }
 
   override def disconnectConnections(request: DisconnectConnectionsRequest, responseObserver: StreamObserver[DisconnectConnectionsResponse]): Unit = {
+    clusterConnections.foreach(cc => cc._2.cluster.disconnect())
     clusterConnections.clear()
     responseObserver.onNext(DisconnectConnectionsResponse.newBuilder.build)
     responseObserver.onCompleted()

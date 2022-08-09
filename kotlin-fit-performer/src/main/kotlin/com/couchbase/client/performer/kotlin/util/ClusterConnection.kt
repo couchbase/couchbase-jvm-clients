@@ -21,7 +21,7 @@ import com.couchbase.client.protocol.shared.DocLocation
 
 class ClusterConnection(req: ClusterConnectionCreateRequest) {
     private val hostname = "couchbase://" + req.clusterHostname
-    private val cluster = Cluster.connect(hostname, req.clusterUsername, req.clusterPassword)
+    val cluster = Cluster.connect(hostname, req.clusterUsername, req.clusterPassword)
     private val bucketCache: MutableMap<String, com.couchbase.client.kotlin.Bucket> = mutableMapOf()
 
     fun collection(loc: DocLocation): com.couchbase.client.kotlin.Collection {
