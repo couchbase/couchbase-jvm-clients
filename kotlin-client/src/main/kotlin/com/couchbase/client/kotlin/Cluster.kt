@@ -43,6 +43,7 @@ import com.couchbase.client.kotlin.analytics.AnalyticsParameters
 import com.couchbase.client.kotlin.analytics.AnalyticsPriority
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
+import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.diagnostics.DiagnosticsResult
 import com.couchbase.client.kotlin.diagnostics.PingResult
@@ -576,6 +577,24 @@ public class Cluster internal constructor(
     }
 
     public companion object {
+        /**
+         * The number of connected Cluster instances that may exist at the same time.
+         * Calling [Cluster.connect] after this limit is reached will either fail or log a warning,
+         * depending on the value of [failIfInstanceLimitReached].
+         */
+        @UncommittedCouchbaseApi
+        public var maxAllowedInstances : Int
+            get() = Core.getMaxAllowedInstances()
+            set(value) = Core.maxAllowedInstances(value)
+
+        /**
+         * True means exceeding [maxAllowedInstances] is a fatal error, false means just log a warning.
+         */
+        @UncommittedCouchbaseApi
+        public var failIfInstanceLimitReached : Boolean
+            get() = Core.getFailIfInstanceLimitReached()
+            set(value) = Core.failIfInstanceLimitReached(value)
+
         /**
          * Connects to a Couchbase cluster, authenticating with username and password.
          */

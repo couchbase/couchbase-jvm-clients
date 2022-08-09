@@ -254,11 +254,19 @@ public class Core {
   /**
    * Configures the maximum allowed core instances before warning/failing.
    *
-   * @param maxAllowedInstances the number of max allowed core instances.
+   * @param maxAllowedInstances the number of max allowed core instances. Must be greater than zero.
    */
   @Stability.Volatile
   public static void maxAllowedInstances(final int maxAllowedInstances) {
+    if (maxAllowedInstances < 1) {
+      throw new IllegalArgumentException("maxAllowedInstances must be > 0, but was " + maxAllowedInstances);
+    }
     Core.maxAllowedInstances = maxAllowedInstances;
+  }
+
+  @Stability.Internal
+  public static int getMaxAllowedInstances() {
+    return maxAllowedInstances;
   }
 
   /**
@@ -269,6 +277,11 @@ public class Core {
   @Stability.Volatile
   public static void failIfInstanceLimitReached(final boolean failIfInstanceLimitReached) {
     Core.failIfInstanceLimitReached = failIfInstanceLimitReached;
+  }
+
+  @Stability.Internal
+  public static boolean getFailIfInstanceLimitReached() {
+    return failIfInstanceLimitReached;
   }
 
   /**
@@ -324,9 +337,9 @@ public class Core {
    */
   private static synchronized void incrementAndVerifyNumInstances(final EventBus eventBus) {
     if (NUM_INSTANCES.get() >= maxAllowedInstances) {
-      String msg = "The number of created instances (" + NUM_INSTANCES + ") has " +
-        "reached the configured instance limit (" + maxAllowedInstances + "). It is recommended to only create " +
-        "one instance and reuse it across the application lifetime. Also, make sure to disconnect clients if they " +
+      String msg = "The number of connected Cluster instances (" + (NUM_INSTANCES.get() + 1) + ") exceeds " +
+        "the configured limit (" + maxAllowedInstances + "). It is recommended to create only " +
+        "one instance and reuse it across the application lifetime. Also, make sure to disconnect Clusters if they " +
         "are not used anymore.";
 
       if (failIfInstanceLimitReached) {
