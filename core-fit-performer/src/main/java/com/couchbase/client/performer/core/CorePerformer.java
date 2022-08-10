@@ -20,22 +20,35 @@ import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
 import com.couchbase.client.performer.core.metrics.MetricsReporter;
 import com.couchbase.client.performer.core.perf.Counters;
 import com.couchbase.client.performer.core.perf.HorizontalScalingThread;
+import com.couchbase.client.performer.core.perf.PerRun;
 import com.couchbase.client.performer.core.perf.WorkloadStreamingThread;
 import com.couchbase.client.performer.core.perf.WorkloadsRunner;
+import com.couchbase.client.performer.core.stream.StreamerOwner;
 import com.couchbase.client.protocol.PerformerServiceGrpc;
 import com.couchbase.client.protocol.performer.Caps;
 import com.couchbase.client.protocol.performer.PerformerCapsFetchRequest;
 import com.couchbase.client.protocol.performer.PerformerCapsFetchResponse;
 import com.couchbase.client.protocol.shared.API;
+import com.couchbase.client.protocol.streams.CancelRequest;
+import com.couchbase.client.protocol.streams.CancelResponse;
+import com.couchbase.client.protocol.streams.RequestItemsRequest;
+import com.couchbase.client.protocol.streams.RequestItemsResponse;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.util.UUID;
 
 abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServiceImplBase {
-    abstract protected SdkCommandExecutor executor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters);
+    private final StreamerOwner streamerOwner = new StreamerOwner();
+
+    public CorePerformer() {
+        streamerOwner.start();
+    }
+
+    abstract protected SdkCommandExecutor executor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters, API api);
 
     // Can return null if the performer does not support transactions.
     abstract protected @Nullable TransactionCommandExecutor transactionsExecutor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters);
@@ -60,12 +73,16 @@ abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServic
     public void run(com.couchbase.client.protocol.run.Request request,
                                      StreamObserver<com.couchbase.client.protocol.run.Result> responseObserver) {
         try {
+            // A runId lets us find streams created by this run
+            var runId = UUID.randomUUID().toString();
+
             if (!request.hasWorkloads()) {
                 throw new UnsupportedOperationException("Not workloads");
             }
 
             var counters = new Counters();
-            var executor = executor(request.getWorkloads(), counters);
+            var sdkExecutor = executor(request.getWorkloads(), counters, API.DEFAULT);
+            var sdkExecutorReactive = executor(request.getWorkloads(), counters, API.ASYNC);
             var transactionsExecutor = transactionsExecutor(request.getWorkloads(), counters);
 
             var writer = new WorkloadStreamingThread(responseObserver, request.getConfig());
@@ -79,24 +96,46 @@ abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServic
                 metrics.start();
             }
 
-            WorkloadsRunner.run(request.getWorkloads(),
-                    (x) -> writer.enqueue(x),
-                    (x) -> new HorizontalScalingThread(x, executor, transactionsExecutor),
-                    counters);
-
-            if (metrics != null) {
-                metrics.interrupt();
-                metrics.join();
+            try (var perRun = new PerRun(runId, writer, counters, streamerOwner, metrics)) {
+                WorkloadsRunner.run(request.getWorkloads(),
+                        perRun,
+                        (x) -> new HorizontalScalingThread(x, sdkExecutor, sdkExecutorReactive, transactionsExecutor));
             }
-
-            writer.interrupt();
-            writer.join();
 
             responseObserver.onCompleted();
         }
         catch (UnsupportedOperationException err) {
             responseObserver.onError(Status.UNIMPLEMENTED.withDescription(err.toString()).asException());
-        } catch (RuntimeException | InterruptedException err) {
+        } catch (Exception err) {
+            responseObserver.onError(Status.UNKNOWN.withDescription(err.toString()).asException());
+        }
+    }
+
+    @Override
+    public void streamCancel(CancelRequest request, StreamObserver<CancelResponse> responseObserver) {
+        try {
+            streamerOwner.cancel(request);
+            responseObserver.onNext(CancelResponse.getDefaultInstance());
+            responseObserver.onCompleted();
+        }
+        catch (UnsupportedOperationException err) {
+            responseObserver.onError(Status.UNIMPLEMENTED.withDescription(err.toString()).asException());
+        } catch (RuntimeException err) {
+            responseObserver.onError(Status.UNKNOWN.withDescription(err.toString()).asException());
+        }
+
+    }
+
+    @Override
+    public void streamRequestItems(RequestItemsRequest request, StreamObserver<RequestItemsResponse> responseObserver) {
+        try {
+            streamerOwner.requestItems(request);
+            responseObserver.onNext(RequestItemsResponse.getDefaultInstance());
+            responseObserver.onCompleted();
+        }
+        catch (UnsupportedOperationException err) {
+            responseObserver.onError(Status.UNIMPLEMENTED.withDescription(err.toString()).asException());
+        } catch (RuntimeException err) {
             responseObserver.onError(Status.UNKNOWN.withDescription(err.toString()).asException());
         }
     }

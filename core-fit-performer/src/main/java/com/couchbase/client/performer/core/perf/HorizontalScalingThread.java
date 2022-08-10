@@ -20,6 +20,7 @@ import com.couchbase.client.performer.core.bounds.BoundsCounterBased;
 import com.couchbase.client.performer.core.bounds.BoundsForTime;
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
+import com.couchbase.client.protocol.shared.API;
 import com.couchbase.client.protocol.shared.Bounds;
 import com.couchbase.client.protocol.transactions.TransactionException;
 import org.slf4j.Logger;
@@ -32,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class HorizontalScalingThread extends Thread {
     private final Logger logger;
     private final SdkCommandExecutor sdkCommandExecutor;
+    private final SdkCommandExecutor sdkCommandExecutorReactive;
     private final @Nullable TransactionCommandExecutor transactionsCommandExecutor;
     private final PerHorizontalScaling per;
     AtomicInteger operationsSuccessful = new AtomicInteger(0);
@@ -39,10 +41,12 @@ public class HorizontalScalingThread extends Thread {
 
     public HorizontalScalingThread(PerHorizontalScaling per,
                                    SdkCommandExecutor sdkCommandExecutor,
+                                   SdkCommandExecutor sdkCommandExecutorReactive,
                                    @Nullable TransactionCommandExecutor transactionsCommandExecutor) {
         super("perf-runner");
         logger = LoggerFactory.getLogger("runner-" + per.runnerIndex());
         this.sdkCommandExecutor = sdkCommandExecutor;
+        this.sdkCommandExecutorReactive = sdkCommandExecutorReactive;
         this.per = per;
         this.transactionsCommandExecutor = transactionsCommandExecutor;
     }
@@ -71,8 +75,11 @@ public class HorizontalScalingThread extends Thread {
         while (bounds.canExecute()) {
             var nextCommand = workload.getCommand((int) (executed % workload.getCommandCount()));
             ++ executed;
-            var result = sdkCommandExecutor.run(nextCommand);
-            per.consumer().accept(result);
+            var result = nextCommand.getApi() == API.DEFAULT
+                    ? sdkCommandExecutor.run(nextCommand, per.perRun())
+                    : sdkCommandExecutorReactive.run(nextCommand, per.perRun());
+
+            per.resultsStream().enqueue(result);
             if (result.hasSdk()) {
                 if (result.getSdk().getSuccess()) {
                     operationsSuccessful.incrementAndGet();
@@ -90,8 +97,11 @@ public class HorizontalScalingThread extends Thread {
         while (bounds.canExecute()) {
             var nextCommand = workload.getCommand((int) (executed % workload.getCommandCount()));
             ++ executed;
+            if (nextCommand.getApi() != API.DEFAULT) {
+                throw new UnsupportedOperationException();
+            }
             var result = transactionsCommandExecutor.run(nextCommand, workload.getPerformanceMode());
-            per.consumer().accept(result);
+            per.resultsStream().enqueue(result);
             if (result.hasTransaction()) {
                 if (result.getTransaction().getException() == TransactionException.NO_EXCEPTION_THROWN) {
                     operationsSuccessful.incrementAndGet();
@@ -110,7 +120,7 @@ public class HorizontalScalingThread extends Thread {
                 throw new UnsupportedOperationException("Unknown GRPC command type");
             }
 
-            per.consumer().accept(com.couchbase.client.protocol.run.Result.newBuilder()
+            per.resultsStream().enqueue(com.couchbase.client.protocol.run.Result.newBuilder()
                     .setGrpc(com.couchbase.client.protocol.meta.Result.getDefaultInstance())
                     .build());
 

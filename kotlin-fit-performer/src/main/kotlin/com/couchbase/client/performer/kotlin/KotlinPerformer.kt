@@ -89,7 +89,10 @@ class KotlinPerformer : CorePerformer() {
         responseObserver.onCompleted()
     }
 
-    override fun executor(workloads: com.couchbase.client.protocol.run.Workloads, counters: Counters): SdkCommandExecutor {
+    override fun executor(workloads: com.couchbase.client.protocol.run.Workloads, counters: Counters, api: API): SdkCommandExecutor {
+        if (api != API.DEFAULT) {
+            throw UnsupportedOperationException()
+        }
         return KotlinSdkCommandExecutor(clusterConnections.get(workloads.clusterConnectionId)!!, counters)
     }
 

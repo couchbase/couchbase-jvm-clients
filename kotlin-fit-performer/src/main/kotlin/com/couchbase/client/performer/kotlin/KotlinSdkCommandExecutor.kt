@@ -29,6 +29,8 @@ import com.couchbase.client.kotlin.kv.PersistTo
 import com.couchbase.client.kotlin.kv.ReplicateTo
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.perf.Counters
+import com.couchbase.client.performer.core.perf.PerRun
+import com.couchbase.client.performer.core.perf.WorkloadStreamingThread
 import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
@@ -112,7 +114,7 @@ class KotlinSdkCommandExecutor(private val connection: ClusterConnection,
         }
     }
 
-    override fun performOperation(op: com.couchbase.client.protocol.sdk.Command): com.couchbase.client.protocol.run.Result {
+    override fun performOperation(op: com.couchbase.client.protocol.sdk.Command, perRun: PerRun): com.couchbase.client.protocol.run.Result {
         val result = com.couchbase.client.protocol.run.Result.newBuilder()
 
         runBlocking {

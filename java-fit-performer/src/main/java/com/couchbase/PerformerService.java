@@ -108,9 +108,11 @@ public class PerformerService extends CorePerformer {
     public static AtomicReference<String> globalError = new AtomicReference<>();
 
     @Override
-    protected SdkCommandExecutor executor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters) {
+    protected SdkCommandExecutor executor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters, API api) {
         var connection = clusterConnections.get(workloads.getClusterConnectionId());
-        return new JavaSdkCommandExecutor(connection, counters, spans);
+        return api == API.DEFAULT
+                ? new JavaSdkCommandExecutor(connection, counters, spans)
+                : new ReactiveJavaSdkCommandExecutor(connection, counters, spans);
     }
 
     @Override

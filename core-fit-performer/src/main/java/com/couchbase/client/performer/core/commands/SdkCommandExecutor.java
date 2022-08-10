@@ -16,26 +16,29 @@
 package com.couchbase.client.performer.core.commands;
 
 import com.couchbase.client.performer.core.perf.Counters;
+import com.couchbase.client.performer.core.perf.PerRun;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// A useful abstraction layer between the core performer and the per-SDK performers.  Allows refactoring most of the logic
+// into the core performer.
+// Note it's tempting to put shared things from core-io here, such as RequestSpans, but for technical reasons
+// we cannot make the core FIT performer depend on core-io, without making it impossible to test different versions of it.
 public abstract class SdkCommandExecutor extends Executor {
     protected final Logger logger = LoggerFactory.getLogger(SdkCommandExecutor.class);
 
     public SdkCommandExecutor(Counters counters) {
-
         super(counters);
     }
 
-    abstract protected com.couchbase.client.protocol.run.Result performOperation(com.couchbase.client.protocol.sdk.Command op);
+    abstract protected com.couchbase.client.protocol.run.Result performOperation(com.couchbase.client.protocol.sdk.Command op, PerRun perRun);
 
     abstract protected com.couchbase.client.protocol.shared.Exception convertException(Throwable raw);
 
-    // Returns a com.couchbase.client.protocol.run.Result rather than a com.couchbase.client.protocol.run.Result directly, so it
-    // can also return the timing info.
-    public com.couchbase.client.protocol.run.Result run(com.couchbase.client.protocol.sdk.Command command) {
+    // Returns a com.couchbase.client.protocol.run.Result so it can also return the timing info.
+    public com.couchbase.client.protocol.run.Result run(com.couchbase.client.protocol.sdk.Command command, PerRun perRun) {
         try {
-            return performOperation(command);
+            return performOperation(command, perRun);
         }
         catch (RuntimeException err) {
             return com.couchbase.client.protocol.run.Result.newBuilder()

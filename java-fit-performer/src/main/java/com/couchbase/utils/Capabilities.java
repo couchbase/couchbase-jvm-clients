@@ -25,9 +25,13 @@ public class Capabilities {
     public static List<Caps> sdkImplementationCaps() {
         var out = new ArrayList<Caps>();
 
-        // [start:1.1.5]
+        // [start:3.1.5]
         out.add(Caps.SDK_PRESERVE_EXPIRY);
-        // [end:1.1.5]
+        // [end:3.1.5]
+
+        // [start:3.4.1]
+        out.add(Caps.SDK_KV_RANGE_SCAN);
+        // [end:3.4.1]
 
         return out;
     }

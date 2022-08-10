@@ -15,13 +15,18 @@
  */
 package com.couchbase.client.performer.core.perf;
 
+import com.couchbase.client.performer.core.stream.StreamerOwner;
 import com.couchbase.client.protocol.run.HorizontalScaling;
-import com.couchbase.client.protocol.run.Result;
-
-import java.util.function.Consumer;
 
 public record PerHorizontalScaling(int runnerIndex,
                                    HorizontalScaling perThread,
-                                   // Abstract over streaming and returning, performance and integration testing
-                                   Consumer<Result> consumer,
-                                   Counters counters) {}
+                                   PerRun perRun) {
+    Counters counters() {
+        return perRun().counters();
+    }
+
+    WorkloadStreamingThread resultsStream() {
+        return perRun.resultsStream();
+    }
+}
+

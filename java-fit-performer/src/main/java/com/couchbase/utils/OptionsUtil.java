@@ -144,6 +144,10 @@ public class OptionsUtil {
             if (timeoutConfig == null) timeoutConfig = TimeoutConfig.builder();
             timeoutConfig.managementTimeout(Duration.ofSeconds(cc.getManagementTimeoutSecs()));
         }
+        if (cc.hasKvScanTimeoutSecs()) {
+            if (timeoutConfig == null) timeoutConfig = TimeoutConfig.builder();
+            timeoutConfig.kvScanTimeout(Duration.ofSeconds(cc.getKvScanTimeoutSecs()));
+        }
         if (cc.hasTranscoder()) {
             clusterEnvironment.transcoder(JavaSdkCommandExecutor.convertTranscoder(cc.getTranscoder()));
         }

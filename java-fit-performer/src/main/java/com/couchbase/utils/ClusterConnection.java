@@ -96,6 +96,13 @@ public class ClusterConnection {
                 .collection(coll.getCollectionName());
     }
 
+    public Collection collection(com.couchbase.client.protocol.shared.Collection coll) {
+        var bucket = cluster.bucket(coll.getBucketName());
+        return bucket
+                .scope(coll.getScopeName())
+                .collection(coll.getCollectionName());
+    }
+
     public void close() {
         cluster.disconnect();
         if (config != null) {

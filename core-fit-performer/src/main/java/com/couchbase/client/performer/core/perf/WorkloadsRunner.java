@@ -29,28 +29,26 @@ public class WorkloadsRunner {
     private static final Logger logger = LoggerFactory.getLogger(WorkloadsRunner.class);
 
     public static void run(com.couchbase.client.protocol.run.Workloads workloadRun,
-                           Consumer<com.couchbase.client.protocol.run.Result> consumer,
-                           Function<PerHorizontalScaling, Thread> createThread,
-                           Counters counters) {
+                           PerRun perRun,
+                           Function<PerHorizontalScaling, Thread> createThread) {
         try{
             var runners = new ArrayList<Thread>();
             for (int runnerIndex = 0; runnerIndex < workloadRun.getHorizontalScalingCount(); runnerIndex ++) {
                 var perThread = workloadRun.getHorizontalScaling(runnerIndex);
                 runners.add(createThread.apply(new PerHorizontalScaling(runnerIndex,
                         perThread,
-                        consumer,
-                        counters)));
+                        perRun)));
             }
 
             for (Thread runner : runners) {
                 runner.start();
             }
-            logger.info("Started {} threads", runners.size());
+            logger.info("Started {} runner threads", runners.size());
 
             for (Thread runner : runners) {
                 runner.join();
             }
-            logger.info("All {} threads completed", runners.size());
+            logger.info("All {} runner threads completed", runners.size());
         }catch (Exception e){
             throw new RuntimeException(e);
         }

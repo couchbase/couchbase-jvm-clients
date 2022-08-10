@@ -18,7 +18,7 @@ package com.couchbase.client.performer.scala
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
-import com.couchbase.client.performer.core.perf.Counters
+import com.couchbase.client.performer.core.perf.{Counters, PerRun, WorkloadStreamingThread}
 import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.protocol
@@ -105,7 +105,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
     }
   }
 
-  override protected def performOperation(op: com.couchbase.client.protocol.sdk.Command): com.couchbase.client.protocol.run.Result = {
+  override protected def performOperation(op: com.couchbase.client.protocol.sdk.Command, perRun: PerRun): com.couchbase.client.protocol.run.Result = {
     val result = com.couchbase.client.protocol.run.Result.newBuilder()
 
     if (op.hasInsert) {

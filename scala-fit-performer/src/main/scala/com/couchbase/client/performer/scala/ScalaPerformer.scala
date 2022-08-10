@@ -27,6 +27,8 @@ import io.grpc.stub.StreamObserver
 import io.grpc.{ServerBuilder, Status}
 import org.slf4j.LoggerFactory
 
+import java.lang
+
 
 object ScalaPerformer {
   private val logger = LoggerFactory.getLogger(classOf[ScalaPerformer])
@@ -101,7 +103,10 @@ class ScalaPerformer extends CorePerformer {
     responseObserver.onCompleted()
   }
 
-  override protected def executor(workloads: com.couchbase.client.protocol.run.Workloads, counters: Counters): SdkCommandExecutor = {
+  override protected def executor(workloads: com.couchbase.client.protocol.run.Workloads, counters: Counters, api: API): SdkCommandExecutor = {
+    if (api != API.DEFAULT) {
+      throw new UnsupportedOperationException()
+    }
     new ScalaSdkCommandExecutor(clusterConnections(workloads.getClusterConnectionId), counters)
   }
 

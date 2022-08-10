@@ -73,7 +73,7 @@ public class WorkloadStreamingThread extends Thread {
             responseObserver.onError(Status.ABORTED.withDescription(e.toString()).asException());
         }
 
-        logger.info("Writer thread has been stopped, performing final flush");
+        logger.info("Writer thread has been stopped, performing final flush (currently {} on queue)", writeQueue.size());
 
         flush();
 

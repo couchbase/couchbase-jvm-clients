@@ -31,27 +31,39 @@ import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.ReplicateTo;
+import com.couchbase.client.java.kv.ScanOptions;
+import com.couchbase.client.java.kv.ScanResult;
+import com.couchbase.client.java.kv.ScanSort;
 import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.perf.Counters;
+import com.couchbase.client.performer.core.perf.PerRun;
+import com.couchbase.client.performer.core.perf.WorkloadStreamingThread;
+import com.couchbase.client.performer.core.stream.StreamStreamer;
 import com.couchbase.client.performer.core.util.ErrorUtil;
+import com.couchbase.client.protocol.run.Result;
+import com.couchbase.client.protocol.sdk.kv.rangescan.Scan;
 import com.couchbase.client.protocol.shared.*;
 import com.couchbase.client.protocol.shared.Exception;
+import com.couchbase.client.performer.core.stream.Streamer;
+import com.couchbase.client.performer.core.stream.StreamerOwner;
 import com.couchbase.utils.ClusterConnection;
 import com.google.protobuf.ByteString;
 
 import javax.annotation.Nullable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
+import static com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN;
 
 
 /**
@@ -71,7 +83,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     }
 
     @Override
-    protected com.couchbase.client.protocol.run.Result performOperation(com.couchbase.client.protocol.sdk.Command op) {
+    protected com.couchbase.client.protocol.run.Result performOperation(com.couchbase.client.protocol.sdk.Command op, PerRun perRun) {
         var result = com.couchbase.client.protocol.run.Result.newBuilder();
 
         if (op.hasInsert()){
@@ -79,7 +91,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             var collection = connection.collection(request.getLocation());
             var content = content(request.getContent());
             var docId = getDocId(request.getLocation());
-            var options = createOptions(request);
+            var options = createOptions(request, spans);
             result.setInitiated(getTimeNow());
             long start = System.nanoTime();
             MutationResult mr;
@@ -92,7 +104,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             var request = op.getGet();
             var collection = connection.collection(request.getLocation());
             var docId = getDocId(request.getLocation());
-            var options = createOptions(request);
+            var options = createOptions(request, spans);
             result.setInitiated(getTimeNow());
             long start = System.nanoTime();
             GetResult gr;
@@ -105,7 +117,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             var request = op.getRemove();
             var collection = connection.collection(request.getLocation());
             var docId = getDocId(request.getLocation());
-            var options = createOptions(request);
+            var options = createOptions(request, spans);
             result.setInitiated(getTimeNow());
             long start = System.nanoTime();
             MutationResult mr;
@@ -118,7 +130,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             var request = op.getReplace();
             var collection = connection.collection(request.getLocation());
             var docId = getDocId(request.getLocation());
-            var options = createOptions(request);
+            var options = createOptions(request, spans);
             var content = content(request.getContent());
             result.setInitiated(getTimeNow());
             long start = System.nanoTime();
@@ -132,7 +144,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             var request = op.getUpsert();
             var collection = connection.collection(request.getLocation());
             var docId = getDocId(request.getLocation());
-            var options = createOptions(request);
+            var options = createOptions(request, spans);
             var content = content(request.getContent());
             result.setInitiated(getTimeNow());
             long start = System.nanoTime();
@@ -142,6 +154,28 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             result.setElapsedNanos(System.nanoTime() - start);
             if (op.getReturnResult()) populateResult(result, mr);
             else setSuccess(result);
+        // [start:3.4.1]
+        } else if (op.hasRangeScan()){
+            var request = op.getRangeScan();
+            var collection = connection.collection(request.getCollection());
+            var options = createOptions(request, spans);
+            var scanType = convertScanType(request);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            Stream<ScanResult> results;
+            if (options != null) results = collection.scan(scanType, options);
+            else results = collection.scan(scanType);
+            result.setElapsedNanos(System.nanoTime() - start);
+            var streamer = new StreamStreamer<ScanResult>(results, perRun, request.getStreamConfig().getStreamId(), request.getStreamConfig(),
+                    (ScanResult r) -> {
+                        return processScanResult(request, r);
+                    });
+            perRun.streamerOwner().addAndStart(streamer);
+            result.setStream(com.couchbase.client.protocol.streams.Signal.newBuilder()
+                    .setCreated(com.couchbase.client.protocol.streams.Created.newBuilder()
+                            .setType(STREAM_KV_RANGE_SCAN)
+                            .setStreamId(streamer.streamId())));
+        // [end:3.4.1]
         } else {
             throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"));
         }
@@ -149,8 +183,89 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         return result.build();
     }
 
+    // [start:3.4.1]
+    public static Result processScanResult(Scan request, ScanResult r) {
+        try {
+            byte[] bytes;
+
+            var builder = com.couchbase.client.protocol.sdk.kv.rangescan.ScanResult.newBuilder()
+                    .setId(r.id())
+                    .setStreamId(request.getStreamConfig().getStreamId());
+
+            if (!r.withoutContent()) {
+                builder.setCas(r.cas());
+                if (r.expiryTime().isPresent()) {
+                    builder.setExpiryTime(r.expiryTime().get().getEpochSecond());
+                }
+            }
+
+            if (request.hasContentAs()) {
+                if (request.getContentAs().hasAsString()) {
+                    bytes = r.contentAs(String.class).getBytes(StandardCharsets.UTF_8);
+                } else if (request.getContentAs().hasAsByteArray()) {
+                    bytes = r.contentAsBytes();
+                } else if (request.getContentAs().hasAsJson()) {
+                    bytes = r.contentAs(JsonObject.class).toBytes();
+                } else throw new UnsupportedOperationException("Unknown contentAs");
+
+                builder.setContent(ByteString.copyFrom(bytes));
+            }
+
+            return Result.newBuilder()
+                    .setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
+                            .setRangeScanResult(builder.build()))
+                    .build();
+        } catch (RuntimeException err) {
+            return Result.newBuilder()
+                    .setStream(com.couchbase.client.protocol.streams.Signal.newBuilder()
+                            .setError(com.couchbase.client.protocol.streams.Error.newBuilder()
+                                    .setException(convertExceptionShared(err))
+                                    .setStreamId(request.getStreamConfig().getStreamId())))
+                    .build();
+        }
+    }
+    // [end:3.4.1]
+
+    public static com.couchbase.client.java.kv.ScanTerm convertScanTerm(com.couchbase.client.protocol.sdk.kv.rangescan.ScanTermChoice st) {
+        if (st.hasMaximum()) {
+            return com.couchbase.client.java.kv.ScanTerm.maximum();
+        }
+        else if (st.hasMinimum()) {
+            return com.couchbase.client.java.kv.ScanTerm.minimum();
+        }
+        else if (st.hasTerm()) {
+            var stt = st.getTerm();
+            if (stt.hasExclusive() && stt.getExclusive()) {
+                return com.couchbase.client.java.kv.ScanTerm.exclusive(stt.getTerm());
+            }
+            return com.couchbase.client.java.kv.ScanTerm.inclusive(stt.getTerm());
+        }
+        else throw new UnsupportedOperationException();
+    }
+
+    public static com.couchbase.client.java.kv.ScanType convertScanType(com.couchbase.client.protocol.sdk.kv.rangescan.Scan request) {
+        if (request.getScanType().hasRange()) {
+            var rs = request.getScanType().getRange();
+            return com.couchbase.client.java.kv.ScanType.rangeScan(convertScanTerm(rs.getFrom()), convertScanTerm(rs.getTo()));
+        }
+        else if (request.getScanType().hasSampling()) {
+            var ss = request.getScanType().getSampling();
+            if (ss.hasSeed()) {
+                return com.couchbase.client.java.kv.ScanType.samplingScan(ss.getLimit(), ss.getSeed());
+            }
+            return com.couchbase.client.java.kv.ScanType.samplingScan(ss.getLimit());
+        }
+        else {
+            throw new UnsupportedOperationException();
+        }
+    }
+
     @Override
     protected Exception convertException(Throwable raw) {
+        return convertExceptionShared(raw);
+    }
+
+    public static Exception convertExceptionShared(Throwable raw) {
         var ret = com.couchbase.client.protocol.shared.Exception.newBuilder();
 
         if (raw instanceof CouchbaseException || raw instanceof UnsupportedOperationException) {
@@ -169,7 +284,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                         .setType(type)
                         .setSerialized(raw.toString());
                 if (raw.getCause() != null) {
-                    out.setCause(convertException(raw.getCause()));
+                    out.setCause(convertExceptionShared(raw.getCause()));
                 }
 
                 ret.setCouchbase(out);
@@ -184,12 +299,12 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         return ret.build();
     }
 
-    private void setSuccess(com.couchbase.client.protocol.run.Result.Builder result) {
+    public static void setSuccess(com.couchbase.client.protocol.run.Result.Builder result) {
         result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
                 .setSuccess(true));
     }
 
-    private void populateResult(com.couchbase.client.protocol.run.Result.Builder result, MutationResult value) {
+    public static void populateResult(com.couchbase.client.protocol.run.Result.Builder result, MutationResult value) {
         var builder = com.couchbase.client.protocol.sdk.kv.MutationResult.newBuilder()
                 .setCas(value.cas());
         value.mutationToken().ifPresent(mt ->
@@ -202,7 +317,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 .setMutationResult(builder));
     }
 
-    private void populateResult(com.couchbase.client.protocol.run.Result.Builder result, GetResult value) {
+    public static void populateResult(com.couchbase.client.protocol.run.Result.Builder result, GetResult value) {
         var builder = com.couchbase.client.protocol.sdk.kv.GetResult.newBuilder()
                 .setCas(value.cas())
                 // contentAsBytes was added later
@@ -226,7 +341,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         throw new UnsupportedOperationException("Unknown content type");
     }
 
-    private @Nullable InsertOptions createOptions(com.couchbase.client.protocol.sdk.kv.Insert request) {
+    public static @Nullable InsertOptions createOptions(com.couchbase.client.protocol.sdk.kv.Insert request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = InsertOptions.insertOptions();   
@@ -251,7 +366,32 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         else return null;
     }
 
-    private @Nullable RemoveOptions createOptions(com.couchbase.client.protocol.sdk.kv.Remove request) {
+    // [start:3.4.1]
+    public static @Nullable ScanOptions createOptions(com.couchbase.client.protocol.sdk.kv.rangescan.Scan request, ConcurrentHashMap<String, RequestSpan> spans) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = ScanOptions.scanOptions();
+            if (opts.hasWithoutContent()) out.withoutContent(opts.getWithoutContent());
+            if (opts.hasConsistentWith()) out.consistentWith(convertMutationState(opts.getConsistentWith()));
+            if (opts.hasSort()) {
+                out.sort(switch (opts.getSort()) {
+                    case KV_RANGE_SCAN_SORT_NONE -> ScanSort.NONE;
+                    case KV_RANGE_SCAN_SORT_ASCENDING -> ScanSort.ASCENDING;
+                    default -> throw new UnsupportedOperationException();
+                });
+            }
+            if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+            if (opts.hasBatchByteLimit()) out.batchByteLimit(opts.getBatchByteLimit());
+            if (opts.hasBatchItemLimit()) out.batchItemLimit(opts.getBatchItemLimit());
+            return out;
+        }
+        else return null;
+    }
+    // [end:3.4.1]
+
+    public static @Nullable RemoveOptions createOptions(com.couchbase.client.protocol.sdk.kv.Remove request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = RemoveOptions.removeOptions();
@@ -264,7 +404,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         else return null;
     }
 
-    private @Nullable GetOptions createOptions(com.couchbase.client.protocol.sdk.kv.Get request) {
+    public static @Nullable GetOptions createOptions(com.couchbase.client.protocol.sdk.kv.Get request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = GetOptions.getOptions();
@@ -278,7 +418,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         else return null;
     }
 
-    private @Nullable ReplaceOptions createOptions(com.couchbase.client.protocol.sdk.kv.Replace request) {
+    public static @Nullable ReplaceOptions createOptions(com.couchbase.client.protocol.sdk.kv.Replace request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = ReplaceOptions.replaceOptions();
@@ -312,7 +452,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         else return null;
     }
 
-    private @Nullable UpsertOptions createOptions(com.couchbase.client.protocol.sdk.kv.Upsert request) {
+    public static @Nullable UpsertOptions createOptions(com.couchbase.client.protocol.sdk.kv.Upsert request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = UpsertOptions.upsertOptions();
@@ -344,8 +484,8 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         }
         else return null;
     }
-    
-    private static void convertDurability(com.couchbase.client.protocol.shared.DurabilityType durability, CommonDurabilityOptions options) {
+
+    public static void convertDurability(com.couchbase.client.protocol.shared.DurabilityType durability, CommonDurabilityOptions options) {
         if (durability.hasDurabilityLevel()) {
             options.durability(switch (durability.getDurabilityLevel()) {
                 case NONE -> DurabilityLevel.NONE;
@@ -384,5 +524,15 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         if (transcoder.hasRawString()) return RawStringTranscoder.INSTANCE;
         if (transcoder.hasRawBinary()) return RawBinaryTranscoder.INSTANCE;
         throw new UnsupportedOperationException("Unknown transcoder");
+    }
+
+    public static MutationState convertMutationState(com.couchbase.client.protocol.shared.MutationState consistentWith) {
+        var mutationTokens = consistentWith.getTokensList().stream()
+                .map(mt -> new com.couchbase.client.core.msg.kv.MutationToken((short) mt.getPartitionId(),
+                        mt.getPartitionUuid(),
+                        mt.getSequenceNumber(),
+                        mt.getBucketName()))
+                .toList();
+        return MutationState.from(mutationTokens.toArray(new com.couchbase.client.core.msg.kv.MutationToken[0]));
     }
 }
