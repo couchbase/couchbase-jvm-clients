@@ -56,7 +56,7 @@ public class QueryRequest
   extends BaseRequest<QueryResponse>
   implements HttpRequest<QueryChunkHeader, QueryChunkRow, QueryChunkTrailer, QueryResponse> {
 
-  private static final String URI = "/query";
+  private static final String URI = "/query/service";
   private final byte[] query;
   private final String statement;
   private final boolean idempotent;
@@ -64,7 +64,7 @@ public class QueryRequest
   private final String contextId;
   private final String bucket;
   private final String scope;
-  private NodeIdentifier target;
+  private final NodeIdentifier target;
 
 
   public QueryRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
