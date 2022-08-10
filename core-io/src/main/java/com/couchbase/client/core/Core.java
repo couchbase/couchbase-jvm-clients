@@ -305,10 +305,14 @@ public class Core {
     this.eventBus = environment.eventBus();
     this.timer = environment.timer();
     this.currentConfig = configurationProvider.config();
-    this.configurationProvider.configs().subscribe(c -> {
-      currentConfig = c;
-      reconfigure();
-    });
+    this.configurationProvider
+      .configs()
+      .publishOn(environment.scheduler())
+      .subscribe(c -> {
+        currentConfig = c;
+        reconfigure();
+      });
+
     this.beforeSendRequestCallbacks = environment
       .requestCallbacks()
       .stream()

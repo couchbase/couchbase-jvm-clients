@@ -130,15 +130,14 @@ class CoreTest {
     clusterConfig.setBucketConfig(oneNodeConfig);
     configs.tryEmitNext(clusterConfig);
 
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.MANAGER, 8091, Optional.empty());
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.QUERY, 8093, Optional.empty());
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
-
 
     verify(mock102, never()).addService(ServiceType.VIEWS, 8092, Optional.empty());
     verify(mock102, never()).addService(ServiceType.MANAGER, 8091, Optional.empty());
@@ -153,23 +152,22 @@ class CoreTest {
     clusterConfig.setBucketConfig(twoNodeConfig);
     configs.tryEmitNext(clusterConfig);
 
-
-    verify(mock101, times(2))
+    verify(mock101, timeout(100).times(2))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
-    verify(mock101, times(2))
+    verify(mock101, timeout(100).times(2))
       .addService(ServiceType.MANAGER, 8091, Optional.empty());
-    verify(mock101, times(2))
+    verify(mock101, timeout(100).times(2))
       .addService(ServiceType.QUERY, 8093, Optional.empty());
-    verify(mock101, times(2))
+    verify(mock101, timeout(100).times(2))
       .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
 
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.MANAGER, 8091, Optional.empty());
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.QUERY, 8093, Optional.empty());
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
   }
 
@@ -226,22 +224,22 @@ class CoreTest {
     clusterConfig.setBucketConfig(twoNodesConfig);
     configs.tryEmitNext(clusterConfig);
 
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.MANAGER, 8091, Optional.empty());
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.QUERY, 8093, Optional.empty());
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
 
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.MANAGER, 8091, Optional.empty());
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.QUERY, 8093, Optional.empty());
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
 
     BucketConfig twoNodesConfigMore = BucketConfigParser.parse(
@@ -252,25 +250,25 @@ class CoreTest {
     clusterConfig.setBucketConfig(twoNodesConfigMore);
     configs.tryEmitNext(clusterConfig);
 
-    verify(mock101, times(2))
+    verify(mock101, timeout(100).times(2))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
-    verify(mock101, times(2))
+    verify(mock101, timeout(100).times(2))
       .addService(ServiceType.MANAGER, 8091, Optional.empty());
-    verify(mock101, times(2))
+    verify(mock101, timeout(100).times(2))
       .addService(ServiceType.QUERY, 8093, Optional.empty());
-    verify(mock101, times(2))
+    verify(mock101, timeout(100).times(2))
       .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
 
-    verify(mock102, times(2))
+    verify(mock102, timeout(100).times(2))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
-    verify(mock102, times(2))
+    verify(mock102, timeout(100).times(2))
       .addService(ServiceType.MANAGER, 8091, Optional.empty());
-    verify(mock102, times(2))
+    verify(mock102, timeout(100).times(2))
       .addService(ServiceType.QUERY, 8093, Optional.empty());
-    verify(mock102, times(2))
+    verify(mock102, timeout(100).times(2))
       .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
 
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.SEARCH, 8094, Optional.empty());
   }
 
@@ -326,24 +324,24 @@ class CoreTest {
     clusterConfig.setBucketConfig(twoNodesConfig);
     configs.tryEmitNext(clusterConfig);
 
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.MANAGER, 8091, Optional.empty());
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.QUERY, 8093, Optional.empty());
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
 
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.MANAGER, 8091, Optional.empty());
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.QUERY, 8093, Optional.empty());
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.SEARCH, 8094, Optional.empty());
 
     BucketConfig twoNodesLessServices = BucketConfigParser.parse(
@@ -354,7 +352,7 @@ class CoreTest {
     clusterConfig.setBucketConfig(twoNodesLessServices);
     configs.tryEmitNext(clusterConfig);
 
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .removeService(ServiceType.SEARCH, Optional.empty());
   }
 
@@ -409,24 +407,24 @@ class CoreTest {
     clusterConfig.setBucketConfig(twoNodesConfig);
     configs.tryEmitNext(clusterConfig);
 
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.MANAGER, 8091, Optional.empty());
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.QUERY, 8093, Optional.empty());
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
 
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.VIEWS, 8092, Optional.empty());
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.MANAGER, 8091, Optional.empty());
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.QUERY, 8093, Optional.empty());
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.SEARCH, 8094, Optional.empty());
 
     BucketConfig twoNodesLessServices = BucketConfigParser.parse(
@@ -437,7 +435,7 @@ class CoreTest {
     clusterConfig.setBucketConfig(twoNodesLessServices);
     configs.tryEmitNext(clusterConfig);
 
-    verify(mock102, times(1)).disconnect();
+    verify(mock102, timeout(100).times(1)).disconnect();
   }
 
   /**
@@ -446,7 +444,7 @@ class CoreTest {
    */
   @Test
   @SuppressWarnings("unchecked")
-  void addsSecondNodeIfBothSameHostname() {
+  void addsSecondNodeIfBothSameHostname() throws InterruptedException {
     final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
     Sinks.Many<ClusterConfig> configs = Sinks.many().multicast().directBestEffort();
     ClusterConfig clusterConfig = new ClusterConfig();
@@ -496,19 +494,19 @@ class CoreTest {
     clusterConfig.setBucketConfig(oneNodeConfig);
     configs.tryEmitNext(clusterConfig);
 
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.VIEWS, 9500, Optional.empty());
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.MANAGER, 9000, Optional.empty());
-    verify(mock101, times(1))
+    verify(mock101, timeout(100).times(1))
       .addService(ServiceType.KV, 12000, Optional.of("default"));
 
 
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.VIEWS, 9501, Optional.empty());
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.MANAGER, 9001, Optional.empty());
-    verify(mock102, times(1))
+    verify(mock102, timeout(100).times(1))
       .addService(ServiceType.KV, 12002, Optional.of("default"));
   }
 
