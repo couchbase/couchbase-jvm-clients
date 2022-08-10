@@ -605,6 +605,9 @@ public enum MemcacheProtocol {
 
   /**
    * Converts the KeyValue protocol status into its generic format.
+   * <p>
+   * Note that only the most likely statuses are covered here, the rest is in {@link #decodeOtherStatus(short)} so
+   * that the JIT can inline the method efficiently.
    *
    * @param status the protocol status.
    * @return the response status.
@@ -614,7 +617,21 @@ public enum MemcacheProtocol {
       return ResponseStatus.SUCCESS;
     } else if (status == Status.NOT_FOUND.status) {
       return ResponseStatus.NOT_FOUND;
-    } else if (status == Status.NOT_SUPPORTED.status) {
+    } else if (status == Status.EXISTS.status) {
+      return ResponseStatus.EXISTS;
+    }
+
+    return decodeOtherStatus(status);
+  }
+
+  /**
+   * Helper method to decode status codes which are not as likely on the hot code path.
+   *
+   * @param status the protocol status.
+   * @return the response status.
+   */
+  private static ResponseStatus decodeOtherStatus(short status) {
+     if (status == Status.NOT_SUPPORTED.status) {
       return ResponseStatus.UNSUPPORTED;
     } else if (status == Status.ACCESS_ERROR.status) {
       return ResponseStatus.NO_ACCESS;
@@ -628,8 +645,6 @@ public enum MemcacheProtocol {
       return ResponseStatus.NOT_MY_VBUCKET;
     } else if (status == Status.LOCKED.status) {
       return ResponseStatus.LOCKED;
-    } else if (status == Status.EXISTS.status) {
-      return ResponseStatus.EXISTS;
     } else if (status == Status.TOO_BIG.status) {
       return ResponseStatus.TOO_BIG;
     } else if (status == Status.NOT_STORED.status) {
@@ -645,12 +660,12 @@ public enum MemcacheProtocol {
     } else if (status == Status.SYNC_WRITE_RE_COMMIT_IN_PROGRESS.status) {
       return ResponseStatus.SYNC_WRITE_RE_COMMIT_IN_PROGRESS;
     } else if (status == Status.SUBDOC_MULTI_PATH_FAILURE.status
-            || status == Status.SUBDOC_MULTI_PATH_FAILURE_DELETED.status
-            || status == Status.SUBDOC_DOC_NOT_JSON.status
-            || status == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status
-            || status == Status.SUBDOC_DOC_TOO_DEEP.status
-            || status == Status.SUBDOC_INVALID_COMBO.status
-            || status == Status.SUBDOC_CAN_ONLY_REVIVE_DELETED_DOCUMENTS.status) {
+      || status == Status.SUBDOC_MULTI_PATH_FAILURE_DELETED.status
+      || status == Status.SUBDOC_DOC_NOT_JSON.status
+      || status == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status
+      || status == Status.SUBDOC_DOC_TOO_DEEP.status
+      || status == Status.SUBDOC_INVALID_COMBO.status
+      || status == Status.SUBDOC_CAN_ONLY_REVIVE_DELETED_DOCUMENTS.status) {
       return ResponseStatus.SUBDOC_FAILURE;
     } else if (status == Status.SUBDOC_SUCCESS_DELETED_DOCUMENT.status) {
       return ResponseStatus.SUCCESS;
