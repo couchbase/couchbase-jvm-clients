@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.metrics.NameAndTags;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.MeterException;
+import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.metrics.DoubleHistogram;
