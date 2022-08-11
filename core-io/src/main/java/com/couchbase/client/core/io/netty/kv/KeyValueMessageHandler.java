@@ -303,7 +303,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   }
 
   /**
-   * Main method to start dispatching the decode.
+   * Main method to start decoding the response.
    *
    * @param ctx the channel handler context from netty.
    * @param response the response to decode and handle.
@@ -317,19 +317,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       return;
     }
 
-    long serverTime = MemcacheProtocol.parseServerDurationFromResponse(response);
-    request.context().serverLatency(serverTime);
-
-    long start = writtenRequestDispatchTimings.remove(opaque);
-    request.context().dispatchLatency(System.nanoTime() - start);
-
-    RequestSpan dispatchSpan = writtenRequestDispatchSpans.remove(opaque);
-    if (dispatchSpan != null) {
-      if (!isInternalTracer) {
-        TracingUtils.setServerDurationAttribute(dispatchSpan, serverTime);
-      }
-      dispatchSpan.end();
-    }
+    completeRequestTimings(request, response, opaque);
 
     short statusCode = MemcacheProtocol.status(response);
     ResponseStatus status = MemcacheProtocol.decodeStatus(statusCode);
@@ -360,16 +348,53 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     } else if (statusIndicatesInvalidChannel(status)) {
       closeChannelWithReason(ioContext, ctx, ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION);
     } else {
-      RetryReason retryReason = statusCodeIndicatesRetry(status, request);
-      if (retryReason == null) {
-        if (!request.completed()) {
-          decodeAndComplete(request, response);
-        } else {
-         ioContext.environment().orphanReporter().report(request);
-        }
+      retryOrComplete(request, response, status);
+    }
+  }
+
+  /**
+   * If an operation does not need special handling, this method is most likely called and will complete the
+   * operation or retry it if needed.
+   *
+   * @param request the original request.
+   * @param response the response received for the request.
+   * @param status the parsed status code.
+   */
+  private void retryOrComplete(final KeyValueRequest<Response> request, final ByteBuf response,
+                               final ResponseStatus status) {
+    RetryReason retryReason = statusCodeIndicatesRetry(status, request);
+    if (retryReason == null) {
+      if (!request.completed()) {
+        decodeAndComplete(request, response);
       } else {
-        RetryOrchestrator.maybeRetry(ioContext, request, retryReason);
+        ioContext.environment().orphanReporter().report(request);
       }
+    } else {
+      RetryOrchestrator.maybeRetry(ioContext, request, retryReason);
+    }
+  }
+
+  /**
+   * Helper method to complete request timings and dispatch spans.
+   *
+   * @param request the request to complete.
+   * @param response the response to complete.
+   * @param opaque the opaque for the request.
+   */
+  private void completeRequestTimings(final KeyValueRequest<Response> request, final ByteBuf response,
+                                      final int opaque) {
+    long serverTime = MemcacheProtocol.parseServerDurationFromResponse(response);
+    request.context().serverLatency(serverTime);
+
+    long start = writtenRequestDispatchTimings.remove(opaque);
+    request.context().dispatchLatency(System.nanoTime() - start);
+
+    RequestSpan dispatchSpan = writtenRequestDispatchSpans.remove(opaque);
+    if (dispatchSpan != null) {
+      if (!isInternalTracer) {
+        TracingUtils.setServerDurationAttribute(dispatchSpan, serverTime);
+      }
+      dispatchSpan.end();
     }
   }
 
