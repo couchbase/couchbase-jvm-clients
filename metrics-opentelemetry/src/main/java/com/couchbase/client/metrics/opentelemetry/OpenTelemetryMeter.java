@@ -72,6 +72,11 @@ public class OpenTelemetryMeter implements Meter {
   private final Map<NameAndTags, OpenTelemetryValueRecorder> valueRecorders = new ConcurrentHashMap<>();
 
   @Stability.Volatile
+  public static OpenTelemetryMeter wrapGlobal() {
+    return wrap(GlobalOpenTelemetry.get());
+  }
+  
+  @Stability.Volatile
   public static OpenTelemetryMeter wrap(final OpenTelemetry openTelemetry) {
     return new OpenTelemetryMeter(openTelemetry.getMeterProvider());
   }
