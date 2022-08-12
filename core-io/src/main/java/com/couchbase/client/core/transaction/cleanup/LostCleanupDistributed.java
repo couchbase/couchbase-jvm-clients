@@ -38,6 +38,7 @@ import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemp
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupEndRunEvent;
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupStartRunEvent;
 import com.couchbase.client.core.transaction.util.DebugUtil;
+import com.couchbase.client.core.transaction.util.MonoBridge;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -443,7 +444,7 @@ public class LostCleanupDistributed {
                             ActiveTransactionRecordStats stats = new ActiveTransactionRecordStats();
 
                             // Perform this checkIfThreadStopped inside the concatMap - see TXNJ-170.
-                            return checkIfThreadStopped(collection)
+                            Mono<String> out = checkIfThreadStopped(collection)
 
                                     // handleATRCleanup does not propagate errors
                                     .thenMany(handleATRCleanup(bp, collection, atrId, stats, DEFAULT_SAFETY_MARGIN, span.get()))
@@ -452,6 +453,9 @@ public class LostCleanupDistributed {
 
                                     .thenReturn(atrId);
 
+                            MonoBridge<String> mb = new MonoBridge<>(out, "", this, null);
+
+                            return mb.external();
                         })
 
                         // Ignore individual ATR errors, press on
