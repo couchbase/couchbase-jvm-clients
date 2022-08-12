@@ -523,8 +523,6 @@ public class LostCleanupDistributed {
 
     private Mono<Void> checkIfThreadStopped(CollectionIdentifier collection) {
         return Mono.defer(() -> {
-            LOGGER.info(String.format("%s stop on %s = %s", bp, collection, stop));
-
             if (stop) {
                 LOGGER.info(String.format("%s Stopping background cleanup thread for lost transactions on %s", bp, collection));
                 return Mono.error(new ThreadStopRequestedException());
