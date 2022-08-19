@@ -118,9 +118,13 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
 object AsyncSearchIndexManager {
   // This can throw, so should be called inside a Future operator
   private[scala] def parseIndexes(in: Array[Byte]): Seq[SearchIndex] = {
-    val json                             = CouchbasePickler.read[ujson.Obj](in)
-    val indexDefs                        = json.obj("indexDefs")
-    val allIndexes: SearchIndexesWrapper = CouchbasePickler.read[SearchIndexesWrapper](indexDefs)
-    allIndexes.indexDefs.values.toSeq
+    val json      = CouchbasePickler.read[ujson.Obj](in)
+    val indexDefs = json.obj("indexDefs")
+    if (indexDefs.isNull) {
+      Seq.empty
+    } else {
+      val allIndexes: SearchIndexesWrapper = CouchbasePickler.read[SearchIndexesWrapper](indexDefs)
+      allIndexes.indexDefs.values.toSeq
+    }
   }
 }

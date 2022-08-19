@@ -32,6 +32,7 @@ import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -168,7 +169,7 @@ public class AsyncSearchIndexManager {
           indexDefs,
           new TypeReference<Map<String, SearchIndex>>() {}
         );
-        return new ArrayList<>(indexes.values());
+        return indexes == null ? Collections.emptyList() : new ArrayList<>(indexes.values());
       });
   }
 
