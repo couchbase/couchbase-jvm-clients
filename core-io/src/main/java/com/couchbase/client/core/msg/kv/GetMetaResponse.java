@@ -24,7 +24,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
  *
  * @since 2.0.0
  */
-public class GetMetaResponse extends BaseResponse {
+public class GetMetaResponse extends KeyValueBaseResponse {
 
   private final long cas;
   private final boolean deleted;

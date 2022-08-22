@@ -24,7 +24,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
  *
  * @since 2.0.0
  */
-public class GetAndLockResponse extends BaseResponse {
+public class GetAndLockResponse extends KeyValueBaseResponse {
 
   private final byte[] content;
   private final long cas;

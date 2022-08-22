@@ -37,6 +37,7 @@ import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.Bytes;
@@ -218,6 +219,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     short rawOverallStatus = status(response);
     ResponseStatus overallStatus = decodeStatus(response);
     Optional<CouchbaseException> error = Optional.empty();
+    MemcacheProtocol.FlexibleExtras flexibleExtras = MemcacheProtocol.flexibleExtras(response);
 
     SubDocumentField[] values = null;
 
@@ -231,7 +233,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
         short opStatusRaw = body.readShort();
         SubDocumentOpResponseStatus opStatus = decodeSubDocumentStatus(opStatusRaw);
         Command c = commands.get(index);
-        error = Optional.of(mapSubDocumentError(this, opStatus, c.path, c.originalIndex));
+        error = Optional.of(mapSubDocumentError(this, opStatus, c.path, c.originalIndex, flexibleExtras));
         values = new SubDocumentField[0];
       } else if (overallStatus.success()) {
         // "For successful multi mutations, there will be zero or more results; each of the results containing a value."
@@ -249,7 +251,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
           SubDocumentOpResponseStatus status = decodeSubDocumentStatus(statusRaw);
 
           if (status != SubDocumentOpResponseStatus.SUCCESS) {
-            CouchbaseException err = mapSubDocumentError(this, status, command.path, command.originalIndex);
+            CouchbaseException err = mapSubDocumentError(this, status, command.path, command.originalIndex, flexibleExtras);
 
             SubDocumentField op = new SubDocumentField(status, Optional.of(err), Bytes.EMPTY_BYTE_ARRAY, command.path, command.type);
             values[command.originalIndex] = op;
@@ -270,16 +272,16 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
     // Handle any document-level failures here
     if (rawOverallStatus == Status.SUBDOC_DOC_NOT_JSON.status()) {
-      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_NOT_JSON);
+      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_NOT_JSON, flexibleExtras);
       error = Optional.of(new DocumentNotJsonException(e));
     } else if (rawOverallStatus == Status.SUBDOC_DOC_TOO_DEEP.status()) {
-      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_TOO_DEEP);
+      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_TOO_DEEP, flexibleExtras);
       error = Optional.of(new DocumentTooDeepException(e));
     } else if (rawOverallStatus == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status()) {
-      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.XATTR_INVALID_KEY_COMBO);
+      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.XATTR_INVALID_KEY_COMBO, flexibleExtras);
       error = Optional.of(new XattrInvalidKeyComboException(e));
     } else if (rawOverallStatus == Status.SUBDOC_CAN_ONLY_REVIVE_DELETED_DOCUMENTS.status()) {
-      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.CAN_ONLY_REVIVE_DELETED_DOCUMENTS);
+      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.CAN_ONLY_REVIVE_DELETED_DOCUMENTS, flexibleExtras);
       error = Optional.of(new DocumentAlreadyAliveException(e));
     }
     // Note that error is only ultimately thrown if response.status() == SUBDOC_FAILURE
@@ -290,13 +292,15 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       error,
       values,
       cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
+      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get()),
+      flexibleExtras
     );
   }
 
-  private SubDocumentErrorContext createSubDocumentExceptionContext(SubDocumentOpResponseStatus status) {
+  private SubDocumentErrorContext createSubDocumentExceptionContext(SubDocumentOpResponseStatus status,
+                                                                    @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
     return new SubDocumentErrorContext(
-            KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE),
+            KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE, flexibleExtras),
             0,
             null,
             status

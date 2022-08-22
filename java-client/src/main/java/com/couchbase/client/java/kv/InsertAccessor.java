@@ -42,7 +42,7 @@ public enum InsertAccessor {
         if (response.status().success()) {
           return new MutationResult(response.cas(), response.mutationToken());
         } else if (response.status() == ResponseStatus.EXISTS || response.status() == ResponseStatus.NOT_STORED) {
-          throw new DocumentExistsException(KeyValueErrorContext.completedRequest(request, response.status()));
+          throw new DocumentExistsException(KeyValueErrorContext.completedRequest(request, response));
         }
         throw response.errorIfNeeded(request);
       });

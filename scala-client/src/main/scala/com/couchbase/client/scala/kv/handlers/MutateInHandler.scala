@@ -180,7 +180,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
           case _ => {
             throw new CouchbaseException(
               "Unknown SubDocument failure occurred",
-              KeyValueErrorContext.completedRequest(request, response.status())
+              KeyValueErrorContext.completedRequest(request, response)
             )
           }
         }
@@ -188,7 +188,7 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
       case ResponseStatus.NOT_STORED =>
         document match {
           case StoreSemantics.Insert => {
-            val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+            val ctx = KeyValueErrorContext.completedRequest(request, response)
             throw new DocumentExistsException(ctx)
           }
           case _ => throw DefaultErrors.throwOnBadResult(request, response)
@@ -197,11 +197,11 @@ private[scala] class MutateInHandler(hp: HandlerParams) {
       case ResponseStatus.EXISTS =>
         document match {
           case StoreSemantics.Insert => {
-            val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+            val ctx = KeyValueErrorContext.completedRequest(request, response)
             throw new DocumentExistsException(ctx)
           }
           case _ => {
-            val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+            val ctx = KeyValueErrorContext.completedRequest(request, response)
             throw new CasMismatchException(ctx)
           }
         }

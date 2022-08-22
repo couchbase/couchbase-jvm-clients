@@ -34,6 +34,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -78,7 +79,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
           if (c.xattr()
                   && (c.path.length() > 0 && c.path.charAt(0) == '$')
                   && !(c.path.startsWith("$document") || c.path.startsWith("$XTOC"))) {
-            throw mapSubDocumentError(this, SubDocumentOpResponseStatus.XATTR_UNKNOWN_VATTR, c.path, c.originalIndex());
+            throw mapSubDocumentError(this, SubDocumentOpResponseStatus.XATTR_UNKNOWN_VATTR, c.path, c.originalIndex(), null);
           }
         }
       }
@@ -132,6 +133,8 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     Optional<ByteBuf> maybeBody = body(response);
     SubDocumentField[] values;
     List<CouchbaseException> errors = null;
+    MemcacheProtocol.FlexibleExtras flexibleExtras = MemcacheProtocol.flexibleExtras(response);
+
     if (maybeBody.isPresent()) {
       ByteBuf body = maybeBody.get();
       values = new SubDocumentField[commands.size()];
@@ -141,7 +144,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
         Optional<CouchbaseException> error = Optional.empty();
         if (status != SubDocumentOpResponseStatus.SUCCESS) {
           if (errors == null) errors = new ArrayList<>();
-          CouchbaseException err = mapSubDocumentError(this, status, command.path, command.originalIndex());
+          CouchbaseException err = mapSubDocumentError(this, status, command.path, command.originalIndex(), flexibleExtras);
           errors.add(err);
           error = Optional.of(err);
         }
@@ -181,23 +184,24 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
     // Handle any document-level failures here
     if (rawStatus == Status.SUBDOC_DOC_NOT_JSON.status()) {
-      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_NOT_JSON);
+      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_NOT_JSON, flexibleExtras);
       error = Optional.of(new DocumentNotJsonException(e));
     } else if (rawStatus == Status.SUBDOC_DOC_TOO_DEEP.status()) {
-      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_TOO_DEEP);
+      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_TOO_DEEP, flexibleExtras);
       error = Optional.of(new DocumentTooDeepException(e));
     } else if (rawStatus == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status()) {
-      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.XATTR_INVALID_KEY_COMBO);
+      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.XATTR_INVALID_KEY_COMBO, flexibleExtras);
       error = Optional.of(new XattrInvalidKeyComboException(e));
     }
 
     // Do not handle SUBDOC_INVALID_COMBO here, it indicates a client-side bug
-    return new SubdocGetResponse(status, error, values, cas(response), isDeleted);
+    return new SubdocGetResponse(status, error, values, cas(response), isDeleted, flexibleExtras);
   }
 
-  private SubDocumentErrorContext createSubDocumentExceptionContext(SubDocumentOpResponseStatus status) {
+  private SubDocumentErrorContext createSubDocumentExceptionContext(SubDocumentOpResponseStatus status,
+                                                                    @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
     return new SubDocumentErrorContext(
-      KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE),
+      KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE, flexibleExtras),
       0,
       null,
       status

@@ -19,15 +19,16 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
-import com.couchbase.client.core.msg.BaseResponse;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
+import reactor.util.annotation.Nullable;
 
 import java.util.Arrays;
 import java.util.Optional;
 
 import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
 
-public class SubdocMutateResponse extends BaseResponse {
+public class SubdocMutateResponse extends KeyValueBaseResponse {
 
   private final SubDocumentField[] values;
   private final long cas;
@@ -38,8 +39,9 @@ public class SubdocMutateResponse extends BaseResponse {
                               Optional<CouchbaseException> error,
                               SubDocumentField[] values,
                               long cas,
-                              Optional<MutationToken> mutationToken) {
-    super(status);
+                              Optional<MutationToken> mutationToken,
+                              @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
+    super(status, flexibleExtras);
     this.error = error;
     this.values = values;
     this.cas = cas;
@@ -66,7 +68,7 @@ public class SubdocMutateResponse extends BaseResponse {
   }
 
   public CouchbaseException throwError(final SubdocMutateRequest request, final boolean insertDocument) {
-    final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, status());
+    final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, this);
     if (insertDocument
             && (status() == ResponseStatus.EXISTS || status() == ResponseStatus.NOT_STORED)) {
       return new DocumentExistsException(ctx);

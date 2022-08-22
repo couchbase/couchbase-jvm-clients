@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Couchbase, Inc.
+ * Copyright (c) 2022 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,27 +17,31 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 import reactor.util.annotation.Nullable;
 
-import java.util.Optional;
+/**
+ * The parent class for all KV responses passing through the SDK that potentially contain flexible extras.
+ *
+ * @since 2.3.4
+ */
+public class KeyValueBaseResponse extends BaseResponse {
 
-public class ReplaceResponse extends KeyValueBaseResponse {
+  private final @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras;
 
-  private final long cas;
-  private final Optional<MutationToken> mutationToken;
-
-  ReplaceResponse(ResponseStatus status, long cas, Optional<MutationToken> mutationToken, @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
-    super(status, flexibleExtras);
-    this.cas = cas;
-    this.mutationToken = mutationToken;
+  protected KeyValueBaseResponse(ResponseStatus status) {
+    super(status);
+    this.flexibleExtras = null;
   }
 
-  public long cas() {
-    return cas;
+  protected KeyValueBaseResponse(ResponseStatus status, @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
+    super(status);
+    this.flexibleExtras = flexibleExtras;
   }
 
-  public Optional<MutationToken> mutationToken() {
-    return mutationToken;
+  @Nullable
+  public MemcacheProtocol.FlexibleExtras flexibleExtras() {
+    return flexibleExtras;
   }
 }

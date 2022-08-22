@@ -37,7 +37,7 @@ public class LookupInAccessor {
         if (response.status().success()) {
           return new LookupInResult(response.values(), response.cas(), serializer, null, response.isDeleted());
         } else if (response.status() == ResponseStatus.SUBDOC_FAILURE) {
-          final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
+          final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response);
           return new LookupInResult(response.values(), response.cas(), serializer, ctx, response.isDeleted());
         }
         throw keyValueStatusToException(request, response);

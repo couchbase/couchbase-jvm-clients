@@ -16,18 +16,19 @@
 
 package com.couchbase.client.core.msg.kv;
 
-import com.couchbase.client.core.msg.BaseResponse;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
+import reactor.util.annotation.Nullable;
 
 import java.util.Optional;
 
-public class RemoveResponse extends BaseResponse {
+public class RemoveResponse extends KeyValueBaseResponse {
 
   private final long cas;
   private final Optional<MutationToken> mutationToken;
 
-  RemoveResponse(ResponseStatus status, long cas, Optional<MutationToken> mutationToken) {
-    super(status);
+  RemoveResponse(ResponseStatus status, long cas, Optional<MutationToken> mutationToken, @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
+    super(status, flexibleExtras);
     this.cas = cas;
     this.mutationToken = mutationToken;
   }

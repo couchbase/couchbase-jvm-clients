@@ -36,7 +36,7 @@ public class UnlockAccessor {
         if (response.status().success()) {
           return null;
         } else if (response.status() == ResponseStatus.LOCKED) {
-          throw new CasMismatchException(KeyValueErrorContext.completedRequest(request, response.status()));
+          throw new CasMismatchException(KeyValueErrorContext.completedRequest(request, response));
         }
         throw keyValueStatusToException(request, response);
       })

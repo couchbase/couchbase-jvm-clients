@@ -159,6 +159,9 @@ public enum ServerFeature {
    */
   @SinceCouchbase("6.6")
   CREATE_AS_DELETED((short) 0x17),
+
+  @SinceCouchbase("7.2")
+  REPORT_UNIT_USAGE((short) 0x1a)
   ;
 
   private static final EnumLookupTable<ServerFeature> lookupTable =

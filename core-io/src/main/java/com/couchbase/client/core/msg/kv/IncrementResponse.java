@@ -21,7 +21,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.util.Optional;
 
-public class IncrementResponse extends BaseResponse {
+public class IncrementResponse extends KeyValueBaseResponse {
 
   private final long cas;
   private final long value;

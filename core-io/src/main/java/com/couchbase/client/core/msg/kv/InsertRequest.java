@@ -36,6 +36,7 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.flexibleExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 
@@ -114,7 +115,8 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
     return new InsertResponse(
       status,
       cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
+      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get()),
+      flexibleExtras(response)
     );
   }
 

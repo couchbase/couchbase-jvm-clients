@@ -117,6 +117,6 @@ class ProjectionsApplierTest {
         )
         .toArray(SubDocumentField[]::new);
 
-    return new SubdocGetResponse(ResponseStatus.SUCCESS, Optional.empty(), values, 0, false);
+    return new SubdocGetResponse(ResponseStatus.SUCCESS, Optional.empty(), values, 0, false, null);
   }
 }

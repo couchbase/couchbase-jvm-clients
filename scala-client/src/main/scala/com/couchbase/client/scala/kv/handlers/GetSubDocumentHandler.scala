@@ -163,7 +163,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
         }
 
       case ResponseStatus.NOT_FOUND =>
-        val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+        val ctx = KeyValueErrorContext.completedRequest(request, response)
         throw new DocumentNotFoundException(ctx)
 
       case ResponseStatus.SUBDOC_FAILURE =>
@@ -204,7 +204,7 @@ private[scala] class GetSubDocumentHandler(hp: HandlerParams) {
         )
 
       case ResponseStatus.NOT_FOUND =>
-        val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+        val ctx = KeyValueErrorContext.completedRequest(request, response)
         Failure(new DocumentNotFoundException(ctx))
 
       case ResponseStatus.SUBDOC_FAILURE =>

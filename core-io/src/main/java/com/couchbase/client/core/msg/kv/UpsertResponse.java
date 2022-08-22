@@ -21,7 +21,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.util.Optional;
 
-public class UpsertResponse extends BaseResponse {
+public class UpsertResponse extends KeyValueBaseResponse {
 
   final long cas;
   private final Optional<MutationToken> mutationToken;

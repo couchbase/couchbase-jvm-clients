@@ -84,7 +84,7 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> implement
       response,
       ctx.bucket().get()
     );
-    return new RemoveResponse(status, cas(response), mutationToken);
+    return new RemoveResponse(status, cas(response), mutationToken, flexibleExtras(response));
   }
 
   @Override

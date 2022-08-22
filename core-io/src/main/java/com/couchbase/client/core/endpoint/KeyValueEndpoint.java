@@ -132,6 +132,13 @@ public class KeyValueEndpoint extends BaseEndpoint {
         features.add(ServerFeature.CREATE_AS_DELETED);
       }
 
+      boolean reportUnitUsageEnabled = Boolean.parseBoolean(
+              System.getProperty("com.couchbase.reportUnitUsageEnabled", "true")
+      );
+      if (reportUnitUsageEnabled) {
+        features.add(ServerFeature.REPORT_UNIT_USAGE);
+      }
+
       return features;
     }
   }

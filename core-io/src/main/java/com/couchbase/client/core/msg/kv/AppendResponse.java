@@ -21,7 +21,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.util.Optional;
 
-public class AppendResponse extends BaseResponse {
+public class AppendResponse extends KeyValueBaseResponse {
 
   private final long cas;
   private final Optional<MutationToken> mutationToken;

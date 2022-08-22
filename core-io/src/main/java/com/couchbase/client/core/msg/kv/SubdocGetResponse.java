@@ -17,13 +17,14 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.msg.BaseResponse;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
+import reactor.util.annotation.Nullable;
 
 import java.util.Arrays;
 import java.util.Optional;
 
-public class SubdocGetResponse extends BaseResponse {
+public class SubdocGetResponse extends KeyValueBaseResponse {
 
   private final SubDocumentField[] values;
   private final long cas;
@@ -34,8 +35,9 @@ public class SubdocGetResponse extends BaseResponse {
                            Optional<CouchbaseException> error,
                            SubDocumentField[] values,
                            long cas,
-                           final boolean isDeleted) {
-    super(status);
+                           final boolean isDeleted,
+                           @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
+    super(status, flexibleExtras);
     this.error = error;
     this.values = values;
     this.cas = cas;

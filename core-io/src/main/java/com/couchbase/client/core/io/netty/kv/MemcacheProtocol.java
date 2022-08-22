@@ -49,8 +49,10 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -127,6 +129,17 @@ public enum MemcacheProtocol {
    * The byte used to signal this is a tracing extras frame.
    */
   public static final byte FRAMING_EXTRAS_TRACING = 0x00;
+
+  /**
+   * Signals that read/write units have been returned.
+   */
+  public static final byte FRAMING_EXTRAS_READ_UNITS_USED = 0x01;
+  public static final byte FRAMING_EXTRAS_WRITE_UNITS_USED = 0x02;
+
+  /**
+   * The server did not return units.
+   */
+  public static final int UNITS_NOT_PRESENT = -1;
 
   /**
    * Create a flexible memcached protocol request with all fields necessary.
@@ -364,17 +377,58 @@ public enum MemcacheProtocol {
     return defaultValue;
   }
 
-  public static Optional<ByteBuf> flexibleExtras(final ByteBuf message) {
-    boolean flexible = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic();
-    if (flexible) {
-      int flexibleExtrasLength = message.getByte(2);
-      if (flexibleExtrasLength > 0) {
-        return Optional.of(message.slice(MemcacheProtocol.HEADER_SIZE, flexibleExtrasLength));
-      } else {
-        return Optional.empty();
+  public static class FlexibleExtras {
+    // server_duration is handled elsewhere, so not included here
+
+    // Will be <0 if not present in the server response
+    public final int readUnits;
+    public final int writeUnits;
+
+    public FlexibleExtras(int readUnits, int writeUnits) {
+      this.readUnits = readUnits;
+      this.writeUnits = writeUnits;
+    }
+
+    public void injectExportableParams(final Map<String, Object> input) {
+      if (readUnits != UNITS_NOT_PRESENT) {
+        input.put("readUnits", readUnits);
       }
+      if (writeUnits != UNITS_NOT_PRESENT) {
+        input.put("writeUnits", writeUnits);
+      }
+    }
+  }
+
+  /**
+   * Retrieve the flexible extras from the packet.
+   *
+   * These are AKA "framing extras" and "flexible framing extras".   These are distinct from just "extras".
+   */
+  public static @Nullable FlexibleExtras flexibleExtras(final ByteBuf message) {
+    int flexibleExtrasLength = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic()
+            ? message.getByte(2)
+            : 0;
+
+    if (flexibleExtrasLength > 0) {
+      int readUnits = UNITS_NOT_PRESENT;
+      int writeUnits = UNITS_NOT_PRESENT;
+
+      for (int offset = 0; offset < flexibleExtrasLength; offset++) {
+        byte control = message.getByte(MemcacheProtocol.HEADER_SIZE + offset);
+        byte id = (byte) ((control & 0xF0) >> 4);
+        byte len = (byte) (control & 0x0F);
+        if (id == FRAMING_EXTRAS_READ_UNITS_USED) {
+          readUnits = message.getUnsignedShort(MemcacheProtocol.HEADER_SIZE + offset + 1);
+        }
+        else if (id == FRAMING_EXTRAS_WRITE_UNITS_USED) {
+          writeUnits = message.getUnsignedShort(MemcacheProtocol.HEADER_SIZE + offset + 1);
+        }
+        offset += len;
+      }
+
+      return new FlexibleExtras(readUnits, writeUnits);
     } else {
-      return Optional.empty();
+      return null;
     }
   }
 
@@ -763,9 +817,9 @@ public enum MemcacheProtocol {
    * an appropriate SubDocumentException.
    */
   public static CouchbaseException mapSubDocumentError(KeyValueRequest<?> request, SubDocumentOpResponseStatus status,
-                                                       String path, int index) {
+                                                       String path, int index, @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
     SubDocumentErrorContext ctx = new SubDocumentErrorContext(
-      KeyValueErrorContext.completedRequest(request, ResponseStatus.SUBDOC_FAILURE),
+      KeyValueErrorContext.completedRequest(request, ResponseStatus.SUBDOC_FAILURE, flexibleExtras),
       index,
       path,
       status

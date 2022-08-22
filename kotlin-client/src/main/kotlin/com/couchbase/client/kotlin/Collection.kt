@@ -699,7 +699,7 @@ public class Collection internal constructor(
 
                 if (storeSemantics == StoreSemantics.Insert
                         && (response.status() == ResponseStatus.EXISTS || response.status() == ResponseStatus.NOT_STORED)) {
-                    throw DocumentExistsException(completedRequest(request, response.status()))
+                    throw DocumentExistsException(completedRequest(request, response))
                 }
                 if (response.status() == SUBDOC_FAILURE) response.error().map { throw it }
                 throw DefaultErrorUtil.keyValueStatusToException(request, response)

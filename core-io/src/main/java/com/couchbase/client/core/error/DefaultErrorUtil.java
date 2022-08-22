@@ -36,7 +36,7 @@ public class DefaultErrorUtil {
      */
     public static CouchbaseException keyValueStatusToException(final KeyValueRequest<? extends Response> request,
                                                                final Response response) {
-        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response.status());
+        final KeyValueErrorContext ctx = KeyValueErrorContext.completedRequest(request, response);
         switch (response.status()) {
             case DURABILITY_INVALID_LEVEL: return new DurabilityLevelNotAvailableException(ctx);
             case DURABILITY_IMPOSSIBLE: return new DurabilityImpossibleException(ctx);

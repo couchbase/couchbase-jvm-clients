@@ -680,7 +680,7 @@ class AsyncCollection(
               ) match {
                 case Some(x) => Future.successful(x)
                 case _ =>
-                  val ctx = KeyValueErrorContext.completedRequest(request, response.status())
+                  val ctx = KeyValueErrorContext.completedRequest(request, response)
                   Future.failed(new DocumentNotFoundException(ctx))
               }
             })
