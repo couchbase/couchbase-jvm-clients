@@ -53,6 +53,7 @@ import com.couchbase.client.core.error.transaction.internal.RetryAtrCommitExcept
 import com.couchbase.client.core.error.transaction.internal.RetryOperationException;
 import com.couchbase.client.core.error.transaction.internal.WrappedTransactionOperationFailedException;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.logging.RedactableArgument;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -110,6 +111,7 @@ import com.couchbase.client.core.transaction.util.TransactionKVHandler;
 import com.couchbase.client.core.transaction.util.TriFunction;
 import com.couchbase.client.core.transaction.error.internal.ErrorClass;
 import com.couchbase.client.core.cnc.events.transaction.IllegalDocumentStateEvent;
+import com.couchbase.client.core.transaction.util.MeteringUnits;
 import com.couchbase.client.core.util.BucketConfigUtil;
 import com.couchbase.client.core.util.CbPreconditions;
 import reactor.core.publisher.Flux;
@@ -217,6 +219,7 @@ public class CoreTransactionAttemptContext {
     private final int EXPIRY_THRESHOLD = Integer.parseInt(System.getProperty("com.couchbase.transactions.expiryThresholdMs", "10"));
 
     private final CoreQueryAccessor coreQueryAccessor;
+    private MeteringUnits.MeteringUnitsBuilder meteringUnitsBuilder = new MeteringUnits.MeteringUnitsBuilder();
 
     // Just a safety measure to make sure we don't get into hard tight loops
     public static Duration DEFAULT_DELAY_RETRYING_OPERATION = Duration.ofMillis(3);
@@ -437,6 +440,8 @@ public class CoreTransactionAttemptContext {
                         .then(Mono.just(Optional.empty()));
             }
 
+            MeteringUnits.MeteringUnitsBuilder units = new MeteringUnits.MeteringUnitsBuilder();
+
             return hooks.beforeUnlockGet.apply(this, id) // in-lock test hook
 
                     .then(unlock(lockToken, "standard"))
@@ -451,16 +456,18 @@ public class CoreTransactionAttemptContext {
                             attemptId,
                             false,
                             pspan,
-                            resolvingMissingATREntry))
+                            resolvingMissingATREntry,
+                            units))
 
                     .publishOn(scheduler())
 
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder builder = createError().cause(err);
+                        MeteringUnits built = addUnits(units.build());
 
-                        LOGGER.warn(attemptId, "got error while getting doc %s in %dus: %s",
-                                DebugUtil.docId(collection, id), pspan.elapsedMicros(), dbg(err));
+                        LOGGER.warn(attemptId, "got error while getting doc %s%s in %dus: %s",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(built), pspan.elapsedMicros(), dbg(err));
 
                         if (err instanceof ForwardCompatibilityRequiresRetryException
                                 || err instanceof ForwardCompatibilityFailureException) {
@@ -504,11 +511,12 @@ public class CoreTransactionAttemptContext {
 
                     .flatMap(v -> {
                         long elapsed = pspan.finish();
+                        MeteringUnits built = addUnits(units.build());
                         if (v.isPresent()) {
-                            LOGGER.info(attemptId, "completed get of %s in %dus", v.get(), elapsed);
+                            LOGGER.info(attemptId, "completed get of %s%s in %dus", v.get(), DebugUtil.dbg(built), elapsed);
                         } else {
-                            LOGGER.info(attemptId, "completed get of %s, could not find, in %dus",
-                                    DebugUtil.docId(collection, id), elapsed);
+                            LOGGER.info(attemptId, "completed get of %s%s, could not find, in %dus",
+                                    DebugUtil.docId(collection, id), DebugUtil.dbg(built), elapsed);
                         }
 
                         // Testing hook
@@ -1284,7 +1292,10 @@ public class CoreTransactionAttemptContext {
                 });
     }
 
-    private Mono<Void> checkATREntryForBlockingDocInternal(CoreTransactionGetResult doc, CollectionIdentifier collection, SpanWrapper span) {
+    private Mono<Void> checkATREntryForBlockingDocInternal(CoreTransactionGetResult doc,
+                                                           CollectionIdentifier collection,
+                                                           SpanWrapper span,
+                                                           MeteringUnits.MeteringUnitsBuilder units) {
         return Mono.fromRunnable(() -> {
             checkExpiryPreCommitAndSetExpiryOvertimeMode("staging.check_atr_entry_blocking_doc", Optional.empty());
         })
@@ -1295,7 +1306,8 @@ public class CoreTransactionAttemptContext {
                         doc.links().stagedAttemptId().get(),
                         config,
                         span,
-                        logger()).flatMap(atrEntry -> {
+                        logger(),
+                        units).flatMap(atrEntry -> {
                     if (atrEntry.isPresent()) {
                         ActiveTransactionRecordEntry ae = atrEntry.get();
 
@@ -1360,9 +1372,13 @@ public class CoreTransactionAttemptContext {
             SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, "staging.check_atr_blocking", pspan);
 
             CollectionIdentifier collection = doc.links().collection();
+            MeteringUnits.MeteringUnitsBuilder units = new MeteringUnits.MeteringUnitsBuilder();
 
-            return checkATREntryForBlockingDocInternal(doc, collection, span)
-                    .doFinally(v -> span.finish())
+            return checkATREntryForBlockingDocInternal(doc, collection, span, units)
+                    .doFinally(v -> {
+                        span.finish();
+                        addUnits(units.build());
+                    })
                     .doOnError(err -> failSpan(span, err));
         });
     }
@@ -1432,20 +1448,23 @@ public class CoreTransactionAttemptContext {
 
                     .doOnNext(v -> {
                         long elapsed = span.finish();
-                        LOGGER.info(attemptId, "set ATR %s to Pending in %dus", getAtrDebug(collection, atrId), elapsed);
+                        addUnits(v.flexibleExtras());
+                        LOGGER.info(attemptId, "set ATR %s to Pending in %dus%s", getAtrDebug(collection, atrId), elapsed,
+                                DebugUtil.dbg(v.flexibleExtras()));
                         setStateLocked(AttemptState.PENDING);
                         overall.cleanup().addToCleanupSet(collection);
                     })
 
                     .then()
-                    
+
 
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder out = createError().cause(err);
+                        MeteringUnits units = addUnits(MeteringUnits.from(err));
 
-                        LOGGER.info(attemptId, "error while setting ATR %s to Pending in %dus: %s",
-                                getAtrDebug(collection, atrId), span.failWith(err), dbg(err));
+                        LOGGER.info(attemptId, "error while setting ATR %s to Pending%s in %dus: %s",
+                                getAtrDebug(collection, atrId), DebugUtil.dbg(units), span.failWith(err), dbg(err));
 
                         if (expiryOvertimeMode) {
                             return mapErrorInOvertimeToExpired(true, CoreTransactionAttemptContextHooks.HOOK_ATR_PENDING, err, FinalErrorToRaise.TRANSACTION_EXPIRED);
@@ -1527,8 +1546,9 @@ public class CoreTransactionAttemptContext {
 
                     .doOnNext(updatedDoc -> {
                         long elapsed = span.finish();
-                        LOGGER.info(attemptId, "replaced doc %s got cas %s, in %dus",
-                                DebugUtil.docId(collection, id), updatedDoc.cas(), elapsed);
+                        addUnits(updatedDoc.flexibleExtras());
+                        LOGGER.info(attemptId, "replaced doc %s%s got cas %s, in %dus",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(updatedDoc.flexibleExtras()), updatedDoc.cas(), elapsed);
                     })
 
                     // Save the new CAS
@@ -1662,8 +1682,9 @@ public class CoreTransactionAttemptContext {
 
                     .flatMap(response -> {
                         long elapsed = span.finish();
-                        LOGGER.info(attemptId, "staged remove of doc %s got cas %d, in %dus",
-                                DebugUtil.docId(doc), response.cas(), elapsed);
+                        addUnits(response.flexibleExtras());
+                        LOGGER.info(attemptId, "staged remove of doc %s%s got cas %d, in %dus",
+                                DebugUtil.docId(doc), DebugUtil.dbg(response.flexibleExtras()), response.cas(), elapsed);
                         // Save so the staged mutation can be committed/rolled back with the correct CAS
                         doc.cas(response.cas());
                         return addStagedMutation(new StagedMutation(operationId, doc.id(), doc.collection(), doc.cas(),
@@ -1707,9 +1728,10 @@ public class CoreTransactionAttemptContext {
                                                 Optional<String> crc32FromGet, Function<Long, Mono<T>> callback) {
         ErrorClass ec = classify(err);
         TransactionOperationFailedException.Builder out = createError().cause(err);
+        MeteringUnits units = addUnits(MeteringUnits.from(err));
 
-        LOGGER.info(attemptId, "error while %s doc %s in %dus: %s",
-                stage, DebugUtil.docId(collection, id), pspan.elapsedMicros(), dbg(err));
+        LOGGER.info(attemptId, "error while %s doc %s%s in %dus: %s",
+                stage, DebugUtil.docId(collection, id), DebugUtil.dbg(units), pspan.elapsedMicros(), dbg(err));
 
         if (expiryOvertimeMode) {
             LOGGER.warn(attemptId, "should not reach here in expiryOvertimeMode");
@@ -1759,16 +1781,18 @@ public class CoreTransactionAttemptContext {
                                                                              byte[] content,
                                                                              SpanWrapper pspan) {
         String bp = "DocExists on " + DebugUtil.docId(collection, id) + ": ";
+        MeteringUnits.MeteringUnitsBuilder units = new MeteringUnits.MeteringUnitsBuilder();
 
         return hooks.beforeGetDocInExistsDuringStagedInsert.apply(this, id) // testing hook
 
-                .then(DocumentGetter.justGetDoc(core, collection, id, kvTimeoutNonMutating(),  pspan, true, logger()))
+                .then(DocumentGetter.justGetDoc(core, collection, id, kvTimeoutNonMutating(),  pspan, true, logger(), units))
 
                 .publishOn(scheduler())
 
                 .doOnSubscribe(x -> LOGGER.info(attemptId, "%s getting doc (which may be a tombstone)", bp))
 
                 .onErrorResume(err -> {
+                    addUnits(units.build());
                     ErrorClass ec = classify(err);
                     TransactionOperationFailedException.Builder e = createError().cause(err);
 
@@ -1787,9 +1811,10 @@ public class CoreTransactionAttemptContext {
                         Tuple2<CoreTransactionGetResult, SubdocGetResponse> results = v.get();
                         CoreTransactionGetResult r = results.getT1();
                         SubdocGetResponse lir = results.getT2();
+                        MeteringUnits built = addUnits(units.build());
 
-                        LOGGER.info(attemptId, "%s doc %s exists inTransaction=%s isDeleted=%s",
-                                bp, DebugUtil.docId(collection, id), r.links(), lir.isDeleted());
+                        LOGGER.info(attemptId, "%s doc %s exists inTransaction=%s isDeleted=%s%s",
+                                bp, DebugUtil.docId(collection, id), r.links(), lir.isDeleted(), DebugUtil.dbg(built));
 
                         return forwardCompatibilityCheck(ForwardCompatibilityStage.WRITE_WRITE_CONFLICT_INSERTING_GET, r.links().forwardCompatibility())
 
@@ -1877,9 +1902,13 @@ public class CoreTransactionAttemptContext {
                         .then(TransactionKVHandler.remove(core, collection, id, kvTimeoutMutating(), lir.cas(), durabilityLevel(),
                                 OptionsUtil.createClientContext("overwriteStagedInsert"), pspan))
 
+                        .doOnNext(v -> addUnits(v.flexibleExtras()))
+
                         .onErrorResume(err -> {
-                            LOGGER.warn(attemptId, "%s hit error %s while removing %s",
-                                    bp, DebugUtil.dbg(err), DebugUtil.docId(collection, id));
+                            MeteringUnits units = addUnits(MeteringUnits.from(err));
+
+                            LOGGER.warn(attemptId, "%s hit error %s while removing %s%s",
+                                    bp, DebugUtil.dbg(err), DebugUtil.docId(collection, id), DebugUtil.dbg(units));
 
                             ErrorClass ec = classify(err);
                             TransactionOperationFailedException.Builder out = createError().cause(err);
@@ -1939,8 +1968,9 @@ public class CoreTransactionAttemptContext {
 
                     .doOnNext(response -> {
                         long elapsed = span.finish();
-                        LOGGER.info(attemptId, "inserted doc %s got cas %d, in %dus",
-                                DebugUtil.docId(collection, id), response.cas(), elapsed);
+                        addUnits(response.flexibleExtras());
+                        LOGGER.info(attemptId, "inserted doc %s%s got cas %d, in %dus",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(response.flexibleExtras()), response.cas(), elapsed);
                     })
 
                     .flatMap(updatedDoc -> {
@@ -1962,8 +1992,9 @@ public class CoreTransactionAttemptContext {
                     })
 
                     .onErrorResume(err -> {
-                        LOGGER.info(attemptId, "got err while staging insert of %s: %s",
-                                DebugUtil.docId(collection, id), dbg(err));
+                        MeteringUnits units = addUnits(MeteringUnits.from(err));
+                        LOGGER.info(attemptId, "got err while staging insert of %s%s: %s",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(units), dbg(err));
 
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder out = createError().cause(err);
@@ -2396,23 +2427,25 @@ public class CoreTransactionAttemptContext {
 
                     .publishOn(scheduler())
 
-                    .flatMap(v -> hooks.afterAtrComplete.apply(this))  // Testing hook
+                    .flatMap(v -> hooks.afterAtrComplete.apply(this).thenReturn(v))  // Testing hook
 
                 .doOnNext(v -> {
                     setStateLocked(AttemptState.COMPLETED);
+                    addUnits(v.flexibleExtras());
                     long now = System.nanoTime();
                     long elapsed = span.finish();
-                    LOGGER.info(attemptId, "removed ATR %s in %dus, overall commit completed in %dus",
-                            getAtrDebug(atrCollection, atrId), elapsed, TimeUnit.NANOSECONDS.toMicros(now - overallStartTime.get()));
+                    LOGGER.info(attemptId, "removed ATR %s in %dus%s, overall commit completed in %dus",
+                            getAtrDebug(atrCollection, atrId), elapsed, DebugUtil.dbg(v.flexibleExtras()), TimeUnit.NANOSECONDS.toMicros(now - overallStartTime.get()));
                 })
 
                     .then()
 
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
+                        MeteringUnits units = addUnits(MeteringUnits.from(err));
 
-                    LOGGER.info(attemptId, "error '%s' ec=%s while removing ATR %s", err, ec,
-                            getAtrDebug(atrCollection, atrId));
+                    LOGGER.info(attemptId, "error '%s' ec=%s while removing ATR %s%s", err, ec,
+                            getAtrDebug(atrCollection, atrId), DebugUtil.dbg(units));
 
                     if (ec == FAIL_HARD) {
                         return Mono.error(operationFailed(createError()
@@ -2478,8 +2511,9 @@ public class CoreTransactionAttemptContext {
                             .thenReturn(mutationResult))
 
                     .doOnNext(mutationResult -> {
-                        LOGGER.info(attemptId, "commit - removed doc %s, mt = %s",
-                                DebugUtil.docId(collection, id), mutationResult.mutationToken());
+                        addUnits(mutationResult.flexibleExtras());
+                        LOGGER.info(attemptId, "commit - removed doc %s%s, mt = %s",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(mutationResult.flexibleExtras()), mutationResult.mutationToken());
                     })
 
                     .then()
@@ -2490,9 +2524,10 @@ public class CoreTransactionAttemptContext {
                                 .cause(err)
                                 .doNotRollbackAttempt()
                                 .raiseException(FinalErrorToRaise.TRANSACTION_FAILED_POST_COMMIT);
+                        MeteringUnits units = addUnits(MeteringUnits.from(err));
 
-                        LOGGER.info("got error while removing doc %s in %dus: %s",
-                                DebugUtil.docId(collection, id), span.elapsedMicros(), dbg(err));
+                        LOGGER.info("got error while removing doc %s%s in %dus: %s",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
 
                         if (expiryOvertimeMode) {
                             return mapErrorInOvertimeToExpired(true, CoreTransactionAttemptContextHooks.HOOK_REMOVE_DOC, err, FinalErrorToRaise.TRANSACTION_FAILED_POST_COMMIT);
@@ -2647,21 +2682,17 @@ public class CoreTransactionAttemptContext {
                     .flatMap(v -> hooks.afterDocCommittedBeforeSavingCAS.apply(this, id).thenReturn(v))
 
                     // Do checkExpiryDuringCommitOrRollback before doOnNext (which tests often make throw)
-                    .flatMap(newCas -> {
-                        LOGGER.info(attemptId, "commit - committed doc %s got cas %d", DebugUtil.docId(collection, id), newCas);
-
-                        // Testing hook
-                        return hooks.afterDocCommitted.apply(this, id);
-                    })
+                    .flatMap(newCas -> hooks.afterDocCommitted.apply(this, id))
 
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder e = createError().cause(err)
                                 .doNotRollbackAttempt()
                                 .raiseException(FinalErrorToRaise.TRANSACTION_FAILED_POST_COMMIT);
+                        MeteringUnits units = addUnits(MeteringUnits.from(err));
 
-                        LOGGER.info(attemptId, "error while committing doc %s in %dus: %s",
-                                DebugUtil.docId(collection, id), span.elapsedMicros(), dbg(err));
+                        LOGGER.info(attemptId, "error while committing doc %s%s in %dus: %s",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
 
                         if (expiryOvertimeMode) {
                             return mapErrorInOvertimeToExpired(true, CoreTransactionAttemptContextHooks.HOOK_COMMIT_DOC, err, FinalErrorToRaise.TRANSACTION_FAILED_POST_COMMIT).thenReturn(0);
@@ -2706,6 +2737,15 @@ public class CoreTransactionAttemptContext {
                     .doOnError(err -> failSpan(span, err))
                     .doFinally(v -> span.finish());
         });
+    }
+
+    private void addUnits(@Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
+        meteringUnitsBuilder.add(flexibleExtras);
+    }
+
+    private MeteringUnits addUnits(@Nullable MeteringUnits units) {
+        meteringUnitsBuilder.add(units);
+        return units;
     }
 
     private Mono<Integer> handleDocMissingDuringCommit(SpanWrapper pspan,
@@ -2773,6 +2813,8 @@ public class CoreTransactionAttemptContext {
             String id = staged.id;
             CollectionIdentifier collection = staged.collection;
             SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "commit.doc_changed", pspan);
+            MeteringUnits.MeteringUnitsBuilder units = new MeteringUnits.MeteringUnitsBuilder();
+
             return Mono.fromRunnable(() -> {
                         LOGGER.info(attemptId, "commit - handling doc changed %s, insertMode=%s",
                                 DebugUtil.docId(collection, id), insertMode);
@@ -2786,12 +2828,13 @@ public class CoreTransactionAttemptContext {
                         }
                     })
                     .then(hooks.beforeDocChangedDuringCommit.apply(this, id)) // testing hook
-                    .then(DocumentGetter.getAsync(core, LOGGER, staged.collection, config, staged.id, attemptId, true, span, Optional.empty()))
+                    .then(DocumentGetter.getAsync(core, LOGGER, staged.collection, config, staged.id, attemptId, true, span, Optional.empty(), units))
                     .publishOn(scheduler())
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
-                        LOGGER.info(attemptId, "commit - handling doc changed %s, got error %s",
-                                DebugUtil.docId(collection, id), dbg(err));
+                        MeteringUnits built = addUnits(units.build());
+                        LOGGER.info(attemptId, "commit - handling doc changed %s%s, got error %s",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(built), dbg(err));
                         if (ec == TRANSACTION_OPERATION_FAILED) {
                             return Mono.error(err);
                         } else if (ec == FAIL_TRANSIENT) {
@@ -2806,6 +2849,7 @@ public class CoreTransactionAttemptContext {
                         // FAIL_DOC_NOT_FOUND handled elsewhere in this function
                     })
                     .flatMap(doc -> {
+                        addUnits(units.build());
                         if (doc.isPresent()) {
                             CoreTransactionGetResult gr = doc.get();
                             DocChanged dc = getDocChanged(gr,
@@ -2847,18 +2891,20 @@ public class CoreTransactionAttemptContext {
                                                       Function<Long, Mono<T>> callback) {
         return Mono.defer(() -> {
             SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "staging.doc_changed", pspan);
+            MeteringUnits.MeteringUnitsBuilder units = new MeteringUnits.MeteringUnitsBuilder();
             return Mono.fromRunnable(() -> {
                         LOGGER.info(attemptId, "handling doc changed during staging %s",
                                 DebugUtil.docId(collection, id));
                         throwIfExpired(id, HOOK_STAGING_DOC_CHANGED);
                     })
                     .then(hooks.beforeDocChangedDuringStaging.apply(this, id)) // testing hook
-                    .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty()))
+                    .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty(), units))
                     .publishOn(scheduler())
                     .onErrorResume(err -> {
+                        MeteringUnits built = addUnits(units.build());
                         ErrorClass ec = classify(err);
-                        LOGGER.info(attemptId, "handling doc changed during staging %s, got error %s",
-                                DebugUtil.docId(collection, id), dbg(err));
+                        LOGGER.info(attemptId, "handling doc changed during staging %s%s, got error %s",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(built), dbg(err));
                         if (ec == TRANSACTION_OPERATION_FAILED) {
                             return Mono.error(err);
                         } else if (ec == FAIL_TRANSIENT) {
@@ -2879,6 +2925,7 @@ public class CoreTransactionAttemptContext {
                         // FAIL_DOC_NOT_FOUND handled elsewhere in this function
                     })
                     .flatMap(doc -> {
+                        addUnits(units.build());
                         if (doc.isPresent()) {
                             CoreTransactionGetResult gr = doc.get();
                             DocChanged dc = getDocChanged(gr,
@@ -2933,18 +2980,20 @@ public class CoreTransactionAttemptContext {
                                                       Function<Long, Mono<Void>> callback) {
         return Mono.defer(() -> {
             SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "rollback.doc_changed", pspan);
+            MeteringUnits.MeteringUnitsBuilder units = new MeteringUnits.MeteringUnitsBuilder();
             return Mono.fromRunnable(() -> {
                         LOGGER.info(attemptId, "handling doc changed during rollback %s",
                                 DebugUtil.docId(collection, id));
                         throwIfExpired(id, HOOK_ROLLBACK_DOC_CHANGED);
                     })
                     .then(hooks.beforeDocChangedDuringRollback.apply(this, id)) // testing hook
-                    .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty()))
+                    .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty(), units))
                     .publishOn(scheduler())
                     .onErrorResume(err -> {
+                        MeteringUnits built = addUnits(units.build());
                         ErrorClass ec = classify(err);
-                        LOGGER.info(attemptId, "handling doc changed during rollback %s, got error %s",
-                                DebugUtil.docId(collection, id), dbg(err));
+                        LOGGER.info(attemptId, "handling doc changed during rollback %s%s, got error %s",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(built), dbg(err));
                         if (ec == TRANSACTION_OPERATION_FAILED) {
                             return Mono.error(err);
                         } else if (ec == FAIL_TRANSIENT) {
@@ -2965,6 +3014,7 @@ public class CoreTransactionAttemptContext {
                         // FAIL_DOC_NOT_FOUND handled elsewhere in this function
                     })
                     .flatMap(doc -> {
+                        addUnits(units.build());
                         if (doc.isPresent()) {
                             CoreTransactionGetResult gr = doc.get();
                             DocChanged dc = getDocChanged(gr,
@@ -3034,7 +3084,9 @@ public class CoreTransactionAttemptContext {
                             status = "UNKNOWN";
                         }
 
-                        LOGGER.info(attemptId, "got status of ATR %s: '%s'", getAtrDebug(atrCollection, atrId), status);
+                        addUnits(result.flexibleExtras());
+                        LOGGER.info(attemptId, "got status of ATR %s%s: '%s'", getAtrDebug(atrCollection, atrId),
+                                DebugUtil.dbg(result.flexibleExtras()), status);
 
                         AttemptState state = AttemptState.convert(status);
 
@@ -3060,13 +3112,14 @@ public class CoreTransactionAttemptContext {
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder builder = createError().doNotRollbackAttempt().cause(err);
+                        MeteringUnits units = addUnits(MeteringUnits.from(err));
 
                         if (err instanceof RetryAtrCommitException || ec == TRANSACTION_OPERATION_FAILED) {
                             return Mono.error(err);
                         }
 
-                        LOGGER.info(attemptId, "error while resolving ATR %s ambiguity in %dus: %s",
-                                getAtrDebug(atrCollection, atrId), span.elapsedMicros(), dbg(err));
+                        LOGGER.info(attemptId, "error while resolving ATR %s ambiguity%s in %dus: %s",
+                                getAtrDebug(atrCollection, atrId), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
 
                         if (ec == FAIL_EXPIRY) {
                             return Mono.error(operationFailed(createError()
@@ -3132,12 +3185,13 @@ public class CoreTransactionAttemptContext {
                     .publishOn(scheduler())
 
                     // Testing hook
-                    .flatMap(v -> hooks.afterAtrCommit.apply(this))
+                    .flatMap(v -> hooks.afterAtrCommit.apply(this).thenReturn(v))
 
                     .doOnNext(v -> {
                         setStateLocked(AttemptState.COMMITTED);
-                        LOGGER.info(attemptId, "set ATR %s to Committed in %dus", getAtrDebug(atrCollection, atrId),
-                                TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - overallStartTime.get()));
+                        addUnits(v.flexibleExtras());
+                        LOGGER.info(attemptId, "set ATR %s to Committed%s in %dus", getAtrDebug(atrCollection, atrId),
+                                DebugUtil.dbg(v.flexibleExtras()), span.elapsedMicros());
                     })
 
                     .then()
@@ -3145,9 +3199,10 @@ public class CoreTransactionAttemptContext {
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder builder = createError().cause(err);
+                        MeteringUnits units = addUnits(MeteringUnits.from(err));
 
-                        LOGGER.info(attemptId, "error while setting ATR %s to Committed in %dus: %s",
-                                getAtrDebug(atrCollection, atrId), span.elapsedMicros(), dbg(err));
+                        LOGGER.info(attemptId, "error while setting ATR %s to Committed%s in %dus: %s",
+                                getAtrDebug(atrCollection, atrId), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
 
                         if (ec == FAIL_EXPIRY) {
                             FinalErrorToRaise toRaise = ambiguityResolutionMode.get() ? FinalErrorToRaise.TRANSACTION_COMMIT_AMBIGUOUS : FinalErrorToRaise.TRANSACTION_EXPIRED;
@@ -3408,17 +3463,20 @@ public class CoreTransactionAttemptContext {
 
                     .publishOn(scheduler())
 
-                    .flatMap(v -> hooks.afterAtrRolledBack.apply(this)) // testing hook
+                    .flatMap(v -> hooks.afterAtrRolledBack.apply(this).thenReturn(v)) // testing hook
 
                     .doOnNext(v -> {
                         setStateLocked(AttemptState.ROLLED_BACK);
                         long elapsed = span.finish();
-                        LOGGER.info(attemptId, "rollback - atr rolled back in %dus", elapsed);
+                        addUnits(v.flexibleExtras());
+                        LOGGER.info(attemptId, "rollback - atr rolled back%s in %dus", DebugUtil.dbg(v.flexibleExtras()), elapsed);
                     })
 
                     .onErrorResume(err -> {
-                        LOGGER.info(attemptId, "error while marking ATR %s as rollback complete in %dus: %s",
-                                getAtrDebug(atrCollection, atrId), span.elapsedMicros(), dbg(err));
+                        MeteringUnits units = addUnits(MeteringUnits.from(err));
+
+                        LOGGER.info(attemptId, "error while marking ATR %s as rollback complete%s in %dus: %s",
+                                getAtrDebug(atrCollection, atrId), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
 
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder error = createError().doNotRollbackAttempt();
@@ -3505,8 +3563,9 @@ public class CoreTransactionAttemptContext {
                             .thenReturn(updatedDoc))
 
                     .doOnNext(updatedDoc -> {
-                        LOGGER.info(attemptId, "rolled back doc %s, got cas %d and mt %s",
-                                DebugUtil.docId(collection, id), updatedDoc.cas(), updatedDoc.mutationToken());
+                        addUnits(updatedDoc.flexibleExtras());
+                        LOGGER.info(attemptId, "rolled back doc %s%s, got cas %d and mt %s",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(updatedDoc.flexibleExtras()), updatedDoc.cas(), updatedDoc.mutationToken());
                     })
 
                     .then()
@@ -3514,9 +3573,10 @@ public class CoreTransactionAttemptContext {
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder builder = createError().doNotRollbackAttempt().cause(err);
+                        MeteringUnits units = addUnits(MeteringUnits.from(err));
 
-                        logger().info(attemptId, "got error while rolling back doc %s in %dus: %s",
-                                DebugUtil.docId(collection, id), span.elapsedMicros(), dbg(err));
+                        logger().info(attemptId, "got error while rolling back doc %s%s in %dus: %s",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
 
                         if (expiryOvertimeMode) {
                             return mapErrorInOvertimeToExpired(isAppRollback, CoreTransactionAttemptContextHooks.HOOK_ROLLBACK_DOC, err, FinalErrorToRaise.TRANSACTION_EXPIRED);
@@ -3581,8 +3641,9 @@ public class CoreTransactionAttemptContext {
                             .thenReturn(updatedDoc))
 
                     .doOnNext(updatedDoc -> {
-                        LOGGER.info(attemptId, "deleted inserted doc %s, mt %s",
-                                DebugUtil.docId(collection, id), updatedDoc.mutationToken());
+                        addUnits(updatedDoc.flexibleExtras());
+                        LOGGER.info(attemptId, "deleted inserted doc %s%s, mt %s",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(updatedDoc.flexibleExtras()), updatedDoc.mutationToken());
                     })
 
                     .then()
@@ -3590,9 +3651,10 @@ public class CoreTransactionAttemptContext {
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder builder = createError().cause(err);
+                        MeteringUnits units = addUnits(MeteringUnits.from(err));
 
-                        LOGGER.info(attemptId, "error while rolling back inserted doc %s in %dus: %s",
-                                DebugUtil.docId(collection, id), span.elapsedMicros(), dbg(err));
+                        LOGGER.info(attemptId, "error while rolling back inserted doc %s%s in %dus: %s",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
 
                         if (expiryOvertimeMode) {
                             return mapErrorInOvertimeToExpired(isAppRollback, CoreTransactionAttemptContextHooks.HOOK_REMOVE_DOC, err, FinalErrorToRaise.TRANSACTION_EXPIRED);
@@ -3664,14 +3726,17 @@ public class CoreTransactionAttemptContext {
                     .flatMap(updatedDoc -> hooks.afterRemoveStagedInsert.apply(this, id)
                             .thenReturn(updatedDoc))
 
+                    .doOnNext(v -> addUnits(v.flexibleExtras()))
+
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder builder = createError()
                                 .retryTransaction()
                                 .cause(err);
+                        MeteringUnits units = addUnits(MeteringUnits.from(err));
 
-                        LOGGER.info(attemptId, "error while removing staged insert doc %s in %dus: %s",
-                                DebugUtil.docId(collection, id), span.elapsedMicros(), dbg(err));
+                        LOGGER.info(attemptId, "error while removing staged insert doc %s%s in %dus: %s",
+                                DebugUtil.docId(collection, id), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
 
                         if (ec == TRANSACTION_OPERATION_FAILED) {
                             return Mono.error(err);
@@ -3727,11 +3792,13 @@ public class CoreTransactionAttemptContext {
                     .publishOn(scheduler())
 
                     // Debug hook
-                    .then(hooks.afterAtrAborted.apply(this))
+                    .flatMap(v -> hooks.afterAtrAborted.apply(this).thenReturn(v))
 
                     .doOnNext(v -> {
                         setStateLocked(AttemptState.ABORTED);
-                        LOGGER.info(attemptId, "aborted ATR %s", getAtrDebug(atrCollection, atrId));
+                        addUnits(v.flexibleExtras());
+                        LOGGER.info(attemptId, "aborted ATR %s%s in %dus", getAtrDebug(atrCollection, atrId),
+                                DebugUtil.dbg(v.flexibleExtras()), span.elapsedMicros());
                     })
 
                     .then()
@@ -3739,9 +3806,10 @@ public class CoreTransactionAttemptContext {
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder builder = createError().cause(err).doNotRollbackAttempt();
+                        MeteringUnits units = addUnits(MeteringUnits.from(err));
 
-                        LOGGER.info(attemptId, "error %s while aborting ATR %s",
-                                DebugUtil.dbg(err), getAtrDebug(atrCollection, atrId));
+                        LOGGER.info(attemptId, "error %s while aborting ATR %s%s",
+                                DebugUtil.dbg(err), getAtrDebug(atrCollection, atrId), DebugUtil.dbg(units));
 
                         if (expiryOvertimeMode) {
                             return mapErrorInOvertimeToExpired(isAppRollback, CoreTransactionAttemptContextHooks.HOOK_ATR_ABORT, err, FinalErrorToRaise.TRANSACTION_EXPIRED);
@@ -4429,7 +4497,7 @@ public class CoreTransactionAttemptContext {
             }
         });
     }
-    
+
     @Stability.Internal
     Mono<Void> lambdaEnd(@Nullable CoreTransactionsCleanup cleanup, @Nullable Throwable err, boolean singleQueryTransactionMode) {
         return Mono.defer(() -> {
@@ -4439,8 +4507,19 @@ public class CoreTransactionAttemptContext {
             FinalErrorToRaise finalError = FinalErrorToRaise.values()[maskedFinalError];
             boolean rollbackNeeded = finalError != FinalErrorToRaise.TRANSACTION_SUCCESS && !shouldNotRollback && !singleQueryTransactionMode;
 
-            LOGGER.info(attemptId, "reached post-lambda in %dus, shouldNotRollback=%s finalError=%s rollbackNeeded=%s, err (only cause of this will be used)=%s tximplicit=%s",
-                    TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - startTimeClient.toNanos()), shouldNotRollback, finalError, rollbackNeeded, err, singleQueryTransactionMode);
+            StringBuilder ub = new StringBuilder();
+            if (meteringUnitsBuilder.readUnits() != 0) {
+                ub.append(" RUs=");
+                ub.append(meteringUnitsBuilder.readUnits());
+            }
+            if (meteringUnitsBuilder.writeUnits() != 0) {
+                ub.append(" WUs=");
+                ub.append(meteringUnitsBuilder.writeUnits());
+            }
+
+            LOGGER.info(attemptId, "reached post-lambda in %dus, shouldNotRollback=%s finalError=%s rollbackNeeded=%s, err (only cause of this will be used)=%s tximplicit=%s%s",
+                    TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - startTimeClient.toNanos()), shouldNotRollback,
+                    finalError, rollbackNeeded, err, singleQueryTransactionMode, meteringUnitsBuilder.toString());
 
             return Mono.defer(() -> {
                         if (rollbackNeeded) {

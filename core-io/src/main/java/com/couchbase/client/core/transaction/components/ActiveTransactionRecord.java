@@ -23,6 +23,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMappe
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibility;
+import com.couchbase.client.core.transaction.util.MeteringUnits;
 import com.couchbase.client.core.transaction.util.TransactionKVHandler;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
@@ -80,7 +81,8 @@ public class ActiveTransactionRecord {
                                                                                       String attemptId,
                                                                                       CoreMergedTransactionConfig config,
                                                                                       @Nullable SpanWrapper pspan,
-                                                                                      @Nullable CoreTransactionLogger logger) {
+                                                                                      @Nullable CoreTransactionLogger logger,
+                                                                                      MeteringUnits.MeteringUnitsBuilder units) {
 
         return TransactionKVHandler.lookupIn(core, atrCollection, atrId, kvTimeoutNonMutating(core),
                         false, createClientContext("ATR::findEntryForTransaction"), pspan,
@@ -90,6 +92,8 @@ public class ActiveTransactionRecord {
                         ))
 
                 .map(d -> {
+                    units.add(d.flexibleExtras());
+
                     if (!d.values()[0].status().success()) {
                         return Optional.empty();
                     } else {

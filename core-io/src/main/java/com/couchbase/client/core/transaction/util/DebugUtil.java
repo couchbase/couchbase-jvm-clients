@@ -17,7 +17,9 @@ package com.couchbase.client.core.transaction.util;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.transaction.CoreTransactionGetResult;
+import reactor.util.annotation.Nullable;
 
 /*
  * These return LogDefer* objects rather that Strings, so log evaluation only has to happen if the logs are actually
@@ -61,4 +63,28 @@ public class DebugUtil {
         return sb.toString();
     }
 
+    public static String dbg(@Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
+        if (flexibleExtras == null) {
+            return "";
+        }
+
+        return " using " +
+                (flexibleExtras.writeUnits >= 0 ? flexibleExtras.writeUnits : 0)  +
+                " WUs " +
+                (flexibleExtras.readUnits >= 0 ? flexibleExtras.readUnits : 0)  +
+                " RUs";
+    }
+
+    public static String dbg(@Nullable MeteringUnits units) {
+        if (units == null) {
+            return "";
+        }
+
+        return " using " +
+                (units.writeUnits == null ? 0 : units.writeUnits) +
+                " WUs " +
+                (units.readUnits == null ? 0 : units.readUnits) +
+                " RUs ";
+
+    }
 }

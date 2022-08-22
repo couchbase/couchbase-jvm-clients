@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.transaction.error.internal.ErrorClass;
+import com.couchbase.client.core.transaction.util.MeteringUnits;
 import com.couchbase.client.core.transaction.util.TransactionKVHandler;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
@@ -65,8 +66,9 @@ public class DocumentGetter {
                                                                     String byAttemptId,
                                                                     boolean justReturn,
                                                                     @Nullable SpanWrapper span,
-                                                                    Optional<String> resolvingMissingATREntry) {
-        return justGetDoc(core, collection, docId, kvTimeoutNonMutating(core), span, true, LOGGER)
+                                                                    Optional<String> resolvingMissingATREntry,
+                                                                    MeteringUnits.MeteringUnitsBuilder units) {
+        return justGetDoc(core, collection, docId, kvTimeoutNonMutating(core), span, true, LOGGER, units)
                 .flatMap(origTrans -> {
                     if (justReturn) {
                         return Mono.just(origTrans.map(v -> v.getT1()));
@@ -115,7 +117,7 @@ public class DocumentGetter {
                             LOGGER.info(byAttemptId, "doc %s is in a transaction %s, looking up its status from ATR %s (MAV read)",
                                     DebugUtil.docId(collection, docId), r.links().stagedAttemptId(),  ActiveTransactionRecordUtil.getAtrDebug(atrCollection, r.links().atrId().get()));
 
-                            return lookupStatusFromATR(core, atrCollection, r, byAttemptId, config, span, LOGGER);
+                            return lookupStatusFromATR(core, atrCollection, r, byAttemptId, config, span, LOGGER, units);
                         }
                     } else {
                         LOGGER.info(byAttemptId, "doc %s is not in a transaction", DebugUtil.docId(collection, docId));
@@ -132,7 +134,8 @@ public class DocumentGetter {
                Duration timeout,
                @Nullable SpanWrapper span,
                boolean accessDeleted,
-               CoreTransactionLogger logger) {
+               CoreTransactionLogger logger,
+               MeteringUnits.MeteringUnitsBuilder units) {
         return TransactionKVHandler.lookupIn(core, collection, docId, timeout, accessDeleted,
                         createClientContext("DocumentGetter::justGetDoc"), span,
                         Arrays.asList(
@@ -149,6 +152,7 @@ public class DocumentGetter {
                         ))
 
                 .map(fragment -> {
+                    units.add(fragment.flexibleExtras());
                     try {
                         return Optional.of(Tuples.of(CoreTransactionGetResult.createFrom(collection,
                                 docId,
@@ -165,6 +169,7 @@ public class DocumentGetter {
                 })
 
                 .onErrorResume(err -> {
+                    units.add(err);
                     ErrorClass ec = ErrorClass.classify(err);
 
                     if (ec == ErrorClass.FAIL_DOC_NOT_FOUND) {
@@ -198,7 +203,8 @@ public class DocumentGetter {
                                                                                 String byAttemptId,
                                                                                 CoreMergedTransactionConfig config,
                                                                                 SpanWrapper span,
-                                                                                @Nullable CoreTransactionLogger logger) {
+                                                                                @Nullable CoreTransactionLogger logger,
+                                                                                MeteringUnits.MeteringUnitsBuilder units) {
         CbPreconditions.check(doc.links().isDocumentInTransaction());
         CbPreconditions.check(doc.links().atrId().isPresent());
         CbPreconditions.check(doc.links().stagedAttemptId().isPresent());
@@ -206,8 +212,9 @@ public class DocumentGetter {
         String atrId = doc.links().atrId().get();
         String attemptIdOfDoc = doc.links().stagedAttemptId().get();
 
-        return ActiveTransactionRecord.findEntryForTransaction(core, collection, atrId, attemptIdOfDoc, config, span, logger)
+        return ActiveTransactionRecord.findEntryForTransaction(core, collection, atrId, attemptIdOfDoc, config, span, logger, units)
                 .onErrorResume(err -> {
+                    units.add(err);
                     ErrorClass ec = ErrorClass.classify(err);
 
                     if (ec == ErrorClass.FAIL_DOC_NOT_FOUND) {

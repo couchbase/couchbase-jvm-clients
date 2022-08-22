@@ -40,9 +40,9 @@ import com.couchbase.client.core.transaction.error.internal.ErrorClass;
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.core.transaction.util.DebugUtil;
-import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import com.couchbase.client.core.transaction.util.TransactionKVHandler;
 import com.couchbase.client.core.transaction.util.TriFunction;
+import com.couchbase.client.core.transaction.util.MeteringUnits;
 import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.core.util.CbPreconditions;
 import reactor.core.publisher.Flux;
@@ -266,6 +266,7 @@ public class TransactionsCleaner {
                 .concatMap(docRecord -> {
                     CollectionIdentifier collection = new CollectionIdentifier(docRecord.bucketName(),
                             Optional.of(docRecord.scopeName()), Optional.of(docRecord.collectionName()));
+                    MeteringUnits.MeteringUnitsBuilder units = new MeteringUnits.MeteringUnitsBuilder();
 
                     return hooks.beforeDocGet.apply(docRecord.id())
 
@@ -275,7 +276,8 @@ public class TransactionsCleaner {
                                     requireCrc32ToMatchStaging,
                                     perDoc,
                                     docRecord,
-                                    collection));
+                                    collection,
+                                    units));
                 })
                 .then();
     }
@@ -286,17 +288,19 @@ public class TransactionsCleaner {
                                       boolean requireCrc32ToMatchStaging,
                                       TriFunction<CollectionIdentifier, CoreTransactionGetResult, SubdocGetResponse, Mono<Void>> perDoc,
                                       DocRecord docRecord,
-                                      CollectionIdentifier collection) {
-        return DocumentGetter.justGetDoc(core, collection, docRecord.id(), kvNonMutatingTimeout(), pspan, true, perEntryLog)
+                                      CollectionIdentifier collection,
+                                      MeteringUnits.MeteringUnitsBuilder units) {
+        return DocumentGetter.justGetDoc(core, collection, docRecord.id(), kvNonMutatingTimeout(), pspan, true, perEntryLog, units)
 
                 .flatMap(docOpt -> {
                     if (docOpt.isPresent()) {
                         CoreTransactionGetResult doc = docOpt.get().getT1();
                         SubdocGetResponse lir = docOpt.get().getT2();
+                        MeteringUnits built = units.build();
 
                         perEntryLog.debug(attemptId, "handling doc %s with cas %d " +
-                                        "and links %s, isTombstone=%s",
-                                DebugUtil.docId(doc), doc.cas(), doc.links(), lir.isDeleted());
+                                        "and links %s, isTombstone=%s%s",
+                                DebugUtil.docId(doc), doc.cas(), doc.links(), lir.isDeleted(), DebugUtil.dbg(built));
 
                         if (!doc.links().isDocumentInTransaction()) {
                             // The txn probably committed this doc then crashed.  This is fine, can skip.
