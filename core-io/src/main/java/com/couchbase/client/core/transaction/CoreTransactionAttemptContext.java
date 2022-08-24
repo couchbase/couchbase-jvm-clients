@@ -4540,6 +4540,8 @@ public class CoreTransactionAttemptContext {
                     TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - startTimeClient.toNanos()), shouldNotRollback,
                     finalError, rollbackNeeded, err, singleQueryTransactionMode, meteringUnitsBuilder.toString());
 
+            core.transactionsContext().counters().attempts().incrementBy(1);
+
             return Mono.defer(() -> {
                         if (rollbackNeeded) {
                             return rollbackAuto()
@@ -4607,6 +4609,8 @@ public class CoreTransactionAttemptContext {
             FinalErrorToRaise finalError = FinalErrorToRaise.values()[maskedFinalError];
 
             LOGGER.info(attemptId, "reached end of transaction, toRaise=%s, err=%s", finalError, err);
+
+            core.transactionsContext().counters().transactions().incrementBy(1);
 
             Throwable cause = null;
             if (err != null) {

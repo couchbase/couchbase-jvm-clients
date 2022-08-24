@@ -131,6 +131,11 @@ public enum Extension {
      * @since 3.3.4
      */
     EXT_REPLACE_BODY_WITH_XATTR("RX"),
+
+    /**
+     * @since ?
+     */
+    EXT_OBSERVABILITY("OB")
     ;
 
     private String value;

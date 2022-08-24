@@ -79,6 +79,11 @@ public class TracingIdentifiers {
    */
   public static final String SERVICE_BACKUP = "backup";
 
+  /**
+   * The identifier commonly used to identify the transactions "service".
+   */
+  public static final String SERVICE_TRANSACTIONS = "transactions";
+
   public static final String SPAN_REQUEST_QUERY = "query";
 
   public static final String SPAN_REQUEST_ANALYTICS = "analytics";
@@ -242,6 +247,8 @@ public class TracingIdentifiers {
   public static final String ATTR_DOCUMENT_ID = "db.couchbase.document_id";
 
   public static final String METER_OPERATIONS = "db.couchbase.operations";
+  public static final String METER_TRANSACTION_TOTAL = "db.couchbase.transaction.total";
+  public static final String METER_TRANSACTION_ATTEMPTS = "db.couchbase.transaction.attempts";
 
   public static final String ATTR_DURABILITY = "db.couchbase.durability";
 

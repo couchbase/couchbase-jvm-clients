@@ -70,6 +70,7 @@ import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.transaction.context.CoreTransactionsContext;
 import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
 import com.couchbase.client.core.cnc.events.transaction.TransactionsStartedEvent;
@@ -242,6 +243,8 @@ public class Core {
 
   private final CoreTransactionsCleanup transactionsCleanup;
 
+  private final CoreTransactionsContext transactionsContext;
+
   /**
    * Holds the user connection string if provided (null otherwise).
    */
@@ -361,6 +364,7 @@ public class Core {
     );
 
     this.transactionsCleanup = new CoreTransactionsCleanup(this, environment.transactionsConfig());
+    this.transactionsContext = new CoreTransactionsContext(environment.meter());
     context().environment().eventBus().publish(new TransactionsStartedEvent(environment.transactionsConfig().cleanupConfig().runLostAttemptsCleanupThread(),
             environment.transactionsConfig().cleanupConfig().runRegularAttemptsCleanupThread()));
   }
@@ -1019,6 +1023,11 @@ public class Core {
   @Stability.Internal
   public CoreTransactionsCleanup transactionsCleanup() {
     return transactionsCleanup;
+  }
+
+  @Stability.Internal
+  public CoreTransactionsContext transactionsContext() {
+    return transactionsContext;
   }
 
   private static class ResponseMetricIdentifier {
