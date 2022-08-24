@@ -17,6 +17,7 @@
 package com.couchbase.twoway;
 
 import com.couchbase.InternalPerformerFailure;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.protocol.shared.API;
 import com.couchbase.client.protocol.transactions.BroadcastToOtherConcurrentTransactionsRequest;
 import com.couchbase.client.protocol.transactions.CommandSetLatch;
@@ -47,9 +48,12 @@ public class TwoWayTransactionMarshaller {
     private final ConcurrentHashMap<String, ClusterConnection> clusterConnections;
     private TwoWayTransactionShared twoWay;
     private volatile boolean readyToStart = false;
+    private final ConcurrentHashMap<String, RequestSpan> spans;
 
-    public TwoWayTransactionMarshaller(ConcurrentHashMap<String, ClusterConnection> clusterConnections) {
+    public TwoWayTransactionMarshaller(ConcurrentHashMap<String, ClusterConnection> clusterConnections,
+                                       ConcurrentHashMap<String, RequestSpan> spans) {
         this.clusterConnections = clusterConnections;
+        this.spans = spans;
     }
 
     private void shutdown() {
@@ -105,7 +109,8 @@ public class TwoWayTransactionMarshaller {
                         TransactionResult result = twoWay.run(clusterConnections.get(req.getClusterConnectionId()),
                                 req,
                                 toTest,
-                                false);
+                                false,
+                                spans);
 
                         logger.info("Transaction has finished, completing stream and ending thread");
 

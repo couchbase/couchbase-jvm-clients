@@ -18,6 +18,7 @@ package com.couchbase.twoway;
 
 import com.couchbase.InternalPerformerFailure;
 import com.couchbase.JavaSdkCommandExecutor;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.transaction.internal.TestFailOtherException;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
@@ -61,6 +62,7 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -78,9 +80,10 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
             ClusterConnection connection,
             TransactionCreateRequest req,
             @Nullable TransactionCommandExecutor executor,
-            boolean performanceMode) {
+            boolean performanceMode,
+            ConcurrentHashMap<String, RequestSpan> spans) {
         TwoWayTransactionBlocking txn = new TwoWayTransactionBlocking(executor);
-        return txn.run(connection, req, (StreamObserver) null, performanceMode);
+        return txn.run(connection, req, (StreamObserver) null, performanceMode, spans);
     }
 
     /**
@@ -90,7 +93,8 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
         ClusterConnection connection,
         TransactionCreateRequest req,
         @Nullable StreamObserver<TransactionStreamPerformerToDriver> toTest,
-        boolean performanceMode
+        boolean performanceMode,
+        ConcurrentHashMap<String, RequestSpan> spans
     ) {
         AtomicInteger attemptCount = new AtomicInteger(-1);
 
@@ -98,7 +102,7 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
             throw new InternalPerformerFailure(new IllegalStateException("Unexpected API"));
         }
 
-        TransactionOptions ptcb = OptionsUtil.makeTransactionOptions(connection, req);
+        TransactionOptions ptcb = OptionsUtil.makeTransactionOptions(connection, req, spans);
 
         TransactionResult out = connection.cluster().transactions().run((ctx) -> {
             if (testFailure.get() != null) {

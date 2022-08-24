@@ -16,6 +16,7 @@
 // [skip:<3.3.0]
 package com.couchbase;
 
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
 import com.couchbase.client.performer.core.perf.Counters;
 import com.couchbase.client.performer.core.util.TimeUtil;
@@ -25,6 +26,8 @@ import com.couchbase.twoway.TwoWayTransactionBlocking;
 import com.couchbase.twoway.TwoWayTransactionReactive;
 import com.couchbase.utils.ClusterConnection;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 
 /**
  * SdkOperation performs each requested SDK operation
@@ -32,10 +35,12 @@ import com.couchbase.utils.ClusterConnection;
 public class JavaTransactionCommandExecutor extends TransactionCommandExecutor {
 
     private final ClusterConnection connection;
+    private final ConcurrentHashMap<String, RequestSpan> spans;
 
-    public JavaTransactionCommandExecutor(ClusterConnection connection, Counters counters) {
+    public JavaTransactionCommandExecutor(ClusterConnection connection, Counters counters, ConcurrentHashMap<String, RequestSpan> spans) {
         super(counters);
         this.connection = connection;
+        this.spans = spans;
     }
 
     @Override
@@ -45,7 +50,7 @@ public class JavaTransactionCommandExecutor extends TransactionCommandExecutor {
         var initiated = TimeUtil.getTimeNow();
         long startNanos = System.nanoTime();
         if (request.getApi() == API.DEFAULT) {
-            response = TwoWayTransactionBlocking.run(connection, request, this, performanceMode);
+            response = TwoWayTransactionBlocking.run(connection, request, this, performanceMode, spans);
         }
         else {
             throw new UnsupportedOperationException();

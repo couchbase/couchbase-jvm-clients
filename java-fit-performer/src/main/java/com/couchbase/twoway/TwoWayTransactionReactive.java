@@ -17,6 +17,7 @@
 package com.couchbase.twoway;
 
 import com.couchbase.InternalPerformerFailure;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.transaction.internal.TestFailOtherException;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
@@ -59,6 +60,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -74,9 +76,10 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
      * Starts a transaction that will run until completion.
      */
     public static com.couchbase.client.protocol.transactions.TransactionResult run(ClusterConnection connection,
-                                                                    TransactionCreateRequest req) {
+                                                                                   TransactionCreateRequest req,
+                                                                                   ConcurrentHashMap<String, RequestSpan> spans) {
         TwoWayTransactionReactive txn = new TwoWayTransactionReactive();
-        return txn.run(connection, req, null, false);
+        return txn.run(connection, req, null, false, spans);
     }
 
 
@@ -86,13 +89,14 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
     protected com.couchbase.client.java.transactions.TransactionResult runInternal(ClusterConnection connection,
                                             TransactionCreateRequest req,
                                             @Nullable StreamObserver<TransactionStreamPerformerToDriver> toTest,
-                                            boolean performanceMode) {
+                                            boolean performanceMode,
+                                            ConcurrentHashMap<String, RequestSpan> spans) {
         if (req.getApi() != API.ASYNC) {
             throw new InternalPerformerFailure(new IllegalStateException("Unexpected API"));
         }
 
         AtomicInteger attemptCount = new AtomicInteger(-1);
-        TransactionOptions ptcb = OptionsUtil.makeTransactionOptions(connection, req);
+        TransactionOptions ptcb = OptionsUtil.makeTransactionOptions(connection, req, spans);
 
         return connection.cluster().reactive().transactions().run((ctx) -> {
             if (testFailure.get() != null) {

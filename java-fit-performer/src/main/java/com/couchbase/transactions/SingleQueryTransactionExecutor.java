@@ -17,6 +17,7 @@
 package com.couchbase.transactions;
 
 import com.couchbase.InternalPerformerFailure;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.events.transaction.TransactionLogEvent;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -45,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -57,12 +59,13 @@ public class SingleQueryTransactionExecutor {
     private static final Logger logger = LoggerFactory.getLogger(SingleQueryTransactionExecutor.class);
 
     public static TransactionSingleQueryResponse execute(TransactionSingleQueryRequest request,
-                                                         ClusterConnection connection) {
+                                                         ClusterConnection connection,
+                                                         ConcurrentHashMap<String, RequestSpan> spans) {
         try {
             if (request.getApi() == API.DEFAULT) {
-                return blocking(request, connection);
+                return blocking(request, connection, spans);
             } else {
-                return reactive(request, connection);
+                return reactive(request, connection, spans);
             }
         } catch (TransactionFailedException err) {
             return TransactionSingleQueryResponse.newBuilder()
@@ -78,8 +81,10 @@ public class SingleQueryTransactionExecutor {
         }
     }
 
-    private static TransactionSingleQueryResponse blocking(TransactionSingleQueryRequest request, ClusterConnection connection) {
-        QueryOptions options = setSingleQueryTransactionOptions(request, connection);
+    private static TransactionSingleQueryResponse blocking(TransactionSingleQueryRequest request,
+                                                           ClusterConnection connection,
+                                                           ConcurrentHashMap<String, RequestSpan> spans) {
+        QueryOptions options = setSingleQueryTransactionOptions(request, connection, spans);
         QueryResult result;
 
         if (request.getQuery().hasScope()) {
@@ -97,8 +102,10 @@ public class SingleQueryTransactionExecutor {
         return TransactionSingleQueryResponse.newBuilder().build();
     }
 
-    private static TransactionSingleQueryResponse reactive(TransactionSingleQueryRequest request, ClusterConnection connection) {
-        QueryOptions options = setSingleQueryTransactionOptions(request, connection);
+    private static TransactionSingleQueryResponse reactive(TransactionSingleQueryRequest request,
+                                                           ClusterConnection connection,
+                                                           ConcurrentHashMap<String, RequestSpan> spans) {
+        QueryOptions options = setSingleQueryTransactionOptions(request, connection, spans);
         ReactiveQueryResult result;
 
         if (request.getQuery().hasScope()) {
@@ -154,7 +161,9 @@ public class SingleQueryTransactionExecutor {
                 .build();
     }
 
-    private static QueryOptions setSingleQueryTransactionOptions(TransactionSingleQueryRequest request, ClusterConnection clusterConnection) {
+    private static QueryOptions setSingleQueryTransactionOptions(TransactionSingleQueryRequest request,
+                                                                 ClusterConnection clusterConnection,
+                                                                 ConcurrentHashMap<String, RequestSpan> spans) {
 
         if (request.hasQueryOptions()) {
             com.couchbase.client.protocol.sdk.query.QueryOptions grpcQueryOptions = request.getQueryOptions();
@@ -210,6 +219,10 @@ public class SingleQueryTransactionExecutor {
 
             if (grpcQueryOptions.hasTimeoutMillis()) {
                 queryOptions.timeout(Duration.ofMillis(grpcQueryOptions.getTimeoutMillis()));
+            }
+
+            if (grpcQueryOptions.hasParentSpanId()) {
+                queryOptions.parentSpan(spans.get(grpcQueryOptions.getParentSpanId()));
             }
 
             if (grpcQueryOptions.hasSingleQueryTransactionOptions()) {

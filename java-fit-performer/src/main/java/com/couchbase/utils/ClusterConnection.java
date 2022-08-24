@@ -27,19 +27,25 @@ import com.couchbase.client.protocol.transactions.DocId;
 
 import javax.annotation.Nullable;
 import java.time.Duration;
-import java.util.Optional;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class ClusterConnection {
     private final Cluster cluster;
     @Nullable private final ClusterEnvironment config;
     public final String username;
+    // Commands to run when this ClusterConnection is being closed.  Allows closing other related resources that have
+    // the same lifetime.
+    private final List<Runnable> onClusterConnectionClose;
 
     public ClusterConnection(String hostname,
                              String username,
                              String password,
-                             @Nullable ClusterEnvironment.Builder config)  {
+                             @Nullable ClusterEnvironment.Builder config,
+                             ArrayList<Runnable> onClusterConnectionClose)  {
         this.username = username;
+        this.onClusterConnectionClose = onClusterConnectionClose;
 
         var co = ClusterOptions.clusterOptions(username, password);
         if (config != null) {
@@ -95,6 +101,7 @@ public class ClusterConnection {
         if (config != null) {
             config.shutdown();
         }
+        onClusterConnectionClose.forEach(Runnable::run);
     }
 
     public void waitUntilReady(CollectionIdentifier collection) {

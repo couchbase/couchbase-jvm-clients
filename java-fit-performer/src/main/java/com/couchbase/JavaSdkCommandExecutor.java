@@ -15,6 +15,7 @@
  */
 package com.couchbase;
 
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.codec.DefaultJsonSerializer;
@@ -48,6 +49,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
 
@@ -60,10 +62,12 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     private static final LegacyTranscoder LEGACY_TRANSCODER = LegacyTranscoder.create(DefaultJsonSerializer.create());
 
     private final ClusterConnection connection;
+    private final ConcurrentHashMap<String, RequestSpan> spans;
 
-    public JavaSdkCommandExecutor(ClusterConnection connection, Counters counters) {
+    public JavaSdkCommandExecutor(ClusterConnection connection, Counters counters, ConcurrentHashMap<String, RequestSpan> spans) {
         super(counters);
         this.connection = connection;
+        this.spans = spans;
     }
 
     @Override
@@ -222,7 +226,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         throw new UnsupportedOperationException("Unknown content type");
     }
 
-    private static @Nullable InsertOptions createOptions(com.couchbase.client.protocol.sdk.kv.Insert request) {
+    private @Nullable InsertOptions createOptions(com.couchbase.client.protocol.sdk.kv.Insert request) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = InsertOptions.insertOptions();   
@@ -241,24 +245,26 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 else throw new UnsupportedOperationException("Unknown expiry");
             }
             if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
         }
         else return null;
     }
 
-    private static @Nullable RemoveOptions createOptions(com.couchbase.client.protocol.sdk.kv.Remove request) {
+    private @Nullable RemoveOptions createOptions(com.couchbase.client.protocol.sdk.kv.Remove request) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = RemoveOptions.removeOptions();
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
             if (opts.hasCas()) out.cas(opts.getCas());
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
         }
         else return null;
     }
 
-    private static @Nullable GetOptions createOptions(com.couchbase.client.protocol.sdk.kv.Get request) {
+    private @Nullable GetOptions createOptions(com.couchbase.client.protocol.sdk.kv.Get request) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = GetOptions.getOptions();
@@ -266,12 +272,13 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasWithExpiry()) out.withExpiry(opts.getWithExpiry());
             if (opts.getProjectionCount() > 0) out.project(opts.getProjectionList().stream().toList());
             if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
         }
         else return null;
     }
 
-    private static @Nullable ReplaceOptions createOptions(com.couchbase.client.protocol.sdk.kv.Replace request) {
+    private @Nullable ReplaceOptions createOptions(com.couchbase.client.protocol.sdk.kv.Replace request) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = ReplaceOptions.replaceOptions();
@@ -299,12 +306,13 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             }
             if (opts.hasCas()) out.cas(opts.getCas());
             if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
         }
         else return null;
     }
 
-    private static @Nullable UpsertOptions createOptions(com.couchbase.client.protocol.sdk.kv.Upsert request) {
+    private @Nullable UpsertOptions createOptions(com.couchbase.client.protocol.sdk.kv.Upsert request) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = UpsertOptions.upsertOptions();
@@ -331,6 +339,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 // [end:<3.1.5]
             }
             if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
         }
         else return null;

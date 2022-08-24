@@ -9,10 +9,10 @@ COPY transactions-fit-performer transactions-fit-performer/
 COPY couchbase-jvm-clients couchbase-jvm-clients/
 
 WORKDIR /app/transactions-fit-performer
-RUN mvn -T6 --projects gRPC/jvm --also-make install -Dcheckstyle.skip -Dmaven.test.skip -Dmaven.javadoc.skip
+RUN mvn -T6 -q --projects gRPC/jvm --also-make install -Dcheckstyle.skip -Dmaven.test.skip -Dmaven.javadoc.skip
 
 WORKDIR /app/couchbase-jvm-clients
-RUN mvn -T6 -f core-io-deps/pom.xml clean install -Dcheckstyle.skip -Dmaven.test.skip -Dmaven.javadoc.skip
+RUN mvn -T6 -q -f core-io-deps/pom.xml clean install -Dcheckstyle.skip -Dmaven.test.skip -Dmaven.javadoc.skip
 RUN mvn -T6 package -q -pl java-fit-performer -am -Dcheckstyle.skip -Dmaven.test.skip -Dmaven.javadoc.skip
 
 # Multistage build to keep things small

@@ -18,6 +18,7 @@ package com.couchbase.twoway;
 
 import com.couchbase.InternalPerformerFailure;
 import com.couchbase.client.core.cnc.EventSubscription;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.DocumentExistsException;
@@ -129,14 +130,16 @@ public abstract class TwoWayTransactionShared {
             ClusterConnection connection,
             TransactionCreateRequest req,
             @Nullable StreamObserver<TransactionStreamPerformerToDriver> toTest,
-            boolean performanceMode
+            boolean performanceMode,
+            ConcurrentHashMap<String, RequestSpan> spans
     );
 
     public com.couchbase.client.protocol.transactions.TransactionResult run(
             ClusterConnection connection,
             TransactionCreateRequest req,
             @Nullable StreamObserver<TransactionStreamPerformerToDriver> toTest,
-            boolean performanceMode) {
+            boolean performanceMode,
+            ConcurrentHashMap<String, RequestSpan> spans) {
         this.name = req.getName();
         this.bp = this.name + ": ";
         logger = LoggerFactory.getLogger(this.name);
@@ -153,7 +156,7 @@ public abstract class TwoWayTransactionShared {
         }
 
         try {
-            com.couchbase.client.java.transactions.TransactionResult result = runInternal(connection, req, toTest, performanceMode);
+            com.couchbase.client.java.transactions.TransactionResult result = runInternal(connection, req, toTest, performanceMode, spans);
 
             Optional<Exception> e = Optional.empty();
             if (testFailure.get() != null) {

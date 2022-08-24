@@ -15,6 +15,7 @@
  */
 package com.couchbase;
 
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.logging.LogRedaction;
 import com.couchbase.client.core.logging.RedactionLevel;
@@ -50,6 +51,13 @@ import com.couchbase.twoway.TwoWayTransactionReactive;
 import com.couchbase.utils.ResultsUtil;
 import com.couchbase.utils.HooksUtil;
 // [end:3.3.0]
+import com.couchbase.client.protocol.observability.SpanCreateRequest;
+import com.couchbase.client.protocol.observability.SpanCreateResponse;
+import com.couchbase.client.protocol.observability.SpanFinishRequest;
+import com.couchbase.client.protocol.observability.SpanFinishResponse;
+import com.couchbase.client.protocol.performer.Caps;
+import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
+import com.couchbase.client.protocol.shared.Collection;
 import com.couchbase.client.protocol.performer.Caps;
 import com.couchbase.client.protocol.shared.Collection;
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
@@ -80,6 +88,7 @@ import reactor.core.publisher.Hooks;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -92,7 +101,8 @@ import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE;
 
 public class PerformerService extends CorePerformer {
     private static final Logger logger = LoggerFactory.getLogger(PerformerService.class);
-    private static final ConcurrentHashMap<String, ClusterConnection> clusterConnections = new ConcurrentHashMap<String, ClusterConnection>();
+    private static final ConcurrentHashMap<String, ClusterConnection> clusterConnections = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, RequestSpan> spans = new ConcurrentHashMap<>();
 
     // Allows capturing various errors so we can notify the driver of problems.
     public static AtomicReference<String> globalError = new AtomicReference<>();
@@ -100,14 +110,14 @@ public class PerformerService extends CorePerformer {
     @Override
     protected SdkCommandExecutor executor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters) {
         var connection = clusterConnections.get(workloads.getClusterConnectionId());
-        return new JavaSdkCommandExecutor(connection, counters);
+        return new JavaSdkCommandExecutor(connection, counters, spans);
     }
 
     @Override
     protected TransactionCommandExecutor transactionsExecutor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters) {
         // [start:3.3.0]
         var connection = clusterConnections.get(workloads.getClusterConnectionId());
-        return new JavaTransactionCommandExecutor(connection, counters);
+        return new JavaTransactionCommandExecutor(connection, counters, spans);
         // [end:3.3.0]
         // [start:<3.3.0]
         /*
@@ -148,6 +158,10 @@ public class PerformerService extends CorePerformer {
         response.addSupportedApis(API.ASYNC);
         response.addPerformerCaps(Caps.TRANSACTIONS_WORKLOAD_1);
         response.addPerformerCaps(Caps.CLUSTER_CONFIG_1);
+        // Some observability options blocks changed name here
+        // [start:3.2.0]
+        response.addPerformerCaps(Caps.OBSERVABILITY_1);
+        // [end:3.2.0]
         response.setPerformerUserAgent("java-sdk");
     }
 
@@ -158,12 +172,14 @@ public class PerformerService extends CorePerformer {
             var clusterConnectionId = request.getClusterConnectionId();
             // Need this callback as we have to configure hooks to do something with a Cluster that we haven't created yet.
             Supplier<ClusterConnection> getCluster = () -> clusterConnections.get(clusterConnectionId);
-            var clusterEnvironment = OptionsUtil.convertClusterConfig(request, getCluster);
+            var onClusterConnectionClose = new ArrayList<Runnable>();
+            var clusterEnvironment = OptionsUtil.convertClusterConfig(request, getCluster, onClusterConnectionClose);
 
             var connection = new ClusterConnection(request.getClusterHostname(),
                     request.getClusterUsername(),
                     request.getClusterPassword(),
-                    clusterEnvironment);
+                    clusterEnvironment,
+                    onClusterConnectionClose);
             clusterConnections.put(clusterConnectionId, connection);
             logger.info("Created cluster connection {} for user {}, now have {}",
                     clusterConnectionId, request.getClusterUsername(), clusterConnections.size());
@@ -205,10 +221,10 @@ public class PerformerService extends CorePerformer {
 
             TransactionResult response;
             if (request.getApi() == API.DEFAULT) {
-                response = TwoWayTransactionBlocking.run(connection, request, (TransactionCommandExecutor) null, false);
+                response = TwoWayTransactionBlocking.run(connection, request, (TransactionCommandExecutor) null, false, spans);
             }
             else {
-                response = TwoWayTransactionReactive.run(connection, request);
+                response = TwoWayTransactionReactive.run(connection, request, spans);
             }
 
             responseObserver.onNext(response);
@@ -253,7 +269,7 @@ public class PerformerService extends CorePerformer {
     @Override
     public StreamObserver<TransactionStreamDriverToPerformer> transactionStream(
             StreamObserver<TransactionStreamPerformerToDriver> toTest) {
-        var marshaller = new TwoWayTransactionMarshaller(clusterConnections);
+        var marshaller = new TwoWayTransactionMarshaller(clusterConnections, spans);
 
         return marshaller.run(toTest);
     }
@@ -384,7 +400,7 @@ public class PerformerService extends CorePerformer {
                     request.getClusterConnectionId(),
                     connection.username);
 
-            TransactionSingleQueryResponse ret = SingleQueryTransactionExecutor.execute(request, connection);
+            TransactionSingleQueryResponse ret = SingleQueryTransactionExecutor.execute(request, connection, spans);
 
             responseObserver.onNext(ret);
             responseObserver.onCompleted();
@@ -417,6 +433,46 @@ public class PerformerService extends CorePerformer {
         }
     }
     // [end:3.3.0]
+
+    @Override
+    public void spanCreate(SpanCreateRequest request, StreamObserver<SpanCreateResponse> responseObserver) {
+        var parent = request.hasParentSpanId()
+                ? spans.get(request.getParentSpanId())
+                : null;
+        var span = getClusterConnection(request.getClusterConnectionId())
+                .cluster()
+                .environment()
+                .requestTracer()
+                .requestSpan(request.getName(), parent);
+        // RequestSpan interface finalised here
+        // [start:3.1.6]
+        request.getAttributesMap().forEach((k, v) -> {
+            if (v.hasValueBoolean()) {
+                span.attribute(k, v.getValueBoolean());
+            }
+            else if (v.hasValueLong()) {
+                span.attribute(k, v.getValueLong());
+            }
+            else if (v.hasValueString()) {
+                span.attribute(k, v.getValueString());
+            }
+            else throw new UnsupportedOperationException();
+        });
+        // [end:3.1.6]
+        spans.put(request.getId(), span);
+        responseObserver.onNext(SpanCreateResponse.getDefaultInstance());
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void spanFinish(SpanFinishRequest request, StreamObserver<SpanFinishResponse> responseObserver) {
+        // [start:3.1.6]
+        spans.get(request.getId()).end();
+        // [end:3.1.6]
+        spans.remove(request.getId());
+        responseObserver.onNext(SpanFinishResponse.getDefaultInstance());
+        responseObserver.onCompleted();
+    }
 
     public static void main(String[] args) throws IOException, InterruptedException {
         int port = 8060;
