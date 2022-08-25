@@ -46,8 +46,11 @@ import reactor.core.scheduler.Schedulers;
 import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -577,6 +580,99 @@ public class CoreEnvironment {
 
     protected Builder() { }
 
+    /**
+     * accept a function that takes the ioEnvironment builder as an argument in order to set properties
+     *
+     * @param consumer
+     * @return
+     */
+    public SELF ioEnvironment(Consumer<IoEnvironment.Builder> consumer) {
+      consumer.accept(this.ioEnvironment);
+      return self();
+    }
+
+    /**
+     * accept a function that takes the ioConfig builder as an argument in order to set properties
+     *
+     * @param consumer
+     * @return
+     */
+    public SELF ioConfig(Consumer<IoConfig.Builder> consumer) {
+      consumer.accept(this.ioConfig);
+      return self();
+    }
+
+    /**
+     * accept a function that takes the compressionConfig builder as an argument in order to set properties
+     *
+     * @param consumer
+     * @return
+     */
+    public SELF compressionConfig(Consumer<CompressionConfig.Builder> consumer) {
+      consumer.accept(this.compressionConfig);
+      return self();
+    }
+
+    /**
+     * accept a function that takes the securityConfig builder as an argument in order to set properties
+     *
+     * @param consumer
+     * @return
+     */
+    public SELF securityConfig(Consumer<SecurityConfig.Builder> consumer) {
+      consumer.accept(this.securityConfig);
+      return self();
+    }
+
+    /**
+     * accept a function that takes the timeoutConfig builder as an argument in order to set properties
+     *
+     * @param consumer
+     * @return
+     */
+    public SELF timeoutConfig(Consumer<TimeoutConfig.Builder> consumer) {
+      consumer.accept(this.timeoutConfig);
+      return self();
+    }
+
+    /**
+     * accept a function that takes the loggerConfig builder as an argument in order to set properties
+     *
+     * @param consumer
+     * @return
+     */
+    public SELF loggerConfig(Consumer<LoggerConfig.Builder> consumer) {
+      consumer.accept(this.loggerConfig);
+      return self();
+    }
+
+    /**
+     * accept a function that takes the orphanReporterConfig builder as an argument in order to set properties
+     *
+     * @param consumer
+     * @return
+     */
+    public SELF orphanReporterConfig(Consumer<OrphanReporterConfig.Builder> consumer) {
+      consumer.accept(this.orphanReporterConfig);
+      return self();
+    }
+
+    public SELF thresholdLoggingTracerConfig(Consumer<ThresholdLoggingTracerConfig.Builder> consumer) {
+      consumer.accept(this.thresholdLoggingTracerConfig);
+      return self();
+    }
+
+    /**
+     * accept a function that takes the loggingMeterConfig builder as an argument in order to set properties
+     *
+     * @param consumer
+     * @return
+     */
+    public SELF loggingMeterConfig(Consumer<LoggingMeterConfig.Builder> consumer) {
+      consumer.accept(this.loggingMeterConfig);
+      return self();
+    }
+
     @SuppressWarnings("unchecked")
     protected SELF self() {
       return (SELF) this;
@@ -938,6 +1034,24 @@ public class CoreEnvironment {
     public CoreEnvironment build() {
       return new CoreEnvironment(this);
     }
+    /**
+     * Applies the settings in profileName to this builder
+     * Property names are from {@link ConnectionStringPropertyLoader}
+     *
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public SELF applyProfile(String profileName)  {
+      Map<String,String> map = new HashMap<>();
+      Collection<String> profileNames = Arrays.asList("development");
+      if("development".equals(profileName)){
+        map.put("timeout.connectTimeout","20s");
+        map.put("timeout.kvTimeout", "5s");
+      } else if ( profileNames.contains(profileName)) {
+        throw InvalidArgumentException.fromMessage("no profile definition available for: '"+profileName+"'");
+      } else {
+        throw InvalidArgumentException.fromMessage("profile not supported: '"+profileName+"', valid profiles are "+profileNames);
+      }
+      return load(PropertyLoader.fromMap(map));
+    }
   }
-
 }

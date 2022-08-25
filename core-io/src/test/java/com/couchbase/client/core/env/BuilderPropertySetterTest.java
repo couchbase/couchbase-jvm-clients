@@ -152,6 +152,30 @@ class BuilderPropertySetterTest {
   }
 
   @Test
+  void worksWithProfile() {
+    CoreEnvironment.Builder<?> builder = newEnvironmentBuilder();
+    assertEquals(builder.build().timeoutConfig().kvTimeout(), Duration.ofMillis(2500));
+    builder.applyProfile("development");
+    assertEquals(builder.build().timeoutConfig().kvTimeout(), Duration.ofSeconds(5));
+    InvalidArgumentException e1 = assertThrows(InvalidArgumentException.class,
+        () -> builder.applyProfile("default"));
+    InvalidArgumentException e2 = assertThrows(InvalidArgumentException.class,
+        () -> builder.applyProfile(null));
+  }
+
+  @Test
+  void handyMethodsToModifyConfigs() {
+    CoreEnvironment.Builder<?> builder = newEnvironmentBuilder();
+    builder.applyProfile("development");
+    builder.ioConfig(config -> config.numKvConnections(2)).timeoutConfig(config -> config.queryTimeout(Duration.ofSeconds(100)));
+    CoreEnvironment env = builder.build();
+    assertEquals(env.timeoutConfig().kvTimeout(), Duration.ofSeconds(5)); // from development profile
+    assertEquals(env.timeoutConfig().queryTimeout(), Duration.ofSeconds(100)); // set above
+    assertEquals(2, env.ioConfig().numKvConnections()); // set above
+    assertEquals(12, env.ioConfig().maxHttpConnections()); // from defaults
+  }
+
+  @Test
   void triesAllOverloads() {
     HasOverloads overloads = new HasOverloads();
     setter.set(overloads, "value", "23");
