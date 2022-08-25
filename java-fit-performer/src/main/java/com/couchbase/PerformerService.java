@@ -29,6 +29,7 @@ import com.couchbase.client.core.transaction.forwards.Extension;
 import com.couchbase.client.core.transaction.forwards.Supported;
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
+import com.couchbase.client.core.transaction.util.MeteringUnits;
 import com.couchbase.client.java.transactions.config.TransactionsConfig;
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
 import com.couchbase.client.protocol.performer.Caps;
@@ -271,6 +272,7 @@ public class PerformerService extends CorePerformer {
             var cleaner = new TransactionsCleaner(connection.core(), cleanupHooks);
             var logger = new CoreTransactionLogger(null, "");
             var merged = new CoreMergedTransactionConfig(config);
+            var units = new MeteringUnits.MeteringUnitsBuilder();
 
             Optional<ActiveTransactionRecordEntry> atrEntry = ActiveTransactionRecord.findEntryForTransaction(connection.core(),
                             collection,
@@ -278,7 +280,8 @@ public class PerformerService extends CorePerformer {
                             request.getAttemptId(),
                             merged,
                             null,
-                            logger)
+                            logger,
+                            units)
                     .block();
 
             TransactionCleanupAttempt response;
