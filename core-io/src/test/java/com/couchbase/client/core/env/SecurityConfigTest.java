@@ -24,6 +24,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.cert.X509Certificate;
 import java.util.List;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
@@ -83,7 +84,12 @@ class SecurityConfigTest {
 
   @Test
   void canReadDefaultCaCertificates() {
-    assertNotEquals(emptyList(), SecurityConfig.defaultCaCertificates());
+    List<X509Certificate> capella = SecurityConfig.capellaCaCertificates();
+    List<X509Certificate> jvm = SecurityConfig.jvmCaCertificates();
+    List<X509Certificate> defaults = SecurityConfig.defaultCaCertificates(); // capella + jvm
+    assertFalse(capella.isEmpty());
+    assertFalse(jvm.isEmpty());
+    assertEquals(jvm.size() + capella.size(), defaults.size());
   }
 
   private void checkCertificatesFromFile(

@@ -24,27 +24,31 @@ import com.couchbase.client.core.util.Bytes;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Collections.unmodifiableList;
+import static java.util.stream.Collectors.toList;
 
 /**
  * The {@link SecurityConfig} allows to enable transport encryption between the client and the servers.
@@ -492,7 +496,7 @@ public class SecurityConfig {
 
     return certificates.stream()
         .flatMap(it -> decodeCertificates(it.getBytes(UTF_8)).stream())
-        .collect(Collectors.toList());
+        .collect(toList());
   }
 
   private static List<X509Certificate> decodeCertificates(byte[] bytes) {
@@ -537,25 +541,55 @@ public class SecurityConfig {
 
     return trustCertificates.stream()
         .map(it -> it.getSubjectDN() + " (valid from " + it.getNotBefore().toInstant() + " to " + it.getNotAfter().toInstant() + ")")
-        .collect(Collectors.toList())
+        .collect(toList())
         .toString();
   }
 
   /**
    * Returns the Certificate Authority (CA) certificates that are trusted if
-   * no other certificates (or other trust source) are specified in the security config.
+   * no other certificate (or other trust source) is specified in the security config.
    * <p>
-   * Includes the CA certificate(s) required for connecting to hosted Couchbase Capella clusters.
+   * Includes the CA certificate(s) required for connecting to hosted Couchbase Capella clusters,
+   * plus CA certificates trusted by the JVM's default trust manager.
    */
   @Stability.Volatile
   public static List<X509Certificate> defaultCaCertificates() {
-    return DefaultCaCertificatesInitOnDemandHolder.certificates;
+    List<X509Certificate> result = new ArrayList<>();
+    result.addAll(capellaCaCertificates());
+    result.addAll(jvmCaCertificates());
+    return result;
   }
 
-  private static class DefaultCaCertificatesInitOnDemandHolder {
-    private static final List<X509Certificate> certificates = unmodifiableList(
-        decodeCertificates(getResourceAsBytes("capella-ca.pem"))
-    );
+  /**
+   * Returns the Certificate Authority (CA) certificates required for connecting to Couchbase Capella.
+   */
+  @Stability.Volatile
+  public static List<X509Certificate> capellaCaCertificates() {
+    return decodeCertificates(getResourceAsBytes("capella-ca.pem"));
+  }
+
+  /**
+   * Returns the Certificate Authority (CA) certificates trusted by the JVM's default trust manager.
+   * This is a subset of the certificates returned by {@link #defaultCaCertificates()};
+   * it does not include the Couchbase Capella CA certificate.
+   */
+  @Stability.Volatile
+  public static List<X509Certificate> jvmCaCertificates() {
+    return Arrays.stream(getDefaultTrustManagerFactory().getTrustManagers())
+        .filter(it -> it instanceof X509TrustManager)
+        .map(it -> (X509TrustManager) it)
+        .flatMap(it -> Arrays.stream(it.getAcceptedIssuers()))
+        .collect(toList());
+  }
+
+  private static TrustManagerFactory getDefaultTrustManagerFactory() {
+    try {
+      TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+      tmf.init((KeyStore) null); // passing null populates it with the default certificates
+      return tmf;
+    } catch (NoSuchAlgorithmException | KeyStoreException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private static byte[] getResourceAsBytes(String resourceName) {
