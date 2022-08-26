@@ -24,6 +24,7 @@ import com.couchbase.client.core.cnc.metrics.NoopMeter;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.util.HostAndPort;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.EnumSet;
@@ -201,14 +202,18 @@ public class RequestContext extends CoreContext {
   /**
    * Signals that this request is completed fully, including streaming sections or logical sub-requests also being
    * completed (i.e. observe polling).
+   * @param err if non-null, will be recorded onto the span (if present).
    */
   @Stability.Internal
-  public RequestContext logicallyComplete() {
+  public RequestContext logicallyComplete(@Nullable Throwable err) {
     this.logicallyCompletedAt = System.nanoTime();
 
     RequestSpan span = request.requestSpan();
     if (span != null) {
       span.attribute(TracingIdentifiers.ATTR_RETRIES, retryAttempts());
+      if (err != null) {
+        span.recordException(err);
+      }
       span.end();
     }
 
@@ -220,6 +225,11 @@ public class RequestContext extends CoreContext {
     }
 
     return this;
+  }
+
+  @Stability.Internal
+  public RequestContext logicallyComplete() {
+    return logicallyComplete(null);
   }
 
   public int retryAttempts() {

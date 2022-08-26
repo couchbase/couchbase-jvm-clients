@@ -30,6 +30,7 @@ import com.couchbase.client.scala.util.DurationConversions._
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 @Stability.Volatile
 class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
@@ -54,7 +55,10 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
         val read = CouchbasePickler.read[SearchIndexWrapper](response.content())
         read.indexDef.copy(numPlanPIndexes = read.numPlanPIndexes)
       })
-    out.onComplete(_ => request.context.logicallyComplete())
+    out onComplete {
+      case Success(_) => request.context.logicallyComplete()
+      case Failure(err) => request.context.logicallyComplete(err)
+    }
     out
   }
 
@@ -70,7 +74,10 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
       .map((response: CoreHttpResponse) => {
         AsyncSearchIndexManager.parseIndexes(response.content())
       })
-    out.onComplete(_ => request.context.logicallyComplete())
+    out onComplete {
+      case Success(_) => request.context.logicallyComplete()
+      case Failure(err) => request.context.logicallyComplete(err)
+    }
     out
   }
 
@@ -88,7 +95,10 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
 
     core.send(request)
     val out = request.response.toScala
-    out.onComplete(_ => request.context.logicallyComplete())
+    out onComplete {
+      case Success(_) => request.context.logicallyComplete()
+      case Failure(err) => request.context.logicallyComplete(err)
+    }
     out.map(_ => ())
   }
 
@@ -102,7 +112,10 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
 
     core.send(request)
     val out = request.response.toScala
-    out.onComplete(_ => request.context.logicallyComplete())
+    out onComplete {
+      case Success(_) => request.context.logicallyComplete()
+      case Failure(err) => request.context.logicallyComplete(err)
+    }
     out
       .map(_ => ())
   }

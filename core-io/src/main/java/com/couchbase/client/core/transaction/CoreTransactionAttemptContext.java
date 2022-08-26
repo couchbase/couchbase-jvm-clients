@@ -4136,8 +4136,9 @@ public class CoreTransactionAttemptContext {
                                     queryTarget = request.context().lastDispatchedToNode();
                                     logger().info(attemptId, "q%d got query node id %s", sidx, RedactableArgument.redactMeta(queryTarget));
                                 }
+                                request.context().logicallyComplete();
                             })
-                            .doFinally(ignore -> request.context().logicallyComplete());
+                            .doOnError(err -> request.context().logicallyComplete(err));
                 }))
 
                 .flatMap(result -> hooks.afterQuery.apply(this, statement)

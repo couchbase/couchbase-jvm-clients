@@ -55,7 +55,7 @@ public enum DurabilityUtils {
       });
     }
 
-    return finalResult.whenComplete((r, t) -> request.context().logicallyComplete());
+    return finalResult.whenComplete((r, t) -> request.context().logicallyComplete(t));
   }
 
 }

@@ -43,7 +43,8 @@ object ManagerUtil {
       core.send(request)
       FutureConversions
         .javaCFToScalaMono(request, request.response, true)
-        .doOnTerminate(() => request.context().logicallyComplete())
+        .doOnNext(_ => request.context.logicallyComplete)
+        .doOnError(err => request.context().logicallyComplete(err))
     })
   }
 

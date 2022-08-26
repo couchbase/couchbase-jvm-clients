@@ -307,6 +307,6 @@ public class ReplicaHelper {
           }
           return response;
         })
-        .whenComplete((t, e) -> request.context().logicallyComplete());
+        .whenComplete((t, e) -> request.context().logicallyComplete(e));
   }
 }

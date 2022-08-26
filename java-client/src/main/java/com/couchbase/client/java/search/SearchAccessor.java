@@ -69,7 +69,8 @@ public class SearchAccessor {
                 .map(trailer -> new SearchResult(rows, parseFacets(trailer), parseMeta(response, trailer)))
               )
           )
-          .doFinally(signalType -> request.context().logicallyComplete())
+          .doOnNext(ignored -> request.context().logicallyComplete())
+          .doOnError(err -> request.context().logicallyComplete(err))
           .toFuture();
     }
 
@@ -84,7 +85,8 @@ public class SearchAccessor {
             Mono<Map<String, SearchFacetResult>> facets = response.trailer().map(SearchAccessor::parseFacets);
             return new ReactiveSearchResult(rows, facets, meta);
           })
-          .doFinally(signalType -> request.context().logicallyComplete());
+          .doOnNext(ignored -> request.context().logicallyComplete())
+          .doOnError(err -> request.context().logicallyComplete(err));
     }
 
     private static Map<String, SearchFacetResult> parseFacets(final SearchChunkTrailer trailer) {

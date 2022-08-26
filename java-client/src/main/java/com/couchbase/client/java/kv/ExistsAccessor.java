@@ -44,7 +44,7 @@ public class ExistsAccessor {
         }
         throw keyValueStatusToException(request, response);
       })
-      .whenComplete((t, e) -> request.context().logicallyComplete());
+      .whenComplete((t, e) -> request.context().logicallyComplete(e));
   }
 
 }

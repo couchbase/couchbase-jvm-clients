@@ -56,7 +56,8 @@ public abstract class PreparedStatementStrategy {
       core.send(request);
       return Reactor
           .wrap(request, request.response(), true)
-          .doFinally(signalType -> request.context().logicallyComplete());
+          .doOnNext(ignored -> request.context().logicallyComplete())
+          .doOnError(err -> request.context().logicallyComplete(err));
     });
   }
 

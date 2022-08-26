@@ -213,7 +213,7 @@ public class HealthPinger {
             Optional.ofNullable(target.bucketName())
           );
         }).onErrorResume(throwable -> {
-          request.context().logicallyComplete();
+          request.context().logicallyComplete(throwable);
           return Mono.just(assembleFailureReport(throwable, request.context(), Optional.ofNullable(target.bucketName())));
         });
     });
@@ -234,7 +234,7 @@ public class HealthPinger {
             Optional.empty()
           );
         }).onErrorResume(throwable -> {
-          request.context().logicallyComplete();
+          request.context().logicallyComplete(throwable);
           return Mono.just(assembleFailureReport(throwable, request.context(), Optional.empty()));
         });
     });

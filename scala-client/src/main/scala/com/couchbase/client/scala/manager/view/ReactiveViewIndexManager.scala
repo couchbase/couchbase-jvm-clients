@@ -137,7 +137,8 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
           core.send(request)
           FutureConversions
             .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-            .doOnTerminate(() => request.context().logicallyComplete())
+            .doOnNext(_ => request.context.logicallyComplete)
+            .doOnError(err => request.context().logicallyComplete(err))
             .map(_ => ())
         })
       case Failure(err) =>
@@ -240,7 +241,8 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
       core.send(request)
       FutureConversions
         .wrap(request, request.response, propagateCancellation = true)
-        .doOnTerminate(() => request.context().logicallyComplete())
+        .doOnNext(_ => request.context.logicallyComplete)
+        .doOnError(err => request.context().logicallyComplete(err))
     })
   }
 }

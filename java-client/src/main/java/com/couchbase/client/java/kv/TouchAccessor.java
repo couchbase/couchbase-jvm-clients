@@ -37,7 +37,7 @@ public class TouchAccessor {
           return new MutationResult(response.cas(), response.mutationToken());
         }
         throw keyValueStatusToException(request, response);
-      }).whenComplete((t, e) -> request.context().logicallyComplete());
+      }).whenComplete((t, e) -> request.context().logicallyComplete(e));
   }
 
 }

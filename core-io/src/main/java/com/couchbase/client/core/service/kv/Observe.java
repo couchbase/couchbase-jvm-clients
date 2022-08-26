@@ -99,8 +99,9 @@ public class Observe {
         ctx.core().send(request);
         return Reactor
           .wrap(request, request.response(), true)
-          .onErrorResume(t-> Mono.empty())
-          .doFinally(signalType -> request.context().logicallyComplete());
+          .doOnNext(ignored -> request.context().logicallyComplete())
+          .doOnError(err -> request.context().logicallyComplete(err))
+          .onErrorResume(t-> Mono.empty());
       })
       .map(response -> ObserveItem.fromMutationToken(mutationToken, response));
   }

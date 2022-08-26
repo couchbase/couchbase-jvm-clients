@@ -40,7 +40,7 @@ public class UnlockAccessor {
         }
         throw keyValueStatusToException(request, response);
       })
-      .whenComplete((aVoid, throwable) -> request.context().logicallyComplete())
+      .whenComplete((aVoid, throwable) -> request.context().logicallyComplete(throwable))
       // Don't ask, need this otherwise it won't compile (void vs. object)
       .thenApply(o -> null);
   }

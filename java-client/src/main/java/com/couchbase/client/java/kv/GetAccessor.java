@@ -59,7 +59,7 @@ public enum GetAccessor {
         }
         throw keyValueStatusToException(request, response);
       })
-      .whenComplete((t, e) -> request.context().logicallyComplete());
+      .whenComplete((t, e) -> request.context().logicallyComplete(e));
   }
 
   /**
@@ -81,7 +81,7 @@ public enum GetAccessor {
         }
         throw keyValueStatusToException(request, response);
       })
-      .whenComplete((t, e) -> request.context().logicallyComplete());
+      .whenComplete((t, e) -> request.context().logicallyComplete(e));
   }
 
   public static CompletableFuture<GetResult> getAndTouch(final Core core, final GetAndTouchRequest request,
@@ -95,7 +95,7 @@ public enum GetAccessor {
         }
         throw keyValueStatusToException(request, response);
       })
-      .whenComplete((t, e) -> request.context().logicallyComplete());
+      .whenComplete((t, e) -> request.context().logicallyComplete(e));
   }
 
   public static CompletableFuture<GetResult> subdocGet(final Core core, final SubdocGetRequest request,
@@ -108,7 +108,7 @@ public enum GetAccessor {
           return parseSubdocGet(response, transcoder);
         }
         throw keyValueStatusToException(request, response);
-      }).whenComplete((t, e) -> request.context().logicallyComplete());
+      }).whenComplete((t, e) -> request.context().logicallyComplete(e));
   }
 
   private static GetResult parseSubdocGet(final SubdocGetResponse response, final Transcoder transcoder) {

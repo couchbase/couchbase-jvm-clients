@@ -317,7 +317,10 @@ class AsyncCollection(
               }
             })
 
-          out.onComplete(_ => request.context.logicallyComplete())
+          out onComplete {
+            case Success(_) => request.context.logicallyComplete()
+            case Failure(err) => request.context.logicallyComplete(err)
+          }
 
           out
 
@@ -380,7 +383,10 @@ class AsyncCollection(
             getSubDocHandler.response(request, id, response, withExpiry, transcoder)
           })
 
-        out.onComplete(_ => request.context.logicallyComplete())
+        out onComplete {
+          case Success(_) => request.context.logicallyComplete()
+          case Failure(err) => request.context.logicallyComplete(err)
+        }
 
         out
 
@@ -440,7 +446,10 @@ class AsyncCollection(
         .toScala(request.response())
         .map(response => mutateInHandler.response(request, id, options.document, response))
 
-      out.onComplete(_ => request.context.logicallyComplete())
+      out onComplete {
+        case Success(_) => request.context.logicallyComplete()
+        case Failure(err) => request.context.logicallyComplete(err)
+      }
 
       options.durability match {
         case ClientVerified(replicateTo, persistTo) =>
@@ -685,7 +694,10 @@ class AsyncCollection(
               }
             })
 
-          out.onComplete(_ => request.context.logicallyComplete())
+          out onComplete {
+            case Success(_) => request.context.logicallyComplete()
+            case Failure(err) => request.context.logicallyComplete(err)
+          }
           out
         })
     }
@@ -768,7 +780,10 @@ object AsyncCollection {
           .toScala(request.response())
           .map(response => handler.response(request, id, response))
 
-        out.onComplete(_ => request.context.logicallyComplete())
+        out onComplete {
+          case Success(_) => request.context.logicallyComplete()
+          case Failure(err) => request.context.logicallyComplete(err)
+        }
 
         out
 
@@ -793,7 +808,10 @@ object AsyncCollection {
             handler.response(request, id, response, transcoder)
           })
 
-        out.onComplete(_ => request.context.logicallyComplete())
+        out onComplete {
+          case Success(_) => request.context.logicallyComplete()
+          case Failure(err) => request.context.logicallyComplete(err)
+        }
 
         out
 
@@ -816,7 +834,10 @@ object AsyncCollection {
           .toScala(request.response())
           .map(response => handler.response(request, id, response, transcoder))
 
-        out.onComplete(_ => request.context.logicallyComplete())
+        out onComplete {
+          case Success(_) => request.context.logicallyComplete()
+          case Failure(err) => request.context.logicallyComplete(err)
+        }
 
         out
 

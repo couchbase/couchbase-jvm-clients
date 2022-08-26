@@ -22,15 +22,7 @@ import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest
 import com.couchbase.client.scala.HandlerBasicParams
-import com.couchbase.client.scala.analytics.{
-  AnalyticsMetaData,
-  AnalyticsMetrics,
-  AnalyticsOptions,
-  AnalyticsResult,
-  AnalyticsStatus,
-  AnalyticsWarning,
-  ReactiveAnalyticsResult
-}
+import com.couchbase.client.scala.analytics.{AnalyticsMetaData, AnalyticsMetrics, AnalyticsOptions, AnalyticsResult, AnalyticsStatus, AnalyticsWarning, ReactiveAnalyticsResult}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.{DurationConversions, FutureConversions, Validate}
@@ -38,7 +30,7 @@ import reactor.core.scala.publisher.SMono
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
@@ -153,7 +145,10 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
       )
       .toFuture
 
-    ret.onComplete(_ => request.context.logicallyComplete())
+    ret onComplete {
+      case Success(_) => request.context.logicallyComplete()
+      case Failure(err) => request.context.logicallyComplete(err)
+    }
     ret
   }
 
@@ -186,7 +181,8 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
                 AnalyticsStatus.from(trailer.status)
               )
             })
-            .doOnTerminate(() => request.context().logicallyComplete())
+            .doOnNext(_ => request.context.logicallyComplete)
+            .doOnError(err => request.context().logicallyComplete(err))
 
           val rows = FutureConversions.javaFluxToScalaFlux(response.rows())
 

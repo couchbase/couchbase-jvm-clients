@@ -157,7 +157,8 @@ class ReactiveBucket private[scala] (val async: AsyncBucket) {
 
               ReactiveViewResult(SMono.just(meta), rows)
             })
-            .doOnTerminate(() => request.context().logicallyComplete())
+            .doOnNext(_ => request.context.logicallyComplete)
+            .doOnError(err => request.context().logicallyComplete(err))
         })
     }
   }

@@ -41,6 +41,6 @@ public class LookupInAccessor {
           return new LookupInResult(response.values(), response.cas(), serializer, ctx, response.isDeleted());
         }
         throw keyValueStatusToException(request, response);
-      }).whenComplete((t, e) -> request.context().logicallyComplete());
+      }).whenComplete((t, e) -> request.context().logicallyComplete(e));
   }
 }

@@ -224,7 +224,8 @@ class ReactiveCluster(val async: AsyncCluster) {
                 meta
               )
             })
-            .doOnTerminate(() => request.context().logicallyComplete())
+            .doOnNext(_ => request.context.logicallyComplete)
+            .doOnError(err => request.context().logicallyComplete(err))
         })
 
       case Failure(err) =>

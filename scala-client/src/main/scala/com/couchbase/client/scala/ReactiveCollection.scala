@@ -352,7 +352,8 @@ class ReactiveCollection(async: AsyncCollection) {
                   case _               => SMono.empty[GetReplicaResult]
                 }
               })
-              .doOnTerminate(() => request.context().logicallyComplete())
+              .doOnNext(_ => request.context.logicallyComplete)
+              .doOnError(err => request.context().logicallyComplete(err))
           })
 
           SFlux.mergeSequential(monos).timeout(timeout)

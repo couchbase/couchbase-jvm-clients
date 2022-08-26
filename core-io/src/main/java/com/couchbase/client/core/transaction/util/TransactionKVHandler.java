@@ -86,7 +86,7 @@ public class TransactionKVHandler {
                             return response;
                         }
                         throw response.errorIfNeeded(request);
-                    }).whenComplete((r, t) -> request.context().logicallyComplete()));
+                    }).whenComplete((r, t) -> request.context().logicallyComplete(t)));
         });
     }
 
@@ -121,7 +121,7 @@ public class TransactionKVHandler {
                             return response;
                         }
                         throw keyValueStatusToException(request, response);
-                    }).whenComplete((r, t) -> request.context().logicallyComplete()));
+                    }).whenComplete((r, t) -> request.context().logicallyComplete(t)));
         });
     }
 
@@ -162,7 +162,7 @@ public class TransactionKVHandler {
                             return response;
                         }
                         throw keyValueStatusToException(request, response);
-                    }).whenComplete((r, t) -> request.context().logicallyComplete()));
+                    }).whenComplete((r, t) -> request.context().logicallyComplete(t)));
         });
     }
 
@@ -256,7 +256,7 @@ public class TransactionKVHandler {
                                 return response;
                             }
                             throw response.throwError(request, insertDocument);
-                        }).whenComplete((r, t) -> request.context().logicallyComplete());
+                        }).whenComplete((r, t) -> request.context().logicallyComplete(t));
             });
 
             return Mono.fromFuture(future);

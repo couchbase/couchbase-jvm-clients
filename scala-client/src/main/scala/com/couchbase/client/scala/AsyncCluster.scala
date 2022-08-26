@@ -491,8 +491,10 @@ object AsyncCluster {
               )
         )
         .toFuture
-    ret.onComplete(_ => request.context.logicallyComplete())
-
+    ret onComplete {
+      case Success(_) => request.context.logicallyComplete()
+      case Failure(err) => request.context.logicallyComplete(err)
+    }
     ret
   }
 
