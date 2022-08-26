@@ -91,6 +91,13 @@ public class OpenTelemetryRequestSpan implements RequestSpan {
     span.setStatus(statusCode);
   }
 
+  // Reference: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/exceptions.md
+  @Override
+  public void recordException(Throwable err) {
+    span.recordException(err);
+    status(StatusCode.ERROR);
+  }
+
   @Override
   public void end() {
     span.end();

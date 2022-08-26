@@ -81,9 +81,21 @@ public interface RequestSpan {
   void status(StatusCode status);
 
   /**
-   * Completes this span.
+   * Records that the operation corresponding to the span failed with an exception.  It will also always set
+   * the status to StatusCode.ERROR.
+   * <p>
+   * The span still needs to have `span.end()` called.
+   * <p>
+   * Note that, depending on the underlying telemetry implementation, this may only set the status.
    *
-   * @param tracer the tracer with the help of which it will be completed.
+   * @param err the exception the operation failed with.
+   */
+  default void recordException(Throwable err) {
+    status(StatusCode.ERROR);
+  }
+
+  /**
+   * Completes this span.
    */
   void end();
 
