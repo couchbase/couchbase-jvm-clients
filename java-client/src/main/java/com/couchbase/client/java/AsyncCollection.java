@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.config.BucketConfig;
@@ -678,9 +679,8 @@ public class AsyncCollection {
       .requestTracer()
       .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_INSERT, opts.parentSpan().orElse(null));
 
-    final RequestSpan encodeSpan = environment
-      .requestTracer()
-      .requestSpan(TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
+
+    final RequestSpan encodeSpan = CbTracing.newSpan(coreContext, TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
     long start = System.nanoTime();
     Transcoder.EncodedValue encoded;
     try {
@@ -744,9 +744,7 @@ public class AsyncCollection {
       .requestTracer()
       .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_UPSERT, opts.parentSpan().orElse(null));
 
-    final RequestSpan encodeSpan = environment
-      .requestTracer()
-      .requestSpan(TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
+    final RequestSpan encodeSpan = CbTracing.newSpan(coreContext, TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
     long start = System.nanoTime();
     Transcoder.EncodedValue encoded;
     try {
@@ -810,9 +808,7 @@ public class AsyncCollection {
       .requestTracer()
       .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_REPLACE, opts.parentSpan().orElse(null));
 
-    final RequestSpan encodeSpan = environment
-      .requestTracer()
-      .requestSpan(TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
+    final RequestSpan encodeSpan = CbTracing.newSpan(coreContext, TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
     long start = System.nanoTime();
     Transcoder.EncodedValue encoded;
     try {
@@ -1068,9 +1064,7 @@ public class AsyncCollection {
 
         ArrayList<SubdocMutateRequest.Command> commands = new ArrayList<>(specs.size());
 
-      final RequestSpan encodeSpan = environment
-        .requestTracer()
-        .requestSpan(TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
+      final RequestSpan encodeSpan = CbTracing.newSpan(coreContext, TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
       long start = System.nanoTime();
 
       try {

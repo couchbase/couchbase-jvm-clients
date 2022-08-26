@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.cnc.{RequestSpan, RequestTracer, TracingIdentifiers}
+import com.couchbase.client.core.cnc.{CbTracing, RequestSpan, RequestTracer, TracingIdentifiers}
 import com.couchbase.client.core.error.context.KeyValueErrorContext
 import com.couchbase.client.core.error.{DocumentExistsException, EncodingFailureException}
 import com.couchbase.client.core.msg.ResponseStatus
@@ -66,7 +66,7 @@ private[scala] class InsertHandler(hp: HandlerParams)
     } else {
       val span = hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_INSERT, parentSpan.orNull)
 
-      val encodeSpan = hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_ENCODING, span)
+      val encodeSpan = CbTracing.newSpan(hp.tracer, TracingIdentifiers.SPAN_REQUEST_ENCODING, span)
       val start      = System.nanoTime()
 
       val encoded: Try[EncodedValue] = transcoder match {

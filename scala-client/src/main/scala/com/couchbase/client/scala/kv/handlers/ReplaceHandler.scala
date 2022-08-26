@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.kv.handlers
 
-import com.couchbase.client.core.cnc.{RequestSpan, RequestTracer, TracingIdentifiers}
+import com.couchbase.client.core.cnc.{CbTracing, RequestSpan, RequestTracer, TracingIdentifiers}
 import com.couchbase.client.core.error.EncodingFailureException
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.kv._
@@ -68,7 +68,7 @@ private[scala] class ReplaceHandler(hp: HandlerParams)
       val span =
         hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_REPLACE, parentSpan.orNull)
 
-      val encodeSpan = hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_ENCODING, span)
+      val encodeSpan = CbTracing.newSpan(hp.tracer, TracingIdentifiers.SPAN_REQUEST_ENCODING, span)
       val start      = System.nanoTime()
 
       val encoded: Try[EncodedValue] = transcoder match {

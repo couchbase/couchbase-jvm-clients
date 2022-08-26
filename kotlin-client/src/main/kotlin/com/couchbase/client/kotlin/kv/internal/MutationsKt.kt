@@ -16,6 +16,7 @@
 
 package com.couchbase.client.kotlin.kv.internal
 
+import com.couchbase.client.core.cnc.CbTracing
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.msg.Request
@@ -63,7 +64,7 @@ internal fun <T> Collection.encodeInSpan(
     parentSpan: RequestSpan,
 ): Pair<Content, Long> {
     val encodedContent: Content
-    val encodeSpan = env.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_ENCODING, parentSpan)
+    val encodeSpan = CbTracing.newSpan(env.requestTracer(), TracingIdentifiers.SPAN_REQUEST_ENCODING, parentSpan)
     val encodingNanos = measureNanoTime {
         try {
             encodedContent = (transcoder ?: defaultTranscoder).encode(input, type)
