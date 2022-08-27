@@ -20,10 +20,10 @@ import com.couchbase.client.test.caves.CavesControlServer;
 import com.couchbase.client.test.caves.CavesProcess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.shaded.okhttp3.Credentials;
-import org.testcontainers.shaded.okhttp3.OkHttpClient;
-import org.testcontainers.shaded.okhttp3.Request;
-import org.testcontainers.shaded.okhttp3.Response;
+import okhttp3.Credentials;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 import java.io.InputStream;
 import java.nio.file.Files;

@@ -22,7 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.shaded.okhttp3.Response;
+import okhttp3.Response;
 
 import java.io.IOException;
 import java.net.URL;

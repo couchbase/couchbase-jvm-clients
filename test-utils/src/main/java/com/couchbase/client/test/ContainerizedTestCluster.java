@@ -23,11 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
-import org.testcontainers.shaded.okhttp3.Credentials;
-import org.testcontainers.shaded.okhttp3.FormBody;
-import org.testcontainers.shaded.okhttp3.OkHttpClient;
-import org.testcontainers.shaded.okhttp3.Request;
-import org.testcontainers.shaded.okhttp3.Response;
+import okhttp3.Credentials;
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

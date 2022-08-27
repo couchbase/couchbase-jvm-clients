@@ -27,7 +27,12 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
-            <version>1.16.2</version>
+            <version>1.17.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>3.14.9</version>
         </dependency>
         <dependency>
             <groupId>io.projectreactor.tools</groupId>
@@ -46,12 +51,12 @@
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
-            <version>4.1.1</version>
+            <version>4.2.0</version>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
-            <version>4.1.79.Final</version>
+            <version>4.1.80.Final</version>
         </dependency>
     </dependencies>
 

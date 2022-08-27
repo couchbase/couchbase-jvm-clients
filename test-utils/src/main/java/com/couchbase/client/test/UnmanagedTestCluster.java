@@ -18,11 +18,11 @@ package com.couchbase.client.test;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.shaded.okhttp3.Credentials;
-import org.testcontainers.shaded.okhttp3.FormBody;
-import org.testcontainers.shaded.okhttp3.OkHttpClient;
-import org.testcontainers.shaded.okhttp3.Request;
-import org.testcontainers.shaded.okhttp3.Response;
+import okhttp3.Credentials;
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 import javax.naming.NamingException;
 import javax.net.ssl.SSLContext;
