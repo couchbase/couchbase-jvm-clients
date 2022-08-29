@@ -15,18 +15,12 @@
  */
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.annotation.Stability.Volatile
-import com.couchbase.client.scala.analytics.{
-  AnalyticsOptions,
-  AnalyticsResult,
-  ReactiveAnalyticsResult
-}
-import com.couchbase.client.scala.query.{QueryOptions, QueryResult, ReactiveQueryResult}
-import com.couchbase.client.scala.util.AsyncUtils
+import com.couchbase.client.scala.analytics.{AnalyticsOptions, ReactiveAnalyticsResult}
+import com.couchbase.client.scala.query.{QueryOptions, ReactiveQueryResult}
 import reactor.core.scala.publisher.SMono
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.ExecutionContext
+import scala.util.{Failure, Success}
 
 /** Represents a Couchbase scope resource.
   *
@@ -109,7 +103,7 @@ class ReactiveScope(async: AsyncScope, bucketName: String) {
       Some(name)
     ) match {
       case Success(request) => async.analyticsHandler.queryReactive(request)
-      case Failure(err)     => SMono.raiseError(err)
+      case Failure(err)     => SMono.error(err)
     }
   }
 }

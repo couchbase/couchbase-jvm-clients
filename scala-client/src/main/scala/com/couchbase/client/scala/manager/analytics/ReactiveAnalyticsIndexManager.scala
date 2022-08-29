@@ -19,7 +19,6 @@ import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus
 import com.couchbase.client.core.error.{FeatureNotAvailableException, HttpStatusCodeException}
 import com.couchbase.client.core.logging.RedactableArgument.redactMeta
-import com.couchbase.client.core.manager.CoreAnalyticsLinkManager
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.CbThrowables.findCause
 import com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode
@@ -92,7 +91,7 @@ class ReactiveAnalyticsIndexManager(
 
         exec(statement, timeout, retryStrategy).map(_ => ())
 
-      case Failure(err) => SMono.raiseError(err)
+      case Failure(err) => SMono.error(err)
     }
   }
 
@@ -112,7 +111,7 @@ class ReactiveAnalyticsIndexManager(
 
         exec(statement, timeout, retryStrategy).map(_ => ())
 
-      case Failure(err) => SMono.raiseError(err)
+      case Failure(err) => SMono.error(err)
     }
   }
 
@@ -147,7 +146,7 @@ class ReactiveAnalyticsIndexManager(
 
     statement match {
       case Success(st)  => exec(st, timeout, retryStrategy).map(_ => ())
-      case Failure(err) => SMono.raiseError(err)
+      case Failure(err) => SMono.error(err)
     }
   }
 
@@ -168,7 +167,7 @@ class ReactiveAnalyticsIndexManager(
 
         exec(statement, timeout, retryStrategy).map(_ => ())
 
-      case Failure(err) => SMono.raiseError(err)
+      case Failure(err) => SMono.error(err)
     }
   }
 
@@ -205,7 +204,7 @@ class ReactiveAnalyticsIndexManager(
 
     statement match {
       case Success(st)  => exec(st, timeout, retryStrategy).map(_ => ())
-      case Failure(err) => SMono.raiseError(err)
+      case Failure(err) => SMono.error(err)
     }
   }
 
@@ -240,7 +239,7 @@ class ReactiveAnalyticsIndexManager(
 
         exec(statement, timeout, retryStrategy).map(_ => ())
 
-      case Failure(err) => SMono.raiseError(err)
+      case Failure(err) => SMono.error(err)
     }
   }
 
@@ -284,7 +283,7 @@ class ReactiveAnalyticsIndexManager(
             }
         }
 
-        SMono.raiseError(errToRaise)
+        SMono.error(errToRaise)
       })
   }
 

@@ -16,9 +16,6 @@
 
 package com.couchbase.client.scala.query.handlers
 
-import java.nio.charset.StandardCharsets
-import java.util.Collections
-
 import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.cnc.events.request.PreparedStatementRetriedEvent
 import com.couchbase.client.core.config.{ClusterCapabilities, ClusterConfig}
@@ -40,15 +37,16 @@ import com.couchbase.client.scala.json.{JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.{DurationConversions, FutureConversions, Validate}
-import reactor.core.scala.publisher
 import reactor.core.scala.publisher.{SFlux, SMono}
 
+import java.nio.charset.StandardCharsets
+import java.util.Collections
+import scala.compat.java8.FutureConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
-import scala.compat.java8.FutureConverters._
 
 /**
   * Holds a cache entry, which might either be the full plan or just the name, depending on the
@@ -263,7 +261,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
         .flatMap((qr: QueryResponse) => {
           val preparedName = qr.header().prepared()
           if (!preparedName.isPresent) {
-            SMono.raiseError(
+            SMono.error(
               new CouchbaseException("No prepared name present but must be, this is a query bug!")
             )
           } else {
@@ -430,7 +428,7 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
   ): SMono[ReactiveQueryResult] = {
     request(statement, options, environment, bucket, scope) match {
       case Success(req) => queryReactive(req, options)
-      case Failure(err) => SMono.raiseError(err)
+      case Failure(err) => SMono.error(err)
     }
   }
 
@@ -496,11 +494,11 @@ private[scala] class QueryHandler(hp: HandlerBasicParams)(implicit ec: Execution
                   .delay(cappedDuration, env.scheduler)
                   .flatMap(l => maybePrepareAndExecute(req, opts))
 
-              case _ => SMono.raiseError(t)
+              case _ => SMono.error(t)
             }
           })
 
-      case _ => SMono.raiseError(err)
+      case _ => SMono.error(err)
     }
   }
 }

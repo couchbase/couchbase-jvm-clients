@@ -333,7 +333,7 @@ class ReactiveCollection(async: AsyncCollection) {
       async.getFromReplicaHandler.requestAll(id, timeout, retryStrategy, options.parentSpan)
 
     reqsTry match {
-      case Failure(err) => SFlux.raiseError(err)
+      case Failure(err) => SFlux.error(err)
 
       case Success(reqs: Seq[GetRequest]) =>
         SFlux.defer({

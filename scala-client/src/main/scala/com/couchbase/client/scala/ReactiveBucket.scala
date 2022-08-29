@@ -15,23 +15,14 @@
  */
 package com.couchbase.client.scala
 
-import java.util.UUID
-
-import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diagnostics.{ClusterState, PingResult}
-import com.couchbase.client.core.error.ViewServiceException
+import com.couchbase.client.core.diagnostics.PingResult
 import com.couchbase.client.core.msg.view.ViewRequest
-import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
-import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.diagnostics.{PingOptions, WaitUntilReadyOptions}
-import com.couchbase.client.scala.manager.collection.{
-  AsyncCollectionManager,
-  ReactiveCollectionManager
-}
-import com.couchbase.client.scala.manager.view.{ReactiveViewIndexManager, ViewIndexManager}
+import com.couchbase.client.scala.manager.collection.ReactiveCollectionManager
+import com.couchbase.client.scala.manager.view.ReactiveViewIndexManager
 import com.couchbase.client.scala.query.handlers.ViewHandler
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
-import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions}
+import com.couchbase.client.scala.util.FutureConversions
 import com.couchbase.client.scala.view._
 import reactor.core.scala.publisher.{SFlux, SMono}
 
@@ -136,7 +127,7 @@ class ReactiveBucket private[scala] (val async: AsyncBucket) {
   private def viewQuery(req: Try[ViewRequest]): SMono[ReactiveViewResult] = {
     req match {
       case Failure(err) =>
-        SMono.raiseError(err)
+        SMono.error(err)
 
       case Success(request) =>
         SMono.defer(() => {

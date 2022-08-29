@@ -15,8 +15,6 @@
  */
 package com.couchbase.client.scala.manager.bucket
 
-import java.nio.charset.StandardCharsets
-
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.{DELETE, GET, POST}
@@ -37,7 +35,6 @@ import com.couchbase.client.scala.durability.Durability.{
   MajorityAndPersistToActive,
   PersistToMajority
 }
-import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.manager.ManagerUtil
 import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral, Memcached}
 import com.couchbase.client.scala.manager.bucket.EjectionMethod.{
@@ -46,10 +43,10 @@ import com.couchbase.client.scala.manager.bucket.EjectionMethod.{
   NotRecentlyUsed,
   ValueOnly
 }
-import com.couchbase.client.scala.util.CouchbasePickler
 import com.couchbase.client.scala.util.DurationConversions._
 import reactor.core.scala.publisher.{SFlux, SMono}
 
+import java.nio.charset.StandardCharsets
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
@@ -92,19 +89,19 @@ class ReactiveBucketManager(core: Core) {
             if ((response.status == ResponseStatus.INVALID_ARGS) && response.content != null) {
               val content = new String(response.content, StandardCharsets.UTF_8)
               if (content.contains("Bucket with given name already exists")) {
-                SMono.raiseError(BucketExistsException.forBucket(settings.name))
+                SMono.error(BucketExistsException.forBucket(settings.name))
               } else {
-                SMono.raiseError(new CouchbaseException(content))
+                SMono.error(new CouchbaseException(content))
               }
             } else {
               ManagerUtil
                 .checkStatus(response, "create bucket [" + redactMeta(settings) + "]") match {
-                case Failure(err) => SMono.raiseError(err)
+                case Failure(err) => SMono.error(err)
                 case _            => SMono.just(())
               }
             }
           })
-      case Failure(err) => SMono.raiseError(err)
+      case Failure(err) => SMono.error(err)
     }
   }
 
@@ -157,7 +154,7 @@ class ReactiveBucketManager(core: Core) {
             )
           })
 
-      case Failure(err) => SMono.raiseError(err)
+      case Failure(err) => SMono.error(err)
     }
   }
 
@@ -212,10 +209,10 @@ class ReactiveBucketManager(core: Core) {
       .sendRequest(core, DELETE, pathForBucket(bucketName), timeout, retryStrategy)
       .flatMap(response => {
         if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.raiseError(BucketNotFoundException.forBucket(bucketName))
+          SMono.error(BucketNotFoundException.forBucket(bucketName))
         } else {
           ManagerUtil.checkStatus(response, "drop bucket [" + redactMeta(bucketName) + "]") match {
-            case Failure(err) => SMono.raiseError(err)
+            case Failure(err) => SMono.error(err)
             case _            => SMono.just(())
           }
         }
@@ -231,10 +228,10 @@ class ReactiveBucketManager(core: Core) {
       .sendRequest(core, GET, pathForBucket(bucketName), timeout, retryStrategy)
       .flatMap(response => {
         if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.raiseError(BucketNotFoundException.forBucket(bucketName))
+          SMono.error(BucketNotFoundException.forBucket(bucketName))
         } else {
           ManagerUtil.checkStatus(response, "get bucket [" + redactMeta(bucketName) + "]") match {
-            case Failure(err) => SMono.raiseError(err)
+            case Failure(err) => SMono.error(err)
             case _ =>
               val bs = BucketSettings.parseFrom(response.content)
               SMono.just(bs)
@@ -251,7 +248,7 @@ class ReactiveBucketManager(core: Core) {
       .sendRequest(core, GET, pathForBuckets, timeout, retryStrategy)
       .flatMapMany(response => {
         ManagerUtil.checkStatus(response, "get all buckets") match {
-          case Failure(err) => SFlux.raiseError(err)
+          case Failure(err) => SFlux.error(err)
           case _ =>
             val bs = BucketSettings.parseSeqFrom(response.content)
             SFlux.fromIterable(bs)
@@ -268,10 +265,10 @@ class ReactiveBucketManager(core: Core) {
       .sendRequest(core, POST, pathForBucketFlush(bucketName), timeout, retryStrategy)
       .flatMap(response => {
         if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.raiseError(BucketNotFoundException.forBucket(bucketName))
+          SMono.error(BucketNotFoundException.forBucket(bucketName))
         } else {
           ManagerUtil.checkStatus(response, "flush bucket [" + redactMeta(bucketName) + "]") match {
-            case Failure(err) => SMono.raiseError(err)
+            case Failure(err) => SMono.error(err)
             case _            => SMono.just(())
           }
         }
