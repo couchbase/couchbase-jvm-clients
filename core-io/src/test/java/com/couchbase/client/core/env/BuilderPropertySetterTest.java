@@ -159,8 +159,10 @@ class BuilderPropertySetterTest {
     assertEquals(builder.build().timeoutConfig().kvTimeout(), Duration.ofSeconds(5));
     InvalidArgumentException e1 = assertThrows(InvalidArgumentException.class,
         () -> builder.applyProfile("default"));
+    assertEquals("Unknown profile: 'default', valid profiles are: [development]", e1.getMessage());
     InvalidArgumentException e2 = assertThrows(InvalidArgumentException.class,
         () -> builder.applyProfile(null));
+    assertEquals("ProfileName cannot be null or empty", e2.getMessage());
   }
 
   @Test

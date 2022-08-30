@@ -46,15 +46,15 @@ import reactor.core.scheduler.Schedulers;
 import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.ServiceLoader;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -64,6 +64,7 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 /**
  * The Environment is the main place in the SDK where configuration and state lives (i.e. I/O pools).
@@ -79,6 +80,12 @@ public class CoreEnvironment {
    */
   public static final long DEFAULT_MAX_NUM_REQUESTS_IN_RETRY = 32768;
   private static final Map<String, Attributes> MANIFEST_INFOS = new ConcurrentHashMap<>();
+
+  /**
+   * Service Loader for Environment Profiles.
+   */
+  private static final ServiceLoader<ConfigurationProfile> environmentProfileLoader =
+    ServiceLoader.load(ConfigurationProfile.class);
 
   static {
     try {
@@ -581,95 +588,128 @@ public class CoreEnvironment {
     protected Builder() { }
 
     /**
-     * accept a function that takes the ioEnvironment builder as an argument in order to set properties
+     * Allows to configure the {@link IoEnvironment} through a provided builder.
+     * <p>
+     * This method is preferred over {@link #ioEnvironment(IoEnvironment.Builder)} since then properties
+     * on an already existing configuration are not overridden.
      *
-     * @param consumer
-     * @return
+     * @param builderConsumer the builder for the {@link IoEnvironment} to customize.
+     * @return this {@link Builder} for chaining purposes.
      */
-    public SELF ioEnvironment(Consumer<IoEnvironment.Builder> consumer) {
-      consumer.accept(this.ioEnvironment);
+    public SELF ioEnvironment(final Consumer<IoEnvironment.Builder> builderConsumer) {
+      notNull(builderConsumer, "BuilderConsumer").accept(this.ioEnvironment);
       return self();
     }
 
     /**
-     * accept a function that takes the ioConfig builder as an argument in order to set properties
+     * Allows to configure the {@link IoConfig} through a provided builder.
+     * <p>
+     * This method is preferred over {@link #ioConfig(IoConfig.Builder)} since then properties
+     * on an already existing configuration are not overridden.
      *
-     * @param consumer
-     * @return
+     * @param builderConsumer the builder for the {@link IoConfig} to customize.
+     * @return this {@link Builder} for chaining purposes.
      */
-    public SELF ioConfig(Consumer<IoConfig.Builder> consumer) {
-      consumer.accept(this.ioConfig);
+    public SELF ioConfig(final Consumer<IoConfig.Builder> builderConsumer) {
+      notNull(builderConsumer, "BuilderConsumer").accept(this.ioConfig);
       return self();
     }
 
     /**
-     * accept a function that takes the compressionConfig builder as an argument in order to set properties
+     * Allows to configure the {@link CompressionConfig} through a provided builder.
+     * <p>
+     * This method is preferred over {@link #compressionConfig(CompressionConfig.Builder)} since then properties
+     * on an already existing configuration are not overridden.
      *
-     * @param consumer
-     * @return
+     * @param builderConsumer the builder for the {@link CompressionConfig} to customize.
+     * @return this {@link Builder} for chaining purposes.
      */
-    public SELF compressionConfig(Consumer<CompressionConfig.Builder> consumer) {
-      consumer.accept(this.compressionConfig);
+    public SELF compressionConfig(final Consumer<CompressionConfig.Builder> builderConsumer) {
+      notNull(builderConsumer, "BuilderConsumer").accept(this.compressionConfig);
       return self();
     }
 
     /**
-     * accept a function that takes the securityConfig builder as an argument in order to set properties
+     * Allows to configure the {@link SecurityConfig} through a provided builder.
+     * <p>
+     * This method is preferred over {@link #securityConfig(SecurityConfig.Builder)} since then properties
+     * on an already existing configuration are not overridden.
      *
-     * @param consumer
-     * @return
+     * @param builderConsumer the builder for the {@link SecurityConfig} to customize.
+     * @return this {@link Builder} for chaining purposes.
      */
-    public SELF securityConfig(Consumer<SecurityConfig.Builder> consumer) {
-      consumer.accept(this.securityConfig);
+    public SELF securityConfig(final Consumer<SecurityConfig.Builder> builderConsumer) {
+      notNull(builderConsumer, "BuilderConsumer").accept(this.securityConfig);
       return self();
     }
 
     /**
-     * accept a function that takes the timeoutConfig builder as an argument in order to set properties
+     * Allows to configure the {@link TimeoutConfig} through a provided builder.
+     * <p>
+     * This method is preferred over {@link #timeoutConfig(TimeoutConfig.Builder)} since then properties
+     * on an already existing configuration are not overridden.
      *
-     * @param consumer
-     * @return
+     * @param builderConsumer the builder for the {@link TimeoutConfig} to customize.
+     * @return this {@link Builder} for chaining purposes.
      */
-    public SELF timeoutConfig(Consumer<TimeoutConfig.Builder> consumer) {
-      consumer.accept(this.timeoutConfig);
+    public SELF timeoutConfig(final Consumer<TimeoutConfig.Builder> builderConsumer) {
+      notNull(builderConsumer, "BuilderConsumer").accept(this.timeoutConfig);
       return self();
     }
 
     /**
-     * accept a function that takes the loggerConfig builder as an argument in order to set properties
+     * Allows to configure the {@link LoggerConfig} through a provided builder.
+     * <p>
+     * This method is preferred over {@link #loggerConfig(LoggerConfig.Builder)} since then properties
+     * on an already existing configuration are not overridden.
      *
-     * @param consumer
-     * @return
+     * @param builderConsumer the builder for the {@link LoggerConfig} to customize.
+     * @return this {@link Builder} for chaining purposes.
      */
-    public SELF loggerConfig(Consumer<LoggerConfig.Builder> consumer) {
-      consumer.accept(this.loggerConfig);
+    public SELF loggerConfig(final Consumer<LoggerConfig.Builder> builderConsumer) {
+      notNull(builderConsumer, "BuilderConsumer").accept(this.loggerConfig);
       return self();
     }
 
     /**
-     * accept a function that takes the orphanReporterConfig builder as an argument in order to set properties
+     * Allows to configure the {@link OrphanReporterConfig} through a provided builder.
+     * <p>
+     * This method is preferred over {@link #orphanReporterConfig(OrphanReporterConfig.Builder)} since then properties
+     * on an already existing configuration are not overridden.
      *
-     * @param consumer
-     * @return
+     * @param builderConsumer the builder for the {@link OrphanReporterConfig} to customize.
+     * @return this {@link Builder} for chaining purposes.
      */
-    public SELF orphanReporterConfig(Consumer<OrphanReporterConfig.Builder> consumer) {
-      consumer.accept(this.orphanReporterConfig);
-      return self();
-    }
-
-    public SELF thresholdLoggingTracerConfig(Consumer<ThresholdLoggingTracerConfig.Builder> consumer) {
-      consumer.accept(this.thresholdLoggingTracerConfig);
+    public SELF orphanReporterConfig(final Consumer<OrphanReporterConfig.Builder> builderConsumer) {
+      notNull(builderConsumer, "BuilderConsumer").accept(this.orphanReporterConfig);
       return self();
     }
 
     /**
-     * accept a function that takes the loggingMeterConfig builder as an argument in order to set properties
+     * Allows to configure the {@link ThresholdLoggingTracerConfig} through a provided builder.
+     * <p>
+     * This method is preferred over {@link #thresholdLoggingTracerConfig(ThresholdLoggingTracerConfig.Builder)} since
+     * then properties on an already existing configuration are not overridden.
      *
-     * @param consumer
-     * @return
+     * @param builderConsumer the builder for the {@link ThresholdLoggingTracerConfig} to customize.
+     * @return this {@link Builder} for chaining purposes.
      */
-    public SELF loggingMeterConfig(Consumer<LoggingMeterConfig.Builder> consumer) {
-      consumer.accept(this.loggingMeterConfig);
+    public SELF thresholdLoggingTracerConfig(final Consumer<ThresholdLoggingTracerConfig.Builder> builderConsumer) {
+      notNull(builderConsumer, "BuilderConsumer").accept(this.thresholdLoggingTracerConfig);
+      return self();
+    }
+
+    /**
+     * Allows to configure the {@link LoggingMeterConfig} through a provided builder.
+     * <p>
+     * This method is preferred over {@link #loggingMeterConfig(LoggingMeterConfig.Builder)} since then properties
+     * on an already existing configuration are not overridden.
+     *
+     * @param builderConsumer the builder for the {@link LoggingMeterConfig} to customize.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public SELF loggingMeterConfig(final Consumer<LoggingMeterConfig.Builder> builderConsumer) {
+      notNull(builderConsumer, "BuilderConsumer").accept(this.loggingMeterConfig);
       return self();
     }
 
@@ -1035,23 +1075,45 @@ public class CoreEnvironment {
       return new CoreEnvironment(this);
     }
     /**
-     * Applies the settings in profileName to this builder
-     * Property names are from {@link ConnectionStringPropertyLoader}
+     * Applies custom properties based on a profile name.
+     * <p>
+     * At the moment only the "development" profile is supported, but its actual values are not determined yet.
+     * Since this is volatile API, the actual profile names and their properties are subject to change.
+     * <p>
+     * New profiles can be registered by utilizing the ServiceRegistry mechanism. Create a file with the name of
+     * "com.couchbase.client.core.env.ConfigurationProfile" in your META-INF/services folder and the content contains
+     * each line of classes that implement the "EnvironmentProfile" interface. See the {@link DevelopmentProfile} for
+     * examples and usage.
      *
      * @return this {@link Builder} for chaining purposes.
      */
-    public SELF applyProfile(String profileName)  {
-      Map<String,String> map = new HashMap<>();
-      Collection<String> profileNames = Arrays.asList("development");
-      if("development".equals(profileName)){
-        map.put("timeout.connectTimeout","20s");
-        map.put("timeout.kvTimeout", "5s");
-      } else if ( profileNames.contains(profileName)) {
-        throw InvalidArgumentException.fromMessage("no profile definition available for: '"+profileName+"'");
-      } else {
-        throw InvalidArgumentException.fromMessage("profile not supported: '"+profileName+"', valid profiles are "+profileNames);
+    @Stability.Volatile
+    public SELF applyProfile(final String profileName)  {
+      notNullOrEmpty(profileName, "ProfileName");
+
+      for (ConfigurationProfile profile : environmentProfileLoader) {
+        if (profile.name().equals(profileName)) {
+          return load(PropertyLoader.fromMap(profile.properties()));
+        }
       }
-      return load(PropertyLoader.fromMap(map));
+
+      throw InvalidArgumentException.fromMessage("Unknown profile: '" + profileName + "', valid profiles are: "
+        + registeredProfileNames());
     }
+
   }
+
+  /**
+   * Returns the registered environment profile names.
+   *
+   * @return the names of the profiles.
+   */
+  private static Set<String> registeredProfileNames() {
+    Set<String> names = new HashSet<>();
+    for (ConfigurationProfile profile : environmentProfileLoader) {
+      names.add(profile.name());
+    }
+    return names;
+  }
+
 }
