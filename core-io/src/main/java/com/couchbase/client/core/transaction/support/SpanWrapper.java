@@ -68,9 +68,7 @@ public class SpanWrapper {
     }
 
     public long failWith(Throwable err) {
-        span.status(RequestSpan.StatusCode.ERROR);
-        span.attribute("error.name", err.getClass().getName());
-        span.attribute("error.message", err.getMessage());
+        span.recordException(err);
         return finish();
     }
 }
