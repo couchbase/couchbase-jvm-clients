@@ -16,11 +16,9 @@
 
 package com.couchbase.client.scala
 
-import java.util.UUID
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics.{DiagnosticsResult, PingResult}
 import com.couchbase.client.core.env.PasswordAuthenticator
-import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.scala.AsyncCluster.{
   extractClusterEnvironment,
   seedNodesFromConnectionString
@@ -39,7 +37,7 @@ import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
 import com.couchbase.client.scala.manager.search.ReactiveSearchIndexManager
 import com.couchbase.client.scala.manager.user.ReactiveUserManager
 import com.couchbase.client.scala.query.handlers.SearchHandler
-import com.couchbase.client.scala.query.{ReactiveQueryResult, _}
+import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchMetaData, SearchRow}
@@ -47,10 +45,9 @@ import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
 
-import scala.compat.java8.OptionConverters._
+import java.util.UUID
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
-import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
 
 /** Represents a connection to a Couchbase cluster.
@@ -404,7 +401,9 @@ object ReactiveCluster {
       .map(ce => {
         implicit val ec: ExecutionContextExecutor = ce.ec
         val seedNodes                             = seedNodesFromConnectionString(connectionString, ce)
-        val cluster                               = new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes))
+        val cluster = new ReactiveCluster(
+          new AsyncCluster(ce, options.authenticator, seedNodes, connectionString)
+        )
         cluster.async.performGlobalConnect()
         cluster
       })
@@ -423,7 +422,8 @@ object ReactiveCluster {
     AsyncCluster
       .extractClusterEnvironment(options)
       .map(ce => {
-        val cluster = new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes))
+        val cluster =
+          new ReactiveCluster(new AsyncCluster(ce, options.authenticator, seedNodes, null))
         cluster.async.performGlobalConnect()
         cluster
       })

@@ -144,7 +144,8 @@ public class ReactiveCluster {
     return new ReactiveCluster(
       environmentSupplier,
       opts.authenticator(),
-      seedNodesFromConnectionString(connectionString, environmentSupplier.get())
+      seedNodesFromConnectionString(connectionString, environmentSupplier.get()),
+      connectionString
     );
   }
 
@@ -164,7 +165,8 @@ public class ReactiveCluster {
     notNull(options, "ClusterOptions");
 
     final ClusterOptions.Built opts = options.build();
-    return new ReactiveCluster(extractClusterEnvironment(asConnectionString(seedNodes), opts), opts.authenticator(), seedNodes);
+    return new ReactiveCluster(extractClusterEnvironment(asConnectionString(seedNodes), opts), opts.authenticator(),
+      seedNodes, null);
   }
 
 
@@ -174,8 +176,8 @@ public class ReactiveCluster {
    * @param environment the environment to use for this cluster.
    */
   private ReactiveCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator,
-                          final Set<SeedNode> seedNodes) {
-    this(new AsyncCluster(environment, authenticator, seedNodes));
+                          final Set<SeedNode> seedNodes, final String connectionString) {
+    this(new AsyncCluster(environment, authenticator, seedNodes, connectionString));
   }
 
   /**

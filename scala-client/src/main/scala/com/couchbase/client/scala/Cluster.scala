@@ -58,12 +58,13 @@ import scala.util.Try
 class Cluster private[scala] (
     _env: => ClusterEnvironment,
     authenticator: Authenticator,
-    seedNodes: Set[SeedNode]
+    seedNodes: Set[SeedNode],
+    connectionString: String
 ) {
   private[scala] implicit val ec: ExecutionContext = _env.ec
 
   /** Access an asynchronous version of this API. */
-  val async = new AsyncCluster(_env, authenticator, seedNodes)
+  val async = new AsyncCluster(_env, authenticator, seedNodes, connectionString)
 
   /** Access a reactive version of this API. */
   lazy val reactive = new ReactiveCluster(async)
@@ -352,7 +353,7 @@ object Cluster {
       .extractClusterEnvironment(connectionString, options)
       .map(ce => {
         val seedNodes = seedNodesFromConnectionString(connectionString, ce)
-        val cluster   = new Cluster(ce, options.authenticator, seedNodes)
+        val cluster   = new Cluster(ce, options.authenticator, seedNodes, connectionString)
         cluster.async.performGlobalConnect()
         cluster
       })
@@ -371,7 +372,7 @@ object Cluster {
     AsyncCluster
       .extractClusterEnvironment(options)
       .map(ce => {
-        val cluster = new Cluster(ce, options.authenticator, seedNodes)
+        val cluster = new Cluster(ce, options.authenticator, seedNodes, null)
         cluster.async.performGlobalConnect()
         cluster
       })

@@ -179,7 +179,8 @@ public class AsyncCluster {
     return new AsyncCluster(
       environmentSupplier,
       opts.authenticator(),
-      seedNodesFromConnectionString(connectionString, environmentSupplier.get())
+      seedNodesFromConnectionString(connectionString, environmentSupplier.get()),
+      connectionString
     );
   }
 
@@ -199,7 +200,8 @@ public class AsyncCluster {
     notNull(options, "ClusterOptions");
 
     final ClusterOptions.Built opts = options.build();
-    return new AsyncCluster(extractClusterEnvironment(asConnectionString(seedNodes), opts), opts.authenticator(), seedNodes);
+    return new AsyncCluster(extractClusterEnvironment(asConnectionString(seedNodes), opts), opts.authenticator(),
+      seedNodes, null);
   }
 
   /**
@@ -250,9 +252,10 @@ public class AsyncCluster {
    *
    * @param environment the environment to use for this cluster.
    */
-  AsyncCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator, Set<SeedNode> seedNodes) {
+  AsyncCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator,
+               final Set<SeedNode> seedNodes, final String connectionString) {
     this.environment = environment;
-    this.core = Core.create(environment.get(), authenticator, seedNodes);
+    this.core = Core.create(environment.get(), authenticator, seedNodes, connectionString);
     this.searchIndexManager = new AsyncSearchIndexManager(core);
     this.queryAccessor = new QueryAccessor(core);
     this.userManager = new AsyncUserManager(core);

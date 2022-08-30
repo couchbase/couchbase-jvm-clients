@@ -127,8 +127,9 @@ public class Cluster internal constructor(
     private val ownsEnvironment: Boolean,
     private val authenticator: Authenticator,
     seedNodes: Set<SeedNode>,
+    connectionString: String,
 ) {
-    internal val core: Core = Core.create(environment, authenticator, seedNodes)
+    internal val core: Core = Core.create(environment, authenticator, seedNodes, connectionString)
 
     internal val env: ClusterEnvironment
         get() = core.env
@@ -712,7 +713,7 @@ public class Cluster internal constructor(
                 env.securityConfig().tlsEnabled(),
                 env.eventBus(),
             )
-            return Cluster(env, ownsEnv, authenticator, seedNodes)
+            return Cluster(env, ownsEnv, authenticator, seedNodes, connectionString)
         }
     }
 }

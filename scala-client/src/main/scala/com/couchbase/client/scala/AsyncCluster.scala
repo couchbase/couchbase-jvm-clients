@@ -15,13 +15,10 @@
  */
 package com.couchbase.client.scala
 
-import java.util.{Optional, UUID}
-import java.util.stream.Collectors
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.Authenticator
-import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionStringUtil
@@ -50,6 +47,8 @@ import com.couchbase.client.scala.util.DurationConversions.{javaDurationToScala,
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
 
+import java.util.stream.Collectors
+import java.util.{Optional, UUID}
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
@@ -73,7 +72,8 @@ import scala.util.{Failure, Success, Try}
 class AsyncCluster(
     environment: => ClusterEnvironment,
     private[scala] val authenticator: Authenticator,
-    private[scala] val seedNodes: Set[SeedNode]
+    private[scala] val seedNodes: Set[SeedNode],
+    private[scala] val connectionString: String
 ) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
 
@@ -81,7 +81,12 @@ class AsyncCluster(
   val env: ClusterEnvironment = environment
 
   private[couchbase] val core =
-    Core.create(environment.coreEnv, authenticator, seedNodes.map(_.toCore).asJava)
+    Core.create(
+      environment.coreEnv,
+      authenticator,
+      seedNodes.map(_.toCore).asJava,
+      connectionString
+    )
   private[scala] val hp                         = HandlerBasicParams(core, env)
   private[scala] val searchTimeout              = javaDurationToScala(env.timeoutConfig.searchTimeout())
   private[scala] val analyticsTimeout           = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
@@ -436,7 +441,7 @@ object AsyncCluster {
     extractClusterEnvironment(connectionString, options)
       .map(ce => {
         val seedNodes = seedNodesFromConnectionString(connectionString, ce)
-        val cluster   = new AsyncCluster(ce, options.authenticator, seedNodes)
+        val cluster   = new AsyncCluster(ce, options.authenticator, seedNodes, connectionString)
         cluster.performGlobalConnect()
         cluster
       })
@@ -455,7 +460,7 @@ object AsyncCluster {
     AsyncCluster
       .extractClusterEnvironment(options)
       .map(ce => {
-        val cluster = new AsyncCluster(ce, options.authenticator, seedNodes)
+        val cluster = new AsyncCluster(ce, options.authenticator, seedNodes, null)
         cluster.performGlobalConnect()
         cluster
       })

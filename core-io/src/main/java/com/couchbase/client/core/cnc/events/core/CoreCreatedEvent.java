@@ -22,12 +22,12 @@ import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -36,18 +36,15 @@ import java.util.stream.Collectors;
 public class CoreCreatedEvent extends AbstractEvent {
 
   private final CoreEnvironment environment;
-  private final int numCoreInstances;
 
   public CoreCreatedEvent(final CoreContext context, final CoreEnvironment environment, final Set<SeedNode> seedNodes,
-                          final int numCoreInstances) {
-    super(Severity.INFO, Category.CORE, Duration.ZERO, attachSeedNodes(context, seedNodes, numCoreInstances));
+                          final int numCoreInstances, @Nullable final String connectionString) {
+    super(Severity.INFO, Category.CORE, Duration.ZERO, enrichContext(context, seedNodes, numCoreInstances, connectionString));
     this.environment = environment;
-    this.numCoreInstances = numCoreInstances;
-
   }
 
-  private static Context attachSeedNodes(final CoreContext context, final Set<SeedNode> seedNodes,
-                                         final int numCoreInstances) {
+  private static Context enrichContext(final CoreContext context, final Set<SeedNode> seedNodes,
+                                       final int numCoreInstances, @Nullable final String connectionString) {
     return new CoreContext(context.core(), context.id(), context.environment(), context.authenticator()) {
       @Override
       public void injectExportableParams(final Map<String, Object> input) {
@@ -62,6 +59,9 @@ public class CoreCreatedEvent extends AbstractEvent {
         }).collect(Collectors.toSet()));
 
         input.put("numCoreInstances", numCoreInstances);
+        if (connectionString != null) {
+          input.put("connectionString", connectionString);
+        }
       }
     };
   }

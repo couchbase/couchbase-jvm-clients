@@ -76,6 +76,7 @@ import com.couchbase.client.core.cnc.events.transaction.TransactionsStartedEvent
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -242,13 +243,36 @@ public class Core {
   private final CoreTransactionsCleanup transactionsCleanup;
 
   /**
-   * Creates a new {@link Core} with the given environment.
+   * Holds the user connection string if provided (null otherwise).
+   */
+  @Nullable
+  private final String connectionString;
+
+  /**
+   * Creates a new {@link Core} with the given environment with no connection string.
    *
    * @param environment the environment for this core.
+   * @param authenticator the authenticator used for kv and http authentication.
+   * @param seedNodes the seed nodes to initially connect to.
    * @return the created {@link Core}.
    */
-  public static Core create(final CoreEnvironment environment, final Authenticator authenticator, final Set<SeedNode> seedNodes) {
-    return new Core(environment, authenticator, seedNodes);
+  public static Core create(final CoreEnvironment environment, final Authenticator authenticator,
+                            final Set<SeedNode> seedNodes) {
+    return new Core(environment, authenticator, seedNodes, null);
+  }
+
+  /**
+   * Creates a new {@link Core} with the given environment with no connection string.
+   *
+   * @param environment the environment for this core.
+   * @param authenticator the authenticator used for kv and http authentication.
+   * @param seedNodes the seed nodes to initially connect to.
+   * @param connectionString if provided, the original connection string from the user.
+   * @return the created {@link Core}.
+   */
+  public static Core create(final CoreEnvironment environment, final Authenticator authenticator,
+                            final Set<SeedNode> seedNodes, @Nullable final String connectionString) {
+    return new Core(environment, authenticator, seedNodes, connectionString);
   }
 
   /**
@@ -287,9 +311,13 @@ public class Core {
   /**
    * Creates a new Core.
    *
-   * @param environment the environment for this core.
+   * @param environment the environment used.
+   * @param authenticator the authenticator used for kv and http authentication.
+   * @param seedNodes the seed nodes to initially connect to.
+   * @param connectionString if provided, the original connection string from the user.
    */
-  protected Core(final CoreEnvironment environment, final Authenticator authenticator, final Set<SeedNode> seedNodes) {
+  protected Core(final CoreEnvironment environment, final Authenticator authenticator, final Set<SeedNode> seedNodes,
+                 @Nullable final String connectionString) {
     if (environment.securityConfig().tlsEnabled() && !authenticator.supportsTls()) {
       throw new InvalidArgumentException("TLS enabled but the Authenticator does not support TLS!", null, null);
     } else if (!environment.securityConfig().tlsEnabled() && !authenticator.supportsNonTls()) {
@@ -298,6 +326,7 @@ public class Core {
 
     incrementAndVerifyNumInstances(environment.eventBus());
 
+    this.connectionString = connectionString;
     this.seedNodes = seedNodes;
     this.coreContext = new CoreContext(this, createInstanceId(), environment, authenticator);
     this.configurationProvider = createConfigurationProvider();
@@ -320,7 +349,7 @@ public class Core {
       .map(c -> (BeforeSendRequestCallback) c)
       .collect(Collectors.toList());
 
-    eventBus.publish(new CoreCreatedEvent(coreContext, environment, seedNodes, NUM_INSTANCES.get()));
+    eventBus.publish(new CoreCreatedEvent(coreContext, environment, seedNodes, NUM_INSTANCES.get(), connectionString));
 
     long watchdogInterval = INVALID_STATE_WATCHDOG_INTERVAL.getSeconds();
     if (watchdogInterval <= 1) {

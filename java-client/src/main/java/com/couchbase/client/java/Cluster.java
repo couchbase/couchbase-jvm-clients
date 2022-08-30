@@ -259,7 +259,8 @@ public class Cluster implements Closeable {
     return new Cluster(
       environmentSupplier,
       opts.authenticator(),
-      seedNodesFromConnectionString(connectionString, environmentSupplier.get())
+      seedNodesFromConnectionString(connectionString, environmentSupplier.get()),
+      connectionString
     );
   }
 
@@ -286,7 +287,8 @@ public class Cluster implements Closeable {
     notNull(options, "ClusterOptions");
 
     final ClusterOptions.Built opts = options.build();
-    return new Cluster(extractClusterEnvironment(asConnectionString(seedNodes), opts), opts.authenticator(), seedNodes);
+    return new Cluster(extractClusterEnvironment(asConnectionString(seedNodes), opts), opts.authenticator(),
+      seedNodes, null);
   }
 
   /**
@@ -317,8 +319,8 @@ public class Cluster implements Closeable {
    * @param seedNodes the seed nodes to bootstrap from.
    */
   private Cluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator,
-                  final Set<SeedNode> seedNodes) {
-    this.asyncCluster = new AsyncCluster(environment, authenticator, seedNodes);
+                  final Set<SeedNode> seedNodes, final String connectionString) {
+    this.asyncCluster = new AsyncCluster(environment, authenticator, seedNodes, connectionString);
     this.reactiveCluster = new ReactiveCluster(asyncCluster);
     this.searchIndexManager = new SearchIndexManager(asyncCluster.searchIndexes());
     this.userManager = new UserManager(asyncCluster.users());
