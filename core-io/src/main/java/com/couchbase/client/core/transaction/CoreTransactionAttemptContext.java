@@ -2661,11 +2661,19 @@ public class CoreTransactionAttemptContext {
                                                 new SubdocMutateRequest.Command(SubdocCommandType.REPLACE_BODY_WITH_XATTR, TransactionFields.STAGED_DATA, null, false, true, false, 0),
                                                 new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, null, false, true, false, 1)
                                         ))
+                                        .doOnNext(v -> {
+                                            addUnits(v.flexibleExtras());
+                                            LOGGER.info(attemptId, "commit - committed doc insert swap body %s got cas %d%s", DebugUtil.docId(collection, id), v.cas(), DebugUtil.dbg(v.flexibleExtras()));
+                                        })
                                         .map(SubdocMutateResponse::cas);
                             }
                             else {
                                 return TransactionKVHandler.insert(core, collection, id, staged.content, kvTimeoutMutating(),
                                                 durabilityLevel(), OptionsUtil.createClientContext("commitDocInsert"), span)
+                                        .doOnNext(v -> {
+                                            addUnits(v.flexibleExtras());
+                                            LOGGER.info(attemptId, "commit - committed doc insert %s got cas %d%s", DebugUtil.docId(collection, id), v.cas(), DebugUtil.dbg(v.flexibleExtras()));
+                                        })
                                         .map(InsertResponse::cas);
                             }
                         } else {
@@ -2675,6 +2683,10 @@ public class CoreTransactionAttemptContext {
                                                         new SubdocMutateRequest.Command(SubdocCommandType.REPLACE_BODY_WITH_XATTR, TransactionFields.STAGED_DATA, null, false, true, false, 0),
                                                         new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, null, false, true, false, 1)
                                                 ))
+                                        .doOnNext(v -> {
+                                            addUnits(v.flexibleExtras());
+                                            LOGGER.info(attemptId, "commit - committed doc replace swap body %s got cas %d%s", DebugUtil.docId(collection, id), v.cas(), DebugUtil.dbg(v.flexibleExtras()));
+                                        })
                                         .map(SubdocMutateResponse::cas);
                             }
                             else {
@@ -2688,6 +2700,10 @@ public class CoreTransactionAttemptContext {
                                                         new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, null, false, true, false, 1),
                                                         new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", staged.content, false, false, false, 2)
                                                 ))
+                                        .doOnNext(v -> {
+                                            addUnits(v.flexibleExtras());
+                                            LOGGER.info(attemptId, "commit - committed doc replace %s got cas %d%s", DebugUtil.docId(collection, id), v.cas(), DebugUtil.dbg(v.flexibleExtras()));
+                                        })
                                         .map(SubdocMutateResponse::cas);
                             }
                         }
