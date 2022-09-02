@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
@@ -210,9 +211,11 @@ public class RequestContext extends CoreContext {
 
     RequestSpan span = request.requestSpan();
     if (span != null) {
-      span.attribute(TracingIdentifiers.ATTR_RETRIES, retryAttempts());
-      if (err != null) {
-        span.recordException(err);
+      if (!CbTracing.isInternalSpan(span)) {
+        span.attribute(TracingIdentifiers.ATTR_RETRIES, retryAttempts());
+        if (err != null) {
+          span.recordException(err);
+        }
       }
       span.end();
     }
