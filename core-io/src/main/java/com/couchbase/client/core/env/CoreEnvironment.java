@@ -50,6 +50,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -136,6 +137,8 @@ public class CoreEnvironment {
   private final long maxNumRequestsInRetry;
   private final List<RequestCallback> requestCallbacks;
   private final CoreTransactionsConfig transactionsConfig;
+
+  private final Set<String> appliedProfiles;
   private final CoreTransactionsSchedulers transactionsSchedulers = new CoreTransactionsSchedulers();
 
   public static CoreEnvironment create() {
@@ -175,6 +178,7 @@ public class CoreEnvironment {
     this.orphanReporterConfig = builder.orphanReporterConfig.build();
     this.thresholdLoggingTracerConfig = builder.thresholdLoggingTracerConfig.build();
     this.loggingMeterConfig = builder.loggingMeterConfig.build();
+    this.appliedProfiles = builder.appliedProfiles;
     this.transactionsConfig = builder.transactionsConfig == null ? CoreTransactionsConfig.createDefault() : builder.transactionsConfig;
 
     if (eventBus instanceof OwnedSupplier) {
@@ -555,6 +559,9 @@ public class CoreEnvironment {
     input.put("schedulerThreadCount", schedulerThreadCount);
 
     input.put("transactionsConfig", transactionsConfig.exportAsMap());
+    if (!appliedProfiles.isEmpty()) {
+      input.put("profiles", appliedProfiles);
+    }
 
     return format.apply(input);
   }
@@ -584,6 +591,8 @@ public class CoreEnvironment {
     private long maxNumRequestsInRetry = DEFAULT_MAX_NUM_REQUESTS_IN_RETRY;
     private final List<RequestCallback> requestCallbacks = new ArrayList<>();
     protected CoreTransactionsConfig transactionsConfig = null;
+
+    private final Set<String> appliedProfiles = new LinkedHashSet<>();
 
     protected Builder() { }
 
@@ -1082,7 +1091,7 @@ public class CoreEnvironment {
      * <p>
      * New profiles can be registered by utilizing the ServiceRegistry mechanism. Create a file with the name of
      * "com.couchbase.client.core.env.ConfigurationProfile" in your META-INF/services folder and the content contains
-     * each line of classes that implement the "EnvironmentProfile" interface. See the {@link DevelopmentProfile} for
+     * each line of classes that implement the "EnvironmentProfile" interface. See the {@link WanDevelopmentProfile} for
      * examples and usage.
      *
      * @return this {@link Builder} for chaining purposes.
@@ -1093,6 +1102,7 @@ public class CoreEnvironment {
 
       for (ConfigurationProfile profile : environmentProfileLoader) {
         if (profile.name().equals(profileName)) {
+          appliedProfiles.add(profileName);
           return load(PropertyLoader.fromMap(profile.properties()));
         }
       }

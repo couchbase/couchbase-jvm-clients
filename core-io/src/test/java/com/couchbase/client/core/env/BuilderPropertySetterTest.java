@@ -155,11 +155,11 @@ class BuilderPropertySetterTest {
   void worksWithProfile() {
     CoreEnvironment.Builder<?> builder = newEnvironmentBuilder();
     assertEquals(builder.build().timeoutConfig().kvTimeout(), Duration.ofMillis(2500));
-    builder.applyProfile("development");
+    builder.applyProfile("wan-development");
     assertEquals(builder.build().timeoutConfig().kvTimeout(), Duration.ofSeconds(5));
     InvalidArgumentException e1 = assertThrows(InvalidArgumentException.class,
         () -> builder.applyProfile("default"));
-    assertEquals("Unknown profile: 'default', valid profiles are: [development]", e1.getMessage());
+    assertEquals("Unknown profile: 'default', valid profiles are: [wan-development]", e1.getMessage());
     InvalidArgumentException e2 = assertThrows(InvalidArgumentException.class,
         () -> builder.applyProfile(null));
     assertEquals("ProfileName cannot be null or empty", e2.getMessage());
@@ -168,7 +168,7 @@ class BuilderPropertySetterTest {
   @Test
   void handyMethodsToModifyConfigs() {
     CoreEnvironment.Builder<?> builder = newEnvironmentBuilder();
-    builder.applyProfile("development");
+    builder.applyProfile("wan-development");
     builder.ioConfig(config -> config.numKvConnections(2)).timeoutConfig(config -> config.queryTimeout(Duration.ofSeconds(100)));
     CoreEnvironment env = builder.build();
     assertEquals(env.timeoutConfig().kvTimeout(), Duration.ofSeconds(5)); // from development profile

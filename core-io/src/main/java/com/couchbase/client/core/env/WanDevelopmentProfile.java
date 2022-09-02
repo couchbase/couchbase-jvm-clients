@@ -22,14 +22,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * The "development" environment profile.
+ * The "wan-development" environment profile.
  */
 @Stability.Volatile
-public class DevelopmentProfile implements ConfigurationProfile {
+public class WanDevelopmentProfile implements ConfigurationProfile {
 
   @Override
   public String name() {
-    return "development";
+    return "wan-development";
   }
 
   @Override
