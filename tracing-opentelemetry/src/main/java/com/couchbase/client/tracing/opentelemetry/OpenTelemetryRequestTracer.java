@@ -23,6 +23,7 @@ import com.couchbase.client.core.error.TracerException;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
+import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.TracerProvider;
 import io.opentelemetry.context.Context;
@@ -132,7 +133,10 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
   @Override
   public RequestSpan requestSpan(String operationName, RequestSpan parent) {
     try {
-      SpanBuilder spanBuilder = tracer.spanBuilder(operationName);
+      SpanBuilder spanBuilder = tracer.spanBuilder(operationName)
+              // Per https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/database.md
+              // Span kind: MUST always be CLIENT.
+              .setSpanKind(SpanKind.CLIENT);
       Context parentContext = Context.current();
       if (parent != null) {
         parentContext = parentContext.with(castSpan(parent));

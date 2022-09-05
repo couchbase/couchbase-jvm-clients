@@ -89,7 +89,7 @@ class OpenTelemetryTracingIntegrationTest extends ClusterAwareIntegrationTest {
             span -> span
               .hasName("get")
               .hasParentSpanId(parent.getSpanContext().getSpanId())
-              .hasKind(SpanKind.INTERNAL)
+              .hasKind(SpanKind.CLIENT)
               .hasAttributesSatisfying(attributes -> assertThat(attributes)
                 .containsEntry("db.system", "couchbase")
                 .containsEntry("db.operation", "get")
@@ -98,7 +98,7 @@ class OpenTelemetryTracingIntegrationTest extends ClusterAwareIntegrationTest {
                 .containsEntry("db.couchbase.scope", "_default")),
             span -> span
               .hasName("dispatch_to_server")
-              .hasKind(SpanKind.INTERNAL)
+              .hasKind(SpanKind.CLIENT)
               .hasAttributesSatisfying(attributes -> assertThat(attributes)
                 .containsEntry("db.system", "couchbase"))
           ));
