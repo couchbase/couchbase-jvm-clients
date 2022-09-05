@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.search;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.metrics.NoopMeter;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
@@ -104,7 +105,9 @@ public class SearchMock {
 
         // Fake some core stuff
         Core mockedCore = mock(Core.class);
-        CoreEnvironment env = CoreEnvironment.create();
+        CoreEnvironment env = CoreEnvironment.builder()
+                .meter(NoopMeter.INSTANCE)
+                .build();
         CoreContext ctx = new CoreContext(mockedCore, 0, env, PasswordAuthenticator.create("Administrator", "password"));
 
         // Our ChunkedSearchMessageHandler needs to be initialised by pretending we've sent an outbound SearchRequest

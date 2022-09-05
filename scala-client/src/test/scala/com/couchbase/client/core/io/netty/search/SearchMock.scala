@@ -16,10 +16,11 @@
 
 package com.couchbase.client.core.io.netty.search
 
+import com.couchbase.client.core.cnc.metrics.NoopMeter
+
 import java.io.{ByteArrayOutputStream, InputStream}
 import java.nio.charset.StandardCharsets
 import java.util.Optional
-
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel
 import com.couchbase.client.core.deps.io.netty.handler.codec.http._
@@ -79,7 +80,7 @@ object SearchMock {
 
     // Fake some core stuff
     val mockedCore = mock(classOf[Core])
-    val env        = CoreEnvironment.create()
+    val env        = CoreEnvironment.builder.meter(NoopMeter.INSTANCE).build
     val ctx        = new CoreContext(mockedCore, 0, env, PasswordAuthenticator("not", "used"))
 
     // Our ChunkedSearchMessageHandler needs to be initialised by pretending we've sent an outbound SearchRequest
