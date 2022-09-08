@@ -19,6 +19,7 @@ package com.couchbase.client.java.kv;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.core.msg.kv.GetAndLockRequest;
@@ -59,7 +60,13 @@ public enum GetAccessor {
         }
         throw keyValueStatusToException(request, response);
       })
-      .whenComplete((t, e) -> request.context().logicallyComplete(e));
+      .whenComplete((t, e) -> {
+        if (e == null || e instanceof DocumentNotFoundException) {
+          request.context().logicallyComplete();
+        } else {
+          request.context().logicallyComplete(e);
+        }
+      });
   }
 
   /**
@@ -81,7 +88,13 @@ public enum GetAccessor {
         }
         throw keyValueStatusToException(request, response);
       })
-      .whenComplete((t, e) -> request.context().logicallyComplete(e));
+      .whenComplete((t, e) -> {
+        if (e == null || e instanceof DocumentNotFoundException) {
+          request.context().logicallyComplete();
+        } else {
+          request.context().logicallyComplete(e);
+        }
+      });
   }
 
   public static CompletableFuture<GetResult> getAndTouch(final Core core, final GetAndTouchRequest request,
@@ -95,7 +108,13 @@ public enum GetAccessor {
         }
         throw keyValueStatusToException(request, response);
       })
-      .whenComplete((t, e) -> request.context().logicallyComplete(e));
+      .whenComplete((t, e) -> {
+        if (e == null || e instanceof DocumentNotFoundException) {
+          request.context().logicallyComplete();
+        } else {
+          request.context().logicallyComplete(e);
+        }
+      });
   }
 
   public static CompletableFuture<GetResult> subdocGet(final Core core, final SubdocGetRequest request,
@@ -108,7 +127,14 @@ public enum GetAccessor {
           return parseSubdocGet(response, transcoder);
         }
         throw keyValueStatusToException(request, response);
-      }).whenComplete((t, e) -> request.context().logicallyComplete(e));
+      })
+      .whenComplete((t, e) -> {
+        if (e == null || e instanceof DocumentNotFoundException) {
+          request.context().logicallyComplete();
+        } else {
+          request.context().logicallyComplete(e);
+        }
+      });
   }
 
   private static GetResult parseSubdocGet(final SubdocGetResponse response, final Transcoder transcoder) {

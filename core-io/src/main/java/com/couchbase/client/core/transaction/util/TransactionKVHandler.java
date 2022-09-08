@@ -18,6 +18,7 @@ package com.couchbase.client.core.transaction.util;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.config.BucketConfig;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -162,7 +163,14 @@ public class TransactionKVHandler {
                             return response;
                         }
                         throw keyValueStatusToException(request, response);
-                    }).whenComplete((r, t) -> request.context().logicallyComplete(t)));
+                    })
+                    .whenComplete((t, e) -> {
+                      if (e == null || e instanceof DocumentNotFoundException) {
+                        request.context().logicallyComplete();
+                      } else {
+                        request.context().logicallyComplete(e);
+                      }
+                    }));
         });
     }
 

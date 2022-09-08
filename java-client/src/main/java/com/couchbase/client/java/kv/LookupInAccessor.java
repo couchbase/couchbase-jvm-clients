@@ -17,6 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
@@ -41,6 +42,12 @@ public class LookupInAccessor {
           return new LookupInResult(response.values(), response.cas(), serializer, ctx, response.isDeleted());
         }
         throw keyValueStatusToException(request, response);
-      }).whenComplete((t, e) -> request.context().logicallyComplete(e));
+      }).whenComplete((t, e) -> {
+              if (e == null || e instanceof DocumentNotFoundException) {
+                request.context().logicallyComplete();
+              } else {
+                request.context().logicallyComplete(e);
+              }
+            });
   }
 }
