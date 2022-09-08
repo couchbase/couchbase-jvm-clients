@@ -215,6 +215,7 @@ public class RequestContext extends CoreContext {
         span.attribute(TracingIdentifiers.ATTR_RETRIES, retryAttempts());
         if (err != null) {
           span.recordException(err);
+          span.status(RequestSpan.StatusCode.ERROR);
         }
       }
       span.end();

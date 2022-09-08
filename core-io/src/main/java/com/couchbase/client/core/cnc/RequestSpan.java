@@ -81,17 +81,16 @@ public interface RequestSpan {
   void status(StatusCode status);
 
   /**
-   * Records that the operation corresponding to the span failed with an exception.  It will also always set
-   * the status to StatusCode.ERROR.
+   * Records that an exception happened on the span.  What this does is dependent on the underlying telemetry
+   * implementation - in some implementations it is a no-op.
    * <p>
-   * The span still needs to have `span.end()` called.
-   * <p>
-   * Note that, depending on the underlying telemetry implementation, this may only set the status.
+   * The span still needs to have `span.end()` called.  And the application may want to set the status to StatusCode.ERROR.
+   * Neither is done automatically, since it's possible for a span to have an exception but then recover.
    *
-   * @param err the exception the operation failed with.
+   * @param err the exception to record.
    */
+  @Stability.Volatile
   default void recordException(Throwable err) {
-    status(StatusCode.ERROR);
   }
 
   /**

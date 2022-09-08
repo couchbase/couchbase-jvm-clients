@@ -95,7 +95,6 @@ public class OpenTelemetryRequestSpan implements RequestSpan {
   @Override
   public void recordException(Throwable err) {
     span.recordException(err);
-    status(StatusCode.ERROR);
   }
 
   @Override
