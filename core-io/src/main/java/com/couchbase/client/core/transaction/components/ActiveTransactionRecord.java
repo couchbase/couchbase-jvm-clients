@@ -75,14 +75,25 @@ public class ActiveTransactionRecord {
     private ActiveTransactionRecord() {
     }
 
-   public static Mono<Optional<ActiveTransactionRecordEntry>> findEntryForTransaction(Core core,
+    // Called from FIT
+    public static Mono<Optional<ActiveTransactionRecordEntry>> findEntryForTransaction(Core core,
+                                                                                     CollectionIdentifier atrCollection,
+                                                                                     String atrId,
+                                                                                     String attemptId,
+                                                                                     CoreMergedTransactionConfig config,
+                                                                                     @Nullable SpanWrapper pspan,
+                                                                                     @Nullable CoreTransactionLogger logger) {
+      return findEntryForTransaction(core, atrCollection, atrId, attemptId, config, pspan, logger, null);
+    }
+
+    public static Mono<Optional<ActiveTransactionRecordEntry>> findEntryForTransaction(Core core,
                                                                                       CollectionIdentifier atrCollection,
                                                                                       String atrId,
                                                                                       String attemptId,
                                                                                       CoreMergedTransactionConfig config,
                                                                                       @Nullable SpanWrapper pspan,
                                                                                       @Nullable CoreTransactionLogger logger,
-                                                                                      MeteringUnits.MeteringUnitsBuilder units) {
+                                                                                      @Nullable MeteringUnits.MeteringUnitsBuilder units) {
 
         return TransactionKVHandler.lookupIn(core, atrCollection, atrId, kvTimeoutNonMutating(core),
                         false, createClientContext("ATR::findEntryForTransaction"), pspan,
@@ -92,7 +103,9 @@ public class ActiveTransactionRecord {
                         ))
 
                 .map(d -> {
-                    units.add(d.flexibleExtras());
+                    if (units != null) {
+                      units.add(d.flexibleExtras());
+                    }
 
                     if (!d.values()[0].status().success()) {
                         return Optional.empty();

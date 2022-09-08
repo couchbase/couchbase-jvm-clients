@@ -29,11 +29,7 @@ import com.couchbase.client.core.transaction.forwards.Extension;
 import com.couchbase.client.core.transaction.forwards.Supported;
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
-import com.couchbase.client.core.transaction.util.MeteringUnits;
 import com.couchbase.client.java.transactions.config.TransactionsConfig;
-import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
-import com.couchbase.client.protocol.performer.Caps;
-import com.couchbase.client.protocol.shared.Collection;
 import com.couchbase.client.protocol.transactions.CleanupSet;
 import com.couchbase.client.protocol.transactions.CleanupSetFetchRequest;
 import com.couchbase.client.protocol.transactions.CleanupSetFetchResponse;
@@ -54,6 +50,9 @@ import com.couchbase.twoway.TwoWayTransactionReactive;
 import com.couchbase.utils.ResultsUtil;
 import com.couchbase.utils.HooksUtil;
 // [end:3.3.0]
+import com.couchbase.client.protocol.performer.Caps;
+import com.couchbase.client.protocol.shared.Collection;
+import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
 import com.couchbase.client.performer.core.CorePerformer;
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.perf.Counters;
@@ -106,8 +105,15 @@ public class PerformerService extends CorePerformer {
 
     @Override
     protected TransactionCommandExecutor transactionsExecutor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters) {
+        // [start:3.3.0]
         var connection = clusterConnections.get(workloads.getClusterConnectionId());
         return new JavaTransactionCommandExecutor(connection, counters);
+        // [end:3.3.0]
+        // [start:<3.3.0]
+        /*
+        return null;
+        // [end:<3.3.0]
+         */
     }
 
     @Override
@@ -272,7 +278,6 @@ public class PerformerService extends CorePerformer {
             var cleaner = new TransactionsCleaner(connection.core(), cleanupHooks);
             var logger = new CoreTransactionLogger(null, "");
             var merged = new CoreMergedTransactionConfig(config);
-            var units = new MeteringUnits.MeteringUnitsBuilder();
 
             Optional<ActiveTransactionRecordEntry> atrEntry = ActiveTransactionRecord.findEntryForTransaction(connection.core(),
                             collection,
@@ -280,8 +285,7 @@ public class PerformerService extends CorePerformer {
                             request.getAttemptId(),
                             merged,
                             null,
-                            logger,
-                            units)
+                            logger)
                     .block();
 
             TransactionCleanupAttempt response;
