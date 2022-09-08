@@ -507,13 +507,18 @@ public class IoConfig {
     }
 
     /**
-     * Captures the traffic for all services provided as an argument (all if empty).
+     * Captures and logs network traffic for the specified services (or all services if none are specified).
      * <p>
-     * IMPORTANT: It is not enough to just enable traffic capturing, also TRACE level logging needs to be enabled
-     * for the couchbase namespace in your logger implementation.
+     * IMPORTANT: Captured traffic is logged to the "com.couchbase.io" category at TRACE level.
+     * To see the log messages, make sure your logging library is configured appropriately.
+     * For example, if you're using Log4j2 with XML configuration, add this as a child of the {@code <Loggers>}
+     * element:
+     * <pre>
+     * &lt;Logger name="com.couchbase.io" level="trace"&#47;>
+     * </pre>
      * <p>
-     * Note that this flag should only be enabled during development and for debugging purposes. When enabled
-     * it will add more overhead due to traffic parsing, logging and analysis.
+     * Traffic capture should only be enabled during development and for debugging purposes. When enabled
+     * it will add more overhead due to traffic parsing, logging, and analysis.
      *
      * @return this {@link Builder} for chaining purposes.
      */
