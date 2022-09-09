@@ -102,6 +102,8 @@ internal fun configureTlsUsingBuilder() {
 internal fun configureManyThingsUsingDsl() {
     // Configure many things using DSL
     val cluster = Cluster.connect("localhost", "Administrator", "password") {
+        applyProfile("wan-development")
+
         transcoder = RawJsonTranscoder
 
         ioEnvironment {
@@ -113,9 +115,10 @@ internal fun configureManyThingsUsingDsl() {
             networkResolution = NetworkResolution.EXTERNAL
             tcpKeepAliveTime = 45.seconds
 
+            // To see traffic, must also set "com.couchbase.io" logging category to TRACE level.
             captureTraffic(ServiceType.KV, ServiceType.QUERY)
 
-            // specify defaults before customizing individual breakers
+            // Specify defaults before customizing individual breakers
             allCircuitBreakers {
                 enabled = true
                 volumeThreshold = 30

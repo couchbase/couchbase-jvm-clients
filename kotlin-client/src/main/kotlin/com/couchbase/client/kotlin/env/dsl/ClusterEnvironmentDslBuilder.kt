@@ -52,6 +52,14 @@ public class ClusterEnvironmentDslBuilder {
     private val wrapped = ClusterEnvironment.Builder()
 
     /**
+     * @see ClusterEnvironment.Builder.applyProfile
+     */
+    @VolatileCouchbaseApi
+    public fun applyProfile(profileName: String) {
+        wrapped.applyProfile(profileName)
+    }
+
+    /**
      * @see ClusterEnvironment.Builder.jsonSerializer
      */
     public var jsonSerializer: JsonSerializer?
