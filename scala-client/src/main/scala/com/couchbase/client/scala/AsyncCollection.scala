@@ -318,7 +318,7 @@ class AsyncCollection(
             })
 
           out onComplete {
-            case Success(_) => request.context.logicallyComplete()
+            case Success(_)   => request.context.logicallyComplete()
             case Failure(err) => request.context.logicallyComplete(err)
           }
 
@@ -384,7 +384,7 @@ class AsyncCollection(
           })
 
         out onComplete {
-          case Success(_) => request.context.logicallyComplete()
+          case Success(_)   => request.context.logicallyComplete()
           case Failure(err) => request.context.logicallyComplete(err)
         }
 
@@ -447,7 +447,7 @@ class AsyncCollection(
         .map(response => mutateInHandler.response(request, id, options.document, response))
 
       out onComplete {
-        case Success(_) => request.context.logicallyComplete()
+        case Success(_)   => request.context.logicallyComplete()
         case Failure(err) => request.context.logicallyComplete(err)
       }
 
@@ -695,7 +695,7 @@ class AsyncCollection(
             })
 
           out onComplete {
-            case Success(_) => request.context.logicallyComplete()
+            case Success(_)   => request.context.logicallyComplete()
             case Failure(err) => request.context.logicallyComplete(err)
           }
           out
@@ -781,7 +781,7 @@ object AsyncCollection {
           .map(response => handler.response(request, id, response))
 
         out onComplete {
-          case Success(_) => request.context.logicallyComplete()
+          case Success(_)   => request.context.logicallyComplete()
           case Failure(err) => request.context.logicallyComplete(err)
         }
 
@@ -809,7 +809,7 @@ object AsyncCollection {
           })
 
         out onComplete {
-          case Success(_) => request.context.logicallyComplete()
+          case Success(_)   => request.context.logicallyComplete()
           case Failure(err) => request.context.logicallyComplete(err)
         }
 
@@ -835,7 +835,7 @@ object AsyncCollection {
           .map(response => handler.response(request, id, response, transcoder))
 
         out onComplete {
-          case Success(_) => request.context.logicallyComplete()
+          case Success(_)   => request.context.logicallyComplete()
           case Failure(err) => request.context.logicallyComplete(err)
         }
 

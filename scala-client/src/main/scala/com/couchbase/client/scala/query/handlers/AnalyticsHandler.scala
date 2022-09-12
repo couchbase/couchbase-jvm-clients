@@ -22,7 +22,15 @@ import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest
 import com.couchbase.client.scala.HandlerBasicParams
-import com.couchbase.client.scala.analytics.{AnalyticsMetaData, AnalyticsMetrics, AnalyticsOptions, AnalyticsResult, AnalyticsStatus, AnalyticsWarning, ReactiveAnalyticsResult}
+import com.couchbase.client.scala.analytics.{
+  AnalyticsMetaData,
+  AnalyticsMetrics,
+  AnalyticsOptions,
+  AnalyticsResult,
+  AnalyticsStatus,
+  AnalyticsWarning,
+  ReactiveAnalyticsResult
+}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.{DurationConversions, FutureConversions, Validate}
@@ -146,7 +154,7 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
       .toFuture
 
     ret onComplete {
-      case Success(_) => request.context.logicallyComplete()
+      case Success(_)   => request.context.logicallyComplete()
       case Failure(err) => request.context.logicallyComplete(err)
     }
     ret

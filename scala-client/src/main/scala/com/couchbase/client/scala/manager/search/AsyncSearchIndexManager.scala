@@ -56,7 +56,7 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
         read.indexDef.copy(numPlanPIndexes = read.numPlanPIndexes)
       })
     out onComplete {
-      case Success(_) => request.context.logicallyComplete()
+      case Success(_)   => request.context.logicallyComplete()
       case Failure(err) => request.context.logicallyComplete(err)
     }
     out
@@ -75,7 +75,7 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
         AsyncSearchIndexManager.parseIndexes(response.content())
       })
     out onComplete {
-      case Success(_) => request.context.logicallyComplete()
+      case Success(_)   => request.context.logicallyComplete()
       case Failure(err) => request.context.logicallyComplete(err)
     }
     out
@@ -96,7 +96,7 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
     core.send(request)
     val out = request.response.toScala
     out onComplete {
-      case Success(_) => request.context.logicallyComplete()
+      case Success(_)   => request.context.logicallyComplete()
       case Failure(err) => request.context.logicallyComplete(err)
     }
     out.map(_ => ())
@@ -113,7 +113,7 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
     core.send(request)
     val out = request.response.toScala
     out onComplete {
-      case Success(_) => request.context.logicallyComplete()
+      case Success(_)   => request.context.logicallyComplete()
       case Failure(err) => request.context.logicallyComplete(err)
     }
     out
