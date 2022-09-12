@@ -153,4 +153,11 @@ public interface ConfigurationProvider  {
    */
   boolean collectionRefreshInProgress(CollectionIdentifier identifier);
 
+  /**
+   * Signals to the config provider that certain types of config refreshes failed and action might need to be taken.
+   *
+   * @param failure the type of config refresh failure.
+   */
+  void signalConfigRefreshFailed(ConfigRefreshFailure failure);
+
 }

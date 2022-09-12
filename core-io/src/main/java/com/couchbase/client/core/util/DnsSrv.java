@@ -29,10 +29,13 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
+/**
+ * The default implementation for performing DNS SRV lookups.
+ */
 @Stability.Internal
 public class DnsSrv {
 
-  private static Hashtable<String, String> DNS_ENV = new Hashtable<>();
+  private static final Hashtable<String, String> DNS_ENV = new Hashtable<>();
   private static final String DEFAULT_DNS_FACTORY = "com.sun.jndi.dns.DnsContextFactory";
   private static final String DEFAULT_DNS_PROVIDER = "dns:";
 

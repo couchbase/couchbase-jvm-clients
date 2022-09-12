@@ -410,7 +410,7 @@ public class Core {
    * @return by default returns the default config provider.
    */
   ConfigurationProvider createConfigurationProvider() {
-    return new DefaultConfigurationProvider(this, seedNodes);
+    return new DefaultConfigurationProvider(this, seedNodes, connectionString);
   }
 
   /**

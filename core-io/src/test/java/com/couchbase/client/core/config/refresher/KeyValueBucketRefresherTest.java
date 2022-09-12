@@ -18,19 +18,19 @@ package com.couchbase.client.core.config.refresher;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.SimpleEventBus;
+import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigRefreshFailure;
 import com.couchbase.client.core.config.ConfigurationProvider;
-import com.couchbase.client.core.config.GlobalConfig;
-import com.couchbase.client.core.config.PortInfo;
+import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.kv.CarrierGlobalConfigRequest;
-import com.couchbase.client.core.msg.kv.CarrierGlobalConfigResponse;
+import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
+import com.couchbase.client.core.msg.kv.CarrierBucketConfigResponse;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.Bytes;
-import com.couchbase.client.core.util.NanoTimestamp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,8 +41,6 @@ import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.couchbase.client.core.util.CbCollections.mapOf;
-import static com.couchbase.client.test.Util.waitUntilCondition;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
@@ -51,7 +49,7 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class GlobalRefresherTest {
+public class KeyValueBucketRefresherTest {
 
   private static final Duration FAST_CONFIG_POLL_INTERVAL = Duration.ofMillis(300);
 
@@ -74,52 +72,6 @@ class GlobalRefresherTest {
     env.shutdown();
   }
 
-  @Test
-  @SuppressWarnings("unchecked")
-  void respectsPollInterval() {
-    ConfigurationProvider provider = mock(ConfigurationProvider.class);
-    ClusterConfig clusterConfig = new ClusterConfig();
-    when(provider.config()).thenReturn(clusterConfig);
-    GlobalConfig config = mock(GlobalConfig.class);
-    clusterConfig.setGlobalConfig(config);
-    when(config.portInfos()).thenReturn(Arrays.asList(
-      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "foo", Collections.emptyMap()),
-      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "bar", Collections.emptyMap())
-    ));
-
-    final AtomicInteger invocationCounter = new AtomicInteger(0);
-
-    doAnswer(invocation -> {
-      invocationCounter.incrementAndGet();
-      CarrierGlobalConfigRequest request = invocation.getArgument(0);
-
-     CarrierGlobalConfigResponse response = mock(CarrierGlobalConfigResponse.class);
-     when(response.status()).thenReturn(ResponseStatus.SUCCESS);
-     when(response.content()).thenReturn(Bytes.EMPTY_BYTE_ARRAY);
-
-     request.succeed(response);
-     return null;
-    }).when(core).send(isA(Request.class));
-
-    GlobalRefresher refresher = new GlobalRefresher(provider, core) {
-      @Override
-      protected Duration pollerInterval() {
-        return Duration.ofMillis(10);
-      }
-    };
-
-    refresher.start().block();
-
-    NanoTimestamp start = NanoTimestamp.now();
-    waitUntilCondition(() -> invocationCounter.get() >= 3);
-
-    // Note that it's 600 (*2) and not 900 (*3) for 3 attempts, since the first one does not count
-    // towards the "last poll" time. The barrier really only starts working after the first
-    // successful result, making sure that failed attempts to not count towards the poll time.
-    assertTrue(start.elapsed().toMillis() >= FAST_CONFIG_POLL_INTERVAL.toMillis() * 2);
-
-    refresher.shutdown().block();
-  }
 
   @Test
   @SuppressWarnings("unchecked")
@@ -127,20 +79,23 @@ class GlobalRefresherTest {
     ConfigurationProvider provider = mock(ConfigurationProvider.class);
     ClusterConfig clusterConfig = new ClusterConfig();
     when(provider.config()).thenReturn(clusterConfig);
-    GlobalConfig config = mock(GlobalConfig.class);
-    clusterConfig.setGlobalConfig(config);
-    when(config.portInfos()).thenReturn(Arrays.asList(
-      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "foo", Collections.emptyMap()),
-      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "bar", Collections.emptyMap())
+    BucketConfig config = mock(BucketConfig.class);
+    when(config.name()).thenReturn("bucket");
+    clusterConfig.setBucketConfig(config);
+    when(config.nodes()).thenReturn(Arrays.asList(
+      new NodeInfo("foo", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091),
+        Collections.emptyMap(), Collections.emptyMap()),
+      new NodeInfo("bar", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091),
+        Collections.emptyMap(), Collections.emptyMap())
     ));
 
     final AtomicInteger invocationCounter = new AtomicInteger(0);
 
     doAnswer(invocation -> {
       invocationCounter.incrementAndGet();
-      CarrierGlobalConfigRequest request = invocation.getArgument(0);
+      CarrierBucketConfigRequest request = invocation.getArgument(0);
 
-      CarrierGlobalConfigResponse response = mock(CarrierGlobalConfigResponse.class);
+      CarrierBucketConfigResponse response = mock(CarrierBucketConfigResponse.class);
       when(response.content()).thenReturn(Bytes.EMPTY_BYTE_ARRAY);
       when(response.status()).thenReturn(ResponseStatus.NOT_FOUND);
       request.fail(new RuntimeException("Request Failed"));
@@ -148,14 +103,14 @@ class GlobalRefresherTest {
       return null;
     }).when(core).send(isA(Request.class));
 
-    GlobalRefresher refresher = new GlobalRefresher(provider, core) {
+    KeyValueBucketRefresher refresher = new KeyValueBucketRefresher(provider, core) {
       @Override
       protected Duration pollerInterval() {
         return Duration.ofMillis(10);
       }
     };
 
-    refresher.start().block();
+    refresher.register("bucket").block();
 
     verify(provider, timeout(1000).atLeast(1))
       .signalConfigRefreshFailed(any(ConfigRefreshFailure.class));

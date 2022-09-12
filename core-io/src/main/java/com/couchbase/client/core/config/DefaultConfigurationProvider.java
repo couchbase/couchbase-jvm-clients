@@ -17,6 +17,7 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.config.BucketConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.BucketOpenRetriedEvent;
@@ -25,6 +26,8 @@ import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshIgnoredEv
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshSucceededEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.ConfigPushFailedEvent;
+import com.couchbase.client.core.cnc.events.config.DnsSrvRefreshAttemptCompletedEvent;
+import com.couchbase.client.core.cnc.events.config.DnsSrvRefreshAttemptFailedEvent;
 import com.couchbase.client.core.cnc.events.config.GlobalConfigRetriedEvent;
 import com.couchbase.client.core.cnc.events.config.GlobalConfigUpdatedEvent;
 import com.couchbase.client.core.cnc.events.config.IndividualGlobalConfigLoadFailedEvent;
@@ -37,6 +40,7 @@ import com.couchbase.client.core.config.refresher.ClusterManagerBucketRefresher;
 import com.couchbase.client.core.config.refresher.GlobalRefresher;
 import com.couchbase.client.core.config.refresher.KeyValueBucketRefresher;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
@@ -46,6 +50,7 @@ import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.SeedNodeOutdatedException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
@@ -56,14 +61,17 @@ import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 
+import javax.naming.NamingException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +87,7 @@ import java.util.stream.Stream;
 
 import static com.couchbase.client.core.Reactor.emitFailureHandler;
 import static com.couchbase.client.core.util.CbCollections.copyToUnmodifiableSet;
+import static com.couchbase.client.core.util.ConnectionStringUtil.fromDnsSrvOrThrowIfTlsRequired;
 import static java.util.Collections.unmodifiableSet;
 
 /**
@@ -90,6 +99,11 @@ import static java.util.Collections.unmodifiableSet;
  * @since 1.0.0
  */
 public class DefaultConfigurationProvider implements ConfigurationProvider {
+
+  /**
+   * Don't perform DNS SRV lookups more quickly than every 10 seconds.
+   */
+  private static final Duration MIN_TIME_BETWEEN_DNS_LOOKUPS = Duration.ofSeconds(10);
 
   /**
    * The default port used for kv bootstrap if not otherwise set on the env.
@@ -150,14 +164,23 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private final Sinks.Many<Set<SeedNode>> seedNodesSink = Sinks.many().replay().latest();
   private final Flux<Set<SeedNode>> seedNodes = seedNodesSink.asFlux();
 
+  private final ConnectionString connectionString;
+
+  private volatile NanoTimestamp lastDnsSrvLookup = NanoTimestamp.never();
+
+  public DefaultConfigurationProvider(final Core core, final Set<SeedNode> seedNodes) {
+    this(core, seedNodes, null);
+  }
+
   /**
    * Creates a new configuration provider.
    *
    * @param core the core against which all ops are executed.
    */
-  public DefaultConfigurationProvider(final Core core, final Set<SeedNode> seedNodes) {
+  public DefaultConfigurationProvider(final Core core, final Set<SeedNode> seedNodes, final String connectionString) {
     this.core = core;
     eventBus = core.context().environment().eventBus();
+    this.connectionString = connectionString != null ? ConnectionString.create(connectionString) : null;
 
     // Don't publish the initial seed nodes, since they probably came from the user
     // and might not be KV nodes, or might have incomplete port information.
@@ -200,60 +223,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
       if (!shutdown.get()) {
         bucketConfigLoadInProgress.incrementAndGet();
         boolean tls = core.context().environment().securityConfig().tlsEnabled();
-        int kvPort = tls ? DEFAULT_KV_TLS_PORT : DEFAULT_KV_PORT;
-        int managerPort = tls ? DEFAULT_MANAGER_TLS_PORT : DEFAULT_MANAGER_PORT;
-        final Optional<String> alternate = core.context().alternateAddress();
 
-        return Flux
-          .range(1, Math.min(MAX_PARALLEL_LOADERS, currentSeedNodes().size()))
-          .flatMap(index -> Flux
-            .fromIterable(currentSeedNodes())
-            .take(Math.min(index, currentSeedNodes().size()))
-            .last()
-            .flatMap(seed -> {
-              NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
-
-              final AtomicReference<Map<ServiceType, Integer>> alternatePorts = new AtomicReference<>();
-              final Optional<String> alternateAddress = alternate.map(a -> mapAlternateAddress(a, seed, tls, alternatePorts));
-
-              final int mappedKvPort;
-              final int mappedManagerPort;
-
-              if (alternateAddress.isPresent()) {
-                Map<ServiceType, Integer> ports = alternatePorts.get();
-                mappedKvPort = ports.get(ServiceType.KV);
-                mappedManagerPort = ports.get(ServiceType.MANAGER);
-              } else {
-                mappedKvPort = seed.kvPort().orElse(kvPort);
-                mappedManagerPort = seed.clusterManagerPort().orElse(managerPort);
-              }
-
-              return loadBucketConfigForSeed(identifier, mappedKvPort, mappedManagerPort, name, alternateAddress);
-            })
-            .retryWhen(
-              Retry.from(companion -> companion.flatMap(rs -> {
-                final Throwable f = rs.failure();
-                if (shutdown.get()) {
-                  return Mono.error(new AlreadyShutdownException());
-                }
-                if (f instanceof UnsupportedConfigMechanismException) {
-                  return Mono.error(Exceptions.propagate(f));
-                }
-
-                boolean bucketNotFound = f instanceof BucketNotFoundDuringLoadException;
-                boolean bucketNotReady = f instanceof BucketNotReadyDuringLoadException;
-
-                // For bucket not found or not ready wait a bit longer, retry the rest quickly
-                Duration delay = bucketNotFound || bucketNotReady
-                  ? Duration.ofMillis(500)
-                  : Duration.ofMillis(1);
-                eventBus.publish(new BucketOpenRetriedEvent(name, delay, core.context(), f));
-                return Mono
-                  .just(rs.totalRetries())
-                  .delayElement(delay, core.context().environment().scheduler());
-              })))
-          )
-          .take(1)
+        return fetchBucketConfigs(name, currentSeedNodes.get(), tls)
           .switchIfEmpty(Mono.error(
             new ConfigException("Could not locate a single bucket configuration for bucket: " + name)
           ))
@@ -358,58 +329,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
       if (!shutdown.get()) {
         globalConfigLoadInProgress = true;
         boolean tls = core.context().environment().securityConfig().tlsEnabled();
-        int kvPort = tls ? DEFAULT_KV_TLS_PORT : DEFAULT_KV_PORT;
 
-        final AtomicBoolean hasErrored = new AtomicBoolean();
-        return Flux
-          .range(1, Math.min(MAX_PARALLEL_LOADERS, currentSeedNodes().size()))
-          .flatMap(index -> Flux
-              .fromIterable(currentSeedNodes())
-              .take(Math.min(index, currentSeedNodes().size()))
-              .last()
-              .flatMap(seed -> {
-                NanoTimestamp start = NanoTimestamp.now();
-
-                if (!currentSeedNodes().contains(seed)) {
-                  // Since updating the seed nodes can race loading the global config, double check that the
-                  // node we are about to load is still part of the list.
-                  return Mono.empty();
-                }
-
-                NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
-                return globalLoader
-                  .load(identifier, seed.kvPort().orElse(kvPort))
-                  .doOnError(throwable -> core.context().environment().eventBus().publish(new IndividualGlobalConfigLoadFailedEvent(
-                    start.elapsed(),
-                    core.context(),
-                    throwable,
-                    seed.address()
-                  )));
-              })
-              .retryWhen(Retry.from(companion -> companion.flatMap(rs -> {
-                Throwable f = rs.failure();
-
-                if (shutdown.get()) {
-                  return Mono.error(new AlreadyShutdownException());
-                }
-                if (f instanceof UnsupportedConfigMechanismException) {
-                  return Mono.error(Exceptions.propagate(f));
-                }
-
-                Duration delay = Duration.ofMillis(1);
-                eventBus.publish(new GlobalConfigRetriedEvent(delay, core.context(), f));
-                return Mono
-                  .just(rs.totalRetries())
-                  .delayElement(delay, core.context().environment().scheduler());
-              })))
-              .onErrorResume(throwable -> {
-                if (hasErrored.compareAndSet(false, true)) {
-                  return Mono.error(throwable);
-                }
-                return Mono.empty();
-              }))
-          .take(1)
-          .switchIfEmpty(Mono.error(
+        return fetchGlobalConfigs(currentSeedNodes.get(), tls, false, true).switchIfEmpty(Mono.error(
             new ConfigException("Could not locate a single global configuration")
           ))
           .map(ctx -> {
@@ -433,7 +354,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           core.context().environment(),
           ctx.origin()
         );
-        checkAndApplyConfig(config);
+        checkAndApplyConfig(config, ctx.forcesOverride());
       } catch (Exception ex) {
         eventBus.publish(new ConfigIgnoredEvent(
           core.context(),
@@ -459,7 +380,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     if (!shutdown.get()) {
       try {
         GlobalConfig config = GlobalConfigParser.parse(ctx.config(), ctx.origin());
-        checkAndApplyConfig(config);
+        checkAndApplyConfig(config, ctx.forcesOverride());
       } catch (Exception ex) {
         eventBus.publish(new ConfigIgnoredEvent(
           core.context(),
@@ -631,11 +552,11 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    *
    * @param newConfig the config to apply.
    */
-  private void checkAndApplyConfig(final BucketConfig newConfig) {
+  private void checkAndApplyConfig(final BucketConfig newConfig, final boolean force) {
     final String name = newConfig.name();
     final BucketConfig oldConfig = currentConfig.bucketConfig(name);
 
-    if (oldConfig != null && configIsOlderOrSame(oldConfig.revEpoch(), newConfig.revEpoch(), oldConfig.rev(), newConfig.rev())) {
+    if (!force && oldConfig != null && configIsOlderOrSame(oldConfig.revEpoch(), newConfig.revEpoch(), oldConfig.rev(), newConfig.rev())) {
       eventBus.publish(new ConfigIgnoredEvent(
         core.context(),
         ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
@@ -666,10 +587,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    *
    * @param newConfig the config to apply.
    */
-  private void checkAndApplyConfig(final GlobalConfig newConfig) {
+  private void checkAndApplyConfig(final GlobalConfig newConfig, final boolean force) {
     final GlobalConfig oldConfig = currentConfig.globalConfig();
 
-    if (oldConfig != null && configIsOlderOrSame(oldConfig.revEpoch(), newConfig.revEpoch(), oldConfig.rev(), newConfig.rev())) {
+    if (!force && oldConfig != null && configIsOlderOrSame(oldConfig.revEpoch(), newConfig.revEpoch(), oldConfig.rev(), newConfig.rev())) {
       eventBus.publish(new ConfigIgnoredEvent(
         core.context(),
         ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
@@ -812,8 +733,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   /**
    * Helper method to figure out which network resolution should be used.
-   *
-   * if DEFAULT is selected, then null is returned which is equal to the "internal" or default
+   * <p>
+   * If DEFAULT is selected, then null is returned which is equal to the "internal" or default
    * config mode. If AUTO is used then we perform the select heuristic based off of the seed
    * hosts given. All other resolution settings (i.e. EXTERNAL) are returned directly and are
    * considered to be part of the alternate address configs.
@@ -902,6 +823,192 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   @Override
   public boolean bucketConfigLoadInProgress() {
     return bucketConfigLoadInProgress.get() > 0;
+  }
+
+  @Override
+  public void signalConfigRefreshFailed(final ConfigRefreshFailure failure) {
+    if (failure == ConfigRefreshFailure.ALL_NODES_TRIED_ONCE_WITHOUT_SUCCESS) {
+      handlePotentialDnsSrvRefresh();
+    }
+  }
+
+  /**
+   * Performs DNS SRV refresh.
+   * <p>
+   * The config provider got a signal that config refresh failed on all nodes, so it will now try to proactively
+   * perform DNS SRV refresh (if possible) to recover a sane state.
+   */
+  private synchronized void handlePotentialDnsSrvRefresh() {
+    final CoreContext ctx = core.context();
+    final CoreEnvironment env = ctx.environment();
+    boolean isValidDnsSrv = connectionString != null
+      && connectionString.isValidDnsSrv()
+      && env.ioConfig().dnsSrvEnabled();
+    boolean tlsEnabled = env.securityConfig().tlsEnabled();
+    boolean enoughTimeElapsed = lastDnsSrvLookup.hasElapsed(MIN_TIME_BETWEEN_DNS_LOOKUPS);
+    boolean refreshAllowed = isValidDnsSrv && enoughTimeElapsed;
+
+    if (refreshAllowed) {
+      lastDnsSrvLookup = NanoTimestamp.now();
+      NanoTimestamp started = NanoTimestamp.now();
+
+      // DNS SRV lookups are blocking, so move it to its own thread for execution.
+      Schedulers.boundedElastic().schedule(() -> {
+        try {
+          List<String> foundNodes = performDnsSrvLookup(tlsEnabled);
+
+          if (foundNodes.isEmpty()) {
+            env.eventBus().publish(new DnsSrvRefreshAttemptFailedEvent(started.elapsed(),
+              ctx, DnsSrvRefreshAttemptFailedEvent.Reason.NO_NEW_SEEDS_RETURNED, null));
+            return;
+          }
+
+          Set<SeedNode> seedNodes = foundNodes.stream().map(SeedNode::create).collect(Collectors.toSet());
+
+          ProposedGlobalConfigContext foundGlobalConfig = fetchGlobalConfigs(seedNodes, tlsEnabled,
+            true, false).block();
+          if (foundGlobalConfig != null) {
+            proposeGlobalConfig(foundGlobalConfig.forceOverride());
+          }
+          for (String name : keyValueRefresher.registered()) {
+            ProposedBucketConfigContext bucketConfig = fetchBucketConfigs(name, seedNodes, tlsEnabled).block();
+            if (bucketConfig != null) {
+              proposeBucketConfig(bucketConfig.forceOverride());
+            }
+          }
+
+          env.eventBus().publish(new DnsSrvRefreshAttemptCompletedEvent(started.elapsed(), ctx, foundNodes));
+        } catch (Exception e) {
+          env.eventBus().publish(new DnsSrvRefreshAttemptFailedEvent(started.elapsed(),
+            ctx, DnsSrvRefreshAttemptFailedEvent.Reason.OTHER, e));
+        }
+      });
+    }
+  }
+
+  /**
+   * Performs DNS SRV lookups - and can be overridden by test classes.
+   *
+   * @return the (potentially empty) DNS SRV records after the lookup.
+   */
+  protected List<String> performDnsSrvLookup(boolean tlsEnabled) throws NamingException {
+    return fromDnsSrvOrThrowIfTlsRequired(connectionString.hosts().get(0).hostname(), tlsEnabled);
+  }
+
+  private Mono<ProposedBucketConfigContext> fetchBucketConfigs(final String name, final Set<SeedNode> seedNodes,
+                                                              final boolean tls) {
+    int kvPort = tls ? DEFAULT_KV_TLS_PORT : DEFAULT_KV_PORT;
+    int managerPort = tls ? DEFAULT_MANAGER_TLS_PORT : DEFAULT_MANAGER_PORT;
+    final Optional<String> alternate = core.context().alternateAddress();
+
+    return Flux
+      .range(1, Math.min(MAX_PARALLEL_LOADERS, seedNodes.size()))
+      .flatMap(index -> Flux
+        .fromIterable(seedNodes)
+        .take(Math.min(index, seedNodes.size()))
+        .last()
+        .flatMap(seed -> {
+          NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
+
+          final AtomicReference<Map<ServiceType, Integer>> alternatePorts = new AtomicReference<>();
+          final Optional<String> alternateAddress = alternate.map(a -> mapAlternateAddress(a, seed, tls, alternatePorts));
+
+          final int mappedKvPort;
+          final int mappedManagerPort;
+
+          if (alternateAddress.isPresent()) {
+            Map<ServiceType, Integer> ports = alternatePorts.get();
+            mappedKvPort = ports.get(ServiceType.KV);
+            mappedManagerPort = ports.get(ServiceType.MANAGER);
+          } else {
+            mappedKvPort = seed.kvPort().orElse(kvPort);
+            mappedManagerPort = seed.clusterManagerPort().orElse(managerPort);
+          }
+
+          return loadBucketConfigForSeed(identifier, mappedKvPort, mappedManagerPort, name, alternateAddress);
+        })
+        .retryWhen(
+          Retry.from(companion -> companion.flatMap(rs -> {
+            final Throwable f = rs.failure();
+            if (shutdown.get()) {
+              return Mono.error(new AlreadyShutdownException());
+            }
+            if (f instanceof UnsupportedConfigMechanismException) {
+              return Mono.error(Exceptions.propagate(f));
+            }
+
+            boolean bucketNotFound = f instanceof BucketNotFoundDuringLoadException;
+            boolean bucketNotReady = f instanceof BucketNotReadyDuringLoadException;
+
+            // For bucket not found or not ready wait a bit longer, retry the rest quickly
+            Duration delay = bucketNotFound || bucketNotReady
+              ? Duration.ofMillis(500)
+              : Duration.ofMillis(1);
+            eventBus.publish(new BucketOpenRetriedEvent(name, delay, core.context(), f));
+            return Mono
+              .just(rs.totalRetries())
+              .delayElement(delay, core.context().environment().scheduler());
+          })))
+      )
+      .next();
+  }
+
+  private Mono<ProposedGlobalConfigContext> fetchGlobalConfigs(final Set<SeedNode> seedNodes, final boolean tls,
+                                                               boolean allowStaleSeeds, boolean retryTimeouts) {
+    final AtomicBoolean hasErrored = new AtomicBoolean();
+    int kvPort = tls ? DEFAULT_KV_TLS_PORT : DEFAULT_KV_PORT;
+
+    return Flux
+      .range(1, Math.min(MAX_PARALLEL_LOADERS, seedNodes.size()))
+      .flatMap(index -> Flux
+        .fromIterable(seedNodes)
+        .take(Math.min(index, seedNodes.size()))
+        .last()
+        .flatMap(seed -> {
+          NanoTimestamp start = NanoTimestamp.now();
+
+          if (!allowStaleSeeds && !currentSeedNodes().contains(seed)) {
+            // Since updating the seed nodes can race loading the global config, double check that the
+            // node we are about to load is still part of the list.
+            return Mono.empty();
+          }
+
+          NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
+          return globalLoader
+            .load(identifier, seed.kvPort().orElse(kvPort))
+            .doOnError(throwable -> core.context().environment().eventBus().publish(new IndividualGlobalConfigLoadFailedEvent(
+              start.elapsed(),
+              core.context(),
+              throwable,
+              seed.address()
+            )));
+        })
+        .retryWhen(Retry.from(companion -> companion.flatMap(rs -> {
+          Throwable f = rs.failure();
+
+          if (shutdown.get()) {
+            return Mono.error(new AlreadyShutdownException());
+          }
+          if (f instanceof UnsupportedConfigMechanismException) {
+            return Mono.error(Exceptions.propagate(f));
+          }
+          if (!retryTimeouts && f.getCause() instanceof TimeoutException) {
+            return Mono.error(f.getCause());
+          }
+
+          Duration delay = Duration.ofMillis(1);
+          eventBus.publish(new GlobalConfigRetriedEvent(delay, core.context(), f));
+          return Mono
+            .just(rs.totalRetries())
+            .delayElement(delay, core.context().environment().scheduler());
+        })))
+        .onErrorResume(throwable -> {
+          if (hasErrored.compareAndSet(false, true)) {
+            return Mono.error(throwable);
+          }
+          return Mono.empty();
+        }))
+      .next();
   }
 
   /**

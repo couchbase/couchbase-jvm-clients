@@ -23,6 +23,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.config.BucketConfigRefreshFailedEvent;
 import com.couchbase.client.core.config.BucketConfig;
+import com.couchbase.client.core.config.ConfigRefreshFailure;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
@@ -37,12 +38,15 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -102,6 +106,11 @@ public class KeyValueBucketRefresher implements BucketRefresher {
    * updated.
    */
   private final Map<String, NanoTimestamp> registrations = new ConcurrentHashMap<>();
+
+  /**
+   * Holds the number of failed refreshes per bucket.
+   */
+  private final Map<String, AtomicInteger> numFailedRefreshes = new ConcurrentHashMap<>();
 
   /**
    * Holds all tainted bucket configs (those undergoing rebalance at the moment).
@@ -193,11 +202,18 @@ public class KeyValueBucketRefresher implements BucketRefresher {
     boolean overInterval = last != null && last.hasElapsed(configPollInterval);
     boolean allowed = tainted.contains(name) || overInterval;
 
-    return allowed
-      ? fetchConfigPerNode(name, filterEligibleNodes(name))
+    if (allowed) {
+      List<NodeInfo> nodes = filterEligibleNodes(name);
+      if (numFailedRefreshes.get(name).get() >= nodes.size()) {
+        provider.signalConfigRefreshFailed(ConfigRefreshFailure.ALL_NODES_TRIED_ONCE_WITHOUT_SUCCESS);
+        numFailedRefreshes.get(name).set(0);
+      }
+      return fetchConfigPerNode(name, Flux.fromIterable(nodes).take(MAX_PARALLEL_FETCH))
         .next()
-        .doOnSuccess(ctx -> registrations.replace(name, NanoTimestamp.now()))
-      : Mono.empty();
+        .doOnSuccess(ctx -> registrations.replace(name, NanoTimestamp.now()));
+    } else {
+      return Mono.empty();
+    }
   }
 
   /**
@@ -209,28 +225,25 @@ public class KeyValueBucketRefresher implements BucketRefresher {
    * @param name the bucket name.
    * @return a flux of nodes that have the KV service enabled.
    */
-  private Flux<NodeInfo> filterEligibleNodes(final String name) {
-    return Flux.defer(() -> {
-      BucketConfig config = provider.config().bucketConfig(name);
-      if (config == null) {
-        eventBus.publish(new BucketConfigRefreshFailedEvent(
-          core.context(),
-          BucketConfigRefreshFailedEvent.RefresherType.KV,
-          BucketConfigRefreshFailedEvent.Reason.NO_BUCKET_FOUND,
-          Optional.empty()
-        ));
-        return Flux.empty();
-      }
+  private List<NodeInfo> filterEligibleNodes(final String name) {
+    BucketConfig config = provider.config().bucketConfig(name);
+    if (config == null) {
+      eventBus.publish(new BucketConfigRefreshFailedEvent(
+        core.context(),
+        BucketConfigRefreshFailedEvent.RefresherType.KV,
+        BucketConfigRefreshFailedEvent.Reason.NO_BUCKET_FOUND,
+        Optional.empty()
+      ));
+      return Collections.emptyList();
+    }
 
-      List<NodeInfo> nodes = new ArrayList<>(config.nodes());
-      shiftNodeList(nodes);
+    List<NodeInfo> nodes = new ArrayList<>(config.nodes());
+    shiftNodeList(nodes);
 
-      return Flux
-        .fromIterable(nodes)
-        .filter(n -> n.services().containsKey(ServiceType.KV)
-          || n.sslServices().containsKey(ServiceType.KV))
-        .take(MAX_PARALLEL_FETCH);
-    });
+    return nodes
+      .stream()
+      .filter(n -> n.services().containsKey(ServiceType.KV) || n.sslServices().containsKey(ServiceType.KV))
+      .collect(Collectors.toList());
   }
 
   /**
@@ -263,6 +276,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
         .wrap(request, request.response(), true)
         .filter(response -> {
           if (!response.status().success()) {
+            numFailedRefreshes.get(name).incrementAndGet();
             eventBus.publish(new BucketConfigRefreshFailedEvent(
               core.context(),
               BucketConfigRefreshFailedEvent.RefresherType.KV,
@@ -274,7 +288,10 @@ public class KeyValueBucketRefresher implements BucketRefresher {
         })
         .map(response ->
           new ProposedBucketConfigContext(name, new String(response.content(), UTF_8), nodeInfo.hostname())
-        ).onErrorResume(t -> {
+        )
+        .doOnSuccess(r -> numFailedRefreshes.get(name).set(0))
+        .onErrorResume(t -> {
+          numFailedRefreshes.get(name).incrementAndGet();
           eventBus.publish(new BucketConfigRefreshFailedEvent(
             core.context(),
             BucketConfigRefreshFailedEvent.RefresherType.KV,
@@ -293,16 +310,14 @@ public class KeyValueBucketRefresher implements BucketRefresher {
    */
   private <T> void shiftNodeList(final List<T> nodeList) {
     int shiftBy = (int) (nodeOffset.getAndIncrement() % nodeList.size());
-    for(int i = 0; i < shiftBy; i++) {
-      T element = nodeList.remove(0);
-      nodeList.add(element);
-    }
+    Collections.rotate(nodeList, -shiftBy);
   }
 
   @Override
   public Mono<Void> register(final String name) {
     return Mono.defer(() -> {
       registrations.put(name, NanoTimestamp.never());
+      numFailedRefreshes.put(name, new AtomicInteger(0));
       return Mono.empty();
     });
   }
@@ -311,6 +326,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
   public Mono<Void> deregister(final String name) {
     return Mono.defer(() -> {
       registrations.remove(name);
+      numFailedRefreshes.remove(name);
       return Mono.empty();
     });
   }
@@ -331,8 +347,15 @@ public class KeyValueBucketRefresher implements BucketRefresher {
       if (!pollRegistration.isDisposed()) {
         pollRegistration.dispose();
       }
+      numFailedRefreshes.clear();
+      registrations.clear();
+      tainted.clear();
       return Mono.empty();
     });
   }
 
+  @Override
+  public Set<String> registered() {
+    return registrations.keySet();
+  }
 }

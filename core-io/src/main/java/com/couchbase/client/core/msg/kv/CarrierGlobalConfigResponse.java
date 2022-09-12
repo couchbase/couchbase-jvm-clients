@@ -19,6 +19,7 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
@@ -38,8 +39,8 @@ public class CarrierGlobalConfigResponse extends BaseResponse {
   @Override
   public String toString() {
     return "CarrierGlobalConfigResponse{" +
-      "status=" + status() +
-      ", content=" + new String(content, UTF_8) +
+      "status=" + redactMeta(status()) +
+      ", content=" + redactMeta(new String(content, UTF_8)) +
       '}';
   }
 }

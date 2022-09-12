@@ -18,6 +18,8 @@ package com.couchbase.client.core.config.refresher;
 
 import reactor.core.publisher.Mono;
 
+import java.util.Set;
+
 /**
  * The {@link BucketRefresher} is responsible to keep the configurations up to date after the initial
  * bootstrap/load.
@@ -41,6 +43,13 @@ public interface BucketRefresher {
    * @return a {@link Mono} once complete.
    */
   Mono<Void> deregister(String name);
+
+  /**
+   * Returns the names of all registered buckets.
+   *
+   * @return all registered buckets.
+   */
+  Set<String> registered();
 
   /**
    * Marks the bucket as tainted, which will change the behavior of the refresher.

@@ -318,9 +318,9 @@ class AsyncCollection(
             })
 
           out onComplete {
-            case Success(_) => request.context.logicallyComplete()
+            case Success(_)                              => request.context.logicallyComplete()
             case Failure(err: DocumentNotFoundException) => request.context.logicallyComplete()
-            case Failure(err) => request.context.logicallyComplete(err)
+            case Failure(err)                            => request.context.logicallyComplete(err)
           }
 
           out
@@ -385,9 +385,9 @@ class AsyncCollection(
           })
 
         out onComplete {
-          case Success(_) => request.context.logicallyComplete()
+          case Success(_)                              => request.context.logicallyComplete()
           case Failure(err: DocumentNotFoundException) => request.context.logicallyComplete()
-          case Failure(err) => request.context.logicallyComplete(err)
+          case Failure(err)                            => request.context.logicallyComplete(err)
         }
 
         out
@@ -697,9 +697,9 @@ class AsyncCollection(
             })
 
           out onComplete {
-            case Success(_) => request.context.logicallyComplete()
+            case Success(_)                              => request.context.logicallyComplete()
             case Failure(err: DocumentNotFoundException) => request.context.logicallyComplete()
-            case Failure(err) => request.context.logicallyComplete(err)
+            case Failure(err)                            => request.context.logicallyComplete(err)
           }
           out
         })
@@ -812,9 +812,9 @@ object AsyncCollection {
           })
 
         out onComplete {
-          case Success(_)   => request.context.logicallyComplete()
+          case Success(_)                              => request.context.logicallyComplete()
           case Failure(err: DocumentNotFoundException) => request.context.logicallyComplete()
-          case Failure(err) => request.context.logicallyComplete(err)
+          case Failure(err)                            => request.context.logicallyComplete(err)
         }
 
         out

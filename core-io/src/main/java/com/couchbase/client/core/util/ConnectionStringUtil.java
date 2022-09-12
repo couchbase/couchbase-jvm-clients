@@ -249,7 +249,8 @@ public class ConnectionStringUtil {
     }
   }
 
-  private static List<String> fromDnsSrvOrThrowIfTlsRequired(final String serviceName, boolean secure) throws NamingException {
+  @Stability.Internal
+  public static List<String> fromDnsSrvOrThrowIfTlsRequired(final String serviceName, boolean secure) throws NamingException {
     final boolean full = false;
 
     // If the user enabled TLS, just return records for the secure protocol.

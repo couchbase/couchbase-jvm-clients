@@ -40,9 +40,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvFileSource;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
@@ -130,8 +128,8 @@ class DefaultConfigurationProviderTest {
 
     assertEquals(3, getSeedNodesFromConfig(provider).size());
     for (SeedNode node : getSeedNodesFromConfig(provider)) {
-      assertEquals(11210, node.kvPort().get());
-      assertEquals(8091, node.clusterManagerPort().get());
+      assertEquals(11210, node.kvPort().orElse(null));
+      assertEquals(8091, node.clusterManagerPort().orElse(null));
     }
 
     assertEquals(Optional.empty(), ctx.alternateAddress());
@@ -258,8 +256,8 @@ class DefaultConfigurationProviderTest {
 
     assertEquals(2, getSeedNodesFromConfig(provider).size());
     for (SeedNode sn : getSeedNodesFromConfig(provider)) {
-      assertEquals(11210, sn.kvPort().get());
-      assertEquals(8091, sn.clusterManagerPort().get());
+      assertEquals(11210, sn.kvPort().orElse(null));
+      assertEquals(8091, sn.clusterManagerPort().orElse(null));
       assertTrue(sn.address().equals("10.143.193.101") || sn.address().equals("10.143.193.102"));
     }
   }
@@ -285,7 +283,7 @@ class DefaultConfigurationProviderTest {
     );
     provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, ORIGIN));
 
-    assertEquals("external", ctx.alternateAddress().get());
+    assertEquals("external", ctx.alternateAddress().orElse(null));
     environment.shutdown();
   }
 
@@ -320,8 +318,8 @@ class DefaultConfigurationProviderTest {
   /**
    * Regression test for JVMCBC-880.
    * <p>
-   * Verifies that when multiple bucket open attempts happen in parallel, the bucketConfigLoadInProgress method
-   * is not returning false prematurely (namely when only one is finished but one is still oustanding).
+   * Verifies that when multiple bucket open attempts are happening in parallel, the bucketConfigLoadInProgress method
+   * is not returning false prematurely (namely when only one is finished but one is still outstanding).
    */
   @Test
   void handlesMultipleBucketOpenInProgress() throws Exception {

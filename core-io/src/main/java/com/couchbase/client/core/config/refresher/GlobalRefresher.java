@@ -19,6 +19,8 @@ package com.couchbase.client.core.config.refresher;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.cnc.events.config.IndividualGlobalConfigRefreshFailedEvent;
+import com.couchbase.client.core.config.ConfigRefreshFailure;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.config.PortInfo;
@@ -33,8 +35,11 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.config.refresher.KeyValueBucketRefresher.MAX_PARALLEL_FETCH;
 import static com.couchbase.client.core.config.refresher.KeyValueBucketRefresher.POLLER_INTERVAL;
@@ -43,9 +48,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * The {@link GlobalRefresher} keeps the cluster-level global config up-to-date.
- *
- * <p>It works very similar to the key value refresher on the bucket level, but explicitly has no bucket
- * level scope. It can be started and stopped, since there might be situations where polling is not needed.</p>
+ * <p>
+ * It works very similar to the {@link KeyValueBucketRefresher}, but explicitly has no bucket
+ * level scope. It can be started and stopped, since there might be situations where global config polling is not
+ * needed.
  */
 public class GlobalRefresher {
 
@@ -70,11 +76,6 @@ public class GlobalRefresher {
   private final Duration configRequestTimeout;
 
   /**
-   * Indicates if the refresher is started/stopped.
-   */
-  private volatile boolean started;
-
-  /**
    * The registration which is used to track the interval polls and needs to be disposed
    * on shutdown.
    */
@@ -87,9 +88,19 @@ public class GlobalRefresher {
   private final AtomicLong nodeOffset = new AtomicLong(0);
 
   /**
+   * Indicates if the refresher is started/stopped.
+   */
+  private volatile boolean started = false;
+
+  /**
    * Stores the last poll attempt to calculate if enough time has passed for a new poll.
    */
   private volatile NanoTimestamp lastPoll;
+
+  /**
+   * Holds the number of consecutively failed refreshes to trigger side effects if needed.
+   */
+  private final AtomicInteger numFailedRefreshes = new AtomicInteger(0);
 
   /**
    * Creates a new global refresher.
@@ -100,9 +111,8 @@ public class GlobalRefresher {
   public GlobalRefresher(final ConfigurationProvider provider, final Core core) {
     this.provider = provider;
     this.core = core;
-    this.configPollInterval = core.context().environment().ioConfig().configPollInterval();
-    this.configRequestTimeout = clampConfigRequestTimeout(configPollInterval);
-    this.started = false;
+    configPollInterval = core.context().environment().ioConfig().configPollInterval();
+    configRequestTimeout = clampConfigRequestTimeout(configPollInterval);
 
     pollRegistration = Flux
       .interval(pollerInterval(), core.context().environment().scheduler())
@@ -114,7 +124,14 @@ public class GlobalRefresher {
       // Since the POLLER_INTERVAL is smaller than the config poll interval, make sure
       // we only emit poll events if enough time has elapsed.
       .filter(v -> lastPoll == null || lastPoll.hasElapsed(configPollInterval))
-      .flatMap(ign -> attemptUpdateGlobalConfig(filterEligibleNodes()))
+      .flatMap(ign -> {
+        List<PortInfo> nodes = filterEligibleNodes();
+        if (numFailedRefreshes.get() >= nodes.size()) {
+          provider.signalConfigRefreshFailed(ConfigRefreshFailure.ALL_NODES_TRIED_ONCE_WITHOUT_SUCCESS);
+          numFailedRefreshes.set(0);
+        }
+        return attemptUpdateGlobalConfig(Flux.fromIterable(nodes).take(MAX_PARALLEL_FETCH));
+      })
       .subscribe(provider::proposeGlobalConfig);
   }
 
@@ -127,8 +144,15 @@ public class GlobalRefresher {
     return POLLER_INTERVAL;
   }
 
+  /**
+   * Attempt to update global configurations for each of the provided (and eligible) nodes.
+   *
+   * @param nodes the nodes eligible for global config loading.
+   * @return a {@link Flux} with all the successfully loaded global config contexts.
+   */
   private Flux<ProposedGlobalConfigContext> attemptUpdateGlobalConfig(final Flux<PortInfo> nodes) {
     return nodes.flatMap(nodeInfo -> {
+      NanoTimestamp start = NanoTimestamp.now();
       CoreContext ctx = core.context();
       CarrierGlobalConfigRequest request = new CarrierGlobalConfigRequest(
         configRequestTimeout,
@@ -140,38 +164,54 @@ public class GlobalRefresher {
       return Reactor
         .wrap(request, request.response(), true)
         .filter(response -> {
-          // TODO: debug event that it got ignored.
-          return response.status().success();
+          if (response.status().success()) {
+            return true;
+          }
+          numFailedRefreshes.incrementAndGet();
+          core.context().environment().eventBus().publish(new IndividualGlobalConfigRefreshFailedEvent(
+            start.elapsed(),
+            core.context(),
+            null,
+            nodeInfo.hostname(),
+            response
+          ));
+          return false;
         })
         .map(response ->
           new ProposedGlobalConfigContext(new String(response.content(), UTF_8), nodeInfo.hostname())
         )
         // If we got a good proposed config, make sure to set the lastPoll timestamp.
-        .doOnSuccess(r -> lastPoll = NanoTimestamp.now())
+        .doOnSuccess(r -> {
+          numFailedRefreshes.set(0);
+          lastPoll = NanoTimestamp.now();
+        })
         .onErrorResume(t -> {
-          // TODO: raise a warning that fetching a config individual failed.
+          numFailedRefreshes.incrementAndGet();
+          core.context().environment().eventBus().publish(new IndividualGlobalConfigRefreshFailedEvent(
+            start.elapsed(),
+            core.context(),
+            t,
+            nodeInfo.hostname(),
+            null
+          ));
           return Mono.empty();
         });
     });
   }
 
-  private Flux<PortInfo> filterEligibleNodes() {
-    return Flux.defer(() -> {
-      GlobalConfig config = provider.config().globalConfig();
-      if (config == null) {
-        // todo: log debug that no node found to refresh a config from
-        return Flux.empty();
-      }
+  private List<PortInfo> filterEligibleNodes() {
+    GlobalConfig config = provider.config().globalConfig();
+    if (config == null) {
+      return Collections.emptyList();
+    }
 
-      List<PortInfo> nodes = new ArrayList<>(config.portInfos());
-      shiftNodeList(nodes);
+    List<PortInfo> nodes = new ArrayList<>(config.portInfos());
+    shiftNodeList(nodes);
 
-      return Flux
-        .fromIterable(nodes)
-        .filter(n -> n.ports().containsKey(ServiceType.KV)
-          || n.sslPorts().containsKey(ServiceType.KV))
-        .take(MAX_PARALLEL_FETCH);
-    });
+    return nodes
+      .stream()
+      .filter(n -> n.ports().containsKey(ServiceType.KV) || n.sslPorts().containsKey(ServiceType.KV))
+      .collect(Collectors.toList());
   }
 
   /**
@@ -181,26 +221,44 @@ public class GlobalRefresher {
    */
   private <T> void shiftNodeList(final List<T> nodeList) {
     int shiftBy = (int) (nodeOffset.getAndIncrement() % nodeList.size());
-    for(int i = 0; i < shiftBy; i++) {
-      T element = nodeList.remove(0);
-      nodeList.add(element);
-    }
+    Collections.rotate(nodeList, -shiftBy);
   }
 
+  /**
+   * Starts the {@link GlobalRefresher}.
+   * <p>
+   * Refreshing can be started and stopped multiple times until the non-reversible {@link #shutdown()} is called.
+   *
+   * @return a {@link Mono} completing when started.
+   */
   public Mono<Void> start() {
     return Mono.defer(() -> {
       started = true;
+      numFailedRefreshes.set(0);
       return Mono.empty();
     });
   }
 
+  /**
+   * Stops the {@link GlobalRefresher}.
+   * <p>
+   * Refreshing can be started and stopped multiple times until the non-reversible {@link #shutdown()} is called.
+   *
+   * @return a {@link Mono} completing when stopped.
+   */
   public Mono<Void> stop() {
     return Mono.defer(() -> {
       started = false;
+      numFailedRefreshes.set(0);
       return Mono.empty();
     });
   }
 
+  /**
+   * Permanently shuts down this {@link GlobalRefresher}.
+   *
+   * @return a {@link Mono} completing when shutdown completed.
+   */
   public Mono<Void> shutdown() {
     return stop().then(Mono.defer(() -> {
       if (!pollRegistration.isDisposed()) {

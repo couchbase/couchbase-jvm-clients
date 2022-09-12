@@ -34,6 +34,7 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ClusterManagerBucketRefresher implements BucketRefresher {
@@ -187,5 +188,10 @@ public class ClusterManagerBucketRefresher implements BucketRefresher {
    */
   @Override
   public void markUntainted(String name) { }
+
+  @Override
+  public Set<String> registered() {
+    return registrations.keySet();
+  }
 
 }

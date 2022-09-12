@@ -1,6 +1,7 @@
 package com.couchbase.client.core.config.refresher;
 
 import com.couchbase.client.core.config.ClusterConfig;
+import com.couchbase.client.core.config.ConfigRefreshFailure;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
@@ -125,5 +126,10 @@ public class ProposedBucketConfigInspectingProvider implements ConfigurationProv
   @Override
   public boolean collectionRefreshInProgress(CollectionIdentifier identifier) {
     return delegate.collectionRefreshInProgress(identifier);
+  }
+
+  @Override
+  public void signalConfigRefreshFailed(ConfigRefreshFailure failure) {
+
   }
 }

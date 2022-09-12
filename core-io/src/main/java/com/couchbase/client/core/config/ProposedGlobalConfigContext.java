@@ -32,6 +32,8 @@ public class ProposedGlobalConfigContext {
   private final String config;
   private final String origin;
 
+  private final boolean forcesOverride;
+
   /**
    * Creates a new proposed bucket config context.
    *
@@ -39,9 +41,14 @@ public class ProposedGlobalConfigContext {
    * @param origin the origin of the config, can be null.
    */
   public ProposedGlobalConfigContext(final String config, final String origin) {
+    this(config, origin, false);
+  }
+
+  public ProposedGlobalConfigContext(final String config, final String origin, final  boolean forcesOverride) {
     requireNonNull(config, "the raw config cannot be null!");
     this.config = config.replace("$HOST", origin);
     this.origin = origin;
+    this.forcesOverride = forcesOverride;
   }
 
   public String config() {
@@ -57,18 +64,26 @@ public class ProposedGlobalConfigContext {
     return origin;
   }
 
+  public boolean forcesOverride() {
+    return forcesOverride;
+  }
+
+  public ProposedGlobalConfigContext forceOverride() {
+    return new ProposedGlobalConfigContext(config, origin, true);
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     ProposedGlobalConfigContext that = (ProposedGlobalConfigContext) o;
-    return Objects.equals(config, that.config) &&
-      Objects.equals(origin, that.origin);
+    return forcesOverride == that.forcesOverride && Objects.equals(config, that.config)
+      && Objects.equals(origin, that.origin);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(config, origin);
+    return Objects.hash(config, origin, forcesOverride);
   }
 
   @Override
@@ -76,6 +91,7 @@ public class ProposedGlobalConfigContext {
     return "ProposedGlobalConfigContext{" +
       "config='" + config + '\'' +
       ", origin='" + origin + '\'' +
+      ", forcesOverride='" + forcesOverride + '\'' +
       '}';
   }
 }
