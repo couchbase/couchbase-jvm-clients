@@ -20,6 +20,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kotlin.version>1.6.20</kotlin.version>
         <kotlin.coroutines.version>1.6.0</kotlin.coroutines.version>
+        <kotlin.serialization.version>1.3.3</kotlin.serialization.version>
         <kotlin.code.style>official</kotlin.code.style>
         <dokka.version>1.6.10</dokka.version>
         <moshi.version>1.13.0</moshi.version>
@@ -66,6 +67,14 @@
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jdk8</artifactId>
             <version>${jackson.version}</version>
+        </dependency>
+
+        <!-- Optional, used by KotlinxSerializationJsonSerializer -->
+        <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-serialization-json</artifactId>
+            <version>${kotlin.serialization.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- Optional, used by MoshiJsonSerializer -->
@@ -126,7 +135,18 @@
                              accidentally leak stuff into the public API -->
                         <arg>-Xexplicit-api=strict</arg>
                     </args>
+                    <!-- For KotlinxSerializationJsonSerializer tests -->
+                    <compilerPlugins>
+                        <plugin>kotlinx-serialization</plugin>
+                    </compilerPlugins>
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.jetbrains.kotlin</groupId>
+                        <artifactId>kotlin-maven-serialization</artifactId>
+                        <version>${kotlin.version}</version>
+                    </dependency>
+                </dependencies>
                 <executions>
                     <execution>
                         <id>compile</id>
