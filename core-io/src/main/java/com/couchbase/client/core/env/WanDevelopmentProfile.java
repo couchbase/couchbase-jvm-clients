@@ -36,7 +36,13 @@ public class WanDevelopmentProfile implements ConfigurationProfile {
   public Map<String, String> properties() {
     Map<String, String> properties = new HashMap<>();
     properties.put("timeout.connectTimeout","20s");
-    properties.put("timeout.kvTimeout", "5s");
+    properties.put("timeout.kvTimeout", "20s");
+    properties.put("timeout.kvDurableTimeout", "20s");
+    properties.put("timeout.viewTimeout", "120s");
+    properties.put("timeout.queryTimeout", "120s");
+    properties.put("timeout.analyticsTimeout", "120s");
+    properties.put("timeout.searchTimeout", "120s");
+    properties.put("timeout.managementTimeout", "120s");
     return properties;
   }
 

@@ -154,15 +154,26 @@ class BuilderPropertySetterTest {
   @Test
   void worksWithProfile() {
     CoreEnvironment.Builder<?> builder = newEnvironmentBuilder();
-    assertEquals(builder.build().timeoutConfig().kvTimeout(), Duration.ofMillis(2500));
+    CoreEnvironment preEnv = builder.build();
+    assertEquals(preEnv.timeoutConfig().kvTimeout(), Duration.ofMillis(2500));
+    preEnv.shutdown();
     builder.applyProfile("wan-development");
-    assertEquals(builder.build().timeoutConfig().kvTimeout(), Duration.ofSeconds(5));
+    CoreEnvironment env = builder.build();
+    assertEquals(Duration.ofSeconds(20),env.timeoutConfig().connectTimeout());
+    assertEquals(env.timeoutConfig().kvTimeout(), Duration.ofSeconds(20));
+    assertEquals(env.timeoutConfig().kvDurableTimeout(), Duration.ofSeconds(20));
+    assertEquals(env.timeoutConfig().viewTimeout(), Duration.ofSeconds(120));
+    assertEquals(env.timeoutConfig().queryTimeout(), Duration.ofSeconds(120));
+    assertEquals(env.timeoutConfig().analyticsTimeout(), Duration.ofSeconds(120));
+    assertEquals(env.timeoutConfig().searchTimeout(), Duration.ofSeconds(120));
+    assertEquals(env.timeoutConfig().managementTimeout(), Duration.ofSeconds(120));
     InvalidArgumentException e1 = assertThrows(InvalidArgumentException.class,
         () -> builder.applyProfile("default"));
     assertEquals("Unknown profile: 'default', valid profiles are: [wan-development]", e1.getMessage());
     InvalidArgumentException e2 = assertThrows(InvalidArgumentException.class,
         () -> builder.applyProfile(null));
     assertEquals("ProfileName cannot be null or empty", e2.getMessage());
+    env.shutdown();
   }
 
   @Test
@@ -171,10 +182,12 @@ class BuilderPropertySetterTest {
     builder.applyProfile("wan-development");
     builder.ioConfig(config -> config.numKvConnections(2)).timeoutConfig(config -> config.queryTimeout(Duration.ofSeconds(100)));
     CoreEnvironment env = builder.build();
-    assertEquals(env.timeoutConfig().kvTimeout(), Duration.ofSeconds(5)); // from development profile
+    assertEquals(env.timeoutConfig().connectTimeout(), Duration.ofSeconds(20)); // from development profile
+    assertEquals(env.timeoutConfig().kvTimeout(), Duration.ofSeconds(20)); // from development profile
     assertEquals(env.timeoutConfig().queryTimeout(), Duration.ofSeconds(100)); // set above
     assertEquals(2, env.ioConfig().numKvConnections()); // set above
     assertEquals(12, env.ioConfig().maxHttpConnections()); // from defaults
+    env.shutdown();
   }
 
   @Test
