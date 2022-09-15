@@ -83,7 +83,7 @@ object ClusterEnvironment {
 
     def build: Try[ClusterEnvironment] = error match {
       case Some(err) => Failure(err)
-      case _ => Success(new ClusterEnvironment(this))
+      case _ => Try(new ClusterEnvironment(this))
     }
 
     /** This can only be used by internal Cluster.connect methods, to avoid the confusion of being able to pass a
