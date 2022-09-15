@@ -1083,10 +1083,11 @@ public class CoreEnvironment {
     public CoreEnvironment build() {
       return new CoreEnvironment(this);
     }
+
     /**
      * Applies custom properties based on a profile name.
      * <p>
-     * At the moment only the "development" profile is supported, but its actual values are not determined yet.
+     * At the moment only the "wan-development" profile is supported, but its actual values are not determined yet.
      * Since this is volatile API, the actual profile names and their properties are subject to change.
      * <p>
      * New profiles can be registered by utilizing the ServiceRegistry mechanism. Create a file with the name of

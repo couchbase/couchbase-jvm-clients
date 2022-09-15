@@ -1,5 +1,6 @@
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.env.WanDevelopmentProfile
 import com.couchbase.client.scala.env._
 import org.junit.jupiter.api.Test
 
@@ -100,16 +101,22 @@ class EnvironmentSpec {
     System.setProperty("com.couchbase.env.timeout.kvTimeout", "10s")
     System.setProperty("com.couchbase.env.timeout.queryTimeout", "15s")
 
-    val env = ClusterEnvironment.builder
-      .timeoutConfig(
-        TimeoutConfig()
-          .kvTimeout(5.seconds)
-      )
-      .build
-      .get
+    try {
+      val env = ClusterEnvironment.builder
+        .timeoutConfig(
+          TimeoutConfig()
+            .kvTimeout(5.seconds)
+        )
+        .build
+        .get
 
-    assert(env.timeoutConfig.kvTimeout().getSeconds == 10)
-    assert(env.timeoutConfig.queryTimeout().getSeconds == 15)
+      assert(env.timeoutConfig.kvTimeout().getSeconds == 10)
+      assert(env.timeoutConfig.queryTimeout().getSeconds == 15)
+    }
+    finally {
+      System.clearProperty("com.couchbase.env.timeout.kvTimeout")
+      System.clearProperty("com.couchbase.env.timeout.queryTimeout")
+    }
   }
 
   @Test
@@ -172,6 +179,27 @@ class EnvironmentSpec {
       .get
     assert(env.coreEnv.ioConfig().dnsSrvEnabled())
     env.shutdown()
+  }
+
+  @Test
+  def wanDevelopmentProfile(): Unit = {
+    val env = ClusterEnvironment.builder
+      .applyProfile(ClusterEnvironment.WanDevelopmentProfile)
+      .build
+      .get
+
+    assert(env.timeoutConfig.kvTimeout().toMillis == WanDevelopmentProfile.KV_TIMEOUT.toMillis)
+    assert(env.timeoutConfig.connectTimeout().toMillis == WanDevelopmentProfile.CONNECT_TIMEOUT.toMillis)
+    assert(env.timeoutConfig.viewTimeout().toMillis == WanDevelopmentProfile.SERVICE_TIMEOUT.toMillis)
+  }
+
+  @Test
+  def nonExistentProfile(): Unit = {
+    val env = ClusterEnvironment.builder
+      .applyProfile("does-not-exist")
+      .build
+
+    assert(env.isFailure)
   }
 
 }

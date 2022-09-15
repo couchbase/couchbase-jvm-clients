@@ -18,14 +18,20 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The "wan-development" environment profile.
  */
 @Stability.Volatile
 public class WanDevelopmentProfile implements ConfigurationProfile {
+  public static Duration CONNECT_TIMEOUT = Duration.ofSeconds(20);
+  public static Duration KV_TIMEOUT = Duration.ofSeconds(20);
+  public static Duration SERVICE_TIMEOUT = Duration.ofSeconds(120);
+
 
   @Override
   public String name() {
@@ -35,14 +41,17 @@ public class WanDevelopmentProfile implements ConfigurationProfile {
   @Override
   public Map<String, String> properties() {
     Map<String, String> properties = new HashMap<>();
-    properties.put("timeout.connectTimeout","20s");
-    properties.put("timeout.kvTimeout", "20s");
-    properties.put("timeout.kvDurableTimeout", "20s");
-    properties.put("timeout.viewTimeout", "120s");
-    properties.put("timeout.queryTimeout", "120s");
-    properties.put("timeout.analyticsTimeout", "120s");
-    properties.put("timeout.searchTimeout", "120s");
-    properties.put("timeout.managementTimeout", "120s");
+    String connectTimeout = TimeUnit.MILLISECONDS.toSeconds(CONNECT_TIMEOUT.toMillis()) + "s";
+    String kvTimeout = TimeUnit.MILLISECONDS.toSeconds(KV_TIMEOUT.toMillis()) + "s";
+    String serviceTimeout = TimeUnit.MILLISECONDS.toSeconds(SERVICE_TIMEOUT.toMillis()) + "s";
+    properties.put("timeout.connectTimeout", connectTimeout);
+    properties.put("timeout.kvTimeout", kvTimeout);
+    properties.put("timeout.kvDurableTimeout", kvTimeout);
+    properties.put("timeout.viewTimeout", serviceTimeout);
+    properties.put("timeout.queryTimeout", serviceTimeout);
+    properties.put("timeout.analyticsTimeout", serviceTimeout);
+    properties.put("timeout.searchTimeout", serviceTimeout);
+    properties.put("timeout.managementTimeout", serviceTimeout);
     return properties;
   }
 

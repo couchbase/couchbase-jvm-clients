@@ -30,9 +30,9 @@ import reactor.core.scala.scheduler.ExecutionContextScheduler
 import reactor.core.scheduler.Scheduler
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, DurationInt}
 import scala.language.existentials
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 /** Functions to create a ClusterEnvironment, which provides configuration options for connecting to a Couchbase
   * cluster.
@@ -41,6 +41,8 @@ import scala.util.Try
   * only create one of these.  The same environment can be shared by multiple cluster connections.
   */
 object ClusterEnvironment {
+  val WanDevelopmentProfile = "wan-development"
+
   def builder: ClusterEnvironment.Builder = {
     // owned is false because the assumption is the application is calling this.  Internal code should explicitly
     // set owned=true
@@ -75,10 +77,14 @@ object ClusterEnvironment {
         }
       ]] = Seq(),
       private[scala] val thresholdRequestTracerConfig: Option[ThresholdRequestTracerConfig] = None,
-      private[scala] val loggingMeterConfig: Option[LoggingMeterConfig] = None
+      private[scala] val loggingMeterConfig: Option[LoggingMeterConfig] = None,
+      private[scala] val error: Option[Throwable] = None
   ) {
 
-    def build: Try[ClusterEnvironment] = Try(new ClusterEnvironment(this))
+    def build: Try[ClusterEnvironment] = error match {
+      case Some(err) => Failure(err)
+      case _ => Success(new ClusterEnvironment(this))
+    }
 
     /** This can only be used by internal Cluster.connect methods, to avoid the confusion of being able to pass a
       * connection string to both ClusterEnvironment and Cluster.connect
@@ -241,6 +247,34 @@ object ClusterEnvironment {
       */
     def loggingMeterConfig(config: LoggingMeterConfig): ClusterEnvironment.Builder = {
       copy(loggingMeterConfig = Some(config))
+    }
+
+    /** Applies custom properties based on a profile name.
+      *
+      * At the moment only the "wan-development" profile is supported.
+      *
+      * @return this, for chaining purposes.
+      */
+    @Volatile
+    def applyProfile(profileName: String): ClusterEnvironment.Builder = {
+      if (profileName == WanDevelopmentProfile) {
+        val connectTimeout = com.couchbase.client.core.env.WanDevelopmentProfile.CONNECT_TIMEOUT
+        val kvTimeout = com.couchbase.client.core.env.WanDevelopmentProfile.KV_TIMEOUT
+        val serviceTimeout = com.couchbase.client.core.env.WanDevelopmentProfile.SERVICE_TIMEOUT
+
+        timeoutConfig(TimeoutConfig()
+          .connectTimeout(connectTimeout)
+          .kvTimeout(kvTimeout)
+          .kvDurableTimeout(kvTimeout)
+          .viewTimeout(serviceTimeout)
+          .queryTimeout(serviceTimeout)
+          .analyticsTimeout(serviceTimeout)
+          .searchTimeout(serviceTimeout)
+          .managementTimeout(serviceTimeout))
+      }
+      else {
+        copy(error = Some(new IllegalArgumentException(s"Unknown profile name ${profileName}")))
+      }
     }
   }
 }
