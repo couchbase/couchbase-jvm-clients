@@ -28,10 +28,8 @@
         <assertj.version>3.22.0</assertj.version>
         <log4j-slf4j-impl.version>2.17.2</log4j-slf4j-impl.version>
 
-        <!-- realign back with the normal jackson version once they all align again -->
-        <jackson.version>2.13.3</jackson.version>
-
-        <reactor.version>3.4.22</reactor.version>
+        <jackson.version>2.13.4</jackson.version>
+        <reactor.version>3.4.23</reactor.version>
         <reactive-streams.version>1.0.4</reactive-streams.version>
         <blockhound.version>1.0.6.RELEASE</blockhound.version>
         <log4j.version>1.2.17</log4j.version>
