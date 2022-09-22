@@ -44,15 +44,17 @@ private val serializerCache = ConcurrentHashMap<Type, KSerializer<*>>()
  */
 @ExperimentalSerializationApi
 @VolatileCouchbaseApi
-public class KotlinxSerializationJsonSerializer : JsonSerializer {
+public class KotlinxSerializationJsonSerializer(
+    private val jsonFormat: Json = Json
+) : JsonSerializer {
     override fun <T> serialize(value: T, type: TypeRef<T>): ByteArray {
         // Json.encodeToStream takes 3x longer for some reason?
-        return Json.encodeToString(serializer(type), value).toByteArray()
+        return jsonFormat.encodeToString(serializer(type), value).toByteArray()
     }
 
     override fun <T> deserialize(json: ByteArray, type: TypeRef<T>): T {
-        // Json.encodeToStream takes 3x longer for some reason?
-        return Json.decodeFromString(serializer(type), String(json))
+        // Json.decodeFromStream takes 3x longer for some reason?
+        return jsonFormat.decodeFromString(serializer(type), String(json))
     }
 
     private fun <T> serializer(typeRef: TypeRef<T>): KSerializer<T> {

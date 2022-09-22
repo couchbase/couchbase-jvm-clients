@@ -21,6 +21,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -58,7 +59,7 @@ internal class KotlinxSerializationJsonSerializerTest {
         val testSubject: List<JsonElement> = listOf(JsonPrimitive("a"), JsonPrimitive(1), JsonPrimitive(true))
 
         val encoded = serializer.serialize(testSubject)
-        assertEquals("[\"a\",1,true]", encoded.toStringUtf8())
+        assertEquals("""["a",1,true]""", encoded.toStringUtf8())
 
         assertEquals(testSubject, serializer.deserialize<List<JsonElement>>(encoded))
     }
@@ -71,7 +72,7 @@ internal class KotlinxSerializationJsonSerializerTest {
         val testSubject: List<SerializeMe> = listOf(SerializeMe("alakazam"), SerializeMe("abracadabra"))
 
         val encoded = serializer.serialize(testSubject)
-        assertEquals("[{\"magicWord\":\"alakazam\"},{\"magicWord\":\"abracadabra\"}]", encoded.toStringUtf8())
+        assertEquals("""[{"magicWord":"alakazam"},{"magicWord":"abracadabra"}]""", encoded.toStringUtf8())
 
         assertEquals(testSubject, serializer.deserialize<List<SerializeMe>>(encoded))
     }
@@ -81,7 +82,7 @@ internal class KotlinxSerializationJsonSerializerTest {
         val testSubject = SerializeMe(null)
 
         val encoded = serializer.serialize(testSubject)
-        assertEquals("{\"magicWord\":null}", encoded.toStringUtf8())
+        assertEquals("""{"magicWord":null}""", encoded.toStringUtf8())
 
         assertEquals(testSubject, serializer.deserialize<SerializeMe>(encoded))
     }
@@ -94,9 +95,21 @@ internal class KotlinxSerializationJsonSerializerTest {
         val testSubject = SerializeMeDifferently("alakazam")
 
         val encoded = serializer.serialize(testSubject)
-        assertEquals("{\"x\":\"alakazam\"}", encoded.toStringUtf8())
+        assertEquals("""{"x":"alakazam"}""", encoded.toStringUtf8())
 
         assertEquals(testSubject, serializer.deserialize<SerializeMeDifferently>(encoded))
     }
 
+    @Test
+    fun `user can configure json parsing options`() {
+        val jsonWithUnknownKey = """{"magicWord":"alakazam","bogusProperty":123}""".toByteArray();
+
+        assertThrows<SerializationException> {
+            serializer.deserialize(jsonWithUnknownKey, typeRef<SerializeMe>())
+        }
+
+        val customSerializer = KotlinxSerializationJsonSerializer(Json { ignoreUnknownKeys = true })
+        val deserialized = customSerializer.deserialize(jsonWithUnknownKey, typeRef<SerializeMe>())
+        assertEquals(SerializeMe("alakazam"), deserialized)
+    }
 }

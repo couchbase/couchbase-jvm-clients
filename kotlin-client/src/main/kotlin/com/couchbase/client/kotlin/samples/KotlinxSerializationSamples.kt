@@ -35,7 +35,10 @@ internal fun configureKotlinxSerializationJsonSerializer() {
     // as shown in the other sample.
     val cluster = Cluster.connect("127.0.0.1", "Administrator", "password") {
         @OptIn(ExperimentalSerializationApi::class)
-        jsonSerializer = KotlinxSerializationJsonSerializer()
+        jsonSerializer = KotlinxSerializationJsonSerializer(Json {
+            // Specify JSON serial format options here. For example:
+            encodeDefaults = true
+        })
     }
 }
 
