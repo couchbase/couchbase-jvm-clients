@@ -51,6 +51,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -134,18 +135,18 @@ class BaseEndpointTest {
       ServiceType.KV, Optional.empty());
 
     try {
-      final CompletableFuture<Channel> cf = new CompletableFuture<>();
+      final EmbeddedChannel channel = new EmbeddedChannel();
+      final AtomicBoolean letSucceed = new AtomicBoolean();
       InstrumentedEndpoint endpoint = InstrumentedEndpoint.create(
         eventLoopGroup,
         ctx,
-        () -> Mono.fromFuture(cf)
+        () -> Mono.fromFuture(letSucceed.get() ? CompletableFuture.completedFuture(channel) : new CompletableFuture<>())
       );
 
       endpoint.connect();
       waitUntilCondition(() -> eventBus.publishedEvents().size() >= 3);
 
-      EmbeddedChannel channel = new EmbeddedChannel();
-      cf.complete(channel);
+      letSucceed.set(true);
       waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
       assertTrue(eventBus.publishedEvents().size() >= 3);
