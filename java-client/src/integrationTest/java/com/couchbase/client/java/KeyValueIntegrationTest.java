@@ -41,7 +41,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -160,6 +159,25 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertEquals("bar", decoded.getString("foo"));
     assertEquals(true, decoded.getBoolean("created"));
     assertFalse(decoded.containsKey("age"));
+  }
+
+  /**
+   * Verify that an empty Optional is returned even though the expiry is requested.
+   */
+  @Test
+  void expiryRequestedButNotSetOnDoc() {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create()
+      .put("foo", "bar")
+      .put("created", true)
+      .put("age", 12);
+
+    MutationResult mutationResult = collection.upsert(id, content);
+    assertTrue(mutationResult.cas() != 0);
+
+    GetResult getResult = collection.get(id, getOptions().withExpiry(true));
+    assertNoExpiry(id);
   }
 
   /**
@@ -512,7 +530,10 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   private static void assertNoExpiry(String docId) {
-    assertExpiry(docId, Instant.EPOCH);
+    assertEquals(
+      Optional.empty(),
+      collection.get(docId, GetOptions.getOptions().withExpiry(true)).expiryTime()
+    );
   }
 
   private static final Instant NEAR_FUTURE_INSTANT = Instant.now().plus(5, DAYS);

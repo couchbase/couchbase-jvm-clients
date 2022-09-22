@@ -134,7 +134,9 @@ public enum GetAccessor {
       }
     }
 
-    int convertedFlags = flags == null ? CodecFlags.JSON_COMPAT_FLAGS : Integer.parseInt(new String(flags, UTF_8));
+    int convertedFlags = flags == null || flags.length == 0
+      ? CodecFlags.JSON_COMPAT_FLAGS
+      : Integer.parseInt(new String(flags, UTF_8));
 
     if (content == null) {
       try {
@@ -144,9 +146,13 @@ public enum GetAccessor {
       }
     }
 
-    Optional<Instant> expiration = exptime == null
-      ? Optional.empty()
-      : Optional.of(Instant.ofEpochSecond(Long.parseLong(new String(exptime, UTF_8))));
+    Optional<Instant> expiration = Optional.empty();
+    if (exptime != null && exptime.length > 0) {
+      long parsed = Long.parseLong(new String(exptime, UTF_8));
+      if (parsed > 0) {
+        expiration = Optional.of(Instant.ofEpochSecond(parsed));
+      }
+    }
 
     return new GetResult(content, convertedFlags, cas, expiration, transcoder);
   }
