@@ -97,13 +97,13 @@ public class RoundRobinLocator implements Locator {
 
     List<Node> filteredNodes = filterNodes(nodes, request, config);
     if (filteredNodes.isEmpty()) {
-      if (serviceShowsUpInConfig(config)) {
-        // No node has the service enabled, but it shows up in the config. This is a race condition,
-        // likely the node/service is currently in progress of being configured, so let's send it into
+      if (serviceShowsUpInConfig(config) || !config.hasClusterOrBucketConfig()) {
+        // No node has the service enabled, but it shows up in the config (or there is no config at all yet). This is
+        // a race condition, likely the node/service is currently in progress of being configured, so let's send it into
         // retry and wait until it can be dispatched.
         RetryOrchestrator.maybeRetry(ctx, request, RetryReason.NODE_NOT_AVAILABLE);
       } else {
-        // No node in the cluster has the service enabled and it does not show up in the bucket config,
+        // No node in the cluster has the service enabled, and it does not show up in the bucket config,
         // so we need to cancel the request with a service not available exception. Either the cluster is
         // not configured with the service in the first place or a failover happened and suddenly there
         // is no node in the cluster anymore which can serve the request. In any case sending it into
@@ -155,7 +155,7 @@ public class RoundRobinLocator implements Locator {
    * Can be overridden to check if a request should be cancelled immediately that the service is not
    * supported.
    * <p>
-   * If this method returns false, something MUST be done with the request or it will time out!
+   * If this method returns false, something MUST be done with the request, or it will time out!
    */
   protected boolean checkServiceNotAvailable(final Request<? extends Response> request, final ClusterConfig config) {
     return true;

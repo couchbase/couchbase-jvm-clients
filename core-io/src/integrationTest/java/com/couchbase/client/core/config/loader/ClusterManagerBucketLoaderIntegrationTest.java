@@ -20,8 +20,11 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.BucketConfigParser;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
+import com.couchbase.client.core.diagnostics.ClusterState;
+import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
@@ -29,11 +32,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-
+import java.time.Duration;
 import java.util.Optional;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static com.couchbase.client.core.util.CbCollections.setOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Verifies the functionality of the {@link ClusterManagerBucketLoader}.
@@ -57,11 +61,18 @@ class ClusterManagerBucketLoaderIntegrationTest extends CoreIntegrationTest {
    * {@link ClusterManagerBucketLoader} by grabbing a JSON decodable config through the full stack.
    */
   @Test
-  //@Disabled
-  void loadConfigViaClusterManagerHttp() {
-    TestNodeConfig config = config().firstNodeWith(Services.MANAGER).get();
+  void loadConfigViaClusterManagerHttp() throws Exception {
+    TestNodeConfig config = config().firstNodeWith(Services.MANAGER).orElse(null);
+    assertNotNull(config);
 
     Core core = Core.create(env, authenticator(), seedNodes());
+    WaitUntilReadyHelper.waitUntilReady(
+      core,
+      setOf(ServiceType.MANAGER, ServiceType.KV),
+      Duration.ofSeconds(10),
+      ClusterState.ONLINE,
+      Optional.empty()
+    ).get();
     ClusterManagerBucketLoader loader = new ClusterManagerBucketLoader(core);
     int port = config.ports().get(Services.MANAGER);
     ProposedBucketConfigContext ctx = loader.load(
@@ -70,6 +81,7 @@ class ClusterManagerBucketLoaderIntegrationTest extends CoreIntegrationTest {
       config().bucketname(),
       Optional.empty()
     ).block();
+    assertNotNull(ctx);
 
     BucketConfig loaded = BucketConfigParser.parse(ctx.config(), env, ctx.origin());
     assertNotNull(loaded);
