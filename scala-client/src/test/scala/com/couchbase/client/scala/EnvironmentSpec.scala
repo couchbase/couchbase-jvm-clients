@@ -112,8 +112,7 @@ class EnvironmentSpec {
 
       assert(env.timeoutConfig.kvTimeout().getSeconds == 10)
       assert(env.timeoutConfig.queryTimeout().getSeconds == 15)
-    }
-    finally {
+    } finally {
       System.clearProperty("com.couchbase.env.timeout.kvTimeout")
       System.clearProperty("com.couchbase.env.timeout.queryTimeout")
     }
@@ -189,8 +188,12 @@ class EnvironmentSpec {
       .get
 
     assert(env.timeoutConfig.kvTimeout().toMillis == WanDevelopmentProfile.KV_TIMEOUT.toMillis)
-    assert(env.timeoutConfig.connectTimeout().toMillis == WanDevelopmentProfile.CONNECT_TIMEOUT.toMillis)
-    assert(env.timeoutConfig.viewTimeout().toMillis == WanDevelopmentProfile.SERVICE_TIMEOUT.toMillis)
+    assert(
+      env.timeoutConfig.connectTimeout().toMillis == WanDevelopmentProfile.CONNECT_TIMEOUT.toMillis
+    )
+    assert(
+      env.timeoutConfig.viewTimeout().toMillis == WanDevelopmentProfile.SERVICE_TIMEOUT.toMillis
+    )
   }
 
   @Test

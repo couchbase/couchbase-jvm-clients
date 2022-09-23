@@ -83,7 +83,7 @@ object ClusterEnvironment {
 
     def build: Try[ClusterEnvironment] = error match {
       case Some(err) => Failure(err)
-      case _ => Try(new ClusterEnvironment(this))
+      case _         => Try(new ClusterEnvironment(this))
     }
 
     /** This can only be used by internal Cluster.connect methods, to avoid the confusion of being able to pass a
@@ -259,20 +259,21 @@ object ClusterEnvironment {
     def applyProfile(profileName: String): ClusterEnvironment.Builder = {
       if (profileName == WanDevelopmentProfile) {
         val connectTimeout = com.couchbase.client.core.env.WanDevelopmentProfile.CONNECT_TIMEOUT
-        val kvTimeout = com.couchbase.client.core.env.WanDevelopmentProfile.KV_TIMEOUT
+        val kvTimeout      = com.couchbase.client.core.env.WanDevelopmentProfile.KV_TIMEOUT
         val serviceTimeout = com.couchbase.client.core.env.WanDevelopmentProfile.SERVICE_TIMEOUT
 
-        timeoutConfig(TimeoutConfig()
-          .connectTimeout(connectTimeout)
-          .kvTimeout(kvTimeout)
-          .kvDurableTimeout(kvTimeout)
-          .viewTimeout(serviceTimeout)
-          .queryTimeout(serviceTimeout)
-          .analyticsTimeout(serviceTimeout)
-          .searchTimeout(serviceTimeout)
-          .managementTimeout(serviceTimeout))
-      }
-      else {
+        timeoutConfig(
+          TimeoutConfig()
+            .connectTimeout(connectTimeout)
+            .kvTimeout(kvTimeout)
+            .kvDurableTimeout(kvTimeout)
+            .viewTimeout(serviceTimeout)
+            .queryTimeout(serviceTimeout)
+            .analyticsTimeout(serviceTimeout)
+            .searchTimeout(serviceTimeout)
+            .managementTimeout(serviceTimeout)
+        )
+      } else {
         copy(error = Some(new IllegalArgumentException(s"Unknown profile name ${profileName}")))
       }
     }
