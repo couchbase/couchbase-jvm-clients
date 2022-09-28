@@ -49,7 +49,7 @@ Yes, we need `make` because maven doesn't support the setup we need and neither 
 want to build for different Scala versions, after the first `make` you can do this through:
 
 ```sh
-$ ./mvnw -D"scala.compat.version=2.13" -D"scala.compat.library.version=2.13.7" clean install
+$ ./mvnw -D"scala.compat.version=2.13" -D"scala.compat.library.version=2.13.9" clean install
 ```
 
 Notes:
