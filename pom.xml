@@ -88,16 +88,6 @@
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
-                <artifactId>scala-implicits_2.11</artifactId>
-                <version>${scala-client.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.couchbase.client</groupId>
-                <artifactId>scala-client_2.11</artifactId>
-                <version>${scala-client.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.couchbase.client</groupId>
                 <artifactId>scala-implicits_2.12</artifactId>
                 <version>${scala-client.version}</version>
             </dependency>

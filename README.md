@@ -50,14 +50,10 @@ want to build for different Scala versions, after the first `make` you can do th
 
 ```sh
 $ ./mvnw -D"scala.compat.version=2.13" -D"scala.compat.library.version=2.13.7" clean install
-$ ./mvnw -D"scala.compat.version=2.11" -D"scala.compat.library.version=2.11.12" clean install
 ```
 
 Notes:
-+ The two `mvn` runs are to cross-compile the Scala SDK for Scala 2.11, and 2.13
-+ Couchbase officially provides, tests and supports builds for Scala 2.12 and 2.13.
-Our community kindly added the capability to create builds for Scala 2.11, and users are of course welcome to create such builds; but Couchbase cannot provide support for them.
-+ When building for Scala 2.11, JDK 8 should be used. If JDK 11 is used then goal scala:doc-jar will fail
++ Couchbase provides, tests and supports builds for Scala 2.12 and 2.13.
 + Default `scala.compat.`X properties are defined in file [.mvn/maven.config]
 + You can always go into one of the sub-directories like `core-io` to only build or test an
 individual project:

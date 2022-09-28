@@ -33,25 +33,8 @@ pipeline {
     }
 
     stages {
-        // Scala 2.11 & 2.13 aren't officially distributed or supported, but we have community depending on it so check
-        // they at least compile
-        stage('build Scala 2.11') {
-            agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
-            }
-            when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                // 2.11 must be built with JDK 8
-                buildScala(OPENJDK, OPENJDK_8, "2.11", "2.11.12")
-            }
-        }
-
+        // Scala 2.13 isn't officially distributed or supported, but we have community depending on it so check
+        // it at least compiles
         stage('build Scala 2.13') {
             agent { label "sdkqe" }
             environment {

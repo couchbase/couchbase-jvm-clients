@@ -251,21 +251,6 @@
                 </plugins>
             </build>
         </profile>
-        <profile>
-            <id>scala_2.11</id>
-            <activation>
-                <property>
-                    <name>scala.compat.version</name>
-                    <value>2.11</value>
-                </property>
-            </activation>
-            <properties>
-                <scala.circe.version>0.11.2</scala.circe.version>
-                <scala.play-json.version>2.7.4</scala.play-json.version>
-                <scala.reactor-core-extensions.version>0.7.1</scala.reactor-core-extensions.version>
-                <scala.jawn.version>0.14.3</scala.jawn.version>
-            </properties>
-        </profile>
     </profiles>
 
     <build>
