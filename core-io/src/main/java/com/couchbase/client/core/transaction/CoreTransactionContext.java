@@ -16,14 +16,18 @@
 
 package com.couchbase.client.core.transaction;
 
+import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
+import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -44,21 +48,26 @@ public class CoreTransactionContext {
     private final CoreMergedTransactionConfig config;
     private final CoreTransactionsCleanup cleanup;
     private int numAttempts = 0;
+    private final CoreTransactionRequest req;
 
-    public CoreTransactionContext(RequestTracer tracer,
-                                  EventBus eventBus,
+    public CoreTransactionContext(CoreContext coreContext,
                                   String transactionId,
                                   CoreMergedTransactionConfig config,
                                   CoreTransactionsCleanup cleanup) {
         this.config = Objects.requireNonNull(config);
         this.cleanup = Objects.requireNonNull(cleanup);
-        SpanWrapper pspan = config.parentSpan().map(sp -> new SpanWrapper(tracer, sp)).orElse(null);
-        this.transactionSpan = SpanWrapperUtil.basic(SpanWrapper.create(tracer, "transaction", pspan), "transaction")
-                .attribute("db.couchbase.transactions.transaction_id", transactionId);
+        RequestTracer tracer = coreContext.environment().requestTracer();
+        SpanWrapper pspan = config.parentSpan().map(sp -> new SpanWrapper(sp)).orElse(null);
+        this.transactionSpan = SpanWrapper.create(tracer, TracingIdentifiers.TRANSACTION_OP, pspan);
+        SpanWrapperUtil.setAttributes(this.transactionSpan, null, null, null)
+                .attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.TRANSACTION_OP)
+                .attribute(TracingIdentifiers.ATTR_TRANSACTION_ID, transactionId);
+
+        req = new CoreTransactionRequest(config.expirationTime(), coreContext, transactionSpan.span());
 
         this.transactionId = Objects.requireNonNull(transactionId);
         this.startTimeClient = System.nanoTime();
-        LOGGER = new CoreTransactionLogger(Objects.requireNonNull(eventBus), transactionId);
+        LOGGER = new CoreTransactionLogger(Objects.requireNonNull(coreContext.environment().eventBus()), transactionId);
     }
 
     public Duration expirationTime() {
@@ -103,5 +112,13 @@ public class CoreTransactionContext {
 
     public CoreTransactionsCleanup cleanup() {
         return cleanup;
+    }
+
+    public void incrementRetryAttempts(final Duration lastRetryDuration, final RetryReason reason) {
+        req.context().incrementRetryAttempts(lastRetryDuration, reason);
+    }
+
+    public void finish(@Nullable Throwable err) {
+        req.context().logicallyComplete(err);
     }
 }

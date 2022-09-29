@@ -17,6 +17,7 @@ package com.couchbase.client.core.transaction.util;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -33,6 +34,7 @@ import com.couchbase.client.core.msg.kv.SubdocMutateResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
+import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
 import com.couchbase.client.core.util.BucketConfigUtil;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
@@ -61,9 +63,10 @@ public class TransactionKVHandler {
                                               final Duration timeout,
                                               final Optional<DurabilityLevel> durabilityLevel,
                                               final Map<String, Object> clientContext,
-                                              final SpanWrapper span) {
+                                              final SpanWrapper pspan) {
         return Mono.defer(() -> {
             long start = System.nanoTime();
+            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().environment().requestTracer(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_INSERT, pspan);
 
             InsertRequest request = new InsertRequest(id,
                     transcodedContent,
@@ -74,7 +77,7 @@ public class TransactionKVHandler {
                     collectionIdentifier,
                     BestEffortRetryStrategy.INSTANCE,
                     durabilityLevel,
-                    span == null ? null : span.span());
+                    span.span());
             request.context()
                     .clientContext(clientContext)
                     .encodeLatency(System.nanoTime() - start);
@@ -98,9 +101,10 @@ public class TransactionKVHandler {
                                               long cas,
                                               final Optional<DurabilityLevel> durabilityLevel,
                                               final Map<String, Object> clientContext,
-                                              final SpanWrapper span) {
+                                              final SpanWrapper pspan) {
         return Mono.defer(() -> {
             long start = System.nanoTime();
+            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().environment().requestTracer(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_REMOVE, pspan);
 
             RemoveRequest request = new RemoveRequest(id,
                     cas,
@@ -109,7 +113,7 @@ public class TransactionKVHandler {
                     collectionIdentifier,
                     BestEffortRetryStrategy.INSTANCE,
                     durabilityLevel,
-                    span == null ? null : span.span());
+                    span.span());
             request.context()
                     .clientContext(clientContext)
                     .encodeLatency(System.nanoTime() - start);
@@ -132,10 +136,11 @@ public class TransactionKVHandler {
                                                    final Duration timeout,
                                                    boolean accessDeleted,
                                                    final Map<String, Object> clientContext,
-                                                   @Nullable final SpanWrapper span,
+                                                   @Nullable final SpanWrapper pspan,
                                                    final List<SubdocGetRequest.Command> commands) {
         return Mono.defer(() -> {
             long start = System.nanoTime();
+            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().environment().requestTracer(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, pspan);
 
             byte flags = 0;
             if (accessDeleted) {
@@ -149,7 +154,7 @@ public class TransactionKVHandler {
                     id,
                     flags,
                     commands,
-                    span == null ? null : span.span());
+                    span.span());
 
             request.context()
                     .clientContext(clientContext)
@@ -217,10 +222,11 @@ public class TransactionKVHandler {
                                                       long cas,
                                                       final Optional<DurabilityLevel> durabilityLevel,
                                                       final Map<String, Object> clientContext,
-                                                      final SpanWrapper span,
+                                                      final SpanWrapper pspan,
                                                       final List<SubdocMutateRequest.Command> commands,
                                                       CoreTransactionLogger logger) {
         return Mono.defer(() -> {
+            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().environment().requestTracer(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN, pspan);
             long start = System.nanoTime();
 
             final boolean requiresBucketConfig = createAsDeleted || reviveDocument;
@@ -250,7 +256,7 @@ public class TransactionKVHandler {
                         false, // Preserve expiry only supported on 7.0+
                         cas,
                         durabilityLevel,
-                        span == null ? null : span.span()
+                        span.span()
                 );
                 request.context()
                         .clientContext(clientContext)

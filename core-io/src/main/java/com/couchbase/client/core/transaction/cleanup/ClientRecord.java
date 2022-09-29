@@ -18,6 +18,7 @@ package com.couchbase.client.core.transaction.cleanup;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -261,111 +262,109 @@ public class ClientRecord {
                                                    CollectionIdentifier collection,
                                                    CoreTransactionsConfig config,
                                                    @Nullable SpanWrapper pspan) {
-        SpanWrapper span = SpanWrapperUtil.createOp(null, tracer(), collection, CLIENT_RECORD_DOC_ID, "cleanup.client", pspan)
-                .attribute("db.couchbase.transactions.cleanup.client_uuid", clientUuid);
+        return Mono.defer(() -> {
+            SpanWrapper span = SpanWrapperUtil.createOp(null, tracer(), collection, CLIENT_RECORD_DOC_ID, TracingIdentifiers.TRANSACTION_CLEANUP_CLIENT, pspan)
+                    .attribute(TracingIdentifiers.ATTR_TRANSACTION_CLEANUP_CLIENT_ID, clientUuid);
 
-        String bp = collection.bucket() + "/" + collection.scope().orElse("-") + "/" + collection.collection().orElse("-") + "/" + clientUuid;
+            String bp = collection.bucket() + "/" + collection.scope().orElse("-") + "/" + collection.collection().orElse("-") + "/" + clientUuid;
 
-        return beforeGetRecord(this)
+            return beforeGetRecord(this)
 
-                .then(getClientRecord(collection, span))
+                    .then(getClientRecord(collection, span))
 
-                .flatMap(clientRecord -> {
-                    ClientRecordDetails cr = parseClientRecord(clientRecord, clientUuid);
+                    .flatMap(clientRecord -> {
+                        ClientRecordDetails cr = parseClientRecord(clientRecord, clientUuid);
 
-                    LOGGER.debug(String.format("%s found %d existing clients including this (%s active, %d " +
-                                    "expired), included this=%s, index of this=%d, override={enabled=%s,expires=%d,now=%d,active=%s}",
-                            bp, cr.numExistingClients(), cr.numActiveClients(), cr.numExpiredClients(),
-                            !cr.clientIsNew(), cr.indexOfThisClient(),
-                            cr.overrideEnabled(), cr.overrideExpires(), cr.casNow(), cr.overrideActive()));
+                        LOGGER.debug(String.format("%s found %d existing clients including this (%s active, %d " +
+                                        "expired), included this=%s, index of this=%d, override={enabled=%s,expires=%d,now=%d,active=%s}",
+                                bp, cr.numExistingClients(), cr.numActiveClients(), cr.numExpiredClients(),
+                                !cr.clientIsNew(), cr.indexOfThisClient(),
+                                cr.overrideEnabled(), cr.overrideExpires(), cr.casNow(), cr.overrideActive()));
 
-                    if (cr.overrideActive()) {
-                        // Nothing to do: an external process has taken over cleanup, for now.
-                        return Mono.just(cr);
-                    }
-                    else {
-                        ArrayList<SubdocMutateRequest.Command> specs = new ArrayList<>();
+                        if (cr.overrideActive()) {
+                            // Nothing to do: an external process has taken over cleanup, for now.
+                            return Mono.just(cr);
+                        } else {
+                            ArrayList<SubdocMutateRequest.Command> specs = new ArrayList<>();
 
-                        String field = FIELD_RECORDS + "." + FIELD_CLIENTS + "." + clientUuid;
+                            String field = FIELD_RECORDS + "." + FIELD_CLIENTS + "." + clientUuid;
 
-                        String host = "unavailable";
-                        try {
-                            host = InetAddress.getLocalHost().getHostAddress();
-                        } catch (Throwable e) {
+                            String host = "unavailable";
+                            try {
+                                host = InetAddress.getLocalHost().getHostAddress();
+                            } catch (Throwable e) {
+                            }
+
+                            long pid = 0;
+                            String name = ManagementFactory.getRuntimeMXBean().getName();
+                            try {
+                                pid = Long.parseLong(name.split("@")[0]);
+                            } catch (Throwable err) {
+                                LOGGER.debug(String.format("Discarding error %s while trying to parse PID %s", err.getMessage(), name));
+                            }
+
+                            // Either update existing record or add new one
+                            byte[] toWrite = Mapper.encodeAsBytes(Mapper.createObjectNode()
+                                    .put(FIELD_EXPIRES, config.cleanupConfig().cleanupWindow().toMillis() + SAFETY_MARGIN_EXPIRY_MILLIS)
+                                    .put(FIELD_NUM_ATRS, config.numAtrs())
+                                    .put(FIELD_IMPLEMENTATION, "java")
+                                    .put(FIELD_VERSION, CoreTransactionsReactive.class.getPackage().getImplementationVersion())
+                                    .put(FIELD_HOST, host)
+                                    .put(FIELD_PROCESS_ID, pid));
+                            specs.add(new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, field, toWrite, true, true, false, 0));
+                            try {
+                                specs.add(new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, field + "." + FIELD_HEARTBEAT, Mapper.writer().writeValueAsBytes("${Mutation.CAS}"), false, true, true, 1));
+                            } catch (JsonProcessingException e) {
+                                throw new EncodingFailureException(e);
+                            }
+
+                            // Subdoc supports a max of 16 fields, fill up the rest with removing expired clients
+                            // Any remaining expired clients will be handled on another run or by another client
+                            cr.expiredClientIds().stream()
+                                    .limit(SubdocMutateRequest.SUBDOC_MAX_FIELDS - specs.size() - 1)
+                                    .forEach(expiredClientId -> {
+                                        LOGGER.debug(String.format("%s removing expired client %s",
+                                                bp, expiredClientId));
+
+                                        specs.add(new SubdocMutateRequest.Command(SubdocCommandType.DELETE, FIELD_RECORDS + "." + FIELD_CLIENTS + "." + expiredClientId, null, false, true, false, specs.size()));
+                                    });
+
+                            specs.add(new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", new byte[]{0}, false, false, false, specs.size()));
+
+                            return beforeUpdateRecord(this) // testing hook
+
+                                    // Use default timeout+durability, as this update is not mission critical.
+                                    .then(TransactionKVHandler.mutateIn(core, collection, CLIENT_RECORD_DOC_ID, mutatingTimeout(),
+                                            false, false, false, false, false, 0,
+                                            Optional.empty(), OptionsUtil.createClientContext("ClientRecord::processClient"), span, specs))
+
+                                    .thenReturn(cr);
                         }
+                    })
 
-                        long pid = 0;
-                        String name = ManagementFactory.getRuntimeMXBean().getName();
-                        try {
-                            pid = Long.parseLong(name.split("@")[0]);
+                    .onErrorResume(err -> {
+                        ErrorClass ec = ErrorClass.classify(err);
+
+                        LOGGER.debug(String.format("%s got error processing client record: %s", bp, DebugUtil.dbg(err)));
+
+                        if (ec == ErrorClass.FAIL_DOC_NOT_FOUND) {
+                            return createClientRecord(clientUuid, collection, span)
+                                    .then(processClient(clientUuid, collection, config, pspan));
+                        } else if ((err instanceof CouchbaseException)
+                                && ((CouchbaseException) err).context() != null
+                                && ((CouchbaseException) err).context().responseStatus() == ResponseStatus.NO_ACCESS) {
+                            // This will catch both read and write access failures
+                            // These aren't logged as it'll get spammy, since the thread is tried every periodically
+                            return Mono.error(new AccessErrorException());
+                        } else {
+                            // Any other errors, propagate through for perBucketThread to handle
+                            return Mono.error(err);
                         }
-                        catch (Throwable err) {
-                            LOGGER.debug(String.format("Discarding error %s while trying to parse PID %s", err.getMessage(), name));
-                        }
+                    })
 
-                        // Either update existing record or add new one
-                        byte[] toWrite = Mapper.encodeAsBytes(Mapper.createObjectNode()
-                                .put(FIELD_EXPIRES, config.cleanupConfig().cleanupWindow().toMillis() + SAFETY_MARGIN_EXPIRY_MILLIS)
-                                .put(FIELD_NUM_ATRS, config.numAtrs())
-                                .put(FIELD_IMPLEMENTATION, "java")
-                                .put(FIELD_VERSION, CoreTransactionsReactive.class.getPackage().getImplementationVersion())
-                                .put(FIELD_HOST, host)
-                                .put(FIELD_PROCESS_ID, pid));
-                        specs.add(new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, field, toWrite, true, true, false, 0));
-                        try {
-                            specs.add(new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, field + "." + FIELD_HEARTBEAT, Mapper.writer().writeValueAsBytes("${Mutation.CAS}"), false, true, true, 1));
-                        } catch (JsonProcessingException e) {
-                            throw new EncodingFailureException(e);
-                        }
-
-                        // Subdoc supports a max of 16 fields, fill up the rest with removing expired clients
-                        // Any remaining expired clients will be handled on another run or by another client
-                        cr.expiredClientIds().stream()
-                            .limit(SubdocMutateRequest.SUBDOC_MAX_FIELDS - specs.size() - 1)
-                            .forEach(expiredClientId -> {
-                                LOGGER.debug(String.format("%s removing expired client %s",
-                                    bp, expiredClientId));
-
-                                specs.add(new SubdocMutateRequest.Command(SubdocCommandType.DELETE, FIELD_RECORDS + "." + FIELD_CLIENTS + "." + expiredClientId, null, false, true, false, specs.size()));
-                            });
-
-                        specs.add(new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", new byte[]{0}, false, false, false, specs.size()));
-
-                        return beforeUpdateRecord(this) // testing hook
-
-                                // Use default timeout+durability, as this update is not mission critical.
-                                .then(TransactionKVHandler.mutateIn(core, collection, CLIENT_RECORD_DOC_ID, mutatingTimeout(),
-                                        false, false, false, false, false, 0,
-                                        Optional.empty(), OptionsUtil.createClientContext("ClientRecord::processClient"), span, specs))
-
-                                .thenReturn(cr);
-                    }
-                })
-
-                .onErrorResume(err -> {
-                    ErrorClass ec = ErrorClass.classify(err);
-
-                    LOGGER.debug(String.format("%s got error processing client record: %s", bp, DebugUtil.dbg(err)));
-
-                    if (ec == ErrorClass.FAIL_DOC_NOT_FOUND) {
-                        return createClientRecord(clientUuid, collection, span)
-                                .then(processClient(clientUuid, collection, config, pspan));
-                    }
-                    else if ((err instanceof CouchbaseException)
-                            && ((CouchbaseException) err).context() != null
-                            && ((CouchbaseException) err).context().responseStatus() == ResponseStatus.NO_ACCESS) {
-                        // This will catch both read and write access failures
-                        // These aren't logged as it'll get spammy, since the thread is tried every periodically
-                        return Mono.error(new AccessErrorException());
-                    }
-                    else {
-                        // Any other errors, propagate through for perBucketThread to handle
-                        return Mono.error(err);
-                    }
-                })
-
-                .doOnNext(v -> span.finish())
-                .doOnError(err -> span.failWith(err));
+                    .doOnError(err -> span.finish(err))
+                    .doOnTerminate(() -> span.finish());
+        });
     }
 
     private Mono<Void> createClientRecord(String clientUuid,

@@ -99,5 +99,19 @@ public class MeteringUnits {
     public MeteringUnits build() {
       return new MeteringUnits(readUnits == 0 ? null : readUnits, writeUnits == 0 ? null : writeUnits);
     }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      if (readUnits > 0) {
+        sb.append(" RUs=");
+        sb.append(readUnits);
+      }
+      if (writeUnits > 0) {
+        sb.append(" WUs=");
+        sb.append(writeUnits);
+      }
+      return sb.toString();
+    }
   }
 }

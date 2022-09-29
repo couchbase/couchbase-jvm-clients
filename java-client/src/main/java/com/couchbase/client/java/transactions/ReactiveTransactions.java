@@ -98,8 +98,7 @@ public class ReactiveTransactions {
         return Mono.defer(() -> {
             CoreMergedTransactionConfig merged = new CoreMergedTransactionConfig(internal.config(), Optional.ofNullable(perConfig));
             CoreTransactionContext overall =
-                    new CoreTransactionContext(internal.core().context().environment().requestTracer(),
-                            internal.core().context().environment().eventBus(),
+                    new CoreTransactionContext(internal.core().context(),
                             UUID.randomUUID().toString(),
                             merged,
                             internal.core().transactionsCleanup());

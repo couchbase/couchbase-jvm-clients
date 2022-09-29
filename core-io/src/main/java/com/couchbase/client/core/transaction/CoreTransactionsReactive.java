@@ -19,12 +19,14 @@ package com.couchbase.client.core.transaction;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionCommitAmbiguousException;
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionExpiredException;
 import com.couchbase.client.core.error.transaction.TransactionOperationFailedException;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.reactor.DefaultRetry;
 import com.couchbase.client.core.retry.reactor.Jitter;
 import com.couchbase.client.core.retry.reactor.RetryContext;
@@ -33,7 +35,6 @@ import com.couchbase.client.core.transaction.config.CoreTransactionOptions;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
 import com.couchbase.client.core.transaction.forwards.Supported;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
-import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
 import com.couchbase.client.core.transaction.threadlocal.TransactionMarker;
 import com.couchbase.client.core.transaction.util.CoreTransactionAttemptContextHooks;
 import com.couchbase.client.core.transaction.util.DebugUtil;
@@ -128,21 +129,22 @@ public class CoreTransactionsReactive {
                             }
 
                             return ctx.transactionEnd(err, singleQueryTransactionMode);
-                        })
-
-                        .doOnNext(v -> overall.span().attribute(SpanWrapperUtil.DB_COUCHBASE_TRANSACTIONS + "retries", overall.numAttempts()).finish())
-                        .doOnError(err -> overall.span().attribute(SpanWrapperUtil.DB_COUCHBASE_TRANSACTIONS + "retries", overall.numAttempts()).failWith(err)))
+                        }))
 
                 // Retry transaction if required - controlled by a RetryTransaction exception.
-                .retryWhen(executeCreateRetryWhen(overall))
+                .retryWhen(executeCreateRetryWhen(overall, startTime))
+
+                .doOnNext(v -> overall.finish(null))
+                .doOnError(err -> overall.finish(err))
 
                 // If we get here, success
-                .doOnTerminate(() ->
-                        overall.LOGGER.info("finished txn in %dus",
-                                TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - startTime.get())));
+                .doOnTerminate(() -> {
+                    long elapsed = TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - startTime.get());
+                    overall.LOGGER.info("finished txn in %dus", elapsed);
+                });
     }
 
-    private reactor.util.retry.Retry executeCreateRetryWhen(CoreTransactionContext overall) {
+    private reactor.util.retry.Retry executeCreateRetryWhen(CoreTransactionContext overall, AtomicReference<Long> startTime) {
         Predicate<? super RetryContext<Object>> predicate = context -> {
             Throwable exception = context.exception();
             return exception instanceof RetryTransactionException;
@@ -152,7 +154,11 @@ public class CoreTransactionsReactive {
 
                 .exponentialBackoff(Duration.ofMillis(1), Duration.ofMillis(100))
 
-                .doOnRetry(v -> overall.LOGGER.info("<>", "retrying transaction after backoff %dmillis", v.backoff().toMillis()))
+                .doOnRetry(v -> {
+                    Duration ofLastAttempt = Duration.ofNanos(System.nanoTime() - startTime.get());
+                    overall.LOGGER.info("<>", "retrying transaction after backoff %dmillis", v.backoff().toMillis());
+                    overall.incrementRetryAttempts(ofLastAttempt, RetryReason.UNKNOWN);
+                })
 
                 // Add some jitter so two txns don't livelock each other
                 .jitter(Jitter.random())
@@ -196,8 +202,7 @@ public class CoreTransactionsReactive {
             CoreMergedTransactionConfig merged = new CoreMergedTransactionConfig(config, Optional.ofNullable(perConfig));
 
             CoreTransactionContext overall =
-                    new CoreTransactionContext(core.context().environment().requestTracer(),
-                            core.context().environment().eventBus(),
+                    new CoreTransactionContext(core.context(),
                             UUID.randomUUID().toString(),
                             merged,
                             core.transactionsCleanup());
@@ -272,8 +277,7 @@ public class CoreTransactionsReactive {
         return Mono.defer(() -> {
             CoreMergedTransactionConfig merged = new CoreMergedTransactionConfig(config, Optional.empty());
             CoreTransactionContext overall =
-                    new CoreTransactionContext(core.context().environment().requestTracer(),
-                            core.context().environment().eventBus(),
+                    new CoreTransactionContext(core.context(),
                             UUID.randomUUID().toString(),
                             merged,
                             core.transactionsCleanup());
@@ -287,22 +291,25 @@ public class CoreTransactionsReactive {
             AtomicReference<QueryResponse> qr = new AtomicReference<>();
 
             Function<CoreTransactionAttemptContext, Mono<Void>> runLogic = (ctx) -> Mono.defer(() -> {
-                return ctx.doQueryOperation("single query streaming",
-                                (sidx, lockToken) -> ctx.queryWrapperLocked(0,
-                                                bucketName,
-                                                scopeName,
-                                                statement,
-                                                queryOptions,
-                                                CoreTransactionAttemptContextHooks.HOOK_QUERY,
-                                                false,
-                                                true,
-                                                null,
-                                                null,
-                                                parentSpan.map(v -> new SpanWrapper(core.context().environment().requestTracer(), v)).orElse(null),
-                                                true,
-                                                null,
-                                                true)
-                                        .doOnNext(ret -> qr.set(ret)))
+                return ctx.doQueryOperation("single query streaming", statement, parentSpan.map(SpanWrapper::new).orElse(null),
+                                (sidx, lockToken, span) -> {
+                                    span.attribute(TracingIdentifiers.ATTR_TRANSACTION_SINGLE_QUERY, true);
+                                    return ctx.queryWrapperLocked(0,
+                                                    bucketName,
+                                                    scopeName,
+                                                    statement,
+                                                    queryOptions,
+                                                    CoreTransactionAttemptContextHooks.HOOK_QUERY,
+                                                    false,
+                                                    true,
+                                                    null,
+                                                    null,
+                                                    span,
+                                                    true,
+                                                    null,
+                                                    true)
+                                            .doOnNext(ret -> qr.set(ret));
+                                })
                         .then();
             });
 
@@ -369,6 +376,7 @@ public class CoreTransactionsReactive {
         };
     }
 
+    // Used only by single query transactions
     public Mono<CoreTransactionAttemptContext.BufferedQueryResponse> queryBlocking(String statement,
                                                                                    String bucketName,
                                                                                    String scopeName,
@@ -379,8 +387,7 @@ public class CoreTransactionsReactive {
 
             CoreMergedTransactionConfig merged = new CoreMergedTransactionConfig(config, parentSpan.map(CoreTransactionOptions::create));
             CoreTransactionContext overall =
-                    new CoreTransactionContext(core.context().environment().requestTracer(),
-                            core.context().environment().eventBus(),
+                    new CoreTransactionContext(core.context(),
                             UUID.randomUUID().toString(),
                             merged,
                             core.transactionsCleanup());

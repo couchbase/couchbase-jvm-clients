@@ -16,6 +16,7 @@
 package com.couchbase.client.core.transaction.support;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import reactor.util.annotation.Nullable;
@@ -31,11 +32,19 @@ import java.util.concurrent.TimeUnit;
 public class SpanWrapper {
     private final long startTime = System.nanoTime();
     private final RequestSpan span;
-    private final RequestTracer tracer;
     private boolean finished = false;
+    private final boolean isInternal;
 
     public long elapsedMicros() {
         return (System.nanoTime() - startTime) * 1_000;
+    }
+
+    public long finish(@Nullable Throwable err) {
+        if (err != null) {
+            span.recordException(err);
+            span.status(RequestSpan.StatusCode.ERROR);
+        }
+        return finish();
     }
 
     public long finish() {
@@ -48,18 +57,20 @@ public class SpanWrapper {
         return 0;
     }
 
-    public SpanWrapper(RequestTracer tracer, RequestSpan span) {
-        this.tracer = Objects.requireNonNull(tracer);
+    public SpanWrapper(RequestSpan span) {
         this.span = Objects.requireNonNull(span);
+         isInternal = CbTracing.isInternalSpan(span);
     }
 
     public static SpanWrapper create(RequestTracer tracer, String op, @Nullable SpanWrapper parent) {
         RequestSpan span = tracer.requestSpan(op, parent == null ? null : parent.span);
-        return new SpanWrapper(tracer, span);
+        return new SpanWrapper(span);
     }
 
     public <T> SpanWrapper attribute(String key, T value) {
-        span.attribute(key, String.valueOf(value));
+        if (!isInternal) {
+            span.attribute(key, String.valueOf(value));
+        }
         return this;
     }
 
@@ -67,9 +78,34 @@ public class SpanWrapper {
         return span;
     }
 
-    public long failWith(Throwable err) {
-        span.recordException(err);
+    public long finishWithErrorStatus() {
+        if (!isInternal) {
+            span.status(RequestSpan.StatusCode.ERROR);
+        }
         return finish();
+    }
+
+    public void setErrorStatus() {
+        if (!isInternal) {
+            span.status(RequestSpan.StatusCode.ERROR);
+        }
+    }
+
+    public void recordExceptionAndSetErrorStatus(Throwable err) {
+        if (!isInternal) {
+            span.recordException(err);
+            span.status(RequestSpan.StatusCode.ERROR);
+        }
+    }
+
+    public void recordException(Throwable err) {
+        if (!isInternal) {
+            span.recordException(err);
+        }
+    }
+
+    public boolean isInternal() {
+        return isInternal;
     }
 }
 

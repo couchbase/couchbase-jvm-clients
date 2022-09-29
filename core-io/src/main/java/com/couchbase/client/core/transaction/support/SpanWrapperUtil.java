@@ -16,23 +16,23 @@
 package com.couchbase.client.core.transaction.support;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
 import reactor.util.annotation.Nullable;
 
+import static com.couchbase.client.core.cnc.TracingIdentifiers.ATTR_OPERATION;
+import static com.couchbase.client.core.cnc.TracingIdentifiers.ATTR_SYSTEM;
+import static com.couchbase.client.core.cnc.TracingIdentifiers.ATTR_SYSTEM_COUCHBASE;
+import static com.couchbase.client.core.cnc.TracingIdentifiers.ATTR_TRANSACTION_ATTEMPT_ID;
+import static com.couchbase.client.core.cnc.TracingIdentifiers.ATTR_TRANSACTION_ID;
+import static com.couchbase.client.core.cnc.TracingIdentifiers.SERVICE_TRANSACTIONS;
+
 @Stability.Internal
 public class SpanWrapperUtil {
-    public static final String DB_COUCHBASE = "db.couchbase";
-    public static final String DB_COUCHBASE_TRANSACTIONS = "db.couchbase.transactions.";
-
     private SpanWrapperUtil() {
-    }
-
-    public static SpanWrapper basic(SpanWrapper span, String op) {
-        return span.attribute("db.system", "couchbase")
-                .attribute("db.operation", op)
-                .attribute(DB_COUCHBASE + ".service", "transactions");
     }
 
     public static SpanWrapper createOp(@Nullable CoreTransactionAttemptContext ctx,
@@ -42,18 +42,32 @@ public class SpanWrapperUtil {
                                        String op,
                                        @Nullable SpanWrapper attemptSpan) {
         SpanWrapper out = SpanWrapper.create(tracer, op, attemptSpan);
-        if (ctx != null) {
-            out.attribute(DB_COUCHBASE + ".transactions.transaction_id", ctx.transactionId())
-                .attribute(DB_COUCHBASE + ".transactions.attempt_id", ctx.attemptId());
+        if (!out.isInternal()) {
+            out.attribute(ATTR_OPERATION, op);
+            return setAttributes(out, ctx, collection, id);
         }
-        basic(out, op);
-        if (collection != null) {
-            out.attribute("db.name", collection.bucket())
-                .attribute(DB_COUCHBASE + ".scope", collection.scope())
-                .attribute(DB_COUCHBASE + ".collection", collection.collection());
-        }
-        if (id != null ) {
-            out.attribute(DB_COUCHBASE + ".document", id);
+        return out;
+    }
+
+    public static SpanWrapper setAttributes(SpanWrapper out,
+                                            @Nullable CoreTransactionAttemptContext ctx,
+                                            @Nullable CollectionIdentifier collection,
+                                            @Nullable String id) {
+        if (!out.isInternal()) {
+            out.attribute(ATTR_SYSTEM, ATTR_SYSTEM_COUCHBASE)
+                    .attribute(TracingIdentifiers.ATTR_SERVICE, SERVICE_TRANSACTIONS);
+            if (ctx != null) {
+                out.attribute(ATTR_TRANSACTION_ID, ctx.transactionId())
+                        .attribute(ATTR_TRANSACTION_ATTEMPT_ID, ctx.attemptId());
+            }
+            if (collection != null) {
+                out.attribute(TracingIdentifiers.ATTR_NAME, collection.bucket())
+                        .attribute(TracingIdentifiers.ATTR_SCOPE, collection.scope().orElse(CollectionIdentifier.DEFAULT_SCOPE))
+                        .attribute(TracingIdentifiers.ATTR_COLLECTION, collection.collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION));
+            }
+            if (id != null) {
+                out.attribute(TracingIdentifiers.ATTR_DOCUMENT_ID, id);
+            }
         }
         return out;
     }

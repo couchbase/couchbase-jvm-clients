@@ -35,6 +35,7 @@ public class ThresholdLoggingTracerConfig {
     public static final Duration DEFAULT_VIEW_THRESHOLD = Duration.ofSeconds(1);
     public static final Duration DEFAULT_SEARCH_THRESHOLD = Duration.ofSeconds(1);
     public static final Duration DEFAULT_ANALYTICS_THRESHOLD = Duration.ofSeconds(1);
+    public static final Duration DEFAULT_TRANSACTIONS_THRESHOLD = Duration.ofSeconds(5);
     public static final int DEFAULT_SAMPLE_SIZE = 10;
   }
 
@@ -47,6 +48,7 @@ public class ThresholdLoggingTracerConfig {
   private final Duration viewThreshold;
   private final Duration searchThreshold;
   private final Duration analyticsThreshold;
+  private final Duration transactionsThreshold;
 
   public static Builder builder() {
     return new Builder();
@@ -69,6 +71,7 @@ public class ThresholdLoggingTracerConfig {
     viewThreshold = builder.viewThreshold;
     searchThreshold = builder.searchThreshold;
     analyticsThreshold = builder.analyticsThreshold;
+    transactionsThreshold = builder.transactionsThreshold;
     enabled = builder.enabled;
   }
 
@@ -193,6 +196,10 @@ public class ThresholdLoggingTracerConfig {
     return analyticsThreshold;
   }
 
+  public Duration transactionsThreshold() {
+    return transactionsThreshold;
+  }
+
   /**
    * Returns this config as a map so it can be exported into i.e. JSON for display.
    */
@@ -210,6 +217,7 @@ public class ThresholdLoggingTracerConfig {
     export.put("searchThresholdMs", searchThreshold.toMillis());
     export.put("analyticsThresholdMs", analyticsThreshold.toMillis());
     export.put("viewThresholdMs", viewThreshold.toMillis());
+    export.put("transactionsThresholdMs", transactionsThreshold.toMillis());
 
     return export;
   }
@@ -225,6 +233,7 @@ public class ThresholdLoggingTracerConfig {
     private Duration viewThreshold = Defaults.DEFAULT_VIEW_THRESHOLD;
     private Duration searchThreshold = Defaults.DEFAULT_SEARCH_THRESHOLD;
     private Duration analyticsThreshold = Defaults.DEFAULT_ANALYTICS_THRESHOLD;
+    private Duration transactionsThreshold = Defaults.DEFAULT_TRANSACTIONS_THRESHOLD;
 
     public Builder enabled(final boolean enabled) {
       this.enabled = enabled;
@@ -310,6 +319,17 @@ public class ThresholdLoggingTracerConfig {
      */
     public Builder analyticsThreshold(final Duration analyticsThreshold) {
       this.analyticsThreshold = analyticsThreshold;
+      return this;
+    }
+
+    /**
+     * Allows customizing the threshold above which transactions are regarded as slow.
+     *
+     * @param transactionsThreshold the threshold to set.
+     * @return this builder for chaining.
+     */
+    public Builder transactionsThreshold(final Duration transactionsThreshold) {
+      this.transactionsThreshold = transactionsThreshold;
       return this;
     }
 

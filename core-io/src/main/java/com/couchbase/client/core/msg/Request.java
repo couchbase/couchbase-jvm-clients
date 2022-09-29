@@ -21,6 +21,7 @@ import com.couchbase.client.core.deps.io.netty.util.Timeout;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Locale;
@@ -142,10 +143,14 @@ public interface Request<R extends Response> {
 
   /**
    * The service type of this request.
+   * <p>
+   * Can be null if this is a 'virtual service' (e.g. transactions), which don't map 1:1 to a particular cluster service,
+   * but need to integrate into various codepaths that are built around ServiceType such as ThresholdLoggingTracer.
+   * Virtual requests must not be sent into core at present, as there is limited support for them.
    *
    * @return the service type for this request.
    */
-  ServiceType serviceType();
+  @Nullable ServiceType serviceType();
 
   /**
    * Returns the name of the bucket this request is scoped to, or null if not scoped to a bucket.

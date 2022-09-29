@@ -18,6 +18,7 @@ package com.couchbase.client.core.transaction.cleanup;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -217,7 +218,7 @@ public class LostCleanupDistributed {
             long start = System.nanoTime();
             AtomicLong timeToFetchAtr = new AtomicLong(0);
             AtomicReference<CasMode> casMode = new AtomicReference<>(CasMode.UNKNOWN);
-            SpanWrapper span = SpanWrapperUtil.createOp(null, tracer(), atrCollection, atrId, "cleanup.atr", pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(null, tracer(), atrCollection, atrId, TracingIdentifiers.TRANSACTION_CLEANUP_ATR, pspan);
 
             TransactionsCleaner cleaner = cleanerSupplier.get();
 
@@ -257,8 +258,8 @@ public class LostCleanupDistributed {
 
                     stats.expired = expired;
 
-                    span.attribute("db.couchbase.transactions.cleanup.atr.num_entries", stats.numEntries);
-                    span.attribute("db.couchbase.transactions.cleanup.atr.num_expired", stats.expired);
+                    span.attribute(TracingIdentifiers.ATTR_TRANSACTION_ATR_ENTRIES_COUNT, stats.numEntries);
+                    span.attribute(TracingIdentifiers.ATTR_TRANSACTION_ATR_ENTRIES_EXPIRED, stats.expired.size());
 
                     return Flux.fromIterable(expired)
                             .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup());
@@ -283,6 +284,7 @@ public class LostCleanupDistributed {
                         });
                 })
 
+                .doOnError(err -> span.finish(err))
                 .doOnTerminate(() -> {
                     long now = System.nanoTime();
                     LOGGER.verbose(String.format("%s processed ATR %s after %sµs (%d fetching ATR), CAS=%s: %s", bp,
@@ -381,9 +383,9 @@ public class LostCleanupDistributed {
 
         // Every X seconds (X = config.cleanupWindow), start off by reading & updating the client record
         // processClient can propagate errors
-        return Mono.fromRunnable(() ->
-                        span.set(SpanWrapperUtil.createOp(null, tracer(), collection, null, "cleanup.run", null)
-                                .attribute("db.couchbase.transactions.cleanup.client_uuid", clientUuid)))
+        return Mono.fromRunnable(() -> span.set(SpanWrapperUtil.createOp(null, tracer(), collection, null, TracingIdentifiers.TRANSACTION_CLEANUP_WINDOW, null)
+                          .attribute(TracingIdentifiers.ATTR_TRANSACTION_CLEANUP_CLIENT_ID, clientUuid)
+                          .attribute(TracingIdentifiers.ATTR_TRANSACTION_CLEANUP_WINDOW, config.cleanupConfig().cleanupWindow().toMillis())))
 
                 .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup())
 
@@ -398,6 +400,10 @@ public class LostCleanupDistributed {
                     atrsHandledByThisClient = atrsToHandle(clientDetails.indexOfThisClient(),
                             clientDetails.numActiveClients(),
                             config.numAtrs());
+
+                    span.get().attribute(TracingIdentifiers.ATTR_TRANSACTION_CLEANUP_NUM_ATRS, atrsHandledByThisClient.size());
+                    span.get().attribute(TracingIdentifiers.ATTR_TRANSACTION_CLEANUP_NUM_ACTIVE, clientDetails.numActiveClients());
+                    span.get().attribute(TracingIdentifiers.ATTR_TRANSACTION_CLEANUP_NUM_EXPIRED, clientDetails.numExpiredClients());
 
                     long checkAtrEveryNNanos = Math.max(1, actualCleanupWindow.toNanos() / atrsHandledByThisClient.size());
 
@@ -498,6 +504,9 @@ public class LostCleanupDistributed {
                     core.context().environment().eventBus().publish(ev);
                 })
 
+                .doOnNext(v -> span.get().finish())
+                .doOnError(err -> span.get().finish(err))
+
                 // TXNJ-90 - make sure the thread does not drop out
                 // Update: With TXNJ-301 this is less mission-critical, as the thread will be restarted after a period
                 // Note that problems with cleanup itself, or fetching ATRs, will not propagate here, so we're only handling
@@ -510,9 +519,6 @@ public class LostCleanupDistributed {
                                     bp, DebugUtil.dbg(v.exception()), v.backoff()));
                         })
                         .toReactorRetry())
-
-                .doOnNext(v -> span.get().finish())
-                .doOnError(err -> span.get().failWith(err))
 
                 // Start all over again with the ClientRecord check
                 .repeat()

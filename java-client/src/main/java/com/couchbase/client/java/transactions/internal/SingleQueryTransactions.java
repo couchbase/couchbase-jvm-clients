@@ -17,6 +17,7 @@ package com.couchbase.client.java.transactions.internal;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
@@ -24,6 +25,8 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.transaction.CoreTransactionsReactive;
 import com.couchbase.client.core.transaction.config.CoreSingleQueryTransactionOptions;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
+import com.couchbase.client.core.transaction.support.SpanWrapper;
+import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
@@ -35,6 +38,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 @Stability.Internal
@@ -54,10 +58,14 @@ public class SingleQueryTransactions {
         final JsonObject json = JsonObject.create();
         opts.injectParams(json);
         try {
+            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().environment().requestTracer(), null,
+                    null, TracingIdentifiers.SPAN_REQUEST_QUERY, opts.parentSpan().map(SpanWrapper::new).orElse(null))
+                    .attribute(TracingIdentifiers.ATTR_STATEMENT, statement)
+                    .attribute(TracingIdentifiers.ATTR_TRANSACTION_SINGLE_QUERY, true);
             ObjectNode converted = Mapper.reader().readValue(json.toBytes(), ObjectNode.class);
             JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
 
-            return tri.queryBlocking(statement, bucketName, scopeName, converted, opts.parentSpan())
+            return tri.queryBlocking(statement, bucketName, scopeName, converted, Optional.of(span.span()))
                     .map(qr -> new QueryResult(qr.header, qr.rows, qr.trailer, serializer))
                     .onErrorResume(ErrorUtil::convertTransactionFailedInternal)
                     .onErrorResume(ex -> {
@@ -66,7 +74,9 @@ public class SingleQueryTransactions {
                             return Mono.error(new UnambiguousTimeoutException(ex.getMessage(), null));
                         }
                         return Mono.error(ex);
-                    });
+                    })
+                    .doOnError(err -> span.finish(err))
+                    .doOnTerminate(() -> span.finish());
         } catch (IOException e) {
             return Mono.error(new EncodingFailureException(e));
         }
@@ -99,11 +109,17 @@ public class SingleQueryTransactions {
         final JsonObject json = JsonObject.create();
         opts.injectParams(json);
         try {
+            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().environment().requestTracer(), null,
+                    null, TracingIdentifiers.SPAN_REQUEST_QUERY, opts.parentSpan().map(SpanWrapper::new).orElse(null))
+                    .attribute(TracingIdentifiers.ATTR_STATEMENT, statement)
+                    .attribute(TracingIdentifiers.ATTR_TRANSACTION_SINGLE_QUERY, true);
             ObjectNode converted = Mapper.reader().readValue(json.toBytes(), ObjectNode.class);
             JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
-            return tri.query(statement, bucketName, scopeName, converted, opts.parentSpan(), errorConverter)
+            return tri.query(statement, bucketName, scopeName, converted, Optional.of(span.span()), errorConverter)
                     .map(qr -> new ReactiveQueryResult(qr, serializer))
-                    .onErrorResume(ErrorUtil::convertTransactionFailedInternal);
+                    .onErrorResume(ErrorUtil::convertTransactionFailedInternal)
+                    .doOnError(err -> span.finish(err))
+                    .doOnTerminate(() -> span.finish());
         } catch (IOException e) {
             return Mono.error(new EncodingFailureException(e));
         }

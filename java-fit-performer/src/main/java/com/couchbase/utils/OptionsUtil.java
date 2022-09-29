@@ -355,6 +355,9 @@ public class OptionsUtil {
             if (tlc.hasAnalyticsThresholdMillis()) {
                 builder.analyticsThreshold(Duration.ofMillis(tlc.getAnalyticsThresholdMillis()));
             }
+            if (tlc.hasTransactionsThresholdMillis()) {
+                builder.transactionsThreshold(Duration.ofMillis(tlc.getTransactionsThresholdMillis()));
+            }
             if (tlc.hasSampleSize()) {
                 builder.sampleSize(tlc.getSampleSize());
             }

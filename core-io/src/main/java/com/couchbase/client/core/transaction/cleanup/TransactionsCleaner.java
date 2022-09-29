@@ -19,6 +19,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
@@ -27,6 +28,7 @@ import com.couchbase.client.core.transaction.components.ActiveTransactionRecordE
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecordUtil;
 import com.couchbase.client.core.transaction.components.DocRecord;
 import com.couchbase.client.core.transaction.components.DocumentGetter;
+import com.couchbase.client.core.transaction.components.DurabilityLevelUtil;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibility;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibilityStage;
 import com.couchbase.client.core.transaction.forwards.Supported;
@@ -387,12 +389,14 @@ public class TransactionsCleaner {
     public Mono<TransactionCleanupAttemptEvent> performCleanup(CleanupRequest req,
                                                                boolean isRegularCleanup,
                                                                @Nullable SpanWrapper pspan) {
-        SpanWrapper span = SpanWrapperUtil.createOp(null, tracer(), req.atrCollection(), req.atrId(), "cleanup.req", pspan)
-                .attribute("db.couchbase.transactions.cleanup.req.attempt_id", req.attemptId())
-                .attribute("db.couchbase.transactions.cleanup.req.age_ms", req.ageMillis())
-                .attribute("db.couchbase.transactions.cleanup.req.durability", req.durabilityLevel())
-                .attribute("db.couchbase.transactions.cleanup.req.state", req.state())
-                .attribute("db.couchbase.transactions.cleanup.req.initiated_from_queue", isRegularCleanup);
+        SpanWrapper span = SpanWrapperUtil.createOp(null, tracer(), req.atrCollection(), req.atrId(), TracingIdentifiers.TRANSACTION_CLEANUP, pspan)
+                .attribute(TracingIdentifiers.ATTR_TRANSACTION_ATTEMPT_ID, req.attemptId())
+                .attribute(TracingIdentifiers.ATTR_TRANSACTION_AGE, req.ageMillis())
+                .attribute(TracingIdentifiers.ATTR_TRANSACTION_STATE, req.state());
+
+        req.durabilityLevel().ifPresent(v -> {
+            span.attribute(TracingIdentifiers.ATTR_DURABILITY, DurabilityLevelUtil.convertDurabilityLevel(v));
+        });
 
         return Mono.defer(() -> {
             CollectionIdentifier atrCollection = req.atrCollection();
@@ -462,8 +466,8 @@ public class TransactionsCleaner {
                         return Mono.just(event);
                     })
 
-                    .doOnError(err -> span.failWith(err))
-                    .doFinally(v -> span.finish());
+                    .doOnError(err -> span.finish(err))
+                    .doOnTerminate(() -> span.finish());
         });
     }
 

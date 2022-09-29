@@ -26,6 +26,7 @@ import com.couchbase.client.core.env.ThresholdLoggingTracerConfig;
 import com.couchbase.client.core.error.TracerException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.NanoTimestamp;
 import reactor.core.publisher.Mono;
@@ -76,6 +77,7 @@ public class ThresholdLoggingTracer implements RequestTracer {
   private final long viewThreshold;
   private final long searchThreshold;
   private final long analyticsThreshold;
+  private final long transactionsThreshold;
   private final Duration emitInterval;
   private final int sampleSize;
 
@@ -125,6 +127,7 @@ public class ThresholdLoggingTracer implements RequestTracer {
     searchThreshold = config.searchThreshold().toNanos();
     viewThreshold = config.viewThreshold().toNanos();
     queryThreshold = config.queryThreshold().toNanos();
+    transactionsThreshold = config.transactionsThreshold().toNanos();
     sampleSize = config.sampleSize();
     emitInterval = config.emitInterval();
     this.config = config;
@@ -178,7 +181,14 @@ public class ThresholdLoggingTracer implements RequestTracer {
   private boolean isOverThreshold(final Request<?> request) {
     final long tookNanos = request.context().logicalRequestLatency();
     final ServiceType serviceType = request.serviceType();
-    if (serviceType == ServiceType.KV && tookNanos >= kvThreshold) {
+    if (serviceType == null) {
+      // Virtual service
+      if (request instanceof CoreTransactionRequest) {
+        return tookNanos >= transactionsThreshold;
+      }
+      return false;
+    }
+    else if (serviceType == ServiceType.KV && tookNanos >= kvThreshold) {
       return true;
     } else if (serviceType == ServiceType.QUERY && tookNanos >= queryThreshold) {
       return true;
@@ -241,12 +251,14 @@ public class ThresholdLoggingTracer implements RequestTracer {
     private final Queue<Request<?>> viewThresholds = new PriorityQueue<>(THRESHOLD_COMPARATOR);
     private final Queue<Request<?>> ftsThresholds = new PriorityQueue<>(THRESHOLD_COMPARATOR);
     private final Queue<Request<?>> analyticsThresholds = new PriorityQueue<>(THRESHOLD_COMPARATOR);
+    private final Queue<Request<?>> transactionsThresholds = new PriorityQueue<>(THRESHOLD_COMPARATOR);
 
     private long kvThresholdCount = 0;
     private long n1qlThresholdCount = 0;
     private long viewThresholdCount = 0;
     private long ftsThresholdCount = 0;
     private long analyticsThresholdCount = 0;
+    private long transactionsThresholdCount = 0;
 
     private NanoTimestamp lastThresholdLog = NanoTimestamp.never();
     private boolean hasThresholdWritten;
@@ -291,7 +303,14 @@ public class ThresholdLoggingTracer implements RequestTracer {
           return;
         }
         final ServiceType serviceType = request.serviceType();
-        if (serviceType == ServiceType.KV) {
+        if (serviceType == null) {
+          // Virtual service
+          if (request instanceof CoreTransactionRequest) {
+            updateThreshold(transactionsThresholds, request);
+            transactionsThresholdCount += 1;
+          }
+        }
+        else if (serviceType == ServiceType.KV) {
           updateThreshold(kvThresholds, request);
           kvThresholdCount += 1;
         } else if (serviceType == ServiceType.QUERY) {
@@ -363,6 +382,14 @@ public class ThresholdLoggingTracer implements RequestTracer {
         analyticsThresholds.clear();
         analyticsThresholdCount = 0;
       }
+      if (!transactionsThresholds.isEmpty()) {
+        output.put(
+                TracingIdentifiers.SERVICE_TRANSACTIONS,
+                convertThresholdMetadataNew(transactionsThresholds, transactionsThresholdCount)
+        );
+        transactionsThresholds.clear();
+        transactionsThresholdCount = 0;
+      }
       logOverThreshold(output, null);
     }
 
@@ -397,6 +424,11 @@ public class ThresholdLoggingTracer implements RequestTracer {
         output.add(convertThresholdMetadataOld(analyticsThresholds, analyticsThresholdCount, TracingIdentifiers.SERVICE_ANALYTICS));
         analyticsThresholds.clear();
         analyticsThresholdCount = 0;
+      }
+      if (!transactionsThresholds.isEmpty()) {
+        output.add(convertThresholdMetadataOld(transactionsThresholds, transactionsThresholdCount, TracingIdentifiers.SERVICE_TRANSACTIONS));
+        transactionsThresholds.clear();
+        transactionsThresholdCount = 0;
       }
       logOverThreshold(null, output);
     }
@@ -646,6 +678,17 @@ public class ThresholdLoggingTracer implements RequestTracer {
      */
     public Builder analyticsThreshold(final Duration analyticsThreshold) {
       config.analyticsThreshold(analyticsThreshold);
+      return this;
+    }
+
+    /**
+     * Allows to customize the transactionsThreshold.
+     *
+     * @param transactionsThreshold the threshold to set.
+     * @return this builder for chaining.
+     */
+    public Builder transactionsThreshold(final Duration transactionsThreshold) {
+      config.transactionsThreshold(transactionsThreshold);
       return this;
     }
 

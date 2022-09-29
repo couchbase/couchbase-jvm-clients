@@ -19,7 +19,9 @@ package com.couchbase.client.core.transaction;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
@@ -135,11 +137,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_ATR_COMMIT;
 import static com.couchbase.client.core.config.BucketCapabilities.SUBDOC_REVIVE_DOCUMENT;
 import static com.couchbase.client.core.error.transaction.TransactionOperationFailedException.Builder.createError;
 import static com.couchbase.client.core.error.transaction.TransactionOperationFailedException.FinalErrorToRaise;
@@ -244,7 +246,7 @@ public class CoreTransactionAttemptContext {
         this.hooks = Objects.requireNonNull(hooks);
         this.coreQueryAccessor = new CoreQueryAccessor(core);
 
-        attemptSpan = SpanWrapperUtil.createOp(this, tracer(), null, null, "attempt", parentSpan.orElse(null));
+        attemptSpan = SpanWrapperUtil.createOp(this, tracer(), null, null, TracingIdentifiers.TRANSACTION_OP_ATTEMPT, parentSpan.orElse(null));
     }
 
     private ObjectNode makeQueryTxDataLocked() {
@@ -409,12 +411,12 @@ public class CoreTransactionAttemptContext {
      * @param id         the document's ID
      * @return an <code>Optional</code> containing the document, or <code>Optional.empty()</code> if not found
      */
-    private Mono<Optional<CoreTransactionGetResult>> getInternal(CollectionIdentifier collection, String id) {
+    private Mono<Optional<CoreTransactionGetResult>> getInternal(CollectionIdentifier collection, String id, SpanWrapper pspan) {
 
-        return doKVOperation("get " + DebugUtil.docId(collection, id), "user.get", CoreTransactionAttemptContextHooks.HOOK_GET, collection, id,
+        return doKVOperation("get " + DebugUtil.docId(collection, id), pspan, CoreTransactionAttemptContextHooks.HOOK_GET, collection, id,
                 (operationId, span, lockToken) -> Mono.defer(() -> {
                     if (queryModeLocked()) {
-                        return getWithQueryLocked(collection, id, lockToken);
+                        return getWithQueryLocked(collection, id, lockToken, span);
                     } else {
                         return getWithKVLocked(collection, id, Optional.empty(), span, lockToken);
                     }
@@ -527,7 +529,7 @@ public class CoreTransactionAttemptContext {
                     })
 
                     .flatMap(v -> {
-                        long elapsed = pspan.finish();
+                        long elapsed = pspan.elapsedMicros();
                         MeteringUnits built = addUnits(units.build());
                         if (v.isPresent()) {
                             LOGGER.info(attemptId, "completed get of %s%s in %dus", v.get(), DebugUtil.dbg(built), elapsed);
@@ -556,10 +558,9 @@ public class CoreTransactionAttemptContext {
                 .put("kv", true);
     }
 
-    private Mono<Optional<CoreTransactionGetResult>> getWithQueryLocked(CollectionIdentifier collection, String id, ReactiveLock.Waiter lockToken) {
+    private Mono<Optional<CoreTransactionGetResult>> getWithQueryLocked(CollectionIdentifier collection, String id, ReactiveLock.Waiter lockToken, SpanWrapper span) {
         return Mono.defer(() -> {
             assertLocked("getWithQuery");
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "user.query_get", attemptSpan);
 
             int sidx = queryStatementIdx.getAndIncrement();
             AtomicReference<ReactiveLock.Waiter> lt = new AtomicReference<>(lockToken);
@@ -626,6 +627,7 @@ public class CoreTransactionAttemptContext {
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder builder = createError().cause(err);
+                        span.recordExceptionAndSetErrorStatus(err);
 
                         if (err instanceof DocumentNotFoundException) {
                             return Mono.just(Optional.empty());
@@ -638,11 +640,7 @@ public class CoreTransactionAttemptContext {
 
                     // unlock is here rather than in usual place straight after queryWrapper, so it handles the DocumentNotFoundException case too
                     .flatMap(result -> unlock(lt.get(), "getWithQueryLocked end", false)
-                            .thenReturn(result))
-
-                    .doOnTerminate(() -> {
-                        span.finish();
-                    });
+                            .thenReturn(result));
         });
     }
 
@@ -655,12 +653,18 @@ public class CoreTransactionAttemptContext {
      * @return a <code>TransactionGetResultInternal</code> containing the document
      */
     public Mono<CoreTransactionGetResult> get(CollectionIdentifier collection, String id) {
-        return getInternal(collection, id).flatMap(doc -> {
-            if (doc.isPresent()) {
-                return Mono.just(doc.get());
-            } else {
-                return Mono.error(new DocumentNotFoundException(ReducedKeyValueErrorContext.create(id)));
-            }
+        return Mono.defer(() -> {
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, TracingIdentifiers.TRANSACTION_OP_GET, attemptSpan);
+            return getInternal(collection, id, span)
+                    .doOnError(err -> span.finishWithErrorStatus())
+                    .flatMap(doc -> {
+                        span.finish();
+                        if (doc.isPresent()) {
+                            return Mono.just(doc.get());
+                        } else {
+                            return Mono.error(new DocumentNotFoundException(ReducedKeyValueErrorContext.create(id)));
+                        }
+                    });
         });
     }
 
@@ -709,9 +713,9 @@ public class CoreTransactionAttemptContext {
      * @param content    the content to insert
      * @return the doc, updated with its new CAS value and ID, and converted to a <code>TransactionGetResultInternal</code>
      */
-    public Mono<CoreTransactionGetResult> insert(CollectionIdentifier collection, String id, byte[] content) {
+    public Mono<CoreTransactionGetResult> insert(CollectionIdentifier collection, String id, byte[] content, SpanWrapper pspan) {
 
-        return doKVOperation("insert " + DebugUtil.docId(collection, id), "user.insert", CoreTransactionAttemptContextHooks.HOOK_INSERT, collection, id,
+        return doKVOperation("insert " + DebugUtil.docId(collection, id), pspan, CoreTransactionAttemptContextHooks.HOOK_INSERT, collection, id,
                 (operationId, span, lockToken) -> insertInternal(operationId, collection, id, content, span, lockToken));
     }
 
@@ -719,7 +723,7 @@ public class CoreTransactionAttemptContext {
                                                           SpanWrapper span, ReactiveLock.Waiter lockToken) {
         return Mono.defer(() -> {
             if (queryModeLocked()) {
-                return insertWithQueryLocked(collection, id, content, lockToken);
+                return insertWithQueryLocked(collection, id, content, lockToken, span);
             } else {
                 return insertWithKVLocked(operationId, collection, id, content, span, lockToken);
             }
@@ -758,10 +762,8 @@ public class CoreTransactionAttemptContext {
                 }));
     }
 
-    private Mono<CoreTransactionGetResult> insertWithQueryLocked(CollectionIdentifier collection, String id, byte[] content, ReactiveLock.Waiter lockToken) {
+    private Mono<CoreTransactionGetResult> insertWithQueryLocked(CollectionIdentifier collection, String id, byte[] content, ReactiveLock.Waiter lockToken, SpanWrapper span) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "user.query_insert", attemptSpan);
-
             ArrayNode params = Mapper.createArrayNode()
                     .add(makeKeyspace(collection))
                     .add(id)
@@ -830,10 +832,9 @@ public class CoreTransactionAttemptContext {
 
                     ErrorClass ec = classify(err);
                     TransactionOperationFailedException out = operationFailed(createError().cause(err).build());
+                    span.recordExceptionAndSetErrorStatus(err);
                     return Mono.error(out);
-                })
-
-                    .doOnTerminate(() -> span.finish());
+                });
         });
     }
 
@@ -910,8 +911,7 @@ public class CoreTransactionAttemptContext {
                                 .onErrorResume(err -> unlock(lockToken, "onError doUnderLock")
                                         .then(Mono.error(err)));
                     })
-                    .doOnError(err -> span.failWith(err))
-                    .doOnTerminate(() -> span.finish());
+                    .doOnError(err -> span.span().status(RequestSpan.StatusCode.ERROR));
         });
     }
 
@@ -937,8 +937,8 @@ public class CoreTransactionAttemptContext {
      * @return the doc, updated with its new CAS value.  For performance a copy is not created and the original doc
      * object is modified.
      */
-    public Mono<CoreTransactionGetResult> replace(CoreTransactionGetResult doc, byte[] content) {
-        return doKVOperation("replace " + DebugUtil.docId(doc).toString(), "user.replace", CoreTransactionAttemptContextHooks.HOOK_REPLACE, doc.collection(), doc.id(),
+    public Mono<CoreTransactionGetResult> replace(CoreTransactionGetResult doc, byte[] content, SpanWrapper pspan) {
+        return doKVOperation("replace " + DebugUtil.docId(doc), pspan, CoreTransactionAttemptContextHooks.HOOK_REPLACE, doc.collection(), doc.id(),
                 (operationId, span, lockToken) -> replaceInternalLocked(operationId, doc, content, span, lockToken));
     }
 
@@ -955,13 +955,13 @@ public class CoreTransactionAttemptContext {
      * <p>
      * The callback is required to unlock the mutex iff it returns without error. This method will handle unlocking on errors.
      */
-    private <T> Mono<T> doKVOperation(String lockDebugOrig, String spanName, String stageName, CollectionIdentifier docCollection, String docId,
+    private <T> Mono<T> doKVOperation(String lockDebugOrig, SpanWrapper span, String stageName, CollectionIdentifier docCollection, String docId,
                                       TriFunction<String, SpanWrapper, ReactiveLock.Waiter, Mono<T>> op) {
         return createMonoBridge(lockDebugOrig, Mono.defer(() -> {
             String operationId = UUID.randomUUID().toString();
             // If two operations on the same doc are done concurrently it can be unclear, so include a partial of the operation id
             String lockDebug = lockDebugOrig + " - " + operationId.substring(0, TransactionLogEvent.CHARS_TO_LOG);
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), docCollection, docId, spanName, attemptSpan);
+            SpanWrapperUtil.setAttributes(span, this, docCollection, docId);
             // We don't attach the opid to the span, it's too low cardinality to be useful
 
             return lockAndIncKVOps(lockDebug)
@@ -1009,18 +1009,22 @@ public class CoreTransactionAttemptContext {
                                             unlock(lockTokens.mutexToken, "doKVOperation", v == SignalType.CANCEL).block();
                                         }
                                         kvOps.done(lockTokens.waitGroupToken).block();
-                                        span.finish();
-                                    }));
+                                    }))
+
+                    .doOnError(err -> span.setErrorStatus());
         }));
     }
 
     /**
      * Doesn't need everything from doKVOperation, as queryWrapper already centralises a lot of logic
      */
-    public <T> Mono<T> doQueryOperation(String lockDebugIn, BiFunction<Integer, AtomicReference<ReactiveLock.Waiter>, Mono<T>> op) {
+    public <T> Mono<T> doQueryOperation(String lockDebugIn, String statement, @Nullable SpanWrapper pspan, TriFunction<Integer, AtomicReference<ReactiveLock.Waiter>, SpanWrapper, Mono<T>> op) {
         return Mono.defer(() -> {
             int sidx = queryStatementIdx.getAndIncrement();
             String lockDebug = lockDebugIn + " q" + sidx;
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, TracingIdentifiers.TRANSACTION_OP_QUERY, pspan)
+                    .attribute(TracingIdentifiers.ATTR_STATEMENT, statement);
+
             return createMonoBridge(lockDebug, Mono.defer(() -> {
                 AtomicReference<ReactiveLock.Waiter> lt = new AtomicReference<>();
 
@@ -1034,7 +1038,7 @@ public class CoreTransactionAttemptContext {
                             // and needs to hold it after, we use an AtomicReference to unlock the correct lock here.
                             // *WithQuery KV operations do similar.
                             lt.set(lockToken);
-                            return op.apply(sidx, lt)
+                            return op.apply(sidx, lt, span)
 
                                     .doFinally(v -> {
                                         if (v == SignalType.CANCEL || v == SignalType.ON_ERROR) {
@@ -1048,8 +1052,8 @@ public class CoreTransactionAttemptContext {
                                         unlock(lt.get(), "doQueryOperation", v == SignalType.CANCEL).block();
                                     });
                         });
-
-            }));
+            })).doOnError(err -> span.finishWithErrorStatus())
+                    .doOnNext(ignored -> span.finish());
         });
     }
 
@@ -1061,7 +1065,7 @@ public class CoreTransactionAttemptContext {
         LOGGER.info(attemptId, "replace doc %s, operationId = %s", doc, operationId);
 
         if (queryModeLocked()) {
-            return replaceWithQueryLocked(doc, content, lockToken);
+            return replaceWithQueryLocked(doc, content, lockToken, pspan);
         } else {
             return replaceWithKVLocked(operationId, doc, content, pspan, lockToken);
         }
@@ -1124,7 +1128,7 @@ public class CoreTransactionAttemptContext {
                                        SpanWrapper pspan) {
         return Mono.defer(() -> {
             if (mayNeedToWriteATR) {
-                return doUnderLock("before ATR " + DebugUtil.docId(docCollection, docId), null,
+                return doUnderLock("before ATR " + DebugUtil.docId(docCollection, docId),
                         () -> initAtrIfNeededLocked(docCollection, docId, pspan));
             }
 
@@ -1152,10 +1156,8 @@ public class CoreTransactionAttemptContext {
         return atrCollection.get();
     }
 
-    private Mono<CoreTransactionGetResult> replaceWithQueryLocked(CoreTransactionGetResult doc, byte[] content, ReactiveLock.Waiter lockToken) {
+    private Mono<CoreTransactionGetResult> replaceWithQueryLocked(CoreTransactionGetResult doc, byte[] content, ReactiveLock.Waiter lockToken, SpanWrapper span) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), doc.collection(), doc.id(), "user.query_replace", attemptSpan);
-
             ObjectNode txData = makeTxdata();
             txData.put("scas", Long.toString(doc.cas()));
             doc.txnMeta().ifPresent(v -> txData.set("txnMeta", v));
@@ -1221,6 +1223,7 @@ public class CoreTransactionAttemptContext {
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder builder = createError().cause(err);
+                        span.recordExceptionAndSetErrorStatus(err);
 
                         if (err instanceof TransactionOperationFailedException) {
                             return Mono.error(err);
@@ -1234,16 +1237,12 @@ public class CoreTransactionAttemptContext {
                             TransactionOperationFailedException out = operationFailed(builder.build());
                             return Mono.error(out);
                         }
-                    })
-
-                    .doOnTerminate(() -> span.finish());
+                    });
         });
     }
 
-    private Mono<Void> removeWithQueryLocked(CoreTransactionGetResult doc, ReactiveLock.Waiter lockToken) {
+    private Mono<Void> removeWithQueryLocked(CoreTransactionGetResult doc, ReactiveLock.Waiter lockToken, SpanWrapper span) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), doc.collection(), doc.id(), "user.query_remove", attemptSpan);
-
             ObjectNode txData = makeTxdata();
             txData.put("scas", Long.toString(doc.cas()));
             doc.txnMeta().ifPresent(v -> txData.set("txnMeta", v));
@@ -1277,6 +1276,7 @@ public class CoreTransactionAttemptContext {
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder builder = createError().cause(err);
+                        span.recordExceptionAndSetErrorStatus(err);
 
                         if (err instanceof TransactionOperationFailedException) {
                             return Mono.error(err);
@@ -1290,9 +1290,7 @@ public class CoreTransactionAttemptContext {
                             TransactionOperationFailedException out = operationFailed(builder.build());
                             return Mono.error(out);
                         }
-                    })
-
-                    .doOnTerminate(() -> span.finish());
+                    });
         });
     }
 
@@ -1386,17 +1384,11 @@ public class CoreTransactionAttemptContext {
 
     private Mono<Void> checkATREntryForBlockingDoc(CoreTransactionGetResult doc, SpanWrapper pspan) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, "staging.check_atr_blocking", pspan);
-
             CollectionIdentifier collection = doc.links().collection();
             MeteringUnits.MeteringUnitsBuilder units = new MeteringUnits.MeteringUnitsBuilder();
 
-            return checkATREntryForBlockingDocInternal(doc, collection, span, units)
-                    .doFinally(v -> {
-                        span.finish();
-                        addUnits(units.build());
-                    })
-                    .doOnError(err -> failSpan(span, err));
+            return checkATREntryForBlockingDocInternal(doc, collection, pspan, units)
+                    .doOnTerminate(() -> addUnits(units.build()));
         });
     }
 
@@ -1434,7 +1426,7 @@ public class CoreTransactionAttemptContext {
     private Mono<Void> atrPendingLocked(CollectionIdentifier collection, SpanWrapper pspan) {
         return Mono.defer(() -> {
             assertLocked("atrPending");
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, atrId.orElse(null), "atr.pending", pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, atrId.orElse(null), TracingIdentifiers.TRANSACTION_OP_ATR_PENDING, pspan);
 
             String prefix = "attempts." + attemptId;
 
@@ -1464,7 +1456,7 @@ public class CoreTransactionAttemptContext {
                     .flatMap(v -> hooks.afterAtrPending.apply(this).map(x -> v))
 
                     .doOnNext(v -> {
-                        long elapsed = span.finish();
+                        long elapsed = span.elapsedMicros();
                         addUnits(v.flexibleExtras());
                         LOGGER.info(attemptId, "set ATR %s to Pending in %dus%s", getAtrDebug(collection, atrId), elapsed,
                                 DebugUtil.dbg(v.flexibleExtras()));
@@ -1474,14 +1466,14 @@ public class CoreTransactionAttemptContext {
 
                     .then()
 
-
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder out = createError().cause(err);
                         MeteringUnits units = addUnits(MeteringUnits.from(err));
+                        long elapsed = span.finish(err);
 
                         LOGGER.info(attemptId, "error while setting ATR %s to Pending%s in %dus: %s",
-                                getAtrDebug(collection, atrId), DebugUtil.dbg(units), span.failWith(err), dbg(err));
+                                getAtrDebug(collection, atrId), DebugUtil.dbg(units), elapsed, dbg(err));
 
                         if (expiryOvertimeMode) {
                             return mapErrorInOvertimeToExpired(true, CoreTransactionAttemptContextHooks.HOOK_ATR_PENDING, err, FinalErrorToRaise.TRANSACTION_EXPIRED);
@@ -1505,7 +1497,9 @@ public class CoreTransactionAttemptContext {
                         } else {
                             return Mono.error(operationFailed(out.build()));
                         }
-                    });
+                    })
+                    .doOnError(err -> span.finish(err))
+                    .doOnTerminate(() -> span.finish());
         });
     }
 
@@ -1515,9 +1509,6 @@ public class CoreTransactionAttemptContext {
         state = newState;
     }
 
-    private static void failSpan(SpanWrapper span, Throwable err) {
-        span.failWith(err);
-    }
 
     /*
      * Stage a replace on a document, putting the staged mutation into the doc's xattrs.  The document's content is
@@ -1537,7 +1528,7 @@ public class CoreTransactionAttemptContext {
                         boolean accessDeleted) {
         return Mono.defer(() -> {
             assertNotLocked("createStagedReplace");
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "staging.replace", pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, TracingIdentifiers.TRANSACTION_OP_REPLACE_STAGE, pspan);
 
             byte[] txn = createDocumentMetadata(OperationTypes.REPLACE, operationId, documentMetadata);
 
@@ -1562,7 +1553,7 @@ public class CoreTransactionAttemptContext {
                     .flatMap(result -> hooks.afterStagedReplaceComplete.apply(this, id).map(x -> result))
 
                     .doOnNext(updatedDoc -> {
-                        long elapsed = span.finish();
+                        long elapsed = span.elapsedMicros();
                         addUnits(updatedDoc.flexibleExtras());
                         LOGGER.info(attemptId, "replaced doc %s%s got cas %s, in %dus",
                                 DebugUtil.docId(collection, id), DebugUtil.dbg(updatedDoc.flexibleExtras()), updatedDoc.cas(), elapsed);
@@ -1583,9 +1574,8 @@ public class CoreTransactionAttemptContext {
                                         crc32OfGet, contentToStage, contentOfBody, pspan, accessDeleted));
                     })
 
-                    .doFinally(v -> span.finish())
-                    .doOnError(err -> failSpan(span, err));
-
+                    .doOnError(err -> span.finish(err))
+                    .doOnTerminate(() -> span.finish());
         });
     }
 
@@ -1677,7 +1667,7 @@ public class CoreTransactionAttemptContext {
      */
     private Mono<Void> createStagedRemove(String operationId, CoreTransactionGetResult doc, long cas, SpanWrapper pspan, boolean accessDeleted) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), doc.collection(), doc.id(), "staging.remove", pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), doc.collection(), doc.id(), TracingIdentifiers.TRANSACTION_OP_REMOVE_STAGE, pspan);
 
             LOGGER.info(attemptId, "about to remove doc %s with cas %d", DebugUtil.docId(doc), cas);
 
@@ -1698,7 +1688,7 @@ public class CoreTransactionAttemptContext {
                             .thenReturn(updatedDoc))
 
                     .flatMap(response -> {
-                        long elapsed = span.finish();
+                        long elapsed = span.elapsedMicros();
                         addUnits(response.flexibleExtras());
                         LOGGER.info(attemptId, "staged remove of doc %s%s got cas %d, in %dus",
                                 DebugUtil.docId(doc), DebugUtil.dbg(response.flexibleExtras()), response.cas(), elapsed);
@@ -1713,27 +1703,23 @@ public class CoreTransactionAttemptContext {
                     .onErrorResume(err -> handleErrorOnStagedMutation("removing", doc.collection(), doc.id(), err, span, doc.crc32OfGet(),
                             (newCas) -> createStagedRemove(operationId, doc, newCas, span, accessDeleted)))
 
-                    .doOnError(err -> failSpan(span, err))
-                    .doFinally(v -> span.finish());
+                    .doOnError(err -> span.finish(err))
+                    .doOnTerminate(() -> span.finish());
         });
     }
 
     private Mono<Void> doUnderLock(String dbg,
-                                   @Nullable SpanWrapper span,
                                    Supplier<Mono<Void>> whileLocked) {
             return lock(dbg)
                     .flatMap(lockToken -> Mono.defer(() -> whileLocked.get())
                             .doFinally(v -> {
-                                if (span != null) {
-                                    span.finish();
-                                }
                                 unlock(lockToken, "doUnderLock on signal " + v).block();
                             }));
     }
 
     private Mono<Void> addStagedMutation(StagedMutation sm) {
         return Mono.defer(() -> {
-            return doUnderLock("addStagedMutation " + DebugUtil.docId(sm.collection, sm.id), null,
+            return doUnderLock("addStagedMutation " + DebugUtil.docId(sm.collection, sm.id),
                     () -> Mono.fromRunnable(() -> {
                         removeStagedMutationLocked(sm.collection, sm.id);
                         stagedMutationsLocked.add(sm);
@@ -1955,7 +1941,7 @@ public class CoreTransactionAttemptContext {
                                                               Optional<Long> cas) {
         return Mono.defer(() -> {
             assertNotLocked("createStagedInsert");
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "staging.insert", pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, TracingIdentifiers.TRANSACTION_OP_INSERT_STAGE, pspan);
 
             byte[] txn = createDocumentMetadata(OperationTypes.INSERT, operationId, Optional.empty());
 
@@ -1980,7 +1966,7 @@ public class CoreTransactionAttemptContext {
                     .flatMap(response -> hooks.afterStagedInsertComplete.apply(this, id).thenReturn(response)) // testing hook
 
                     .doOnNext(response -> {
-                        long elapsed = span.finish();
+                        long elapsed = span.elapsedMicros();
                         addUnits(response.flexibleExtras());
                         LOGGER.info(attemptId, "inserted doc %s%s got cas %d, in %dus",
                                 DebugUtil.docId(collection, id), DebugUtil.dbg(response.flexibleExtras()), response.cas(), elapsed);
@@ -2036,7 +2022,7 @@ public class CoreTransactionAttemptContext {
                         }
                     })
 
-                    .doOnError(err -> failSpan(span, err))
+                    .doOnError(err -> span.finish(err))
                     .doOnTerminate(() -> span.finish());
         });
     }
@@ -2048,8 +2034,8 @@ public class CoreTransactionAttemptContext {
      * <p>
      * @param doc - the doc to be removed
      */
-    public Mono<Void> remove(CoreTransactionGetResult doc) {
-        return doKVOperation("remove " + DebugUtil.docId(doc), "user.remove", CoreTransactionAttemptContextHooks.HOOK_REMOVE, doc.collection(), doc.id(),
+    public Mono<Void> remove(CoreTransactionGetResult doc, SpanWrapper pspan) {
+        return doKVOperation("remove " + DebugUtil.docId(doc), pspan, CoreTransactionAttemptContextHooks.HOOK_REMOVE, doc.collection(), doc.id(),
                 (operationId, span, lockToken) -> removeInternalLocked(operationId, doc, span, lockToken)
                         // This triggers onNext
                         .thenReturn(1)).then();
@@ -2060,7 +2046,7 @@ public class CoreTransactionAttemptContext {
             LOGGER.info(attemptId, "remove doc %s, operationId=%s", DebugUtil.docId(doc), operationId);
 
             if (queryModeLocked()) {
-                return removeWithQueryLocked(doc, lockToken);
+                return removeWithQueryLocked(doc, lockToken, span);
             } else {
                 return removeWithKVLocked(operationId, doc, span, lockToken);
             }
@@ -2245,20 +2231,15 @@ public class CoreTransactionAttemptContext {
     /**
      * Commits the transaction.  All staged replaces, inserts and removals will be written.
      * <p>
-     * The semantics are the same as {@link AttemptContext#commit()}, except that the a <code>Mono</code> is returned
+     * The semantics are the same as {@link #commit()}, except that the a <code>Mono</code> is returned
      * so the operation can be performed asynchronously.
      */
     public Mono<Void> commit() {
-        return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, "user.commit", attemptSpan);
-
-            return commitInternal(span);
-        });
+        return commitInternal();
     }
 
     Mono<Void> implicitCommit(boolean singleQueryTransactionMode) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, "commit.implicit", attemptSpan);
 
             // May have done an explicit commit already, or the attempt may have failed.
             if (hasStateBit(TRANSACTION_STATE_BIT_COMMIT_NOT_ALLOWED)) {
@@ -2270,17 +2251,20 @@ public class CoreTransactionAttemptContext {
             else {
                 LOGGER.info(attemptId(), "doing implicit commit");
 
-                return commitInternal(span);
+                return commitInternal();
             }
         }).then();
     }
 
-    Mono<Void> commitInternal(SpanWrapper span) {
+    Mono<Void> commitInternal() {
         // MonoBridge in case someone is trying a concurrent commit
         return createMonoBridge("commit", Mono.defer(() -> {
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, TracingIdentifiers.TRANSACTION_OP_COMMIT, attemptSpan);
             assertNotLocked("commit");
             return waitForAllOpsThenDoUnderLock("commit", span,
-                    () -> commitInternalLocked(span));
+                    () -> commitInternalLocked(span))
+                    .doOnError(err -> span.finish(err))
+                    .doOnTerminate(() -> span.finish());
         }));
     }
 
@@ -2344,7 +2328,6 @@ public class CoreTransactionAttemptContext {
                         LOGGER.info(attemptId, "overall commit completed");
                     })
 
-                    .doFinally(v -> span.finish())
                     .then();
         });
     }
@@ -2415,7 +2398,7 @@ public class CoreTransactionAttemptContext {
     private Mono<Void> atrCompleteLocked(String prefix, AtomicReference<Long> overallStartTime, SpanWrapper pspan) {
         return Mono.defer(() -> {
             assertLocked("atrComplete");
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), atrCollection.orElse(null), atrId.orElse(null), "atr.complete", pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), atrCollection.orElse(null), atrId.orElse(null), TracingIdentifiers.TRANSACTION_OP_ATR_COMPLETE, pspan);
 
             LOGGER.info(attemptId, "about to remove ATR entry %s", getAtrDebug(atrCollection, atrId));
 
@@ -2446,7 +2429,7 @@ public class CoreTransactionAttemptContext {
                     setStateLocked(AttemptState.COMPLETED);
                     addUnits(v.flexibleExtras());
                     long now = System.nanoTime();
-                    long elapsed = span.finish();
+                    long elapsed = span.elapsedMicros();
                     LOGGER.info(attemptId, "removed ATR %s in %dus%s, overall commit completed in %dus",
                             getAtrDebug(atrCollection, atrId), elapsed, DebugUtil.dbg(v.flexibleExtras()), TimeUnit.NANOSECONDS.toMicros(now - overallStartTime.get()));
                 })
@@ -2471,8 +2454,8 @@ public class CoreTransactionAttemptContext {
                             return Mono.empty();
                         }
                     })
-                    .doOnError(err -> failSpan(span, err))
-                    .doFinally(v -> span.finish());
+                    .doOnError(err -> span.finish(err))
+                    .doOnTerminate(() -> span.finish());
         });
     }
 
@@ -2493,10 +2476,9 @@ public class CoreTransactionAttemptContext {
                 .cause(new AttemptExpiredException(err)).build()));
     }
 
-    private Mono<Void> removeDocLocked(SpanWrapper pspan, CollectionIdentifier collection, String id, boolean ambiguityResolutionMode) {
+    private Mono<Void> removeDocLocked(SpanWrapper span, CollectionIdentifier collection, String id, boolean ambiguityResolutionMode) {
         return Mono.defer(() -> {
             assertLocked("removeDoc");
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "commit.remove", pspan);
 
             return Mono.fromRunnable(() -> {
                 LOGGER.info(attemptId, "about to remove doc %s, ambiguityResolutionMode=%s",
@@ -2561,16 +2543,14 @@ public class CoreTransactionAttemptContext {
 
                     .then()
 
-                    .doOnError(err -> failSpan(span, err))
-                    .doFinally(v -> span.finish());
+                    .doOnError(err -> span.span().status(RequestSpan.StatusCode.ERROR));
         });
     }
 
-    private Mono<Void> commitDocsLocked(SpanWrapper pspan) {
+    private Mono<Void> commitDocsLocked(SpanWrapper span) {
         return Mono.defer(() -> {
             assertLocked("commitDocs");
-
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, "commit.docs", pspan);
+            long start = System.nanoTime();
 
             // TXNJ-64 - commit in the order the docs were staged
             return Flux.fromIterable(stagedMutationsLocked)
@@ -2581,7 +2561,7 @@ public class CoreTransactionAttemptContext {
                     })
 
                     .then(Mono.defer(() -> {
-                        long elapsed = span.finish();
+                        long elapsed = TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - start);
                         LOGGER.info(attemptId, "commit - all %d docs committed in %dus",
                                 stagedMutationsLocked.size(), elapsed);
 
@@ -2591,8 +2571,7 @@ public class CoreTransactionAttemptContext {
 
                     .then()
 
-                    .doOnError(err -> failSpan(span, err))
-                    .doFinally(v -> span.finish());
+                    .doOnError(err -> span.span().status(RequestSpan.StatusCode.ERROR));
         });
     }
 
@@ -2629,7 +2608,7 @@ public class CoreTransactionAttemptContext {
         });
     }
 
-    private Mono<Void> commitDocLocked(SpanWrapper pspan,
+    private Mono<Void> commitDocLocked(SpanWrapper span,
                                        StagedMutation staged,
                                        long cas,
                                        boolean insertMode,
@@ -2638,7 +2617,6 @@ public class CoreTransactionAttemptContext {
             assertLocked("commitDoc");
             String id = staged.id;
             CollectionIdentifier collection = staged.collection;
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "commit.doc", pspan);
 
             return Mono.fromRunnable(() -> {
                 LOGGER.info(attemptId, "commit - committing doc %s, cas=%d, insertMode=%s, ambiguity-resolution=%s supportsReplaceBodyWithXattr=%s",
@@ -2732,9 +2710,9 @@ public class CoreTransactionAttemptContext {
 
                             return commitDocLocked(span, staged, cas, insertMode, true).thenReturn(0);
                         } else if (ec == FAIL_CAS_MISMATCH) {
-                            return handleDocChangedDuringCommit(pspan, staged, insertMode).thenReturn(0);
+                            return handleDocChangedDuringCommit(span, staged, insertMode).thenReturn(0);
                         } else if (ec == FAIL_DOC_NOT_FOUND) {
-                            return handleDocMissingDuringCommit(pspan, staged);
+                            return handleDocMissingDuringCommit(span, staged);
                         } else if (ec == FAIL_DOC_ALREADY_EXISTS) { // includes CannotReviveAliveDocumentException
                             if (ambiguityResolutionMode) {
                                 return Mono.error(e.build());
@@ -2763,8 +2741,7 @@ public class CoreTransactionAttemptContext {
 
                     .then()
 
-                    .doOnError(err -> failSpan(span, err))
-                    .doFinally(v -> span.finish());
+                    .doOnError(err -> span.span().status(RequestSpan.StatusCode.ERROR));
         });
     }
 
@@ -2787,6 +2764,10 @@ public class CoreTransactionAttemptContext {
                     .then(commitDocLocked(pspan, staged, 0, true, false)
                             .thenReturn(0));
         });
+    }
+
+    public RequestSpan span() {
+        return attemptSpan.span();
     }
 
     static class DocChanged {
@@ -2835,13 +2816,12 @@ public class CoreTransactionAttemptContext {
     }
 
     // No need to pass ambiguityResolutionMode - we are about to resolve the ambiguity
-    private Mono<Void> handleDocChangedDuringCommit(SpanWrapper pspan,
+    private Mono<Void> handleDocChangedDuringCommit(SpanWrapper span,
                                                     StagedMutation staged,
                                                     boolean insertMode) {
         return Mono.defer(() -> {
             String id = staged.id;
             CollectionIdentifier collection = staged.collection;
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "commit.doc_changed", pspan);
             MeteringUnits.MeteringUnitsBuilder units = new MeteringUnits.MeteringUnitsBuilder();
 
             return Mono.fromRunnable(() -> {
@@ -2862,6 +2842,7 @@ public class CoreTransactionAttemptContext {
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
                         MeteringUnits built = addUnits(units.build());
+                        span.recordException(err);
                         LOGGER.info(attemptId, "commit - handling doc changed %s%s, got error %s",
                                 DebugUtil.docId(collection, id), DebugUtil.dbg(built), dbg(err));
                         if (ec == TRANSACTION_OPERATION_FAILED) {
@@ -2908,18 +2889,17 @@ public class CoreTransactionAttemptContext {
                         }
                     })
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY_WITH_FIXED_RETRY)
-                    .doFinally(v -> span.finish())
-                    .then();
+                    .then()
+                    .doOnError(err -> span.setErrorStatus());
         });
     }
 
-    private <T> Mono<T> handleDocChangedDuringStaging(SpanWrapper pspan,
+    private <T> Mono<T> handleDocChangedDuringStaging(SpanWrapper span,
                                                       String id,
                                                       CollectionIdentifier collection,
                                                       Optional<String> crc32FromGet,
                                                       Function<Long, Mono<T>> callback) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "staging.doc_changed", pspan);
             MeteringUnits.MeteringUnitsBuilder units = new MeteringUnits.MeteringUnitsBuilder();
             return Mono.fromRunnable(() -> {
                         LOGGER.info(attemptId, "handling doc changed during staging %s",
@@ -3003,12 +2983,11 @@ public class CoreTransactionAttemptContext {
         }
     }
 
-    private Mono<Void> handleDocChangedDuringRollback(SpanWrapper pspan,
+    private Mono<Void> handleDocChangedDuringRollback(SpanWrapper span,
                                                       String id,
                                                       CollectionIdentifier collection,
                                                       Function<Long, Mono<Void>> callback) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "rollback.doc_changed", pspan);
             MeteringUnits.MeteringUnitsBuilder units = new MeteringUnits.MeteringUnitsBuilder();
             return Mono.fromRunnable(() -> {
                         LOGGER.info(attemptId, "handling doc changed during rollback %s",
@@ -3021,6 +3000,7 @@ public class CoreTransactionAttemptContext {
                     .onErrorResume(err -> {
                         MeteringUnits built = addUnits(units.build());
                         ErrorClass ec = classify(err);
+                        span.recordException(err);
                         LOGGER.info(attemptId, "handling doc changed during rollback %s%s, got error %s",
                                 DebugUtil.docId(collection, id), DebugUtil.dbg(built), dbg(err));
                         if (ec == TRANSACTION_OPERATION_FAILED) {
@@ -3066,7 +3046,7 @@ public class CoreTransactionAttemptContext {
                         }
                     })
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY_WITH_FIXED_RETRY)
-                    .doFinally(v -> span.finish())
+                    .doOnError(err -> span.setErrorStatus())
                     .then();
         });
     }
@@ -3084,108 +3064,104 @@ public class CoreTransactionAttemptContext {
     }
 
     private Mono<Void> atrCommitAmbiguityResolutionLocked(AtomicReference<Long> overallStartTime,
-                                                          SpanWrapper pspan) {
+                                                          SpanWrapper span) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), atrCollection.orElse(null), atrId.orElse(null), "atr.commit_ambiguity_resolution", pspan);
+                    LOGGER.info(attemptId, "about to fetch status of ATR %s to resolve ambiguity, expiryOvertimeMode=%s",
+                            getAtrDebug(atrCollection, atrId), expiryOvertimeMode);
+                    overallStartTime.set(System.nanoTime());
 
-            return Mono.defer(() -> {
-                        LOGGER.info(attemptId, "about to fetch status of ATR %s to resolve ambiguity, expiryOvertimeMode=%s",
-                                getAtrDebug(atrCollection, atrId), expiryOvertimeMode);
-                        overallStartTime.set(System.nanoTime());
+                    return errorIfExpiredAndNotInExpiryOvertimeMode(CoreTransactionAttemptContextHooks.HOOK_ATR_COMMIT_AMBIGUITY_RESOLUTION, Optional.empty());
+                })
 
-                        return errorIfExpiredAndNotInExpiryOvertimeMode(CoreTransactionAttemptContextHooks.HOOK_ATR_COMMIT_AMBIGUITY_RESOLUTION, Optional.empty());
-                    })
+                .then(hooks.beforeAtrCommitAmbiguityResolution.apply(this)) // testing hook
 
-                    .then(hooks.beforeAtrCommitAmbiguityResolution.apply(this)) // testing hook
+                .then(TransactionKVHandler.lookupIn(core, atrCollection.get(), atrId.get(), kvTimeoutNonMutating(), false, OptionsUtil.createClientContext("atrCommitAmbiguityResolution"), span,
+                        Arrays.asList(
+                                new SubdocGetRequest.Command(SubdocCommandType.GET, "attempts." + attemptId + "." + TransactionFields.ATR_FIELD_STATUS, true, 0)
+                        )))
+                .publishOn(scheduler())
 
-                    .then(TransactionKVHandler.lookupIn(core, atrCollection.get(), atrId.get(), kvTimeoutNonMutating(), false, OptionsUtil.createClientContext("atrCommitAmbiguityResolution"), span,
-                            Arrays.asList(
-                                    new SubdocGetRequest.Command(SubdocCommandType.GET, "attempts." + attemptId + "." + TransactionFields.ATR_FIELD_STATUS, true, 0)
-                            )))
-                    .publishOn(scheduler())
+                .flatMap(result -> {
+                    String status = null;
+                    try {
+                        status = Mapper.reader().readValue(result.values()[0].value(), String.class);
+                    } catch (IOException e) {
+                        LOGGER.info(attemptId, "failed to parse ATR %s status '%s'", getAtrDebug(atrCollection, atrId), new String(result.values()[0].value()));
+                        status = "UNKNOWN";
+                    }
 
-                    .flatMap(result -> {
-                        String status = null;
-                        try {
-                            status = Mapper.reader().readValue(result.values()[0].value(), String.class);
-                        } catch (IOException e) {
-                            LOGGER.info(attemptId, "failed to parse ATR %s status '%s'", getAtrDebug(atrCollection, atrId), new String(result.values()[0].value()));
-                            status = "UNKNOWN";
-                        }
+                    addUnits(result.flexibleExtras());
+                    LOGGER.info(attemptId, "got status of ATR %s%s: '%s'", getAtrDebug(atrCollection, atrId),
+                            DebugUtil.dbg(result.flexibleExtras()), status);
 
-                        addUnits(result.flexibleExtras());
-                        LOGGER.info(attemptId, "got status of ATR %s%s: '%s'", getAtrDebug(atrCollection, atrId),
-                                DebugUtil.dbg(result.flexibleExtras()), status);
+                    AttemptState state = AttemptState.convert(status);
 
-                        AttemptState state = AttemptState.convert(status);
+                    switch (state) {
+                        case COMMITTED:
+                            return Mono.empty();
 
-                        switch (state) {
-                            case COMMITTED:
-                                return Mono.empty();
+                        case ABORTED:
+                            return Mono.error(operationFailed(createError()
+                                    .retryTransaction()
+                                    .build()));
 
-                            case ABORTED:
-                                return Mono.error(operationFailed(createError()
-                                        .retryTransaction()
-                                        .build()));
-
-                            default:
-                                return Mono.error(operationFailed(createError()
-                                        .doNotRollbackAttempt()
-                                        .cause(new IllegalStateException("This transaction has been changed by another actor to be in unexpected state " + status))
-                                        .build()));
-                        }
-                    })
-
-                    .then()
-
-                    .onErrorResume(err -> {
-                        ErrorClass ec = classify(err);
-                        TransactionOperationFailedException.Builder builder = createError().doNotRollbackAttempt().cause(err);
-                        MeteringUnits units = addUnits(MeteringUnits.from(err));
-
-                        if (err instanceof RetryAtrCommitException || ec == TRANSACTION_OPERATION_FAILED) {
-                            return Mono.error(err);
-                        }
-
-                        LOGGER.info(attemptId, "error while resolving ATR %s ambiguity%s in %dus: %s",
-                                getAtrDebug(atrCollection, atrId), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
-
-                        if (ec == FAIL_EXPIRY) {
+                        default:
                             return Mono.error(operationFailed(createError()
                                     .doNotRollbackAttempt()
-                                    .raiseException(FinalErrorToRaise.TRANSACTION_COMMIT_AMBIGUOUS)
-                                    .cause(new AttemptExpiredException(err)).build()));
-                        } else if (ec == FAIL_HARD) {
-                            return Mono.error(operationFailed(builder
-                                    .doNotRollbackAttempt()
-                                    .raiseException(FinalErrorToRaise.TRANSACTION_COMMIT_AMBIGUOUS)
+                                    .cause(new IllegalStateException("This transaction has been changed by another actor to be in unexpected state " + status))
                                     .build()));
-                        } else if (ec == FAIL_TRANSIENT || ec == FAIL_OTHER) {
-                            return Mono.error(new RetryOperationException());
-                        } else if (ec == ErrorClass.FAIL_PATH_NOT_FOUND) {
-                            return Mono.error(operationFailed(createError()
-                                    .doNotRollbackAttempt()
-                                    .cause(new ActiveTransactionRecordEntryNotFoundException(atrId.get(), attemptId))
-                                    .raiseException(FinalErrorToRaise.TRANSACTION_COMMIT_AMBIGUOUS)
-                                    .build()));
-                        } else if (ec == FAIL_DOC_NOT_FOUND) {
-                            return Mono.error(operationFailed(createError()
-                                    .doNotRollbackAttempt()
-                                    .cause(new ActiveTransactionRecordNotFoundException(atrId.get(), attemptId))
-                                    .raiseException(FinalErrorToRaise.TRANSACTION_COMMIT_AMBIGUOUS)
-                                    .build()));
-                        } else {
-                            return Mono.error(operationFailed(builder.raiseException(FinalErrorToRaise.TRANSACTION_COMMIT_AMBIGUOUS).build()));
-                        }
-                    })
+                    }
+                })
 
-                    // Retry RetryOperation() exceptions
-                    .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY_WITH_FIXED_RETRY)
-                    .publishOn(scheduler()) // after retryWhen triggers, it's on parallel scheduler
+                .then()
 
-                    .doOnError(err -> failSpan(span, err))
-                    .doFinally(v -> span.finish());
-        });
+                .onErrorResume(err -> {
+                    ErrorClass ec = classify(err);
+                    TransactionOperationFailedException.Builder builder = createError().doNotRollbackAttempt().cause(err);
+                    MeteringUnits units = addUnits(MeteringUnits.from(err));
+                    span.recordException(err);
+
+                    if (err instanceof RetryAtrCommitException || ec == TRANSACTION_OPERATION_FAILED) {
+                        return Mono.error(err);
+                    }
+
+                    LOGGER.info(attemptId, "error while resolving ATR %s ambiguity%s in %dus: %s",
+                            getAtrDebug(atrCollection, atrId), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
+
+                    if (ec == FAIL_EXPIRY) {
+                        return Mono.error(operationFailed(createError()
+                                .doNotRollbackAttempt()
+                                .raiseException(FinalErrorToRaise.TRANSACTION_COMMIT_AMBIGUOUS)
+                                .cause(new AttemptExpiredException(err)).build()));
+                    } else if (ec == FAIL_HARD) {
+                        return Mono.error(operationFailed(builder
+                                .doNotRollbackAttempt()
+                                .raiseException(FinalErrorToRaise.TRANSACTION_COMMIT_AMBIGUOUS)
+                                .build()));
+                    } else if (ec == FAIL_TRANSIENT || ec == FAIL_OTHER) {
+                        return Mono.error(new RetryOperationException());
+                    } else if (ec == ErrorClass.FAIL_PATH_NOT_FOUND) {
+                        return Mono.error(operationFailed(createError()
+                                .doNotRollbackAttempt()
+                                .cause(new ActiveTransactionRecordEntryNotFoundException(atrId.get(), attemptId))
+                                .raiseException(FinalErrorToRaise.TRANSACTION_COMMIT_AMBIGUOUS)
+                                .build()));
+                    } else if (ec == FAIL_DOC_NOT_FOUND) {
+                        return Mono.error(operationFailed(createError()
+                                .doNotRollbackAttempt()
+                                .cause(new ActiveTransactionRecordNotFoundException(atrId.get(), attemptId))
+                                .raiseException(FinalErrorToRaise.TRANSACTION_COMMIT_AMBIGUOUS)
+                                .build()));
+                    } else {
+                        return Mono.error(operationFailed(builder.raiseException(FinalErrorToRaise.TRANSACTION_COMMIT_AMBIGUOUS).build()));
+                    }
+                })
+
+                // Retry RetryOperation() exceptions
+                .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY_WITH_FIXED_RETRY)
+                .publishOn(scheduler()) // after retryWhen triggers, it's on parallel scheduler
+
+                .doOnError(err -> span.setErrorStatus());
     }
 
     private Mono<Void> atrCommitLocked(List<SubdocMutateRequest.Command> specs,
@@ -3194,7 +3170,7 @@ public class CoreTransactionAttemptContext {
 
         return Mono.defer(() -> {
             assertLocked("atrCommit");
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), atrCollection.orElse(null), atrId.orElse(null), "atr.commit", pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), atrCollection.orElse(null), atrId.orElse(null), TRANSACTION_OP_ATR_COMMIT, pspan);
 
             AtomicBoolean ambiguityResolutionMode = new AtomicBoolean(false);
 
@@ -3229,6 +3205,7 @@ public class CoreTransactionAttemptContext {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder builder = createError().cause(err);
                         MeteringUnits units = addUnits(MeteringUnits.from(err));
+                        span.recordException(err);
 
                         LOGGER.info(attemptId, "error while setting ATR %s to Committed%s in %dus: %s",
                                 getAtrDebug(atrCollection, atrId), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
@@ -3302,8 +3279,8 @@ public class CoreTransactionAttemptContext {
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY)
                     .publishOn(scheduler()) // after retryWhen triggers, it's on parallel scheduler
 
-                    .doOnError(err -> failSpan(span, err))
-                    .doFinally(v -> span.finish());
+                    .doOnError(err -> span.finish(err))
+                    .doOnTerminate(() -> span.finish());
         });
     }
 
@@ -3335,17 +3312,15 @@ public class CoreTransactionAttemptContext {
      */
     public Mono<Void> rollback() {
         return createMonoBridge("rollback", Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, "user.rollback", attemptSpan);
-            return waitForAllOpsThenDoUnderLock("app-rollback", span,
-                    () -> rollbackInternalLocked(true, span));
+            return waitForAllOpsThenDoUnderLock("app-rollback", attemptSpan,
+                    () -> rollbackInternalLocked(true));
         }));
     }
 
     Mono<Void> rollbackAuto() {
         return createMonoBridge("rollbackAuto", Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, "rollback.auto", attemptSpan);
-            return waitForAllOpsThenDoUnderLock("auto-rollback", span,
-                    () -> rollbackInternalLocked(false, span));
+            return waitForAllOpsThenDoUnderLock("auto-rollback", attemptSpan,
+                    () -> rollbackInternalLocked(false));
         }));
     }
 
@@ -3354,29 +3329,34 @@ public class CoreTransactionAttemptContext {
      *
      * @param isAppRollback whether this is an app-rollback or auto-rollback
      */
-    private Mono<Void> rollbackInternalLocked(boolean isAppRollback, SpanWrapper span) {
+    private Mono<Void> rollbackInternalLocked(boolean isAppRollback) {
         return Mono.defer(() -> {
-            TransactionOperationFailedException returnEarly = canPerformRollback("rollbackInternal", isAppRollback);
-            if (returnEarly != null) {
-                logger().info(attemptId, "rollback raising %s", DebugUtil.dbg(returnEarly));
-                return Mono.error(returnEarly);
-            }
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, TracingIdentifiers.TRANSACTION_OP_ROLLBACK, attemptSpan);
 
-            int sb = TRANSACTION_STATE_BIT_COMMIT_NOT_ALLOWED | TRANSACTION_STATE_BIT_APP_ROLLBACK_NOT_ALLOWED;
-            setStateBits("rollback-" + (isAppRollback ? "app" : "auto"), sb, 0);
+            return Mono.defer(() -> {
+                TransactionOperationFailedException returnEarly = canPerformRollback("rollbackInternal", isAppRollback);
+                if (returnEarly != null) {
+                    logger().info(attemptId, "rollback raising %s", DebugUtil.dbg(returnEarly));
+                    return Mono.error(returnEarly);
+                }
 
-            // In queryMode we always ROLLBACK, as there is possibly delta table state to cleanup, and there may be an
-            // ATR - we don't know
-            if (state == AttemptState.NOT_STARTED && !queryModeUnlocked()) {
-                LOGGER.info(attemptId, "told to auto-rollback but in NOT_STARTED state, so nothing to do - skipping rollback");
-                return Mono.empty();
-            }
+                int sb = TRANSACTION_STATE_BIT_COMMIT_NOT_ALLOWED | TRANSACTION_STATE_BIT_APP_ROLLBACK_NOT_ALLOWED;
+                setStateBits("rollback-" + (isAppRollback ? "app" : "auto"), sb, 0);
 
-            if (queryModeLocked()) {
-                return rollbackQueryLocked(isAppRollback);
-            } else {
-                return rollbackWithKVLocked(isAppRollback, span);
-            }
+                // In queryMode we always ROLLBACK, as there is possibly delta table state to cleanup, and there may be an
+                // ATR - we don't know
+                if (state == AttemptState.NOT_STARTED && !queryModeUnlocked()) {
+                    LOGGER.info(attemptId, "told to auto-rollback but in NOT_STARTED state, so nothing to do - skipping rollback");
+                    return Mono.empty();
+                }
+
+                if (queryModeLocked()) {
+                    return rollbackQueryLocked(isAppRollback, span);
+                } else {
+                    return rollbackWithKVLocked(isAppRollback, span);
+                }
+            }).doOnError(err -> span.finishWithErrorStatus())
+                    .doOnTerminate(() -> span.finish());
         }).subscribeOn(scheduler());
     }
 
@@ -3427,10 +3407,9 @@ public class CoreTransactionAttemptContext {
                 });
     }
 
-    private Mono<Void> rollbackQueryLocked(boolean appRollback) {
+    private Mono<Void> rollbackQueryLocked(boolean appRollback, SpanWrapper span) {
         return Mono.defer(() -> {
             assertLocked("rollbackQuery");
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, "rollback_query", attemptSpan);
 
             int statementIdx = queryStatementIdx.getAndIncrement();
 
@@ -3447,6 +3426,8 @@ public class CoreTransactionAttemptContext {
                     }))
 
                     .onErrorResume(err -> {
+                        span.recordExceptionAndSetErrorStatus(err);
+
                          if (err instanceof TransactionOperationFailedException) {
                              return Mono.error(err);
                         }
@@ -3463,10 +3444,6 @@ public class CoreTransactionAttemptContext {
                         }
                     })
 
-                    .doFinally(v -> {
-                        span.finish();
-                    })
-
                     .then();
         });
     }
@@ -3474,7 +3451,7 @@ public class CoreTransactionAttemptContext {
     private Mono<Void> atrRollbackCompleteLocked(boolean isAppRollback, String prefix, SpanWrapper pspan) {
         return Mono.defer(() -> {
             assertLocked("atrRollbackComplete");
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), atrCollection.orElse(null), atrId.orElse(null), "atr.rollback_complete", pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), atrCollection.orElse(null), atrId.orElse(null), TracingIdentifiers.TRANSACTION_OP_ATR_ROLLBACK, pspan);
 
             return Mono.defer(() -> {
                         LOGGER.info(attemptId, "removing ATR %s as rollback complete", getAtrDebug(atrCollection, atrId));
@@ -3496,13 +3473,14 @@ public class CoreTransactionAttemptContext {
 
                     .doOnNext(v -> {
                         setStateLocked(AttemptState.ROLLED_BACK);
-                        long elapsed = span.finish();
+                        long elapsed = span.elapsedMicros();
                         addUnits(v.flexibleExtras());
                         LOGGER.info(attemptId, "rollback - atr rolled back%s in %dus", DebugUtil.dbg(v.flexibleExtras()), elapsed);
                     })
 
                     .onErrorResume(err -> {
                         MeteringUnits units = addUnits(MeteringUnits.from(err));
+                        span.recordException(err);
 
                         LOGGER.info(attemptId, "error while marking ATR %s as rollback complete%s in %dus: %s",
                                 getAtrDebug(atrCollection, atrId), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
@@ -3535,15 +3513,13 @@ public class CoreTransactionAttemptContext {
 
                     .then()
 
-                    .doOnError(err -> failSpan(span, err))
-                    .doFinally(v -> span.finish());
+                    .doOnError(err -> span.finish(err))
+                    .doOnTerminate(() -> span.finish());
         });
     }
 
-    private Mono<Void> rollbackDocsLocked(boolean isAppRollback, SpanWrapper pspan) {
+    private Mono<Void> rollbackDocsLocked(boolean isAppRollback, SpanWrapper span) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, "rollback.docs", pspan);
-
             return Flux.fromIterable(stagedMutationsLocked)
                     .publishOn(scheduler())
 
@@ -3560,17 +3536,12 @@ public class CoreTransactionAttemptContext {
                         LOGGER.info(attemptId, "rollback - docs rolled back");
                     })
 
-                    .then()
-
-                    .doOnError(err -> failSpan(span, err))
-                    .doFinally(v -> span.finish());
+                    .then();
         });
     }
 
-    private Mono<Void> rollbackStagedReplaceOrRemoveLocked(boolean isAppRollback, SpanWrapper pspan, CollectionIdentifier collection, String id, long cas) {
+    private Mono<Void> rollbackStagedReplaceOrRemoveLocked(boolean isAppRollback, SpanWrapper span, CollectionIdentifier collection, String id, long cas) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "rollback.doc", pspan);
-
             return Mono.defer(() -> {
                 LOGGER.info(attemptId, "rolling back doc %s with cas %d by removing staged mutation",
                         DebugUtil.docId(collection, id), cas);
@@ -3603,6 +3574,7 @@ public class CoreTransactionAttemptContext {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder builder = createError().doNotRollbackAttempt().cause(err);
                         MeteringUnits units = addUnits(MeteringUnits.from(err));
+                        span.recordException(err);
 
                         logger().info(attemptId, "got error while rolling back doc %s%s in %dus: %s",
                                 DebugUtil.docId(collection, id), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
@@ -3635,19 +3607,16 @@ public class CoreTransactionAttemptContext {
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY)
                     .publishOn(scheduler()) // after retryWhen triggers, it's on parallel scheduler
 
-                    .doOnError(err -> failSpan(span, err))
-                    .doFinally(v -> span.finish());
+                    .doOnError(err -> span.setErrorStatus());
         });
     }
 
     private Mono<Void> rollbackStagedInsertLocked(boolean isAppRollback,
-                                                       SpanWrapper pspan,
+                                                       SpanWrapper span,
                                                        CollectionIdentifier collection,
                                                        String id,
                                                        long cas) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "rollback.insert", pspan);
-
             return Mono.defer(() -> {
                 LOGGER.info(attemptId, "rolling back staged insert %s with cas %d",
                         DebugUtil.docId(collection, id), cas);
@@ -3681,6 +3650,7 @@ public class CoreTransactionAttemptContext {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder builder = createError().cause(err);
                         MeteringUnits units = addUnits(MeteringUnits.from(err));
+                        span.recordException(err);
 
                         LOGGER.info(attemptId, "error while rolling back inserted doc %s%s in %dus: %s",
                                 DebugUtil.docId(collection, id), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
@@ -3711,8 +3681,7 @@ public class CoreTransactionAttemptContext {
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY)
                     .publishOn(scheduler()) // after retryWhen triggers, it's on parallel scheduler
 
-                    .doOnError(err -> failSpan(span, err))
-                    .doFinally(v -> span.finish());
+                    .doOnError(err -> span.setErrorStatus());
         });
     }
 
@@ -3720,12 +3689,11 @@ public class CoreTransactionAttemptContext {
      * Very similar to rollbackStagedInsert, but with slightly different requirements as it's not performed
      * during rollback.
      */
-    private Mono<Void> removeStagedInsert(CoreTransactionGetResult doc, SpanWrapper pspan) {
+    private Mono<Void> removeStagedInsert(CoreTransactionGetResult doc, SpanWrapper span) {
         return Mono.defer(() -> {
             assertNotLocked("removeStagedInsert");
             CollectionIdentifier collection = doc.collection();
             String id = doc.id();
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, "staging.remove_staged_insert", pspan);
 
             return Mono.defer(() -> {
                 LOGGER.info(attemptId, "removing staged insert %s with cas %d",
@@ -3763,6 +3731,7 @@ public class CoreTransactionAttemptContext {
                                 .retryTransaction()
                                 .cause(err);
                         MeteringUnits units = addUnits(MeteringUnits.from(err));
+                        span.recordException(err);
 
                         LOGGER.info(attemptId, "error while removing staged insert doc %s%s in %dus: %s",
                                 DebugUtil.docId(collection, id), DebugUtil.dbg(units), span.elapsedMicros(), dbg(err));
@@ -3779,10 +3748,10 @@ public class CoreTransactionAttemptContext {
                     .flatMap(v -> {
                         // Save so the subsequent KV ops can be done with the correct CAS
                         doc.cas(v.cas());
-                        long elapsed = span.finish();
+                        long elapsed = span.elapsedMicros();
                         LOGGER.info(attemptId, "removed staged insert from doc %s in %dus", DebugUtil.docId(collection, id), elapsed);
 
-                        return doUnderLock("removeStagedInsert " + DebugUtil.docId(collection, id), null,
+                        return doUnderLock("removeStagedInsert " + DebugUtil.docId(collection, id),
                                 () -> Mono.fromRunnable(()-> {
                                     removeStagedMutationLocked(doc.collection(), doc.id());
                                 }));
@@ -3798,7 +3767,7 @@ public class CoreTransactionAttemptContext {
                                       boolean ambiguityResolutionMode) {
         return Mono.defer(() -> {
             assertLocked("atrAbort");
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), atrCollection.orElse(null), atrId.orElse(null), "atr.abort", pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), atrCollection.orElse(null), atrId.orElse(null), TracingIdentifiers.TRANSACTION_OP_ATR_ABORT, pspan);
 
             ArrayList<SubdocMutateRequest.Command> specs = new ArrayList<>();
 
@@ -3836,6 +3805,7 @@ public class CoreTransactionAttemptContext {
                         ErrorClass ec = classify(err);
                         TransactionOperationFailedException.Builder builder = createError().cause(err).doNotRollbackAttempt();
                         MeteringUnits units = addUnits(MeteringUnits.from(err));
+                        span.recordException(err);
 
                         LOGGER.info(attemptId, "error %s while aborting ATR %s%s",
                                 DebugUtil.dbg(err), getAtrDebug(atrCollection, atrId), DebugUtil.dbg(units));
@@ -3862,8 +3832,8 @@ public class CoreTransactionAttemptContext {
                     .retryWhen(RETRY_OPERATION_UNTIL_EXPIRY)
                     .publishOn(scheduler()) // after retryWhen triggers, it's on parallel scheduler
 
-                    .doOnError(err -> failSpan(span, err))
-                    .doFinally(v -> span.finish());
+                    .doOnError(err -> span.finish(err))
+                    .doOnTerminate(() -> span.finish());
         });
     }
 
@@ -4088,73 +4058,78 @@ public class CoreTransactionAttemptContext {
                                               final ObjectNode options,
                                               @Nullable final SpanWrapper pspan,
                                               final boolean tximplicit) {
-        return hooks.beforeQuery.apply(this, statement)
+        return Mono.defer(() -> {
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, TracingIdentifiers.SPAN_REQUEST_QUERY, pspan);
 
-                .then(Mono.defer(() -> {
-                    assertNotLocked("queryInternal");
+            return hooks.beforeQuery.apply(this, statement)
 
-                    // The metrics are invaluable for debugging, override user's setting
-                    options.put("metrics", true);
+                    .then(Mono.defer(() -> {
+                        assertNotLocked("queryInternal");
 
-                    if (tximplicit) {
-                        options.put("tximplicit", true);
-                    }
+                        // The metrics are invaluable for debugging, override user's setting
+                        options.put("metrics", true);
 
-                    if (bucketName != null && scopeName != null) {
-                        String queryContext = QueryRequest.queryContext(bucketName, scopeName);
-                        options.put("query_context", queryContext);
-                    }
-
-                    if (tximplicit) {
-
-                        // Workaround for MB-50914 on older server versions
-                        if (!options.has("scan_consistency")) {
-                            options.put("scan_consistency", "request_plus");
+                        if (tximplicit) {
+                            options.put("tximplicit", true);
                         }
 
-                        applyQueryOptions(config, options, expiryRemainingMillis());
-                    }
+                        if (bucketName != null && scopeName != null) {
+                            String queryContext = QueryRequest.queryContext(bucketName, scopeName);
+                            options.put("query_context", queryContext);
+                        }
 
-                    logger().info(attemptId, "q%d using query params %s", sidx, options.toString());
+                        if (tximplicit) {
 
-                    options.put("statement", statement);
+                            // Workaround for MB-50914 on older server versions
+                            if (!options.has("scan_consistency")) {
+                                options.put("scan_consistency", "request_plus");
+                            }
 
-                    byte[] encoded;
-                    try {
-                        encoded = Mapper.writer().writeValueAsBytes(options);
-                    } catch (JsonProcessingException e) {
-                        throw new EncodingFailureException(e);
-                    }
-                    boolean readonly = options.path("readonly").asBoolean(false);
+                            applyQueryOptions(config, options, expiryRemainingMillis());
+                        }
 
-                    QueryRequest request = new QueryRequest(queryTimeout(),
-                            core.context(),
-                            BestEffortRetryStrategy.INSTANCE,
-                            core.context().authenticator(),
-                            statement,
-                            encoded,
-                            readonly,
-                            "query",
-                            pspan == null ? null : pspan.span(),
-                            bucketName,
-                            scopeName,
-                            queryTarget);
+                        logger().info(attemptId, "q%d using query params %s", sidx, options.toString());
 
-                    // TODO ESI adhoc (with adhoc=false) get null lastDispatchedToNode
-                    return coreQueryAccessor.query(request, true)
-                            .publishOn(scheduler())
-                            .doOnNext(v -> {
-                                if (queryTarget == null) {
-                                    queryTarget = request.context().lastDispatchedToNode();
-                                    logger().info(attemptId, "q%d got query node id %s", sidx, RedactableArgument.redactMeta(queryTarget));
-                                }
-                                request.context().logicallyComplete();
-                            })
-                            .doOnError(err -> request.context().logicallyComplete(err));
-                }))
+                        options.put("statement", statement);
 
-                .flatMap(result -> hooks.afterQuery.apply(this, statement)
-                        .thenReturn(result));
+                        byte[] encoded;
+                        try {
+                            encoded = Mapper.writer().writeValueAsBytes(options);
+                        } catch (JsonProcessingException e) {
+                            throw new EncodingFailureException(e);
+                        }
+                        boolean readonly = options.path("readonly").asBoolean(false);
+
+                        QueryRequest request = new QueryRequest(queryTimeout(),
+                                core.context(),
+                                BestEffortRetryStrategy.INSTANCE,
+                                core.context().authenticator(),
+                                statement,
+                                encoded,
+                                readonly,
+                                "query",
+                                span.span(),
+                                bucketName,
+                                scopeName,
+                                queryTarget);
+
+                        // TODO ESI adhoc (with adhoc=false) get null lastDispatchedToNode
+                        return coreQueryAccessor.query(request, true)
+                                .publishOn(scheduler())
+                                .doOnNext(v -> {
+                                    if (queryTarget == null) {
+                                        queryTarget = request.context().lastDispatchedToNode();
+                                        logger().info(attemptId, "q%d got query node id %s", sidx, RedactableArgument.redactMeta(queryTarget));
+                                    }
+                                    request.context().logicallyComplete();
+                                })
+                                // This finishs the span
+                                .doOnError(err -> request.context().logicallyComplete(err));
+                    }))
+
+                    .flatMap(result -> hooks.afterQuery.apply(this, statement)
+                            .thenReturn(result));
+        });
     }
 
     /**
@@ -4181,7 +4156,7 @@ public class CoreTransactionAttemptContext {
                                                    final boolean existingErrorCheck,
                                                    @Nullable final ObjectNode txdata,
                                                    @Nullable final ArrayNode params,
-                                                   @Nullable final SpanWrapper pspan,
+                                                   @Nullable final SpanWrapper span,
                                                    final boolean tximplicit,
                                                    AtomicReference<ReactiveLock.Waiter> lockToken,
                                                    final boolean updateInternalState) {
@@ -4190,9 +4165,6 @@ public class CoreTransactionAttemptContext {
 
             long start = System.nanoTime();
 
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, "query.wrapper", pspan != null ? pspan : attemptSpan)
-                    .attribute("db.statement", statement)
-                    .attribute(SpanWrapperUtil.DB_COUCHBASE + ".transactions.tximplicit", tximplicit);
             logger().debug(attemptId, "q%d: '%s' params=%s txdata=%s tximplicit=%s", sidx,
                     RedactableArgument.redactUser(statement), RedactableArgument.redactUser(params), RedactableArgument.redactUser(txdata), tximplicit);
 
@@ -4251,15 +4223,11 @@ public class CoreTransactionAttemptContext {
                                                    final boolean existingErrorCheck,
                                                    @Nullable final ObjectNode txdata,
                                                    @Nullable final ArrayNode params,
-                                                   @Nullable final SpanWrapper pspan,
+                                                   @Nullable final SpanWrapper span,
                                                    final boolean tximplicit,
                                                    AtomicReference<ReactiveLock.Waiter> lockToken,
                                                    final boolean updateInternalState) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, "query.wrapper.blocking", pspan != null ? pspan : attemptSpan)
-                    .attribute("db.statement", statement)
-                    .attribute(SpanWrapperUtil.DB_COUCHBASE + ".transactions.tximplicit", tximplicit);
-
             return queryWrapperLocked(sidx,
                     bucketName,
                     scopeName,
@@ -4281,7 +4249,7 @@ public class CoreTransactionAttemptContext {
                                 .flatMap(rows -> result.trailer()
                                         .onErrorResume(err -> {
                                             RuntimeException converted = convertQueryError(sidx, err, true);
-                                            long elapsed = span.finish();
+                                            long elapsed = span.elapsedMicros();
 
                                             logger().warn(attemptId, "q%d got error on rows stream %s after %dus, converted from %s", sidx, dbg(converted),
                                                     elapsed, dbg(err));
@@ -4297,7 +4265,7 @@ public class CoreTransactionAttemptContext {
 
                     .onErrorResume(err -> {
                         RuntimeException converted = convertQueryError(sidx, err, updateInternalState);
-                        long elapsed = span.finish();
+                         long elapsed = span.elapsedMicros();
 
                         logger().warn(attemptId, "q%d got error %s after %dus, converted from %s", sidx, dbg(converted),
                                 elapsed, dbg(err));
@@ -4310,7 +4278,7 @@ public class CoreTransactionAttemptContext {
                     })
 
                     .flatMap(result -> {
-                        long elapsed = span.finish();
+                        long elapsed = span.elapsedMicros();
 
                         try {
                             JsonNode metrics = Mapper.reader().readValue(result.trailer.metrics().get(), JsonNode.class);
@@ -4414,11 +4382,9 @@ public class CoreTransactionAttemptContext {
         return options;
     }
 
-    private Mono<Void> queryBeginWorkLocked(final SpanWrapper pspan) {
+    private Mono<Void> queryBeginWorkLocked(final SpanWrapper span) {
         return Mono.defer(() -> {
             assertLocked("queryBeginWork");
-
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, "query.begin_work", pspan);
 
             ObjectNode txdata = makeQueryTxDataLocked();
 
@@ -4456,8 +4422,6 @@ public class CoreTransactionAttemptContext {
                         }
                     })
 
-                    .doFinally(ignore -> span.finish())
-
                     .then();
         });
     }
@@ -4472,7 +4436,14 @@ public class CoreTransactionAttemptContext {
                                                      final ObjectNode options,
                                                      final boolean tximplicit) {
         return doQueryOperation("query blocking",
-                (sidx, lockToken) -> queryWrapperBlockingLocked(sidx, bucketName, scopeName, statement, options,  CoreTransactionAttemptContextHooks.HOOK_QUERY, false, true, null, null, null, tximplicit, lockToken, true));
+                statement,
+                attemptSpan,
+                (sidx, lockToken, span) -> {
+                    if (tximplicit) {
+                        span.attribute(TracingIdentifiers.ATTR_TRANSACTION_SINGLE_QUERY, true);
+                    }
+                    return queryWrapperBlockingLocked(sidx, bucketName, scopeName, statement, options, CoreTransactionAttemptContextHooks.HOOK_QUERY, false, true, null, null, span, tximplicit, lockToken, true);
+                });
     }
 
     /**
@@ -4538,19 +4509,11 @@ public class CoreTransactionAttemptContext {
             FinalErrorToRaise finalError = FinalErrorToRaise.values()[maskedFinalError];
             boolean rollbackNeeded = finalError != FinalErrorToRaise.TRANSACTION_SUCCESS && !shouldNotRollback && !singleQueryTransactionMode;
 
-            StringBuilder ub = new StringBuilder();
-            if (meteringUnitsBuilder.readUnits() != 0) {
-                ub.append(" RUs=");
-                ub.append(meteringUnitsBuilder.readUnits());
-            }
-            if (meteringUnitsBuilder.writeUnits() != 0) {
-                ub.append(" WUs=");
-                ub.append(meteringUnitsBuilder.writeUnits());
-            }
-
             LOGGER.info(attemptId, "reached post-lambda in %dus, shouldNotRollback=%s finalError=%s rollbackNeeded=%s, err (only cause of this will be used)=%s tximplicit=%s%s",
                     TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - startTimeClient.toNanos()), shouldNotRollback,
-                    finalError, rollbackNeeded, err, singleQueryTransactionMode, meteringUnitsBuilder.toString());
+                    finalError, rollbackNeeded, err, singleQueryTransactionMode,
+                    // Don't display the aggregated units if queryMode as it won't be accurate
+                    queryModeUnlocked() ? "" : meteringUnitsBuilder.toString());
 
             core.transactionsContext().counters().attempts().incrementBy(1);
 
@@ -4570,7 +4533,14 @@ public class CoreTransactionAttemptContext {
                     // Only want to add the attempt after doing the rollback, so the attempt has the correct state (hopefully
                     // ROLLED_BACK)
                     .then(addCleanup(cleanup))
-                    .doOnTerminate(attemptSpan::finish)
+                    .doOnTerminate(() -> {
+                        if (err != null) {
+                            attemptSpan.finishWithErrorStatus();
+                        }
+                        else {
+                            attemptSpan.finish();
+                        }
+                    })
                     .then(Mono.defer(() -> retryIfRequired(err)));
         });
     }
@@ -4706,6 +4676,8 @@ public class CoreTransactionAttemptContext {
             logger().info(attemptId(), "Caught exception from application's lambda %s, converted it to %s",
                     DebugUtil.dbg(e),
                     DebugUtil.dbg(out));
+
+            attemptSpan.recordExceptionAndSetErrorStatus(e);
 
             // Pass it through operationFailed to account for cases like insert raising DocExists, or query SLA errors
             return operationFailed(out);

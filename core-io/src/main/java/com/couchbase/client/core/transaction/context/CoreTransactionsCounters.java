@@ -19,6 +19,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Counter;
 import com.couchbase.client.core.cnc.Meter;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.util.CbCollections;
 
 import java.util.HashMap;
@@ -32,6 +33,7 @@ import static com.couchbase.client.core.cnc.TracingIdentifiers.SERVICE_TRANSACTI
 public class CoreTransactionsCounters {
   private final Counter transactions;
   private final Counter attempts;
+  // A histogram of transaction durations
 
   public CoreTransactionsCounters(Meter meter) {
     Map<String, String> tags = CbCollections.mapOf(TracingIdentifiers.ATTR_SERVICE, SERVICE_TRANSACTIONS);

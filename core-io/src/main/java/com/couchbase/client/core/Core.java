@@ -70,6 +70,7 @@ import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.transaction.context.CoreTransactionsContext;
 import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
@@ -638,7 +639,15 @@ public class Core {
   public ValueRecorder responseMetric(final Request<?> request) {
     return responseMetrics.computeIfAbsent(new ResponseMetricIdentifier(request), key -> {
       Map<String, String> tags = new HashMap<>(4);
-      tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceType.ident());
+      if (key.serviceType == null) {
+        // Virtual service
+        if (request instanceof CoreTransactionRequest) {
+          tags.put(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_TRANSACTIONS);
+        }
+      }
+      else {
+        tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceType);
+      }
       tags.put(TracingIdentifiers.ATTR_OPERATION, key.requestName);
       return coreContext.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, tags);
     });
@@ -1032,11 +1041,22 @@ public class Core {
 
   private static class ResponseMetricIdentifier {
 
-    private final ServiceType serviceType;
+    private final String serviceType;
     private final String requestName;
 
     ResponseMetricIdentifier(final Request<?> request) {
-      this.serviceType = request.serviceType();
+      if (request.serviceType() == null) {
+        if (request instanceof CoreTransactionRequest) {
+          this.serviceType = TracingIdentifiers.SERVICE_TRANSACTIONS;
+        }
+        else {
+          // Safer than throwing
+          this.serviceType = TracingIdentifiers.SERVICE_UNKNOWN;
+        }
+      }
+      else {
+        this.serviceType = request.serviceType().ident();
+      }
       this.requestName = request.name();
     }
 
@@ -1045,7 +1065,7 @@ public class Core {
       if (this == o) return true;
       if (o == null || getClass() != o.getClass()) return false;
       ResponseMetricIdentifier that = (ResponseMetricIdentifier) o;
-      return serviceType == that.serviceType && Objects.equals(requestName, that.requestName);
+      return serviceType.equals(that.serviceType) && Objects.equals(requestName, that.requestName);
     }
 
     @Override

@@ -17,23 +17,26 @@
 package com.couchbase.client.java.transactions;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.CbTracing;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.error.EncodingFailureException;
-import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
+import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.java.ReactiveCollection;
 import com.couchbase.client.java.ReactiveScope;
 import com.couchbase.client.java.codec.JsonSerializer;
-import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.transactions.internal.OptionsUtil;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
 import java.util.Objects;
 
+import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_INSERT;
+import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_REMOVE;
+import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_REPLACE;
 import static com.couchbase.client.java.transactions.internal.ConverterUtil.makeCollectionIdentifier;
+import static com.couchbase.client.java.transactions.internal.EncodingUtil.encode;
 
 /**
  * Provides methods to allow an application's transaction logic to read, mutate, insert and delete documents, as well
@@ -78,11 +81,16 @@ public class ReactiveTransactionAttemptContext {
      * @return the doc, updated with its new CAS value and ID, and converted to a <code>TransactionGetResult</code>
      */
     public Mono<TransactionGetResult> insert(ReactiveCollection collection, String id, Object content) {
-        byte[] encoded = serializer().serialize(content);
-        return internal.insert(makeCollectionIdentifier(collection.async()), id, encoded)
-                .map(result -> new TransactionGetResult(result, serializer()));
+        RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_INSERT, internal.span());
+        span.attribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_INSERT);
+        byte[] encoded = encode(content, span, serializer, internal.core().context());
+
+        return internal.insert(makeCollectionIdentifier(collection.async()), id, encoded, new SpanWrapper(span))
+                .map(result -> new TransactionGetResult(result, serializer()))
+                .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
+                .doOnTerminate(() -> span.end());
     }
-    
+
     private JsonSerializer serializer() {
         return serializer;
     }
@@ -96,9 +104,13 @@ public class ReactiveTransactionAttemptContext {
      * object is modified.
      */
     public Mono<TransactionGetResult> replace(TransactionGetResult doc, Object content) {
-        byte[] encoded = serializer().serialize(content);
-        return internal.replace(doc.internal(), encoded)
-                .map(result -> new TransactionGetResult(result, serializer()));
+        RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REPLACE, internal.span());
+        span.attribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REPLACE);
+        byte[] encoded = encode(content, span, serializer, internal.core().context());
+        return internal.replace(doc.internal(), encoded, new SpanWrapper(span))
+                .map(result -> new TransactionGetResult(result, serializer()))
+                .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
+                .doOnTerminate(() -> span.end());
     }
 
     /**
@@ -107,7 +119,11 @@ public class ReactiveTransactionAttemptContext {
      * @param doc - the doc to be removed
      */
     public Mono<Void> remove(TransactionGetResult doc) {
-        return internal.remove(doc.internal());
+        RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REMOVE, internal.span());
+        span.attribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REMOVE);
+        return internal.remove(doc.internal(), new SpanWrapper(span))
+                .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
+                .doOnTerminate(() -> span.end());
     }
 
     @SuppressWarnings("unused")

@@ -227,7 +227,7 @@ public class ActiveTransactionRecord {
                                                                   String atrId,
                                                                   Duration timeout,
                                                                   @Nullable SpanWrapper pspan) {
-        return TransactionKVHandler.lookupIn(core, atrCollection, atrId, timeout, false,  createClientContext("ATR::getAtrWithUpToDateCas"), pspan,
+        return TransactionKVHandler.lookupIn(core, atrCollection, atrId, timeout, false,  createClientContext("ATR::getAtr"), pspan,
         Arrays.asList(
                 new SubdocGetRequest.Command(SubdocCommandType.GET, ATR_FIELD_ATTEMPTS, true, 0),
                 new SubdocGetRequest.Command(SubdocCommandType.GET, "$vbucket.HLC", true, 1)

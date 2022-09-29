@@ -20,6 +20,7 @@ import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.transaction.TransactionsStartedEvent;
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
 import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.env.ThresholdLoggingTracerConfig;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.Bucket;
@@ -65,7 +66,7 @@ public class TransactionsIntegrationTest extends JavaIntegrationTest {
     @BeforeAll
     static void beforeAll() {
 
-        cluster = createCluster();
+        cluster = createCluster(env -> env.thresholdLoggingTracerConfig(ThresholdLoggingTracerConfig.builder().emitInterval(Duration.ofSeconds(1))));
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
 
@@ -101,13 +102,20 @@ public class TransactionsIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    void insert() {
+    void insert() throws InterruptedException {
         String docId = UUID.randomUUID().toString();
         JsonObject content = JsonObject.create().put("foo", "bar");
 
         cluster.transactions().run((ctx) -> {
             ctx.insert(collection, docId, content);
+            try {
+                Thread.sleep(6000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         });
+
+        Thread.sleep(2000);
 
         assertEquals(content, collection.get(docId).contentAsObject());
     }

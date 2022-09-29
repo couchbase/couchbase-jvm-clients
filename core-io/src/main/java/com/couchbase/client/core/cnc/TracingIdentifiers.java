@@ -84,6 +84,11 @@ public class TracingIdentifiers {
    */
   public static final String SERVICE_TRANSACTIONS = "transactions";
 
+  /**
+   * Used only in situations where due to likely internal error we don't have a known service.
+   */
+  public static final String SERVICE_UNKNOWN = "unknown";
+
   public static final String SPAN_REQUEST_QUERY = "query";
 
   public static final String SPAN_REQUEST_ANALYTICS = "analytics";
@@ -245,14 +250,47 @@ public class TracingIdentifiers {
   public static final String ATTR_SCOPE = "db.couchbase.scope";
 
   public static final String ATTR_DOCUMENT_ID = "db.couchbase.document_id";
+  public static final String ATTR_TRANSACTION_ID = "db.couchbase.transaction.id";
+  public static final String ATTR_TRANSACTION_ATTEMPT_ID = "db.couchbase.transaction.attempt_id";
+  public static final String ATTR_TRANSACTION_STATE = "db.couchbase.transaction.state";
+  public static final String ATTR_TRANSACTION_AGE = "db.couchbase.transaction.age_ms";
+  public static final String ATTR_TRANSACTION_SINGLE_QUERY = "db.couchbase.transaction.single_query";
+  public static final String ATTR_TRANSACTION_CLEANUP_CLIENT_ID = "db.couchbase.transactions.cleanup.client_id";
+  public static final String ATTR_TRANSACTION_CLEANUP_WINDOW = "db.couchbase.transactions.cleanup.window_ms";
+  public static final String ATTR_TRANSACTION_CLEANUP_NUM_ATRS = "db.couchbase.transactions.cleanup.client_atrs";
+  public static final String ATTR_TRANSACTION_CLEANUP_NUM_ACTIVE = "db.couchbase.transactions.cleanup.clients_active";
+  public static final String ATTR_TRANSACTION_CLEANUP_NUM_EXPIRED = "db.couchbase.transactions.cleanup.clients_expired";
+  public static final String ATTR_TRANSACTION_ATR_ENTRIES_COUNT = "db.couchbase.transactions.atr.entries_count";
+  public static final String ATTR_TRANSACTION_ATR_ENTRIES_EXPIRED = "db.couchbase.transactions.atr.entries_expired";
 
   public static final String METER_OPERATIONS = "db.couchbase.operations";
-  public static final String METER_TRANSACTION_TOTAL = "db.couchbase.transaction.total";
-  public static final String METER_TRANSACTION_ATTEMPTS = "db.couchbase.transaction.attempts";
+  public static final String METER_TRANSACTION_TOTAL = "db.couchbase.transactions.total";
+  public static final String METER_TRANSACTION_ATTEMPTS = "db.couchbase.transactions.attempts";
 
   public static final String ATTR_DURABILITY = "db.couchbase.durability";
 
   public static final String ATTR_RETRIES = "db.couchbase.retries";
 
+  public static final String TRANSACTION_OP = "transaction";
+  public static final String TRANSACTION_OP_ATTEMPT = "transaction_attempt";
+  public static final String TRANSACTION_OP_REPLACE = "transaction_replace";
+  public static final String TRANSACTION_OP_INSERT = "transaction_insert";
+  public static final String TRANSACTION_OP_REMOVE = "transaction_remove";
+  public static final String TRANSACTION_OP_GET = "transaction_get";
+  public static final String TRANSACTION_OP_QUERY = "transaction_query";
+  public static final String TRANSACTION_OP_INSERT_STAGE = "transaction_insert_stage";
+  public static final String TRANSACTION_OP_REPLACE_STAGE = "transaction_replace_stage";
+  public static final String TRANSACTION_OP_REMOVE_STAGE = "transaction_remove_stage";
+  public static final String TRANSACTION_OP_ATR_PENDING = "transaction_atr_pending";
+  public static final String TRANSACTION_OP_ATR_COMMIT = "transaction_atr_commit";
+  public static final String TRANSACTION_OP_ATR_COMPLETE = "transaction_atr_complete";
+  public static final String TRANSACTION_OP_ATR_ROLLBACK = "transaction_atr_rollback";
+  public static final String TRANSACTION_OP_ATR_ABORT = "transaction_atr_abort";
+  public static final String TRANSACTION_OP_COMMIT = "transaction_commit";
+  public static final String TRANSACTION_OP_ROLLBACK = "transaction_rollback";
+  public static final String TRANSACTION_CLEANUP_WINDOW = "transaction_cleanup_window";
+  public static final String TRANSACTION_CLEANUP_ATR = "transaction_cleanup_atr";
+  public static final String TRANSACTION_CLEANUP = "transaction_cleanup";
+  public static final String TRANSACTION_CLEANUP_CLIENT = "transaction_cleanup_client";
 
 }
