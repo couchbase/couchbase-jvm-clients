@@ -60,7 +60,7 @@ public class SecurityConfigDslBuilder(private val wrapped: SecurityConfig.Builde
      * Specifies where the trusted certificates come from.
      */
     public var trust: TrustSource
-            by observable(TrustSource.trustNoOne()) { _, _, it -> it.configureBuilder(wrapped) }
+            by observable(TrustSource.defaultCertificates()) { _, _, it -> it.configureBuilder(wrapped) }
 }
 
 /**
@@ -107,9 +107,9 @@ public interface TrustSource {
         }
 
         /**
-         * Equivalent to not configuring the trust settings.
+         * Trust the Couchbase Capella CA certificate, plus certificates in the JVM's `cacerts` trust store.
          */
-        internal fun trustNoOne(): TrustSource = from {}
+        internal fun defaultCertificates(): TrustSource = from {}
 
         private fun from(initializer: SecurityConfig.Builder.() -> Unit): TrustSource {
             return object : TrustSource {
