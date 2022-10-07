@@ -355,11 +355,13 @@ public class OptionsUtil {
             if (tlc.hasAnalyticsThresholdMillis()) {
                 builder.analyticsThreshold(Duration.ofMillis(tlc.getAnalyticsThresholdMillis()));
             }
+            // [end:3.2.0]
             // [start:3.4.0]
             if (tlc.hasTransactionsThresholdMillis()) {
                 builder.transactionsThreshold(Duration.ofMillis(tlc.getTransactionsThresholdMillis()));
             }
             // [end:3.4.0]
+            // [start:3.2.0]
             if (tlc.hasSampleSize()) {
                 builder.sampleSize(tlc.getSampleSize());
             }
