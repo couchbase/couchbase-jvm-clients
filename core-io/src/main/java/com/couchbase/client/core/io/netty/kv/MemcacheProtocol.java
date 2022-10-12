@@ -236,6 +236,36 @@ public enum MemcacheProtocol {
     return message.getShort(STATUS_OFFSET);
   }
 
+  public static short keyLength(final ByteBuf message) {
+    return isFlexible(message) ? message.getByte(3) : message.getShort(2);
+  }
+
+  public static boolean isFlexible(final ByteBuf message) {
+    byte magic = magic(message);
+    return magic == Magic.FLEXIBLE_REQUEST.magic() || magic == Magic.FLEXIBLE_RESPONSE.magic();
+  }
+
+  public static byte flexExtrasLength(final ByteBuf message) {
+    return isFlexible(message) ? message.getByte(2) : 0;
+  }
+
+  public static byte extrasLength(final ByteBuf message) {
+    return message.getByte(4);
+  }
+
+  public static byte magic(final ByteBuf message) {
+    return message.getByte(0);
+  }
+
+  public static boolean isRequest(final ByteBuf message) {
+    byte magic = magic(message);
+    return magic == Magic.FLEXIBLE_REQUEST.magic() || magic == Magic.REQUEST.magic();
+  }
+
+  public static int totalBodyLength(final ByteBuf message) {
+    return message.getInt(TOTAL_LENGTH_OFFSET);
+  }
+
   /**
    * Helper method to check if the given response has a successful status.
    *
@@ -252,7 +282,7 @@ public enum MemcacheProtocol {
    * @param message the message to get the opcode from.
    * @return the opcode as a byte.
    */
-  static byte opcode(final ByteBuf message) {
+  public static byte opcode(final ByteBuf message) {
     return message.getByte(OPCODE_OFFSET);
   }
 
@@ -272,7 +302,7 @@ public enum MemcacheProtocol {
    * @param message the message to get the opaque from.
    * @return the opaque as an int.
    */
-  static int opaque(final ByteBuf message) {
+  public static int opaque(final ByteBuf message) {
     return message.getInt(OPAQUE_OFFSET);
   }
 
@@ -308,6 +338,22 @@ public enum MemcacheProtocol {
       return Optional.of(message.slice(
           MemcacheProtocol.HEADER_SIZE + flexibleExtrasLength + extrasLength + keyLength,
           bodyLength
+      ));
+    } else {
+      return Optional.empty();
+    }
+  }
+
+  public static Optional<ByteBuf> key(final ByteBuf message) {
+    if (message == null) {
+      return Optional.empty();
+    }
+
+    int keyLength = keyLength(message);
+    if (keyLength > 0) {
+      return Optional.of(message.slice(
+        MemcacheProtocol.HEADER_SIZE + flexExtrasLength(message) + extrasLength(message),
+        keyLength
       ));
     } else {
       return Optional.empty();
@@ -378,15 +424,16 @@ public enum MemcacheProtocol {
   }
 
   public static class FlexibleExtras {
-    // server_duration is handled elsewhere, so not included here
-
     // Will be <0 if not present in the server response
     public final int readUnits;
     public final int writeUnits;
 
-    public FlexibleExtras(int readUnits, int writeUnits) {
+    public final long serverDuration;
+
+    public FlexibleExtras(int readUnits, int writeUnits, long serverDuration) {
       this.readUnits = readUnits;
       this.writeUnits = writeUnits;
+      this.serverDuration = serverDuration;
     }
 
     public void injectExportableParams(final Map<String, Object> input) {
@@ -395,6 +442,9 @@ public enum MemcacheProtocol {
       }
       if (writeUnits != UNITS_NOT_PRESENT) {
         input.put("writeUnits", writeUnits);
+      }
+      if (serverDuration != UNITS_NOT_PRESENT) {
+        input.put("serverDuration", serverDuration);
       }
     }
   }
@@ -412,11 +462,16 @@ public enum MemcacheProtocol {
     if (flexibleExtrasLength > 0) {
       int readUnits = UNITS_NOT_PRESENT;
       int writeUnits = UNITS_NOT_PRESENT;
-
+      long serverDuration = UNITS_NOT_PRESENT;
       for (int offset = 0; offset < flexibleExtrasLength; offset++) {
         byte control = message.getByte(MemcacheProtocol.HEADER_SIZE + offset);
         byte id = (byte) ((control & 0xF0) >> 4);
         byte len = (byte) (control & 0x0F);
+        if (id == FRAMING_EXTRAS_TRACING) {
+          serverDuration = Math.round(
+            Math.pow(message.getUnsignedShort(MemcacheProtocol.HEADER_SIZE + offset + 1), 1.74) / 2
+          );
+        }
         if (id == FRAMING_EXTRAS_READ_UNITS_USED) {
           readUnits = message.getUnsignedShort(MemcacheProtocol.HEADER_SIZE + offset + 1);
         }
@@ -426,7 +481,7 @@ public enum MemcacheProtocol {
         offset += len;
       }
 
-      return new FlexibleExtras(readUnits, writeUnits);
+      return new FlexibleExtras(readUnits, writeUnits, serverDuration);
     } else {
       return null;
     }
@@ -1134,6 +1189,73 @@ public enum MemcacheProtocol {
     public byte opcode() {
       return opcode;
     }
+
+    public static Opcode of(final byte input) {
+      switch (input) {
+        case (byte) 0x00:
+          return Opcode.GET;
+        case (byte) 0x01:
+          return Opcode.SET;
+        case (byte) 0x02:
+          return Opcode.ADD;
+        case (byte) 0x03:
+          return Opcode.REPLACE;
+        case (byte) 0x04:
+          return Opcode.DELETE;
+        case (byte) 0x05:
+          return Opcode.INCREMENT;
+        case (byte) 0x06:
+          return Opcode.DECREMENT;
+        case (byte) 0x0a:
+          return Opcode.NOOP;
+        case (byte) 0x0e:
+          return Opcode.APPEND;
+        case (byte) 0x0f:
+          return Opcode.PREPEND;
+        case (byte) 0x1f:
+          return Opcode.HELLO;
+        case (byte) 0xfe:
+          return Opcode.ERROR_MAP;
+        case (byte) 0x89:
+          return Opcode.SELECT_BUCKET;
+        case (byte) 0x20:
+          return Opcode.SASL_LIST_MECHS;
+        case (byte) 0x21:
+          return Opcode.SASL_AUTH;
+        case (byte) 0x22:
+          return Opcode.SASL_STEP;
+        case (byte) 0xb5:
+          return Opcode.GET_CONFIG;
+        case (byte) 0xbb:
+          return Opcode.COLLECTIONS_GET_CID;
+        case (byte) 0xd0:
+          return Opcode.SUBDOC_MULTI_LOOKUP;
+        case (byte) 0xd1:
+          return Opcode.SUBDOC_MULTI_MUTATE;
+        case (byte) 0x1d:
+          return Opcode.GET_AND_TOUCH;
+        case (byte) 0x94:
+          return Opcode.GET_AND_LOCK;
+        case (byte) 0x92:
+          return Opcode.OBSERVE_CAS;
+        case (byte) 0x91:
+          return Opcode.OBSERVE_SEQ;
+        case (byte) 0x83:
+          return Opcode.GET_REPLICA;
+        case (byte) 0x1c:
+          return Opcode.TOUCH;
+        case (byte) 0x95:
+          return Opcode.UNLOCK;
+        case (byte) 0xa8:
+          return Opcode.DELETE_WITH_META;
+        case (byte) 0xba:
+          return Opcode.COLLECTIONS_GET_MANIFEST;
+        case (byte) 0xa0:
+          return Opcode.GET_META;
+
+      }
+      return null;
+    }
   }
 
   public enum Status {
@@ -1400,6 +1522,122 @@ public enum MemcacheProtocol {
       return status;
     }
 
+    public static Status of(short input) {
+      switch (input) {
+        case 0x00:
+          return SUCCESS;
+        case 0x01:
+          return NOT_FOUND;
+        case 0x02:
+          return EXISTS;
+        case 0x03:
+          return TOO_BIG;
+        case 0x04:
+          return INVALID_REQUEST;
+        case 0x05:
+          return NOT_STORED;
+        case 0x07:
+          return NOT_MY_VBUCKET;
+        case 0x08:
+          return NO_BUCKET;
+        case 0x09:
+          return LOCKED;
+        case 0x20:
+          return AUTH_ERROR;
+        case 0x24:
+          return ACCESS_ERROR;
+        case 0x25:
+          return NOT_INITIALIZED;
+        case 0x84:
+          return INTERNAL_SERVER_ERROR;
+        case 0x85:
+          return SERVER_BUSY;
+        case 0x86:
+          return TEMPORARY_FAILURE;
+        case 0x81:
+          return UNKNOWN_COMMAND;
+        case 0x82:
+          return OUT_OF_MEMORY;
+        case 0x83:
+          return NOT_SUPPORTED;
+        case 0xc0:
+          return SUBDOC_PATH_NOT_FOUND;
+        case 0xc1:
+          return SUBDOC_PATH_MISMATCH;
+        case 0xc2:
+          return SUBDOC_PATH_INVALID;
+        case 0xc3:
+          return SUBDOC_PATH_TOO_BIG;
+        case 0xc4:
+          return SUBDOC_DOC_TOO_DEEP;
+        case 0xc5:
+          return SUBDOC_VALUE_CANTINSERT;
+        case 0xc6:
+          return SUBDOC_DOC_NOT_JSON;
+        case 0xc7:
+          return SUBDOC_NUM_RANGE;
+        case 0xc8:
+          return SUBDOC_DELTA_RANGE;
+        case 0xc9:
+          return SUBDOC_PATH_EXISTS;
+        case 0xca:
+          return SUBDOC_VALUE_TOO_DEEP;
+        case 0xcb:
+          return SUBDOC_INVALID_COMBO;
+        case 0xcc:
+          return SUBDOC_MULTI_PATH_FAILURE;
+        case 0xce:
+          return SUBDOC_XATTR_INVALID_FLAG_COMBO;
+        case 0xcf:
+          return SUBDOC_XATTR_INVALID_KEY_COMBO;
+        case 0xd0:
+          return SUBDOC_XATTR_UNKNOWN_MACRO;
+        case 0xd1:
+          return SUBDOC_XATTR_UNKNOWN_VATTR;
+        case 0xd2:
+          return SUBDOC_XATTR_CANNOT_MODIFY_VATTR;
+        case 0xcd:
+          return SUBDOC_SUCCESS_DELETED_DOCUMENT;
+        case 0xd3:
+          return SUBDOC_MULTI_PATH_FAILURE_DELETED;
+        case 0xd4:
+          return SUBDOC_INVALID_XATTR_ORDER;
+        case 0xd6:
+          return SUBDOC_CAN_ONLY_REVIVE_DELETED_DOCUMENTS;
+        case 0xa0:
+          return DURABILITY_INVALID_LEVEL;
+        case 0xa1:
+          return DURABILITY_IMPOSSIBLE;
+        case 0xa2:
+          return SYNC_WRITE_IN_PROGRESS;
+        case 0xa4:
+          return SYNC_WRITE_RE_COMMIT_IN_PROGRESS;
+        case 0xa3:
+          return SYNC_WRITE_AMBIGUOUS;
+        case 0x88:
+          return UNKNOWN_COLLECTION;
+        case 0x89:
+          return NO_COLLECTIONS_MANIFEST;
+        case 0x8a:
+          return CANNOT_APPLY_COLLECTIONS_MANIFEST;
+        case 0x8b:
+          return COLLECTIONS_MANIFEST_AHEAD;
+        case 0x8c:
+          return UNKNOWN_SCOPE;
+        case 0x30:
+          return RATE_LIMITED_NETWORK_INGRESS;
+        case 0x31:
+          return RATE_LIMITED_NETWORK_EGRESS;
+        case 0x32:
+          return RATE_LIMITED_MAX_CONNECTIONS;
+        case 0x33:
+          return RATE_LIMITED_MAX_COMMANDS;
+        case 0x34:
+          return SCOPE_SIZE_LIMIT_EXCEEDED;
+      }
+      return null;
+    }
+
   }
 
   public enum Datatype {
@@ -1426,6 +1664,16 @@ public enum MemcacheProtocol {
      */
     public byte datatype() {
       return datatype;
+    }
+
+    public static Datatype of(byte input) {
+      switch (input) {
+        case 0x02:
+          return SNAPPY;
+        case 0x04:
+          return XATTR;
+      }
+      return null;
     }
   }
 }
