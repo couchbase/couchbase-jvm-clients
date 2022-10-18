@@ -167,8 +167,8 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
         );
         interceptedConnectPromise.tryFailure(
           new AuthenticationFailureException(
-            "Either the bucket with name \"" + redactMeta(bucketName) + "\" is not present or the user does not have " +
-              "the right privileges to access it",
+            "Either the bucket with name \"" + redactMeta(bucketName) + "\" is not present, the user does not have " +
+              "the right privileges to access it, or the bucket is hibernated",
             new KeyValueIoErrorContext(MemcacheProtocol.decodeStatus(status), endpointContext, null),
             null
           )

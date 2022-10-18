@@ -199,8 +199,8 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
         }
       });
 
-    assertAuthenticationFailure(bootstrap, "Either the bucket with name \"" + bucketName + "\" is not present " +
-      "or the user does not have the right privileges to access it");
+    assertAuthenticationFailure(bootstrap, "Either the bucket with name \"" + bucketName + "\" is not present, " +
+      "the user does not have the right privileges to access it, or the bucket is hibernated");
   }
 
 
