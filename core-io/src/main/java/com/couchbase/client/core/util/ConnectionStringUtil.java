@@ -228,15 +228,6 @@ public class ConnectionStringUtil {
     }
 
     boolean capella = isCapella(connStr);
-    if (tls && !userSpecifiedTrustSource(env.securityConfig()) && !capella) {
-      // Default trust source only works with Capella.
-      throw InvalidArgumentException.fromMessage(
-          "When TLS is enabled, the cluster environment's security config must specify" +
-              " either the Certificate Authority certificate(s) to trust," +
-              " or the trust manager factory to use." +
-              " (Unless connecting to cloud.couchbase.com.)"
-      );
-    }
 
     if (capella && !tls) {
       // Can't connect to Capella without TLS. Until we determine
