@@ -16,7 +16,6 @@
 package com.couchbase.client.scala.env
 
 import com.couchbase.client.core
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.duration.Duration
@@ -80,7 +79,6 @@ case class TimeoutConfig(
     *
     * @return this, for chaining
     */
-  @Volatile
   def kvDurableTimeout(value: Duration): TimeoutConfig = {
     copy(kvDurableTimeout = Some(value))
   }
