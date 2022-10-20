@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java.analytics;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow;
@@ -33,7 +32,6 @@ import java.util.List;
  *
  * @since 3.0.0
  */
-@Stability.Volatile
 public class AnalyticsResult {
 
   /**

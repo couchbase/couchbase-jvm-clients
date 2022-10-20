@@ -125,7 +125,6 @@ public class TimeoutConfig {
     return kvTimeout;
   }
 
-  @Stability.Volatile
   public Duration kvDurableTimeout() {
     return kvDurableTimeout;
   }

@@ -30,7 +30,6 @@ import reactor.core.publisher.Mono;
  *
  * @since 3.0.0
  */
-@Stability.Volatile
 public class ReactiveQueryResult {
 
 	private final QueryResponse response;
