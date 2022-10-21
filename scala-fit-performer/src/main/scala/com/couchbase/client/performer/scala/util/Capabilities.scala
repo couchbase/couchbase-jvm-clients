@@ -23,9 +23,13 @@ object Capabilities {
   def sdkImplementationCaps: util.List[Caps] = {
     val out = new util.ArrayList[Caps]
 
-    // [start:3.1.5]
+    // [start:1.1.5]
     out.add(Caps.SDK_PRESERVE_EXPIRY);
-    // [end:3.1.5]
+    // [end:1.1.5]
+
+    // [start:1.4.1]
+    out.add(Caps.SDK_KV_RANGE_SCAN);
+    // [end:1.4.1]
 
     out
   }

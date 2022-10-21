@@ -16,7 +16,7 @@
 package com.couchbase.client.performer.scala.util
 
 import com.couchbase.client.protocol.shared.{ClusterConnectionCreateRequest, DocLocation}
-import com.couchbase.client.scala.{Bucket, Cluster, Collection}
+import com.couchbase.client.scala.{Bucket, Cluster, ClusterOptions, Collection}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -26,7 +26,13 @@ class ClusterConnection(req: ClusterConnectionCreateRequest) {
   private val hostname = "couchbase://" + req.getClusterHostname
   logger.info("Attempting connection to cluster " + hostname)
 
-  val cluster = Cluster.connect(hostname, req.getClusterUsername, req.getClusterPassword).get
+  val cluster: Cluster = OptionsUtil.convertClusterConfig(req) match {
+    case Some(env) =>
+      val built = env.build.get
+      val opts = ClusterOptions.create(req.getClusterUsername, req.getClusterPassword).environment(built)
+      Cluster.connect(hostname, opts).get
+    case _ => Cluster.connect(hostname, req.getClusterUsername, req.getClusterPassword).get
+  }
   private val bucketCache = scala.collection.mutable.Map.empty[String, Bucket]
 
   // SCBC-365: hit performance problems when repeatedly opening a scope or collection.  99% of the time we'll be
@@ -45,6 +51,10 @@ class ClusterConnection(req: ClusterConnectionCreateRequest) {
       else throw new UnsupportedOperationException("Unknown DocLocation type")
     }
 
+    collection(coll)
+  }
+
+  def collection(coll: com.couchbase.client.protocol.shared.Collection): Collection = {
     if (lastCollectionGrpc == coll) {
       lastCollection
     }

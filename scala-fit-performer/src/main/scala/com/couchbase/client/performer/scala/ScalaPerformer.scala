@@ -104,10 +104,13 @@ class ScalaPerformer extends CorePerformer {
   }
 
   override protected def executor(workloads: com.couchbase.client.protocol.run.Workloads, counters: Counters, api: API): SdkCommandExecutor = {
-    if (api != API.DEFAULT) {
-      throw new UnsupportedOperationException()
+    if (api == API.DEFAULT) {
+      new ScalaSdkCommandExecutor(clusterConnections(workloads.getClusterConnectionId), counters)
     }
-    new ScalaSdkCommandExecutor(clusterConnections(workloads.getClusterConnectionId), counters)
+    else if (api == API.ASYNC) {
+      new ScalaSdkCommandExecutor(clusterConnections(workloads.getClusterConnectionId), counters)
+    }
+    else throw new UnsupportedOperationException("Unknown API")
   }
 
   override protected def transactionsExecutor(workloads: Workloads, counters: Counters): TransactionCommandExecutor = null

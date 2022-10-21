@@ -18,91 +18,33 @@ package com.couchbase.client.performer.scala
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
-import com.couchbase.client.performer.core.perf.{Counters, PerRun, WorkloadStreamingThread}
+import com.couchbase.client.performer.core.perf.{Counters, PerRun}
 import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
+import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
+import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaIteratorStreamer}
 import com.couchbase.client.protocol
+import com.couchbase.client.protocol.sdk.kv.rangescan.{Scan, ScanTermChoice}
 import com.couchbase.client.protocol.shared
-import com.couchbase.client.protocol._
-import com.couchbase.client.performer.scala.util.ClusterConnection
-import com.couchbase.client.scala.codec.{JsonTranscoder, LegacyTranscoder, RawBinaryTranscoder, RawJsonTranscoder, RawStringTranscoder, Transcoder}
+import com.couchbase.client.protocol.shared.{CouchbaseExceptionEx, CouchbaseExceptionType, ExceptionOther}
+import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.durability.{Durability, PersistTo, ReplicateTo}
 import com.couchbase.client.scala.json.JsonObject
-import com.couchbase.client.scala.kv.{GetOptions, GetResult, InsertOptions, MutationResult, RemoveOptions, ReplaceOptions, UpsertOptions}
-import com.couchbase.client.protocol
-import com.couchbase.client.protocol.shared.{CouchbaseExceptionEx, CouchbaseExceptionType, ExceptionOther}
+import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
+import com.couchbase.client.scala.kv._
+import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.google.protobuf.ByteString
 
+import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.concurrent.duration.Duration
-import scala.reflect.ClassTag
+import scala.util.{Failure, Success, Try}
 
 class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: Counters) extends SdkCommandExecutor(counters) {
   override protected def convertException(raw: Throwable): com.couchbase.client.protocol.shared.Exception = {
-    val ret = com.couchbase.client.protocol.shared.Exception.newBuilder
-
-    if (raw.isInstanceOf[CouchbaseException] || raw.isInstanceOf[UnsupportedOperationException]) {
-      val typ = if (raw.isInstanceOf[UnsupportedOperationException]) CouchbaseExceptionType.SDK_UNSUPPORTED_OPERATION_EXCEPTION
-      else ErrorUtil.convertException(raw.asInstanceOf[CouchbaseException])
-
-      val out = CouchbaseExceptionEx.newBuilder
-        .setName(raw.getClass.getSimpleName)
-        .setType(typ)
-        .setSerialized(raw.toString)
-      if (raw.getCause != null) {
-        out.setCause(convertException(raw.getCause))
-      }
-      ret.setCouchbase(out)
-    }
-    else ret.setOther(ExceptionOther.newBuilder.setName(raw.getClass.getSimpleName).setSerialized(raw.toString))
-
-    ret.build
-  }
-
-  def convertDurability(durability: protocol.shared.DurabilityType): Durability = {
-    if (durability.hasDurabilityLevel()) {
-      durability.getDurabilityLevel() match {
-        case shared.Durability.NONE => Durability.Disabled
-        case shared.Durability.MAJORITY => Durability.Majority
-        case shared.Durability.MAJORITY_AND_PERSIST_TO_ACTIVE => Durability.MajorityAndPersistToActive
-        case shared.Durability.PERSIST_TO_MAJORITY => Durability.PersistToMajority
-        case _ => throw new UnsupportedOperationException("Unknown durability level")
-      }
-    }
-    else if (durability.hasObserve) {
-      Durability.ClientVerified(durability.getObserve.getReplicateTo match {
-        case shared.ReplicateTo.REPLICATE_TO_NONE => ReplicateTo.None
-        case shared.ReplicateTo.REPLICATE_TO_ONE => ReplicateTo.One
-        case shared.ReplicateTo.REPLICATE_TO_TWO => ReplicateTo.Two
-        case shared.ReplicateTo.REPLICATE_TO_THREE => ReplicateTo.Three
-        case _ => throw new UnsupportedOperationException("Unknown replicateTo level")
-      }, durability.getObserve.getPersistTo match {
-        case shared.PersistTo.PERSIST_TO_NONE => PersistTo.None
-        case shared.PersistTo.PERSIST_TO_ACTIVE => PersistTo.Active
-        case shared.PersistTo.PERSIST_TO_ONE => PersistTo.One
-        case shared.PersistTo.PERSIST_TO_TWO => PersistTo.Two
-        case shared.PersistTo.PERSIST_TO_THREE => PersistTo.Three
-        case shared.PersistTo.PERSIST_TO_FOUR => PersistTo.Four
-        case _ => throw new UnsupportedOperationException("Unknown persistTo level")
-      })
-    }
-    else {
-      throw new UnsupportedOperationException("Unknown durability")
-    }
-  }
-
-  def convertExpiry(expiry: shared.Expiry): Either[Instant, Duration] = {
-    if (expiry.hasAbsoluteEpochSecs) {
-      Left(Instant.ofEpochSecond(expiry.getAbsoluteEpochSecs))
-    }
-    else if (expiry.hasRelativeSecs) {
-      Right(Duration.create(expiry.getRelativeSecs, TimeUnit.SECONDS))
-    }
-    else {
-      throw new UnsupportedOperationException("Unknown expiry")
-    }
+    ScalaSdkCommandExecutor.convertException(raw)
   }
 
   override protected def performOperation(op: com.couchbase.client.protocol.sdk.Command, perRun: PerRun): com.couchbase.client.protocol.run.Result = {
@@ -176,17 +118,165 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
     }
+    // [start:1.4.1]
+    else if (op.hasRangeScan) {
+      val request = op.getRangeScan
+      val collection = connection.collection(request.getCollection)
+      val options = createOptions(request)
+      val scanType = convertScanType(request)
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      val iterator = if (options == null) collection.scan(scanType)
+      else collection.scan(scanType, options)
+      result.setElapsedNanos(System.nanoTime - start)
+      val streamer = new ScalaIteratorStreamer[ScanResult](iterator, perRun, request.getStreamConfig.getStreamId, request.getStreamConfig, (r: AnyRef) => {
+        processScanResult(request, r.asInstanceOf[ScanResult])
+      })
+      perRun.streamerOwner.addAndStart(streamer)
+      result.setStream(com.couchbase.client.protocol.streams.Signal
+        .newBuilder
+        .setCreated(com.couchbase.client.protocol.streams.Created.newBuilder
+          .setType(com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN)
+          .setStreamId(streamer.streamId)))
+    }
+    // [end:1.4.1]
     else throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"))
 
     result.build
   }
+}
+  
+object ScalaSdkCommandExecutor {
+  def convertDurability(durability: protocol.shared.DurabilityType): Durability = {
+    if (durability.hasDurabilityLevel()) {
+      durability.getDurabilityLevel() match {
+        case shared.Durability.NONE => Durability.Disabled
+        case shared.Durability.MAJORITY => Durability.Majority
+        case shared.Durability.MAJORITY_AND_PERSIST_TO_ACTIVE => Durability.MajorityAndPersistToActive
+        case shared.Durability.PERSIST_TO_MAJORITY => Durability.PersistToMajority
+        case _ => throw new UnsupportedOperationException("Unknown durability level")
+      }
+    }
+    else if (durability.hasObserve) {
+      Durability.ClientVerified(durability.getObserve.getReplicateTo match {
+        case shared.ReplicateTo.REPLICATE_TO_NONE => ReplicateTo.None
+        case shared.ReplicateTo.REPLICATE_TO_ONE => ReplicateTo.One
+        case shared.ReplicateTo.REPLICATE_TO_TWO => ReplicateTo.Two
+        case shared.ReplicateTo.REPLICATE_TO_THREE => ReplicateTo.Three
+        case _ => throw new UnsupportedOperationException("Unknown replicateTo level")
+      }, durability.getObserve.getPersistTo match {
+        case shared.PersistTo.PERSIST_TO_NONE => PersistTo.None
+        case shared.PersistTo.PERSIST_TO_ACTIVE => PersistTo.Active
+        case shared.PersistTo.PERSIST_TO_ONE => PersistTo.One
+        case shared.PersistTo.PERSIST_TO_TWO => PersistTo.Two
+        case shared.PersistTo.PERSIST_TO_THREE => PersistTo.Three
+        case shared.PersistTo.PERSIST_TO_FOUR => PersistTo.Four
+        case _ => throw new UnsupportedOperationException("Unknown persistTo level")
+      })
+    }
+    else {
+      throw new UnsupportedOperationException("Unknown durability")
+    }
+  }
 
-  private def convertContent(content: shared.Content): String = {
+  def convertExpiry(expiry: shared.Expiry): Either[Instant, Duration] = {
+    if (expiry.hasAbsoluteEpochSecs) {
+      Left(Instant.ofEpochSecond(expiry.getAbsoluteEpochSecs))
+    }
+    else if (expiry.hasRelativeSecs) {
+      Right(Duration.create(expiry.getRelativeSecs, TimeUnit.SECONDS))
+    }
+    else {
+      throw new UnsupportedOperationException("Unknown expiry")
+    }
+  }
+
+  // [start:1.4.1]
+  def processScanResult(request: Scan, r: ScanResult): com.couchbase.client.protocol.run.Result = {
+    val builder = com.couchbase.client.protocol.sdk.kv.rangescan.ScanResult
+      .newBuilder
+      .setId(r.id)
+      .setStreamId(request.getStreamConfig.getStreamId)
+
+    r.cas.foreach(v => builder.setCas(v))
+    r.expiryTime.foreach(v => builder.setExpiryTime(v.getEpochSecond))
+
+    if (request.hasContentAs) {
+      val bytes: Try[Array[Byte]] = if (request.getContentAs.hasAsString) {
+        r.contentAs[String].map(_.getBytes(StandardCharsets.UTF_8))
+      }
+      else if (request.getContentAs.hasAsByteArray) {
+        r.contentAs[Array[Byte]]
+      }
+      else if (request.getContentAs.hasAsJson) {
+        r.contentAs[JsonObject].map(v => {
+          JacksonTransformers.MAPPER.writeValueAsBytes(v)
+        })
+      }
+      else throw new UnsupportedOperationException("Unknown contentAs")
+
+      bytes match {
+        case Success(b) =>
+          builder.setContent(ByteString.copyFrom(b))
+
+          com.couchbase.client.protocol.run.Result.newBuilder
+            .setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder
+              .setRangeScanResult(builder.build))
+            .build
+
+        case Failure(err) =>
+          com.couchbase.client.protocol.run.Result.newBuilder
+            .setStream(com.couchbase.client.protocol.streams.Signal.newBuilder
+              .setError(com.couchbase.client.protocol.streams.Error.newBuilder
+                .setStreamId(request.getStreamConfig.getStreamId)
+                .setException(convertException(err))
+              ))
+            .build
+      }
+    }
+    else {
+      com.couchbase.client.protocol.run.Result.newBuilder
+        .setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder
+          .setRangeScanResult(builder.build))
+        .build
+    }
+  }
+
+  def convertScanTerm(st: ScanTermChoice) = {
+    if (st.hasMaximum) {
+      ScanTerm.maximum()
+    }
+    else if (st.hasMinimum) {
+      ScanTerm.minimum()
+    }
+    else if (st.hasTerm) {
+      val stt = st.getTerm
+      ScanTerm(stt.getTerm, if (stt.hasExclusive) Some(stt.getExclusive) else None)
+    }
+    else throw new UnsupportedOperationException("Unknown scan term")
+  }
+
+  def convertScanType(request: Scan): ScanType = {
+    if (request.getScanType.hasRange) {
+      val scan = request.getScanType.getRange
+      val from = convertScanTerm(scan.getFrom)
+      val to = convertScanTerm(scan.getTo)
+      RangeScan(from, to)
+    }
+    else if (request.getScanType.hasSampling) {
+      val scan = request.getScanType.getSampling
+      SamplingScan(scan.getLimit, if (scan.hasSeed) Some(scan.getSeed) else None)
+    }
+    else throw new UnsupportedOperationException("Unknown scan type")
+  }
+  // [end:1.4.1]
+
+  def convertContent(content: shared.Content): String = {
     if (content.hasPassthroughString) content.getPassthroughString
     else throw new UnsupportedOperationException("Unknown content")
   }
 
-  private def createOptions(request: com.couchbase.client.protocol.sdk.kv.Insert) = {
+  def createOptions(request: com.couchbase.client.protocol.sdk.kv.Insert) = {
     if (request.hasOptions) {
       val opts = request.getOptions
       var out = InsertOptions()
@@ -208,7 +298,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
     else null
   }
 
-  private def createOptions(request: com.couchbase.client.protocol.sdk.kv.Remove) = {
+  def createOptions(request: com.couchbase.client.protocol.sdk.kv.Remove) = {
     if (request.hasOptions) {
       val opts = request.getOptions
       var out = RemoveOptions()
@@ -220,7 +310,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
     else null
   }
 
-  private def createOptions(request: com.couchbase.client.protocol.sdk.kv.Get) = {
+  def createOptions(request: com.couchbase.client.protocol.sdk.kv.Get) = {
     if (request.hasOptions) {
       val opts = request.getOptions
       var out = GetOptions()
@@ -233,7 +323,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
     else null
   }
 
-  private def createOptions(request: com.couchbase.client.protocol.sdk.kv.Replace) = {
+  def createOptions(request: com.couchbase.client.protocol.sdk.kv.Replace) = {
     if (request.hasOptions) {
       val opts = request.getOptions
       var out = ReplaceOptions()
@@ -264,7 +354,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
     else null
   }
 
-  private def createOptions(request: com.couchbase.client.protocol.sdk.kv.Upsert) = {
+  def createOptions(request: com.couchbase.client.protocol.sdk.kv.Upsert) = {
     if (request.hasOptions) {
       val opts = request.getOptions
       var out = UpsertOptions()
@@ -294,7 +384,30 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
     else null
   }
 
-  private def convertTranscoder(transcoder: shared.Transcoder): Transcoder = {
+  // [start:1.4.1]
+  def createOptions(request: com.couchbase.client.protocol.sdk.kv.rangescan.Scan) = {
+    if (request.hasOptions) {
+      val opts = request.getOptions
+      var out = ScanOptions()
+
+      if (opts.hasWithoutContent) out = out.withoutContent(opts.getWithoutContent)
+      if (opts.hasConsistentWith) out = out.consistentWith(convertMutationState(opts.getConsistentWith))
+      if (opts.hasSort) out = out.scanSort(if (opts.getSort == com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_NONE) ScanSort.None
+      else if (opts.getSort == com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_ASCENDING) ScanSort.Ascending
+      else throw new UnsupportedOperationException("Unknown scan sort"))
+      if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
+      if (opts.hasTimeoutMsecs) out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
+      if (opts.hasBatchByteLimit) out = out.batchByteLimit(opts.getBatchByteLimit)
+      if (opts.hasBatchItemLimit) out = out.batchItemLimit(opts.getBatchItemLimit)
+      // Will add when adding support for Caps.OBSERVABILITY_1.
+      // if (opts.hasParentSpanId) out = out.parentSpan(spans.get(opts.getParentSpanId))
+      out
+    }
+    else null
+  }
+  // [end:1.4.1]
+
+  def convertTranscoder(transcoder: shared.Transcoder): Transcoder = {
     if (transcoder.hasRawJson) return RawJsonTranscoder.Instance
     else if (transcoder.hasJson) return JsonTranscoder.Instance
     else if (transcoder.hasLegacy) return LegacyTranscoder.Instance
@@ -303,11 +416,11 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
     else throw new UnsupportedOperationException("Unknown transcoder")
   }
 
-  private def setSuccess(result: com.couchbase.client.protocol.run.Result.Builder): Unit = {
+  def setSuccess(result: com.couchbase.client.protocol.run.Result.Builder): Unit = {
     result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder.setSuccess(true))
   }
 
-  private def populateResult(result: com.couchbase.client.protocol.run.Result.Builder, value: MutationResult): Unit = {
+  def populateResult(result: com.couchbase.client.protocol.run.Result.Builder, value: MutationResult): Unit = {
     val builder = com.couchbase.client.protocol.sdk.kv.MutationResult.newBuilder.setCas(value.cas)
     value.mutationToken.foreach(mt => builder.setMutationToken(com.couchbase.client.protocol.shared.MutationToken.newBuilder
       .setPartitionId(mt.partitionID)
@@ -317,7 +430,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
     result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder.setMutationResult(builder))
   }
 
-  private def populateResult(result: com.couchbase.client.protocol.run.Result.Builder, value: GetResult): Unit = {
+  def populateResult(result: com.couchbase.client.protocol.run.Result.Builder, value: GetResult): Unit = {
     val builder = com.couchbase.client.protocol.sdk.kv.GetResult.newBuilder
       .setCas(value.cas)
       .setContent(ByteString.copyFrom(value.contentAs[JsonObject].toString.getBytes))
@@ -327,4 +440,31 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
     result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder.setGetResult(builder))
   }
 
+  def convertMutationState(consistentWith: com.couchbase.client.protocol.shared.MutationState): MutationState = {
+    val tokens = consistentWith.getTokensList.toSeq
+      .map(mt => new MutationToken(mt.getPartitionId.asInstanceOf[Short], mt.getPartitionUuid, mt.getSequenceNumber, mt.getBucketName))
+
+    MutationState(tokens)
+  }
+
+  def convertException(raw: Throwable): com.couchbase.client.protocol.shared.Exception = {
+    val ret = com.couchbase.client.protocol.shared.Exception.newBuilder
+
+    if (raw.isInstanceOf[CouchbaseException] || raw.isInstanceOf[UnsupportedOperationException]) {
+      val typ = if (raw.isInstanceOf[UnsupportedOperationException]) CouchbaseExceptionType.SDK_UNSUPPORTED_OPERATION_EXCEPTION
+      else ErrorUtil.convertException(raw.asInstanceOf[CouchbaseException])
+
+      val out = CouchbaseExceptionEx.newBuilder
+        .setName(raw.getClass.getSimpleName)
+        .setType(typ)
+        .setSerialized(raw.toString)
+      if (raw.getCause != null) {
+        out.setCause(convertException(raw.getCause))
+      }
+      ret.setCouchbase(out)
+    }
+    else ret.setOther(ExceptionOther.newBuilder.setName(raw.getClass.getSimpleName).setSerialized(raw.toString))
+
+    ret.build
+  }
 }
