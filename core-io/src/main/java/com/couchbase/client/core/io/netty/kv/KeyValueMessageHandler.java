@@ -529,7 +529,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
     eventBus.publish(new NotMyVbucketReceivedEvent(ioContext, request.partition()));
 
-    final String origin = request.context().lastDispatchedTo() != null ? request.context().lastDispatchedTo().hostname() : null;
+    final String origin = request.context().lastDispatchedTo() != null ? request.context().lastDispatchedTo().host() : null;
     RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_NOT_MY_VBUCKET);
 
     body(response)

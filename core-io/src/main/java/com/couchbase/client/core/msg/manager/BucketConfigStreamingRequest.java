@@ -50,7 +50,7 @@ public class BucketConfigStreamingRequest extends BaseManagerRequest<BucketConfi
   public BucketConfigStreamingResponse decode(final HttpResponse response, final byte[] content) {
     String lastDispatchedTo = null;
     if (context().lastDispatchedTo() != null) {
-      lastDispatchedTo = context().lastDispatchedTo().hostname();
+      lastDispatchedTo = context().lastDispatchedTo().host();
     }
     return new BucketConfigStreamingResponse(HttpProtocol.decodeStatus(response.status()), lastDispatchedTo);
   }

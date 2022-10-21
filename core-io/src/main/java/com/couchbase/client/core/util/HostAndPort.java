@@ -16,52 +16,77 @@
 
 package com.couchbase.client.core.util;
 
+import java.net.InetSocketAddress;
 import java.util.Objects;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static java.util.Objects.requireNonNull;
 
 /**
- * Typed tuple that holds an unresolved hostname and port tuple and provides utility access methods.
+ * A host (hostname or IP address) and a port number.
  */
 public class HostAndPort {
-
-  private final String hostname;
+  private final String host;
   private final int port;
-  private final String stringified;
-  private final int hashCode;
 
-  public HostAndPort(final String hostname, final int port) {
-    this.hostname = hostname;
+  // Derived properties, pre-computed and cached for performance.
+  private final int hashCode;
+  private final String formatted;
+  private final String redactedFormatted;
+
+  public HostAndPort(String host, int port) {
+    requireNonNull(host, "host must be non-null");
+
+    boolean ipv6Literal = host.contains(":");
+    this.host = ipv6Literal ? canonicalizeIpv6Literal(host) : host;
     this.port = port;
-    this.stringified = redactSystem(hostname + ":" + port).toString();
-    this.hashCode = Objects.hash(hostname, port);
+
+    this.hashCode = Objects.hash(this.host, this.port);
+    this.formatted = (ipv6Literal ? "[" + this.host + "]" : this.host) + ":" + this.port;
+    this.redactedFormatted = redactSystem(this.formatted).toString();
   }
 
-  public String hostname() {
-    return hostname;
+  private static String canonicalizeIpv6Literal(String ipv6Literal) {
+    // This "resolves" the address, but because it's an IPv6 literal no DNS lookup is required
+    return new InetSocketAddress(ipv6Literal, 0).getHostString();
+  }
+
+  public String host() {
+    return host;
   }
 
   public int port() {
     return port;
   }
 
+  public HostAndPort withPort(int port) {
+    return this.port == port ? this : new HostAndPort(this.host, port);
+  }
+
+  public String format() {
+    return formatted;
+  }
+
+  @Override
+  public String toString() {
+    return redactedFormatted;
+  }
+
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
     HostAndPort that = (HostAndPort) o;
     return port == that.port &&
-      Objects.equals(hostname, that.hostname);
+        host.equals(that.host);
   }
 
   @Override
   public int hashCode() {
     return hashCode;
   }
-
-  @Override
-  public String toString() {
-    return stringified;
-  }
-
 }

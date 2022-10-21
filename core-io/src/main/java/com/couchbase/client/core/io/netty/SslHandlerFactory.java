@@ -68,7 +68,7 @@ public class SslHandlerFactory {
 
     final SslHandler sslHandler = context.build().newHandler(
       allocator,
-      endpointContext.remoteSocket().hostname(),
+      endpointContext.remoteSocket().host(),
       endpointContext.remoteSocket().port()
     );
 

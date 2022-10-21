@@ -121,7 +121,7 @@ public class SearchMock {
         doReturn(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "localhost")).when(spiedReq).encode();
 
         doAnswer(v -> {
-            EndpointContext endpointContext = new EndpointContext(ctx, new HostAndPort(null, 0), null, null, null,
+            EndpointContext endpointContext = new EndpointContext(ctx, new HostAndPort("127.0.0.1", 0), null, null, null,
                     Optional.of("bucket"), null);
 
             BaseEndpoint endpoint = mock(BaseEndpoint.class);

@@ -268,7 +268,7 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   protected SocketAddress remoteAddress() {
     final EndpointContext ctx = endpointContext.get();
-    return InetSocketAddress.createUnresolved(ctx.remoteSocket().hostname(), ctx.remoteSocket().port());
+    return InetSocketAddress.createUnresolved(ctx.remoteSocket().host(), ctx.remoteSocket().port());
   }
 
   /**
