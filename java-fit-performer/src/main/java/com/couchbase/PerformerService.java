@@ -359,7 +359,7 @@ public class PerformerService extends CorePerformer {
             ClientRecordProcessResponse.Builder response = ClientRecordProcessResponse.newBuilder();
 
             try {
-                ClientRecordDetails result = cr.processClient(request.getClientUUID(),
+                ClientRecordDetails result = cr.processClient(request.getClientUuid(),
                                 collection,
                                 config,
                                 null)
@@ -375,7 +375,7 @@ public class PerformerService extends CorePerformer {
                         .setOverrideEnabled(result.overrideEnabled())
                         .setOverrideExpires(result.overrideExpires())
                         .setCasNowNanos(result.casNow())
-                        .setClientUUID(request.getClientUUID())
+                        .setClientUuid(request.getClientUuid())
                         .build();
             }
             catch (RuntimeException err) {

@@ -149,10 +149,10 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                                   TransactionCommand op,
                                   @Nullable StreamObserver<TransactionStreamPerformerToDriver> toTest,
                                   boolean performanceMode) {
-        if (op.getWaitMSecs() != 0) {
+        if (op.getWaitMsecs() != 0) {
             try {
-                logger.info("Sleeping for Msecs: "+op.getWaitMSecs());
-                Thread.sleep(op.getWaitMSecs());
+                logger.info("Sleeping for Msecs: "+op.getWaitMsecs());
+                Thread.sleep(op.getWaitMsecs());
             } catch (InterruptedException e) {
                 throw new InternalPerformerFailure(new RuntimeException(e));
             }
@@ -318,8 +318,8 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
             performCommandBatch(request, (parallelOp) -> Mono.fromRunnable(() -> {
                 performOperation(connection, ctx, parallelOp, toTest, performanceMode);
             }).then()).block();
-        } else if (op.hasInsertRegularKV()) {
-            final CommandInsertRegularKV request = op.getInsertRegularKV();
+        } else if (op.hasInsertRegularKv()) {
+            final CommandInsertRegularKV request = op.getInsertRegularKv();
             final Collection collection = connection.collection(request.getDocId());
 
             performOperation("KV insert " + request.getDocId().getDocId(), ctx, Collections.singletonList(EXPECT_SUCCESS), op.getDoNotPropagateError(), performanceMode,
@@ -327,8 +327,8 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                         JsonObject content = JsonObject.fromJson(request.getContentJson());
                         collection.insert(request.getDocId().getDocId(), content);
                     });
-        } else if (op.hasReplaceRegularKV()) {
-            final CommandReplaceRegularKV request = op.getReplaceRegularKV();
+        } else if (op.hasReplaceRegularKv()) {
+            final CommandReplaceRegularKV request = op.getReplaceRegularKv();
             final Collection collection = connection.collection(request.getDocId());
 
             performOperation("KV replace " + request.getDocId().getDocId(), ctx, Collections.singletonList(EXPECT_SUCCESS), op.getDoNotPropagateError(), performanceMode,
@@ -336,8 +336,8 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                         JsonObject content = JsonObject.fromJson(request.getContentJson());
                         collection.replace(request.getDocId().getDocId(), content);
                     });
-        } else if (op.hasRemoveRegularKV()) {
-            final CommandRemoveRegularKV request = op.getRemoveRegularKV();
+        } else if (op.hasRemoveRegularKv()) {
+            final CommandRemoveRegularKV request = op.getRemoveRegularKv();
             final Collection collection = connection.collection(request.getDocId());
 
             performOperation("KV remove " + request.getDocId().getDocId(), ctx, Collections.singletonList(EXPECT_SUCCESS), op.getDoNotPropagateError(), performanceMode,
