@@ -115,7 +115,7 @@ public class RangeScanCreateRequest extends PredeterminedPartitionRequest<RangeS
     }
 
     mutationToken.ifPresent(token -> payload.put("snapshot_requirements", mapOf(
-      "vb_uuid", token.partitionUUID(),
+      "vb_uuid", Long.toString(token.partitionUUID()),
       "seqno", token.sequenceNumber(),
       "timeout_ms", Math.toIntExact(timeout().toMillis())
     )));

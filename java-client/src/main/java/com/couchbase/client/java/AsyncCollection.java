@@ -1119,8 +1119,10 @@ public class AsyncCollection {
       return Flux.error(InvalidArgumentException.fromMessage("Unsupported ScanType: " + scanType));
     }
 
+    final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+
     return coreScanStream.map(item -> new ScanResult(opts.withoutContent(), item.key(), item.value(), item.flags(),
-      item.cas(), Optional.ofNullable(item.expiry()), opts.transcoder())
+      item.cas(), Optional.ofNullable(item.expiry()), transcoder)
     );
   }
 
