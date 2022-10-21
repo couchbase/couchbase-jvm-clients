@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.datastructures._
 import com.couchbase.client.scala.durability.Durability
@@ -23,6 +24,7 @@ import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.util.TimeoutUtil
 
+import scala.collection.compat.immutable.LazyList
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
@@ -821,5 +823,21 @@ class Collection(
       tag: ClassTag[T]
   ): CouchbaseQueue[T] = {
     new CouchbaseQueue[T](id, this)
+  }
+
+  /** Initiates a KV range scan, which will return a non-blocking stream of KV documents.
+    *
+    * Uses default options.
+    */
+  @Volatile
+  def scan(scanType: ScanType): Iterator[ScanResult] = {
+    scan(scanType, ScanOptions())
+  }
+
+  /** Initiates a KV range scan, which will return a non-blocking stream of KV documents.
+    */
+  @Volatile
+  def scan(scanType: ScanType, opts: ScanOptions): Iterator[ScanResult] = {
+    async.scanRequest(scanType, opts).toStream().iterator
   }
 }

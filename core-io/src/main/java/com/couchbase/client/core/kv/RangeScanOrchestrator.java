@@ -71,6 +71,8 @@ import static com.couchbase.client.core.util.Validators.notNull;
  */
 @Stability.Internal
 public class RangeScanOrchestrator {
+  public static final int RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT = 15000;
+  public static final int RANGE_SCAN_DEFAULT_BATCH_ITEM_LIMIT = 50;
 
   /**
    * Holds the reference to core.

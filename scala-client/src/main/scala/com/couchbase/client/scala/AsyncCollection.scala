@@ -18,12 +18,14 @@ package com.couchbase.client.scala
 import java.time.Instant
 import java.util.Optional
 import java.util.concurrent.TimeUnit
-
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
+import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error._
 import com.couchbase.client.core.error.context.KeyValueErrorContext
 import com.couchbase.client.core.io.CollectionIdentifier
+import com.couchbase.client.core.kv.{CoreRangeScanSort, RangeScanOrchestrator}
 import com.couchbase.client.core.msg.Response
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
@@ -35,8 +37,9 @@ import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.kv.handlers._
 import com.couchbase.client.scala.util.{ExpiryUtil, FutureConversions, TimeoutUtil}
-import reactor.core.scala.publisher.SMono
+import reactor.core.scala.publisher.{SFlux, SMono}
 
+import java.nio.charset.StandardCharsets
 import scala.compat.java8.FutureConverters
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.{Duration, _}
@@ -97,6 +100,7 @@ class AsyncCollection(
   private[scala] val unlockHandler         = new UnlockHandler(hp)
   private[scala] val getFromReplicaHandler = new GetFromReplicaHandler(hp)
   private[scala] val touchHandler          = new TouchHandler(hp)
+  private[scala] val rangeScanOrchestrator = new RangeScanOrchestrator(core, collectionIdentifier)
 
   val binary = new AsyncBinaryCollection(this)
 
@@ -763,6 +767,90 @@ class AsyncCollection(
       options.parentSpan
     )
     wrap(req, id, touchHandler)
+  }
+
+  private[scala] def scanRequest(scanType: ScanType, opts: ScanOptions): SFlux[ScanResult] = {
+    import scala.compat.java8.OptionConverters._
+
+    val timeoutActual: java.time.Duration =
+      if (opts.timeout == Duration.MinusInf) environment.timeoutConfig.kvScanTimeout() else opts.timeout
+
+    val sortCore = opts.scanSort match {
+      case Some(ScanSort.Ascending) => CoreRangeScanSort.ASCENDING
+      case _ => CoreRangeScanSort.NONE
+    }
+
+    val consistencyTokens = new java.util.HashMap[java.lang.Short, MutationToken]()
+
+    opts.consistentWith match {
+      case Some(cw) => cw.tokens.foreach(t => consistencyTokens.put(t.partitionID, t))
+      case _ =>
+    }
+
+    val withoutContent = opts.withoutContent.getOrElse(false)
+
+    val flux = scanType match {
+      case scan: ScanType.RangeScan =>
+        FutureConversions.javaFluxToScalaFlux(rangeScanOrchestrator.rangeScan(scan.from.term.getBytes(StandardCharsets.UTF_8),
+          scan.from.exclusive.getOrElse(false),
+          scan.to.term.getBytes(StandardCharsets.UTF_8),
+          scan.to.exclusive.getOrElse(false),
+          timeoutActual,
+          opts.batchItemLimit.getOrElse(RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_ITEM_LIMIT),
+          opts.batchByteLimit.getOrElse(RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT),
+          opts.withoutContent.getOrElse(false),
+          sortCore,
+          opts.parentSpan.asJava,
+          consistencyTokens))
+      case scan: ScanType.SamplingScan =>
+        if (scan.limit <= 0) {
+          SFlux.error(new InvalidArgumentException("Limit must be > 0", null, null))
+        }
+        else {
+          FutureConversions.javaFluxToScalaFlux(rangeScanOrchestrator.samplingScan(scan.limit,
+            scan.seed.map(_.asInstanceOf[java.lang.Long]).asJava,
+            timeoutActual,
+            opts.batchItemLimit.getOrElse(0),
+            opts.batchByteLimit.getOrElse(0),
+            opts.withoutContent.getOrElse(false),
+            sortCore,
+            opts.parentSpan.asJava,
+            consistencyTokens))
+        }
+    }
+
+    flux.map(item => if (withoutContent) {
+      ScanResult(item.key(),
+        None,
+        item.flags(),
+        None,
+        None,
+        opts.transcoder.getOrElse(environment.transcoder))
+    }
+    else {
+      ScanResult(item.key(),
+        Some(item.value()),
+        item.flags(),
+        Some(item.cas()),
+        Option(item.expiry()),
+        opts.transcoder.getOrElse(environment.transcoder))
+    })
+  }
+
+  /** Initiates a KV range scan, which will return a non-blocking stream of KV documents.
+    *
+    * Uses default options.
+    */
+  @Volatile
+  def scan(scanType: ScanType): Future[Iterator[ScanResult]] = {
+    scan(scanType, ScanOptions())
+  }
+
+  /** Initiates a KV range scan, which will return a non-blocking stream of KV documents.
+    */
+  @Volatile
+  def scan(scanType: ScanType, opts: ScanOptions): Future[Iterator[ScanResult]] = {
+    Future(scanRequest(scanType, opts).toStream().iterator)
   }
 }
 

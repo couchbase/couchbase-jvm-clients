@@ -24,6 +24,8 @@ import com.couchbase.client.java.query.QueryOptions;
 
 import java.util.Optional;
 
+import static com.couchbase.client.core.kv.RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT;
+import static com.couchbase.client.core.kv.RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_ITEM_LIMIT;
 import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
@@ -42,12 +44,12 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
   /**
    * The default batch item limit is 50.
    */
-  private int batchItemLimit = 50;
+  private int batchItemLimit = RANGE_SCAN_DEFAULT_BATCH_ITEM_LIMIT;
 
   /**
    * The default batch byte limit is 15k.
    */
-  private int batchByteLimit = 15000;
+  private int batchByteLimit = RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT;
 
   private Optional<MutationState> consistentWith = Optional.empty();
 

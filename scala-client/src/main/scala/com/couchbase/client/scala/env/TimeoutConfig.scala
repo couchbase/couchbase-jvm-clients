@@ -16,6 +16,7 @@
 package com.couchbase.client.scala.env
 
 import com.couchbase.client.core
+import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.duration.Duration
@@ -40,7 +41,8 @@ case class TimeoutConfig(
     private[scala] val searchTimeout: Option[Duration] = None,
     private[scala] val analyticsTimeout: Option[Duration] = None,
     private[scala] val connectTimeout: Option[Duration] = None,
-    private[scala] val disconnectTimeout: Option[Duration] = None
+    private[scala] val disconnectTimeout: Option[Duration] = None,
+    private[scala] val kvScanTimeout: Option[Duration] = None,
 ) {
 
   private[scala] def toCore: core.env.TimeoutConfig.Builder = {
@@ -48,6 +50,7 @@ case class TimeoutConfig(
 
     kvTimeout.foreach(v => builder.kvTimeout(v))
     kvDurableTimeout.foreach(v => builder.kvDurableTimeout(v))
+    kvScanTimeout.foreach(v => builder.kvScanTimeout(v))
     managementTimeout.foreach(v => builder.managementTimeout(v))
     queryTimeout.foreach(v => builder.queryTimeout(v))
     viewTimeout.foreach(v => builder.viewTimeout(v))
@@ -81,6 +84,17 @@ case class TimeoutConfig(
     */
   def kvDurableTimeout(value: Duration): TimeoutConfig = {
     copy(kvDurableTimeout = Some(value))
+  }
+
+  /** Sets the timeout to use for key-value range scan operations.
+    *
+    * The default is 75 seconds.
+    *
+    * @return this, for chaining
+    */
+  @Stability.Volatile
+  def kvScanTimeout(value: Duration): TimeoutConfig = {
+    copy(kvScanTimeout = Some(value))
   }
 
   /** Sets the timeout to use for management operations.

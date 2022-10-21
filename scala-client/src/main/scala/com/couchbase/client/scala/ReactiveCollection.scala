@@ -16,7 +16,9 @@
 
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.msg.kv.GetRequest
+import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.kv.CoreRangeScanSort
+import com.couchbase.client.core.msg.kv.{GetRequest, MutationToken}
 import com.couchbase.client.scala.codec.JsonSerializer
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
@@ -402,5 +404,21 @@ class ReactiveCollection(async: AsyncCollection) {
       options: ExistsOptions
   ): SMono[ExistsResult] = {
     SMono.defer(() => SMono.fromFuture(async.exists(id, options)))
+  }
+
+  /** Initiates a KV range scan, which will return a stream of KV documents.
+    *
+    * Uses default options.
+    */
+  @Volatile
+  def scan(scanType: ScanType): SFlux[ScanResult] = {
+    scan(scanType, ScanOptions())
+  }
+
+  /** Initiates a KV range scan, which will return a stream of KV documents.
+    */
+  @Volatile
+  def scan(scanType: ScanType, opts: ScanOptions): SFlux[ScanResult] = {
+    async.scanRequest(scanType, opts)
   }
 }
