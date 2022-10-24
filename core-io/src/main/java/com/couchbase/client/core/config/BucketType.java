@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.config;
 
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonValue;
+
 /**
  * Represents the possible bucket types.
  *
@@ -23,11 +25,27 @@ package com.couchbase.client.core.config;
  */
 public enum BucketType {
   /**
-   * This bucket is a "couchbase" bucket, which also includes ephemeral buckets.
+   * This bucket is a "couchbase" bucket.
    */
-  COUCHBASE,
+  COUCHBASE("membase"),
+  /**
+   * This bucket is an "ephemeral" bucket.
+   */
+  EPHEMERAL("ephemeral"),
   /**
    * This bucket is a "memcached" bucket.
    */
-  MEMCACHED
+  MEMCACHED("memcached");
+
+  private final String raw;
+
+  BucketType(final String raw) {
+    this.raw = raw;
+  }
+
+  @JsonValue
+  public String getRaw() {
+    return raw;
+  }
+
 }

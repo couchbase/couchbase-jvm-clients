@@ -176,6 +176,13 @@ class CouchbaseBucketConfigTest {
         assertNull(config.uuid());
     }
 
+    @Test
+    void magmaBucketIsNotEphemeral() {
+        CouchbaseBucketConfig config = readConfig("config_magma_two_nodes.json");
+        assertEquals("foo", config.name());
+        assertFalse(config.ephemeral());
+    }
+
     /**
      * This test makes sure that we are properly extracting the cluster capabilities from the config
      * section while keeping all the other services empty so it is safe to look up (and not returning

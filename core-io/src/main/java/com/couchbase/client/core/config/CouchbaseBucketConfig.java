@@ -68,6 +68,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
       @JsonProperty("nodesExt") List<PortInfo> portInfos,
       @JsonProperty("bucketCapabilities") List<BucketCapabilities> bucketCapabilities,
       @JsonProperty("clusterCapabilities") Map<String, Set<ClusterCapabilities>> clusterCapabilities,
+      @JsonProperty("bucketType") BucketType bucketType,
       @JacksonInject("origin") String origin) {
         super(uuid, name, BucketNodeLocator.VBUCKET, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities,
           origin, clusterCapabilities, rev, revEpoch);
@@ -77,9 +78,17 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
         this.partitionHosts = buildPartitionHosts(extendedNodeInfos, partitionInfo);
         this.nodesWithPrimaryPartitions = buildNodesWithPrimaryPartitions(nodeInfos, partitionInfo.partitions());
 
-        // Use bucket capabilities to identify if couchapi is missing (then its ephemeral). If its null then
-        // we are running an old version of couchbase which doesn't have ephemeral buckets at all.
-        this.ephemeral = bucketCapabilities != null && !bucketCapabilities.contains(BucketCapabilities.COUCHAPI);
+        // When ephemeral buckets were introduced, a "bucketType" field was not part of the config. In recent
+        // servers (added in 7.1.0, same time when magma got introduced) there is a new bucketType available
+        // which allows us to more directly infer if it is an ephemeral bucket and no rely on the COUCHAPI
+        // presence as a heuristic.
+        if (bucketType != null) {
+            this.ephemeral = BucketType.EPHEMERAL == bucketType;
+        } else {
+            // Use bucket capabilities to identify if couchapi is missing (then its ephemeral). If its null then
+            // we are running an old version of couchbase which doesn't have ephemeral buckets at all.
+            this.ephemeral = bucketCapabilities != null && !bucketCapabilities.contains(BucketCapabilities.COUCHAPI);
+        }
     }
 
     /**
