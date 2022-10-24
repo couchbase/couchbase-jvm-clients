@@ -27,22 +27,26 @@ import com.couchbase.client.core.cnc.events.core.DnsSrvRecordsLoadedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.util.ConnectionString.PortType;
+import com.couchbase.client.core.util.ConnectionString.UnresolvedSocket;
 
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashMap;
+import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static com.couchbase.client.core.util.ConnectionString.PortType.KV;
+import static com.couchbase.client.core.util.ConnectionString.PortType.MANAGER;
 import static com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASES;
+import static java.util.stream.Collectors.groupingBy;
 
 /**
  * Contains various helper methods when dealing with the connection string.
@@ -124,38 +128,33 @@ public class ConnectionStringUtil {
 
   /**
    * Extracts the seed nodes from the instantiated connection string.
+   * Assumes untyped ports are KV ports.
+   * <p>
+   * If a host appears in the connection string multiple times, all its ports are merged.
+   * For example: {@code "couchbases://foo:123,foo:456=manager"} yields a single node
+   * with KV port 123 and Manager port 456. If the cluster actually has multiple nodes
+   * on the same host, some are ignored. While not ideal, this is good enough for bootstrapping.
    *
    * @param connectionString the instantiated connection string.
    * @return the set of seed nodes extracted.
    */
-  private static Set<SeedNode> populateSeedsFromConnectionString(final ConnectionString connectionString) {
-    final Map<String, List<ConnectionString.UnresolvedSocket>> aggregated = new LinkedHashMap<>();
-    for (ConnectionString.UnresolvedSocket socket : connectionString.hosts()) {
-      if (!aggregated.containsKey(socket.hostname())) {
-        aggregated.put(socket.hostname(), new ArrayList<>());
-      }
-      aggregated.get(socket.hostname()).add(socket);
-    }
+  static Set<SeedNode> populateSeedsFromConnectionString(final ConnectionString connectionString) {
+    Map<String, List<UnresolvedSocket>> groupedByHost = connectionString.hosts().stream()
+        .collect(groupingBy(UnresolvedSocket::hostname));
 
-    Set<SeedNode> seedNodes = aggregated.entrySet().stream().map(entry -> {
-      String hostname = entry.getKey();
-      Optional<Integer> kvPort = Optional.empty();
-      Optional<Integer> managerPort = Optional.empty();
+    Set<SeedNode> seedNodes = new HashSet<>();
 
-      for (ConnectionString.UnresolvedSocket socket : entry.getValue()) {
-        if (socket.portType().isPresent()) {
-          if (socket.portType().get() == ConnectionString.PortType.KV) {
-            kvPort = Optional.of(socket.port());
-          } else if (socket.portType().get() == ConnectionString.PortType.MANAGER) {
-            managerPort = Optional.of(socket.port());
-          }
-        } else if (socket.port() != 0) {
-          kvPort = Optional.of(socket.port());
-        }
-      }
+    groupedByHost.forEach((host, addresses) -> {
+      Map<PortType, Integer> ports = new EnumMap<>(PortType.class);
+      addresses.stream()
+          .filter(it -> it.port() != 0)
+          .forEach(it -> ports.put(it.portType().orElse(KV), it.port()));
 
-      return SeedNode.create(hostname, kvPort, managerPort);
-    }).collect(Collectors.toSet());
+      seedNodes.add(SeedNode.create(host)
+          .withKvPort(ports.get(KV))
+          .withManagerPort(ports.get(MANAGER))
+      );
+    });
 
     sanityCheckSeedNodes(connectionString.original(), seedNodes);
     return seedNodes;

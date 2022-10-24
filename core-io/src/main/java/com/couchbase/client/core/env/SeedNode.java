@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.env;
 
+import reactor.util.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
@@ -77,6 +79,24 @@ public class SeedNode {
     this.address = notNullOrEmpty(address, "Address");
     this.kvPort = notNull(kvPort, "KvPort");
     this.clusterManagerPort = notNull(clusterManagerPort, "ClusterManagerPort");
+  }
+
+  /**
+   * Returns a copy of this seed node, with the given KV port.
+   *
+   * @param port (nullable) null means absent KV port.
+   */
+  public SeedNode withKvPort(@Nullable Integer port) {
+    return SeedNode.create(address(), Optional.ofNullable(port), clusterManagerPort());
+  }
+
+  /**
+   * Returns a copy of this seed node, with the given Manager port.
+   *
+   * @param port (nullable) null means absent Manager port.
+   */
+  public SeedNode withManagerPort(@Nullable Integer port) {
+    return SeedNode.create(address(), kvPort(), Optional.ofNullable(port));
   }
 
   /**
