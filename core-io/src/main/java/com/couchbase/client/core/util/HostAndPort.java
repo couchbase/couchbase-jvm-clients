@@ -51,6 +51,14 @@ public class HostAndPort {
     return new InetSocketAddress(ipv6Literal, 0).getHostString();
   }
 
+  /**
+   * @deprecated Please use {@link #host()} instead.
+   */
+  @Deprecated
+  public String hostname() {
+    return host();
+  }
+
   public String host() {
     return host;
   }
