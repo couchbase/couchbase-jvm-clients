@@ -105,7 +105,7 @@ object SearchMock {
     doAnswer((v) => {
       val endpointContext = new EndpointContext(
         ctx,
-        new HostAndPort("127.0.0.1",0),
+        new HostAndPort("127.0.0.1", 0),
         null,
         null,
         null,
