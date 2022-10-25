@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.service.util;
+package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.util.ConnectionString;
+import com.couchbase.client.core.util.ConnectionString.UnresolvedSocket;
 import org.junit.jupiter.api.Test;
+import reactor.util.annotation.Nullable;
 
 import java.util.Optional;
 
@@ -34,6 +35,43 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConnectionStringTest {
+
+  @Test
+  void canParseEmptyConnectionString() {
+    ConnectionString parsed = ConnectionString.create("");
+    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertNull(parsed.username());
+    assertTrue(parsed.hosts().isEmpty());
+    assertTrue(parsed.params().isEmpty());
+  }
+
+  @Test
+  void canParseUnresolvedSocket() {
+    assertParsedUnresolvedSocketMatches("foo", "foo", 0, null);
+    assertParsedUnresolvedSocketMatches("foo:123", "foo", 123, null);
+    assertParsedUnresolvedSocketMatches("foo:123=kv", "foo", 123, ConnectionString.PortType.KV);
+    assertParsedUnresolvedSocketMatches("foo:123=manager", "foo", 123, ConnectionString.PortType.MANAGER);
+
+    assertParsedUnresolvedSocketMatches("[::1]", "0:0:0:0:0:0:0:1", 0, null);
+    assertParsedUnresolvedSocketMatches("[::1]:123", "0:0:0:0:0:0:0:1", 123, null);
+    assertParsedUnresolvedSocketMatches("[::1]:123=kv", "0:0:0:0:0:0:0:1", 123, ConnectionString.PortType.KV);
+    assertParsedUnresolvedSocketMatches("[::1]:123=manager", "0:0:0:0:0:0:0:1", 123, ConnectionString.PortType.MANAGER);
+
+    assertThrows(IllegalArgumentException.class, () -> UnresolvedSocket.parse(""));
+    assertThrows(IllegalArgumentException.class, () -> UnresolvedSocket.parse("[]"));
+    assertThrows(IllegalArgumentException.class, () -> UnresolvedSocket.parse("foo=kv"));
+    assertThrows(IllegalArgumentException.class, () -> UnresolvedSocket.parse("foo:0=kv"));
+    assertThrows(IllegalArgumentException.class, () -> UnresolvedSocket.parse("[::1]=kv"));
+    assertThrows(IllegalArgumentException.class, () -> UnresolvedSocket.parse("[::1]:0=kv"));
+    assertThrows(IllegalArgumentException.class, () -> UnresolvedSocket.parse("[]:0=kv"));
+  }
+
+  private static void assertParsedUnresolvedSocketMatches(String s, String expectedHost, int expectedPort, @Nullable ConnectionString.PortType expectedPortType) {
+    UnresolvedSocket parsed = UnresolvedSocket.parse(s);
+    assertEquals(expectedHost, parsed.host());
+    assertEquals(expectedPort, parsed.port());
+    assertEquals(Optional.ofNullable(expectedPortType), parsed.portType());
+  }
 
   @Test
   void shouldParseValidSchemes() {
@@ -113,6 +151,15 @@ class ConnectionStringTest {
   }
 
   @Test
+  void trailingParamDelimiterIsOkay() {
+    ConnectionString parsed = ConnectionString.create("couchbase://foo?");
+    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(1, parsed.hosts().size());
+    assertTrue(parsed.params().isEmpty());
+    assertNull(parsed.username());
+  }
+
+  @Test
   void shouldParseUsername() {
     ConnectionString parsed = ConnectionString.create("couchbase://user@localhost?foo=bar");
     assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
@@ -137,7 +184,7 @@ class ConnectionStringTest {
     ConnectionString parsed = ConnectionString.create("couchbase://[::1]");
     assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
     assertEquals(1, parsed.hosts().size());
-    assertEquals("::1", parsed.hosts().get(0).hostname());
+    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).hostname());
     assertEquals(0, parsed.hosts().get(0).port());
     assertTrue(parsed.params().isEmpty());
 
@@ -154,8 +201,8 @@ class ConnectionStringTest {
     ConnectionString parsed = ConnectionString.create("couchbase://[::1], [::1]");
     assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
     assertEquals(2, parsed.hosts().size());
-    assertEquals("::1", parsed.hosts().get(0).hostname());
-    assertEquals("::1", parsed.hosts().get(1).hostname());
+    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).hostname());
+    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(1).hostname());
     assertTrue(parsed.params().isEmpty());
 
     parsed = ConnectionString.create("couchbase://[::1/128], [::1/128],[::1/128]");
@@ -172,21 +219,10 @@ class ConnectionStringTest {
     ConnectionString parsed = ConnectionString.create("couchbases://[::1]:8091, [::1]:11210");
     assertEquals(ConnectionString.Scheme.COUCHBASES, parsed.scheme());
     assertEquals(2, parsed.hosts().size());
-    assertEquals("::1", parsed.hosts().get(0).hostname());
+    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).hostname());
     assertEquals(8091, parsed.hosts().get(0).port());
-    assertEquals("::1", parsed.hosts().get(1).hostname());
+    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(1).hostname());
     assertEquals(11210, parsed.hosts().get(1).port());
-    assertTrue(parsed.params().isEmpty());
-
-    parsed = ConnectionString.create("couchbase://[::1/128]:1234, [::1/128]:11210,[::1/128]:1");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
-    assertEquals(3, parsed.hosts().size());
-    assertEquals("::1/128", parsed.hosts().get(0).hostname());
-    assertEquals(1234, parsed.hosts().get(0).port());
-    assertEquals("::1/128", parsed.hosts().get(1).hostname());
-    assertEquals(11210, parsed.hosts().get(1).port());
-    assertEquals("::1/128", parsed.hosts().get(2).hostname());
-    assertEquals(1, parsed.hosts().get(2).port());
     assertTrue(parsed.params().isEmpty());
   }
 
@@ -224,11 +260,11 @@ class ConnectionStringTest {
     assertEquals(ConnectionString.Scheme.COUCHBASES, parsed.scheme());
     assertEquals(2, parsed.hosts().size());
 
-    assertEquals("::1", parsed.hosts().get(0).hostname());
+    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).hostname());
     assertEquals(8091, parsed.hosts().get(0).port());
     assertEquals(ConnectionString.PortType.MANAGER, parsed.hosts().get(0).portType().get());
 
-    assertEquals("::1", parsed.hosts().get(1).hostname());
+    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(1).hostname());
     assertEquals(11210, parsed.hosts().get(1).port());
     assertEquals(ConnectionString.PortType.KV, parsed.hosts().get(1).portType().get());
 
@@ -239,6 +275,8 @@ class ConnectionStringTest {
   void isValidDnsSrv() {
     assertFalse(ConnectionString.create("couchbase://foo,bar").isValidDnsSrv());
     assertFalse(ConnectionString.create("couchbase://").isValidDnsSrv());
+    assertFalse(ConnectionString.create("couchbase://127.0.0.1").isValidDnsSrv());
+    assertFalse(ConnectionString.create("couchbase://[::1]").isValidDnsSrv());
     assertFalse(ConnectionString.create("").isValidDnsSrv());
     assertTrue(ConnectionString.create("foo").isValidDnsSrv());
     assertTrue(ConnectionString.create("couchbase://foo").isValidDnsSrv());

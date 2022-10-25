@@ -17,17 +17,21 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import reactor.util.annotation.Nullable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
 /**
  * Implements a {@link ConnectionString}.
@@ -39,157 +43,77 @@ public class ConnectionString {
 
   public static final String DEFAULT_SCHEME = "couchbase://";
 
+  private static final Pattern connectionStringPattern = Pattern.compile(
+      "((?<scheme>.*?)://)?" +
+          "((?<user>.*?)@)?" +
+          "(?<hosts>.*?)" +
+          "(\\?(?<params>.*?))?"
+  );
+
   private final Scheme scheme;
   private final List<UnresolvedSocket> hosts;
   private final Map<String, String> params;
-  private final String username;
+  private final @Nullable String username;
   private final String original;
 
-  protected ConnectionString(final String input) {
-    this.original = input;
-
-    if (input.contains("://")) {
-      this.scheme = parseScheme(input);
-    } else {
-      this.scheme = Scheme.COUCHBASE;
+  protected ConnectionString(final String connectionString) {
+    Matcher m = connectionStringPattern.matcher(connectionString);
+    if (!m.matches()) {
+      throw InvalidArgumentException.fromMessage("Malformed connection string: " + connectionString);
     }
 
-    this.username = parseUser(input);
-    this.hosts = parseHosts(input);
-    this.params = parseParams(input);
+    try {
+      this.original = connectionString;
+      this.scheme = Optional.ofNullable(m.group("scheme"))
+          .map(Scheme::parse)
+          .orElse(Scheme.COUCHBASE);
+      this.username = m.group("user");
+      this.hosts = parseHosts(m.group("hosts"));
+      this.params = parseParams(m.group("params"));
+
+    } catch (Exception e) {
+      throw InvalidArgumentException.fromMessage("Failed to parse connection string \"" + connectionString + "\" ; " + e.getMessage(), e);
+    }
   }
 
-  public static ConnectionString create(final String input) {
-    return new ConnectionString(input);
+  public static ConnectionString create(final String connectionString) {
+    return new ConnectionString(connectionString);
   }
 
   public static ConnectionString fromHostnames(final List<String> hostnames) {
-    StringBuilder sb = new StringBuilder(DEFAULT_SCHEME);
-    for (int i = 0; i < hostnames.size(); i++) {
-      sb.append(hostnames.get(i));
-      if (i < hostnames.size() - 1) {
-        sb.append(",");
-      }
-    }
-    return create(sb.toString());
+    return create(String.join(",", hostnames));
   }
 
-  static Scheme parseScheme(final String input) {
-    String lowerCasedInput = input.toLowerCase(Locale.ROOT);
-
-    if (lowerCasedInput.startsWith("couchbase://")) {
-      return Scheme.COUCHBASE;
-    } else if (lowerCasedInput.startsWith("couchbases://")) {
-      return Scheme.COUCHBASES;
-    } else {
-      throw InvalidArgumentException.fromMessage("Could not parse ConnectionString scheme \"" + input
-          + "\". Supported are couchbase:// and couchbases://");
-    }
+  private static List<UnresolvedSocket> parseHosts(String hosts) {
+    return Arrays.stream(hosts.split(","))
+        .map(String::trim)
+        .filter(it -> !it.isEmpty())
+        .map(UnresolvedSocket::parse)
+        .collect(toList());
   }
 
-  static String parseUser(final String input) {
-    if (!input.contains("@")) {
-      return null;
-    } else {
-      String schemeRemoved = input.replaceAll("\\w+://", "");
-      String username = schemeRemoved.replaceAll("@.*", "");
-      return username;
-    }
-  }
-
-  static List<UnresolvedSocket> parseHosts(final String input) {
-    String schemeRemoved = input.replaceAll("\\w+://", "");
-    String usernameRemoved = schemeRemoved.replaceAll(".*@", "");
-    String paramsRemoved = usernameRemoved.replaceAll("\\?.*", "");
-    String[] splitted = paramsRemoved.split(",");
-
-    List<UnresolvedSocket> hosts = new ArrayList<>();
-
-    Pattern ipv6pattern = Pattern.compile("^\\[(.+)]:(\\d+(=\\w+)?)$");
-    for (int i = 0; i < splitted.length; i++) {
-      String singleHost = splitted[i];
-      if (singleHost == null || singleHost.isEmpty()) {
-        continue;
-      }
-      singleHost = singleHost.trim();
-
-      Matcher matcher = ipv6pattern.matcher(singleHost);
-      if (singleHost.startsWith("[") && singleHost.endsWith("]")) {
-        // this is an ipv6 addr!
-        singleHost = singleHost.substring(1, singleHost.length() - 1);
-        hosts.add(new UnresolvedSocket(singleHost, 0, Optional.empty()));
-      } else if (matcher.matches()) {
-        // this is ipv6 with addr and port!
-        String rawPort = matcher.group(2);
-        if (rawPort.contains("=")) {
-          String[] portParts = rawPort.split("=");
-          hosts.add(new UnresolvedSocket(
-              matcher.group(1),
-              Integer.parseInt(portParts[0]),
-              Optional.of(PortType.fromString(portParts[1])))
-          );
-        } else {
-          hosts.add(new UnresolvedSocket(
-              matcher.group(1),
-              Integer.parseInt(matcher.group(2)),
-              Optional.empty()
-          ));
-        }
-      } else {
-        // either ipv4 or a hostname
-        String[] parts = singleHost.split(":");
-        if (parts.length == 1) {
-          hosts.add(new UnresolvedSocket(parts[0], 0, Optional.empty()));
-        } else {
-          if (parts[1].contains("=")) {
-            // has custom port type
-            String[] portParts = parts[1].split("=");
-            hosts.add(new UnresolvedSocket(
-                parts[0],
-                Integer.parseInt(portParts[0]),
-                Optional.of(PortType.fromString(portParts[1])))
-            );
-          } else {
-            int port = Integer.parseInt(parts[1]);
-            hosts.add(new UnresolvedSocket(parts[0], port, Optional.empty()));
-          }
-        }
+  private static Map<String, String> parseParams(@Nullable String paramsString) {
+    Map<String, String> result = new LinkedHashMap<>();
+    if (!isNullOrEmpty(paramsString)) {
+      for (String entry : paramsString.split("&")) {
+        String[] nameAndValue = entry.split("=", 2);
+        String name = nameAndValue[0];
+        String value = nameAndValue.length == 1 ? "" : nameAndValue[1];
+        result.put(name, value);
       }
     }
-    return hosts;
-  }
-
-  static Map<String, String> parseParams(final String input) {
-    try {
-      String[] parts = input.split("\\?");
-      Map<String, String> params = new HashMap<>();
-      if (parts.length > 1) {
-        String found = parts[1];
-        String[] exploded = found.split("&");
-        for (int i = 0; i < exploded.length; i++) {
-          String[] pair = exploded[i].split("=");
-          params.put(pair[0], pair[1]);
-        }
-      }
-      return params;
-    } catch (Exception ex) {
-      throw new CouchbaseException("Could not parse Params of connection string: " + input, ex);
-    }
+    return result;
   }
 
   public Scheme scheme() {
     return scheme;
   }
 
+  @Nullable
   public String username() {
     return username;
   }
 
-  /**
-   * Get the list of all hosts from the connection string.
-   *
-   * @return hosts
-   */
   public List<UnresolvedSocket> hosts() {
     return hosts;
   }
@@ -199,43 +123,50 @@ public class ConnectionString {
   }
 
   /**
-   * Returns true if this connection string qualifies for DNS SRV resolving per spec.
-   *
-   * <p>To be valid, the following criteria have to be met: only couchbase(s) schema, single host with no port
-   * specified and no IP address.</p>
+   * Returns true if this connection string consists of a single hostname (not IP address) with no port.
    */
   public boolean isValidDnsSrv() {
-    if (scheme != Scheme.COUCHBASE && scheme != Scheme.COUCHBASES) {
-      return false;
-    }
+    return dnsSrvCandidate().isPresent();
+  }
 
-    if (hosts.size() != 1) {
-      return false;
-    }
-
-    for (UnresolvedSocket socket : hosts) {
-      if (socket.port > 0) {
-        return false;
-      }
-    }
-
-    return !InetAddresses.isInetAddress(hosts.get(0).hostname);
+  /**
+   * If this connection string consists of a single hostname (not IP address) with no port,
+   * returns that hostname. Otherwise, returns empty.
+   */
+  public Optional<String> dnsSrvCandidate() {
+    boolean maybeDnsSrv = hosts.size() == 1
+        && hosts.get(0).port() == 0
+        && !InetAddresses.isInetAddress(hosts.get(0).hostname());
+    return maybeDnsSrv
+        ? Optional.of(hosts.get(0).hostname())
+        : Optional.empty();
   }
 
   public enum Scheme {
     COUCHBASE,
-    COUCHBASES
+    COUCHBASES,
+    ;
+
+    private static Scheme parse(String s) {
+      try {
+        return valueOf(s.toUpperCase(Locale.ROOT));
+      } catch (IllegalArgumentException e) {
+        List<String> lowercaseNames = Arrays.stream(values())
+            .map(it -> it.name().toLowerCase(Locale.ROOT))
+            .collect(toList());
+        throw InvalidArgumentException.fromMessage("Expected scheme to be one of " + lowercaseNames + " but got: " + s);
+      }
+    }
   }
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder("ConnectionString{");
-    sb.append("scheme=").append(scheme);
-    sb.append(", user=").append(username);
-    sb.append(", hosts=").append(hosts);
-    sb.append(", params=").append(params);
-    sb.append('}');
-    return sb.toString();
+    return "ConnectionString{" +
+        "scheme=" + scheme +
+        ", user=" + username +
+        ", hosts=" + hosts +
+        ", params=" + params +
+        '}';
   }
 
   /**
@@ -246,34 +177,54 @@ public class ConnectionString {
   }
 
   public static class UnresolvedSocket {
+    private final HostAndPort hostAndPort;
 
-    private final String hostname;
-    private final int port;
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private final Optional<PortType> portType;
 
-    UnresolvedSocket(String hostname, int port, Optional<PortType> portType) {
-      this.hostname = hostname;
-      this.port = port;
-      this.portType = portType;
+    UnresolvedSocket(HostAndPort hostAndPort, @Nullable PortType portType) {
+      this.hostAndPort = requireNonNull(hostAndPort);
+      this.portType = Optional.ofNullable(portType);
     }
 
+    /**
+     * @deprecated Please use {@link #host()} instead.
+     */
+    @Deprecated
     public String hostname() {
-      return hostname;
+      return host();
+    }
+
+    public String host() {
+      return hostAndPort.host();
     }
 
     public int port() {
-      return port;
+      return hostAndPort.port();
     }
 
     public Optional<PortType> portType() {
       return portType;
     }
 
+    /**
+     * @param address "host" or "host:port" or "host:port=portType"
+     */
+    static UnresolvedSocket parse(String address) {
+      String[] parts = address.split("=", 2);
+      HostAndPort hostAndPort = HostAndPort.parse(parts[0]);
+      PortType portType = parts.length == 1 ? null : PortType.fromString(parts[1]);
+      if (hostAndPort.port() == 0 && portType != null) {
+        throw new IllegalArgumentException("Malformed address; must specify a port when specifying a port type: " + address);
+      }
+      return new UnresolvedSocket(hostAndPort, portType);
+    }
+
     @Override
     public String toString() {
       return "UnresolvedSocket{" +
-          "hostname='" + hostname + '\'' +
-          ", port=" + port +
+          "hostname='" + host() + '\'' +
+          ", port=" + port() +
           ", portType=" + portType +
           '}';
     }

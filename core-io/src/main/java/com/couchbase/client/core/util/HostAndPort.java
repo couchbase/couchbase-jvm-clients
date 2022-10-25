@@ -16,8 +16,12 @@
 
 package com.couchbase.client.core.util;
 
+import com.couchbase.client.core.annotation.Stability;
+
 import java.net.InetSocketAddress;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static java.util.Objects.requireNonNull;
@@ -73,6 +77,26 @@ public class HostAndPort {
 
   public String format() {
     return formatted;
+  }
+
+  private static final Pattern hostAndPortPattern = Pattern.compile("(?<host>[^:]+)(:(?<port>\\d+))?");
+  private static final Pattern hostAndPortPatternIpv6 = Pattern.compile("\\[(?<host>.+)](:(?<port>\\d+))?");
+
+  static HostAndPort parse(String s) {
+    return parse(s, 0);
+  }
+
+  static HostAndPort parse(String s, int defaultPort) {
+    s = s.trim();
+    Pattern pattern = s.startsWith("[") ? hostAndPortPatternIpv6 : hostAndPortPattern;
+    Matcher m = pattern.matcher(s);
+    if (!m.matches()) {
+      throw new IllegalArgumentException("Malformed address: " + s);
+    }
+
+    String portString = m.group("port");
+    int port = portString == null ? defaultPort : Integer.parseInt(portString);
+    return new HostAndPort(m.group("host"), port);
   }
 
   @Override

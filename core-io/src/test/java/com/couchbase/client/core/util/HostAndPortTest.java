@@ -18,9 +18,9 @@ package com.couchbase.client.core.util;
 
 import org.junit.jupiter.api.Test;
 
-import java.net.InetSocketAddress;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class HostAndPortTest {
   @Test
@@ -52,4 +52,28 @@ class HostAndPortTest {
     assertEquals("example.com:12345", new HostAndPort("example.com", 12345).format());
   }
 
+  @Test
+  void parse() throws Exception {
+    assertEquals(new HostAndPort("127.0.0.1", 12345), HostAndPort.parse("127.0.0.1:12345"));
+    assertEquals(new HostAndPort("0:0:0:0:0:0:0:1", 12345), HostAndPort.parse("[0:0:0:0:0:0:0:1]:12345"));
+    assertEquals(new HostAndPort("0:0:0:0:0:0:0:1", 12345), HostAndPort.parse("[::1]:12345"));
+    assertEquals(new HostAndPort("example.com", 12345), HostAndPort.parse("example.com:12345"));
+  }
+
+  @Test
+  void parseWithDefaultPort() throws Exception {
+    assertEquals(new HostAndPort("127.0.0.1", 0), HostAndPort.parse("127.0.0.1"));
+    assertEquals(new HostAndPort("127.0.0.1", 123), HostAndPort.parse("127.0.0.1", 123));
+    assertEquals(new HostAndPort("0:0:0:0:0:0:0:1", 0), HostAndPort.parse("[::1]"));
+    assertEquals(new HostAndPort("0:0:0:0:0:0:0:1", 123), HostAndPort.parse("[::1]", 123));
+  }
+
+  @Test
+  void parseMalformed() throws Exception {
+    assertThrows(IllegalArgumentException.class, () -> HostAndPort.parse("[::1:123"));
+    assertThrows(IllegalArgumentException.class, () -> HostAndPort.parse("::1]:123"));
+    assertThrows(IllegalArgumentException.class, () -> HostAndPort.parse("abc:def"));
+    assertThrows(IllegalArgumentException.class, () -> HostAndPort.parse("::1:3"));
+    assertThrows(IllegalArgumentException.class, () -> HostAndPort.parse("a::3"));
+  }
 }
