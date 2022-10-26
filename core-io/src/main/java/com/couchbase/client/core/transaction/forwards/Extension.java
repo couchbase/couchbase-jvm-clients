@@ -138,9 +138,14 @@ public enum Extension {
     EXT_INSERT_EXISTING("IX"),
 
     /**
-     * @since ?
+     * @since 3.4.0
      */
-    EXT_OBSERVABILITY("OB")
+    EXT_OBSERVABILITY("OB"),
+
+    /**
+     * @since 3.4.1
+     */
+    EXT_QUERY_CONTEXT("QC"),
     ;
 
     private String value;

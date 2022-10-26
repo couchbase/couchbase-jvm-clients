@@ -169,6 +169,18 @@ import static com.couchbase.client.core.transaction.util.CoreTransactionAttemptC
  */
 @Stability.Internal
 public class CoreTransactionAttemptContext {
+    static class QueryContext {
+        public final NodeIdentifier queryTarget;
+        public final @Nullable String bucketName;
+        public final @Nullable String scopeName;
+
+        public QueryContext(NodeIdentifier queryTarget, @Nullable String bucketName, @Nullable String scopeName) {
+            this.queryTarget = Objects.requireNonNull(queryTarget);
+            this.bucketName = bucketName;
+            this.scopeName = scopeName;
+        }
+    }
+
     public static int TRANSACTION_STATE_BIT_COMMIT_NOT_ALLOWED = 0x1;
     public static int TRANSACTION_STATE_BIT_APP_ROLLBACK_NOT_ALLOWED = 0x2;
     public static int TRANSACTION_STATE_BIT_SHOULD_NOT_ROLLBACK = 0x4;
@@ -204,7 +216,7 @@ public class CoreTransactionAttemptContext {
     // [EXP-ROLLBACK] [EXP-COMMIT-OVERTIME]: Internal flag to indicate that transaction has expired.  After,
     // this, one attempt will be made to rollback the txn (or commit it, if the expiry happened during commit).
     private volatile boolean expiryOvertimeMode = false;
-    private volatile @Nullable NodeIdentifier queryTarget = null;
+    private volatile @Nullable QueryContext queryContext = null;
     // Purely for debugging (so we don't have to log the statement everywhere), associate each statement with an id
     private final AtomicInteger queryStatementIdx = new AtomicInteger(0);
 
@@ -2337,8 +2349,8 @@ public class CoreTransactionAttemptContext {
             int sidx = queryStatementIdx.getAndIncrement();
 
             return queryWrapperBlockingLocked(sidx,
-                    null,
-                    null,
+                    queryContext.bucketName,
+                    queryContext.scopeName,
                     "COMMIT",
                     Mapper.createObjectNode(),
                     CoreTransactionAttemptContextHooks.HOOK_QUERY_COMMIT,
@@ -3414,8 +3426,8 @@ public class CoreTransactionAttemptContext {
             int statementIdx = queryStatementIdx.getAndIncrement();
 
             return queryWrapperBlockingLocked(statementIdx,
-                    null,
-                    null,
+                    queryContext.bucketName,
+                    queryContext.scopeName,
                     "ROLLBACK",
                     Mapper.createObjectNode(),
                     CoreTransactionAttemptContextHooks.HOOK_QUERY_ROLLBACK,
@@ -4020,7 +4032,7 @@ public class CoreTransactionAttemptContext {
 
     boolean queryModeLocked() {
         assertLocked("queryMode");
-        return queryTarget != null;
+        return queryContext != null;
     }
 
     /**
@@ -4029,7 +4041,7 @@ public class CoreTransactionAttemptContext {
      * Though technically the user could have scheduled an op to occur after the lambda is done, that would be an app bug.
      */
     boolean queryModeUnlocked() {
-        return queryTarget != null;
+        return queryContext != null;
     }
 
     /**
@@ -4111,15 +4123,15 @@ public class CoreTransactionAttemptContext {
                                 span.span(),
                                 bucketName,
                                 scopeName,
-                                queryTarget);
+                                queryContext == null ? null : queryContext.queryTarget);
 
                         // TODO ESI adhoc (with adhoc=false) get null lastDispatchedToNode
                         return coreQueryAccessor.query(request, true)
                                 .publishOn(scheduler())
                                 .doOnNext(v -> {
-                                    if (queryTarget == null) {
-                                        queryTarget = request.context().lastDispatchedToNode();
-                                        logger().info(attemptId, "q%d got query node id %s", sidx, RedactableArgument.redactMeta(queryTarget));
+                                    if (queryContext == null) {
+                                        queryContext = new QueryContext(request.context().lastDispatchedToNode(), bucketName, scopeName);
+                                        logger().info(attemptId, "q%d got query node id %s", sidx, RedactableArgument.redactMeta(queryContext.queryTarget));
                                     }
                                     request.context().logicallyComplete();
                                 })
@@ -4172,7 +4184,7 @@ public class CoreTransactionAttemptContext {
 
             if (!tximplicit && !queryModeLocked() && !isBeginWork) {
                 // Thread-safety 7.6: need to unlock (to avoid deadlocks), wait for all KV ops, lock
-                beginWorkIfNeeded = beginWorkIfNeeded(sidx, statement, lockToken, span);
+                beginWorkIfNeeded = beginWorkIfNeeded(sidx, bucketName, scopeName, statement, lockToken, span);
             }
 
             if (txdata != null) {
@@ -4300,7 +4312,12 @@ public class CoreTransactionAttemptContext {
         });
     }
 
-    private Mono<Void> beginWorkIfNeeded(int sidx, String statement, AtomicReference<ReactiveLock.Waiter> lockToken, SpanWrapper span) {
+    private Mono<Void> beginWorkIfNeeded(int sidx,
+                                         @Nullable final String bucketName,
+                                         @Nullable final String scopeName,
+                                         String statement,
+                                         AtomicReference<ReactiveLock.Waiter> lockToken,
+                                         SpanWrapper span) {
         // Thread-safety 7.6: need to unlock (to avoid deadlocks), wait for all KV ops, lock
         return hooks.beforeUnlockQuery.apply(this, statement) // test hook
 
@@ -4313,7 +4330,7 @@ public class CoreTransactionAttemptContext {
                     boolean stillNeedsBeginWork = !queryModeLocked();
                     LOGGER.info(attemptId, "q%d after reacquiring lock stillNeedsBeginWork=%s", sidx, stillNeedsBeginWork);
                     if (!queryModeLocked()) {
-                        return queryBeginWorkLocked(span);
+                        return queryBeginWorkLocked(bucketName, scopeName, span);
                     } else {
                         return Mono.empty();
                     }
@@ -4382,7 +4399,9 @@ public class CoreTransactionAttemptContext {
         return options;
     }
 
-    private Mono<Void> queryBeginWorkLocked(final SpanWrapper span) {
+    private Mono<Void> queryBeginWorkLocked(@Nullable final String bucketName,
+                                            @Nullable final String scopeName,
+                                            final SpanWrapper span) {
         return Mono.defer(() -> {
             assertLocked("queryBeginWork");
 
@@ -4397,8 +4416,8 @@ public class CoreTransactionAttemptContext {
             // Using a null lockToken will keep it locked throughout BEGIN WORK.
             // Update: no longer important as the body of queryWrapper does not unlock anymore.
             return queryWrapperBlockingLocked(statementIdx,
-                    null,
-                    null,
+                    bucketName,
+                    scopeName,
                     statement,
                     options,
                     CoreTransactionAttemptContextHooks.HOOK_QUERY_BEGIN_WORK,
@@ -4415,7 +4434,7 @@ public class CoreTransactionAttemptContext {
                         assertLocked("beginWork");
                         // Query/gocbcore will maintain the mutations now
                         stagedMutationsLocked.clear();
-                        if (queryTarget == null) {
+                        if (queryContext == null) {
                             throw operationFailed(TransactionOperationFailedException.Builder.createError()
                                     .cause(new IllegalAccessError("Internal error: Must have a queryTarget after BEGIN WORK"))
                                     .build());

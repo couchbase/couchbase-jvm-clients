@@ -60,13 +60,18 @@ public class QueryUtil {
                     int code = chosenError.code();
 
                     switch (code) {
-                        case 1065: // Unknown parameter
+                        case 1065:  // Unknown parameter
                             return createError()
                                     .cause(new FeatureNotAvailableException("Unknown query parameter: note that query support in transactions is available from Couchbase Server 7.0 onwards", err))
                                     .build();
+                        case 1197:  // Tenant missing
+                            return createError()
+                                    // Have to keep this error somewhat vague as could be inside a regular transaction or a single query transaction
+                                    .cause(new FeatureNotAvailableException("This Couchbase Server requires all queries use a Scope", err))
+                                    .build();
                         case 17004: // Transaction context error
                             return new AttemptNotFoundOnQueryException();
-                        case 1080: // Timeout - fall through
+                        case 1080:  // Timeout - fall through
                         case 17010: // Transaction timeout
                             return createError()
                                     .cause(new AttemptExpiredException(err))
