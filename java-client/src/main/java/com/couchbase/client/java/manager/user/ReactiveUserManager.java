@@ -54,6 +54,24 @@ public class ReactiveUserManager {
     return Reactor.toFlux(() -> async.getRoles(options));
   }
 
+  /**
+   * Changes the password of the currently authenticated user.
+   * SDK must be re-started and a new connection established after running, as the previous credentials will no longer
+   * be valid.
+   * @param newPassword String to replace the previous password with.
+   * @param options Common options (timeout, retry...)
+   */
+  public Mono<Void> changePassword(String newPassword, ChangePasswordOptions options) {
+    return Reactor.toMono(() -> async.changePassword(newPassword, options));
+  }
+  /**
+   * Changes the password of the currently authenticated user.
+   * SDK must be re-started and a new connection established after running, as the previous credentials will no longer
+   * be valid.
+   * @param newPassword String to replace the previous password with.
+   */
+  public Mono<Void> changePassword(String newPassword) { return Reactor.toMono(() -> async.changePassword(newPassword)); }
+
   public Mono<Void> upsertUser(User user) {
     return Reactor.toMono(() -> async.upsertUser(user));
   }

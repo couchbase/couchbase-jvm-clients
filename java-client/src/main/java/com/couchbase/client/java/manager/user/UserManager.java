@@ -53,6 +53,22 @@ public class UserManager {
     return block(async.getRoles(options));
   }
 
+  /**
+   * Changes the password of the currently authenticated user.
+   * SDK must be re-started and a new connection established after running, as the previous credentials will no longer
+   * be valid.
+   * @param newPassword String to replace the previous password with.
+   * @param options Common options (timeout, retry...)
+   */
+  public void changePassword(String newPassword, ChangePasswordOptions options) { block(async.changePassword(newPassword, options));}
+  /**
+   * Changes the password of the currently authenticated user.
+   * SDK must be re-started and a new connection established after running, as the previous credentials will no longer
+   * be valid.
+   * @param newPassword String to replace the previous password with.
+   */
+  public void changePassword(String newPassword) { block(async.changePassword(newPassword));}
+
   public List<UserAndMetadata> getAllUsers() {
     return block(async.getAllUsers());
   }

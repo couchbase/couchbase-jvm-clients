@@ -198,6 +198,7 @@ public class TracingIdentifiers {
   public static final String SPAN_REQUEST_MU_GET_USER = "manager_users_get_user";
   public static final String SPAN_REQUEST_MU_UPSERT_GROUP = "manager_users_upsert_group";
   public static final String SPAN_REQUEST_MU_UPSERT_USER = "manager_users_upsert_user";
+  public static final String SPAN_REQUEST_MU_CHANGE_PASSWORD = "manager_users_change_password";
 
   public static final String SPAN_REQUEST_MV_DROP_DD = "manager_views_drop_design_document";
   public static final String SPAN_REQUEST_MV_GET_ALL_DD = "manager_views_get_all_design_documents";

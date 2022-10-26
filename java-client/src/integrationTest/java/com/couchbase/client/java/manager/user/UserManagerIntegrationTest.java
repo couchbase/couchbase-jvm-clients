@@ -20,12 +20,14 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.UserNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
-import com.couchbase.client.test.ClusterType;
-import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
-import com.couchbase.client.test.TestNodeConfig;
+import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.Util;
+import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.TestNodeConfig;
+
 import com.couchbase.mock.deps.org.apache.http.auth.AuthScope;
 import com.couchbase.mock.deps.org.apache.http.auth.UsernamePasswordCredentials;
 import com.couchbase.mock.deps.org.apache.http.client.CredentialsProvider;
@@ -35,14 +37,13 @@ import com.couchbase.mock.deps.org.apache.http.impl.client.BasicCredentialsProvi
 import com.couchbase.mock.deps.org.apache.http.impl.client.CloseableHttpClient;
 import com.couchbase.mock.deps.org.apache.http.impl.client.HttpClientBuilder;
 import com.couchbase.mock.deps.org.apache.http.util.EntityUtils;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterAll;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -54,6 +55,7 @@ import static com.couchbase.client.test.Capabilities.ENTERPRISE_EDITION;
 import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -93,7 +95,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
 
   private void upsert(User user) {
     users.upsertUser(user);
-    waitUntilUserPresent(USERNAME);
+    waitUntilUserPresent(user.username());
   }
 
   private void waitUntilUserPresent(String name) {
@@ -118,6 +120,30 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
         return true;
       }
     });
+  }
+
+  @Test
+  void changeUserPassword(){
+    final String username = "changePasswordTestUser";
+    final String origPassword = "password";
+    final String newPassword = "newpassword";
+
+    upsert(new User(username)
+            .password(origPassword)
+            .roles(ADMIN));
+
+    ClusterOptions options = ClusterOptions.clusterOptions(username, origPassword);
+
+    Cluster disposableCluster = Cluster.connect(connectionString(), options);
+    UserManager disposableUserManager = disposableCluster.users();
+
+    disposableUserManager.changePassword("newpassword");
+
+    assertCanAuthenticate(username, newPassword, true);
+    assertCanAuthenticate(username, origPassword, false);
+
+    disposableCluster.disconnect();
+    users.dropUser(username);
   }
 
   @Test
@@ -179,7 +205,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
         .roles(ADMIN));
 
     // must be a specific kind of admin for this to succeed (not exactly sure which)
-    assertCanAuthenticate(USERNAME, origPassword);
+    assertCanAuthenticate(USERNAME, origPassword, true);
 
     UserAndMetadata userMeta = users.getUser(LOCAL, USERNAME);
     assertEquals(LOCAL, userMeta.domain());
@@ -199,7 +225,8 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
       UserAndMetadata user = users.getUser(LOCAL, USERNAME);
       return user.user().displayName().equals("Renamed");
     });
-    assertCanAuthenticate(USERNAME, origPassword);
+
+    assertCanAuthenticate(USERNAME, origPassword, true);
 
     users.upsertUser(
         new User(USERNAME)
@@ -211,7 +238,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
       return user.user().roles().size() == 2;
     });
 
-    assertCanAuthenticate(USERNAME, newPassword);
+    assertCanAuthenticate(USERNAME, newPassword, true);
 
     userMeta = users.getUser(LOCAL, USERNAME);
     assertEquals("Renamed", userMeta.user().displayName());
@@ -226,7 +253,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
     assertEquals(expectedRolesAndOrigins, actualRolesAndOrigns);
   }
 
-  private void assertCanAuthenticate(String username, String password) {
+  private void assertCanAuthenticate(String username, String password, boolean expectSuccess) {
 
     CredentialsProvider provider = new BasicCredentialsProvider();
     provider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
@@ -240,7 +267,12 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
 
       try (CloseableHttpResponse response = client.execute(new HttpGet("http://" + hostAndPort + "/pools"))) {
         String body = EntityUtils.toString(response.getEntity());
-        assertEquals(200, response.getStatusLine().getStatusCode(), "Server response: " + body);
+        if (expectSuccess) {
+          assertEquals(200, response.getStatusLine().getStatusCode(), "Server response: " + body);
+        }
+        else {
+          assertNotEquals(200, response.getStatusLine().getStatusCode(), "Server response: " + body);
+        }
       }
     } catch (IOException e) {
       throw new RuntimeException(e);

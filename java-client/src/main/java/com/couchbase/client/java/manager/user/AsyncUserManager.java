@@ -40,6 +40,7 @@ import static com.couchbase.client.core.endpoint.http.CoreHttpRequest.Builder.ne
 import static com.couchbase.client.core.error.HttpStatusCodeException.couchbaseResponseStatus;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbThrowables.propagate;
+import static com.couchbase.client.java.manager.user.ChangePasswordOptions.changePasswordOptions;
 import static com.couchbase.client.java.manager.user.DropGroupOptions.dropGroupOptions;
 import static com.couchbase.client.java.manager.user.DropUserOptions.dropUserOptions;
 import static com.couchbase.client.java.manager.user.GetAllGroupsOptions.getAllGroupsOptions;
@@ -85,6 +86,9 @@ public class AsyncUserManager {
         "groupName", groupName
     ));
   }
+  private static CoreHttpPath pathForPassword() {
+    return path("/controller/changePassword");
+  }
 
   public CompletableFuture<UserAndMetadata> getUser(AuthDomain domain, String username) {
     return getUser(domain, username, getUserOptions());
@@ -120,6 +124,36 @@ public class AsyncUserManager {
         .exec(core)
         .thenApply(response -> Mapper.decodeInto(response.content(), new TypeReference<List<RoleAndDescription>>() {
         }));
+  }
+
+  /**
+   * Changes the password of the currently authenticated user.
+   * SDK must be re-started and a new connection established after running, as the previous credentials will no longer
+   * be valid.
+   * @param newPassword String to replace the previous password with.
+   */
+  public CompletableFuture<Void> changePassword(String newPassword){
+    return changePassword(newPassword, changePasswordOptions());
+
+  }
+  /**
+   * Changes the password of the currently authenticated user.
+   * SDK must be re-started and a new connection established after running, as the previous credentials will no longer
+   * be valid.
+   * @param newPassword String to replace the previous password with.
+   * @param options Common options (timeout, retry...)
+   */
+  public CompletableFuture<Void> changePassword(String newPassword, ChangePasswordOptions options){
+
+    UrlQueryStringBuilder params = newForm()
+            .add("password", newPassword);
+
+    return httpClient.post(pathForPassword(), options.build())
+            .trace(TracingIdentifiers.SPAN_REQUEST_MU_CHANGE_PASSWORD)
+            .form(params)
+            .exec(core)
+            .thenApply(response -> null);
+
   }
 
   public CompletableFuture<Void> upsertUser(User user) {
