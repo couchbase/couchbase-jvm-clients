@@ -154,7 +154,6 @@ public class PerformerService extends CorePerformer {
         logger.info("Performer implements protocol {} with caps {}",
             protocolVersion, response.getPerformerCapsList());
         // [end:3.3.0]
-        response.addSupportedApis(API.DEFAULT);
         response.addSupportedApis(API.ASYNC);
         response.addPerformerCaps(Caps.TRANSACTIONS_WORKLOAD_1);
         response.addPerformerCaps(Caps.CLUSTER_CONFIG_1);
