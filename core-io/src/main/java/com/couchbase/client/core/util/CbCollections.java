@@ -21,13 +21,16 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -36,6 +39,7 @@ import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 @Stability.Internal
@@ -244,6 +248,70 @@ public class CbCollections {
     if (map.put(key, value) != null) {
       throw InvalidArgumentException.fromMessage("Duplicate key: " + key);
     }
+  }
+
+  /**
+   * Convenience method equivalent to:
+   * <pre>
+   * input.stream().map(transformer).collect(toList())
+   * </pre>
+   */
+  public static <T1, T2> List<T2> transform(Iterable<T1> input, Function<? super T1, ? extends T2> transformer) {
+    List<T2> result = new ArrayList<>();
+    input.forEach(it -> result.add(transformer.apply(it)));
+    return result;
+  }
+
+  /**
+   * Convenience method equivalent to:
+   * <pre>
+   * input.stream().map(transformer).collect(toList())
+   * </pre>
+   */
+  public static <T1, T2> List<T2> transform(Iterator<T1> input, Function<? super T1, ? extends T2> transformer) {
+    List<T2> result = new ArrayList<>();
+    input.forEachRemaining(it -> result.add(transformer.apply(it)));
+    return result;
+  }
+
+  /**
+   * Convenience method equivalent to:
+   * <pre>
+   * Arrays.stream(input).map(transformer).collect(toList())
+   * </pre>
+   */
+  public static <T1, T2> List<T2> transform(T1[] input, Function<? super T1, ? extends T2> transformer) {
+    return Arrays.stream(input)
+        .map(transformer)
+        .collect(toList());
+  }
+
+  /**
+   * Convenience method equivalent to:
+   * <pre>
+   * input.stream().filter(predicate).collect(toList())
+   * </pre>
+   */
+  public static <T> List<T> filter(Iterable<T> input, Predicate<? super T> predicate) {
+    List<T> result = new ArrayList<>();
+    input.forEach(it -> {
+      if (predicate.test(it)) {
+        result.add(it);
+      }
+    });
+    return result;
+  }
+
+  /**
+   * Convenience method equivalent to:
+   * <pre>
+   * Arrays.stream(input).filter(predicate).collect(toList())
+   * </pre>
+   */
+  public static <T> List<T> filter(T[] input, Predicate<? super T> predicate) {
+    return Arrays.stream(input)
+        .filter(predicate)
+        .collect(toList());
   }
 
   public static <K, V1, V2> Map<K, V2> transformValues(Map<K, V1> map, Function<V1, V2> transformer) {
