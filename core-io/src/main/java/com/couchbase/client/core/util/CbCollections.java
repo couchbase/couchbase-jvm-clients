@@ -18,6 +18,7 @@ package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,32 +45,75 @@ public class CbCollections {
   }
 
   /**
+   * Backport of {@code List.copyOf}.
+   * <p>
+   * Returns an unmodifiable list containing all elements of the given collection.
+   * Subsequent changes to the original collection are not reflected in the returned list.
+   *
+   * @throws NullPointerException if original is null or contains any nulls
+   */
+  @SuppressWarnings("unchecked")
+  public static <E> List<E> listCopyOf(Collection<? extends E> original) {
+    return (List<E>) listOf(original.toArray());
+  }
+
+  /**
+   * Backport of {@code Set.copyOf}.
+   * <p>
+   * Returns an unmodifiable set containing all elements of the given collection.
+   * If the original contains duplicate items, an arbitrary element is preserved.
+   * Subsequent changes to the original collection are not reflected in the returned set.
+   *
+   * @throws NullPointerException if original is null or contains any nulls
+   */
+  @SuppressWarnings("unchecked")
+  public static <E> Set<E> setCopyOf(Collection<? extends E> original) {
+    return (Set<E>) setOf(new HashSet<>(original).toArray());
+  }
+
+  /**
+   * Backport of {@code Map.copyOf}.
+   * <p>
+   * Returns an unmodifiable map containing all entries of the given map.
+   * Subsequent changes to the original map are not reflected in the returned map.
+   *
+   * @throws NullPointerException if original is null or contains any null keys or values.
+   */
+  public static <K,V> Map<K,V> mapCopyOf(Map<? extends K, ? extends V> original) {
+    Map<K, V> result = new HashMap<>();
+    original.forEach((k,v) -> putUniqueKey(result, k, v));
+    return unmodifiableMap(result);
+  }
+
+  /**
    * Returns a new unmodifiable list with the same contents as the given collection.
+   * Subsequent changes to the original collection are not reflected in the returned list.
    *
    * @param c may be {@code null}, in which case an empty list is returned.
    */
-  public static <T> List<T> copyToUnmodifiableList(Collection<T> c) {
+  public static <T> List<T> copyToUnmodifiableList(@Nullable Collection<T> c) {
     return isNullOrEmpty(c) ? emptyList() : unmodifiableList(new ArrayList<>(c));
   }
 
   /**
    * Returns a new unmodifiable set with the same contents as the given collection.
+   * Subsequent changes to the original collection are not reflected in the returned set.
    *
    * @param c may be {@code null}, in which case an empty set is returned.
    */
-  public static <T> Set<T> copyToUnmodifiableSet(Collection<T> c) {
+  public static <T> Set<T> copyToUnmodifiableSet(@Nullable Collection<T> c) {
     return isNullOrEmpty(c) ? emptySet() : unmodifiableSet(new HashSet<>(c));
   }
 
-  public static boolean isNullOrEmpty(Collection<?> c) {
+  public static boolean isNullOrEmpty(@Nullable Collection<?> c) {
     return c == null || c.isEmpty();
   }
 
-  public static boolean isNullOrEmpty(Map<?, ?> m) {
+  public static boolean isNullOrEmpty(@Nullable Map<?, ?> m) {
     return m == null || m.isEmpty();
   }
 
-  public static boolean isNullOrEmpty(String s) {
+  public static boolean isNullOrEmpty(@Nullable String s) {
     return s == null || s.isEmpty();
   }
 
