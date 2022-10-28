@@ -36,7 +36,7 @@ public class TlsRequiredButNotEnabledEvent extends AbstractEvent {
   public static TlsRequiredButNotEnabledEvent forSharedEnvironment() {
     return new TlsRequiredButNotEnabledEvent(
         "TLS is required when connecting to Couchbase Capella, but is not enabled." +
-            " Please enable TLS by setting the 'security.enableTLS' client setting to true."
+            " Please enable TLS by setting the 'security.enableTls' client setting to true."
     );
   }
 
@@ -44,7 +44,7 @@ public class TlsRequiredButNotEnabledEvent extends AbstractEvent {
     return new TlsRequiredButNotEnabledEvent(
         "TLS is required when connecting to Couchbase Capella, but is not enabled." +
             " Please enable TLS by prefixing the connection string with \"couchbases://\" (note the final 's')" +
-            " or setting the 'security.enableTLS' client setting to true."
+            " or setting the 'security.enableTls' client setting to true."
     );
   }
 
