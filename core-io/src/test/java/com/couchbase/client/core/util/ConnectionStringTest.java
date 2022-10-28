@@ -26,8 +26,12 @@ import reactor.util.annotation.Nullable;
 import java.util.Optional;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASE;
+import static com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASES;
 import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static com.couchbase.client.core.util.ConnectionStringUtil.isCapella;
+import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -39,10 +43,40 @@ class ConnectionStringTest {
   @Test
   void canParseEmptyConnectionString() {
     ConnectionString parsed = ConnectionString.create("");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertNull(parsed.username());
     assertTrue(parsed.hosts().isEmpty());
     assertTrue(parsed.params().isEmpty());
+  }
+
+  @Test
+  void canFormat() {
+    String original = "foo,bar:123,zot:456=kv";
+    ConnectionString parsed = ConnectionString.create(original);
+    assertEquals(ConnectionString.DEFAULT_SCHEME + original, parsed.original());
+
+    original = "foo?one=1&two=2";
+    parsed = ConnectionString.create(original);
+    assertEquals(ConnectionString.DEFAULT_SCHEME + original, parsed.original());
+  }
+
+  @Test
+  void isImmutable() {
+    ConnectionString cs = ConnectionString.create("couchbase://127.0.0.1?foo=bar");
+
+    assertThrows(UnsupportedOperationException.class, () -> cs.hosts().remove(0));
+    assertThrows(UnsupportedOperationException.class, () -> cs.params().remove("foo"));
+  }
+
+  @Test
+  void withers() {
+    ConnectionString cs = ConnectionString.create("couchbase://127.0.0.1?foo=bar");
+
+    assertEquals("couchbases://127.0.0.1?foo=bar", cs.withScheme(COUCHBASES).original());
+    assertEquals("couchbase://127.0.0.1?foo=bar", cs.withScheme(COUCHBASES).withScheme(COUCHBASE).original());
+
+    assertEquals("couchbase://127.0.0.1?zot=orb", cs.withParams(mapOf("zot", "orb")).original());
+    assertEquals("couchbase://127.0.0.1", cs.withParams(emptyMap()).original());
   }
 
   @Test
@@ -76,12 +110,12 @@ class ConnectionStringTest {
   @Test
   void shouldParseValidSchemes() {
     ConnectionString parsed = ConnectionString.create("couchbase://");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertTrue(parsed.hosts().isEmpty());
     assertTrue(parsed.params().isEmpty());
 
     parsed = ConnectionString.create("couchbases://");
-    assertEquals(ConnectionString.Scheme.COUCHBASES, parsed.scheme());
+    assertEquals(COUCHBASES, parsed.scheme());
     assertTrue(parsed.hosts().isEmpty());
     assertTrue(parsed.params().isEmpty());
   }
@@ -94,7 +128,7 @@ class ConnectionStringTest {
   @Test
   void shouldParseHostList() {
     ConnectionString parsed = ConnectionString.create("couchbase://localhost");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertTrue(parsed.params().isEmpty());
     assertEquals(1, parsed.hosts().size());
     assertEquals("localhost", parsed.hosts().get(0).hostname());
@@ -102,7 +136,7 @@ class ConnectionStringTest {
     assertNull(parsed.username());
 
     parsed = ConnectionString.create("couchbase://localhost:1234");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertTrue(parsed.params().isEmpty());
     assertEquals(1, parsed.hosts().size());
     assertEquals("localhost", parsed.hosts().get(0).hostname());
@@ -110,7 +144,7 @@ class ConnectionStringTest {
     assertNull(parsed.username());
 
     parsed = ConnectionString.create("couchbase://foo:1234,bar:5678");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertTrue(parsed.params().isEmpty());
     assertEquals(2, parsed.hosts().size());
     assertEquals("foo", parsed.hosts().get(0).hostname());
@@ -120,7 +154,7 @@ class ConnectionStringTest {
     assertNull(parsed.username());
 
     parsed = ConnectionString.create("couchbase://foo,bar:5678,baz");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertTrue(parsed.params().isEmpty());
     assertEquals(3, parsed.hosts().size());
     assertEquals("foo", parsed.hosts().get(0).hostname());
@@ -135,14 +169,14 @@ class ConnectionStringTest {
   @Test
   void shouldParseParams() {
     ConnectionString parsed = ConnectionString.create("couchbase://localhost?foo=bar");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertEquals(1, parsed.hosts().size());
     assertEquals(1, parsed.params().size());
     assertEquals("bar", parsed.params().get("foo"));
     assertNull(parsed.username());
 
     parsed = ConnectionString.create("couchbase://localhost?foo=bar&setting=true");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertEquals(1, parsed.hosts().size());
     assertEquals(2, parsed.params().size());
     assertEquals("bar", parsed.params().get("foo"));
@@ -153,7 +187,7 @@ class ConnectionStringTest {
   @Test
   void trailingParamDelimiterIsOkay() {
     ConnectionString parsed = ConnectionString.create("couchbase://foo?");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertEquals(1, parsed.hosts().size());
     assertTrue(parsed.params().isEmpty());
     assertNull(parsed.username());
@@ -162,7 +196,7 @@ class ConnectionStringTest {
   @Test
   void shouldParseUsername() {
     ConnectionString parsed = ConnectionString.create("couchbase://user@localhost?foo=bar");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertEquals("user", parsed.username());
     assertEquals("localhost", parsed.hosts().get(0).hostname());
     assertEquals(0, parsed.hosts().get(0).port());
@@ -170,7 +204,7 @@ class ConnectionStringTest {
     assertEquals("bar", parsed.params().get("foo"));
 
     parsed = ConnectionString.create("couchbase://user123@host1,host2?foo=bar&setting=true");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertEquals("user123", parsed.username());
     assertEquals("host1", parsed.hosts().get(0).hostname());
     assertEquals("host2", parsed.hosts().get(1).hostname());
@@ -182,14 +216,14 @@ class ConnectionStringTest {
   @Test
   void shouldAcceptSingleIPv6WithoutPort() {
     ConnectionString parsed = ConnectionString.create("couchbase://[::1]");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertEquals(1, parsed.hosts().size());
     assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).hostname());
     assertEquals(0, parsed.hosts().get(0).port());
     assertTrue(parsed.params().isEmpty());
 
     parsed = ConnectionString.create("couchbase://[::1/128]");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertEquals(1, parsed.hosts().size());
     assertEquals("::1/128", parsed.hosts().get(0).hostname());
     assertEquals(0, parsed.hosts().get(0).port());
@@ -199,14 +233,14 @@ class ConnectionStringTest {
   @Test
   void shouldAcceptMultipleIPv6WithoutPort() {
     ConnectionString parsed = ConnectionString.create("couchbase://[::1], [::1]");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertEquals(2, parsed.hosts().size());
     assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).hostname());
     assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(1).hostname());
     assertTrue(parsed.params().isEmpty());
 
     parsed = ConnectionString.create("couchbase://[::1/128], [::1/128],[::1/128]");
-    assertEquals(ConnectionString.Scheme.COUCHBASE, parsed.scheme());
+    assertEquals(COUCHBASE, parsed.scheme());
     assertEquals(3, parsed.hosts().size());
     assertEquals("::1/128", parsed.hosts().get(0).hostname());
     assertEquals("::1/128", parsed.hosts().get(1).hostname());
@@ -217,7 +251,7 @@ class ConnectionStringTest {
   @Test
   void shouldAcceptSingleIPv6WithPort() {
     ConnectionString parsed = ConnectionString.create("couchbases://[::1]:8091, [::1]:11210");
-    assertEquals(ConnectionString.Scheme.COUCHBASES, parsed.scheme());
+    assertEquals(COUCHBASES, parsed.scheme());
     assertEquals(2, parsed.hosts().size());
     assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).hostname());
     assertEquals(8091, parsed.hosts().get(0).port());
@@ -257,7 +291,7 @@ class ConnectionStringTest {
   @Test
   void shouldAcceptIPv6WithPortType() {
     ConnectionString parsed = ConnectionString.create("couchbases://[::1]:8091=http,[::1]:11210=kv");
-    assertEquals(ConnectionString.Scheme.COUCHBASES, parsed.scheme());
+    assertEquals(COUCHBASES, parsed.scheme());
     assertEquals(2, parsed.hosts().size());
 
     assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).hostname());
@@ -290,9 +324,9 @@ class ConnectionStringTest {
 
   @Test
   void acceptsMixedCaseSchemes() {
-    assertEquals(ConnectionString.Scheme.COUCHBASE, ConnectionString.create("COUCHBASE://").scheme());
-    assertEquals(ConnectionString.Scheme.COUCHBASE, ConnectionString.create("cOuChBaSe://").scheme());
-    assertEquals(ConnectionString.Scheme.COUCHBASES, ConnectionString.create("cOuChBaSeS://").scheme());
+    assertEquals(COUCHBASE, ConnectionString.create("COUCHBASE://").scheme());
+    assertEquals(COUCHBASE, ConnectionString.create("cOuChBaSe://").scheme());
+    assertEquals(COUCHBASES, ConnectionString.create("cOuChBaSeS://").scheme());
   }
 
 
@@ -306,7 +340,7 @@ class ConnectionStringTest {
     )));
 
     assertEquals(
-        "neither,onlyKvPort:123=kv,onlyManagerPort:456=manager,both:123=kv",
+        "couchbase://neither,onlyKvPort:123=kv,onlyManagerPort:456=manager,both:123=kv",
         connectionString.original()
     );
   }

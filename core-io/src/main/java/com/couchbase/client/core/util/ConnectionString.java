@@ -29,7 +29,11 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.couchbase.client.core.util.CbCollections.listCopyOf;
+import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
+import static java.util.Collections.unmodifiableList;
+import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -54,7 +58,13 @@ public class ConnectionString {
   private final List<UnresolvedSocket> hosts;
   private final Map<String, String> params;
   private final @Nullable String username;
-  private final String original;
+
+  private ConnectionString(Scheme scheme, @Nullable String username, List<UnresolvedSocket> hosts, Map<String, String> params) {
+    this.scheme = requireNonNull(scheme);
+    this.username = username;
+    this.hosts = listCopyOf(hosts);
+    this.params = unmodifiableMap(new LinkedHashMap<>(params));
+  }
 
   protected ConnectionString(final String connectionString) {
     Matcher m = connectionStringPattern.matcher(connectionString);
@@ -63,13 +73,12 @@ public class ConnectionString {
     }
 
     try {
-      this.original = connectionString;
       this.scheme = Optional.ofNullable(m.group("scheme"))
           .map(Scheme::parse)
           .orElse(Scheme.COUCHBASE);
       this.username = m.group("user");
-      this.hosts = parseHosts(m.group("hosts"));
-      this.params = parseParams(m.group("params"));
+      this.hosts = unmodifiableList(parseHosts(m.group("hosts")));
+      this.params = unmodifiableMap(parseParams(m.group("params")));
 
     } catch (Exception e) {
       throw InvalidArgumentException.fromMessage("Failed to parse connection string \"" + connectionString + "\" ; " + e.getMessage(), e);
@@ -82,6 +91,16 @@ public class ConnectionString {
 
   public static ConnectionString fromHostnames(final List<String> hostnames) {
     return create(String.join(",", hostnames));
+  }
+
+  @Stability.Internal
+  public ConnectionString withScheme(Scheme scheme) {
+    return new ConnectionString(scheme, username(), hosts(), params());
+  }
+
+  @Stability.Internal
+  public ConnectionString withParams(Map<String, String> params) {
+    return new ConnectionString(scheme(), username(), hosts(), params);
   }
 
   private static List<UnresolvedSocket> parseHosts(String hosts) {
@@ -151,9 +170,7 @@ public class ConnectionString {
       try {
         return valueOf(s.toUpperCase(Locale.ROOT));
       } catch (IllegalArgumentException e) {
-        List<String> lowercaseNames = Arrays.stream(values())
-            .map(it -> it.name().toLowerCase(Locale.ROOT))
-            .collect(toList());
+        List<String> lowercaseNames = transform(values(), it -> it.name().toLowerCase(Locale.ROOT));
         throw InvalidArgumentException.fromMessage("Expected scheme to be one of " + lowercaseNames + " but got: " + s);
       }
     }
@@ -170,10 +187,25 @@ public class ConnectionString {
   }
 
   /**
-   * Returns the unmodified, original connection string.
+   * Returns this connection string formatted as a string.
+   * <p>
+   * The result can be passed to {@link #create(String)} to get the same connection string back again.
    */
   public String original() {
-    return original;
+    StringBuilder sb = new StringBuilder();
+    sb.append(scheme.name().toLowerCase(Locale.ROOT)).append("://");
+    if (username != null) {
+      sb.append(username).append("@");
+    }
+    sb.append(String.join(",", transform(hosts, UnresolvedSocket::format)));
+    if (!params.isEmpty()) {
+      sb.append("?");
+      sb.append(String.join(
+          "&",
+          transform(params.entrySet(), it -> it.getKey() + "=" + it.getValue()))
+      );
+    }
+    return sb.toString();
   }
 
   public static class UnresolvedSocket {
@@ -205,6 +237,12 @@ public class ConnectionString {
 
     public Optional<PortType> portType() {
       return portType;
+    }
+
+    public String format() {
+      StringBuilder sb = new StringBuilder(hostAndPort.format());
+      portType.ifPresent(it -> sb.append("=").append(it.name().toLowerCase(Locale.ROOT)));
+      return sb.toString();
     }
 
     /**

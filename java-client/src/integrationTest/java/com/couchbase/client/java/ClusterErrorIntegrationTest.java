@@ -33,13 +33,13 @@ class ClusterErrorIntegrationTest {
       InvalidArgumentException.class,
       () -> Cluster.connect("localhost:8091", "foo", "bar")
     );
-    assertTrue(exception.getMessage().contains("Please omit the port and use \"localhost\" instead."));
+    assertTrue(exception.getMessage().contains("Please omit the port and use \"couchbase://localhost\" instead."));
 
     exception = assertThrows(
       InvalidArgumentException.class,
       () -> Cluster.connect("1.2.3.4:8091", "foo", "bar")
     );
-    assertTrue(exception.getMessage().contains("Please omit the port and use \"1.2.3.4\" instead."));
+    assertTrue(exception.getMessage().contains("Please omit the port and use \"couchbase://1.2.3.4\" instead."));
   }
 
 }

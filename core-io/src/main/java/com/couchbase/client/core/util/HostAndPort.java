@@ -16,8 +16,6 @@
 
 package com.couchbase.client.core.util;
 
-import com.couchbase.client.core.annotation.Stability;
-
 import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -46,7 +44,7 @@ public class HostAndPort {
     this.port = port;
 
     this.hashCode = Objects.hash(this.host, this.port);
-    this.formatted = (ipv6Literal ? "[" + this.host + "]" : this.host) + ":" + this.port;
+    this.formatted = (ipv6Literal ? "[" + this.host + "]" : this.host) + (this.port <= 0 ? "" : ":" + this.port);
     this.redactedFormatted = redactSystem(this.formatted).toString();
   }
 

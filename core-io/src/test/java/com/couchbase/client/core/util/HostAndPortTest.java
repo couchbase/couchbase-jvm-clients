@@ -50,6 +50,7 @@ class HostAndPortTest {
     assertEquals("[0:0:0:0:0:0:0:1]:12345", new HostAndPort("0:0:0:0:0:0:0:1", 12345).format());
     assertEquals("[0:0:0:0:0:0:0:1]:12345", new HostAndPort("[::1]", 12345).format());
     assertEquals("example.com:12345", new HostAndPort("example.com", 12345).format());
+    assertEquals("127.0.0.1", new HostAndPort("127.0.0.1", 0).format());
   }
 
   @Test
