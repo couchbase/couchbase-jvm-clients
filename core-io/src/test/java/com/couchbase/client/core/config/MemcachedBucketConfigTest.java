@@ -58,7 +58,7 @@ class MemcachedBucketConfigTest {
 
         assertEquals(0, config.revEpoch());
         assertEquals(4, config.nodes().size());
-        for (Map.Entry<Long, NodeInfo> node : config.ketamaNodes().entrySet()) {
+        for (Map.Entry<Long, NodeInfo> node : config.ketamaRing().toMap().entrySet()) {
             String hostname = node.getValue().hostname();
             assertTrue(hostname.equals("192.168.56.101") || hostname.equals("192.168.56.102"));
             assertTrue(node.getValue().services().containsKey(ServiceType.KV));
@@ -70,7 +70,7 @@ class MemcachedBucketConfigTest {
         MemcachedBucketConfig config = readConfig("memcached_with_ipv6.json");
 
         assertEquals(2, config.nodes().size());
-        for (Map.Entry<Long, NodeInfo> node : config.ketamaNodes().entrySet()) {
+        for (Map.Entry<Long, NodeInfo> node : config.ketamaRing().toMap().entrySet()) {
             String hostname = node.getValue().hostname();
             assertTrue(hostname.equals("fd63:6f75:6368:2068:1471:75ff:fe25:a8be")
                 || hostname.equals("fd63:6f75:6368:2068:c490:b5ff:fe86:9cf7"));
@@ -127,7 +127,7 @@ class MemcachedBucketConfigTest {
         );
         List<String> mustNotContain = Collections.singletonList("10.0.0.4");
 
-        Collection<NodeInfo> actualRingNodes = config.ketamaNodes().values();
+        Collection<NodeInfo> actualRingNodes = config.ketamaRing().toMap().values();
         for (NodeInfo nodeInfo : actualRingNodes) {
             String actual = nodeInfo.hostname();
             assertTrue(mustContain.contains(actual));

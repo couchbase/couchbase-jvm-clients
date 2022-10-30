@@ -212,7 +212,7 @@ public class KeyValueLocator implements Locator {
       return;
     }
 
-    NodeIdentifier identifier = config.nodeForId(request.key());
+    NodeIdentifier identifier = config.nodeForKey(request.key()).identifier();
     request.partition((short) 0);
 
     for (Node node : nodes) {

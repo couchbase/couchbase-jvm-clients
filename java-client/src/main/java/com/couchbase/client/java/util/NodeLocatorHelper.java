@@ -25,16 +25,14 @@ import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.java.Bucket;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.SortedMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.zip.CRC32;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Helper class to provide direct access on how document IDs are mapped onto nodes.
@@ -216,38 +214,13 @@ public class NodeLocatorHelper {
   }
 
   private static String nodeForIdOnMemcachedBucket(final String id, final MemcachedBucketConfig config) {
-    long hash = ketamaHash(id);
-    if (!config.ketamaNodes().containsKey(hash)) {
-      SortedMap<Long, NodeInfo> tailMap = config.ketamaNodes().tailMap(hash);
-      if (tailMap.isEmpty()) {
-        hash = config.ketamaNodes().firstKey();
-      } else {
-        hash = tailMap.firstKey();
-      }
-    }
-    return config.ketamaNodes().get(hash).hostname();
+    return config.nodeForKey(id.getBytes(UTF_8)).hostname();
   }
 
   private static long hashId(final String id) {
     CRC32 crc32 = new CRC32();
-    crc32.update(id.getBytes(StandardCharsets.UTF_8));
+    crc32.update(id.getBytes(UTF_8));
     return (crc32.getValue() >> 16) & 0x7fff;
   }
-
-  private static long ketamaHash(final String key) {
-    try {
-      MessageDigest md5 = MessageDigest.getInstance("MD5");
-      md5.update(key.getBytes(StandardCharsets.UTF_8));
-      byte[] digest = md5.digest();
-      long rv = ((long) (digest[3] & 0xFF) << 24)
-        | ((long) (digest[2] & 0xFF) << 16)
-        | ((long) (digest[1] & 0xFF) << 8)
-        | (digest[0] & 0xFF);
-      return rv & 0xffffffffL;
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException("Could not encode ketama hash - MD5 should be available in the JVM.", e);
-    }
-  }
-
 
 }

@@ -35,6 +35,10 @@ public class StandardMemcachedHashingStrategy implements MemcachedHashingStrateg
     @Override
     public String hash(final NodeInfo info, final int repetition) {
         int port = info.services().get(ServiceType.KV);
+
+        // Compatibility note: libcouchbase encloses the host in square brackets
+        // if it is an IPv6 literal (contains colons). The Java SDK doesn't do that.
+
         return info.hostname() + ":" + port + "-" + repetition;
     }
 

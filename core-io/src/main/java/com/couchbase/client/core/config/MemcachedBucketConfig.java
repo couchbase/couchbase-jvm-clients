@@ -16,35 +16,25 @@
 
 package com.couchbase.client.core.config;
 
-import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.node.MemcachedHashingStrategy;
-import com.couchbase.client.core.node.NodeIdentifier;
-import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
-import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JacksonInject;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
+import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.node.NodeIdentifier;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.TreeMap;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MemcachedBucketConfig extends AbstractBucketConfig {
 
-    private final TreeMap<Long, NodeInfo> ketamaNodes;
-    private final MemcachedHashingStrategy hashingStrategy;
+    private final KetamaRing<NodeInfo> ketamaRing;
 
     /**
      * Creates a new {@link MemcachedBucketConfig}.
@@ -73,9 +63,11 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
             @JacksonInject("origin") String origin) {
         super(uuid, name, BucketNodeLocator.KETAMA, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities,
           origin, clusterCapabilities, rev, revEpoch);
-        this.ketamaNodes = new TreeMap<>();
-        this.hashingStrategy = env.ioConfig().memcachedHashingStrategy();
-        populateKetamaNodes();
+
+        this.ketamaRing = KetamaRing.create(
+            nodes(),
+            env.ioConfig().memcachedHashingStrategy()
+        );
     }
 
     @Override
@@ -88,49 +80,29 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
         return BucketType.MEMCACHED;
     }
 
+    /**
+     * @deprecated Please use {@link #nodeForKey(byte[])} for Ketama lookups instead.
+     */
+    @Deprecated
     public SortedMap<Long, NodeInfo> ketamaNodes() {
-        return ketamaNodes;
+        return ketamaRing.toMap();
     }
 
-    private void populateKetamaNodes() {
-        for (NodeInfo node : nodes()) {
-            if (!node.services().containsKey(ServiceType.KV)) {
-                continue;
-            }
-
-            for (int i = 0; i < 40; i++) {
-                MessageDigest md5;
-                try {
-                    md5 = MessageDigest.getInstance("MD5");
-                    md5.update(hashingStrategy.hash(node, i).getBytes(UTF_8));
-                    byte[] digest = md5.digest();
-                    for (int j = 0; j < 4; j++) {
-                        Long key = ((long) (digest[3 + j * 4] & 0xFF) << 24)
-                            | ((long) (digest[2 + j * 4] & 0xFF) << 16)
-                            | ((long) (digest[1 + j * 4] & 0xFF) << 8)
-                            | (digest[j * 4] & 0xFF);
-                        ketamaNodes.put(key, node);
-                    }
-                } catch (NoSuchAlgorithmException e) {
-                    throw new IllegalStateException("Could not populate ketama nodes.", e);
-                }
-            }
-        }
+    // Visible for testing
+    KetamaRing<NodeInfo> ketamaRing() {
+        return ketamaRing;
     }
 
+    /**
+     * @deprecated Please use {@link #nodeForKey(byte[])}.identifier() instead.
+     */
+    @Deprecated
     public NodeIdentifier nodeForId(final byte[] id) {
-        long hash = calculateKetamaHash(id);
+        return nodeForKey(id).identifier();
+    }
 
-        if (!ketamaNodes.containsKey(hash)) {
-            SortedMap<Long, NodeInfo> tailMap = ketamaNodes.tailMap(hash);
-            if (tailMap.isEmpty()) {
-                hash = ketamaNodes.firstKey();
-            } else {
-                hash = tailMap.firstKey();
-            }
-        }
-
-        return ketamaNodes.get(hash).identifier();
+    public NodeInfo nodeForKey(final byte[] id) {
+        return ketamaRing.get(id);
     }
 
     @Override
@@ -139,28 +111,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
     }
 
     /**
-     * Calculates the ketama hash for the given key.
-     *
-     * @param key the key to calculate.
-     * @return the calculated hash.
-     */
-    private static long calculateKetamaHash(final byte[] key) {
-        try {
-            MessageDigest md5 = MessageDigest.getInstance("MD5");
-            md5.update(key);
-            byte[] digest = md5.digest();
-            long rv = ((long) (digest[3] & 0xFF) << 24)
-                    | ((long) (digest[2] & 0xFF) << 16)
-                    | ((long) (digest[1] & 0xFF) << 8)
-                    | (digest[0] & 0xFF);
-            return rv & 0xffffffffL;
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("Could not encode ketama hash.", e);
-        }
-    }
-
-    /**
-     * Note that dumping the whole ring is pretty much useless, so here we focus on just dumping all the nodes
+     * Note that dumping the whole Ketama ring is pretty much useless, so here we focus on just dumping all the nodes
      * that participate in the cluster instead.
      */
     @Override
@@ -169,23 +120,8 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
           "name='" + redactMeta(name()) + '\'' +
           ", rev=" + rev() +
           ", revEpoch=" + revEpoch() +
-          ", nodes=" + redactSystem(new HashSet<>(ketamaNodes.values()).toString()) +
-          ", hash=" + hashingStrategy +
+          ", nodes=" + redactSystem(nodes()) +
           '}';
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        MemcachedBucketConfig that = (MemcachedBucketConfig) o;
-        return rev() == that.rev() &&
-          Objects.equals(ketamaNodes, that.ketamaNodes) &&
-          Objects.equals(hashingStrategy, that.hashingStrategy);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(rev(), ketamaNodes, hashingStrategy);
-    }
 }
