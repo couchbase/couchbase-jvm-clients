@@ -26,6 +26,7 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ReactiveCluster;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
@@ -51,7 +52,8 @@ public class BucketSettings {
   private int numReplicas = 1;
   private boolean replicaIndexes = false;
   private Duration maxExpiry = Duration.ZERO;
-  private CompressionMode compressionMode = CompressionMode.PASSIVE;
+  // Package-private to allow access to the raw, nullable value for passthrough purposes
+  @Nullable CompressionMode compressionMode = null;
   private BucketType bucketType = BucketType.COUCHBASE;
   private ConflictResolutionType conflictResolutionType = ConflictResolutionType.SEQUENCE_NUMBER;
   private EvictionPolicyType evictionPolicy = null; // null means default for the bucket type
@@ -100,13 +102,8 @@ public class BucketSettings {
     this.numReplicas = numReplicas;
     this.replicaIndexes = replicaIndex;
     this.maxExpiry = Duration.ofSeconds(maxTTL);
-    if (compressionMode != null) {
-      this.compressionMode = compressionMode;
-    }
-    else {
-      // Couchbase 5.0 doesn't send a compressionMode
-      this.compressionMode = CompressionMode.OFF;
-    }
+    // Couchbase 5.0 and CE doesn't send a compressionMode
+    this.compressionMode = compressionMode;
     this.bucketType = bucketType;
     this.conflictResolutionType = conflictResolutionType;
     this.evictionPolicy = evictionPolicy;
@@ -223,6 +220,9 @@ public class BucketSettings {
    * Returns the {@link CompressionMode} used for the bucket.
    */
   public CompressionMode compressionMode() {
+    if (compressionMode == null) {
+      return CompressionMode.OFF;
+    }
     return compressionMode;
   }
 

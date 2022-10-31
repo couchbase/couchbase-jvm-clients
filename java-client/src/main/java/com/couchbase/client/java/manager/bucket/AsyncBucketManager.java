@@ -300,7 +300,7 @@ public class AsyncBucketManager {
       params.put("evictionPolicy", settings.evictionPolicy().alias());
     }
     // Do not send if it's been left at default, else will get an error on CE
-    if (settings.compressionMode() != CompressionMode.PASSIVE) {
+    if (settings.compressionMode != null) {
       params.put("compressionMode", settings.compressionMode().alias());
     }
 

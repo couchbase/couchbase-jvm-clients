@@ -47,6 +47,9 @@ class NonChunkedManagerMessageHandler extends NonChunkedHttpMessageHandler {
       if (content.contains("Magma is supported in enterprise edition only")) {
         return FeatureNotAvailableException.communityEdition("Storage Backend: Magma");
       }
+      if (content.contains("Compression mode is supported in enterprise edition only")) {
+        return FeatureNotAvailableException.communityEdition("Compression Mode");
+      }
     }
 
     if (status.equals(HttpResponseStatus.TOO_MANY_REQUESTS)) {

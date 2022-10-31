@@ -20,6 +20,7 @@ import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.BucketNotFlushableException;
 import com.couchbase.client.core.error.BucketNotFoundException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.service.ServiceType;
@@ -333,6 +334,44 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     } catch (HttpStatusCodeException ex) {
       assertTrue(ex.getMessage().contains("Conflict resolution type 'custom' is supported only with developer preview enabled"));
     }
+  }
+
+  @Test
+  @IgnoreWhen(hasCapabilities = {Capabilities.ENTERPRISE_EDITION})
+  void createBucketWithCompressionModeShouldFailOnCE() {
+    String name = UUID.randomUUID().toString();
+    assertThrows(FeatureNotAvailableException.class, () -> createBucket(BucketSettings.create(name)
+            .compressionMode(CompressionMode.PASSIVE)));
+  }
+
+  @Test
+  @IgnoreWhen(hasCapabilities = {Capabilities.ENTERPRISE_EDITION})
+  void updateBucketWithCompressionModeShouldFailOnCE() {
+    String name = UUID.randomUUID().toString();
+    createBucket(BucketSettings.create(name));
+    BucketSettings settings = buckets.getBucket(name);
+    settings.compressionMode(CompressionMode.PASSIVE);
+    assertThrows(FeatureNotAvailableException.class, () -> buckets.updateBucket(settings));
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = {Capabilities.ENTERPRISE_EDITION})
+  void createBucketWithCompressionModeShouldSucceedOnEE() {
+    String name = UUID.randomUUID().toString();
+    createBucket(BucketSettings.create(name)
+            .compressionMode(CompressionMode.PASSIVE));
+    BucketSettings settings = buckets.getBucket(name);
+    assertEquals(StorageBackend.COUCHSTORE, settings.storageBackend());
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = {Capabilities.ENTERPRISE_EDITION})
+  void updateBucketWithCompressionModeShouldSucceedOnEE() {
+    String name = UUID.randomUUID().toString();
+    createBucket(BucketSettings.create(name));
+    BucketSettings settings = buckets.getBucket(name);
+    settings.compressionMode(CompressionMode.PASSIVE);
+    buckets.updateBucket(settings);
   }
 
   /**
