@@ -74,14 +74,20 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 
     collections.createScope(scopeName);
 
-    waitUntilCondition(() -> scopeExists(collections, scopeName));
-    Optional<ScopeSpec> scope = collections.getAllScopes().stream().filter(ss -> ss.name().equals(scopeName)).findFirst();
-    assertEquals(scopeSpec, scope.get());
+    waitUntilCondition(() -> {
+      Optional<ScopeSpec> scope = collections.getAllScopes().stream().filter(ss -> ss.name().equals(scopeName)).findFirst();
+      return scope.isPresent() && scope.get().equals(scopeSpec);
+    });
 
     collections.createCollection(collSpec);
-    waitUntilCondition(() -> collectionExists(collections, collSpec));
-    scope = collections.getAllScopes().stream().filter(ss -> ss.name().equals(scopeName)).findFirst();
-    assertTrue(scope.get().collections().contains(collSpec));
+    waitUntilCondition(() -> {
+      boolean collExists = collectionExists(collections, collSpec);
+      if (collExists) {
+        Optional<ScopeSpec> scope = collections.getAllScopes().stream().filter(ss -> ss.name().equals(scopeName)).findFirst();
+        return scope.isPresent() && scope.get().collections().contains(collSpec);
+      }
+      return false;
+    });
   }
 
   @Test
