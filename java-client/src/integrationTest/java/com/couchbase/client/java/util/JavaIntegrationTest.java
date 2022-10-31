@@ -191,6 +191,9 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
     }
 
     if (!ready) {
+      QueryResult queryResult = cluster.query("SELECT * FROM system:keyspaces");
+      queryResult.rowsAsObject().forEach(row -> LOGGER.info("Keyspace: " + row.toString()));
+
       throw new IllegalStateException("Query indexer is still not aware of keyspaceName " + keyspaceName);
     }
   }
