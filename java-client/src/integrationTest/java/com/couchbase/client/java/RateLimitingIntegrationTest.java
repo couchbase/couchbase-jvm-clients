@@ -47,6 +47,7 @@ import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.Flaky;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
@@ -76,6 +77,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Verifies rate and quota limits against clusters which support the "rate limiting" feature.
  */
+@Flaky // Intermittently failing on CI, and rate limiting has anyway been removed from the server
 @IgnoreWhen(missesCapabilities = Capabilities.RATE_LIMITING, clusterTypes = ClusterType.CAPELLA)
 class RateLimitingIntegrationTest extends JavaIntegrationTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(RateLimitingIntegrationTest.class);
