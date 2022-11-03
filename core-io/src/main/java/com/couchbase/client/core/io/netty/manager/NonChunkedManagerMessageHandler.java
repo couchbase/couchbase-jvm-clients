@@ -50,6 +50,9 @@ class NonChunkedManagerMessageHandler extends NonChunkedHttpMessageHandler {
       if (content.contains("Compression mode is supported in enterprise edition only")) {
         return FeatureNotAvailableException.communityEdition("Compression Mode");
       }
+      if (content.contains("This http API endpoint requires enterprise edition")){
+        return FeatureNotAvailableException.communityEdition("HTTP API Feature");
+      }
     }
 
     if (status.equals(HttpResponseStatus.TOO_MANY_REQUESTS)) {

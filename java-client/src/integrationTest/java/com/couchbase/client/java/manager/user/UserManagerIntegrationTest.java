@@ -18,6 +18,8 @@ package com.couchbase.client.java.manager.user;
 
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.UserNotFoundException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
@@ -123,7 +125,8 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  void changeUserPassword(){
+  @IgnoreWhen(missesCapabilities = ENTERPRISE_EDITION)
+  void changeUserPassword() {
     final String username = "changePasswordTestUser";
     final String origPassword = "password";
     final String newPassword = "newpassword";
@@ -135,15 +138,41 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
     ClusterOptions options = ClusterOptions.clusterOptions(username, origPassword);
 
     Cluster disposableCluster = Cluster.connect(connectionString(), options);
+    disposableCluster.waitUntilReady(java.time.Duration.ofSeconds(30));
     UserManager disposableUserManager = disposableCluster.users();
+    Bucket disposableBucket = disposableCluster.bucket(config().bucketname());
 
-    disposableUserManager.changePassword("newpassword");
+    disposableUserManager.changePassword(newPassword);
 
     assertCanAuthenticate(username, newPassword, true);
     assertCanAuthenticate(username, origPassword, false);
 
     disposableCluster.disconnect();
     users.dropUser(username);
+  }
+  @Test
+  @IgnoreWhen(hasCapabilities = ENTERPRISE_EDITION)
+  void changeUserPasswordShouldFailOnCE() {
+    final String username = "changePasswordTestUser";
+    final String origPassword = "password";
+    final String newPassword = "newpassword";
+
+    upsert(new User(username)
+            .password(origPassword)
+            .roles(ADMIN));
+
+    ClusterOptions options = ClusterOptions.clusterOptions(username, origPassword);
+
+    Cluster disposableCluster = Cluster.connect(connectionString(), options);
+    disposableCluster.waitUntilReady(java.time.Duration.ofSeconds(30));
+    UserManager disposableUserManager = disposableCluster.users();
+    Bucket disposableBucket = disposableCluster.bucket(config().bucketname());
+
+    assertThrows(FeatureNotAvailableException.class, () -> disposableUserManager.changePassword(newPassword));
+
+    disposableCluster.disconnect();
+    users.dropUser(username);
+
   }
 
   @Test
