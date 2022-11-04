@@ -19,26 +19,26 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.ReplicateTo;
-import com.couchbase.client.java.kv.ScanOptions;
 import com.couchbase.client.java.kv.ScanResult;
 import com.couchbase.client.java.kv.ScanSort;
 import com.couchbase.client.java.kv.ScanTerm;
 import com.couchbase.client.java.kv.ScanType;
-import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
@@ -96,7 +96,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
       assertTrue(item.contentAsBytes().length > 0);
       assertFalse(item.withoutContent());
     });
-    assertEquals(DOC_IDS.size(), count.get());
+    assertTrue(count.get() >= DOC_IDS.size());
   }
 
   @Test
@@ -110,7 +110,8 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
       assertTrue(item.withoutContent());
       assertEquals(0, item.contentAsBytes().length);
     });
-    assertEquals(DOC_IDS.size(), count.get());
+
+    assertTrue(count.get() >= DOC_IDS.size());
   }
 
   @Test
@@ -130,7 +131,8 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
       "b-211d975a-84ed-49c2-b578-e9ec4b016f44",
       "c-ba5ff9da-bb87-4dd0-be8e-6d24010062a1"
     );
-    assertEquals(expected, results);
+
+    assertTrue(results.containsAll(expected));
   }
 
   @Test
@@ -179,6 +181,16 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
   }
 
   @Test
+  void scanOptionsMustBeWithinBounds() {
+    assertThrows(InvalidArgumentException.class,
+      () -> collection.scan(ScanType.samplingScan(1), scanOptions().batchByteLimit(-1)));
+    assertThrows(InvalidArgumentException.class,
+      () -> collection.scan(ScanType.samplingScan(1), scanOptions().batchItemLimit(-1)));
+    assertThrows(InvalidArgumentException.class,
+      () -> collection.scan(ScanType.samplingScan(1), scanOptions().sort(null)));
+  }
+
+  @Test
   void throwsTimeoutWithContext() {
     UnambiguousTimeoutException ex = assertThrows(
       UnambiguousTimeoutException.class,
@@ -189,6 +201,26 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
     );
 
     assertNotNull(ex.context().getRangeScanContext());
+  }
+
+  @Test
+  void supportsReadYourOwnWrite() {
+    String id = UUID.randomUUID().toString();
+    MutationResult upsertResult = collection.upsert(id, JsonObject.create().put("id", id));
+    assertTrue(upsertResult.mutationToken().isPresent());
+    MutationState mutationState = MutationState.from(upsertResult.mutationToken().get());
+
+    AtomicBoolean idFound = new AtomicBoolean(false);
+    collection.scan(
+      ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.maximum()),
+      scanOptions().consistentWith(mutationState)
+    ).forEach(item -> {
+      if (item.id().equals(id)) {
+        idFound.set(true);
+      }
+    });
+
+    assertTrue(idFound.get());
   }
 
 }

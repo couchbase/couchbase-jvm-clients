@@ -37,12 +37,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Unit tests for the range scan orchestrator to simulate errors and correct behavior from downstream components.
- *
- * Tests TODO:
- * 	- bucket config not there yet for both
- * 	- create errors
- * 	- continue error handling
- * 	- test non couchbase bucket
  */
 class RangeScanOrchestratorTest {
 

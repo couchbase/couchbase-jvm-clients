@@ -1093,7 +1093,6 @@ public class AsyncCollection {
     ScanOptions.Built opts = options.build();
     Duration timeout = opts.timeout().orElse(environment().timeoutConfig().kvScanTimeout());
 
-
     Map<Short, MutationToken> consistencyTokens = opts.consistentWith().map(ms -> {
       Map<Short, MutationToken> tokens = new HashMap<>();
       for (MutationToken mt : ms) {

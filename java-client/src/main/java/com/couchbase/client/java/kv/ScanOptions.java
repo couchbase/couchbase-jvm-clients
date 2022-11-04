@@ -20,7 +20,6 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.Transcoder;
-import com.couchbase.client.java.query.QueryOptions;
 
 import java.util.Optional;
 
@@ -91,8 +90,7 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
    * @return the {@link ScanOptions} to allow method chaining.
    */
   public ScanOptions transcoder(final Transcoder transcoder) {
-    notNull(transcoder, "Transcoder");
-    this.transcoder = transcoder;
+    this.transcoder = notNull(transcoder, "Transcoder");
     return this;
   }
 
