@@ -179,7 +179,7 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
     }
 
     public int batchItemLimit() {
-      return batchByteLimit;
+      return batchItemLimit;
     }
 
     public int batchByteLimit() {
