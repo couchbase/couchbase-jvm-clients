@@ -23,6 +23,7 @@ import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -140,7 +141,7 @@ class FeatureNegotiatingHandlerTest extends AbstractKeyValueEmbeddedChannelTest 
     channel.runScheduledPendingTasks();
 
     assertTrue(connect.isDone());
-    assertTrue(connect.cause() instanceof TimeoutException);
+    assertInstanceOf(TimeoutException.class, connect.cause());
     assertEquals("KV Feature Negotiation timed out after 100ms", connect.cause().getMessage());
   }
 

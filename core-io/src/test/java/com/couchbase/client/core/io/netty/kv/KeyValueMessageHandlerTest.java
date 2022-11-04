@@ -54,6 +54,7 @@ import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -151,7 +152,7 @@ class KeyValueMessageHandlerTest {
       channel.writeInbound(getResponse);
 
       ExecutionException exception = assertThrows(ExecutionException.class, () -> request.response().get());
-      assertTrue(exception.getCause() instanceof RequestCanceledException);
+      assertInstanceOf(RequestCanceledException.class, exception.getCause());
       assertEquals("NO_MORE_RETRIES", request.cancellationReason().identifier());
       assertEquals(RetryReason.KV_ERROR_MAP_INDICATED, request.cancellationReason().innerReason());
       assertEquals(0, getResponse.refCnt());

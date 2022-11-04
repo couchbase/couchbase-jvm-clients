@@ -48,6 +48,7 @@ import java.util.concurrent.ExecutionException;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -183,7 +184,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
     SubdocGetResponse response = checkExpectedSuccess("{\"foo\":\"bar\"}", commands);
     assertTrue(response.values()[0].status().success());
     assertEquals(SubDocumentOpResponseStatus.PATH_MISMATCH, response.values()[1].status());
-    assertTrue(response.values()[1].error().get() instanceof PathMismatchException);
+    assertInstanceOf(PathMismatchException.class, response.values()[1].error().get());
   }
 
   @Test
@@ -202,7 +203,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
     SubdocGetResponse response = checkExpectedSuccess("{\"foo\":\"bar\"}", commands);
     assertTrue(response.values()[0].status().success());
     assertEquals(SubDocumentOpResponseStatus.PATH_NOT_FOUND, response.values()[1].status());
-    assertTrue(response.values()[1].error().get() instanceof PathNotFoundException);
+    assertInstanceOf(PathNotFoundException.class, response.values()[1].error().get());
     assertEquals(SubdocCommandType.GET, response.values()[0].type());
     assertEquals(SubdocCommandType.GET, response.values()[1].type());
   }

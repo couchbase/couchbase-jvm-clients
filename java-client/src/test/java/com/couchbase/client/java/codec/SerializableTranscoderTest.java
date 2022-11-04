@@ -45,7 +45,7 @@ class SerializableTranscoderTest {
       InvalidArgumentException.class,
       () -> SerializableTranscoder.INSTANCE.encode(new Group())
     );
-    assertTrue(ex.getCause() instanceof NotSerializableException);
+    assertInstanceOf(NotSerializableException.class, ex.getCause());
   }
 
   static class User implements Serializable {

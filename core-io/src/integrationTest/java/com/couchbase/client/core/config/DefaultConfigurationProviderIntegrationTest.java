@@ -49,6 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -225,14 +226,14 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     try {
       String bucketName = "this-bucket-does-not-exist";
-      provider.openBucket(bucketName).subscribe(v -> {}, e -> assertTrue(e instanceof ConfigException));
+      provider.openBucket(bucketName).subscribe(v -> {}, e -> assertInstanceOf(ConfigException.class, e));
 
       waitUntilCondition(() -> eventBus.publishedEvents().stream().anyMatch(p -> p instanceof BucketOpenRetriedEvent));
 
       for (Event event : eventBus.publishedEvents()) {
         if (event instanceof BucketOpenRetriedEvent) {
           assertEquals(bucketName, ((BucketOpenRetriedEvent) event).bucketName());
-          assertTrue(event.cause() instanceof BucketNotFoundDuringLoadException);
+          assertInstanceOf(BucketNotFoundDuringLoadException.class, event.cause());
         }
       }
     } finally {

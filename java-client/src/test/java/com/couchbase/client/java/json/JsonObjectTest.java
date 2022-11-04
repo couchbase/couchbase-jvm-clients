@@ -268,7 +268,7 @@ class JsonObjectTest {
     Map<String, Object> badMap2 = mapOf("key1", new CloneNotSupportedException());
 
     InvalidArgumentException e = assertThrows(InvalidArgumentException.class, () -> JsonObject.from(mapOf("subMap", badMap1)));
-    assertTrue(e.getCause() instanceof ClassCastException);
+    assertInstanceOf(ClassCastException.class, e.getCause());
 
     assertThrows(InvalidArgumentException.class, () -> JsonObject.from(mapOf("subMap", badMap2)));
   }
@@ -309,7 +309,7 @@ class JsonObjectTest {
 
     assertTrue(obj.containsKey("sub"));
     assertNotNull(obj.get("sub"));
-    assertTrue(obj.get("sub") instanceof JsonObject);
+    assertInstanceOf(JsonObject.class, obj.get("sub"));
     assertTrue(obj.getObject("sub").containsKey("item1"));
     assertTrue(obj.getObject("sub").containsKey("item2"));
   }
@@ -323,7 +323,7 @@ class JsonObjectTest {
 
     assertTrue(obj.containsKey("sub"));
     assertNotNull(obj.get("sub"));
-    assertTrue(obj.get("sub") instanceof JsonArray);
+    assertInstanceOf(JsonArray.class, obj.get("sub"));
     assertEquals(2, obj.getArray("sub").size());
     assertEquals("value1", obj.getArray("sub").get(0));
     assertEquals(Boolean.TRUE, obj.getArray("sub").get(1));
@@ -342,11 +342,11 @@ class JsonObjectTest {
     Object mSub2 = asMap.get("sub2");
 
     assertNotNull(mSub1);
-    assertTrue(mSub1 instanceof Map);
+    assertInstanceOf(Map.class, mSub1);
     assertEquals("test", ((Map) mSub1).get("sub1.1"));
 
     assertNotNull(mSub2);
-    assertTrue(mSub2 instanceof List);
+    assertInstanceOf(List.class, mSub2);
     assertEquals("sub2.1", ((List) mSub2).get(0));
   }
 
@@ -420,7 +420,7 @@ class JsonObjectTest {
 
     JsonObject decoded = JsonObject.fromJson(encoded);
     assertEquals(bigint, decoded.getBigInteger("value"));
-    assertTrue(decoded.getNumber("value") instanceof BigInteger);
+    assertInstanceOf(BigInteger.class, decoded.getNumber("value"));
   }
 
   @Test
@@ -442,7 +442,7 @@ class JsonObjectTest {
       decoded.getBigDecimal("value")
     );
     assertEquals(1234.567890123457, decoded.getDouble("value"), 0.1);
-    assertTrue(decoded.getNumber("value") instanceof Double);
+    assertInstanceOf(Double.class, decoded.getNumber("value"));
   }
 
   @Test

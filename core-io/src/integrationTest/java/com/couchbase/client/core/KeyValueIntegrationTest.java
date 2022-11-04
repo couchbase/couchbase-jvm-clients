@@ -45,6 +45,7 @@ import java.util.concurrent.ExecutionException;
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -105,7 +106,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     core.send(insertRequest);
 
     ExecutionException exception = assertThrows(ExecutionException.class, () -> insertRequest.response().get());
-    assertTrue(exception.getCause() instanceof FeatureNotAvailableException);
+    assertInstanceOf(FeatureNotAvailableException.class, exception.getCause());
   }
 
   /**
@@ -122,7 +123,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     core.send(getRequest);
 
     ExecutionException exception = assertThrows(ExecutionException.class, () -> getRequest.response().get());
-    assertTrue(exception.getCause() instanceof TimeoutException);
+    assertInstanceOf(TimeoutException.class, exception.getCause());
   }
 
   @Test
@@ -174,7 +175,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     core.send(insertRequest);
 
     ExecutionException exception = assertThrows(ExecutionException.class, () -> insertRequest.response().get());
-    assertTrue(exception.getCause() instanceof FeatureNotAvailableException);
+    assertInstanceOf(FeatureNotAvailableException.class, exception.getCause());
 
     InsertRequest insertRequest2 = new InsertRequest(id, content, 0, 0,
       kvTimeout, core.context(), new CollectionIdentifier(
@@ -186,7 +187,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
     core.send(insertRequest2);
 
     exception = assertThrows(ExecutionException.class, () -> insertRequest2.response().get());
-    assertTrue(exception.getCause() instanceof FeatureNotAvailableException);
+    assertInstanceOf(FeatureNotAvailableException.class, exception.getCause());
 
   }
 

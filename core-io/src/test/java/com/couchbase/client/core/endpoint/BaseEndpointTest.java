@@ -58,6 +58,7 @@ import java.util.function.Supplier;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -194,10 +195,10 @@ class BaseEndpointTest {
     int debug = 0;
     for (Event event : eventBus.publishedEvents()) {
       if (event.severity() == Event.Severity.WARN) {
-        assertTrue(event instanceof EndpointConnectionFailedEvent);
+        assertInstanceOf(EndpointConnectionFailedEvent.class, event);
         warnings++;
       } else if (event.severity() == Event.Severity.DEBUG) {
-        assertTrue(event instanceof EndpointConnectedEvent);
+        assertInstanceOf(EndpointConnectedEvent.class, event);
         debug++;
       } else {
         throw new RuntimeException("Unexpected Event" + event);
@@ -231,9 +232,9 @@ class BaseEndpointTest {
     waitUntilCondition(() -> endpoint.state() == EndpointState.DISCONNECTED);
 
     assertTrue(eventBus.publishedEvents().size() >= 2);
-    assertTrue(eventBus.publishedEvents().get(0) instanceof EndpointConnectionIgnoredEvent);
+    assertInstanceOf(EndpointConnectionIgnoredEvent.class, eventBus.publishedEvents().get(0));
 
-    assertTrue(eventBus.publishedEvents().get(1) instanceof EndpointDisconnectedEvent);
+    assertInstanceOf(EndpointDisconnectedEvent.class, eventBus.publishedEvents().get(1));
     assertEquals(
       "Endpoint disconnected successfully",
       eventBus.publishedEvents().get(1).description()
@@ -275,10 +276,10 @@ class BaseEndpointTest {
       for (Event event : eventBus.publishedEvents()) {
         if (event.severity() == Event.Severity.WARN) {
           warn++;
-          assertTrue(event instanceof EndpointConnectionFailedEvent);
+          assertInstanceOf(EndpointConnectionFailedEvent.class, event);
         } else if (event.severity() == Event.Severity.DEBUG) {
           debug++;
-          assertTrue(event instanceof EndpointConnectionAbortedEvent);
+          assertInstanceOf(EndpointConnectionAbortedEvent.class, event);
         } else {
           throw new RuntimeException("Unexpected Event: " + event);
         }
@@ -308,8 +309,8 @@ class BaseEndpointTest {
     assertFalse(channel.isActive());
 
     assertEquals(2, eventBus.publishedEvents().size());
-    assertTrue(eventBus.publishedEvents().get(0) instanceof EndpointConnectedEvent);
-    assertTrue(eventBus.publishedEvents().get(1) instanceof EndpointDisconnectedEvent);
+    assertInstanceOf(EndpointConnectedEvent.class, eventBus.publishedEvents().get(0));
+    assertInstanceOf(EndpointDisconnectedEvent.class, eventBus.publishedEvents().get(1));
   }
 
   /**
@@ -331,7 +332,7 @@ class BaseEndpointTest {
     waitUntilCondition(() -> endpoint.state() == EndpointState.DISCONNECTED);
 
     assertEquals(2, eventBus.publishedEvents().size());
-    assertTrue(eventBus.publishedEvents().get(0) instanceof EndpointConnectedEvent);
+    assertInstanceOf(EndpointConnectedEvent.class, eventBus.publishedEvents().get(0));
     EndpointDisconnectionFailedEvent event =
       (EndpointDisconnectionFailedEvent) eventBus.publishedEvents().get(1);
     assertEquals(expectedCause, event.cause());
@@ -387,7 +388,7 @@ class BaseEndpointTest {
 
     cf.complete(channel);
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
-    assertTrue(eventBus.publishedEvents().get(0) instanceof EndpointConnectedEvent);
+    assertInstanceOf(EndpointConnectedEvent.class, eventBus.publishedEvents().get(0));
     assertTrue(endpoint.lastConnectedAt() > 0);
     return endpoint;
   }

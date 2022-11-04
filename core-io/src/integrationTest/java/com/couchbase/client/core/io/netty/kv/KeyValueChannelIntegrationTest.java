@@ -51,6 +51,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -217,7 +218,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
     latch.await();
     assertFalse(f.get().isSuccess());
     Throwable ex = f.get().cause();
-    assertTrue(ex instanceof AuthenticationFailureException);
+    assertInstanceOf(AuthenticationFailureException.class, ex);
     assertTrue(ex.getMessage().contains(msg));
   }
 

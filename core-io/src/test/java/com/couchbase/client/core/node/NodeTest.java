@@ -51,6 +51,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -515,21 +516,21 @@ class NodeTest {
 
       List<Event> events = eventBus.publishedEvents();
 
-      assertTrue(events.remove(0) instanceof NodeConnectedEvent);
+      assertInstanceOf(NodeConnectedEvent.class, events.remove(0));
 
-      assertTrue(events.get(0) instanceof ServiceAddedEvent);
-      assertTrue(events.get(1) instanceof ServiceAddedEvent);
-      assertTrue(events.get(2) instanceof ServiceAddIgnoredEvent);
+      assertInstanceOf(ServiceAddedEvent.class, events.get(0));
+      assertInstanceOf(ServiceAddedEvent.class, events.get(1));
+      assertInstanceOf(ServiceAddIgnoredEvent.class, events.get(2));
 
-      assertTrue(events.get(3) instanceof ServiceRemovedEvent);
-      assertTrue(events.get(4) instanceof ServiceRemovedEvent);
-      assertTrue(events.get(5) instanceof ServiceRemoveIgnoredEvent);
+      assertInstanceOf(ServiceRemovedEvent.class, events.get(3));
+      assertInstanceOf(ServiceRemovedEvent.class, events.get(4));
+      assertInstanceOf(ServiceRemoveIgnoredEvent.class, events.get(5));
 
-      assertTrue(events.get(6) instanceof NodeDisconnectedEvent);
-      assertTrue(events.get(7) instanceof NodeDisconnectIgnoredEvent);
+      assertInstanceOf(NodeDisconnectedEvent.class, events.get(6));
+      assertInstanceOf(NodeDisconnectIgnoredEvent.class, events.get(7));
 
-      assertTrue(events.get(8) instanceof ServiceAddIgnoredEvent);
-      assertTrue(events.get(9) instanceof ServiceRemoveIgnoredEvent);
+      assertInstanceOf(ServiceAddIgnoredEvent.class, events.get(8));
+      assertInstanceOf(ServiceRemoveIgnoredEvent.class, events.get(9));
     } finally {
       env.shutdown();
     }

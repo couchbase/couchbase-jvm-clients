@@ -55,6 +55,7 @@ import static com.couchbase.client.test.Util.readResource;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -135,7 +136,7 @@ public class SaslListMechanismsHandlerTest extends AbstractKeyValueEmbeddedChann
     channel.runScheduledPendingTasks();
 
     assertTrue(connect.isDone());
-    assertTrue(connect.cause() instanceof TimeoutException);
+    assertInstanceOf(TimeoutException.class, connect.cause());
     assertEquals("SASL Mechanism listing timed out after 100ms", connect.cause().getMessage());
   }
 
@@ -187,7 +188,7 @@ public class SaslListMechanismsHandlerTest extends AbstractKeyValueEmbeddedChann
     Set<SaslMechanism> saslMechanisms = channel.attr(ChannelAttributes.SASL_MECHS_KEY).get();
     assertEquals(saslMechanisms, EnumSet.of(SaslMechanism.PLAIN, SaslMechanism.SCRAM_SHA1, SaslMechanism.SCRAM_SHA256, SaslMechanism.SCRAM_SHA512));
 
-    assertTrue(eventBus.publishedEvents().get(0) instanceof SaslMechanismsListedEvent);
+    assertInstanceOf(SaslMechanismsListedEvent.class, eventBus.publishedEvents().get(0));
   }
 
   @Test

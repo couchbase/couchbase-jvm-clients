@@ -43,6 +43,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -124,7 +125,7 @@ class SelectBucketHandlerTest {
     channel.runScheduledPendingTasks();
 
     assertTrue(connect.isDone());
-    assertTrue(connect.cause() instanceof TimeoutException);
+    assertInstanceOf(TimeoutException.class, connect.cause());
     assertEquals(
       "KV Select Bucket loading timed out after 10ms",
       connect.cause().getMessage()

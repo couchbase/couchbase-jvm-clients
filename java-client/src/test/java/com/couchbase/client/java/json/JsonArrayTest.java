@@ -33,6 +33,7 @@ import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -182,7 +183,7 @@ class JsonArrayTest {
     Map<String, Object> badMap2 = mapOf("key1", new CloneNotSupportedException());
 
     InvalidArgumentException e = assertThrows(InvalidArgumentException.class, () -> JsonArray.from(listOf(badMap1)));
-    assertTrue(e.getCause() instanceof ClassCastException);
+    assertInstanceOf(ClassCastException.class, e.getCause());
 
     assertThrows(InvalidArgumentException.class, () -> JsonArray.from(listOf(badMap2)));
   }
@@ -222,7 +223,7 @@ class JsonArrayTest {
 
     assertEquals(1, arr.size());
     assertNotNull(arr.get(0));
-    assertTrue(arr.get(0) instanceof JsonObject);
+    assertInstanceOf(JsonObject.class, arr.get(0));
     assertTrue(arr.getObject(0).containsKey("item1"));
     assertTrue(arr.getObject(0).containsKey("item2"));
   }
@@ -236,7 +237,7 @@ class JsonArrayTest {
 
     assertEquals(1, arr.size());
     assertNotNull(arr.get(0));
-    assertTrue(arr.get(0) instanceof JsonArray);
+    assertInstanceOf(JsonArray.class, arr.get(0));
     assertEquals(2, arr.getArray(0).size());
     assertEquals("value1", arr.getArray(0).get(0));
     assertEquals(Boolean.TRUE, arr.getArray(0).get(1));
@@ -269,11 +270,11 @@ class JsonArrayTest {
     Object mSub2 = asList.get(1);
 
     assertNotNull(mSub1);
-    assertTrue(mSub1 instanceof Map);
+    assertInstanceOf(Map.class, mSub1);
     assertEquals("test", ((Map) mSub1).get("sub1.1"));
 
     assertNotNull(mSub2);
-    assertTrue(mSub2 instanceof List);
+    assertInstanceOf(List.class, mSub2);
     assertEquals("sub2.1", ((List) mSub2).get(0));
   }
 
@@ -344,7 +345,7 @@ class JsonArrayTest {
 
     JsonArray decoded = JsonArray.fromJson(encoded);
     assertEquals(bigint, decoded.getBigInteger(0));
-    assertTrue(decoded.getNumber(0) instanceof BigInteger);
+    assertInstanceOf(BigInteger.class, decoded.getNumber(0));
 
   }
 
@@ -363,7 +364,7 @@ class JsonArrayTest {
       new BigDecimal("1234.5678901234568911604583263397216796875"), decoded.getBigDecimal(0)
     );
     assertEquals(1234.567890123457, decoded.getDouble(0), 0.1);
-    assertTrue(decoded.getNumber(0) instanceof Double);
+    assertInstanceOf(Double.class, decoded.getNumber(0));
   }
 
   @Test

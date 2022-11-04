@@ -224,7 +224,7 @@ class CouchbaseArrayListTest extends JavaIntegrationTest {
         while(it.hasNext()) {
             Object obj = it.next();
             // TODO: yea... Jackson turns these into Integers by default, so...
-            assertTrue(obj instanceof Integer);
+            assertInstanceOf(Integer.class, obj);
             assertEquals(obj, i+1);
             i++;
         }

@@ -266,7 +266,7 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
       f.get();
     }
     catch (ExecutionException err) {
-      assertTrue(err.getCause() instanceof TimeoutException);
+      assertInstanceOf(TimeoutException.class, err.getCause());
     }
   }
 
