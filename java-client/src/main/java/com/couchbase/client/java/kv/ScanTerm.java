@@ -28,15 +28,8 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 @Stability.Volatile
 public class ScanTerm {
 
-  /**
-   * The minimum scan pattern - construct with {@link #minimum()}.
-   */
-  public static final byte[] MINIMUM_PATTERN = new byte[]{ 0x00 };
-
-  /**
-   * The maximum scan pattern - construct with {@link #maximum()} ()}.
-   */
-  public static final byte[] MAXIMUM_PATTERN = new byte[]{ (byte) 0xFF };
+  private static final ScanTerm MINIMUM = inclusive(new byte[]{(byte) 0x00});
+  private static final ScanTerm MAXIMUM = inclusive(new byte[]{(byte) 0xFF});
 
   /**
    * Contains the key pattern of this term.
@@ -55,12 +48,21 @@ public class ScanTerm {
    * @param exclusive if the term is exclusive while scanning.
    */
   private ScanTerm(final byte[] id, final boolean exclusive) {
-    this.id = notNullOrEmpty(id, "ScanTerm ID");
+    this.id = notNullOrEmpty(id, "ScanTerm ID")
+        .clone();
     this.exclusive = exclusive;
   }
 
+  private ScanTerm(final String id, final boolean exclusive) {
+    this.id = notNullOrEmpty(id, "ScanTerm ID").getBytes(StandardCharsets.UTF_8);
+    this.exclusive = exclusive;
+  }
+
+  /**
+   * Returns a new byte array containing the key pattern of this term.
+   */
   public byte[] id() {
-    return id;
+    return id.clone();
   }
 
   public boolean exclusive() {
@@ -74,7 +76,7 @@ public class ScanTerm {
    * @return the created {@link ScanTerm}.
    */
   public static ScanTerm inclusive(final String id) {
-    return inclusive(id.getBytes(StandardCharsets.UTF_8));
+    return new ScanTerm(id, false);
   }
 
   /**
@@ -94,7 +96,7 @@ public class ScanTerm {
    * @return the created {@link ScanTerm}.
    */
   public static ScanTerm exclusive(final String id) {
-    return exclusive(id.getBytes(StandardCharsets.UTF_8));
+    return new ScanTerm(id, true);
   }
 
   /**
@@ -108,21 +110,25 @@ public class ScanTerm {
   }
 
   /**
-   * Creates a {@link ScanTerm} representing the absolute minimum pattern (starting point) - see {@link ScanTerm#MINIMUM_PATTERN}.
+   * Returns a scan term representing the absolute minimum pattern (starting point).
+   * <p>
+   * Equivalent to {@code ScanTerm.inclusive(new byte[]{(byte) 0x00})}
    *
-   * @return the created {@link ScanTerm}.
+   * @return the absolute minimum {@link ScanTerm}.
    */
   public static ScanTerm minimum() {
-    return new ScanTerm(MINIMUM_PATTERN, false);
+    return MINIMUM;
   }
 
   /**
-   * Creates a {@link ScanTerm} representing the absolute maximum pattern (end point) - see {@link ScanTerm#MAXIMUM_PATTERN}.
+   * Returns a scan term representing the absolute maximum pattern (end point).
+   * <p>
+   * Equivalent to {@code ScanTerm.inclusive(new byte[]{(byte) 0xFF})}
    *
-   * @return the created {@link ScanTerm}.
+   * @return the absolute maximum {@link ScanTerm}.
    */
   public static ScanTerm maximum() {
-    return new ScanTerm(MAXIMUM_PATTERN, false);
+    return MAXIMUM;
   }
 
 }
