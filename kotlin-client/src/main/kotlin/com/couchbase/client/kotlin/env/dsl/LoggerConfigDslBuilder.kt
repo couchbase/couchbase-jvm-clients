@@ -51,6 +51,6 @@ public class LoggerConfigDslBuilder(private val wrapped: LoggerConfig.Builder) {
     /**
      * @see LoggerConfig.Builder.enableDiagnosticContext
      */
-    public val enableDiagnosticContext: Boolean
+    public var enableDiagnosticContext: Boolean
             by observable(DEFAULT_DIAGNOSTIC_CONTEXT_ENABLED) { _, _, it -> wrapped.enableDiagnosticContext(it) }
 }
