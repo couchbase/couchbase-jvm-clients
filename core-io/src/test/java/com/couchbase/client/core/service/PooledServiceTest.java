@@ -429,6 +429,9 @@ class PooledServiceTest {
     verify(mock1, never()).send(request);
   }
 
+  // JVMCBC-1023: Intermittently fails on CI with an error that makes no sense:
+  // 'send' is a *void method* and it *cannot* be stubbed with a *return value*!
+  @Flaky
   @Test
   void cleansIdleConnections() throws Exception {
     int minEndpoints = 0;
@@ -595,7 +598,7 @@ class PooledServiceTest {
     verify(mock1, never()).disconnect();
   }
 
-  @Disabled @Flaky // Intermittently see complaints of "'send' is a *void method* and it *cannot* be stubbed with a *return value*!"
+  @Disabled @Flaky // JVMCBC-1023: Intermittently see complaints of "'send' is a *void method* and it *cannot* be stubbed with a *return value*!"
   @Test
   void cleansUpNeverUsedIdleConnections() {
     Endpoint mock1 = mock(Endpoint.class);
