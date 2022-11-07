@@ -65,8 +65,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>
  * @author Michael Reiche
  */
+// Using SUBDOC_REVIVE_DOCUMENT as a proxy for 7.1.0 so we get fix for MB-50132
 @IgnoreWhen(
-  missesCapabilities = { Capabilities.QUERY, Capabilities.COLLECTIONS },
+  missesCapabilities = { Capabilities.QUERY, Capabilities.COLLECTIONS, Capabilities.SUBDOC_REVIVE_DOCUMENT },
   clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES },
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER
 )
