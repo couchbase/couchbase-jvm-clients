@@ -360,8 +360,6 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     String name = UUID.randomUUID().toString();
     createBucket(BucketSettings.create(name)
             .compressionMode(CompressionMode.PASSIVE));
-    BucketSettings settings = buckets.getBucket(name);
-    assertEquals(StorageBackend.COUCHSTORE, settings.storageBackend());
   }
 
   @Test
