@@ -17,7 +17,7 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 
-public class ArraySetOptions extends CommonDatastructureOptions<ArrayListOptions> {
+public class ArraySetOptions extends CommonDatastructureOptions<ArraySetOptions> {
 public static ArraySetOptions arraySetOptions() { return new ArraySetOptions(); }
 
     private ArraySetOptions() {
