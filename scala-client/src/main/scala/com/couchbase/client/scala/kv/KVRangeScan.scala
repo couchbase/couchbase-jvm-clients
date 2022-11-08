@@ -4,7 +4,12 @@ import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.codec.{JsonDeserializer, Transcoder, TranscoderWithSerializer, TranscoderWithoutSerializer}
+import com.couchbase.client.scala.codec.{
+  JsonDeserializer,
+  Transcoder,
+  TranscoderWithSerializer,
+  TranscoderWithoutSerializer
+}
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -20,6 +25,7 @@ import scala.util.{Failure, Try}
 case class ScanTerm(term: String, exclusive: Option[Boolean] = None)
 
 object ScanTerm {
+
   /** Creates a ScanTerm representing the absolute minimum pattern - e.g. before the first document. */
   def minimum(): ScanTerm = ScanTerm(new String(new Array[Byte](0x00)))
 
@@ -31,6 +37,7 @@ object ScanTerm {
 sealed trait ScanType
 
 object ScanType {
+
   /** Scans documents, from document `from` to document `to`. */
   case class RangeScan(from: ScanTerm, to: ScanTerm) extends ScanType
 
@@ -45,6 +52,7 @@ object ScanType {
 sealed trait ScanSort
 
 object ScanSort {
+
   /** KV range scan results are not sorted. */
   case object None extends ScanSort
 
@@ -55,16 +63,16 @@ object ScanSort {
 /** Provides control over how a KV range scan is performed.
   */
 case class ScanOptions(
-                       private[scala] val timeout: Duration = Duration.MinusInf,
-                       private[scala] val parentSpan: Option[RequestSpan] = None,
-                       private[scala] val retryStrategy: Option[RetryStrategy] = None,
-                       private[scala] val transcoder: Option[Transcoder] = None,
-                       private[scala] val withoutContent: Option[Boolean] = None,
-                       private[scala] val consistentWith: Option[MutationState] = None,
-                       private[scala] val scanSort: Option[ScanSort] = None,
-                       private[scala] val batchByteLimit: Option[Int] = None,
-                       private[scala] val batchItemLimit: Option[Int] = None,
-                     ) {
+    private[scala] val timeout: Duration = Duration.MinusInf,
+    private[scala] val parentSpan: Option[RequestSpan] = None,
+    private[scala] val retryStrategy: Option[RetryStrategy] = None,
+    private[scala] val transcoder: Option[Transcoder] = None,
+    private[scala] val withoutContent: Option[Boolean] = None,
+    private[scala] val consistentWith: Option[MutationState] = None,
+    private[scala] val scanSort: Option[ScanSort] = None,
+    private[scala] val batchByteLimit: Option[Int] = None,
+    private[scala] val batchItemLimit: Option[Int] = None
+) {
 
   /** Changes the timeout setting used for this operation.
     *
@@ -181,12 +189,14 @@ case class ScanOptions(
   *                        of types that are supported 'out of the box' is available at
   *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]]
   */
-case class ScanResult(id: String,
-                     private val content: Option[Array[Byte]],
-                     private[scala] val flags: Int,
-                     cas: Option[Long],
-                     expiryTime: Option[Instant],
-                     transcoder: Transcoder) {
+case class ScanResult(
+    id: String,
+    private val content: Option[Array[Byte]],
+    private[scala] val flags: Int,
+    cas: Option[Long],
+    expiryTime: Option[Instant],
+    transcoder: Transcoder
+) {
 
   /** If the scan was initiated without the `withoutContent` flag set then this will contain the
     * document's expiration value.  Otherwise it will be None.
@@ -202,17 +212,22 @@ case class ScanResult(id: String,
     *
     * @tparam T $SupportedTypes
     */
-  def contentAs[T](implicit deserializer: JsonDeserializer[T],
-                   tag: ClassTag[T]
-                  ): Try[T] = {
+  def contentAs[T](implicit deserializer: JsonDeserializer[T], tag: ClassTag[T]): Try[T] = {
     content match {
       case Some(bytes) =>
         transcoder match {
-          case t: TranscoderWithSerializer => t.decode(bytes, flags, deserializer)
+          case t: TranscoderWithSerializer    => t.decode(bytes, flags, deserializer)
           case t: TranscoderWithoutSerializer => t.decode(bytes, flags)
         }
 
-      case _ => Failure(new InvalidArgumentException("The content cannot be fetched as the scan was initiated with the 'withoutContent' flag set", null, null))
+      case _ =>
+        Failure(
+          new InvalidArgumentException(
+            "The content cannot be fetched as the scan was initiated with the 'withoutContent' flag set",
+            null,
+            null
+          )
+        )
     }
   }
 }

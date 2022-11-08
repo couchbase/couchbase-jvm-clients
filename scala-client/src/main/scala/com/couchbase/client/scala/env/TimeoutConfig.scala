@@ -42,7 +42,7 @@ case class TimeoutConfig(
     private[scala] val analyticsTimeout: Option[Duration] = None,
     private[scala] val connectTimeout: Option[Duration] = None,
     private[scala] val disconnectTimeout: Option[Duration] = None,
-    private[scala] val kvScanTimeout: Option[Duration] = None,
+    private[scala] val kvScanTimeout: Option[Duration] = None
 ) {
 
   private[scala] def toCore: core.env.TimeoutConfig.Builder = {
