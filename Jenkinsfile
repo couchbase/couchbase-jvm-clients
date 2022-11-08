@@ -721,8 +721,10 @@ void testAgainstServer(String serverVersion,
         echo "Got cluster IP http://" + ip + ":8091"
 
         // By default Java and Scala use mock for testing, make them use cbdyncluster instead
+        createIntegrationTestPropertiesFile('core-io/src/integrationTest/resources/integration.properties', ip)
         createIntegrationTestPropertiesFile('java-client/src/integrationTest/resources/integration.properties', ip)
         createIntegrationTestPropertiesFile('scala-client/src/integrationTest/resources/integration.properties', ip)
+        createIntegrationTestPropertiesFile('kotlin-client/src/integrationTest/resources/integration.properties', ip)
 
         // We need a bit more than the default 600 for out bucket management integration tests
         // Particularly Magma which requires min of 1GB
