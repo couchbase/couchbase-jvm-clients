@@ -4,13 +4,9 @@ import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.codec.{
-  JsonDeserializer,
-  Transcoder,
-  TranscoderWithSerializer,
-  TranscoderWithoutSerializer
-}
+import com.couchbase.client.scala.codec.{JsonDeserializer, Transcoder, TranscoderWithSerializer, TranscoderWithoutSerializer}
 
+import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
@@ -19,18 +15,35 @@ import scala.util.{Failure, Try}
 
 /** A scan term identifies a point to scan from or to scan to.
   *
-  * @param term      matches a particular document id pattern, such as "user_".
+  * @param term      matches a particular document id pattern, such as "user_".  Since it's represented as an Array[Byte]
+  *                  to support maximum() and minimum(), it's easiest to construct a ScanTerm via the methods in the
+  *                  companion object.
   * @param exclusive controls whether this term is inclusive or exclusive.
   */
-case class ScanTerm(term: String, exclusive: Option[Boolean] = None)
+case class ScanTerm(term: Array[Byte], exclusive: Option[Boolean] = None)
 
 object ScanTerm {
+  private val min = collection.immutable.Seq.apply(0x00.toByte)
+  private val max = collection.immutable.Seq.apply(0xFF.toByte)
+
 
   /** Creates a ScanTerm representing the absolute minimum pattern - e.g. before the first document. */
-  def minimum(): ScanTerm = ScanTerm(new String(new Array[Byte](0x00)))
+  def minimum(): ScanTerm = inclusive(min.toArray)
 
   /** Creates a ScanTerm representing the absolute maximum pattern - e.g. after the last document. */
-  def maximum(): ScanTerm = ScanTerm(new String(new Array[Byte](0xFF)))
+  def maximum(): ScanTerm = inclusive(max.toArray)
+
+  /** Creates a ScanTerm including `term`. */
+  def inclusive(term: String) = ScanTerm(term.getBytes(StandardCharsets.UTF_8), Option(false))
+
+  /** Creates a ScanTerm including `term`. */
+  def inclusive(term: Array[Byte]) = ScanTerm(term, Option(false))
+
+  /** Creates a ScanTerm excluding `term`. */
+  def exclusive(term: String) = ScanTerm(term.getBytes(StandardCharsets.UTF_8), Option(true))
+
+  /** Creates a ScanTerm excluding `term`. */
+  def exclusive(term: Array[Byte]) = ScanTerm(term, Option(true))
 }
 
 /** Controls what type of scan is performed. */
@@ -76,7 +89,7 @@ case class ScanOptions(
 
   /** Changes the timeout setting used for this operation.
     *
-    * When the operation will timeout.  This will default to `timeoutConfig().kvTimeout()` in the
+    * When the operation will timeout.  This will default to `timeoutConfig().kvScanTimeout()` in the
     * [[com.couchbase.client.scala.env.ClusterEnvironment]].
     *
     * @return a copy of this with the change applied, for chaining.

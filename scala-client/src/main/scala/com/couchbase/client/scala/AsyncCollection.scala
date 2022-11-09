@@ -794,9 +794,9 @@ class AsyncCollection(
       case scan: ScanType.RangeScan =>
         FutureConversions.javaFluxToScalaFlux(
           rangeScanOrchestrator.rangeScan(
-            scan.from.term.getBytes(StandardCharsets.UTF_8),
+            scan.from.term,
             scan.from.exclusive.getOrElse(false),
-            scan.to.term.getBytes(StandardCharsets.UTF_8),
+            scan.to.term,
             scan.to.exclusive.getOrElse(false),
             timeoutActual,
             opts.batchItemLimit

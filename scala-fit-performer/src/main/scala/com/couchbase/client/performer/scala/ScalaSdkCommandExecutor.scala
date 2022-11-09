@@ -251,7 +251,7 @@ object ScalaSdkCommandExecutor {
     }
     else if (st.hasTerm) {
       val stt = st.getTerm
-      ScanTerm(stt.getTerm, if (stt.hasExclusive) Some(stt.getExclusive) else None)
+      ScanTerm(stt.getTerm.getBytes(StandardCharsets.UTF_8), if (stt.hasExclusive) Some(stt.getExclusive) else None)
     }
     else throw new UnsupportedOperationException("Unknown scan term")
   }
