@@ -38,6 +38,7 @@ public class HorizontalScalingThread extends Thread {
     private final PerHorizontalScaling per;
     AtomicInteger operationsSuccessful = new AtomicInteger(0);
     AtomicInteger operationsFailed = new AtomicInteger(0);
+    AtomicInteger operationsUnknown = new AtomicInteger(0);
 
     public HorizontalScalingThread(PerHorizontalScaling per,
                                    SdkCommandExecutor sdkCommandExecutor,
@@ -81,10 +82,12 @@ public class HorizontalScalingThread extends Thread {
 
             per.resultsStream().enqueue(result);
             if (result.hasSdk()) {
-                if (result.getSdk().getSuccess()) {
+                if (result.getSdk().hasSuccess() && result.getSdk().getSuccess()) {
                     operationsSuccessful.incrementAndGet();
-                } else {
+                } else if (result.getSdk().hasException()) {
                     operationsFailed.incrementAndGet();
+                } else{
+                    operationsUnknown.incrementAndGet();
                 }
             }
         }
@@ -152,7 +155,7 @@ public class HorizontalScalingThread extends Thread {
             System.exit(-1);
         }
 
-        logger.info("Finished after {} successful operations and {} failed",
-                operationsSuccessful, operationsFailed);
+        logger.info("Finished after {} successful operations, {} failed, and {} unknown",
+                operationsSuccessful, operationsFailed, operationsUnknown);
     }
 }

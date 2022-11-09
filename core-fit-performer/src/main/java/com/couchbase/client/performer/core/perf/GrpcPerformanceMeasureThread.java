@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Measures the performance of GRPC.
  */
-    public class GrpcPerformanceMeasureThread extends Thread {
+public class GrpcPerformanceMeasureThread extends Thread {
     private static final Logger logger = LoggerFactory.getLogger(GrpcPerformanceMeasureThread.class);
     private final AtomicInteger enqueued = new AtomicInteger();
     private final AtomicInteger ignored = new AtomicInteger();
