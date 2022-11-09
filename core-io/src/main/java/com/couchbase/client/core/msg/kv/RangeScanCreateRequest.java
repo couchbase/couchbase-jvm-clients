@@ -128,7 +128,10 @@ public class RangeScanCreateRequest extends PredeterminedPartitionRequest<RangeS
     } else {
       payload.put("sampling", mapOf(
         "samples", limit,
-        "seed", seed.orElse(0L)
+        "seed", seed
+          // Server drops connection if negative. Force positive by clearing sign bit.
+          .map(it -> it & 0x7fffffffffffffffL)
+          .orElse(0L)
       ));
     }
 

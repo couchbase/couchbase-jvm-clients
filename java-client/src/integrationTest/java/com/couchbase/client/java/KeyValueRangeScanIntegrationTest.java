@@ -134,6 +134,14 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
   }
 
   @Test
+  void samplingWithNegativeSeed() throws Exception {
+    long limit = 3;
+    long seed = -1;
+    long count = collection.scan(ScanType.samplingScan(limit, seed)).count();
+    assertEquals(limit, count);
+  }
+
+  @Test
   void samplingWithLimitAndContent() throws Exception {
     long limit = 3;
     AtomicLong count = new AtomicLong(0);
