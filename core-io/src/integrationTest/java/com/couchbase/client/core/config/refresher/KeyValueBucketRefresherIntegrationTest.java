@@ -60,40 +60,40 @@ class KeyValueBucketRefresherIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
-  void pollsForNewConfigs() {
-    Core core = Core.create(env, authenticator(), seedNodes());
+  void pollsForNewConfigs() throws Exception{
+    try ( Core core = Core.create(env, authenticator(), seedNodes());) {
 
-    ProposedBucketConfigInspectingProvider inspectingProvider =
-      new ProposedBucketConfigInspectingProvider(core.configurationProvider());
-    KeyValueBucketRefresher refresher = new KeyValueBucketRefresher(inspectingProvider, core) {
-      @Override
-      protected Duration pollerInterval() {
-        return Duration.ofMillis(10); // fire quickly to speed up the integration test.
+      ProposedBucketConfigInspectingProvider inspectingProvider =
+        new ProposedBucketConfigInspectingProvider(core.configurationProvider());
+      KeyValueBucketRefresher refresher = new KeyValueBucketRefresher(inspectingProvider, core) {
+        @Override
+        protected Duration pollerInterval() {
+          return Duration.ofMillis(10); // fire quickly to speed up the integration test.
+        }
+      };
+
+      core.openBucket(config().bucketname());
+      refresher.register(config().bucketname()).block();
+      long expected = env.ioConfig().configPollInterval().toNanos();
+
+      Util.waitUntilCondition(() -> {
+        List<ProposedConfigAndTimestamp> configs = new ArrayList<>(inspectingProvider.proposedConfigs());
+        int size = configs.size();
+        if (size < 2) {
+          return false; // we need at least 2 records to compare
+        }
+        return configs.get(size - 1).nanosSince(configs.get(size - 2)) >= expected;
+      });
+
+      refresher.deregister(config().bucketname()).block();
+
+      for (ProposedConfigAndTimestamp configAndTimestamp : inspectingProvider.proposedConfigs()) {
+        assertEquals(config().bucketname(), configAndTimestamp.proposedConfig().bucketName());
+        assertNotNull(configAndTimestamp.proposedConfig());
       }
-    };
 
-    core.openBucket(config().bucketname());
-    refresher.register(config().bucketname()).block();
-    long expected = env.ioConfig().configPollInterval().toNanos();
-
-    Util.waitUntilCondition(() -> {
-      List<ProposedConfigAndTimestamp> configs = new ArrayList<>(inspectingProvider.proposedConfigs());
-      int size = configs.size();
-      if (size < 2) {
-        return false; // we need at least 2 records to compare
-      }
-      return configs.get(size - 1).nanosSince(configs.get(size - 2)) >= expected;
-    });
-
-    refresher.deregister(config().bucketname()).block();
-
-    for (ProposedConfigAndTimestamp configAndTimestamp : inspectingProvider.proposedConfigs()) {
-      assertEquals(config().bucketname(), configAndTimestamp.proposedConfig().bucketName());
-      assertNotNull(configAndTimestamp.proposedConfig());
+      refresher.shutdown().block();
     }
-
-    refresher.shutdown().block();
-    inspectingProvider.shutdown().block();
   }
 
 }

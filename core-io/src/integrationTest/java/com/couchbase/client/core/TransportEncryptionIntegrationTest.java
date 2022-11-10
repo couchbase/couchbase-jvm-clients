@@ -22,6 +22,9 @@ import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import com.couchbase.client.core.diagnostics.ClusterState;
+import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.SeedNode;
@@ -31,6 +34,7 @@ import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.GetResponse;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.InsertResponse;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
@@ -40,11 +44,16 @@ import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.TrustManagerFactory;
 import java.security.KeyStore;
+import java.time.Duration;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -65,6 +74,10 @@ import static org.mockito.Mockito.mock;
 @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES })
 class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
 
+  private static final Set<ServiceType> serviceTypes = new HashSet<>();
+  static {
+    serviceTypes.add(ServiceType.KV);
+  }
   /**
    * Helper method to configure the secure environment based on the integration seed nodes
    * from the target cluster and the security config from each test.
@@ -95,10 +108,8 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     CoreEnvironment env = secureEnvironment(SecurityConfig
       .enableTls(true)
       .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE), null);
-    Core core = Core.create(env, authenticator(), secureSeeds());
-    core.openBucket(config().bucketname());
 
-    waitUntilCondition(() -> core.clusterConfig().hasClusterOrBucketConfig());
+    Core core = createCore(env, authenticator(), secureSeeds());
 
     try {
       runKeyValueOperation(core, env);
@@ -114,21 +125,13 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     if (!config().clusterCerts().isPresent()) {
       fail("Cluster Certificate must be present for this test!");
     }
-
-    CoreEnvironment env = secureEnvironment(SecurityConfig
-      .enableTls(true)
-      .trustCertificates(config().clusterCerts().get()), null);
-    Core core = Core.create(env, authenticator(), secureSeeds());
-    core.openBucket(config().bucketname());
-
-    waitUntilCondition(() -> core.clusterConfig().hasClusterOrBucketConfig());
-
-    try {
-      runKeyValueOperation(core, env);
-    } finally {
-      core.shutdown().block();
-      env.shutdown();
-    }
+    
+    try (
+      CoreEnvironment env = secureEnvironment(
+        SecurityConfig.enableTls(true).trustCertificates(config().clusterCerts().get()), null);
+        Core core = createCore(env, authenticator(), secureSeeds())) {
+          runKeyValueOperation(core, env);
+        }
   }
 
   @Test
@@ -137,20 +140,13 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       fail("Cluster Certificate must be present for this test!");
     }
 
-    CoreEnvironment env = secureEnvironment(SecurityConfig
-      .enableTls(true)
-      .ciphers(Collections.singletonList("TLS_AES_256_GCM_SHA384"))
-      .trustCertificates(config().clusterCerts().get()), null);
-    Core core = Core.create(env, authenticator(), secureSeeds());
-    core.openBucket(config().bucketname());
-
-    waitUntilCondition(() -> core.clusterConfig().hasClusterOrBucketConfig());
-
-    try {
-      runKeyValueOperation(core, env);
-    } finally {
-      core.shutdown().block();
-      env.shutdown();
+    try (
+      CoreEnvironment env = secureEnvironment(
+          SecurityConfig.enableTls(true).ciphers(Collections.singletonList("TLS_AES_256_GCM_SHA384"))
+              .trustCertificates(config().clusterCerts().get()),
+          null);
+      Core core = createCore(env, authenticator(), secureSeeds())) {
+        runKeyValueOperation(core, env);
     }
   }
 
@@ -165,20 +161,12 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     trustStore.load(null, null);
     trustStore.setCertificateEntry("server", config().clusterCerts().get().get(0));
 
-    CoreEnvironment env = secureEnvironment(SecurityConfig
-      .enableTls(true)
-      .trustStore(trustStore), null);
-    Core core = Core.create(env, authenticator(), secureSeeds());
-    core.openBucket(config().bucketname());
-
-    waitUntilCondition(() -> core.clusterConfig().hasClusterOrBucketConfig());
-
-    try {
-      runKeyValueOperation(core, env);
-    } finally {
-      core.shutdown().block();
-      env.shutdown();
+    try (
+      CoreEnvironment env = secureEnvironment(SecurityConfig.enableTls(true).trustStore(trustStore), null);
+      Core core = createCore(env, authenticator(), secureSeeds())) {
+        runKeyValueOperation(core, env);
     }
+
   }
 
   private void runKeyValueOperation(Core core, CoreEnvironment env) throws Exception {
@@ -203,11 +191,6 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   }
 
   @Test
-  void failsIfNoTrustPresent() {
-    assertThrows(InvalidArgumentException.class, () -> secureEnvironment(SecurityConfig.enableTls(true), null));
-  }
-
-  @Test
   @SuppressWarnings("unchecked")
   void failsIfMoreThanOneTrustPresent() {
     assertThrows(InvalidArgumentException.class, () -> secureEnvironment(SecurityConfig
@@ -219,34 +202,38 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  void failsIfWrongCertPresent() {
+  void failsIfWrongCertPresent() throws Exception {
     SimpleEventBus eventBus = new SimpleEventBus(true);
-    CoreEnvironment env = secureEnvironment(SecurityConfig
-      .enableTls(true)
-      .trustCertificates(mock(List.class)), eventBus);
-    Core core = Core.create(env, authenticator(), secureSeeds());
+    try (
+      CoreEnvironment env = secureEnvironment(SecurityConfig.enableTls(true).trustCertificates(mock(List.class)),
+          eventBus);
+      Core core = Core.create(env, authenticator(), secureSeeds())) {
 
-    try {
-      core.openBucket(config().bucketname());
+        core.openBucket(config().bucketname());
 
-      waitUntilCondition(() -> {
-        boolean hasEndpointConnectFailedEvent = false;
-        boolean hasSecureConnectionFailedEvent = false;
-        for (Event event : eventBus.publishedEvents()) {
-          if (event instanceof EndpointConnectionFailedEvent) {
-            hasEndpointConnectFailedEvent = true;
+        waitUntilCondition(() -> {
+          boolean hasEndpointConnectFailedEvent = false;
+          boolean hasSecureConnectionFailedEvent = false;
+          for (Event event : eventBus.publishedEvents()) {
+            if (event instanceof EndpointConnectionFailedEvent) {
+              hasEndpointConnectFailedEvent = true;
+            }
+            if (event instanceof SecureConnectionFailedEvent) {
+              hasSecureConnectionFailedEvent = true;
+            }
           }
-          if (event instanceof SecureConnectionFailedEvent) {
-            hasSecureConnectionFailedEvent = true;
-          }
-        }
 
         return hasEndpointConnectFailedEvent && hasSecureConnectionFailedEvent;
       });
-    } finally {
-      core.shutdown().block();
-      env.shutdown();
-  }
+    }
   }
 
+  private Core createCore(CoreEnvironment env, Authenticator auth, Set<SeedNode> seedNodes) throws ExecutionException, InterruptedException, TimeoutException {
+    Core core = Core.create(env, auth, seedNodes);
+    core.openBucket(config().bucketname());
+    WaitUntilReadyHelper.waitUntilReady(core, serviceTypes, Duration.ofSeconds(10),  ClusterState.ONLINE,
+        Optional.of(config().bucketname())).get(10,
+        TimeUnit.SECONDS);
+    return core;
+  }
 }

@@ -161,7 +161,7 @@ public class KeyValueLocator implements Locator {
     if (ctx.core().configurationProvider().bucketConfigLoadInProgress()) {
       RetryOrchestrator.maybeRetry(ctx, request, RetryReason.BUCKET_OPEN_IN_PROGRESS);
     } else {
-      throw new IllegalStateException("Node not found for request" + request);
+      throw new IllegalStateException("Node not found for request " + request);
     }
   }
 

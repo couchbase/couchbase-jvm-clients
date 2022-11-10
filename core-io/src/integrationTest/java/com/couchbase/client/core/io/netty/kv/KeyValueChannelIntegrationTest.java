@@ -72,13 +72,13 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
    * in the logs by using the simple event bus.
    */
   private static final SimpleEventBus eventBus = new SimpleEventBus(true);
+  private static Core core = null;
 
   @BeforeAll
   static void beforeAll() {
     TestNodeConfig node = config().nodes().get(0);
     env = environment().eventBus(eventBus).build();
-
-    Core core = Core.create(env, authenticator(), seedNodes());
+    core = Core.create(env, authenticator(), seedNodes());
     endpointContext = new EndpointContext(
       core.context(),
       new HostAndPort(node.hostname(), node.ports().get(Services.KV)),
@@ -93,6 +93,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
 
   @AfterAll
   static void afterAll() {
+    core.shutdown().block();
     env.shutdown();
     eventLoopGroup.shutdownGracefully();
   }
