@@ -73,7 +73,7 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
  * Note that unless you are using the core directly, you want to consider the child implementations for each
  * language binding (i.e. the ClusterEnvironment for the java client).
  */
-public class CoreEnvironment {
+public class CoreEnvironment implements AutoCloseable {
 
   private static final String CORE_AGENT_TITLE = "java-core";
   /**
@@ -569,6 +569,11 @@ public class CoreEnvironment {
   @Override
   public String toString() {
     return exportAsString(Context.ExportFormat.STRING);
+  }
+
+  @Override
+  public void close() throws Exception {
+    shutdown();
   }
 
   public static class Builder<SELF extends Builder<SELF>> {

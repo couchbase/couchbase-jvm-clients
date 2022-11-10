@@ -109,7 +109,7 @@ import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
  * @since 2.0.0
  */
 @Stability.Volatile
-public class Core {
+public class Core implements AutoCloseable {
 
   /**
    * Holds the number of max allowed instances initialized at any point in time.
@@ -1037,6 +1037,11 @@ public class Core {
   @Stability.Internal
   public CoreTransactionsContext transactionsContext() {
     return transactionsContext;
+  }
+
+  @Override
+  public void close() throws Exception {
+    shutdown().block();
   }
 
   private static class ResponseMetricIdentifier {
