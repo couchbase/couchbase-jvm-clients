@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.node.NodeConnectedEvent;
+import com.couchbase.client.core.cnc.events.node.NodeCreatedEvent;
 import com.couchbase.client.core.cnc.events.node.NodeDisconnectIgnoredEvent;
 import com.couchbase.client.core.cnc.events.node.NodeDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.node.NodeStateChangedEvent;
@@ -516,6 +517,7 @@ class NodeTest {
 
       List<Event> events = eventBus.publishedEvents();
 
+      assertInstanceOf(NodeCreatedEvent.class, events.remove(0));
       assertInstanceOf(NodeConnectedEvent.class, events.remove(0));
 
       assertInstanceOf(ServiceAddedEvent.class, events.get(0));

@@ -19,6 +19,7 @@ package com.couchbase.client.core.node;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.node.NodeConnectedEvent;
+import com.couchbase.client.core.cnc.events.node.NodeCreatedEvent;
 import com.couchbase.client.core.cnc.events.node.NodeDisconnectIgnoredEvent;
 import com.couchbase.client.core.cnc.events.node.NodeDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.node.NodeStateChangedEvent;
@@ -164,6 +165,9 @@ public class Node implements Stateful<NodeState> {
       (from, to) -> ctx.environment().eventBus().publish(new NodeStateChangedEvent(this.ctx, from, to))
     );
 
+    ctx.environment().eventBus().publish(new NodeCreatedEvent(Duration.ZERO, this.ctx));
+    // Also publish the deprecated version with the misleading name, in case a user is listening for it.
+    //noinspection deprecation
     ctx.environment().eventBus().publish(new NodeConnectedEvent(Duration.ZERO, this.ctx));
   }
 
