@@ -73,8 +73,8 @@ public class TransactionsConcurrencyTest extends JavaIntegrationTest {
         AtomicReference<Throwable> err = new AtomicReference<>();
 
         Runnable r = () -> {
+            Thread t = Thread.currentThread();
             try {
-                Thread t = Thread.currentThread();
                 LOGGER.info("Started thread {} {}", t.getId(), t.getName());
 
                 String docId = UUID.randomUUID().toString();
@@ -102,12 +102,15 @@ public class TransactionsConcurrencyTest extends JavaIntegrationTest {
 
                 assertEquals(content, collection.get(docId).contentAsObject());
             } catch (Throwable e) {
+                LOGGER.warn("Thread {} {} threw {}", t.getId(), t.getName(), e.toString());
                 err.set(e);
             }
         };
         List<Thread> threads = new ArrayList<>();
-        for (int i = 0; i < 1000; i++) {
-            Thread t = new Thread(r);
+        for (int i = 0; i < 200; i++) {
+            LOGGER.info("Creating thread {}", i);
+
+            Thread t = new Thread(r, "thread-" + i);
             t.start();
             threads.add(t);
         }
