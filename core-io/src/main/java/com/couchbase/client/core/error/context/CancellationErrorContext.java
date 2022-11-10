@@ -65,17 +65,23 @@ public class CancellationErrorContext extends ErrorContext {
   }
 
   /**
-   * Returns the wait until ready context if present.
+   * Returns information specific to a cancelled "wait until ready" request.
+   *
+   * @return (nullable) Returns null if no information is available,
+   * or if this error context is not associated with a "wait until ready" request.
    */
   public WaitUntilReadyContext getWaitUntilReadyContext() {
-    return (WaitUntilReadyContext) context;
+    return context instanceof WaitUntilReadyContext ? (WaitUntilReadyContext) context : null;
   }
 
   /**
-   * Returns the context for a RangeScan operation.
+   * Returns information specific to a cancelled "range scan" request.
+   *
+   * @return (nullable) Returns null if no information is available,
+   * or if this error context is not associated with a "range scan" request.
    */
   public RangeScanContext getRangeScanContext() {
-    return (RangeScanContext) context;
+    return context instanceof RangeScanContext ? (RangeScanContext) context : null;
   }
 
 }
