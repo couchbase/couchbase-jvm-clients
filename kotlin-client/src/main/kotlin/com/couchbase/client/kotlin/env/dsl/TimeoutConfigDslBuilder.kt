@@ -17,6 +17,7 @@
 package com.couchbase.client.kotlin.env.dsl
 
 import com.couchbase.client.core.env.TimeoutConfig
+import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import kotlin.properties.Delegates.observable
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
@@ -39,6 +40,15 @@ public class TimeoutConfigDslBuilder(private val wrapped: TimeoutConfig.Builder)
     public var kvDurableTimeout: Duration
             by observable(TimeoutConfig.DEFAULT_KV_DURABLE_TIMEOUT.toKotlinDuration()) { _, _, it ->
                 wrapped.kvDurableTimeout(it.toJavaDuration())
+            }
+
+    /**
+     * @see TimeoutConfig.Builder.kvScanTimeout
+     */
+    @VolatileCouchbaseApi
+    public var kvScanTimeout: Duration
+            by observable(TimeoutConfig.DEFAULT_KV_SCAN_TIMEOUT.toKotlinDuration()) { _, _, it ->
+                wrapped.kvScanTimeout(it.toJavaDuration())
             }
 
     /**

@@ -246,6 +246,9 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
     internal fun CommonOptions.actualKvTimeout(durability: Durability) =
         (timeout ?: timeoutConfig().kvTimeout(durability)).toJavaDuration()
 
+    internal fun CommonOptions.actualKvScanTimeout() =
+        (timeout?.toJavaDuration() ?: timeoutConfig().kvScanTimeout())
+
     internal fun CommonOptions.actualSearchTimeout() =
         timeout?.toJavaDuration() ?: timeoutConfig().searchTimeout()
 

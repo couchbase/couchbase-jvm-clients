@@ -17,6 +17,7 @@
 package com.couchbase.client.kotlin.query
 
 import com.couchbase.client.core.util.Golang
+import com.couchbase.client.kotlin.internal.isEmpty
 import com.couchbase.client.kotlin.kv.MutationState
 import com.couchbase.client.kotlin.query.QueryScanConsistency.Companion.consistentWith
 import com.couchbase.client.kotlin.query.QueryScanConsistency.Companion.notBounded
@@ -83,5 +84,3 @@ public sealed class QueryScanConsistency(
         }
     }
 }
-
-private fun Iterable<*>.isEmpty() = !iterator().hasNext()

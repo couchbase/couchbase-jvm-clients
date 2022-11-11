@@ -16,6 +16,7 @@
 
 package com.couchbase.client.kotlin.search
 
+import com.couchbase.client.kotlin.internal.isEmpty
 import com.couchbase.client.kotlin.kv.MutationState
 import com.couchbase.client.kotlin.search.SearchScanConsistency.Companion.consistentWith
 import com.couchbase.client.kotlin.search.SearchScanConsistency.Companion.notBounded
@@ -68,5 +69,3 @@ public sealed class SearchScanConsistency {
         }
     }
 }
-
-private fun Iterable<*>.isEmpty() = !iterator().hasNext()

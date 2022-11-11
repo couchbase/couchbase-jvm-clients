@@ -23,6 +23,20 @@ import java.nio.charset.StandardCharsets.UTF_8
 
 internal fun ByteArray.toStringUtf8() = toString(UTF_8)
 
+internal fun ByteArray.hexContentToString() =
+    "[${joinToString { byte -> "0x${byte.toHexString()}" }}]"
+
+internal fun Byte.toHexString(pad: Int = 2) = toUByte().toString(16).padStart(pad, '0')
+
+internal fun Long.toSaturatedInt(): Int {
+    return this.coerceIn(
+        minimumValue = Int.MIN_VALUE.toLong(),
+        maximumValue = Int.MAX_VALUE.toLong(),
+    ).toInt()
+}
+
+internal fun Iterable<*>.isEmpty() = !iterator().hasNext()
+
 internal fun <T> T?.toOptional() = java.util.Optional.ofNullable(this)
 
 internal suspend fun Mono<Void>.await() = toFuture().await()
@@ -31,7 +45,7 @@ internal fun MutableMap<String, Any?>.putIfNotEmpty(key: String, value: Collecti
     if (value.isNotEmpty()) put(key, value)
 }
 
-internal fun MutableMap<String, Any?>.putIfNotEmpty(key: String, value: Map<*,*>) {
+internal fun MutableMap<String, Any?>.putIfNotEmpty(key: String, value: Map<*, *>) {
     if (value.isNotEmpty()) put(key, value)
 }
 

@@ -29,6 +29,8 @@ import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.error.context.KeyValueErrorContext.completedRequest
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext
 import com.couchbase.client.core.io.CollectionIdentifier
+import com.couchbase.client.core.kv.CoreRangeScanItem
+import com.couchbase.client.core.kv.RangeScanOrchestrator
 import com.couchbase.client.core.msg.Request
 import com.couchbase.client.core.msg.Response
 import com.couchbase.client.core.msg.ResponseStatus
@@ -41,6 +43,7 @@ import com.couchbase.client.core.msg.kv.GetMetaRequest
 import com.couchbase.client.core.msg.kv.GetRequest
 import com.couchbase.client.core.msg.kv.InsertRequest
 import com.couchbase.client.core.msg.kv.KeyValueRequest
+import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.msg.kv.RemoveRequest
 import com.couchbase.client.core.msg.kv.ReplaceRequest
 import com.couchbase.client.core.msg.kv.SubdocGetRequest
@@ -56,29 +59,39 @@ import com.couchbase.client.kotlin.codec.Transcoder
 import com.couchbase.client.kotlin.codec.TypeRef
 import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.env.ClusterEnvironment
+import com.couchbase.client.kotlin.env.env
 import com.couchbase.client.kotlin.internal.isAnyOf
 import com.couchbase.client.kotlin.internal.toOptional
+import com.couchbase.client.kotlin.internal.toSaturatedInt
+import com.couchbase.client.kotlin.internal.toStringUtf8
 import com.couchbase.client.kotlin.kv.Counter
+import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_ITEM_LIMIT
+import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_SIZE_LIMIT
 import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.kv.ExistsResult
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.GetReplicaResult
 import com.couchbase.client.kotlin.kv.GetResult
+import com.couchbase.client.kotlin.kv.KvScanConsistency
 import com.couchbase.client.kotlin.kv.LookupInResult
 import com.couchbase.client.kotlin.kv.LookupInSpec
 import com.couchbase.client.kotlin.kv.MutateInResult
 import com.couchbase.client.kotlin.kv.MutateInSpec
 import com.couchbase.client.kotlin.kv.MutationResult
+import com.couchbase.client.kotlin.kv.ScanSort
+import com.couchbase.client.kotlin.kv.ScanType
 import com.couchbase.client.kotlin.kv.StoreSemantics
 import com.couchbase.client.kotlin.kv.internal.encodeInSpan
 import com.couchbase.client.kotlin.kv.internal.levelIfSynchronous
 import com.couchbase.client.kotlin.kv.internal.observe
 import com.couchbase.client.kotlin.kv.internal.subdocGet
+import com.couchbase.client.kotlin.util.StorageSize
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
+import reactor.core.publisher.Flux
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 import kotlin.time.toKotlinDuration
@@ -98,6 +111,7 @@ public class Collection internal constructor(
 
     internal val core: Core = scope.bucket.core
     internal val env: ClusterEnvironment = scope.bucket.env
+    internal val rangeScanOrchestrator = RangeScanOrchestrator(core, collectionId)
 
     internal val defaultJsonSerializer: JsonSerializer = env.jsonSerializer
     internal val defaultTranscoder: Transcoder = env.transcoder
@@ -175,6 +189,124 @@ public class Collection internal constructor(
         get(id, common, withExpiry, project)
     } catch (t: DocumentNotFoundException) {
         null
+    }
+
+    /**
+     * Depending on the scan [type], returns from this collection:
+     *
+     * - Every document whose ID starts with a [ScanType.prefix].
+     * - Every document whose ID is within a lexicographic [ScanType.range].
+     * - A random [ScanType.sample] of documents.
+     *
+     * @param type Specifies which documents to include in the scan results.
+     * Defaults to every document in the collection.
+     *
+     * @param sort By default, results are emitted in the order they arrive from each partition.
+     * If you want them sorted by document ID, pass [ScanSort.ASCENDING].
+     *
+     * @param consistency By default, the scan runs immediately, without waiting for
+     * previous KV mutations to be indexed. If the scan results must include
+     * certain mutations, pass [KvScanConsistency.consistentWith].
+     *
+     * @param batchItemLimit Tunes how many documents the server may send in a single round trip.
+     * The value is per partition (vbucket), so multiply by 1024 when calculating memory requirements.
+     * Might affect performance, but does not change the results of this method.
+     *
+     * @param batchSizeLimit Tunes how many bytes the server may send in a single round trip.
+     * The value is per partition (vbucket), so multiply by 1024 when calculating memory requirements.
+     * Might affect performance, but does not change the results of this method.
+     */
+    @VolatileCouchbaseApi
+    public fun scanDocuments(
+        type: ScanType = ScanType.range(),
+        common: CommonOptions = CommonOptions.Default,
+        sort: ScanSort = ScanSort.NONE,
+        consistency: KvScanConsistency = KvScanConsistency.notBounded(),
+        batchItemLimit: Int = DEFAULT_SCAN_BATCH_ITEM_LIMIT,
+        batchSizeLimit: StorageSize = DEFAULT_SCAN_BATCH_SIZE_LIMIT,
+    ): Flow<GetResult> {
+        return scan(type, common, sort, idsOnly = false, consistency, batchItemLimit, batchSizeLimit)
+            .map {
+                GetResult(
+                    id = it.keyBytes().toStringUtf8(),
+                    cas = it.cas(),
+                    content = Content(it.value(), it.flags()),
+                    expiry = it.expiry()?.let { expiryInstant -> Expiry.of(expiryInstant) } ?: Expiry.none(),
+                    defaultTranscoder = defaultTranscoder,
+                )
+            }.asFlow()
+    }
+
+    /**
+     * Like [scanDocuments], but returns only document IDs instead of full documents.
+     */
+    @VolatileCouchbaseApi
+    public fun scanIds(
+        type: ScanType = ScanType.range(),
+        common: CommonOptions = CommonOptions.Default,
+        sort: ScanSort = ScanSort.NONE,
+        consistency: KvScanConsistency = KvScanConsistency.notBounded(),
+        batchItemLimit: Int = DEFAULT_SCAN_BATCH_ITEM_LIMIT,
+        batchSizeLimit: StorageSize = DEFAULT_SCAN_BATCH_SIZE_LIMIT,
+    ): Flow<String> {
+        return scan(type, common, sort, idsOnly = true, consistency, batchItemLimit, batchSizeLimit)
+            .map { it.keyBytes().toStringUtf8() }
+            .asFlow()
+    }
+
+    /**
+     * If in the future kv range scan must return metadata or something other than
+     * a document ID or [GetResult], the evolution path is to mirror [Cluster.query].
+     * That is, make `scan` public and return `Flow<ScanFlowItem>`, where `ScanFlowItem`
+     * is a sealed class with subclasses `ScanRow` and `ScanMetadata`. Add `ScanResult`
+     * to mirror `QueryResult`, along with `Flow<ScanFlowItem>.execute` extensions.
+     *
+     * Not doing all that stuff now because YAGNI.
+     */
+    internal fun scan(
+        type: ScanType = ScanType.range(),
+        common: CommonOptions = CommonOptions.Default,
+        sort: ScanSort = ScanSort.NONE,
+        idsOnly: Boolean = false,
+        consistency: KvScanConsistency = KvScanConsistency.notBounded(),
+        batchItemLimit: Int = DEFAULT_SCAN_BATCH_ITEM_LIMIT,
+        batchSizeLimit: StorageSize = DEFAULT_SCAN_BATCH_SIZE_LIMIT,
+    ): Flux<CoreRangeScanItem> {
+
+        val batchByteLimit = batchSizeLimit.inBytes.toSaturatedInt()
+
+        val timeout = with(core.env) { common.actualKvScanTimeout() }
+
+        val consistentWith = mutableMapOf<Short, MutationToken>()
+        consistency.mutationState?.forEach { token -> consistentWith[token.partitionID()] = token }
+
+        return when (type) {
+            is ScanType.Sample -> rangeScanOrchestrator.samplingScan(
+                type.limit,
+                type.seed.toOptional(),
+                timeout,
+                batchItemLimit,
+                batchByteLimit,
+                idsOnly,
+                sort.toCore(),
+                common.parentSpan.toOptional(),
+                consistentWith,
+            )
+
+            is ScanType.Range -> rangeScanOrchestrator.rangeScan(
+                type.from.term,
+                type.from.exclusive,
+                type.to.term,
+                type.to.exclusive,
+                timeout,
+                batchItemLimit,
+                batchByteLimit,
+                idsOnly,
+                sort.toCore(),
+                common.parentSpan.toOptional(),
+                consistentWith,
+            )
+        }
     }
 
     /**
