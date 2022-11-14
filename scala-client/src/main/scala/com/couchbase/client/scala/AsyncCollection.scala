@@ -788,7 +788,7 @@ class AsyncCollection(
       case _        =>
     }
 
-    val withoutContent = opts.withoutContent.getOrElse(false)
+    val idsOnly = opts.idsOnly.getOrElse(false)
 
     val flux = scanType match {
       case scan: ScanType.RangeScan =>
@@ -803,7 +803,7 @@ class AsyncCollection(
               .getOrElse(RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_ITEM_LIMIT),
             opts.batchByteLimit
               .getOrElse(RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT),
-            opts.withoutContent.getOrElse(false),
+            opts.idsOnly.getOrElse(false),
             sortCore,
             opts.parentSpan.asJava,
             consistencyTokens
@@ -820,7 +820,7 @@ class AsyncCollection(
               timeoutActual,
               opts.batchItemLimit.getOrElse(0),
               opts.batchByteLimit.getOrElse(0),
-              opts.withoutContent.getOrElse(false),
+              opts.idsOnly.getOrElse(false),
               sortCore,
               opts.parentSpan.asJava,
               consistencyTokens
@@ -831,7 +831,7 @@ class AsyncCollection(
 
     flux.map(
       item =>
-        if (withoutContent) {
+        if (idsOnly) {
           ScanResult(
             item.key(),
             None,

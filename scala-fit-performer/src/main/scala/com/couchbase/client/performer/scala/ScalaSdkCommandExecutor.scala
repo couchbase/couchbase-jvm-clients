@@ -390,7 +390,7 @@ object ScalaSdkCommandExecutor {
       val opts = request.getOptions
       var out = ScanOptions()
 
-      if (opts.hasWithoutContent) out = out.withoutContent(opts.getWithoutContent)
+      if (opts.hasWithoutContent) out = out.idsOnly(opts.getWithoutContent)
       if (opts.hasConsistentWith) out = out.consistentWith(convertMutationState(opts.getConsistentWith))
       if (opts.hasSort) out = out.scanSort(if (opts.getSort == com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_NONE) ScanSort.None
       else if (opts.getSort == com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_ASCENDING) ScanSort.Ascending

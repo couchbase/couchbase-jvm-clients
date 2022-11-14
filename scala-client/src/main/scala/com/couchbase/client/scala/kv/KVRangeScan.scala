@@ -80,7 +80,7 @@ case class ScanOptions(
     private[scala] val parentSpan: Option[RequestSpan] = None,
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
     private[scala] val transcoder: Option[Transcoder] = None,
-    private[scala] val withoutContent: Option[Boolean] = None,
+    private[scala] val idsOnly: Option[Boolean] = None,
     private[scala] val consistentWith: Option[MutationState] = None,
     private[scala] val scanSort: Option[ScanSort] = None,
     private[scala] val batchByteLimit: Option[Int] = None,
@@ -148,8 +148,8 @@ case class ScanOptions(
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  def withoutContent(value: Boolean): ScanOptions = {
-    copy(withoutContent = Some(value))
+  def idsOnly(value: Boolean): ScanOptions = {
+    copy(idsOnly = Some(value))
   }
 
   /** The KV range scan will wait until this mutation has been consistently applied.
@@ -193,8 +193,8 @@ case class ScanOptions(
   *
   * @param id         the unique identifier of the document
   * @param cas        the document's CAS value at the time of the lookup.
-  *                   Will not be present if the scan was performed with `withoutContent` set.
-  * @param expiryTime the document's expiration time, if it was fetched without the `withoutContent` flag set.  If that flag
+  *                   Will not be present if the scan was performed with `idsOnly` set.
+  * @param expiryTime the document's expiration time, if it was fetched without the `idsOnly` flag set.  If that flag
   *                   was not set, this will be None.  The time is the point in time when the document expires.
   *
   * @define SupportedTypes this can be of any type for which an implicit
@@ -211,7 +211,7 @@ case class ScanResult(
     transcoder: Transcoder
 ) {
 
-  /** If the scan was initiated without the `withoutContent` flag set then this will contain the
+  /** If the scan was initiated without the `idsOnly` flag set then this will contain the
     * document's expiration value.  Otherwise it will be None.
     *
     * The time is expressed as a duration from the start of 'epoch time' until when the document expires.
@@ -236,7 +236,7 @@ case class ScanResult(
       case _ =>
         Failure(
           new InvalidArgumentException(
-            "The content cannot be fetched as the scan was initiated with the 'withoutContent' flag set",
+            "The content cannot be fetched as the scan was initiated with the 'idsOnly' flag set",
             null,
             null
           )
