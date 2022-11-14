@@ -77,7 +77,8 @@ class DnsSrvTest {
   @Test
   void bootstrapFromDnsSrv() throws Exception {
     try {
-      String demoService = "_xmpp-server._tcp.gmail.com";
+      // Any public well-known DNS SRV record suffices here
+      String demoService = "_x-puppet._tcp.dnscheck.co.";
       String publicNameServer = "8.8.8.8"; //google's public DNS
       List<String> strings = DnsSrv.fromDnsSrv(demoService, true, false, publicNameServer);
       assertTrue(strings.size() > 0);
