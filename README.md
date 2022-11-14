@@ -71,6 +71,16 @@ You can test like this:
 $ ./mvnw clean test -fae
 ```
 
+#### Testing with FIT
+(This section is for internal consumption for Couchbase developers.)
+
+Increasingly the SDK is tested internally with Couchbase's FIT suite.  
+Each SDK has its own FIT 'performer' - java-fit-performer, scala-fit-performer and kotlin-fit-performer.
+They are not included in the build by default as they require a) JDK 17 and b) the fit-grpc library (built separately).
+
+To use a performer, uncomment the lines in the top-level pom.xml after 'Uncomment next lines to include the FIT performers', and reload the Maven config.
+Then run one of the performers in an IDE.
+
 ### Branches & Release Trains
 
 Since this monorepo houses different versions of different artifacts, release train names have been chosen
