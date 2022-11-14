@@ -70,7 +70,7 @@ pipeline {
                     installJDKIfNeeded(ORACLE_JDK, ORACLE_JDK_8)
 
                     dir('couchbase-jvm-clients') {
-                        checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
+                        doCheckout()
                         // By default Java and Scala use mock for testing
                         shWithEcho("mvn --fail-at-end clean test")
 
@@ -462,7 +462,7 @@ pipeline {
                     // qe-grav2-amzn2 doesn't have maven
                     shWithEcho("cbdep install -d deps maven 3.5.2-cb6")
                     dir('couchbase-jvm-clients') {
-                        checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
+                        doCheckout()
                         // Advice from builds team: cbdyncluster cannot be contacted from qe-grav2-amzn2, so testing
                         // against mocks only for now
                         script { testAgainstMock() }
@@ -492,7 +492,7 @@ pipeline {
                     cleanupWorkspace()
                     installJDKIfNeeded(OPENJDK, OPENJDK_11_M1)
                     dir('couchbase-jvm-clients') {
-                        checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
+                        doCheckout()
                         // Mock testing only, with native IO disabled - check JVMCBC-942 for details
                         script { testAgainstMock(true) }
                     }
@@ -521,7 +521,7 @@ pipeline {
                     cleanupWorkspace()
                     installJDKIfNeeded(OPENJDK, OPENJDK_17)
                     dir('couchbase-jvm-clients') {
-                        checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
+                        doCheckout()
                         // Cbdyn not available on this machine
                         script {
                             shWithEcho("make deps-only")
@@ -595,7 +595,7 @@ void test(Map args=[:],
         installJDKIfNeeded(jdk, jdkVersion)
 
         dir('couchbase-jvm-clients') {
-            checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
+            doCheckout()
             script { testAgainstServer(serverVersion, QUICK_TEST_MODE, includeAnalytics, includeEventing, enableDevelopPreview, ceMode, multiCerts, serverlessMode) }
             shWithEcho("make deps-only")
             shWithEcho("mvn clean install -Dmaven.test.skip --batch-mode")
@@ -613,10 +613,20 @@ void buildScala(String jdk,
         installJDKIfNeeded(jdk, jdkVersion)
 
         dir('couchbase-jvm-clients') {
-            checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
+            doCheckout()
             shWithEcho("make deps-only")
             shWithEcho("mvn -Dmaven.test.skip --batch-mode -Dscala.compat.version=${scalaCompatVersion} -Dscala.compat.library.version=${scalaLibraryVersion} clean compile")
         }
+    }
+}
+
+void doCheckout() {
+    checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
+
+    if (REFSPEC != '') {
+        echo 'Applying REFSPEC'
+        checkout([$class: 'GitSCM', branches: [[name: "FETCH_HEAD"]], userRemoteConfigs: [[refspec: "$REFSPEC", url: "https://review.couchbase.org/couchbase-jvm-clients"]]])
+        sh(script: "git log -n 2")
     }
 }
 
