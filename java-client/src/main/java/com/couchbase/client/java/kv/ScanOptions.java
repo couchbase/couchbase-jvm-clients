@@ -37,7 +37,7 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
     return new ScanOptions();
   }
 
-  private boolean withoutContent = false;
+  private boolean idsOnly = false;
   private ScanSort sort = ScanSort.NONE;
 
   /**
@@ -64,11 +64,11 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
   /**
    * If set to true, the content of the document is not included in the results.
    *
-   * @param withoutContent if the content of the document will be included, false by default.
+   * @param idsOnly True means document content and metadata are excluded from result; default is false.
    * @return the {@link ScanOptions} to allow method chaining.
    */
-  public ScanOptions withoutContent(final boolean withoutContent) {
-    this.withoutContent = withoutContent;
+  public ScanOptions idsOnly(final boolean idsOnly) {
+    this.idsOnly = idsOnly;
     return this;
   }
 
@@ -123,7 +123,7 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
    * @return the {@link ScanOptions} to allow method chaining.
    */
   public ScanOptions batchByteLimit(final int batchByteLimit) {
-    if (batchItemLimit < 0) {
+    if (batchByteLimit < 0) {
       throw InvalidArgumentException.fromMessage("The batchByteLimit must not be smaller than 0");
     }
     this.batchByteLimit = batchByteLimit;
@@ -164,8 +164,8 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
   @Stability.Internal
   public class Built extends BuiltCommonOptions {
 
-    public boolean withoutContent() {
-      return withoutContent;
+    public boolean idsOnly() {
+      return idsOnly;
     }
 
     public ScanSort sort() {

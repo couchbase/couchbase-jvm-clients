@@ -94,21 +94,21 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
     collection.scan(ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.maximum())).forEach(item -> {
       count.incrementAndGet();
       assertTrue(item.contentAsBytes().length > 0);
-      assertFalse(item.withoutContent());
+      assertFalse(item.idOnly());
     });
     assertTrue(count.get() >= DOC_IDS.size());
   }
 
   @Test
-  void fullRangeScanOnCollectionWithoutContent() {
+  void fullRangeScanOnCollectionIdsOnly() {
     AtomicLong count = new AtomicLong(0);
     collection.scan(
       ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.maximum()),
-      scanOptions().withoutContent(true)
+      scanOptions().idsOnly(true)
     ).forEach(item -> {
       count.incrementAndGet();
-      assertTrue(item.withoutContent());
-      assertEquals(0, item.contentAsBytes().length);
+      assertTrue(item.idOnly());
+      assertThrows(UnsupportedOperationException.class, item::contentAsBytes);
     });
 
     assertTrue(count.get() >= DOC_IDS.size());
@@ -150,19 +150,19 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
     collection.scan(ScanType.samplingScan(limit)).forEach(item -> {
       count.incrementAndGet();
       assertTrue(item.contentAsBytes().length > 0);
-      assertFalse(item.withoutContent());
+      assertFalse(item.idOnly());
     });
     assertEquals(limit, count.get());
   }
 
   @Test
-  void samplingWithLimitWithoutContent() {
+  void samplingWithLimitIdsOnly() {
     long limit = 3;
     AtomicLong count = new AtomicLong(0);
-    collection.scan(ScanType.samplingScan(limit), scanOptions().withoutContent(true)).forEach(item -> {
+    collection.scan(ScanType.samplingScan(limit), scanOptions().idsOnly(true)).forEach(item -> {
       count.incrementAndGet();
-      assertEquals(0, item.contentAsBytes().length);
-      assertTrue(item.withoutContent());
+      assertThrows(UnsupportedOperationException.class, item::contentAsBytes);
+      assertTrue(item.idOnly());
     });
     assertEquals(limit, count.get());
   }

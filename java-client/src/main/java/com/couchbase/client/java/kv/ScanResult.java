@@ -69,7 +69,9 @@ public class ScanResult {
   private final Transcoder transcoder;
 
   /**
-   * True if this result is id only.
+   * True if this result contains only a document ID.
+   * <p>
+   * If true, any attempt to get the document content or metadata will fail.
    */
   private final boolean idOnly;
 
@@ -100,7 +102,14 @@ public class ScanResult {
     return id;
   }
 
-  public boolean withoutContent() {
+  /**
+   * Returns true if this result came from a scan where {@link ScanOptions#idsOnly(boolean)}
+   * was set to true.
+   * <p>
+   * If true, attempting to access the document content or metadata will throw
+   * {@link UnsupportedOperationException}.
+   */
+  public boolean idOnly() {
     return idOnly;
   }
 
@@ -113,8 +122,12 @@ public class ScanResult {
    * If document on the server has been modified in the meantime the SDK will raise a {@link CasMismatchException}. In
    * this case the caller is expected to re-do the whole "fetch-modify-update" cycle again. Please refer to the
    * SDK documentation for more information on CAS mismatches and subsequent retries.
+   *
+   * @throws UnsupportedOperationException if this result came from a scan
+   * where {@link ScanOptions#idsOnly(boolean)} was set to true. See {@link #idOnly()}.
    */
   public long cas() {
+    requireBody();
     return cas;
   }
 
@@ -122,16 +135,19 @@ public class ScanResult {
    * If the document has an expiry, returns the point in time when the loaded
    * document expires.
    * <p>
-   * NOTE: This method always returns an empty Optional unless
-   * the Get request was made using {@link GetOptions#withExpiry(boolean)}
-   * set to true.
+   * @throws UnsupportedOperationException if this result came from a scan
+   * where {@link ScanOptions#idsOnly(boolean)} was set to true. See {@link #idOnly()}.
    */
   public Optional<Instant> expiryTime() {
+    requireBody();
     return expiry;
   }
 
   /**
    * Decodes the content of the document into a {@link JsonObject}.
+   *
+   * @throws UnsupportedOperationException if this result came from a scan
+   * where {@link ScanOptions#idsOnly(boolean)} was set to true. See {@link #idOnly()}.
    */
   public JsonObject contentAsObject() {
     return contentAs(JsonObject.class);
@@ -139,6 +155,9 @@ public class ScanResult {
 
   /**
    * Decodes the content of the document into a {@link JsonArray}.
+   *
+   * @throws UnsupportedOperationException if this result came from a scan
+   * where {@link ScanOptions#idsOnly(boolean)} was set to true. See {@link #idOnly()}.
    */
   public JsonArray contentAsArray() {
     return contentAs(JsonArray.class);
@@ -148,11 +167,11 @@ public class ScanResult {
    * Decodes the content of the document into an instance of the target class.
    *
    * @param target the target class to decode the encoded content into.
+   * @throws UnsupportedOperationException if this result came from a scan
+   * where {@link ScanOptions#idsOnly(boolean)} was set to true. See {@link #idOnly()}.
    */
   public <T> T contentAs(final Class<T> target) {
-    if (idOnly) {
-      throw new UnsupportedOperationException("This Scan has been configured withoutContent");
-    }
+    requireBody();
     return transcoder.decode(target, content, flags);
   }
 
@@ -164,11 +183,11 @@ public class ScanResult {
    * </pre>
    *
    * @param target the type to decode the encoded content into.
+   * @throws UnsupportedOperationException if this result came from a scan
+   * where {@link ScanOptions#idsOnly(boolean)} was set to true. See {@link #idOnly()}.
    */
   public <T> T contentAs(final TypeRef<T> target) {
-    if (idOnly) {
-      throw new UnsupportedOperationException("This Scan has been configured withoutContent");
-    }
+    requireBody();
     return transcoder.decode(target, content, flags);
   }
 
@@ -176,9 +195,18 @@ public class ScanResult {
    * Returns the raw bytes of the document content.
    *
    * @return the document content as a byte array
+   * @throws UnsupportedOperationException if this result came from a scan
+   * where {@link ScanOptions#idsOnly(boolean)} was set to true. See {@link #idOnly()}.
    */
   public byte[] contentAsBytes() {
+    requireBody();
     return content;
+  }
+
+  private void requireBody() {
+    if (idOnly) {
+      throw new UnsupportedOperationException("This result came from a scan configured to return only document IDs.");
+    }
   }
 
   @Override

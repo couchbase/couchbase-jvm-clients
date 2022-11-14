@@ -43,15 +43,12 @@ import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.perf.Counters;
 import com.couchbase.client.performer.core.perf.PerRun;
-import com.couchbase.client.performer.core.perf.WorkloadStreamingThread;
 import com.couchbase.client.performer.core.stream.StreamStreamer;
 import com.couchbase.client.performer.core.util.ErrorUtil;
 import com.couchbase.client.protocol.run.Result;
 import com.couchbase.client.protocol.sdk.kv.rangescan.Scan;
 import com.couchbase.client.protocol.shared.*;
 import com.couchbase.client.protocol.shared.Exception;
-import com.couchbase.client.performer.core.stream.Streamer;
-import com.couchbase.client.performer.core.stream.StreamerOwner;
 import com.couchbase.utils.ClusterConnection;
 import com.google.protobuf.ByteString;
 
@@ -192,7 +189,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                     .setId(r.id())
                     .setStreamId(request.getStreamConfig().getStreamId());
 
-            if (!r.withoutContent()) {
+            if (!r.idOnly()) {
                 builder.setCas(r.cas());
                 if (r.expiryTime().isPresent()) {
                     builder.setExpiryTime(r.expiryTime().get().getEpochSecond());
@@ -371,7 +368,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = ScanOptions.scanOptions();
-            if (opts.hasWithoutContent()) out.withoutContent(opts.getWithoutContent());
+            if (opts.hasWithoutContent()) out.idsOnly(opts.getWithoutContent());
             if (opts.hasConsistentWith()) out.consistentWith(convertMutationState(opts.getConsistentWith()));
             if (opts.hasSort()) {
                 out.sort(switch (opts.getSort()) {

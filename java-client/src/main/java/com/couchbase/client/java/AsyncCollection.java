@@ -77,7 +77,6 @@ import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.RangeScan;
 import com.couchbase.client.java.kv.RemoveAccessor;
@@ -106,7 +105,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.StreamSupport;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -1086,6 +1084,7 @@ public class AsyncCollection {
    * @param options a {@link ScanOptions} to customize the behavior of the scan operation.
    * @return the flux stream of converted scan results.
    */
+  @SuppressWarnings("resource")
   Flux<ScanResult> scanRequest(final ScanType scanType, final ScanOptions options) {
     notNull(scanType, "ScanType");
     notNull(options, "Options");
@@ -1106,13 +1105,13 @@ public class AsyncCollection {
     if (scanType instanceof RangeScan) {
       RangeScan rs = (RangeScan) scanType;
       coreScanStream = rangeScanOrchestrator.rangeScan(rs.from().id(), rs.from().exclusive(), rs.to().id(),
-        rs.to().exclusive(), timeout, opts.batchItemLimit(), opts.batchByteLimit(), opts.withoutContent(),
+        rs.to().exclusive(), timeout, opts.batchItemLimit(), opts.batchByteLimit(), opts.idsOnly(),
         opts.sort().intoCore(), opts.parentSpan(), consistencyTokens
       );
     } else if (scanType instanceof SamplingScan) {
       SamplingScan ss = (SamplingScan) scanType;
       coreScanStream = rangeScanOrchestrator.samplingScan(ss.limit(), ss.seed(), timeout, opts.batchItemLimit(),
-        opts.batchByteLimit(), opts.withoutContent(), opts.sort().intoCore(), opts.parentSpan(), consistencyTokens
+        opts.batchByteLimit(), opts.idsOnly(), opts.sort().intoCore(), opts.parentSpan(), consistencyTokens
       );
     } else {
       return Flux.error(InvalidArgumentException.fromMessage("Unsupported ScanType: " + scanType));
@@ -1120,7 +1119,7 @@ public class AsyncCollection {
 
     final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
 
-    return coreScanStream.map(item -> new ScanResult(opts.withoutContent(), item.key(), item.value(), item.flags(),
+    return coreScanStream.map(item -> new ScanResult(opts.idsOnly(), item.key(), item.value(), item.flags(),
       item.cas(), Optional.ofNullable(item.expiry()), transcoder)
     );
   }
