@@ -24,7 +24,6 @@ import com.couchbase.client.test.IgnoreWhen
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.Instant
@@ -61,10 +60,10 @@ internal class ExpiryIntegrationTest : KotlinIntegrationTest() {
     }
 
     @Test
-    fun `GetResult expiry is null when unknown`(): Unit = runBlocking {
+    fun `GetResult expiry is unknown when not requested`(): Unit = runBlocking {
         val id = UUID.randomUUID().toString()
         collection.upsert(id, "foo", expiry = Expiry.of(1.days))
-        assertNull(collection.get(id, withExpiry = false).expiry)
+        assertEquals(Expiry.Unknown, collection.get(id, withExpiry = false).expiry)
     }
 
     @Test
