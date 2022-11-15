@@ -72,17 +72,41 @@ class ViewSpec extends ScalaIntegrationTest {
 
   @Test
   def succeedsWithNoRowsReturned(): Unit = {
-    val viewResult = bucket.viewQuery(DesignDocName, ViewName, ViewOptions().limit(0)).get
-    assert(viewResult.rows.isEmpty)
-    assert(viewResult.metaData.debugAs[JsonObject].isEmpty)
+    Util.waitUntilCondition(() => {
+      try {
+        val viewResult = bucket.viewQuery(DesignDocName, ViewName, ViewOptions().limit(0)).get
+        assert(viewResult.rows.isEmpty)
+        assert(viewResult.metaData.debugAs[JsonObject].isEmpty)
+        true
+      }
+      catch {
+        case _: ViewNotFoundException =>
+          // Intermittently on CI see this error despite previous queries on the same view succeeding.
+          // Presumably hitting different nodes.
+          println("Looping on ViewNotFoundException")
+          false
+      }
+    })
   }
 
   @Test
   def withDebug(): Unit = {
-    val viewResult =
-      bucket.viewQuery(DesignDocName, ViewName, ViewOptions().limit(0).debug(true)).get
-    assert(viewResult.rows.isEmpty)
-    assert(viewResult.metaData.debugAs[JsonObject].isDefined)
+    Util.waitUntilCondition(() => {
+      try {
+        val viewResult =
+          bucket.viewQuery(DesignDocName, ViewName, ViewOptions().limit(0).debug(true)).get
+        assert(viewResult.rows.isEmpty)
+        assert(viewResult.metaData.debugAs[JsonObject].isDefined)
+        true
+      }
+      catch {
+        case _: ViewNotFoundException =>
+          // Intermittently on CI see this error despite previous queries on the same view succeeding.
+          // Presumably hitting different nodes.
+          println("Looping on ViewNotFoundException")
+          false
+      }
+    })
   }
 
   @Test
