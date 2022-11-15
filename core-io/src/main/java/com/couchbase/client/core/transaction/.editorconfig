@@ -1,0 +1,5 @@
+[*.java]
+indent_size = 4
+ij_continuation_indent_size = 8
+ij_java_keep_simple_methods_in_one_line = true
+ij_java_spaces_within_braces = true
