@@ -17,36 +17,26 @@ package com.couchbase.client.scala.manager.bucket
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability.Volatile
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.{DELETE, GET, POST}
-import com.couchbase.client.core.error.{
-  BucketExistsException,
-  BucketNotFoundException,
-  CouchbaseException,
-  InvalidArgumentException
-}
-import com.couchbase.client.core.logging.RedactableArgument.redactMeta
-import com.couchbase.client.core.msg.ResponseStatus
+import com.couchbase.client.core.cnc.RequestSpan
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions
+import com.couchbase.client.core.error.InvalidArgumentException
+import com.couchbase.client.core.manager.CoreBucketManager
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.core.util.UrlQueryStringBuilder
-import com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode
-import com.couchbase.client.scala.durability.Durability.{
-  Disabled,
-  Majority,
-  MajorityAndPersistToActive,
-  PersistToMajority
-}
-import com.couchbase.client.scala.manager.ManagerUtil
-import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral, Memcached}
+import com.couchbase.client.scala.durability.Durability
+import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral}
 import com.couchbase.client.scala.manager.bucket.EjectionMethod.{
   FullEviction,
   NoEviction,
   NotRecentlyUsed,
   ValueOnly
 }
+import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager.{toCommonOptions, toMap}
 import com.couchbase.client.scala.util.DurationConversions._
+import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.{SFlux, SMono}
 
-import java.nio.charset.StandardCharsets
+import java.util.Optional
+import java.{time, util}
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
@@ -55,57 +45,148 @@ class ReactiveBucketManager(core: Core) {
   private[scala] val defaultManagerTimeout =
     core.context().environment().timeoutConfig().managementTimeout()
   private[scala] val defaultRetryStrategy = core.context().environment().retryStrategy()
-
-  private def pathForBuckets = "/pools/default/buckets/"
-
-  private def pathForBucket(bucketName: String) = pathForBuckets + urlEncode(bucketName)
-
-  private def pathForBucketFlush(bucketName: String) = {
-    "/pools/default/buckets/" + urlEncode(bucketName) + "/controller/doFlush"
-  }
+  private[scala] val coreBucketManager    = new CoreBucketManager(core)
 
   def create(
       settings: CreateBucketSettings,
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): SMono[Unit] = {
-    createUpdateBucketShared(settings, pathForBuckets, timeout, retryStrategy, update = false)
-  }
-
-  private def createUpdateBucketShared(
-      settings: CreateBucketSettings,
-      path: String,
-      timeout: Duration,
-      retryStrategy: RetryStrategy,
-      update: Boolean
-  ): SMono[Unit] = {
-    checkValidEjectionMethod(settings) match {
-      case Success(_) =>
-        val params = convertSettingsToParams(settings, update)
-
-        ManagerUtil
-          .sendRequest(core, POST, path, params, timeout, retryStrategy)
-          .flatMap(response => {
-            if ((response.status == ResponseStatus.INVALID_ARGS) && response.content != null) {
-              val content = new String(response.content, StandardCharsets.UTF_8)
-              if (content.contains("Bucket with given name already exists")) {
-                SMono.error(BucketExistsException.forBucket(settings.name))
-              } else {
-                SMono.error(new CouchbaseException(content))
-              }
-            } else {
-              ManagerUtil
-                .checkStatus(response, "create bucket [" + redactMeta(settings) + "]") match {
-                case Failure(err) => SMono.error(err)
-                case _            => SMono.just(())
-              }
-            }
-          })
+    toMap(settings) match {
+      case Success(params) =>
+        FutureConversions
+          .javaCFToScalaMono(
+            coreBucketManager.createBucket(params, toCommonOptions(timeout, retryStrategy))
+          )
+          .`then`()
       case Failure(err) => SMono.error(err)
     }
   }
 
-  private def checkValidEjectionMethod(settings: CreateBucketSettings): Try[Unit] = {
+  def updateBucket(
+      settings: CreateBucketSettings,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
+    toMap(settings) match {
+      case Success(params) =>
+        FutureConversions
+          .javaCFToScalaMono(
+            coreBucketManager.updateBucket(params, toCommonOptions(timeout, retryStrategy))
+          )
+          .`then`()
+      case Failure(err) => SMono.error(err)
+    }
+  }
+
+  def dropBucket(
+      bucketName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
+    FutureConversions
+      .javaCFToScalaMono(
+        coreBucketManager.dropBucket(bucketName, toCommonOptions(timeout, retryStrategy))
+      )
+      .`then`()
+  }
+
+  def getBucket(
+      bucketName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[BucketSettings] = {
+    FutureConversions
+      .javaCFToScalaMono(
+        coreBucketManager.getBucket(bucketName, toCommonOptions(timeout, retryStrategy))
+      )
+      .map(response => {
+        BucketSettings.parseFrom(response)
+      })
+  }
+
+  def getAllBuckets(
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SFlux[BucketSettings] = {
+    import scala.jdk.CollectionConverters._
+
+    FutureConversions
+      .javaCFToScalaMono(coreBucketManager.getAllBuckets(toCommonOptions(timeout, retryStrategy)))
+      .flatMapMany(response => SFlux.fromIterable(response.asScala))
+      .map(response => {
+        BucketSettings.parseFrom(response._2)
+      })
+  }
+
+  def flushBucket(
+      bucketName: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
+    FutureConversions
+      .javaCFToScalaMono(
+        coreBucketManager.flushBucket(bucketName, toCommonOptions(timeout, retryStrategy))
+      )
+      .`then`()
+  }
+}
+
+object ReactiveBucketManager {
+  private[scala] def toMap(settings: CreateBucketSettings): Try[util.HashMap[String, String]] = {
+    checkValidEjectionMethod(settings)
+      .map(_ => {
+        val params = new java.util.HashMap[String, String]
+        params.put("ramQuotaMB", String.valueOf(settings.ramQuotaMB))
+        if (!settings.bucketType.contains(BucketType.Memcached)) {
+          // "The replica number must be specified and must be a non-negative integer."
+          params.put("replicaNumber", String.valueOf(settings.numReplicas.getOrElse(1)))
+        }
+        settings.flushEnabled.foreach(
+          fe => params.put("flushEnabled", String.valueOf(if (fe) 1 else 0))
+        )
+        // Do not send if it's been left at default, else will get an error on CE
+        settings.maxTTL.foreach(maxTTL => params.put("maxTTL", String.valueOf(maxTTL)))
+        settings.ejectionMethod.foreach(em => params.put("evictionPolicy", em.alias))
+        settings.compressionMode.foreach(cm => params.put("compressionMode", cm.alias))
+        settings.minimumDurabilityLevel match {
+          case Some(Durability.Majority) => params.put("durabilityMinLevel", "majority")
+          case Some(Durability.MajorityAndPersistToActive) =>
+            params.put("durabilityMinLevel", "majorityAndPersistActive")
+          case Some(Durability.PersistToMajority) =>
+            params.put("durabilityMinLevel", "persistToMajority")
+          case _ =>
+        }
+        settings.storageBackend match {
+          case Some(StorageBackend.Couchstore) => params.put("storageBackend", "couchstore")
+          case Some(StorageBackend.Magma)      => params.put("storageBackend", "magma")
+          case None                            =>
+        }
+        params.put("name", settings.name)
+        settings.bucketType.foreach(bt => {
+          params.put("bucketType", bt.alias)
+          if (bt != BucketType.Ephemeral && settings.replicaIndexes.isDefined) {
+            params.put("replicaIndex", String.valueOf(if (settings.replicaIndexes.get) 1 else 0))
+          }
+        })
+        //    if (settings.bucketType != BucketType.Ephemeral) {
+        //
+        //    }
+        params
+      })
+  }
+
+  private[scala] def toCommonOptions(to: Duration, rs: RetryStrategy): CoreCommonOptions = {
+    new CoreCommonOptions {
+      override def timeout(): Optional[time.Duration] = Optional.of(to)
+
+      override def retryStrategy(): Optional[RetryStrategy] = Optional.of(rs)
+
+      override def parentSpan(): Optional[RequestSpan] = Optional.empty()
+    }
+  }
+
+  private[scala] def checkValidEjectionMethod(settings: CreateBucketSettings): Try[Unit] = {
     val validEjectionType = settings.ejectionMethod match {
       case Some(FullEviction) | Some(ValueOnly) =>
         settings.bucketType match {
@@ -132,146 +213,5 @@ class ReactiveBucketManager(core: Core) {
     } else {
       Success(())
     }
-  }
-
-  def updateBucket(
-      settings: CreateBucketSettings,
-      timeout: Duration = defaultManagerTimeout,
-      retryStrategy: RetryStrategy = defaultRetryStrategy
-  ): SMono[Unit] = {
-    checkValidEjectionMethod(settings) match {
-      case Success(_) =>
-        getAllBuckets(timeout, retryStrategy)
-          .collectSeq()
-          .map(buckets => buckets.exists(_.name == settings.name))
-          .flatMap(bucketExists => {
-            createUpdateBucketShared(
-              settings,
-              pathForBucket(settings.name),
-              timeout,
-              retryStrategy,
-              bucketExists
-            )
-          })
-
-      case Failure(err) => SMono.error(err)
-    }
-  }
-
-  private def convertSettingsToParams(settings: CreateBucketSettings, update: Boolean) = {
-    val params = UrlQueryStringBuilder.createForUrlSafeNames
-    params.add("ramQuotaMB", settings.ramQuotaMB)
-    settings.bucketType match {
-      case Some(Memcached) =>
-      case _ =>
-        settings.numReplicas.foreach(v => params.add("replicaNumber", v))
-    }
-    settings.flushEnabled.foreach(v => params.add("flushEnabled", if (v) 1 else 0))
-    settings.maxTTL.foreach(v => params.add("maxTTL", v))
-    settings.ejectionMethod.foreach(v => params.add("evictionPolicy", v.alias))
-    settings.compressionMode.foreach(v => params.add("compressionMode", v.alias))
-
-    settings.minimumDurabilityLevel
-      .filterNot(d => d == Disabled)
-      .map {
-        case Majority                   => "majority"
-        case MajorityAndPersistToActive => "majorityAndPersistActive"
-        case PersistToMajority          => "persistToMajority"
-        case _                          => throw new IllegalStateException("Unknown durability")
-      }
-      .foreach(v => params.add("durabilityMinLevel", v))
-
-    // The following values must not be changed on update
-    if (!update) {
-      params.add("name", settings.name)
-      settings.bucketType.foreach(v => params.add("bucketType", v.alias))
-      settings.conflictResolutionType.foreach(v => params.add("conflictResolutionType", v.alias))
-      settings.bucketType match {
-        case Some(Ephemeral) =>
-        case _ =>
-          settings.replicaIndexes.foreach(v => params.add("replicaIndex", if (v) 1 else 0))
-      }
-      settings.storageBackend match {
-        case Some(StorageBackend.Couchstore) => params.add("storageBackend", "couchstore")
-        case Some(StorageBackend.Magma)      => params.add("storageBackend", "magma")
-        case _                               =>
-      }
-    }
-    params
-  }
-
-  def dropBucket(
-      bucketName: String,
-      timeout: Duration = defaultManagerTimeout,
-      retryStrategy: RetryStrategy = defaultRetryStrategy
-  ): SMono[Unit] = {
-    ManagerUtil
-      .sendRequest(core, DELETE, pathForBucket(bucketName), timeout, retryStrategy)
-      .flatMap(response => {
-        if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.error(BucketNotFoundException.forBucket(bucketName))
-        } else {
-          ManagerUtil.checkStatus(response, "drop bucket [" + redactMeta(bucketName) + "]") match {
-            case Failure(err) => SMono.error(err)
-            case _            => SMono.just(())
-          }
-        }
-      })
-  }
-
-  def getBucket(
-      bucketName: String,
-      timeout: Duration = defaultManagerTimeout,
-      retryStrategy: RetryStrategy = defaultRetryStrategy
-  ): SMono[BucketSettings] = {
-    ManagerUtil
-      .sendRequest(core, GET, pathForBucket(bucketName), timeout, retryStrategy)
-      .flatMap(response => {
-        if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.error(BucketNotFoundException.forBucket(bucketName))
-        } else {
-          ManagerUtil.checkStatus(response, "get bucket [" + redactMeta(bucketName) + "]") match {
-            case Failure(err) => SMono.error(err)
-            case _ =>
-              val bs = BucketSettings.parseFrom(response.content)
-              SMono.just(bs)
-          }
-        }
-      })
-  }
-
-  def getAllBuckets(
-      timeout: Duration = defaultManagerTimeout,
-      retryStrategy: RetryStrategy = defaultRetryStrategy
-  ): SFlux[BucketSettings] = {
-    ManagerUtil
-      .sendRequest(core, GET, pathForBuckets, timeout, retryStrategy)
-      .flatMapMany(response => {
-        ManagerUtil.checkStatus(response, "get all buckets") match {
-          case Failure(err) => SFlux.error(err)
-          case _ =>
-            val bs = BucketSettings.parseSeqFrom(response.content)
-            SFlux.fromIterable(bs)
-        }
-      })
-  }
-
-  def flushBucket(
-      bucketName: String,
-      timeout: Duration = defaultManagerTimeout,
-      retryStrategy: RetryStrategy = defaultRetryStrategy
-  ): SMono[Unit] = {
-    ManagerUtil
-      .sendRequest(core, POST, pathForBucketFlush(bucketName), timeout, retryStrategy)
-      .flatMap(response => {
-        if (response.status == ResponseStatus.NOT_FOUND) {
-          SMono.error(BucketNotFoundException.forBucket(bucketName))
-        } else {
-          ManagerUtil.checkStatus(response, "flush bucket [" + redactMeta(bucketName) + "]") match {
-            case Failure(err) => SMono.error(err)
-            case _            => SMono.just(())
-          }
-        }
-      })
   }
 }

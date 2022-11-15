@@ -296,8 +296,8 @@ case class BucketSettings(
     bucketType: BucketType,
     @upickle.implicits.key("evictionPolicy")
     ejectionMethod: EjectionMethod,
-    maxTTL: Int,
-    compressionMode: CompressionMode,
+    maxTTL: Option[Int],
+    compressionMode: Option[CompressionMode],
     @upickle.implicits.key("durabilityMinLevel")
     minimumDurabilityLevel: Durability,
     @Internal private[scala] val healthy: Boolean,
@@ -312,8 +312,8 @@ case class BucketSettings(
       Some(replicaIndexes),
       Some(bucketType),
       Some(ejectionMethod),
-      Some(maxTTL),
-      Some(compressionMode),
+      maxTTL,
+      compressionMode,
       minimumDurabilityLevel = Some(minimumDurabilityLevel),
       storageBackend = storageBackend
     )
@@ -341,10 +341,10 @@ object BucketSettings {
       }
     }
     // Next two parameters only available post 5.X
-    val maxTTL = Try(json.num("maxTTL")).toOption.getOrElse(0)
+    val maxTTL = Try(json.num("maxTTL")).toOption
     val compressionMode = Try("\"" + json.str("compressionMode") + "\"")
       .map(v => CouchbasePickler.read[CompressionMode](v))
-      .getOrElse(CompressionMode.Off)
+      .toOption
 
     val minimumDurabilityLevel = Try("\"" + json.str("durabilityMinLevel") + "\"")
       .map(v => CouchbasePickler.read[Durability](v))
@@ -370,15 +370,6 @@ object BucketSettings {
       isHealthy,
       storageBackend
     )
-  }
-
-  def parseSeqFrom(raw: Array[Byte]): Seq[BucketSettings] = {
-    val jsonArr = JsonArray.fromJson(new String(raw, StandardCharsets.UTF_8)).get
-    import scala.jdk.CollectionConverters._
-    jsonArr.values.asScala.toSeq.map(v => {
-      val j = v.asInstanceOf[JsonObject]
-      parseFrom(j)
-    })
   }
 
   implicit val rw: CouchbasePickler.ReadWriter[Durability] = CouchbasePickler

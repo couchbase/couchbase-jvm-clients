@@ -82,6 +82,10 @@ private[scala] object FutureConversions {
     SFlux(in)
   }
 
+  def javaCFToScalaMono[T](response: CompletableFuture[T]): SMono[T] = {
+    SMono(JavaMono.fromFuture(response))
+  }
+
   def javaCFToScalaMono[T](
       request: Request[_],
       response: CompletableFuture[T],

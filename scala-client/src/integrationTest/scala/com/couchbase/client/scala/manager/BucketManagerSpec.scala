@@ -36,6 +36,9 @@ import com.couchbase.client.test._
 import org.junit.jupiter.api.Assertions.{assertEquals, assertFalse, assertThrows, assertTrue}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
+import com.couchbase.client.core.error.FeatureNotAvailableException
+import com.couchbase.client.test.Capabilities
+import com.couchbase.client.test.IgnoreWhen
 
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
@@ -130,8 +133,6 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     assert(found.replicaIndexes)
     assert(found.bucketType == BucketType.Couchbase)
     assert(found.ejectionMethod == EjectionMethod.ValueOnly)
-    assert(found.maxTTL == 0)
-    assert(found.compressionMode == CompressionMode.Passive)
     assert(found.minimumDurabilityLevel == Durability.Disabled)
     buckets.dropBucket(name).get
     assertFalse(buckets.getAllBuckets().get.exists(_.name == name))
@@ -139,10 +140,16 @@ class BucketManagerSpec extends ScalaIntegrationTest {
 
   @Test
   @IgnoreWhen(missesCapabilities = Array(Capabilities.BUCKET_MINIMUM_DURABILITY))
-  def createWithMinimumDurabiltiy(): Unit = {
+  def createWithMinimumDurability(): Unit = {
     val name: String = UUID.randomUUID.toString
 
-    buckets.create(CreateBucketSettings(name, 100, minimumDurabilityLevel = Some(Majority)))
+    buckets
+      .create(
+        CreateBucketSettings(name, 100)
+          .minimumDurabilityLevel(Durability.Majority)
+          .numReplicas(0)
+      )
+      .get
     waitUntilHealthy(name)
 
     val bucket = buckets.getBucket(name).get
@@ -180,7 +187,6 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     )
     buckets.create(bucket) match {
       case Failure(_: InvalidArgumentException) =>
-      case _                                    => assert(false)
     }
   }
 
@@ -195,7 +201,6 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     )
     buckets.create(bucket) match {
       case Failure(_: InvalidArgumentException) =>
-      case _                                    => assert(false)
     }
   }
 
@@ -210,7 +215,6 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     )
     buckets.create(bucket) match {
       case Failure(_: InvalidArgumentException) =>
-      case _                                    => assert(false)
     }
   }
 
@@ -333,4 +337,54 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     assertTrue(settings.ramQuotaMB > 0)
   }
 
+  @Test
+  @IgnoreWhen(hasCapabilities = Array(Capabilities.ENTERPRISE_EDITION))
+  def createBucketWithCompressionModeShouldFailOnCE(): Unit = {
+    val name = UUID.randomUUID.toString
+    assertThrows(
+      classOf[FeatureNotAvailableException],
+      () =>
+        buckets.create(CreateBucketSettings(name, 100).compressionMode(CompressionMode.Passive)).get
+    )
+  }
+
+  @Test
+  @IgnoreWhen(hasCapabilities = Array(Capabilities.ENTERPRISE_EDITION))
+  def updateBucketWithCompressionModeShouldFailOnCE(): Unit = {
+    val name = UUID.randomUUID.toString
+    buckets.create(CreateBucketSettings(name, 100)).get
+    val settings = buckets.getBucket(name).get
+    assertThrows(
+      classOf[FeatureNotAvailableException],
+      () =>
+        buckets
+          .updateBucket(
+            settings.copy(compressionMode = Some(CompressionMode.Passive)).toCreateBucketSettings
+          )
+          .get
+    )
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.ENTERPRISE_EDITION))
+  def createBucketWithCompressionModeShouldSucceedOnEE(): Unit = {
+    val name = UUID.randomUUID.toString
+    buckets.create(CreateBucketSettings(name, 100).compressionMode(CompressionMode.Passive)).get
+    val settings = buckets.getBucket(name).get
+    assert(settings.maxTTL.isDefined)
+    assert(settings.compressionMode.isDefined)
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.ENTERPRISE_EDITION))
+  def updateBucketWithCompressionModeShouldSucceedOnEE(): Unit = {
+    val name = UUID.randomUUID.toString
+    buckets.create(CreateBucketSettings(name, 100)).get
+    val settings = buckets.getBucket(name).get
+    buckets
+      .updateBucket(
+        settings.copy(compressionMode = Some(CompressionMode.Passive)).toCreateBucketSettings
+      )
+      .get
+  }
 }
