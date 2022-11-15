@@ -55,6 +55,58 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     cluster.disconnect()
   }
 
+  def waitForScopeToExist(scope: String) = {
+    Util.waitUntilCondition(() => {
+      val result = collections.scopeExists(scope)
+
+      println(s"Waiting for scope ${scope} to exist, result: ${result}")
+
+      result match {
+        case Success(true) => true
+        case _ => false
+      }
+    })
+  }
+
+  def waitForScopeToNotExist(scope: String) = {
+    Util.waitUntilCondition(() => {
+      val result = collections.scopeExists(scope)
+
+      println(s"Waiting for scope ${scope} to not exist, result: ${result}")
+
+      result match {
+        case Success(false) => true
+        case _ => false
+      }
+    })
+  }
+
+  def waitForCollectionToExist(collSpec: CollectionSpec): Unit = {
+    Util.waitUntilCondition(() => {
+      val result = collections.collectionExists(collSpec)
+
+      println(s"Waiting for collection ${collSpec} to exist, result: ${result}")
+
+      result match {
+        case Success(true) => true
+        case _ => false
+      }
+    })
+  }
+
+  def waitForCollectionToNotExist(collSpec: CollectionSpec): Unit = {
+    Util.waitUntilCondition(() => {
+      val result = collections.collectionExists(collSpec)
+
+      println(s"Waiting for collection ${collSpec} to not exist, result: ${result}")
+
+      result match {
+        case Success(false) => true
+        case _ => false
+      }
+    })
+  }
+
   @Test
   def createScope(): Unit = {
     val scope = randomString
@@ -63,7 +115,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
 
     collections.createScope(scope).get
 
-    assert(collections.scopeExists(scope).get)
+    waitForScopeToExist(scope)
   }
 
   @Test
@@ -83,13 +135,15 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     collections.createScope(scope).get
     collections.createCollection(collSpec).get
 
-    assert(collections.collectionExists(collSpec).get)
+    waitForCollectionToExist(collSpec)
   }
 
   @Test
   def createScopeTwice(): Unit = {
     val scope = randomString
     collections.createScope(scope).get
+
+    waitForScopeToExist(scope)
 
     collections.createScope(scope) match {
       case Success(_)                         => assert(false)
@@ -107,6 +161,9 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     collections.createScope(scope).get
     collections.createCollection(collSpec).get
 
+    waitForScopeToExist(scope)
+    waitForCollectionToExist(collSpec)
+
     collections.createCollection(collSpec) match {
       case Success(_)                              => assert(false)
       case Failure(err: CollectionExistsException) =>
@@ -121,7 +178,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     collections.createScope(scope).get
     collections.dropScope(scope).get
 
-    assert(!collections.scopeExists(scope).get)
+    waitForScopeToNotExist(scope)
 
     collections.createScope(scope).get
   }
@@ -134,9 +191,13 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
 
     collections.createScope(scope).get
     collections.createCollection(collSpec).get
+
+    waitForScopeToExist(scope)
+    waitForCollectionToExist(collSpec)
+
     collections.dropCollection(collSpec).get
 
-    assert(!collections.collectionExists(collSpec).get)
+    waitForCollectionToNotExist(collSpec)
 
     collections.createCollection(collSpec).get
   }
