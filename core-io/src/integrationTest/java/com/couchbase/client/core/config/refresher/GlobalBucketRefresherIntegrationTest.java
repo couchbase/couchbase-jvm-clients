@@ -74,7 +74,9 @@ class GlobalBucketRefresherIntegrationTest extends CoreIntegrationTest {
 
     refresher.start().block();
 
-    int failSafety = 10;
+    // Default config poll interval is 2.5 seconds, so give enough time for the two refresh iterations that this test
+    // is looking for.
+    int failSafety = 30;
     while (true) {
       failSafety--;
       Thread.sleep(500);
