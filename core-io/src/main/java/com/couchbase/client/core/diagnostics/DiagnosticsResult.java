@@ -25,6 +25,7 @@ import com.couchbase.client.core.service.ServiceType;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -165,7 +166,7 @@ public class DiagnosticsResult {
         result.put("services", services);
         result.put("sdk", sdk);
         result.put("id", id);
-        result.put("state", clusterState.toString().toLowerCase());
+        result.put("state", clusterState.toString().toLowerCase(Locale.ROOT));
 
         try {
             return Mapper.writer().writeValueAsString(result);

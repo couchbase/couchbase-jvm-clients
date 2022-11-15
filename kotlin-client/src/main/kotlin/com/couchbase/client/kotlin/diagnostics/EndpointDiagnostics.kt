@@ -16,8 +16,10 @@
 
 package com.couchbase.client.kotlin.diagnostics
 
+import com.couchbase.client.core.endpoint.CircuitBreaker
 import com.couchbase.client.core.endpoint.EndpointState
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import kotlin.time.toKotlinDuration
 
 public class EndpointDiagnostics internal constructor(
@@ -32,6 +34,12 @@ public class EndpointDiagnostics internal constructor(
      * The current state of the endpoint.
      */
     public val state: EndpointState = core.state()
+
+    /**
+     * The current state of the endpoint's circuit breaker.
+     */
+    @VolatileCouchbaseApi
+    public val circuitBreakerState: CircuitBreaker.State = core.circuitBreakerState()
 
     /**
      * The local socket identifier as a string.
@@ -61,6 +69,6 @@ public class EndpointDiagnostics internal constructor(
     public val id: String? = core.id().orElse(null)
 
     override fun toString(): String {
-        return "EndpointDiagnostics(type=$type, state=$state, local=$local, remote=$remote, namespace=$namespace, lastActivity=$lastActivity, id=$id)"
+        return "EndpointDiagnostics(type=$type, state=$state, circuitBreakerState=$circuitBreakerState, local=$local, remote=$remote, namespace=$namespace, lastActivity=$lastActivity, id=$id)"
     }
 }

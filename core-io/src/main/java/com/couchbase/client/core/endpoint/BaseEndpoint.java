@@ -438,7 +438,7 @@ public abstract class BaseEndpoint implements Endpoint {
 
   /**
    * Helper method to annotate a ConnectionException with more information in the message body.
-   *
+   * <p>
    * Recent Couchbase Server versions allow forcing TLS connections, so they won't even listen on non-TLS
    * ports. To improve the user experience, a little more information should be printed with the message
    * of a ConnectException.
@@ -478,7 +478,7 @@ public abstract class BaseEndpoint implements Endpoint {
 
     final List<StackTraceElement> elements = new LinkedList<>(Arrays.asList(input.getStackTrace()));
     elements.removeIf(next -> next.getClassName().startsWith("com.couchbase.client.core.deps.io.netty"));
-    input.setStackTrace(elements.toArray(new StackTraceElement[] {}));
+    input.setStackTrace(elements.toArray(new StackTraceElement[]{}));
     trimNettyFromStackTrace(input.getCause());
     return input;
   }
@@ -721,7 +721,7 @@ public abstract class BaseEndpoint implements Endpoint {
   public EndpointDiagnostics diagnostics() {
     String remote = null;
     String local = null;
-    if(channel != null) {
+    if (channel != null) {
       SocketAddress remoteAddr = channel.remoteAddress();
       SocketAddress localAddr = channel.localAddress();
       if (remoteAddr instanceof InetSocketAddress) {
@@ -740,7 +740,7 @@ public abstract class BaseEndpoint implements Endpoint {
 
 
     final Optional<String> id = Optional.ofNullable(channel).map(c -> "0x" + c.id().asShortText());
-    return new EndpointDiagnostics(context().serviceType(), state(), local, remote, context().bucket(),
+    return new EndpointDiagnostics(context().serviceType(), state(), circuitBreaker.state(), local, remote, context().bucket(),
       lastActivity, id, Optional.ofNullable(lastConnectAttemptFailure()));
   }
 

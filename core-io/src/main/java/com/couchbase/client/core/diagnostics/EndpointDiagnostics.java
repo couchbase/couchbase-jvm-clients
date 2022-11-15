@@ -16,15 +16,19 @@
 package com.couchbase.client.core.diagnostics;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.endpoint.CircuitBreaker;
 import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A diagnostic report for an individual endpoint.
@@ -43,6 +47,11 @@ public class EndpointDiagnostics {
      * The current state of the endpoint.
      */
     private final EndpointState state;
+
+    /**
+     * The current state of the endpoint's circuit breaker.
+     */
+    private final CircuitBreaker.State circuitBreakerState;
 
     /**
      * The local socket identifier as a string.
@@ -75,12 +84,18 @@ public class EndpointDiagnostics {
     private final Optional<Throwable> lastConnectAttemptFailure;
 
     @Stability.Internal
-    public EndpointDiagnostics(final ServiceType type, final EndpointState state, final String local,
-                               final String remote, final Optional<String> namespace,
-                               final Optional<Long> lastActivityUs, final Optional<String> id,
+    public EndpointDiagnostics(final ServiceType type,
+                               final EndpointState state,
+                               final CircuitBreaker.State circuitBreakerState,
+                               final String local,
+                               final String remote,
+                               final Optional<String> namespace,
+                               final Optional<Long> lastActivityUs,
+                               final Optional<String> id,
                                final Optional<Throwable> lastConnectAttemptFailure) {
         this.type = type;
         this.state = state;
+        this.circuitBreakerState = requireNonNull(circuitBreakerState);
         this.id = id;
         this.local = local;
         this.remote = remote;
@@ -132,6 +147,14 @@ public class EndpointDiagnostics {
     }
 
     /**
+     * The current state of the endpoint's circuit breaker
+     */
+    @Stability.Volatile
+    public CircuitBreaker.State circuitBreakerState() {
+      return circuitBreakerState;
+    }
+
+    /**
      * The namespace of this endpoint (likely the bucket name if present).
      */
     public Optional<String> namespace() {
@@ -156,7 +179,8 @@ public class EndpointDiagnostics {
         if (local != null) {
             map.put("local", local);
         }
-        map.put("state", state().toString().toLowerCase());
+        map.put("state", state().name().toLowerCase(Locale.ROOT));
+        map.put("circuit_breaker_state", circuitBreakerState().name().toLowerCase(Locale.ROOT));
         lastActivityUs.ifPresent(a -> map.put("last_activity_us", a));
         id.ifPresent(id -> map.put("id", id));
         namespace.ifPresent(n -> map.put("namespace", n));
@@ -169,6 +193,7 @@ public class EndpointDiagnostics {
         return "EndpointDiagnostics{" +
           "type=" + type +
           ", state=" + state +
+          ", circuitBreakerState=" + circuitBreakerState +
           ", local='" + local + '\'' +
           ", remote='" + remote + '\'' +
           ", lastActivityUs=" + lastActivityUs +
@@ -185,6 +210,7 @@ public class EndpointDiagnostics {
         EndpointDiagnostics that = (EndpointDiagnostics) o;
         return type == that.type &&
           state == that.state &&
+          circuitBreakerState == that.circuitBreakerState &&
           Objects.equals(local, that.local) &&
           Objects.equals(remote, that.remote) &&
           Objects.equals(lastActivityUs, that.lastActivityUs) &&
@@ -195,6 +221,6 @@ public class EndpointDiagnostics {
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, state, local, remote, lastActivityUs, id, namespace, lastConnectAttemptFailure);
+        return Objects.hash(type, state, circuitBreakerState, local, remote, lastActivityUs, id, namespace, lastConnectAttemptFailure);
     }
 }
