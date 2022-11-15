@@ -48,7 +48,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                buildScala(OPENJDK, OPENJDK_11, "2.13", "2.13.7")
+                buildScala(OPENJDK, OPENJDK_11, "2.13", "2.13.7", REFSPEC)
             }
         }
 
@@ -70,12 +70,12 @@ pipeline {
                     installJDKIfNeeded(ORACLE_JDK, ORACLE_JDK_8)
 
                     dir('couchbase-jvm-clients') {
-                        doCheckout()
+                        doCheckout(REFSPEC)
                         // By default Java and Scala use mock for testing
-                        shWithEcho("mvn --fail-at-end clean test")
+                        shWithEcho("./mvnw -Dmaven.test.failure.ignore=true clean test")
 
                         // While iterating Jenkins development, this makes it much faster:
-                        // shWithEcho("mvn package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
+                        // shWithEcho("./mvnw package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
                     }
                 }
             }
@@ -105,7 +105,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(OPENJDK, OPENJDK_17, CLUSTER_VERSION_LATEST_STABLE)
+                test(OPENJDK, OPENJDK_17, CLUSTER_VERSION_LATEST_STABLE, REFSPEC)
             }
             post {
                 always {
@@ -126,7 +126,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(CORRETTO, CORRETTO_8, CLUSTER_VERSION_LATEST_STABLE)
+                test(CORRETTO, CORRETTO_8, CLUSTER_VERSION_LATEST_STABLE, REFSPEC)
             }
             post {
                 always {
@@ -147,7 +147,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(CORRETTO, CORRETTO_11, CLUSTER_VERSION_LATEST_STABLE)
+                test(CORRETTO, CORRETTO_11, CLUSTER_VERSION_LATEST_STABLE, REFSPEC)
             }
             post {
                 always {
@@ -168,7 +168,7 @@ pipeline {
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
              steps {
-                test(OPENJDK, OPENJDK_11, CLUSTER_VERSION_LATEST_STABLE)
+                test(OPENJDK, OPENJDK_11, CLUSTER_VERSION_LATEST_STABLE, REFSPEC)
              }
              post {
                  always {
@@ -189,7 +189,7 @@ pipeline {
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
              steps {
-                test(OPENJDK, OPENJDK_8, CLUSTER_VERSION_LATEST_STABLE)
+                test(OPENJDK, OPENJDK_8, CLUSTER_VERSION_LATEST_STABLE, REFSPEC)
              }
              post {
                  always {
@@ -204,26 +204,28 @@ pipeline {
         // No cluster testing for CLUSTER_VERSION_LATEST_STABLE since that is thoroughly tested by JVM tests
         // No cluster testing for non-serverless 7.5, as that is dedicated to serverless
 
-        stage('Cluster testing  (Linux, cbdyncluster 8.0-stable, Oracle JDK 8)') {
-            agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
-            when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "8.0-stable")
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-            }
-        }
+        // Temporarily disabled as MB-54250 is creating a large number of failed tests.
+        // Also "8.0-stable" does not currently work with cbdyncluster.
+//         stage('Cluster testing  (Linux, cbdyncluster 8.0-stable, Oracle JDK 8)') {
+//             agent { label "sdkqe" }
+//             environment {
+//                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+//                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+//             }
+//             when {
+//                 beforeAgent true;
+//                 expression
+//                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+//             }
+//             steps {
+//                 test(ORACLE_JDK, ORACLE_JDK_8, "8.0-stable", REFSPEC)
+//             }
+//             post {
+//                 always {
+//                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+//                 }
+//             }
+//         }
 
         stage('Cluster testing  (Linux, cbdyncluster 7.2-stable, Oracle JDK 8)') {
             agent { label "sdkqe" }
@@ -237,7 +239,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "7.2-stable")
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.2-stable", REFSPEC)
             }
             post {
                 always {
@@ -258,7 +260,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "7.0-stable")
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.0-stable", REFSPEC)
             }
             post {
                 always {
@@ -279,7 +281,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "6.6-stable")
+                test(ORACLE_JDK, ORACLE_JDK_8, "6.6-stable", REFSPEC)
             }
             post {
                 always {
@@ -301,7 +303,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "6.5-release")
+                test(ORACLE_JDK, ORACLE_JDK_8, "6.5-release", REFSPEC)
             }
             post {
                 always {
@@ -323,7 +325,7 @@ pipeline {
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
              steps {
-                 test(ORACLE_JDK, ORACLE_JDK_8, "6.0-release")
+                 test(ORACLE_JDK, ORACLE_JDK_8, "6.0-release", REFSPEC)
              }
              post {
                  always {
@@ -345,7 +347,7 @@ pipeline {
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
              steps {
-                 test(ORACLE_JDK, ORACLE_JDK_8, "5.5-release", includeAnalytics : false)
+                 test(ORACLE_JDK, ORACLE_JDK_8, "5.5-release", includeAnalytics : false, REFSPEC)
              }
              post {
                  always {
@@ -355,26 +357,27 @@ pipeline {
          }
 
         // 7.5 is dedicated to serverless
-        stage('Serverless testing (Linux, cbdyncluster 7.5-stable Serverless mode, Oracle JDK 8)') {
-            agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
-            when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "7.5-stable", includeEventing : true, serverlessMode: true)
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-            }
-        }
+        // Temporarily disabled as MB-54250 is creating a large number of failed tests.
+//         stage('Serverless testing (Linux, cbdyncluster 7.5-stable Serverless mode, Oracle JDK 8)') {
+//             agent { label "sdkqe" }
+//             environment {
+//                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+//                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+//             }
+//             when {
+//                 beforeAgent true;
+//                 expression
+//                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+//             }
+//             steps {
+//                 test(ORACLE_JDK, ORACLE_JDK_8, "7.5-stable", includeEventing : true, serverlessMode: true, REFSPEC)
+//             }
+//             post {
+//                 always {
+//                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+//                 }
+//             }
+//         }
 
         stage("CE testing (Linux, stable, OpenJDK JDK 17)") {
             agent { label "sdkqe" }
@@ -388,7 +391,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(OPENJDK, OPENJDK_17, CLUSTER_VERSION_LATEST_STABLE, ceMode : true)
+                test(OPENJDK, OPENJDK_17, CLUSTER_VERSION_LATEST_STABLE, ceMode : true, REFSPEC)
             }
             post {
                 always {
@@ -410,7 +413,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "7.0.2", ceMode : true)
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.0.2", ceMode : true, REFSPEC)
             }
             post {
                 always {
@@ -433,7 +436,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(OPENJDK, OPENJDK_11_M1, CLUSTER_VERSION_LATEST_STABLE)
+                test(OPENJDK, OPENJDK_11_M1, CLUSTER_VERSION_LATEST_STABLE, REFSPEC)
             }
             post {
                 always {
@@ -462,7 +465,7 @@ pipeline {
                     // qe-grav2-amzn2 doesn't have maven
                     shWithEcho("cbdep install -d deps maven 3.5.2-cb6")
                     dir('couchbase-jvm-clients') {
-                        doCheckout()
+                        doCheckout(REFSPEC)
                         // Advice from builds team: cbdyncluster cannot be contacted from qe-grav2-amzn2, so testing
                         // against mocks only for now
                         script { testAgainstMock() }
@@ -492,7 +495,7 @@ pipeline {
                     cleanupWorkspace()
                     installJDKIfNeeded(OPENJDK, OPENJDK_11_M1)
                     dir('couchbase-jvm-clients') {
-                        doCheckout()
+                        doCheckout(REFSPEC)
                         // Mock testing only, with native IO disabled - check JVMCBC-942 for details
                         script { testAgainstMock(true) }
                     }
@@ -521,7 +524,7 @@ pipeline {
                     cleanupWorkspace()
                     installJDKIfNeeded(OPENJDK, OPENJDK_17)
                     dir('couchbase-jvm-clients') {
-                        doCheckout()
+                        doCheckout(REFSPEC)
                         // Cbdyn not available on this machine
                         script {
                             shWithEcho("make deps-only")
@@ -581,7 +584,8 @@ pipeline {
 void test(Map args=[:],
             String jdk,
             String jdkVersion,
-            String serverVersion) {
+            String serverVersion,
+            String refspec) {
 
     boolean ceMode = args.containsKey("ceMode") ? args.get("ceMode") : false
     boolean includeAnalytics = args.containsKey("includeAnalytics") ? args.get("includeAnalytics") : !ceMode // CE doesn't have analytics
@@ -595,10 +599,8 @@ void test(Map args=[:],
         installJDKIfNeeded(jdk, jdkVersion)
 
         dir('couchbase-jvm-clients') {
-            doCheckout()
+            doCheckout(refspec)
             script { testAgainstServer(serverVersion, QUICK_TEST_MODE, includeAnalytics, includeEventing, enableDevelopPreview, ceMode, multiCerts, serverlessMode) }
-            shWithEcho("make deps-only")
-            shWithEcho("mvn clean install -Dmaven.test.skip --batch-mode")
         }
     }
 }
@@ -607,25 +609,26 @@ void test(Map args=[:],
 void buildScala(String jdk,
                 String jdkVersion,
                 String scalaCompatVersion,
-                String scalaLibraryVersion) {
+                String scalaLibraryVersion,
+                String refspec) {
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
         cleanupWorkspace()
         installJDKIfNeeded(jdk, jdkVersion)
 
         dir('couchbase-jvm-clients') {
-            doCheckout()
+            doCheckout(refspec)
             shWithEcho("make deps-only")
-            shWithEcho("mvn -Dmaven.test.skip --batch-mode -Dscala.compat.version=${scalaCompatVersion} -Dscala.compat.library.version=${scalaLibraryVersion} clean compile")
+            shWithEcho("./mvnw -Dmaven.test.skip --batch-mode -Dscala.compat.version=${scalaCompatVersion} -Dscala.compat.library.version=${scalaLibraryVersion} clean compile")
         }
     }
 }
 
-void doCheckout() {
+void doCheckout(refspec) {
     checkout([$class: 'GitSCM', userRemoteConfigs: [[url: '$REPO']]])
 
-    if (REFSPEC != '') {
+    if (refspec != '' && refspec != null) {
         echo 'Applying REFSPEC'
-        checkout([$class: 'GitSCM', branches: [[name: "FETCH_HEAD"]], userRemoteConfigs: [[refspec: "$REFSPEC", url: "https://review.couchbase.org/couchbase-jvm-clients"]]])
+        checkout([$class: 'GitSCM', branches: [[name: "FETCH_HEAD"]], userRemoteConfigs: [[refspec: "$refspec", url: "https://review.couchbase.org/couchbase-jvm-clients"]]])
         sh(script: "git log -n 2")
     }
 }
@@ -793,13 +796,13 @@ void testAgainstServer(String serverVersion,
 
         // The --batch-mode hides download progress messages, very verbose
         if (!QUICK_TEST_MODE) {
-            shWithEcho("mvn --fail-at-end clean install --batch-mode -Dgroups=!flaky")
+            shWithEcho("./mvnw -Dmaven.test.failure.ignore=true clean install --batch-mode -Dgroups=!flaky")
         } else {
             // This is for iteration during development, skips out some steps
-            shWithEcho("mvn -pl '!scala-client,!scala-implicits' --fail-at-end clean install test --batch-mode")
+            shWithEcho("./mvnw -pl '!scala-client,!scala-implicits' --fail-at-end clean install test --batch-mode")
 
             // Another iteration option, this runs just one test
-            //shWithEcho("mvn package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
+            //shWithEcho("./mvnw package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
         }
 
 
@@ -816,7 +819,7 @@ void testAgainstServer(String serverVersion,
 
 void testAgainstMock(boolean disableNativeIo = false) {
     shWithEcho("make deps-only")
-    shWithEcho("mvn --fail-at-end clean install --batch-mode ${disableNativeIo ? '-Dcom.couchbase.client.core.deps.io.netty.transport.noNative=true' : ''}")
+    shWithEcho("./mvnw -Dmaven.test.failure.ignore=true clean install --batch-mode ${disableNativeIo ? '-Dcom.couchbase.client.core.deps.io.netty.transport.noNative=true' : ''}")
 }
 
 void cleanupWorkspace() {
