@@ -18,6 +18,8 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
+import com.couchbase.client.core.endpoint.CircuitBreaker;
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.DocumentNotFoundException;
@@ -31,6 +33,7 @@ import com.couchbase.client.core.msg.kv.GetResponse;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,12 +41,17 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
+import static com.couchbase.client.core.endpoint.CircuitBreaker.State.CLOSED;
+import static com.couchbase.client.core.endpoint.CircuitBreaker.State.OPEN;
+import static com.couchbase.client.core.util.CbCollections.setOf;
+import static java.util.Collections.emptyList;
+import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Verifies the default behavior of the circuit breaker when enabled.
@@ -75,6 +83,7 @@ class CircuitBreakerIntegrationTest extends JavaIntegrationTest {
     int threshold = collection.environment().ioConfig().kvCircuitBreakerConfig().volumeThreshold();
     for (int i = 0; i < threshold * 3; i++) {
       assertThrows(DocumentNotFoundException.class, () -> collection.get("this-doc-does-not-exist"));
+      assertEquals(setOf(CLOSED), circuitBreakerStates(ServiceType.KV));
     }
   }
 
@@ -99,19 +108,15 @@ class CircuitBreakerIntegrationTest extends JavaIntegrationTest {
       collection.core().send(request);
 
 
-      try {
-        request.response().get();
-        fail();
-      } catch (ExecutionException ex) {
-        if (ex.getCause() instanceof TimeoutException) {
-          timeouts++;
-        } else if (ex.getCause() instanceof RequestCanceledException) {
-          cancellations++;
-          CancellationReason reason = ((RequestCanceledException) ex.getCause()).context().requestContext().request().cancellationReason();
-          assertEquals(reason.innerReason(), RetryReason.ENDPOINT_CIRCUIT_OPEN);
-        }
-      } catch (Throwable t) {
-        fail(t);
+      ExecutionException ex = assertThrows(ExecutionException.class, () -> request.response().get());
+      if (ex.getCause() instanceof TimeoutException) {
+        timeouts++;
+      } else if (ex.getCause() instanceof RequestCanceledException) {
+        cancellations++;
+        CancellationReason reason = ((RequestCanceledException) ex.getCause()).context().requestContext().request().cancellationReason();
+        assertEquals(reason.innerReason(), RetryReason.ENDPOINT_CIRCUIT_OPEN);
+
+        assertTrue(circuitBreakerStates(ServiceType.KV).contains(OPEN));
       }
     }
 
@@ -132,4 +137,12 @@ class CircuitBreakerIntegrationTest extends JavaIntegrationTest {
     }
   }
 
+  private Set<CircuitBreaker.State> circuitBreakerStates(ServiceType serviceType) {
+    return cluster.diagnostics()
+      .endpoints()
+      .getOrDefault(serviceType, emptyList())
+      .stream()
+      .map(EndpointDiagnostics::circuitBreakerState)
+      .collect(toSet());
+  }
 }
