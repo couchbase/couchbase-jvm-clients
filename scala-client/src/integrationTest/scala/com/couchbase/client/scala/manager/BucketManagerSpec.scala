@@ -122,10 +122,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   def createAndDropBucketWithDefaults(): Unit = {
     val name: String = UUID.randomUUID.toString
     val bucket       = CreateBucketSettings(name, 100)
-    buckets.create(bucket).get
-    waitUntilHealthy(name)
-
-    val found = buckets.getAllBuckets().get.find(_.name == name).get
+    val found = createGetAndDestroy(name, bucket)
 
     assert(!found.flushEnabled)
     assert(found.ramQuotaMB == 100)
@@ -134,8 +131,6 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     assert(found.bucketType == BucketType.Couchbase)
     assert(found.ejectionMethod == EjectionMethod.ValueOnly)
     assert(found.minimumDurabilityLevel == Durability.Disabled)
-    buckets.dropBucket(name).get
-    assertFalse(buckets.getAllBuckets().get.exists(_.name == name))
   }
 
   @Test
@@ -143,18 +138,11 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   def createWithMinimumDurability(): Unit = {
     val name: String = UUID.randomUUID.toString
 
-    buckets
-      .create(
-        CreateBucketSettings(name, 100)
-          .minimumDurabilityLevel(Durability.Majority)
-          .numReplicas(0)
-      )
-      .get
-    waitUntilHealthy(name)
+    val bucket = createGetAndDestroy(name, CreateBucketSettings(name, 100)
+            .minimumDurabilityLevel(Durability.Majority)
+            .numReplicas(0))
 
-    val bucket = buckets.getBucket(name).get
     assert(bucket.minimumDurabilityLevel == Majority)
-    buckets.dropBucket(name).get
   }
 
   @Test
@@ -166,14 +154,10 @@ class BucketManagerSpec extends ScalaIntegrationTest {
       bucketType = Some(Ephemeral),
       ejectionMethod = Some(NotRecentlyUsed)
     )
-    buckets.create(bucket).get
-    waitUntilHealthy(name)
-
-    val found = buckets.getAllBuckets().get.find(_.name == name).get
+    val found = createGetAndDestroy(name, bucket)
 
     assert(found.bucketType == BucketType.Ephemeral)
     assert(found.ejectionMethod == EjectionMethod.NotRecentlyUsed)
-    buckets.dropBucket(name).get
   }
 
   @Test
@@ -312,7 +296,6 @@ class BucketManagerSpec extends ScalaIntegrationTest {
       classOf[BucketExistsException],
       () => {
         buckets.create(CreateBucketSettings(bucketName, 100)).get
-        waitUntilHealthy(bucketName)
       }
     )
   }
@@ -353,6 +336,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   def updateBucketWithCompressionModeShouldFailOnCE(): Unit = {
     val name = UUID.randomUUID.toString
     buckets.create(CreateBucketSettings(name, 100)).get
+    waitUntilHealthy(name)
     val settings = buckets.getBucket(name).get
     assertThrows(
       classOf[FeatureNotAvailableException],
@@ -369,8 +353,8 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   @IgnoreWhen(missesCapabilities = Array(Capabilities.ENTERPRISE_EDITION))
   def createBucketWithCompressionModeShouldSucceedOnEE(): Unit = {
     val name = UUID.randomUUID.toString
-    buckets.create(CreateBucketSettings(name, 100).compressionMode(CompressionMode.Passive)).get
-    val settings = buckets.getBucket(name).get
+    val settings = createGetAndDestroy(name, CreateBucketSettings(name, 100).compressionMode(CompressionMode.Passive))
+
     assert(settings.maxTTL.isDefined)
     assert(settings.compressionMode.isDefined)
   }
@@ -379,8 +363,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   @IgnoreWhen(missesCapabilities = Array(Capabilities.ENTERPRISE_EDITION))
   def updateBucketWithCompressionModeShouldSucceedOnEE(): Unit = {
     val name = UUID.randomUUID.toString
-    buckets.create(CreateBucketSettings(name, 100)).get
-    val settings = buckets.getBucket(name).get
+    val settings = createGetAndDestroy(name, CreateBucketSettings(name, 100))
     buckets
       .updateBucket(
         settings.copy(compressionMode = Some(CompressionMode.Passive)).toCreateBucketSettings
