@@ -39,8 +39,14 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       val options = createOptions(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r = if (options == null) collection.insert(docId, content).get
-      else collection.insert(docId, content, options).get
+      val r = if (options == null) content match {
+          case ContentString(value) => collection.insert(docId, value).get
+          case ContentJson(value) => collection.insert(docId, value).get
+      }
+      else content match {
+          case ContentString(value) => collection.insert(docId, value, options).get
+          case ContentJson(value) => collection.insert(docId, value, options).get
+      }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
@@ -79,8 +85,14 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       val content = convertContent(request.getContent)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r = if (options == null) collection.replace(docId, content).get
-      else collection.replace(docId, content, options).get
+      val r = if (options == null) content match {
+        case ContentString(value) => collection.replace(docId, value).get
+        case ContentJson(value) => collection.replace(docId, value).get
+      }
+      else content match {
+        case ContentString(value) => collection.replace(docId, value, options).get
+        case ContentJson(value) => collection.replace(docId, value, options).get
+      }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
@@ -93,8 +105,14 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       val content = convertContent(request.getContent)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r = if (options == null) collection.upsert(docId, content).get
-      else collection.upsert(docId, content, options).get
+      val r = if (options == null) content match {
+        case ContentString(value) => collection.upsert(docId, value).get
+        case ContentJson(value) => collection.upsert(docId, value).get
+      }
+      else content match {
+        case ContentString(value) => collection.upsert(docId, value, options).get
+        case ContentJson(value) => collection.upsert(docId, value, options).get
+      }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)

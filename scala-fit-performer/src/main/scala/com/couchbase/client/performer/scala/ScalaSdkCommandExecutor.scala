@@ -42,6 +42,10 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
+sealed trait Content
+case class ContentString(value: String) extends Content
+case class ContentJson(value: JsonObject) extends Content
+
 class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: Counters) extends SdkCommandExecutor(counters) {
   override protected def convertException(raw: Throwable): com.couchbase.client.protocol.shared.Exception = {
     ScalaSdkCommandExecutor.convertException(raw)
@@ -58,8 +62,14 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
       val options = createOptions(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r = if (options == null) collection.insert(docId, content).get
-      else collection.insert(docId, content, options).get
+      val r = if (options == null) content match {
+          case ContentString(value) => collection.insert(docId, value).get
+          case ContentJson(value) => collection.insert(docId, value).get
+      }
+      else content match {
+          case ContentString(value) => collection.insert(docId, value, options).get
+          case ContentJson(value) => collection.insert(docId, value, options).get
+      }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
@@ -98,8 +108,14 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
       val content = convertContent(request.getContent)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r = if (options == null) collection.replace(docId, content).get
-      else collection.replace(docId, content, options).get
+      val r = if (options == null) content match {
+          case ContentString(value) => collection.replace(docId, value).get
+          case ContentJson(value) => collection.replace(docId, value).get
+      }
+      else content match {
+          case ContentString(value) => collection.replace(docId, value, options).get
+          case ContentJson(value) => collection.replace(docId, value, options).get
+      }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
@@ -112,8 +128,14 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
       val content = convertContent(request.getContent)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r = if (options == null) collection.upsert(docId, content).get
-      else collection.upsert(docId, content, options).get
+      val r = if (options == null) content match {
+          case ContentString(value) => collection.upsert(docId, value).get
+          case ContentJson(value) => collection.upsert(docId, value).get
+      }
+      else content match {
+          case ContentString(value) => collection.upsert(docId, value, options).get
+          case ContentJson(value) => collection.upsert(docId, value, options).get
+      }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
@@ -271,8 +293,9 @@ object ScalaSdkCommandExecutor {
   }
   // [end:1.4.1]
 
-  def convertContent(content: shared.Content): String = {
-    if (content.hasPassthroughString) content.getPassthroughString
+  def convertContent(content: shared.Content): Content = {
+    if (content.hasPassthroughString) ContentString(content.getPassthroughString)
+    else if (content.hasConvertToJson) ContentJson(JsonObject.fromJson(new String(content.getConvertToJson.toByteArray, StandardCharsets.UTF_8)))
     else throw new UnsupportedOperationException("Unknown content")
   }
 
