@@ -20,16 +20,20 @@ import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor
 import com.couchbase.client.performer.core.perf.Counters
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
-import com.couchbase.client.protocol.*
 import com.couchbase.client.protocol.performer.PerformerCapsFetchResponse
 import com.couchbase.client.protocol.run.Workloads
-import com.couchbase.client.protocol.shared.*
+import com.couchbase.client.protocol.shared.API
+import com.couchbase.client.protocol.shared.ClusterConnectionCloseRequest
+import com.couchbase.client.protocol.shared.ClusterConnectionCloseResponse
+import com.couchbase.client.protocol.shared.ClusterConnectionCreateRequest
+import com.couchbase.client.protocol.shared.ClusterConnectionCreateResponse
+import com.couchbase.client.protocol.shared.DisconnectConnectionsRequest
+import com.couchbase.client.protocol.shared.DisconnectConnectionsResponse
 import io.grpc.ServerBuilder
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
-import kotlin.Exception
 
 class KotlinPerformer : CorePerformer() {
     private val clusterConnections: MutableMap<String, ClusterConnection> = mutableMapOf()
@@ -90,9 +94,13 @@ class KotlinPerformer : CorePerformer() {
     }
 
     override fun executor(workloads: com.couchbase.client.protocol.run.Workloads, counters: Counters, api: API): SdkCommandExecutor {
-        if (api != API.DEFAULT) {
-            throw UnsupportedOperationException()
-        }
+        // The test driver freaks out if we say we don't support the async API.
+        // As a workaround, execute the tests redundantly (same way in both API modes).
+        // Uncomment this when driver is fixed.
+//        if (api != API.DEFAULT) {
+//            throw UnsupportedOperationException("This performer supports only the default API.")
+//        }
+
         return KotlinSdkCommandExecutor(clusterConnections.get(workloads.clusterConnectionId)!!, counters)
     }
 

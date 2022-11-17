@@ -17,34 +17,39 @@ package com.couchbase.client.performer.kotlin
 
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.kotlin.CommonOptions
-import com.couchbase.client.kotlin.codec.*
+import com.couchbase.client.kotlin.codec.JacksonJsonSerializer
 import com.couchbase.client.kotlin.codec.JsonTranscoder
 import com.couchbase.client.kotlin.codec.RawBinaryTranscoder
 import com.couchbase.client.kotlin.codec.RawJsonTranscoder
 import com.couchbase.client.kotlin.codec.RawStringTranscoder
-import com.couchbase.client.kotlin.kv.*
 import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.kv.Expiry
+import com.couchbase.client.kotlin.kv.GetResult
+import com.couchbase.client.kotlin.kv.MutationResult
 import com.couchbase.client.kotlin.kv.PersistTo
 import com.couchbase.client.kotlin.kv.ReplicateTo
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.perf.Counters
 import com.couchbase.client.performer.core.perf.PerRun
-import com.couchbase.client.performer.core.perf.WorkloadStreamingThread
 import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
-import com.couchbase.client.protocol.*
-import com.couchbase.client.protocol.shared.*
+import com.couchbase.client.protocol.shared.CouchbaseExceptionEx
+import com.couchbase.client.protocol.shared.CouchbaseExceptionType
+import com.couchbase.client.protocol.shared.Exception
+import com.couchbase.client.protocol.shared.ExceptionOther
+import com.couchbase.client.protocol.shared.MutationToken
 import com.couchbase.client.protocol.shared.Transcoder
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.fasterxml.jackson.module.kotlin.jacksonTypeRef
 import com.fasterxml.jackson.module.kotlin.jsonMapper
 import com.google.protobuf.ByteString
 import kotlinx.coroutines.runBlocking
 import java.time.Instant
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import com.couchbase.client.protocol.shared.Content as ProtoContent
 
 /**
  * SdkOperation performs each requested SDK operation
@@ -250,11 +255,17 @@ class KotlinSdkCommandExecutor(private val connection: ClusterConnection,
         return ret.build()
     }
 
-    fun content(content: com.couchbase.client.protocol.shared.Content): String {
-        if (content.hasPassthroughString()) {
-            return content.passthroughString;
+    fun content(content: ProtoContent): Any? {
+        return when {
+            content.hasPassthroughString() -> content.passthroughString
+
+            content.hasConvertToJson() -> jsonMapper.readValue(
+                content.convertToJson.toByteArray(),
+                jacksonTypeRef<Map<String, Any?>>(),
+            )
+
+            else -> throw UnsupportedOperationException("Unknown content: $content")
         }
-        throw UnsupportedOperationException("Unknown content");
     }
 
     private fun convertTranscoder(hasTranscoder: Boolean, transcoderMaybe: Transcoder?): com.couchbase.client.kotlin.codec.Transcoder? {
@@ -313,11 +324,12 @@ class KotlinSdkCommandExecutor(private val connection: ClusterConnection,
         )
     }
 
-
     companion object {
-        val jsonTranscoder = JsonTranscoder(JacksonJsonSerializer(jsonMapper {
+        val jsonMapper = jsonMapper {
             addModule(Jdk8Module())
-            addModule(KotlinModule())
-        }))
+            addModule(KotlinModule.Builder().build())
+        }
+
+        val jsonTranscoder = JsonTranscoder(JacksonJsonSerializer(jsonMapper))
     }
 }

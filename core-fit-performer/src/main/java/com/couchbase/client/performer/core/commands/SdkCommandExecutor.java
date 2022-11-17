@@ -39,8 +39,11 @@ public abstract class SdkCommandExecutor extends Executor {
     public com.couchbase.client.protocol.run.Result run(com.couchbase.client.protocol.sdk.Command command, PerRun perRun) {
         try {
             return performOperation(command, perRun);
-        }
-        catch (RuntimeException err) {
+        } catch (RuntimeException err) {
+            if (err instanceof UnsupportedOperationException) {
+                logger.warn("Failed to perform unsupported operation: {}", command, err);
+            }
+
             return com.couchbase.client.protocol.run.Result.newBuilder()
                     .setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
                             .setException(convertException(err)))
