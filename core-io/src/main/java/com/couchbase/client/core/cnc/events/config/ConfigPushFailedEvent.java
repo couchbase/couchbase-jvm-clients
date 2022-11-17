@@ -30,7 +30,7 @@ public class ConfigPushFailedEvent extends AbstractEvent {
   private final Sinks.EmitResult reason;
 
   public ConfigPushFailedEvent(Context context, Sinks.EmitResult reason) {
-    super(Severity.WARN, Category.CONFIG, Duration.ZERO, context);
+    super(reason == Sinks.EmitResult.FAIL_TERMINATED ? Severity.DEBUG : Severity.WARN, Category.CONFIG, Duration.ZERO, context);
     this.reason = reason;
   }
 
