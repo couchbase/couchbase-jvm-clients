@@ -79,7 +79,7 @@ public class MonoBridge<T> {
                             // Even though a Mono still need to propagate onComplete in case it's Mono<Void>
                             if (!done) {
                                 if (logger != null) logger.info("", "MB: [%s] propagating complete", dbg);
-                                actual.tryEmitValue(null);
+                                actual.tryEmitEmpty();
                             } else if (logger != null)
                                 logger.info("", "MB: [%s] skipping complete propagating as done", dbg);
                         });

@@ -96,7 +96,7 @@ public class ReactiveWaitGroup {
 
             // Signal the awaiter, making sure to do it outside synchronization for safety.
             if (notifier != null) {
-                notifier.tryEmitValue(null).orThrow();
+                notifier.tryEmitEmpty().orThrow();
             }
 
             return Mono.empty();
