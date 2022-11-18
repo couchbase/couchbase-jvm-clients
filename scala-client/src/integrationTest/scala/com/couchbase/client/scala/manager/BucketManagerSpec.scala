@@ -17,13 +17,7 @@ package com.couchbase.client.scala.manager
 
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-
-import com.couchbase.client.core.error.{
-  BucketExistsException,
-  BucketNotFoundException,
-  DocumentNotFoundException,
-  InvalidArgumentException
-}
+import com.couchbase.client.core.error.{BucketExistsException, BucketNotFoundException, DocumentNotFoundException, InvalidArgumentException}
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability.Majority
 import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral}
@@ -37,6 +31,7 @@ import org.junit.jupiter.api.Assertions.{assertEquals, assertFalse, assertThrows
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 import com.couchbase.client.core.error.FeatureNotAvailableException
+import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.test.Capabilities
 import com.couchbase.client.test.IgnoreWhen
 
@@ -72,6 +67,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   }
 
   private def waitUntilHealthy(bucket: String): Unit = {
+    ConsistencyUtil.waitUntilBucketPresent(cluster.async.core, bucket)
     Util.waitUntilCondition(() => {
       buckets.getBucket(bucket) match {
         case Success(value) => value.healthy
@@ -81,6 +77,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   }
 
   private def waitUntilDropped(bucket: String): Unit = {
+    ConsistencyUtil.waitUntilBucketDropped(cluster.async.core, bucket)
     Util.waitUntilCondition(() => {
       buckets.getBucket(bucket) match {
         case Failure(err: BucketNotFoundException) => true

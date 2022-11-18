@@ -18,6 +18,7 @@ package com.couchbase.client.java.manager.search;
 
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.json.JsonObject;
@@ -41,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(missesCapabilities = Capabilities.SEARCH, clusterTypes = ClusterType.CAVES)
+@IgnoreWhen(missesCapabilities = Capabilities.SEARCH, clusterTypes = ClusterType.CAVES, clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101)
 class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SearchIndexManagerIntegrationTest.class);
@@ -70,6 +71,7 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
     String name = "idx-" + UUID.randomUUID().toString().substring(0, 8);
     SearchIndex index = new SearchIndex(name, config().bucketname());
     indexes.upsertIndex(index);
+    ConsistencyUtil.waitUntilSearchIndexPresent(cluster.core(), name);
 
     SearchIndex foundIndex = indexes.getIndex(name);
     assertEquals(name, foundIndex.name());
@@ -86,6 +88,7 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
     String name = "idx-" + UUID.randomUUID().toString().substring(0, 8);
     SearchIndex index = new SearchIndex(name, config().bucketname());
     indexes.upsertIndex(index);
+    ConsistencyUtil.waitUntilSearchIndexPresent(cluster.core(), name);
 
     SearchIndex foundIndex = indexes.getIndex(name);
 
@@ -97,6 +100,7 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
     String name = "idx-" + UUID.randomUUID().toString().substring(0, 8);
     SearchIndex index = new SearchIndex(name, config().bucketname());
     indexes.upsertIndex(index);
+    ConsistencyUtil.waitUntilSearchIndexPresent(cluster.core(), name);
 
     boolean found = false;
     List<SearchIndex> foundIndexes = indexes.getAllIndexes();
@@ -113,12 +117,14 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
     String name = "idx-" + UUID.randomUUID().toString().substring(0, 8);
     SearchIndex index = new SearchIndex(name, config().bucketname());
     indexes.upsertIndex(index);
+    ConsistencyUtil.waitUntilSearchIndexPresent(cluster.core(), name);
 
     SearchIndex foundIndex = indexes.getIndex(name);
     assertEquals(name, foundIndex.name());
     assertEquals(config().bucketname(), foundIndex.sourceName());
 
     indexes.dropIndex(name);
+    ConsistencyUtil.waitUntilSearchIndexDropped(cluster.core(), name);
 
     assertThrows(IndexNotFoundException.class, () -> indexes.getIndex(name));
     assertThrows(IndexNotFoundException.class, () -> indexes.dropIndex(name));
@@ -134,6 +140,7 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
     String name = "idx-" + UUID.randomUUID().toString().substring(0, 8);
     SearchIndex index = new SearchIndex(name, config().bucketname());
     indexes.upsertIndex(index);
+    ConsistencyUtil.waitUntilSearchIndexPresent(cluster.core(), name);
 
     runWithRetry(Duration.ofSeconds(30), () -> {
       List<JsonObject> tokens = indexes.analyzeDocument(name, JsonObject.create().put("name", "hello world"));
@@ -150,6 +157,7 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
     String name = "idx-" + UUID.randomUUID().toString().substring(0, 8);
     SearchIndex index = new SearchIndex(name, config().bucketname());
     indexes.upsertIndex(index);
+    ConsistencyUtil.waitUntilSearchIndexPresent(cluster.core(), name);
 
     runWithRetry(Duration.ofSeconds(30), () -> {
       indexes.pauseIngest(name);

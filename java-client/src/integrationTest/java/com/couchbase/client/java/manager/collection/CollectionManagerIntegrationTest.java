@@ -22,6 +22,7 @@ import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -73,6 +74,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     assertThrows(ScopeNotFoundException.class, () -> collections.createCollection(collSpec));
 
     collections.createScope(scopeName);
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scopeName);
 
     waitUntilCondition(() -> {
       Optional<ScopeSpec> scope = collections.getAllScopes().stream().filter(ss -> ss.name().equals(scopeName)).findFirst();
@@ -80,6 +82,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     });
 
     collections.createCollection(collSpec);
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collSpec.scopeName(), collSpec.name());
     waitUntilCondition(() -> {
       boolean collExists = collectionExists(collections, collSpec);
       if (collExists) {
@@ -95,6 +98,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     String scope = randomString();
 
     collections.createScope(scope);
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
     waitUntilCondition(() -> scopeExists(collections, scope));
     assertThrows(ScopeExistsException.class, () -> collections.createScope(scope));
   }
@@ -103,10 +107,12 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   void shouldThrowWhenCollectionAlreadyExists() {
     String scope = randomString();
     collections.createScope(scope);
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
     waitUntilCondition(() -> scopeExists(collections, scope));
 
     CollectionSpec collectionSpec = CollectionSpec.create(randomString(), scope);
     collections.createCollection(collectionSpec);
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec.scopeName(), collectionSpec.name());
 
     assertThrows(CollectionExistsException.class, () -> collections.createCollection(collectionSpec));
   }
@@ -124,16 +130,21 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     assertThrows(ScopeNotFoundException.class, () -> collections.dropCollection(collectionSpec1));
 
     collections.createScope(scope);
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
     waitUntilCondition(() -> scopeExists(collections, scope));
 
     collections.createCollection(collectionSpec1);
     collections.createCollection(collectionSpec2);
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec1.scopeName(), collectionSpec1.name());
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec2.scopeName(), collectionSpec2.name());
 
     collections.dropCollection(collectionSpec1);
+    ConsistencyUtil.waitUntilCollectionDropped(cluster.core(), config().bucketname(), collectionSpec1.scopeName(), collectionSpec1.name());
     waitUntilCondition(() -> !collectionExists(collections, collectionSpec1));
     assertThrows(CollectionNotFoundException.class, () -> collections.dropCollection(collectionSpec1));
 
     collections.dropScope(scope);
+    ConsistencyUtil.waitUntilScopeDropped(cluster.core(), config().bucketname(), scope);
     waitUntilCondition(() -> !scopeExists(collections, scope));
 
     assertThrows(ScopeNotFoundException.class, () -> collections.dropCollection(collectionSpec2));
@@ -149,10 +160,13 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     CollectionSpec collectionSpec2 = CollectionSpec.create(collection2, scope);
 
     collections.createScope(scope);
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
     waitUntilCondition(() -> scopeExists(collections, scope));
 
     collections.createCollection(collectionSpec1);
     collections.createCollection(collectionSpec2);
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec1.scopeName(), collectionSpec1.name());
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec2.scopeName(), collectionSpec2.name());
 
     waitUntilCondition(() -> collectionExists(collections, collectionSpec1));
     waitUntilCondition(() -> collectionExists(collections, collectionSpec2));
@@ -178,6 +192,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     int collectionsPerScope = 10;
     ScopeSpec scopeSpec = ScopeSpec.create(scopeName);
     collections.createScope(scopeName);
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scopeName);
     waitUntilCondition(() -> scopeExists(collections, scopeName));
 
     List<ScopeSpec> scopeList = collections.getAllScopes();
@@ -193,6 +208,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     for (int i = 0; i < collectionsPerScope; i++) {
       CollectionSpec collectionSpec = CollectionSpec.create(String.valueOf(collectionsPerScope + i), scopeName);
       collections.createCollection(collectionSpec);
+      ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec.scopeName(), collectionSpec.name());
       waitUntilCondition(() -> collectionExists(collections, collectionSpec));
       waitUntilCondition(() -> collections.getAllScopes().stream().anyMatch(ss -> ss.collections().contains(collectionSpec)));
     }

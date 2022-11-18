@@ -20,6 +20,7 @@ import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.QueryException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MutationResult;
@@ -98,9 +99,11 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
     CollectionSpec collSpec = CollectionSpec.create(COLLECTION_NAME, SCOPE_NAME);
 
     collectionManager.createScope(SCOPE_NAME);
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), bucket.name(), SCOPE_NAME);
     waitUntilCondition(() -> scopeExists(collectionManager, SCOPE_NAME));
 
     collectionManager.createCollection(collSpec);
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), bucket.name(), collSpec.scopeName(), collSpec.name());
     waitUntilCondition(() -> collectionExists(collectionManager, collSpec));
 
     waitForQueryIndexerToHaveKeyspace(cluster, COLLECTION_NAME);

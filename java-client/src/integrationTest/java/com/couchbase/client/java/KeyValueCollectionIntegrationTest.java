@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.retry.RetryReason;
+import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.manager.collection.CollectionSpec;
@@ -61,6 +62,7 @@ public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
     String collId = UUID.randomUUID().toString().substring(0, 10);
     CollectionSpec collectionSpec = CollectionSpec.create(collId, CollectionIdentifier.DEFAULT_SCOPE);
     bucket.collections().createCollection(collectionSpec);
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), bucket.name(), collectionSpec.scopeName(), collectionSpec.name());
 
     Collection collection = bucket.collection(collId);
 

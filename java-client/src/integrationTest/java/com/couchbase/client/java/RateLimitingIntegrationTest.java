@@ -30,6 +30,7 @@ import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CbCollections;
+import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MutationResult;
@@ -249,6 +250,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
 
     CollectionManager collectionManager = adminCluster.bucket(config().bucketname()).collections();
     collectionManager.createCollection(CollectionSpec.create(scopeName, scopeName));
+    ConsistencyUtil.waitUntilCollectionPresent(adminCluster.core(), config().bucketname(), scopeName, scopeName);
 
     Collection collection = adminCluster.bucket(config().bucketname()).scope(scopeName).collection(scopeName);
 
@@ -422,6 +424,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
 
     try {
       collectionManager.createCollection(CollectionSpec.create("collection1", scopeName));
+      ConsistencyUtil.waitUntilCollectionPresent(adminCluster.core(), config().bucketname(), scopeName, "collection1");
 
       assertThrows(QuotaLimitedException.class, () ->
         collectionManager.createCollection(CollectionSpec.create("collection2", scopeName)));
@@ -626,6 +629,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     try {
       CollectionSpec collectionSpec = CollectionSpec.create(collectionName, scopeName);
       collectionManager.createCollection(collectionSpec);
+      ConsistencyUtil.waitUntilCollectionPresent(adminCluster.core(), config().bucketname(), collectionSpec.scopeName(), collectionSpec.name());
       waitUntilCondition(() -> collectionExists(collectionManager, collectionSpec));
 
       waitForService(adminCluster.bucket(config().bucketname()), ServiceType.SEARCH);

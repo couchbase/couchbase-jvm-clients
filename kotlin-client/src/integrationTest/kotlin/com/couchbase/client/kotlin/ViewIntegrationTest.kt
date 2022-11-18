@@ -16,6 +16,7 @@
 
 package com.couchbase.client.kotlin
 
+import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.kotlin.manager.view.DesignDocument
 import com.couchbase.client.kotlin.manager.view.View
 import com.couchbase.client.kotlin.manager.view.ViewIndexManager
@@ -60,6 +61,9 @@ internal class ViewIntegrationTest : KotlinIntegrationTest() {
         runBlocking {
             viewIndexes.upsertDesignDocument(designDocument, PRODUCTION)
             waitUntil { viewIndexes.getDesignDocumentOrNull(DDOC_NAME, PRODUCTION) != null }
+            ConsistencyUtil.waitUntilDesignDocumentPresent(cluster.core, bucket.name, DDOC_NAME)
+            ConsistencyUtil.waitUntilViewPresent(cluster.core, bucket.name, DDOC_NAME, VIEW_NAME)
+            ConsistencyUtil.waitUntilViewPresent(cluster.core, bucket.name, DDOC_NAME, VIEW_WITH_REDUCE_NAME)
         }
     }
 

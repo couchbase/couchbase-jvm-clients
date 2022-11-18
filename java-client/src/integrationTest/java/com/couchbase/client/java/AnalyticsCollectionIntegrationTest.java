@@ -20,6 +20,7 @@ import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.analytics.AnalyticsMetaData;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.analytics.AnalyticsStatus;
@@ -101,8 +102,10 @@ class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
     waitForService(bucket, ServiceType.ANALYTICS);
 
     collectionManager.createScope(scopeName);
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), bucket.name(), scopeName);
     CollectionSpec collSpec = CollectionSpec.create(collectionName, scopeName);
     collectionManager.createCollection(collSpec);
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), bucket.name(), collSpec.scopeName(), collSpec.name());
     waitUntilCondition(() -> collectionExists(collectionManager, collSpec));
 
     waitForQueryIndexerToHaveKeyspace(cluster, config().bucketname());

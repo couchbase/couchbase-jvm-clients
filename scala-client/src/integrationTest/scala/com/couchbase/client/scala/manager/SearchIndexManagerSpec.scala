@@ -20,6 +20,7 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import com.couchbase.client.core.error.IndexNotFoundException
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.manager.search._
 import com.couchbase.client.scala.util.{CouchbasePickler, ScalaIntegrationTest}
@@ -33,7 +34,7 @@ import scala.util.Failure
 
 @Disabled @Flaky
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(missesCapabilities = Array(Capabilities.SEARCH))
+@IgnoreWhen(missesCapabilities = Array(Capabilities.SEARCH), clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101)
 class SearchIndexManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster            = _
   private var bucketName: String          = _
@@ -51,7 +52,10 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
     indexes
       .getAllIndexes()
       .get
-      .foreach(index => indexes.dropIndex(index.name))
+      .foreach(index => {
+        indexes.dropIndex(index.name)
+        ConsistencyUtil.waitUntilSearchIndexDropped(cluster.async.core, index.name)
+      })
   }
 
   @AfterAll
@@ -78,6 +82,7 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
     val name  = "idx-" + UUID.randomUUID.toString.substring(0, 8)
     val index = SearchIndex.create(name, config.bucketname)
     indexes.upsertIndex(index).get
+    ConsistencyUtil.waitUntilSearchIndexPresent(cluster.async.core, index.name)
 
     val foundIndex = indexes.getIndex(name).get
     assert(name == foundIndex.name)
@@ -89,6 +94,7 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
     val name  = "idx-" + UUID.randomUUID.toString.substring(0, 8)
     val index = SearchIndex.create(name, config.bucketname)
     indexes.upsertIndex(index).get
+    ConsistencyUtil.waitUntilSearchIndexPresent(cluster.async.core, index.name)
 
     // Need to get the UUID
     val foundIndex = indexes.getIndex(name).get
@@ -102,6 +108,7 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
     val name  = "idx-" + UUID.randomUUID.toString.substring(0, 8)
     val index = SearchIndex.create(name, config.bucketname)
     indexes.upsertIndex(index).get
+    ConsistencyUtil.waitUntilSearchIndexPresent(cluster.async.core, index.name)
 
     val foundIndex = indexes.getIndex(name).get
 
@@ -145,6 +152,7 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
     val name  = "idx-" + UUID.randomUUID.toString.substring(0, 8)
     val index = SearchIndex.create(name, config.bucketname)
     indexes.upsertIndex(index).get
+    ConsistencyUtil.waitUntilSearchIndexPresent(cluster.async.core, index.name)
 
     val allIndexes = indexes.getAllIndexes().get
     assert(allIndexes.exists(_.name == name))
@@ -171,8 +179,10 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
     val name  = "idx-" + UUID.randomUUID.toString.substring(0, 8)
     val index = SearchIndex.create(name, config.bucketname)
     indexes.upsertIndex(index).get
+    ConsistencyUtil.waitUntilSearchIndexPresent(cluster.async.core, index.name)
 
     indexes.dropIndex(name).get
+    ConsistencyUtil.waitUntilSearchIndexDropped(cluster.async.core, index.name)
 
     indexes.getIndex(name) match {
       case Failure(err: IndexNotFoundException) =>

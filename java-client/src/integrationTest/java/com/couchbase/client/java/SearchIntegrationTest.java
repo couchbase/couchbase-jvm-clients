@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.manager.search.SearchIndex;
@@ -56,7 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @Disabled
 @Flaky
-@IgnoreWhen(missesCapabilities = Capabilities.SEARCH, clusterTypes = ClusterType.CAVES)
+@IgnoreWhen(missesCapabilities = Capabilities.SEARCH, clusterTypes = ClusterType.CAVES, clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101)
 class SearchIntegrationTest extends JavaIntegrationTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(SearchIntegrationTest.class);
 
@@ -73,6 +74,7 @@ class SearchIntegrationTest extends JavaIntegrationTest {
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
     waitForService(bucket, ServiceType.SEARCH);
     cluster.searchIndexes().upsertIndex(new SearchIndex(indexName, config().bucketname()));
+    ConsistencyUtil.waitUntilSearchIndexPresent(cluster.core(), indexName);
   }
 
   @AfterAll

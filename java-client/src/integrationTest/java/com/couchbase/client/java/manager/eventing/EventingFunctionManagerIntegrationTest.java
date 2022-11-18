@@ -17,6 +17,7 @@
 package com.couchbase.client.java.manager.eventing;
 
 import com.couchbase.client.core.error.*;
+import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
@@ -61,8 +62,11 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
     Bucket bucket = cluster.bucket(config().bucketname());
 
     bucket.collections().createScope("eventing");
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), "eventing");
     bucket.collections().createCollection(CollectionSpec.create("source", "eventing"));
     bucket.collections().createCollection(CollectionSpec.create("meta", "eventing"));
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), "source", "eventing");
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), "meta", "eventing");
 
     sourceCollection = bucket.scope("eventing").collection("source");
     metaCollection = bucket.scope("eventing").collection("meta");

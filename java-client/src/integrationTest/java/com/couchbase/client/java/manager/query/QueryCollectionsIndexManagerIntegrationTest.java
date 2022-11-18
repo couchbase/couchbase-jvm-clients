@@ -19,6 +19,7 @@ package com.couchbase.client.java.manager.query;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.manager.collection.CollectionSpec;
@@ -51,6 +52,7 @@ import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrati
 import static com.couchbase.client.java.manager.query.WatchQueryIndexesOptions.watchQueryIndexesOptions;
 import static com.couchbase.client.test.Capabilities.COLLECTIONS;
 import static com.couchbase.client.test.Capabilities.QUERY;
+import static com.couchbase.client.test.Capabilities.SUBDOC_REVIVE_DOCUMENT;
 import static com.couchbase.client.test.ClusterType.CAVES;
 import static com.couchbase.client.test.ClusterType.MOCKED;
 import static java.util.Collections.emptyList;
@@ -91,7 +93,9 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     waitForQueryIndexerToHaveKeyspace(cluster, bucketName);
 
     bucket.collections().createScope(scopeName);
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scopeName);
     bucket.collections().createCollection(CollectionSpec.create(collectionName, scopeName));
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), scopeName, collectionName);
     waitForQueryIndexerToHaveKeyspace(cluster, collectionName);
   }
 

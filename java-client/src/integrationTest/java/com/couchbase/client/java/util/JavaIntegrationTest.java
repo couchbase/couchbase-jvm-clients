@@ -25,6 +25,7 @@ import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
@@ -213,6 +214,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
     });
   }
 
+  // This is probably superfluous since ConsistencyUtil.waitUntilCollectionPresent.
   protected static boolean collectionExists(CollectionManager collectionManager, CollectionSpec spec) {
     try {
       List<ScopeSpec> scopeList = collectionManager.getAllScopes();
@@ -228,6 +230,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
     }
   }
 
+  // This is probably superfluous since ConsistencyUtil.waitUntilScopePresent.
   protected static boolean scopeExists(CollectionManager collectionManager, String scopeName) {
     try {
       List<ScopeSpec> scopeList = collectionManager.getAllScopes();

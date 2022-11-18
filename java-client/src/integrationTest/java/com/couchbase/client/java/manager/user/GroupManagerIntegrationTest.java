@@ -18,6 +18,7 @@ package com.couchbase.client.java.manager.user;
 
 import com.couchbase.client.core.error.GroupNotFoundException;
 import com.couchbase.client.core.error.UserNotFoundException;
+import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
@@ -40,6 +41,8 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.java.manager.user.AuthDomain.LOCAL;
 import static com.couchbase.client.java.manager.user.UserManagerIntegrationTest.checkRoleOrigins;
+import static com.couchbase.client.java.util.GroupUserManagementUtil.dropGroupQuietly;
+import static com.couchbase.client.java.util.GroupUserManagementUtil.dropUserQuietly;
 import static com.couchbase.client.test.Capabilities.COLLECTIONS;
 import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -84,60 +87,9 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
   @AfterEach
   @BeforeEach
   void dropTestUser() {
-    dropUserQuietly(USERNAME);
-    dropGroupQuietly(GROUP_A);
-    dropGroupQuietly(GROUP_B);
-    waitUntilUserDropped(USERNAME);
-    waitUntilGroupDropped(GROUP_A);
-    waitUntilGroupDropped(GROUP_B);
-  }
-
-  private void waitUntilUserPresent(String name) {
-    Util.waitUntilCondition(() -> {
-      try {
-        users.getUser(LOCAL, name);
-        return true;
-      }
-      catch (UserNotFoundException err) {
-        return false;
-      }
-    });
-  }
-
-  private void waitUntilUserDropped(String name) {
-    Util.waitUntilCondition(() -> {
-      try {
-        users.getUser(LOCAL, name);
-        return false;
-      }
-      catch (UserNotFoundException err) {
-        return true;
-      }
-    });
-  }
-
-  private void waitUntilGroupPresent(String name) {
-    Util.waitUntilCondition(() -> {
-      try {
-        users.getGroup(name);
-        return true;
-      }
-      catch (GroupNotFoundException err) {
-        return false;
-      }
-    });
-  }
-
-  private void waitUntilGroupDropped(String name) {
-    Util.waitUntilCondition(() -> {
-      try {
-        users.getGroup(name);
-        return false;
-      }
-      catch (GroupNotFoundException err) {
-        return true;
-      }
-    });
+    dropUserQuietly(cluster.core(), users, USERNAME);
+    dropGroupQuietly(cluster.core(), users, GROUP_A);
+    dropGroupQuietly(cluster.core(), users, GROUP_B);
   }
 
   @Test
@@ -145,8 +97,8 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
     users.upsertGroup(new Group(GROUP_A));
     users.upsertGroup(new Group(GROUP_B));
 
-    waitUntilGroupPresent(GROUP_A);
-    waitUntilGroupPresent(GROUP_B);
+    ConsistencyUtil.waitUntilGroupPresent(cluster.core(), GROUP_A);
+    ConsistencyUtil.waitUntilGroupPresent(cluster.core(), GROUP_B);
 
     Set<String> actualNames = users.getAllGroups().stream()
         .map(Group::name)
@@ -156,7 +108,7 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
 
     users.dropGroup(GROUP_B);
 
-    waitUntilGroupDropped(GROUP_B);
+    ConsistencyUtil.waitUntilGroupDropped(cluster.core(), GROUP_B);
 
     assertFalse(users.getAllGroups().stream()
         .map(Group::name)
@@ -266,27 +218,11 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
 
   private void upsert(Group group) {
     users.upsertGroup(group);
-    waitUntilGroupPresent(group.name());
+    ConsistencyUtil.waitUntilGroupPresent(cluster.core(), group.name());
   }
 
   private void upsert(User user) {
     users.upsertUser(user);
-    waitUntilUserPresent(user.username());
-  }
-
-  private static void dropUserQuietly(String name) {
-    try {
-      users.dropUser(name);
-    } catch (UserNotFoundException e) {
-      // that's fine!
-    }
-  }
-
-  private static void dropGroupQuietly(String name) {
-    try {
-      users.dropGroup(name);
-    } catch (GroupNotFoundException e) {
-      // that's fine!
-    }
+    ConsistencyUtil.waitUntilUserPresent(cluster.core(), LOCAL.alias(), user.username());
   }
 }

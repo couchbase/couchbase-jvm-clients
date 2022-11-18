@@ -24,6 +24,7 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
@@ -36,6 +37,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
 import java.time.Duration;
 import java.util.HashSet;
@@ -58,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies the functionality of the bucket manager.
  */
 @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA })
+@Execution(ExecutionMode.CONCURRENT)
 class BucketManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
@@ -93,6 +97,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   private void waitUntilHealthy(String bucket) {
+    ConsistencyUtil.waitUntilBucketPresent(cluster.core(), bucket);
     Util.waitUntilCondition(() -> {
       try {
         BucketSettings bkt = buckets.getBucket(bucket);
@@ -104,6 +109,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   private void waitUntilDropped(String bucket) {
+    ConsistencyUtil.waitUntilBucketDropped(cluster.core(), bucket);
     Util.waitUntilCondition(() -> {
       try {
         buckets.getBucket(bucket);
@@ -223,7 +229,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     assertEquals(StorageBackend.MAGMA, settings.storageBackend());
   }
 
-    @Test
+  @Test
   void shouldPickNoDurabilityLevelIfNotSpecified() {
     String name = UUID.randomUUID().toString();
     createBucket(BucketSettings.create(name)
@@ -245,7 +251,6 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     String name = UUID.randomUUID().toString();
 
     createBucket(BucketSettings.create(name));
-    waitUntilHealthy(name);
     assertTrue(buckets.getAllBuckets().containsKey(name));
 
     buckets.dropBucket(name);
@@ -315,7 +320,6 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     String name = UUID.randomUUID().toString();
 
     createBucket(BucketSettings.create(name).numReplicas(3));
-    waitUntilHealthy(name);
 
     BucketSettings bucket = buckets.getBucket(name);
     assertEquals(3, bucket.numReplicas());
@@ -327,7 +331,6 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     String bucketName = UUID.randomUUID().toString();
     try {
       createBucket(BucketSettings.create(bucketName).ramQuotaMB(100).conflictResolutionType(ConflictResolutionType.CUSTOM));
-      waitUntilHealthy(bucketName);
 
       BucketSettings bucket = buckets.getBucket(bucketName);
       assertEquals(ConflictResolutionType.CUSTOM, bucket.conflictResolutionType());
@@ -382,6 +385,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
 
   private void createBucket(BucketSettings settings) {
     buckets.createBucket(settings);
+    ConsistencyUtil.waitUntilBucketPresent(cluster.core(), settings.name());
     bucketsToDrop.add(settings.name());
     waitUntilHealthy(settings.name());
   }

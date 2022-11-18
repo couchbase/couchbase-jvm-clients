@@ -16,9 +16,11 @@
 
 package com.couchbase.client.kotlin.manager.user
 
+import com.couchbase.client.core.Core
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.error.FeatureNotAvailableException
 import com.couchbase.client.core.error.UserNotFoundException
+import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.manager.user.RoleAndOrigins.Origin
 import com.couchbase.client.kotlin.retry
@@ -53,7 +55,7 @@ internal class UserManagerIntegrationTest : KotlinIntegrationTest() {
     @AfterEach
     @BeforeEach
     fun dropTestUser(): Unit = runBlocking {
-        users.dropUserQuietly(USERNAME)
+        users.dropUserQuietly(cluster.core, USERNAME)
         waitUntil { !users.userExists(USERNAME) }
     }
 
@@ -226,6 +228,7 @@ internal class UserManagerIntegrationTest : KotlinIntegrationTest() {
 
     internal suspend fun upsert(user: User) {
         users.upsertUser(user)
+        ConsistencyUtil.waitUntilUserPresent(cluster.core, AuthDomain.LOCAL.name, user.username)
         waitUntil { users.userExists(user.username) }
     }
 }
@@ -257,9 +260,10 @@ internal suspend fun UserManager.userExists(username: String): Boolean {
     }
 }
 
-internal suspend fun UserManager.dropUserQuietly(username: String) {
+internal suspend fun UserManager.dropUserQuietly(core: Core, username: String) {
     try {
         dropUser(username)
     } catch (_: UserNotFoundException) {
     }
+    ConsistencyUtil.waitUntilUserDropped(core, AuthDomain.LOCAL.name, username)
 }

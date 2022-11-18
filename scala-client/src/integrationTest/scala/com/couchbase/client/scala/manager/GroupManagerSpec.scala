@@ -1,3 +1,18 @@
+/*
+ * Copyright 2022 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.couchbase.client.scala.manager
 
 import com.couchbase.client.core.error.{
@@ -5,6 +20,7 @@ import com.couchbase.client.core.error.{
   GroupNotFoundException,
   UserNotFoundException
 }
+import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.scala.manager.user._
 import com.couchbase.client.scala.util.{CouchbasePickler, ScalaIntegrationTest}
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
@@ -72,6 +88,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   }
 
   private def waitUntilUserPresent(name: String): Unit = {
+    ConsistencyUtil.waitUntilUserPresent(cluster.async.core, AuthDomain.Local.alias, name)
     Util.waitUntilCondition(() => {
       users.getUser(name) match {
         case Success(_) => true
@@ -81,6 +98,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   }
 
   private def waitUntilUserDropped(name: String): Unit = {
+    ConsistencyUtil.waitUntilUserDropped(cluster.async.core, AuthDomain.Local.alias, name)
     Util.waitUntilCondition(() => {
       users.getUser(name) match {
         case Failure(err: UserNotFoundException) => true
@@ -90,6 +108,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   }
 
   private def waitUntilGroupPresent(name: String): Unit = {
+    ConsistencyUtil.waitUntilGroupPresent(cluster.async.core, name)
     Util.waitUntilCondition(() => {
       users.getGroup(name) match {
         case Success(_) => true
@@ -99,6 +118,7 @@ class GroupManagerSpec extends ScalaIntegrationTest {
   }
 
   private def waitUntilGroupDropped(name: String): Unit = {
+    ConsistencyUtil.waitUntilGroupDropped(cluster.async.core, name)
     Util.waitUntilCondition(() => {
       users.getGroup(name) match {
         case Failure(err: GroupNotFoundException) => true

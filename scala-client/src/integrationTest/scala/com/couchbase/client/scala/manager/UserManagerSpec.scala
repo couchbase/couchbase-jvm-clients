@@ -1,9 +1,9 @@
 package com.couchbase.client.scala.manager
 
 import java.util.concurrent.TimeUnit
-
 import com.couchbase.client.core.error.{CouchbaseException, UserNotFoundException}
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.scala.manager.user._
 import com.couchbase.client.scala.util.CouchbasePickler._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
@@ -12,11 +12,7 @@ import com.couchbase.client.test._
 import com.couchbase.mock.deps.org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import com.couchbase.mock.deps.org.apache.http.client.CredentialsProvider
 import com.couchbase.mock.deps.org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
-import com.couchbase.mock.deps.org.apache.http.impl.client.{
-  BasicCredentialsProvider,
-  CloseableHttpClient,
-  HttpClientBuilder
-}
+import com.couchbase.mock.deps.org.apache.http.impl.client.{BasicCredentialsProvider, CloseableHttpClient, HttpClientBuilder}
 import com.couchbase.mock.deps.org.apache.http.util.EntityUtils
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -77,6 +73,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
   }
 
   private def waitUntilUserPresent(name: String): Unit = {
+    ConsistencyUtil.waitUntilUserPresent(cluster.async.core, AuthDomain.Local.alias, name)
     Util.waitUntilCondition(() => {
       users.getUser(name) match {
         case Success(_) => true
@@ -86,6 +83,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
   }
 
   private def waitUntilUserDropped(name: String): Unit = {
+    ConsistencyUtil.waitUntilUserDropped(cluster.async.core, AuthDomain.Local.alias, name)
     Util.waitUntilCondition(() => {
       users.getUser(name) match {
         case Failure(err: UserNotFoundException) => true

@@ -16,7 +16,9 @@
 
 package com.couchbase.client.kotlin.manager.user
 
+import com.couchbase.client.core.Core
 import com.couchbase.client.core.error.GroupNotFoundException
+import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.kotlin.manager.user.RoleAndOrigins.Origin
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.kotlin.util.waitUntil
@@ -49,9 +51,9 @@ internal class GroupManagerIntegrationTest : KotlinIntegrationTest() {
     @AfterEach
     @BeforeEach
     fun dropTestUser(): Unit = runBlocking {
-        users.dropUserQuietly(USERNAME)
-        users.dropGroupQuietly(GROUP_A)
-        users.dropGroupQuietly(GROUP_B)
+        users.dropUserQuietly(cluster.core, USERNAME)
+        users.dropGroupQuietly(cluster.core, GROUP_A)
+        users.dropGroupQuietly(cluster.core, GROUP_B)
         waitUntil { !users.userExists(USERNAME) }
         waitUntil { !users.groupExists(GROUP_A) }
         waitUntil { !users.groupExists(GROUP_B) }
@@ -61,11 +63,14 @@ internal class GroupManagerIntegrationTest : KotlinIntegrationTest() {
     fun getAll(): Unit = runBlocking {
         users.upsertGroup(Group(GROUP_A))
         users.upsertGroup(Group(GROUP_B))
+        ConsistencyUtil.waitUntilGroupPresent(cluster.core, GROUP_A)
+        ConsistencyUtil.waitUntilGroupPresent(cluster.core, GROUP_B)
         waitUntil { users.groupExists(GROUP_A) }
         waitUntil { users.groupExists(GROUP_B) }
         val actualNames = users.getAllGroups().map { it.name }.toSet()
         assertTrue(actualNames.containsAll(setOf(GROUP_A, GROUP_B)))
         users.dropGroup(GROUP_B)
+        ConsistencyUtil.waitUntilGroupDropped(cluster.core, GROUP_B)
         waitUntil { !users.groupExists(GROUP_B) }
         assertFalse(users.getAllGroups().any { it.name == GROUP_B })
     }
@@ -157,11 +162,13 @@ internal class GroupManagerIntegrationTest : KotlinIntegrationTest() {
 
     private suspend fun upsert(user: User) {
         users.upsertUser(user)
+        ConsistencyUtil.waitUntilUserPresent(cluster.core, AuthDomain.LOCAL.name, user.username)
         waitUntil { users.userExists(user.username) }
     }
 
     private suspend fun upsert(group: Group) {
         users.upsertGroup(group)
+        ConsistencyUtil.waitUntilGroupPresent(cluster.core, group.name)
         waitUntil { users.groupExists(group.name) }
     }
 }
@@ -188,9 +195,10 @@ private suspend fun UserManager.groupExists(groupName: String): Boolean {
     }
 }
 
-private suspend fun UserManager.dropGroupQuietly(groupName: String) {
+private suspend fun UserManager.dropGroupQuietly(core: Core, groupName: String) {
     try {
         dropGroup(groupName)
     } catch (_: GroupNotFoundException) {
     }
+    ConsistencyUtil.waitUntilGroupDropped(core, groupName)
 }

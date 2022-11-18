@@ -20,6 +20,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.UserNotFoundException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
+import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
@@ -52,6 +53,7 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.java.manager.user.AuthDomain.LOCAL;
+import static com.couchbase.client.java.util.GroupUserManagementUtil.dropUserQuietly;
 import static com.couchbase.client.test.Capabilities.COLLECTIONS;
 import static com.couchbase.client.test.Capabilities.ENTERPRISE_EDITION;
 import static java.util.Collections.singleton;
@@ -90,38 +92,13 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
   @AfterEach
   @BeforeEach
   void dropTestUser() {
-    dropUserQuietly(USERNAME);
-    waitUntilUserDropped(USERNAME);
+    dropUserQuietly(cluster.core(), users, USERNAME);
     assertUserAbsent(USERNAME);
   }
 
   private void upsert(User user) {
     users.upsertUser(user);
-    waitUntilUserPresent(user.username());
-  }
-
-  private void waitUntilUserPresent(String name) {
-    Util.waitUntilCondition(() -> {
-      try {
-        users.getUser(LOCAL, name);
-        return true;
-      }
-      catch (UserNotFoundException err) {
-        return false;
-      }
-    });
-  }
-
-  private void waitUntilUserDropped(String name) {
-    Util.waitUntilCondition(() -> {
-      try {
-        users.getUser(LOCAL, name);
-        return false;
-      }
-      catch (UserNotFoundException err) {
-        return true;
-      }
-    });
+    ConsistencyUtil.waitUntilUserPresent(cluster.core(), LOCAL.alias(), user.username());
   }
 
   @Test
@@ -149,7 +126,9 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
 
     disposableCluster.disconnect();
     users.dropUser(username);
+    ConsistencyUtil.waitUntilUserDropped(cluster.core(), AuthDomain.LOCAL.alias(), username);
   }
+
   @Test
   @IgnoreWhen(hasCapabilities = ENTERPRISE_EDITION)
   void changeUserPasswordShouldFailOnCE() {
@@ -172,7 +151,7 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
 
     disposableCluster.disconnect();
     users.dropUser(username);
-
+    ConsistencyUtil.waitUntilUserDropped(cluster.core(), AuthDomain.LOCAL.alias(), username);
   }
 
   @Test
@@ -305,14 +284,6 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
-    }
-  }
-
-  private static void dropUserQuietly(String name) {
-    try {
-      users.dropUser(name);
-    } catch (UserNotFoundException e) {
-      // that's fine!
     }
   }
 

@@ -18,6 +18,7 @@ package com.couchbase.client.kotlin.manager.bucket
 import com.couchbase.client.core.error.BucketExistsException
 import com.couchbase.client.core.error.BucketNotFlushableException
 import com.couchbase.client.core.error.BucketNotFoundException
+import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.kotlin.util.StorageSize.Companion.mebibytes
@@ -48,6 +49,7 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
     }
 
     private suspend fun waitUntilHealthy(bucket: String) {
+        ConsistencyUtil.waitUntilBucketPresent(cluster.core, bucket)
         waitUntil {
             try {
                 buckets.isHealthy(bucket)
@@ -58,6 +60,7 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
     }
 
     private suspend fun waitUntilDropped(bucket: String) {
+        ConsistencyUtil.waitUntilBucketDropped(cluster.core, bucket)
         waitUntil {
             buckets.getAllBuckets().none { it.name == bucket }
         }
@@ -271,6 +274,7 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
             name = name,
             flushEnabled = false,
         )
+        waitUntilHealthy(name)
         assertThrows<BucketNotFlushableException> {
             buckets.flushBucket(name)
         }

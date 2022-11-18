@@ -18,6 +18,7 @@ package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.kotlin.http.CouchbaseHttpClient
 import com.couchbase.client.kotlin.http.CouchbaseHttpResponse
 import com.couchbase.client.kotlin.http.HttpBody
@@ -48,7 +49,7 @@ import kotlin.time.Duration.Companion.seconds
 
 
 @Disabled("due to flakiness in CI environment")
-@IgnoreWhen(missesCapabilities = [SEARCH], clusterTypes = [CAVES])
+@IgnoreWhen(missesCapabilities = [SEARCH], clusterTypes = [CAVES], clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101)
 internal class SearchIntegrationTest : KotlinIntegrationTest() {
 
     private val indexName by lazy { "idx-" + config().bucketname() }
@@ -102,6 +103,7 @@ private suspend fun Cluster.waitForIndex(
     indexName: String,
     timeout: Duration = 1.minutes,
 ): Cluster = withTimeout(timeout) {
+    ConsistencyUtil.waitUntilSearchIndexPresent(core, indexName)
     while (true) {
         val result = httpClient.get(
             HttpTarget.search(),
