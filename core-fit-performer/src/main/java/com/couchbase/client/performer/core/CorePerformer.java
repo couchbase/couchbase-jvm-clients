@@ -48,7 +48,8 @@ abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServic
         streamerOwner.start();
     }
 
-    abstract protected SdkCommandExecutor executor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters, API api);
+    // Performer can return null to indicate it doesn't support this mode of execution (e.g. unsupported API)
+    abstract protected @Nullable SdkCommandExecutor executor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters, API api);
 
     // Can return null if the performer does not support transactions.
     abstract protected @Nullable TransactionCommandExecutor transactionsExecutor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters);
@@ -82,8 +83,8 @@ abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServic
 
             var counters = new Counters();
             var sdkExecutor = executor(request.getWorkloads(), counters, API.DEFAULT);
-            var sdkExecutorReactive = executor(request.getWorkloads(), counters, API.ASYNC);
-            var transactionsExecutor = transactionsExecutor(request.getWorkloads(), counters);
+            @Nullable var sdkExecutorReactive = executor(request.getWorkloads(), counters, API.ASYNC);
+            @Nullable var transactionsExecutor = transactionsExecutor(request.getWorkloads(), counters);
 
             var writer = new WorkloadStreamingThread(responseObserver, request.getConfig());
             writer.start();

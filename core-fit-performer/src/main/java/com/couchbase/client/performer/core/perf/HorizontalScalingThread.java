@@ -32,8 +32,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class HorizontalScalingThread extends Thread {
     private final Logger logger;
-    private final SdkCommandExecutor sdkCommandExecutor;
-    private final SdkCommandExecutor sdkCommandExecutorReactive;
+    private final @Nullable SdkCommandExecutor sdkCommandExecutor;
+    private final @Nullable SdkCommandExecutor sdkCommandExecutorReactive;
     private final @Nullable TransactionCommandExecutor transactionsCommandExecutor;
     private final PerHorizontalScaling per;
     AtomicInteger operationsSuccessful = new AtomicInteger(0);
@@ -41,8 +41,8 @@ public class HorizontalScalingThread extends Thread {
     AtomicInteger operationsUnknown = new AtomicInteger(0);
 
     public HorizontalScalingThread(PerHorizontalScaling per,
-                                   SdkCommandExecutor sdkCommandExecutor,
-                                   SdkCommandExecutor sdkCommandExecutorReactive,
+                                   @Nullable SdkCommandExecutor sdkCommandExecutor,
+                                   @Nullable SdkCommandExecutor sdkCommandExecutorReactive,
                                    @Nullable TransactionCommandExecutor transactionsCommandExecutor) {
         super("perf-runner");
         logger = LoggerFactory.getLogger("runner-" + per.runnerIndex());
@@ -77,6 +77,8 @@ public class HorizontalScalingThread extends Thread {
             var nextCommand = workload.getCommand((int) (executed % workload.getCommandCount()));
             ++ executed;
             var result = nextCommand.getApi() == API.DEFAULT
+                    // It's safe to call .run() here on the @Nullable, as the executor will only be called if it's previously declared itself
+                    // to support this mode of execution (e.g. API)
                     ? sdkCommandExecutor.run(nextCommand, per.perRun())
                     : sdkCommandExecutorReactive.run(nextCommand, per.perRun());
 

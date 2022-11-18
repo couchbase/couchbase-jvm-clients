@@ -93,14 +93,10 @@ class KotlinPerformer : CorePerformer() {
         responseObserver.onCompleted()
     }
 
-    override fun executor(workloads: com.couchbase.client.protocol.run.Workloads, counters: Counters, api: API): SdkCommandExecutor {
-        // The test driver freaks out if we say we don't support the async API.
-        // As a workaround, execute the tests redundantly (same way in both API modes).
-        // Uncomment this when driver is fixed.
-//        if (api != API.DEFAULT) {
-//            throw UnsupportedOperationException("This performer supports only the default API.")
-//        }
-
+    override fun executor(workloads: com.couchbase.client.protocol.run.Workloads, counters: Counters, api: API): SdkCommandExecutor? {
+        if (api != API.DEFAULT) {
+            return null
+        }
         return KotlinSdkCommandExecutor(clusterConnections.get(workloads.clusterConnectionId)!!, counters)
     }
 
