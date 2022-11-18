@@ -11,9 +11,10 @@ QUICK_TEST_MODE = false // enable to support quicker development iteration
 // https://hub.internal.couchbase.com/confluence/pages/viewpage.action?spaceKey=CR&title=cbdep+available+packages
 // https://github.com/couchbasebuild/cbdep/blob/master/cbdep.config
 def ORACLE_JDK = "java"
-def ORACLE_JDK_8 = "8u192"
+def ORACLE_JDK_8 = "8u192"        // Avoid above Oracle 8u201, for licensing reasons.
+def ORACLE_JDK_11 = "11.0.3"
 def OPENJDK = "openjdk"
-def OPENJDK_8 = "8u202-b08"
+def OPENJDK_8 = "8u292-b10"       // https://github.com/AdoptOpenJDK/openjdk8-binaries/releases
 def OPENJDK_11 = "11.0.2+7"
 def OPENJDK_11_M1 = "11.0.11+9"
 def OPENJDK_17 = "17.0.1+12"
@@ -32,7 +33,7 @@ pipeline {
 
     options {
         // Safety check, prevent the script running forever
-        timeout(time: 300, unit: 'MINUTES')
+        timeout(time: 600, unit: 'MINUTES')
     }
 
     stages {
@@ -87,116 +88,13 @@ pipeline {
             }
         }
 
-        // "JDK testing"      = checking the latest stable cluster against various JDK versions
-        // "Cluster testing"  = checking a specific cluster version
-        // "Platform testing" = checking a specific platform (M1, ARM, Alpine etc.)
-        // "CE testing"       = Community Edition testing
+        // "JDK testing"         = checking the latest stable cluster against various JDK versions
+        // "Cluster testing"     = checking a specific cluster version
+        // "JDK/Cluster testing" = orthogonally testing JDKs and clusters was expensive in time, so they are now combined.
+        //                         An arbitrary JDK is used for each cluster - aim is just to get good coverage of all of them.
+        // "Platform testing"    = checking a specific platform (M1, ARM, Alpine etc.)
+        // "CE testing"          = Community Edition testing
 
-        // Note we can't embed the actual version in the string here, due to https://issues.jenkins.io/browse/JENKINS-43820
-        stage("JDK testing (Linux, stable, openjdk 17)") {
-            agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}/bin:$PATH"
-            }
-            when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                test(OPENJDK, OPENJDK_17, CLUSTER_VERSION_LATEST_STABLE, REFSPEC)
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-            }
-        }
-
-        stage("JDK testing (Linux, stable, Amazon Corretto 8)") {
-            agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}"
-                PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}/bin:$PATH"
-            }
-            when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                test(CORRETTO, CORRETTO_8, CLUSTER_VERSION_LATEST_STABLE, REFSPEC)
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-            }
-        }
-
-        stage("JDK testing (Linux, stable, Amazon Corretto 11)") {
-            agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}"
-                PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}/bin:$PATH"
-            }
-            when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                test(CORRETTO, CORRETTO_11, CLUSTER_VERSION_LATEST_STABLE, REFSPEC)
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-            }
-        }
-
-        stage("JDK testing (Linux, stable, AdoptOpenJDK 11)") {
-             agent { label "sdkqe" }
-             environment {
-                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
-                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
-             }
-             when {
-                 beforeAgent true;
-                 expression
-                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
-             }
-             steps {
-                test(OPENJDK, OPENJDK_11, CLUSTER_VERSION_LATEST_STABLE, REFSPEC)
-             }
-             post {
-                 always {
-                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                 }
-             }
-         }
-
-         stage('JDK testing (Linux, stable, AdoptOpenJDK 8)') {
-             agent { label "sdkqe" }
-             environment {
-                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
-                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
-             }
-             when {
-                 beforeAgent true;
-                 expression
-                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
-             }
-             steps {
-                test(OPENJDK, OPENJDK_8, CLUSTER_VERSION_LATEST_STABLE, REFSPEC)
-             }
-             post {
-                 always {
-                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                 }
-             }
-         }
 
         // Test against cbdyncluster - do for nightly tests
         // One day can get all these cbdyncluster tests running in parallel: https://jenkins.io/blog/2017/09/25/declarative-1/
@@ -227,7 +125,7 @@ pipeline {
 //             }
 //         }
 
-        stage('Cluster testing  (Linux, cbdyncluster 7.2-stable, Oracle JDK 8)') {
+        stage('JDK/Cluster testing  (Linux, cbdyncluster 7.2-stable, Oracle JDK 8)') {
             agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
@@ -248,11 +146,11 @@ pipeline {
             }
         }
 
-        stage('Cluster testing  (Linux, cbdyncluster 7.0-stable, Oracle JDK 8)') {
+        stage('JDK/Cluster testing  (Linux, cbdyncluster 7.1-stable, openjdk 17)') {
             agent { label "sdkqe" }
             environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
+                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}/bin:$PATH"
             }
             when {
                 beforeAgent true;
@@ -260,7 +158,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "7.0-stable", REFSPEC)
+                test(OPENJDK, OPENJDK_17, "7.1-stable", REFSPEC)
             }
             post {
                 always {
@@ -269,11 +167,11 @@ pipeline {
             }
         }
 
-        stage('Cluster testing  (Linux, cbdyncluster 6.6-stable, Oracle JDK 8)') {
+        stage('JDK/Cluster testing  (Linux, cbdyncluster 7.0-stable, Oracle JDK 11)') {
             agent { label "sdkqe" }
             environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_11}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_11}/bin:$PATH"
             }
             when {
                 beforeAgent true;
@@ -281,7 +179,28 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "6.6-stable", REFSPEC)
+                test(ORACLE_JDK, ORACLE_JDK_11, "7.0-stable", REFSPEC)
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('JDK/Cluster testing  (Linux, cbdyncluster 6.6-stable, Corretto 8)') {
+            agent { label "sdkqe" }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}"
+                PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}/bin:$PATH"
+            }
+            when {
+                beforeAgent true;
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                test(CORRETTO, CORRETTO_8, "6.6-stable", REFSPEC)
             }
             post {
                 always {
@@ -291,11 +210,11 @@ pipeline {
         }
 
         // 6.5 is EOL, we do one sanity test against it
-        stage('Cluster testing  (Linux, cbdyncluster 6.5-release, Oracle JDK 8)') {
+        stage('JDK/Cluster testing  (Linux, cbdyncluster 6.5-release, Corretto 11)') {
             agent { label "sdkqe" }
             environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+                JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}"
+                PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}/bin:$PATH"
             }
             when {
                 beforeAgent true;
@@ -303,7 +222,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "6.5-release", REFSPEC)
+                test(CORRETTO, CORRETTO_11, "6.5-release", REFSPEC)
             }
             post {
                 always {
@@ -313,11 +232,11 @@ pipeline {
         }
 
         // 6.0 is EOL, we do one sanity test against it
-        stage('Cluster testing  (Linux, cbdyncluster 6.0-release, Oracle JDK 8)') {
+        stage('JDK/Cluster testing  (Linux, cbdyncluster 6.0-release, openjdk 11)') {
              agent { label "sdkqe" }
              environment {
-                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
+                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
              }
              when {
                  beforeAgent true;
@@ -325,7 +244,7 @@ pipeline {
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
              steps {
-                 test(ORACLE_JDK, ORACLE_JDK_8, "6.0-release", REFSPEC)
+                 test(OPENJDK, OPENJDK_11, "6.0-release", REFSPEC)
              }
              post {
                  always {
@@ -334,12 +253,15 @@ pipeline {
              }
          }
 
+        // When removing tests for an older cluster version, if it's a JDK/Cluster test please
+        // make sure that JDK is still tested.
+
         // 5.5 is EOL, we do one sanity test against it
-        stage('Cluster testing  (Linux, cbdyncluster 5.5-release, Oracle JDK 8)') {
+        stage('JDK/Cluster testing  (Linux, cbdyncluster 5.5-release, openjdk 8)') {
              agent { label "sdkqe" }
              environment {
-                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
+                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
              }
              when {
                  beforeAgent true;
@@ -347,7 +269,7 @@ pipeline {
                          { return IS_GERRIT_TRIGGER.toBoolean() == false }
              }
              steps {
-                 test(ORACLE_JDK, ORACLE_JDK_8, "5.5-release", includeAnalytics : false, REFSPEC)
+                 test(OPENJDK, OPENJDK_8, "5.5-release", includeAnalytics : false, REFSPEC)
              }
              post {
                  always {
@@ -379,7 +301,8 @@ pipeline {
 //             }
 //         }
 
-        stage("CE testing (Linux, stable, OpenJDK JDK 17)") {
+        // Cannot use 7.1-stable, it maps to 7.1.3 and there is no 7.1.3 CE release.  7.1.1 is current latest (Nov '22).
+        stage("CE testing (Linux, cbdyncluster 7.1.1, OpenJDK JDK 17)") {
             agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
@@ -391,7 +314,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(OPENJDK, OPENJDK_17, CLUSTER_VERSION_LATEST_STABLE, ceMode : true, REFSPEC)
+                test(OPENJDK, OPENJDK_17, "7.1.1", ceMode : true, REFSPEC)
             }
             post {
                 always {
