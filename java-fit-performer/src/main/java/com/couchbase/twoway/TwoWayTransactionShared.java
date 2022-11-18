@@ -508,7 +508,7 @@ public abstract class TwoWayTransactionShared {
                 .doOnSubscribe(s -> logger.info("Running {} operations, concurrency={}",
                         request.getCommandsCount(), request.getParallelism()))
                 .parallel(request.getParallelism())
-                .runOn(Schedulers.elastic())
+                .runOn(Schedulers.boundedElastic())
                 .concatMap(parallelOp -> new MonoBridge<>(call.apply(parallelOp), "not-used", this, null).external()
                         .doOnTerminate(() -> latch.countDown())
                 .doOnNext(v -> logger.info("A parallel op {} has finished", parallelOp.getCommandCase()))
@@ -545,7 +545,7 @@ public abstract class TwoWayTransactionShared {
                 .doOnSubscribe(s -> logger.info("Running {} operations, concurrency={}",
                         request.getCommandsCount(), request.getParallelism()))
                 .parallel(request.getParallelism())
-                .runOn(Schedulers.elastic())
+                .runOn(Schedulers.boundedElastic())
                 .concatMap(parallelOp -> new MonoBridge<>(call.apply(parallelOp), "not-used", this, null).external()
                         .doOnNext(v -> logger.info("A parallel op {} has finished", parallelOp.getCommandCase()))
                         .doOnCancel(() -> logger.info("A parallel op {} has been cancelled", parallelOp.getCommandCase()))
