@@ -363,10 +363,13 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   @IgnoreWhen(missesCapabilities = Array(Capabilities.ENTERPRISE_EDITION))
   def updateBucketWithCompressionModeShouldSucceedOnEE(): Unit = {
     val name = UUID.randomUUID.toString
-    val settings = createGetAndDestroy(name, CreateBucketSettings(name, 100))
+    val settings = CreateBucketSettings(name, 100)
+    buckets.create(settings).get
+    waitUntilHealthy(name)
+
     buckets
       .updateBucket(
-        settings.copy(compressionMode = Some(CompressionMode.Passive)).toCreateBucketSettings
+        settings.copy(compressionMode = Some(CompressionMode.Passive))
       )
       .get
   }
