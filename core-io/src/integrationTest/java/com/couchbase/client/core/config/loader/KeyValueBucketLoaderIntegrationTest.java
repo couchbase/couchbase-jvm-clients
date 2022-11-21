@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.util.ConfigWaitHelper;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
@@ -38,10 +39,12 @@ import static org.junit.Assert.assertNotNull;
 class KeyValueBucketLoaderIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
+  private ConfigWaitHelper configWaitHelper;
 
   @BeforeEach
   void beforeEach() {
     env = environment().build();
+    configWaitHelper = new ConfigWaitHelper(env.eventBus());
   }
 
   @AfterEach
@@ -58,6 +61,7 @@ class KeyValueBucketLoaderIntegrationTest extends CoreIntegrationTest {
     TestNodeConfig config = config().firstNodeWith(Services.KV).get();
 
     Core core = Core.create(env, authenticator(), seedNodes());
+    configWaitHelper.await();
     KeyValueBucketLoader loader = new KeyValueBucketLoader(core);
     ProposedBucketConfigContext loaded = loader.load(
       new NodeIdentifier(config.hostname(), config.ports().get(Services.MANAGER)),

@@ -25,6 +25,7 @@ import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.ConfigWaitHelper;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
@@ -45,10 +46,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class ClusterManagerBucketLoaderIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
+  private static ConfigWaitHelper configWaitHelper;
 
   @BeforeEach
   void beforeEach() {
     env = environment().build();
+    configWaitHelper = new ConfigWaitHelper(env.eventBus());
   }
 
   @AfterEach
@@ -73,6 +76,7 @@ class ClusterManagerBucketLoaderIntegrationTest extends CoreIntegrationTest {
       ClusterState.ONLINE,
       Optional.empty()
     ).get();
+    configWaitHelper.await();
     ClusterManagerBucketLoader loader = new ClusterManagerBucketLoader(core);
     int port = config.ports().get(Services.MANAGER);
     ProposedBucketConfigContext ctx = loader.load(

@@ -17,9 +17,11 @@
 package com.couchbase.client.core.config.loader;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.cnc.events.core.ReconfigurationCompletedEvent;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.util.ConfigWaitHelper;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
@@ -28,17 +30,21 @@ import com.couchbase.client.test.TestNodeConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @IgnoreWhen(missesCapabilities = Capabilities.GLOBAL_CONFIG)
-class GlobalLoaderIntegrationTest extends CoreIntegrationTest {
-
+public class GlobalLoaderIntegrationTest extends CoreIntegrationTest {
+  private final Logger logger = LoggerFactory.getLogger(GlobalLoaderIntegrationTest.class);
   private CoreEnvironment env;
+  private ConfigWaitHelper configWaitHelper;
 
   @BeforeEach
   void beforeEach() {
     env = environment().build();
+    configWaitHelper = new ConfigWaitHelper(env.eventBus());
   }
 
   @AfterEach
@@ -55,7 +61,10 @@ class GlobalLoaderIntegrationTest extends CoreIntegrationTest {
     TestNodeConfig config = config().firstNodeWith(Services.KV).get();
 
     Core core = Core.create(env, authenticator(), seedNodes());
+    configWaitHelper.await();
     GlobalLoader loader = new GlobalLoader(core);
+
+    logger.info("Proposing config");
 
     ProposedGlobalConfigContext globalConfigContext = loader.load(
       new NodeIdentifier(config.hostname(), config.ports().get(Services.MANAGER)),
@@ -67,5 +76,4 @@ class GlobalLoaderIntegrationTest extends CoreIntegrationTest {
 
     core.shutdown().block();
   }
-
 }
