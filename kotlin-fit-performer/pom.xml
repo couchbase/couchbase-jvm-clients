@@ -18,6 +18,7 @@
 
     <properties>
         <kotlin.version>1.7.10</kotlin.version>
+        <kotlin.code.style>official</kotlin.code.style>
     </properties>
 
     <dependencies>

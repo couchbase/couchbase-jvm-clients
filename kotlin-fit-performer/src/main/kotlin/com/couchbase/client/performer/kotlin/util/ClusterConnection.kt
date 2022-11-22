@@ -13,25 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.performer.kotlin.util
 
 import com.couchbase.client.kotlin.Cluster
+import com.couchbase.client.kotlin.Collection
 import com.couchbase.client.protocol.shared.ClusterConnectionCreateRequest
 import com.couchbase.client.protocol.shared.DocLocation
+import com.couchbase.client.protocol.shared.Collection as FitCollection
 
 class ClusterConnection(req: ClusterConnectionCreateRequest) {
-    private val hostname = "couchbase://" + req.clusterHostname
-    val cluster = Cluster.connect(hostname, req.clusterUsername, req.clusterPassword)
-    private val bucketCache: MutableMap<String, com.couchbase.client.kotlin.Bucket> = mutableMapOf()
+    val cluster = Cluster.connect(
+        connectionString = "couchbase://" + req.clusterHostname,
+        username = req.clusterUsername,
+        password = req.clusterPassword,
+    )
 
-    fun collection(loc: DocLocation): com.couchbase.client.kotlin.Collection {
-        var coll: com.couchbase.client.protocol.shared.Collection?
-        if (loc.hasPool()) coll = loc.pool.collection
-        else if (loc.hasSpecific()) coll = loc.specific.collection
-        else if (loc.hasUuid()) coll = loc.uuid.collection
-        else throw UnsupportedOperationException("Unknown DocLocation type")
+    fun collection(loc: DocLocation): Collection {
+        val coll: FitCollection = when {
+            loc.hasPool() -> loc.pool.collection
+            loc.hasSpecific() -> loc.specific.collection
+            loc.hasUuid() -> loc.uuid.collection
+            else -> throw UnsupportedOperationException("Unknown DocLocation type: $loc")
+        }
 
-        val bucket = bucketCache.getOrPut(coll.bucketName) { cluster.bucket(coll.bucketName) }
-        return bucket.scope(coll.scopeName).collection(coll.collectionName)
+        return collection(coll)
+    }
+
+    fun collection(coll: FitCollection): Collection {
+        return cluster.bucket(coll.bucketName)
+            .scope(coll.scopeName)
+            .collection(coll.collectionName)
     }
 }

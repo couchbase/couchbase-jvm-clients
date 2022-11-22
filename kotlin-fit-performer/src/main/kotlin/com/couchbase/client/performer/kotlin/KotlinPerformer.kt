@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.performer.kotlin
 
 import com.couchbase.client.performer.core.CorePerformer
@@ -22,6 +23,7 @@ import com.couchbase.client.performer.core.perf.Counters
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
 import com.couchbase.client.protocol.performer.PerformerCapsFetchResponse
 import com.couchbase.client.protocol.run.Workloads
+import com.couchbase.client.protocol.sdk.Caps
 import com.couchbase.client.protocol.shared.API
 import com.couchbase.client.protocol.shared.ClusterConnectionCloseRequest
 import com.couchbase.client.protocol.shared.ClusterConnectionCloseResponse
@@ -39,19 +41,24 @@ class KotlinPerformer : CorePerformer() {
     private val clusterConnections: MutableMap<String, ClusterConnection> = mutableMapOf()
     private val logger = LoggerFactory.getLogger(KotlinPerformer::class.java)
 
-    override fun customisePerformerCaps(response: PerformerCapsFetchResponse.Builder?) {
-        response!!.setPerformerUserAgent("kotlin")
-            .addSdkImplementationCaps(com.couchbase.client.protocol.sdk.Caps.SDK_PRESERVE_EXPIRY)
+    override fun customisePerformerCaps(response: PerformerCapsFetchResponse.Builder) {
+        response.setPerformerUserAgent("kotlin")
+            .addSdkImplementationCaps(Caps.SDK_PRESERVE_EXPIRY)
     }
 
-    override fun clusterConnectionCreate(request: ClusterConnectionCreateRequest, responseObserver: StreamObserver<ClusterConnectionCreateResponse>) {
+    override fun clusterConnectionCreate(
+        request: ClusterConnectionCreateRequest,
+        responseObserver: StreamObserver<ClusterConnectionCreateResponse>,
+    ) {
         try {
             val connection = ClusterConnection(request)
             clusterConnections[request.clusterConnectionId] = connection
             logger.info("Established connection to cluster at IP: {} with user {} and id {}", request.clusterHostname, request.clusterUsername, request.clusterConnectionId)
-            responseObserver.onNext(ClusterConnectionCreateResponse.newBuilder()
-                .setClusterConnectionCount(clusterConnections.size)
-                .build())
+            responseObserver.onNext(
+                ClusterConnectionCreateResponse.newBuilder()
+                    .setClusterConnectionCount(clusterConnections.size)
+                    .build()
+            )
             responseObserver.onCompleted()
         } catch (err: Exception) {
             logger.error("Operation failed during clusterConnectionCreate due to {}", err.message)
@@ -61,16 +68,18 @@ class KotlinPerformer : CorePerformer() {
 
     override fun clusterConnectionClose(
         request: ClusterConnectionCloseRequest,
-        responseObserver: StreamObserver<ClusterConnectionCloseResponse>
+        responseObserver: StreamObserver<ClusterConnectionCloseResponse>,
     ) {
         try {
             runBlocking {
-                clusterConnections.get(request.clusterConnectionId)!!.cluster.disconnect()
+                clusterConnections[request.clusterConnectionId]!!.cluster.disconnect()
             }
             clusterConnections.remove(request.clusterConnectionId)
-            responseObserver.onNext(ClusterConnectionCloseResponse.newBuilder()
-                .setClusterConnectionCount(clusterConnections.size)
-                .build())
+            responseObserver.onNext(
+                ClusterConnectionCloseResponse.newBuilder()
+                    .setClusterConnectionCount(clusterConnections.size)
+                    .build()
+            )
             responseObserver.onCompleted()
         } catch (err: Exception) {
             responseObserver.onError(Status.ABORTED.withDescription(err.toString()).asException())
@@ -78,35 +87,27 @@ class KotlinPerformer : CorePerformer() {
     }
 
     override fun disconnectConnections(
-        request: DisconnectConnectionsRequest?,
-        responseObserver: StreamObserver<DisconnectConnectionsResponse?>
+        request: DisconnectConnectionsRequest,
+        responseObserver: StreamObserver<DisconnectConnectionsResponse>,
     ) {
-        runBlocking {
-            clusterConnections.forEach { t, u ->
-                runBlocking {
-                    u.cluster.disconnect()
-                }
-            }
-        }
+        clusterConnections.values.forEach { runBlocking { it.cluster.disconnect() } }
         clusterConnections.clear()
         responseObserver.onNext(DisconnectConnectionsResponse.newBuilder().build())
         responseObserver.onCompleted()
     }
 
-    override fun executor(workloads: com.couchbase.client.protocol.run.Workloads, counters: Counters, api: API): SdkCommandExecutor? {
-        if (api != API.DEFAULT) {
-            return null
-        }
-        return KotlinSdkCommandExecutor(clusterConnections.get(workloads.clusterConnectionId)!!, counters)
+    override fun executor(workloads: Workloads, counters: Counters, api: API): SdkCommandExecutor? {
+        return if (api != API.DEFAULT) null
+        else KotlinSdkCommandExecutor(clusterConnections[workloads.clusterConnectionId]!!, counters)
     }
 
-    override fun transactionsExecutor(workloads: Workloads?, counters: Counters?): TransactionCommandExecutor? {
+    override fun transactionsExecutor(workloads: Workloads, counters: Counters): TransactionCommandExecutor? {
         return null
     }
 }
 
 
-fun main(args: Array<String>) {
+fun main() {
     val logger = LoggerFactory.getLogger(KotlinPerformer::class.java)
     val port = 8060
 

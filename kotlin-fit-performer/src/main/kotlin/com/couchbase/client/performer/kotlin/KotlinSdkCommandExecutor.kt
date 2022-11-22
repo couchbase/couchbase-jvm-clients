@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.performer.kotlin
 
 import com.couchbase.client.core.error.CouchbaseException
@@ -35,7 +36,6 @@ import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
 import com.couchbase.client.protocol.shared.CouchbaseExceptionEx
-import com.couchbase.client.protocol.shared.CouchbaseExceptionType
 import com.couchbase.client.protocol.shared.Exception
 import com.couchbase.client.protocol.shared.ExceptionOther
 import com.couchbase.client.protocol.shared.MutationToken
@@ -49,78 +49,75 @@ import kotlinx.coroutines.runBlocking
 import java.time.Instant
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
-import com.couchbase.client.protocol.shared.Content as ProtoContent
+import com.couchbase.client.protocol.run.Result as FitRunResult
+import com.couchbase.client.protocol.sdk.Command as FitSdkCommand
+import com.couchbase.client.protocol.sdk.kv.GetResult as FitGetResult
+import com.couchbase.client.protocol.sdk.kv.MutationResult as FitMutationResult
+import com.couchbase.client.protocol.shared.Content as FitContent
+import com.couchbase.client.protocol.shared.Durability as FitDurability
+import com.couchbase.client.protocol.shared.Expiry as FitExpiry
+import com.couchbase.client.protocol.shared.PersistTo as FitPersistTo
+import com.couchbase.client.protocol.shared.ReplicateTo as FitReplicateTo
 
 /**
- * SdkOperation performs each requested SDK operation
+ * Performs each requested SDK operation
  */
-class KotlinSdkCommandExecutor(private val connection: ClusterConnection,
-                               private val counters: Counters) : SdkCommandExecutor(counters) {
+class KotlinSdkCommandExecutor(
+    private val connection: ClusterConnection,
+    counters: Counters,
+) : SdkCommandExecutor(counters) {
+
     fun createCommon(hasTimeout: Boolean, timeout: Int): CommonOptions {
-        if (hasTimeout) {
-            return CommonOptions(timeout = timeout.milliseconds)
-        }
-        else {
-            return CommonOptions.Default
-        }
+        return if (hasTimeout) CommonOptions(timeout = timeout.milliseconds)
+        else CommonOptions.Default
     }
 
     fun convertDurability(hasDurability: Boolean, durability: com.couchbase.client.protocol.shared.DurabilityType): Durability {
-        if (hasDurability) {
-            if (durability.hasDurabilityLevel()) {
-                return when (durability.getDurabilityLevel()) {
-                    com.couchbase.client.protocol.shared.Durability.NONE -> Durability.none()
-                    com.couchbase.client.protocol.shared.Durability.MAJORITY -> Durability.majority()
-                    com.couchbase.client.protocol.shared.Durability.MAJORITY_AND_PERSIST_TO_ACTIVE -> Durability.majorityAndPersistToActive()
-                    com.couchbase.client.protocol.shared.Durability.PERSIST_TO_MAJORITY -> Durability.persistToMajority()
-                    else -> throw UnsupportedOperationException("Unknown durability")
-                }
-            }
-            else if (durability.hasObserve()) {
-                return Durability.clientVerified(when (durability.getObserve().getPersistTo()) {
-                    com.couchbase.client.protocol.shared.PersistTo.PERSIST_TO_NONE -> PersistTo.NONE
-                    com.couchbase.client.protocol.shared.PersistTo.PERSIST_TO_ACTIVE -> PersistTo.ACTIVE
-                    com.couchbase.client.protocol.shared.PersistTo.PERSIST_TO_ONE -> PersistTo.ONE
-                    com.couchbase.client.protocol.shared.PersistTo.PERSIST_TO_TWO -> PersistTo.TWO
-                    com.couchbase.client.protocol.shared.PersistTo.PERSIST_TO_THREE -> PersistTo.THREE
-                    com.couchbase.client.protocol.shared.PersistTo.PERSIST_TO_FOUR -> PersistTo.FOUR
-                    else -> throw UnsupportedOperationException("Unknown durability")
-                }, when (durability.getObserve().getReplicateTo()) {
-                    com.couchbase.client.protocol.shared.ReplicateTo.REPLICATE_TO_NONE -> ReplicateTo.NONE
-                    com.couchbase.client.protocol.shared.ReplicateTo.REPLICATE_TO_ONE -> ReplicateTo.ONE
-                    com.couchbase.client.protocol.shared.ReplicateTo.REPLICATE_TO_TWO -> ReplicateTo.TWO
-                    com.couchbase.client.protocol.shared.ReplicateTo.REPLICATE_TO_THREE -> ReplicateTo.THREE
-                    else -> throw UnsupportedOperationException("Unknown durability")
-                })
-            }
-            else {
-                throw UnsupportedOperationException("Unknown durability")
+        if (!hasDurability) return Durability.None
+
+        if (durability.hasDurabilityLevel()) {
+            return when (durability.durabilityLevel) {
+                FitDurability.NONE -> Durability.none()
+                FitDurability.MAJORITY -> Durability.majority()
+                FitDurability.MAJORITY_AND_PERSIST_TO_ACTIVE -> Durability.majorityAndPersistToActive()
+                FitDurability.PERSIST_TO_MAJORITY -> Durability.persistToMajority()
+                else -> throw UnsupportedOperationException("Unknown durability: $durability")
             }
         }
-        else {
-            return Durability.None
+
+        if (durability.hasObserve()) {
+            return Durability.clientVerified(
+                persistTo = when (durability.observe.persistTo) {
+                    FitPersistTo.PERSIST_TO_NONE -> PersistTo.NONE
+                    FitPersistTo.PERSIST_TO_ACTIVE -> PersistTo.ACTIVE
+                    FitPersistTo.PERSIST_TO_ONE -> PersistTo.ONE
+                    FitPersistTo.PERSIST_TO_TWO -> PersistTo.TWO
+                    FitPersistTo.PERSIST_TO_THREE -> PersistTo.THREE
+                    FitPersistTo.PERSIST_TO_FOUR -> PersistTo.FOUR
+                    else -> throw UnsupportedOperationException("Unknown durability: $durability")
+                },
+                replicateTo = when (durability.observe.replicateTo) {
+                    FitReplicateTo.REPLICATE_TO_NONE -> ReplicateTo.NONE
+                    FitReplicateTo.REPLICATE_TO_ONE -> ReplicateTo.ONE
+                    FitReplicateTo.REPLICATE_TO_TWO -> ReplicateTo.TWO
+                    FitReplicateTo.REPLICATE_TO_THREE -> ReplicateTo.THREE
+                    else -> throw UnsupportedOperationException("Unknown durability: $durability")
+                },
+            )
         }
+
+        throw UnsupportedOperationException("Unknown durability")
     }
 
-    fun convertExpiry(hasExpiry: Boolean, expiry: com.couchbase.client.protocol.shared.Expiry): Expiry {
-        if (hasExpiry) {
-            if (expiry.hasAbsoluteEpochSecs()) {
-                return Expiry.of(Instant.ofEpochSecond(expiry.absoluteEpochSecs))
-            }
-            else if (expiry.hasRelativeSecs()) {
-                return Expiry.of(expiry.relativeSecs.seconds)
-            }
-            else {
-                throw UnsupportedOperationException("Unknown expiry")
-            }
-        }
-        else {
-            return Expiry.None
-        }
+    fun convertExpiry(hasExpiry: Boolean, expiry: FitExpiry): Expiry = when {
+        !hasExpiry -> Expiry.none()
+        expiry.hasAbsoluteEpochSecs() -> Expiry.of(Instant.ofEpochSecond(expiry.absoluteEpochSecs))
+        expiry.hasRelativeSecs() -> Expiry.of(expiry.relativeSecs.seconds)
+        else -> throw UnsupportedOperationException("Unknown expiry: $expiry")
     }
 
-    override fun performOperation(op: com.couchbase.client.protocol.sdk.Command, perRun: PerRun): com.couchbase.client.protocol.run.Result {
-        val result = com.couchbase.client.protocol.run.Result.newBuilder()
+    override fun performOperation(op: FitSdkCommand, perRun: PerRun): FitRunResult {
+        val result = FitRunResult.newBuilder()
 
         runBlocking {
             if (op.hasInsert()) {
@@ -132,13 +129,14 @@ class KotlinSdkCommandExecutor(private val connection: ClusterConnection,
                 val start = System.nanoTime()
                 val r = if (request.hasOptions()) {
                     val options = request.options
-                    collection.insert(docId, content,
+                    collection.insert(
+                        docId, content,
                         common = createCommon(options.hasTimeoutMsecs(), options.timeoutMsecs),
                         transcoder = convertTranscoder(options.hasTranscoder(), options.transcoder),
                         durability = convertDurability(options.hasDurability(), options.durability),
-                        expiry = convertExpiry(options.hasExpiry(), options.expiry))
-                }
-                else collection.insert(docId, content)
+                        expiry = convertExpiry(options.hasExpiry(), options.expiry),
+                    )
+                } else collection.insert(docId, content)
                 result.elapsedNanos = System.nanoTime() - start
                 if (op.returnResult) populateResult(result, r)
                 else setSuccess(result)
@@ -154,12 +152,13 @@ class KotlinSdkCommandExecutor(private val connection: ClusterConnection,
                         throw UnsupportedOperationException("Unknown transcoder")
                     }
                     val options = request.options
-                    collection.get(docId,
+                    collection.get(
+                        docId,
                         common = createCommon(options.hasTimeoutMsecs(), options.timeoutMsecs),
                         withExpiry = if (options.hasWithExpiry()) options.hasWithExpiry() else false,
-                        project = options.projectionList.toList())
-                }
-                else collection.get(docId)
+                        project = options.projectionList.toList(),
+                    )
+                } else collection.get(docId)
                 result.elapsedNanos = System.nanoTime() - start
                 if (op.returnResult) populateResult(result, r)
                 else setSuccess(result)
@@ -171,12 +170,13 @@ class KotlinSdkCommandExecutor(private val connection: ClusterConnection,
                 val start = System.nanoTime()
                 val r = if (request.hasOptions()) {
                     val options = request.options
-                    collection.remove(docId,
+                    collection.remove(
+                        docId,
                         common = createCommon(options.hasTimeoutMsecs(), options.timeoutMsecs),
                         durability = convertDurability(options.hasDurability(), options.durability),
-                        cas = if (options.hasCas()) options.cas else 0)
-                }
-                else collection.remove(docId)
+                        cas = if (options.hasCas()) options.cas else 0,
+                    )
+                } else collection.remove(docId)
                 result.elapsedNanos = System.nanoTime() - start
                 if (op.returnResult) populateResult(result, r)
                 else setSuccess(result)
@@ -189,15 +189,16 @@ class KotlinSdkCommandExecutor(private val connection: ClusterConnection,
                 val start = System.nanoTime()
                 val r = if (request.hasOptions()) {
                     val options = request.options
-                    collection.replace(docId, content,
+                    collection.replace(
+                        docId, content,
                         common = createCommon(options.hasTimeoutMsecs(), options.timeoutMsecs),
                         transcoder = convertTranscoder(options.hasTranscoder(), options.transcoder),
                         durability = convertDurability(options.hasDurability(), options.durability),
                         expiry = convertExpiry(options.hasExpiry(), options.expiry),
                         preserveExpiry = if (options.hasPreserveExpiry()) options.preserveExpiry else false,
-                        cas = if (options.hasCas()) options.cas else 0)
-                }
-                else collection.replace(docId, content)
+                        cas = if (options.hasCas()) options.cas else 0,
+                    )
+                } else collection.replace(docId, content)
                 result.elapsedNanos = System.nanoTime() - start
                 if (op.returnResult) populateResult(result, r)
                 else setSuccess(result)
@@ -210,14 +211,15 @@ class KotlinSdkCommandExecutor(private val connection: ClusterConnection,
                 val start = System.nanoTime()
                 val r = if (request.hasOptions()) {
                     val options = request.options
-                    collection.upsert(docId, content,
+                    collection.upsert(
+                        docId, content,
                         common = createCommon(options.hasTimeoutMsecs(), options.timeoutMsecs),
                         transcoder = convertTranscoder(options.hasTranscoder(), options.transcoder),
                         durability = convertDurability(options.hasDurability(), options.durability),
                         expiry = convertExpiry(options.hasExpiry(), options.expiry),
-                        preserveExpiry = if (options.hasPreserveExpiry()) options.preserveExpiry else false)
-                }
-                else collection.upsert(docId, content)
+                        preserveExpiry = if (options.hasPreserveExpiry()) options.preserveExpiry else false,
+                    )
+                } else collection.upsert(docId, content)
                 result.elapsedNanos = System.nanoTime() - start
                 if (op.returnResult) populateResult(result, r)
                 else setSuccess(result)
@@ -229,33 +231,9 @@ class KotlinSdkCommandExecutor(private val connection: ClusterConnection,
         return result.build()
     }
 
-    override fun convertException(raw: Throwable?): Exception {
-        val ret = Exception.newBuilder()
+    override fun convertException(raw: Throwable): Exception = convertExceptionKt(raw)
 
-        if (raw is CouchbaseException || raw is java.lang.UnsupportedOperationException) {
-            val type = if (raw is java.lang.UnsupportedOperationException) {
-                CouchbaseExceptionType.SDK_UNSUPPORTED_OPERATION_EXCEPTION
-            } else {
-                ErrorUtil.convertException(raw as CouchbaseException)
-            }
-            val out = CouchbaseExceptionEx.newBuilder()
-                    .setName(raw.javaClass.simpleName)
-                    .setType(type)
-                    .setSerialized(raw.toString())
-            if (raw.cause != null) {
-                out.cause = convertException(raw.cause)
-            }
-            ret.setCouchbase(out)
-        } else {
-            ret.setOther(ExceptionOther.newBuilder()
-                    .setName(raw!!.javaClass.simpleName)
-                    .setSerialized(raw.toString()))
-        }
-
-        return ret.build()
-    }
-
-    fun content(content: ProtoContent): Any? {
+    fun content(content: FitContent): Any? {
         return when {
             content.hasPassthroughString() -> content.passthroughString
 
@@ -269,19 +247,20 @@ class KotlinSdkCommandExecutor(private val connection: ClusterConnection,
     }
 
     private fun convertTranscoder(hasTranscoder: Boolean, transcoderMaybe: Transcoder?): com.couchbase.client.kotlin.codec.Transcoder? {
-        if (hasTranscoder) {
-            val transcoder = transcoderMaybe!!
-            return if (transcoder.hasRawJson()) RawJsonTranscoder
-            else if (transcoder.hasJson()) jsonTranscoder
-            else if (transcoder.hasRawString()) RawStringTranscoder
-            else if (transcoder.hasRawBinary()) RawBinaryTranscoder
+        if (!hasTranscoder) return null
+
+        val transcoder = transcoderMaybe!!
+        return when {
+            transcoder.hasRawJson() -> RawJsonTranscoder
+            transcoder.hasJson() -> jsonTranscoder
+            transcoder.hasRawString() -> RawStringTranscoder
+            transcoder.hasRawBinary() -> RawBinaryTranscoder
             // Kotlin does not have LegacyTranscoder
-            else throw UnsupportedOperationException("Unknown transcoder")
+            else -> throw UnsupportedOperationException("Unknown transcoder: $transcoder")
         }
-        return null
     }
 
-    private fun setSuccess(result: com.couchbase.client.protocol.run.Result.Builder) {
+    private fun setSuccess(result: FitRunResult.Builder) {
         result.setSdk(
             com.couchbase.client.protocol.sdk.Result.newBuilder()
                 .setSuccess(true)
@@ -289,10 +268,10 @@ class KotlinSdkCommandExecutor(private val connection: ClusterConnection,
     }
 
     private fun populateResult(
-        result: com.couchbase.client.protocol.run.Result.Builder,
+        result: FitRunResult.Builder,
         value: MutationResult
     ) {
-        val builder = com.couchbase.client.protocol.sdk.kv.MutationResult.newBuilder()
+        val builder = FitMutationResult.newBuilder()
             .setCas(value.cas)
         if (value.mutationToken != null) {
             val mt = value.mutationToken!!
@@ -310,8 +289,8 @@ class KotlinSdkCommandExecutor(private val connection: ClusterConnection,
         )
     }
 
-    private fun populateResult(result: com.couchbase.client.protocol.run.Result.Builder, value: GetResult) {
-        val builder = com.couchbase.client.protocol.sdk.kv.GetResult.newBuilder()
+    private fun populateResult(result: FitRunResult.Builder, value: GetResult) {
+        val builder = FitGetResult.newBuilder()
             .setCas(value.cas)
             .setContent(ByteString.copyFrom(value.content.bytes))
         when (val expiry = value.expiry) {
@@ -332,4 +311,25 @@ class KotlinSdkCommandExecutor(private val connection: ClusterConnection,
 
         val jsonTranscoder = JsonTranscoder(JacksonJsonSerializer(jsonMapper))
     }
+}
+
+fun convertExceptionKt(raw: Throwable): Exception {
+    if (raw is CouchbaseException || raw is UnsupportedOperationException) {
+        val out = CouchbaseExceptionEx.newBuilder()
+            .setName(raw.javaClass.simpleName)
+            .setType(ErrorUtil.convertException(raw))
+            .setSerialized(raw.toString())
+        raw.cause?.let { out.cause = convertExceptionKt(it) }
+
+        return Exception.newBuilder()
+            .setCouchbase(out)
+            .build()
+    }
+
+    return Exception.newBuilder()
+        .setOther(
+            ExceptionOther.newBuilder()
+                .setName(raw.javaClass.simpleName)
+                .setSerialized(raw.toString())
+        ).build()
 }
