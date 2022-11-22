@@ -32,6 +32,8 @@ import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.msg.Request
 import com.couchbase.client.core.msg.Response
 import com.couchbase.client.core.msg.ResponseStatus
+import com.couchbase.client.core.msg.ResponseStatus.EXISTS
+import com.couchbase.client.core.msg.ResponseStatus.NOT_STORED
 import com.couchbase.client.core.msg.ResponseStatus.SUBDOC_FAILURE
 import com.couchbase.client.core.msg.kv.GetAndLockRequest
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest
@@ -54,6 +56,7 @@ import com.couchbase.client.kotlin.codec.Transcoder
 import com.couchbase.client.kotlin.codec.TypeRef
 import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.env.ClusterEnvironment
+import com.couchbase.client.kotlin.internal.isAnyOf
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.kv.Counter
 import com.couchbase.client.kotlin.kv.Durability
@@ -155,6 +158,7 @@ public class Collection internal constructor(
             return GetResult(id, it.cas, Content(it.content, it.flags), it.expiry, defaultTranscoder)
         }
     }
+
     /**
      * Like [get], but returns null instead of throwing
      * [DocumentNotFoundException] if the document is not found.
@@ -697,8 +701,7 @@ public class Collection internal constructor(
                     )
                 }
 
-                if (storeSemantics == StoreSemantics.Insert
-                        && (response.status() == ResponseStatus.EXISTS || response.status() == ResponseStatus.NOT_STORED)) {
+                if (storeSemantics == StoreSemantics.Insert && response.status().isAnyOf(EXISTS, NOT_STORED)) {
                     throw DocumentExistsException(completedRequest(request, response))
                 }
                 if (response.status() == SUBDOC_FAILURE) response.error().map { throw it }

@@ -16,15 +16,10 @@
 
 package com.couchbase.client.kotlin.internal
 
-import com.couchbase.client.core.error.TimeoutException
 import com.couchbase.client.core.util.CbThrowables
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.future.await
-import kotlinx.coroutines.withTimeout
 import reactor.core.publisher.Mono
 import java.nio.charset.StandardCharsets.UTF_8
-import kotlin.time.Duration
 
 internal fun ByteArray.toStringUtf8() = toString(UTF_8)
 
@@ -70,6 +65,10 @@ internal inline fun <reified T : Throwable> Throwable.findCause(): T? {
  */
 internal inline fun <reified T : Throwable> Throwable.hasCause(): Boolean {
     return findCause<T>() != null
+}
+
+internal fun <E : Enum<E>> E?.isAnyOf(a: E, b: E): Boolean {
+    return a == this || b == this
 }
 
 /**
