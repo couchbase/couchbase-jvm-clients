@@ -23,8 +23,8 @@ import com.couchbase.client.kotlin.analytics.AnalyticsStatus
 import com.couchbase.client.kotlin.analytics.execute
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.test.Capabilities.ANALYTICS
-import com.couchbase.client.test.ClusterType.MOCKED
 import com.couchbase.client.test.ClusterType.CAVES
+import com.couchbase.client.test.ClusterType.MOCKED
 import com.couchbase.client.test.IgnoreWhen
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
@@ -50,8 +50,8 @@ internal class AnalyticsIntegrationTest : KotlinIntegrationTest() {
     @Test
     fun `named args dataverse query`(): Unit = runBlocking {
         val result = cluster.analyticsQuery(
-            "SELECT RAW DataverseName FROM Metadata.`Dataverse` where DataverseName = \$dataverse",
-            parameters = named("dataverse" to "Metadata")
+            "SELECT RAW DataverseName FROM Metadata.`Dataverse` where DataverseName = \$dataverseName",
+            parameters = named("dataverseName" to "Metadata")
         ).execute()
 
         assertEquals(listOf("Metadata"), result.rows.map { it.contentAs<String>() })
