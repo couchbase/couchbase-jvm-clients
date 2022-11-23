@@ -17,6 +17,7 @@
 package com.couchbase.client.kotlin.manager.user
 
 import com.couchbase.client.core.error.CouchbaseException
+import com.couchbase.client.core.error.FeatureNotAvailableException
 import com.couchbase.client.core.error.UserNotFoundException
 import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.manager.user.RoleAndOrigins.Origin
@@ -113,7 +114,7 @@ internal class UserManagerIntegrationTest : KotlinIntegrationTest() {
     }
 
     @Test
-    fun create() : Unit = runBlocking {
+    fun create(): Unit = runBlocking {
         val origPassword = testUser.password!!
         val newPassword = "newpassword"
         upsert(testUser.copy(roles = setOf(admin)))
@@ -131,12 +132,14 @@ internal class UserManagerIntegrationTest : KotlinIntegrationTest() {
         waitUntil { users.getUser(USERNAME).user.displayName == "Renamed" }
 
         assertCanAuthenticate(USERNAME, origPassword)
-        users.upsertUser(User(
-            username = USERNAME,
-            displayName = "Renamed",
-            roles = setOf(readOnlyAdmin, bucketFullAccessWildcard),
-            password = newPassword,
-        ))
+        users.upsertUser(
+            User(
+                username = USERNAME,
+                displayName = "Renamed",
+                roles = setOf(readOnlyAdmin, bucketFullAccessWildcard),
+                password = newPassword,
+            )
+        )
         waitUntil { users.getUser(USERNAME, AuthDomain.LOCAL).user.roles.size == 2 }
 
         assertCanAuthenticate(USERNAME, newPassword)
@@ -148,14 +151,37 @@ internal class UserManagerIntegrationTest : KotlinIntegrationTest() {
     }
 
     @Test
-    fun `user can change their own password`(): Unit = runBlocking {
+    @IgnoreWhen(hasCapabilities = [ENTERPRISE_EDITION])
+    fun `change password throws FeatureNotAvailable on community edition`(): Unit = runBlocking {
         val origPassword = "password"
         val newPassword = "newPassword"
 
         upsert(
             User(
                 username = USERNAME,
-                roles = setOf(Role("data_reader", bucket.name)),
+                roles = setOf(Role("bucket_full_access", bucket.name)),
+                password = origPassword,
+            )
+        )
+
+        Cluster.connect(connectionString, USERNAME, origPassword).use {
+            // Open a bucket for clusters that don't support global config
+            it.bucket(bucket.name).waitUntilReady(1.minutes)
+
+            assertThrows<FeatureNotAvailableException> { it.users.changePassword(newPassword) }
+        }
+    }
+
+    @Test
+    @IgnoreWhen(missesCapabilities = [ENTERPRISE_EDITION])
+    fun `enterprise edition user can change their own password`(): Unit = runBlocking {
+        val origPassword = "password"
+        val newPassword = "newPassword"
+
+        upsert(
+            User(
+                username = USERNAME,
+                roles = setOf(Role("bucket_full_access", bucket.name)),
                 password = origPassword,
             )
         )
@@ -164,7 +190,10 @@ internal class UserManagerIntegrationTest : KotlinIntegrationTest() {
         assertCannotAuthenticate(USERNAME, newPassword)
 
         Cluster.connect(connectionString, USERNAME, origPassword).use {
-            it.waitUntilReady(1.minutes).users.changePassword(newPassword)
+            // Open a bucket for clusters that don't support global config
+            it.bucket(bucket.name).waitUntilReady(1.minutes)
+
+            it.users.changePassword(newPassword)
         }
 
         retry {

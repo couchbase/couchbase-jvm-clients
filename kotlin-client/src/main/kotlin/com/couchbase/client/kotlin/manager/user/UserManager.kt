@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayN
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.error.CouchbaseException
+import com.couchbase.client.core.error.FeatureNotAvailableException
 import com.couchbase.client.core.error.GroupNotFoundException
 import com.couchbase.client.core.error.UserNotFoundException
 import com.couchbase.client.core.json.Mapper
@@ -45,8 +46,14 @@ public class UserManager(
 ) {
     private fun CouchbaseHttpResponse.check(block: CouchbaseHttpResponse.() -> Unit = {}): CouchbaseHttpResponse {
         block()
-        if (!success)
+
+        if (!success) {
+            if (statusCode == 400 && this.contentAsString.lowercase().contains("enterprise edition")) {
+                throw FeatureNotAvailableException.communityEdition("changePassword")
+            }
+
             throw CouchbaseException("Unexpected HTTP status code $statusCode ; $contentAsString")
+        }
         return this
     }
 
