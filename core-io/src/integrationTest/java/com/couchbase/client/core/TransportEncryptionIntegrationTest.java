@@ -38,6 +38,7 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
+import com.couchbase.client.test.Flaky;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
 import org.junit.jupiter.api.Test;
@@ -140,8 +141,9 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
         }
   }
 
+  @Flaky
   @Test
-  void allowsToConfigureCustomCipher() {
+  void allowsToConfigureCustomCipher() throws Exception {
     String version = System.getProperty("java.version");
     boolean is8 = version.startsWith("8") || version.startsWith("1.8");
 
@@ -151,29 +153,19 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     // of JDK 8.  Logic was added to work through the list of supported ciphers, but this hits various SSL errors ("insufficient_security",
     // "handshake_failure") and fails to find a cipher that works in a reasonable time.
     // The common denominator in the failures is JDK 8, so not running this test on that.
+    // Update: the logic to find a supported cipher was still failing on some versions of JDK11+.  It appears to be intermittent so perhaps the list of supported ciphers is unorded.  Going back to hardcoded cipher.
     if (!is8) {
       if (!config().clusterCerts().isPresent()) {
         fail("Cluster Certificate must be present for this test!");
       }
 
-      String[] supportedCiphers = ((SSLServerSocketFactory) SSLServerSocketFactory.getDefault()).getSupportedCipherSuites();
-
-      for (String cipher : supportedCiphers) {
-        logger.info("Supported cipher: {}", cipher);
-
-        try (
-          CoreEnvironment env = secureEnvironment(
-            SecurityConfig.enableTls(true).ciphers(Collections.singletonList(cipher))
-              .trustCertificates(config().clusterCerts().get()),
-            null);
-          Core core = createCore(env, authenticator(), secureSeeds())) {
-          runKeyValueOperation(core, env);
-
-          logger.info("Cipher succeeded: {}", cipher);
-          break;
-        } catch (Throwable e) {
-          logger.info("Cipher {} failed with {}", cipher, e);
-        }
+      String cipher = "TLS_AES_256_GCM_SHA384";
+      CoreEnvironment env = secureEnvironment(
+        SecurityConfig.enableTls(true).ciphers(Collections.singletonList(cipher))
+          .trustCertificates(config().clusterCerts().get()),
+        null);
+      try (Core core = createCore(env, authenticator(), secureSeeds())) {
+        runKeyValueOperation(core, env);
       }
     }
   }
