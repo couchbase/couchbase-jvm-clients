@@ -17,6 +17,7 @@ package com.couchbase.client.test;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,8 @@ import reactor.blockhound.integration.BlockHoundIntegration;
  * @since 2.0.0
  */
 @ExtendWith(ClusterInvocationProvider.class)
+// Sanity timer that should be sufficient for majority of tests.
+@Timeout(120)
 public class ClusterAwareIntegrationTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ClusterAwareIntegrationTest.class);
