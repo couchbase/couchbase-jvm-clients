@@ -16,6 +16,7 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationCompletedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,12 +43,31 @@ public class ConfigWaitHelper {
   private final CountDownLatch latch = new CountDownLatch(1);
 
   public ConfigWaitHelper(EventBus eventBus) {
-    eventBus.subscribe(event -> {
-      // This event happens after core has finished processing the config.
-      if (event instanceof ReconfigurationCompletedEvent) {
-        latch.countDown();
-      }
-    });
+    if (eventBus instanceof SimpleEventBus) {
+      SimpleEventBus seb = (SimpleEventBus) eventBus;
+
+      new Thread(() -> {
+        while (true) {
+          if (seb.publishedEvents().stream().anyMatch(v -> v instanceof ReconfigurationCompletedEvent)) {
+            latch.countDown();
+            break;
+          }
+          try {
+            Thread.sleep(10);
+          } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+          }
+        }
+      }).start();
+    }
+    else {
+      eventBus.subscribe(event -> {
+        // This event happens after core has finished processing the config.
+        if (event instanceof ReconfigurationCompletedEvent) {
+          latch.countDown();
+        }
+      });
+    }
   }
 
   public void await() {

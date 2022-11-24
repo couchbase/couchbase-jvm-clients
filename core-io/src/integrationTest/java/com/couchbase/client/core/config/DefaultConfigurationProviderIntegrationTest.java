@@ -27,6 +27,7 @@ import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.BucketNotFoundDuringLoadException;
 import com.couchbase.client.core.error.ConfigException;
+import com.couchbase.client.core.util.ConfigWaitHelper;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
@@ -62,6 +63,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment environment;
   private Core core;
+  private ConfigWaitHelper configWaitHelper;
 
   @AfterEach
   void afterEach() {
@@ -220,7 +222,9 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     environment = CoreEnvironment.builder()
       .eventBus(eventBus)
       .build();
+    configWaitHelper = new ConfigWaitHelper(environment.eventBus());
     core = Core.create(environment, authenticator(), seeds);
+    configWaitHelper.await();
 
     ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
 
