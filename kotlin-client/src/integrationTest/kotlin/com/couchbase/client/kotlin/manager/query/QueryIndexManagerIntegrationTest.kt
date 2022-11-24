@@ -48,12 +48,15 @@ import kotlin.time.Duration.Companion.seconds
 // Disabling against 5.5 as there appear to be several query bugs (SCBC-246, SCBC-251).  Hardcoding 5.5.6 as that's
 // the current 5.5-release and it's unlikely to change.
 private const val DISABLE_QUERY_TESTS_FOR_CLUSTER = "5.5.6"
+// See QueryIndexManagerIntegrationTest for explanation
+private const val REQUIRE_MB_50132 = "7.1.0"
 private val watchTimeout = 15.seconds
 
 @IgnoreWhen(
     clusterTypes = [ClusterType.CAVES, ClusterType.MOCKED],
     missesCapabilities = [Capabilities.QUERY],
     clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
+    clusterVersionIsBelow = REQUIRE_MB_50132
 )
 internal class QueryIndexManagerIntegrationTest : KotlinIntegrationTest() {
     private val indexes: QueryIndexManager by lazy { cluster.queryIndexes }

@@ -25,6 +25,7 @@ import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.MutationState
 import com.couchbase.client.scala.query.QueryScanConsistency.ConsistentWith
+import com.couchbase.client.scala.query.QuerySpec.{DisableQueryTestsForCluster, RequireMB50132}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.test.{Capabilities, IgnoreWhen, Util}
@@ -39,7 +40,9 @@ import scala.util.{Failure, Success}
 
 // Disabling against 5.5.  See comment on QueryIndexManagerIntegrationTest for details.
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(missesCapabilities = Array(Capabilities.QUERY), clusterVersionEquals = "5.5.6")
+@IgnoreWhen(missesCapabilities = Array(Capabilities.QUERY),
+  clusterVersionEquals = DisableQueryTestsForCluster,
+  clusterVersionIsBelow = RequireMB50132)
 class QuerySpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster   = _
@@ -530,4 +533,10 @@ class QuerySpec extends ScalaIntegrationTest {
     Thread.sleep(50)
     assert(coll.get(docId).isFailure)
   }
+}
+
+object QuerySpec {
+  // See QueryIndexManagerIntegrationTest.java for explanation of these.
+  final val DisableQueryTestsForCluster = "5.5.6"
+  final val RequireMB50132 = "7.1.0"
 }

@@ -37,6 +37,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
+import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.REQUIRE_MB_50132;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -45,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @IgnoreWhen(
   missesCapabilities = Capabilities.QUERY,
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
+  clusterVersionIsBelow = REQUIRE_MB_50132,
   clusterTypes = ClusterType.CAVES
 )
 class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {

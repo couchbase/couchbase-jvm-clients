@@ -19,6 +19,7 @@ import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.MutationState
 import com.couchbase.client.scala.manager.collection.CollectionSpec
+import com.couchbase.client.scala.query.QuerySpec.RequireMB50132
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, Scope, TestUtils}
 import com.couchbase.client.test.{Capabilities, Flaky, IgnoreWhen, Util}
@@ -30,7 +31,8 @@ import scala.util.{Failure, Success}
 
 @Disabled @Flaky
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(missesCapabilities = Array(Capabilities.QUERY, Capabilities.COLLECTIONS))
+@IgnoreWhen(missesCapabilities = Array(Capabilities.QUERY, Capabilities.COLLECTIONS),
+  clusterVersionIsBelow = RequireMB50132)
 class ScopeLevelQuerySpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster   = _

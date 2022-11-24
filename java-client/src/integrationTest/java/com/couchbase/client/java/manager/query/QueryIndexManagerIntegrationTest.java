@@ -45,6 +45,7 @@ import static com.couchbase.client.java.manager.query.DropPrimaryQueryIndexOptio
 import static com.couchbase.client.java.manager.query.DropQueryIndexOptions.dropQueryIndexOptions;
 import static com.couchbase.client.java.manager.query.GetAllQueryIndexesOptions.getAllQueryIndexesOptions;
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
+import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.REQUIRE_MB_50132;
 import static com.couchbase.client.java.manager.query.WatchQueryIndexesOptions.watchQueryIndexesOptions;
 import static com.couchbase.client.test.Capabilities.QUERY;
 import static com.couchbase.client.test.ClusterType.CAVES;
@@ -58,11 +59,18 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-// Disabling against 5.5 as there appear to be several query bugs (SCBC-246, SCBC-251).  Hardcoding 5.5.6 as that's
-// the current 5.5-release and it's unlikely to change.
-@IgnoreWhen(clusterTypes = {CAVES, MOCKED}, missesCapabilities = QUERY, clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER)
+@IgnoreWhen(clusterTypes = {CAVES, MOCKED},
+  missesCapabilities = QUERY,
+  clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
+  clusterVersionIsBelow = REQUIRE_MB_50132)
 public class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
+  // Disabling against 5.5 as there appear to be several query bugs (SCBC-246, SCBC-251).  Hardcoding 5.5.6 as that's
+  // the current 5.5-release and it's unlikely to change.
+  // This is now often redundant with REQUIRE_MB_50132 - leaving for documentation purposes.
   public static final String DISABLE_QUERY_TESTS_FOR_CLUSTER = "5.5.6";
+
+  // Any tests that are creating collections and require the indexer to be aware of those collections, needs MB-50132.
+  public static final String REQUIRE_MB_50132 = "7.1.0";
 
   // time to allow for watch operations that are expected to succeed eventually
   private static final Duration watchTimeout = Duration.ofSeconds(15);

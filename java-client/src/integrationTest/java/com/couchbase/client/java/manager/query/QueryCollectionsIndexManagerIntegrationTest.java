@@ -47,6 +47,7 @@ import static com.couchbase.client.java.manager.query.CreateQueryIndexOptions.cr
 import static com.couchbase.client.java.manager.query.DropPrimaryQueryIndexOptions.dropPrimaryQueryIndexOptions;
 import static com.couchbase.client.java.manager.query.DropQueryIndexOptions.dropQueryIndexOptions;
 import static com.couchbase.client.java.manager.query.GetAllQueryIndexesOptions.getAllQueryIndexesOptions;
+import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.REQUIRE_MB_50132;
 import static com.couchbase.client.java.manager.query.WatchQueryIndexesOptions.watchQueryIndexesOptions;
 import static com.couchbase.client.test.Capabilities.COLLECTIONS;
 import static com.couchbase.client.test.Capabilities.QUERY;
@@ -64,7 +65,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Very similar to the {@link QueryIndexManagerIntegrationTest}, but this one tests with scope and collection support.
  */
-@IgnoreWhen(clusterTypes = { CAVES, MOCKED }, missesCapabilities = { QUERY, COLLECTIONS })
+@IgnoreWhen(clusterTypes = { CAVES, MOCKED },
+  missesCapabilities = { QUERY, COLLECTIONS },
+  clusterVersionIsBelow = REQUIRE_MB_50132)
 public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   // time to allow for watch operations that are expected to succeed eventually
@@ -86,9 +89,6 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
     waitForService(bucket, ServiceType.QUERY);
     waitForQueryIndexerToHaveKeyspace(cluster, bucketName);
-
-    // Workaround for MB-50132
-    Thread.sleep(3000);
 
     bucket.collections().createScope(scopeName);
     bucket.collections().createCollection(CollectionSpec.create(collectionName, scopeName));

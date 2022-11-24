@@ -53,6 +53,7 @@ import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static com.couchbase.client.core.util.CbThrowables.throwIfUnchecked;
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
+import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.REQUIRE_MB_50132;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -65,10 +66,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>
  * @author Michael Reiche
  */
-// Using SUBDOC_REVIVE_DOCUMENT as a proxy for 7.1.0 so we get fix for MB-50132
 @IgnoreWhen(
-  missesCapabilities = { Capabilities.QUERY, Capabilities.COLLECTIONS, Capabilities.SUBDOC_REVIVE_DOCUMENT },
+  missesCapabilities = { Capabilities.QUERY, Capabilities.COLLECTIONS },
   clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES },
+  clusterVersionIsBelow = REQUIRE_MB_50132,
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER
 )
 class QueryCollectionIntegrationTest extends JavaIntegrationTest {

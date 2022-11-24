@@ -53,6 +53,7 @@ import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOpti
 import static com.couchbase.client.java.manager.analytics.CreateDatasetAnalyticsOptions.createDatasetAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.DropDatasetAnalyticsOptions.dropDatasetAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.DropIndexAnalyticsOptions.dropIndexAnalyticsOptions;
+import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.REQUIRE_MB_50132;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -65,6 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @IgnoreWhen(
   missesCapabilities = {Capabilities.ANALYTICS, Capabilities.COLLECTIONS},
+  clusterVersionIsBelow = REQUIRE_MB_50132,
   clusterTypes = ClusterType.CAVES
 )
 class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {

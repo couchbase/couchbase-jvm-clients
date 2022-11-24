@@ -27,6 +27,7 @@ import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.manager.bucket.CreateBucketSettings
 import com.couchbase.client.scala.manager.collection.CollectionSpec
 import com.couchbase.client.scala.manager.query.{QueryIndex, QueryIndexManager}
+import com.couchbase.client.scala.query.QuerySpec.RequireMB50132
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
 import com.couchbase.client.test._
@@ -44,7 +45,8 @@ import scala.util.{Failure, Success, Try}
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(
   clusterTypes = Array(ClusterType.MOCKED),
-  missesCapabilities = Array(Capabilities.COLLECTIONS)
+  missesCapabilities = Array(Capabilities.COLLECTIONS),
+  clusterVersionIsBelow = RequireMB50132
 )
 class QueryIndexManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster           = _
@@ -458,8 +460,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     assert(cluster.reactive.queryIndexes.getAllIndexes(bucketName).collectSeq().block().size == 1)
   }
 
-  // Using SUBDOC_REVIVE_DOCUMENT to indicate 7.1 support as fix MB-50132 is required
-  @IgnoreWhen(missesCapabilities = Array(Capabilities.SUBDOC_REVIVE_DOCUMENT))
+  @IgnoreWhen(clusterVersionIsBelow = RequireMB50132)
   @Test
   def createCollectionIndex(): Unit = {
     val indexName = "myCollectionIndex"
@@ -491,8 +492,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     })
   }
 
-  // Using SUBDOC_REVIVE_DOCUMENT to indicate 7.1 support as fix MB-50132 is required
-  @IgnoreWhen(missesCapabilities = Array(Capabilities.SUBDOC_REVIVE_DOCUMENT))
+  @IgnoreWhen(clusterVersionIsBelow = RequireMB50132)
   @Test
   def dropCollectionIndex() = {
     val indexName = UUID.randomUUID().toString
@@ -521,8 +521,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     assert(cluster.queryIndexes.getAllIndexes(config.bucketname()).get.isEmpty)
   }
 
-  // Using SUBDOC_REVIVE_DOCUMENT to indicate 7.1 support as fix MB-50132 is required
-  @IgnoreWhen(missesCapabilities = Array(Capabilities.SUBDOC_REVIVE_DOCUMENT))
+  @IgnoreWhen(clusterVersionIsBelow = RequireMB50132)
   @Test
   def buildOneDeferredCollectionIndex() = {
     val indexName = UUID.randomUUID().toString
