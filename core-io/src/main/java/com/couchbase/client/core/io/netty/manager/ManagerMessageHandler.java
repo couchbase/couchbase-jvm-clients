@@ -89,6 +89,16 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
   }
 
   @Override
+  public void handlerAdded(ChannelHandlerContext ctx) {
+    currentContent = ctx.alloc().buffer();
+  }
+
+  @Override
+  public void handlerRemoved(ChannelHandlerContext ctx) {
+    currentContent.release();
+  }
+
+  @Override
   public void channelActive(final ChannelHandlerContext ctx) {
     ioContext = new IoContext(
       coreContext,
@@ -98,7 +108,6 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
     );
 
     remoteHost = endpoint.remoteHostname() + ":" + endpoint.remotePort();
-    currentContent = ctx.alloc().buffer();
     ctx.fireChannelActive();
   }
 
@@ -206,7 +215,6 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
 
   @Override
   public void channelInactive(final ChannelHandlerContext ctx) {
-    ReferenceCountUtil.release(currentContent);
     if (streamingResponse != null) {
       streamingResponse.completeStream();
     }
