@@ -20,6 +20,8 @@ import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.Capabilities;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,6 +70,7 @@ class KeyValueManyEndpointsTest extends JavaIntegrationTest {
    * Even though we open more than one kv endpoint per config, we need to make sure that we only open one
    * gcccp endpoint per node.
    */
+  @IgnoreWhen(missesCapabilities = {Capabilities.GLOBAL_CONFIG})
   @Test
   void onlyOpensOneGcccpPerNode() {
     int bucket = 0;
