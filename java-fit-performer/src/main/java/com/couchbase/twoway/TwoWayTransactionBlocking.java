@@ -381,6 +381,12 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                             }
                         }
 
+                        if (qr == null) {
+                            // Should not happen, but have intermittently seen it occur.
+                            logger.warn("Somehow have null result back from ctx.query()");
+                            dump(getLogger(ctx));
+                        }
+
                         ResultValidation.validateQueryResult(request, qr);
                     });
         } else if (op.hasTestFail()) {
