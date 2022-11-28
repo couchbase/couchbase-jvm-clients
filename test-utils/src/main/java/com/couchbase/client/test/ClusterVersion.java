@@ -15,13 +15,21 @@
  */
 package com.couchbase.client.test;
 
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Comparator;
 import java.util.Objects;
 
-public class ClusterVersion {
+public class ClusterVersion implements Comparable<ClusterVersion> {
     private final int majorVersion;
     private final int minorVersion;
     private final int patchVersion;
     private final boolean communityEdition;
+
+    private static final Comparator<ClusterVersion> naturalOrder = Comparator
+      .comparing(ClusterVersion::majorVersion)
+      .thenComparing(ClusterVersion::minorVersion)
+      .thenComparing(ClusterVersion::patchVersion);
 
     public ClusterVersion(int majorVersion, int minorVersion, int patchVersion, boolean communityEdition) {
         this.majorVersion = majorVersion;
@@ -56,12 +64,7 @@ public class ClusterVersion {
     }
 
     public boolean isGreaterThan(ClusterVersion other) {
-        if (other.majorVersion > majorVersion) return false;
-        if (other.majorVersion < majorVersion) return true;
-        if (other.minorVersion > minorVersion) return false;
-        if (other.minorVersion < minorVersion) return true;
-        if (other.patchVersion > patchVersion) return false;
-        return true;
+      return this.compareTo(other) > 0;
     }
 
     @Override
@@ -87,4 +90,9 @@ public class ClusterVersion {
     public boolean isCommunityEdition() {
         return communityEdition;
     }
+
+  @Override
+  public int compareTo(@NotNull ClusterVersion o) {
+    return naturalOrder.compare(this, o);
+  }
 }

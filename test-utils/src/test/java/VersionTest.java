@@ -13,7 +13,7 @@ public class VersionTest {
     @Test
     void test1() {
         assertTrue(version7_0_0.isGreaterThan(version6_0_0));
-        assertTrue(version7_1_0.isGreaterThan(version7_1_0));
+        assertFalse(version7_1_0.isGreaterThan(version7_1_0));
         assertTrue(version7_1_1.isGreaterThan(version7_1_0));
         assertFalse(version7_1_0.isGreaterThan(version7_1_1));
         assertFalse(version7_0_0.isGreaterThan(version7_1_0));

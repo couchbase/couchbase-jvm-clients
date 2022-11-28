@@ -125,7 +125,6 @@ public class ClusterInvocationProvider
       }
       if (!found.clusterVersionEquals().isEmpty()) {
         ClusterVersion lookingFor = ClusterVersion.parseString(found.clusterVersionEquals());
-        // TODO remove temporary debug for why this doesn't work on CI
         System.out.println("Looking for cluster-version '" + found.clusterVersionEquals() + "' or " + lookingFor + ", found " + testCluster.config().clusterVersion());
         if (lookingFor.equals(testCluster.config().clusterVersion())) {
           return ConditionEvaluationResult.disabled("Test disabled because cluster version is == " +
