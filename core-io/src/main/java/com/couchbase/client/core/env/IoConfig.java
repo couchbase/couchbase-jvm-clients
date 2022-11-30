@@ -33,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -396,9 +397,20 @@ public class IoConfig {
      * Configures a {@link CircuitBreaker} to use for key-value operations.
      *
      * @return this, for chaining
+     * @deprecated Please use {@link #kvCircuitBreakerConfig(Consumer)} instead.
      */
     public Builder kvCircuitBreakerConfig(CircuitBreakerConfig.Builder kvCircuitBreakerConfig) {
       this.kvCircuitBreakerConfig = kvCircuitBreakerConfig;
+      return this;
+    }
+
+    /**
+     * Configures the key-value circuit breaker by passing its config builder to the given consumer.
+     *
+     * @return this, for chaining
+     */
+    public Builder kvCircuitBreakerConfig(Consumer<CircuitBreakerConfig.Builder> builderConsumer) {
+      builderConsumer.accept(kvCircuitBreakerConfig);
       return this;
     }
 
@@ -410,9 +422,20 @@ public class IoConfig {
      * Configures a {@link CircuitBreaker} to use for query operations.
      *
      * @return this, for chaining
+     * @deprecated Please use {@link #queryCircuitBreakerConfig(Consumer)} instead.
      */
     public Builder queryCircuitBreakerConfig(CircuitBreakerConfig.Builder queryCircuitBreakerConfig) {
       this.queryCircuitBreakerConfig = queryCircuitBreakerConfig;
+      return this;
+    }
+
+    /**
+     * Configures the query circuit breaker by passing its config builder to the given consumer.
+     *
+     * @return this, for chaining
+     */
+    public Builder queryCircuitBreakerConfig(Consumer<CircuitBreakerConfig.Builder> builderConsumer) {
+      builderConsumer.accept(queryCircuitBreakerConfig);
       return this;
     }
 
@@ -424,9 +447,20 @@ public class IoConfig {
      * Configures a {@link CircuitBreaker} to use for view operations.
      *
      * @return this, for chaining
+     * @deprecated Please use {@link #viewCircuitBreakerConfig(Consumer)} instead.
      */
     public Builder viewCircuitBreakerConfig(CircuitBreakerConfig.Builder viewCircuitBreakerConfig) {
       this.viewCircuitBreakerConfig = viewCircuitBreakerConfig;
+      return this;
+    }
+
+    /**
+     * Configures the views circuit breaker by passing its config builder to the given consumer.
+     *
+     * @return this, for chaining
+     */
+    public Builder viewCircuitBreakerConfig(Consumer<CircuitBreakerConfig.Builder> builderConsumer) {
+      builderConsumer.accept(viewCircuitBreakerConfig);
       return this;
     }
 
@@ -438,9 +472,20 @@ public class IoConfig {
      * Configures a {@link CircuitBreaker} to use for search operations.
      *
      * @return this, for chaining
+     * @deprecated Please use {@link #searchCircuitBreakerConfig(Consumer)} instead.
      */
     public Builder searchCircuitBreakerConfig(CircuitBreakerConfig.Builder searchCircuitBreakerConfig) {
       this.searchCircuitBreakerConfig = searchCircuitBreakerConfig;
+      return this;
+    }
+
+    /**
+     * Configures the search circuit breaker by passing its config builder to the given consumer.
+     *
+     * @return this, for chaining
+     */
+    public Builder searchCircuitBreakerConfig(Consumer<CircuitBreakerConfig.Builder> builderConsumer) {
+      builderConsumer.accept(searchCircuitBreakerConfig);
       return this;
     }
 
@@ -452,9 +497,20 @@ public class IoConfig {
      * Configures a {@link CircuitBreaker} to use for analytics operations.
      *
      * @return this, for chaining
+     * @deprecated Please use {@link #analyticsCircuitBreakerConfig(Consumer)} instead.
      */
     public Builder analyticsCircuitBreakerConfig(CircuitBreakerConfig.Builder analyticsCircuitBreakerConfig) {
       this.analyticsCircuitBreakerConfig = analyticsCircuitBreakerConfig;
+      return this;
+    }
+
+    /**
+     * Configures the analytics circuit breaker by passing its config builder to the given consumer.
+     *
+     * @return this, for chaining
+     */
+    public Builder analyticsCircuitBreakerConfig(Consumer<CircuitBreakerConfig.Builder> builderConsumer) {
+      builderConsumer.accept(analyticsCircuitBreakerConfig);
       return this;
     }
 
@@ -466,11 +522,23 @@ public class IoConfig {
      * Configures a {@link CircuitBreaker} to use for manager operations.
      *
      * @return this, for chaining
+     * @deprecated Please use {@link #managerCircuitBreakerConfig(Consumer)} instead.
      */
     public Builder managerCircuitBreakerConfig(CircuitBreakerConfig.Builder managerCircuitBreakerConfig) {
       this.managerCircuitBreakerConfig = managerCircuitBreakerConfig;
       return this;
     }
+
+    /**
+     * Configures the manager circuit breaker by passing its config builder to the given consumer.
+     *
+     * @return this, for chaining
+     */
+    public Builder managerCircuitBreakerConfig(Consumer<CircuitBreakerConfig.Builder> builderConsumer) {
+      builderConsumer.accept(managerCircuitBreakerConfig);
+      return this;
+    }
+
 
     public CircuitBreakerConfig.Builder managerCircuitBreakerConfig() {
       return managerCircuitBreakerConfig;
@@ -480,9 +548,20 @@ public class IoConfig {
      * Configures a {@link CircuitBreaker} to use for eventing operations.
      *
      * @return this, for chaining
+     * @deprecated Please use {@link #eventingCircuitBreakerConfig(Consumer)} instead.
      */
     public Builder eventingCircuitBreakerConfig(CircuitBreakerConfig.Builder eventingCircuitBreakerConfig) {
       this.eventingCircuitBreakerConfig = eventingCircuitBreakerConfig;
+      return this;
+    }
+
+    /**
+     * Configures the eventing circuit breaker by passing its config builder to the given consumer.
+     *
+     * @return this, for chaining
+     */
+    public Builder eventingCircuitBreakerConfig(Consumer<CircuitBreakerConfig.Builder> builderConsumer) {
+      builderConsumer.accept(eventingCircuitBreakerConfig);
       return this;
     }
 
@@ -494,10 +573,22 @@ public class IoConfig {
      * Configures a {@link CircuitBreaker} to use for backup operations.
      *
      * @return this, for chaining
+     * @deprecated Please use {@link #backupCircuitBreakerConfig(Consumer)} instead.
      */
     @Stability.Volatile
     public Builder backupCircuitBreakerConfig(CircuitBreakerConfig.Builder backupCircuitBreakerConfig) {
       this.backupCircuitBreakerConfig = backupCircuitBreakerConfig;
+      return this;
+    }
+
+    /**
+     * Configures the backup circuit breaker by passing its config builder to the given consumer.
+     *
+     * @return this, for chaining
+     */
+    @Stability.Volatile
+    public Builder backupCircuitBreakerConfig(Consumer<CircuitBreakerConfig.Builder> builderConsumer) {
+      builderConsumer.accept(backupCircuitBreakerConfig);
       return this;
     }
 

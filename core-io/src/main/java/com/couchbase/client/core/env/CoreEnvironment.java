@@ -770,7 +770,9 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param ioEnvironment the IO environment to customize.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated Please use {@link #ioEnvironment(Consumer)} instead.
      */
+    @Deprecated
     public SELF ioEnvironment(final IoEnvironment.Builder ioEnvironment) {
       this.ioEnvironment = notNull(ioEnvironment, "IoEnvironment");
       return self();
@@ -804,7 +806,9 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param ioConfig the custom I/O config to use.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated Please use {@link #ioConfig(Consumer)} instead.
      */
+    @Deprecated
     public SELF ioConfig(final IoConfig.Builder ioConfig) {
       this.ioConfig = notNull(ioConfig, "IoConfig");
       return self();
@@ -828,7 +832,9 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param orphanReporterConfig the custom orphan reporter config.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated Please use {@link #orphanReporterConfig(Consumer)} instead.
      */
+    @Deprecated
     public SELF orphanReporterConfig(final OrphanReporterConfig.Builder orphanReporterConfig) {
       this.orphanReporterConfig = notNull(orphanReporterConfig, "OrphanReporterConfig");
       return self();
@@ -843,6 +849,10 @@ public class CoreEnvironment implements AutoCloseable {
       return orphanReporterConfig;
     }
 
+    /**
+     * @deprecated Please use {@link #loggingMeterConfig(Consumer)} instead.
+     */
+    @Deprecated
     public SELF loggingMeterConfig(final LoggingMeterConfig.Builder loggingMeterConfig) {
       this.loggingMeterConfig = notNull(loggingMeterConfig, "LoggingMeterConfig");
       return self();
@@ -857,7 +867,7 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param thresholdRequestTracerConfig the configuration which should be used.
      * @return this {@link Builder} for chaining purposes.
-     * @deprecated use the {@link #thresholdLoggingTracerConfig(ThresholdLoggingTracerConfig.Builder)} instead.
+     * @deprecated Please use {@link #thresholdLoggingTracerConfig(Consumer)} instead.
      */
     @Deprecated
     public SELF thresholdRequestTracerConfig(final ThresholdRequestTracerConfig.Builder thresholdRequestTracerConfig) {
@@ -876,7 +886,9 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param thresholdLoggingTracerConfig the configuration which should be used.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated Please use {@link #thresholdLoggingTracerConfig(Consumer)} instead.
      */
+    @Deprecated
     public SELF thresholdLoggingTracerConfig(final ThresholdLoggingTracerConfig.Builder thresholdLoggingTracerConfig) {
       this.thresholdLoggingTracerConfig = notNull(thresholdLoggingTracerConfig, "ThresholdLoggingTracerConfig");
       return self();
@@ -894,7 +906,9 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param compressionConfig the custom compression config.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated Please use {@link #compressionConfig(Consumer)} instead.
      */
+    @Deprecated
     public SELF compressionConfig(final CompressionConfig.Builder compressionConfig) {
       this.compressionConfig = notNull(compressionConfig, "CompressionConfig");
       return self();
@@ -917,7 +931,9 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param securityConfig the custom security config to use.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated Please use {@link #securityConfig(Consumer)} instead.
      */
+    @Deprecated
     public SELF securityConfig(final SecurityConfig.Builder securityConfig) {
       this.securityConfig = notNull(securityConfig, "SecurityConfig");
       return self();
@@ -939,7 +955,9 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param timeoutConfig the custom timeout config to use.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated Please use {@link #timeoutConfig(Consumer)} instead.
      */
+    @Deprecated
     public SELF timeoutConfig(final TimeoutConfig.Builder timeoutConfig) {
       this.timeoutConfig = notNull(timeoutConfig, "TimeoutConfig");
       return self();
@@ -962,7 +980,9 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param loggerConfig the custom logger config to use.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated Please use {@link #loggerConfig(Consumer)} instead.
      */
+    @Deprecated
     public SELF loggerConfig(final LoggerConfig.Builder loggerConfig) {
       this.loggerConfig = notNull(loggerConfig, "LoggerConfig");
       return self();
