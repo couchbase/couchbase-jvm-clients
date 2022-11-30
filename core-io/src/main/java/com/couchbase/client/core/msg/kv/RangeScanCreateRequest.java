@@ -37,6 +37,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Datatype.JSON;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode.RANGE_SCAN_CREATE;
@@ -50,12 +51,14 @@ import static com.couchbase.client.core.util.CbCollections.mapOf;
 
 public class RangeScanCreateRequest extends PredeterminedPartitionRequest<RangeScanCreateResponse> {
 
+  private static final Random random = new Random();
+
   private final byte[] startTerm;
   private final boolean startExclusive;
   private final byte[] endTerm;
   private final boolean endExclusive;
   private final long limit;
-  private final Optional<Long> seed;
+  private final long seed;
 
   private final boolean keyOnly;
 
@@ -89,9 +92,11 @@ public class RangeScanCreateRequest extends PredeterminedPartitionRequest<RangeS
     this.endTerm = endTerm;
     this.endExclusive = endExclusive;
     this.limit = limit;
-    this.seed = seed;
     this.keyOnly = keyOnly;
     this.mutationToken = mutationToken;
+
+    // Server drops connection if seed is negative. Force positive by clearing sign bit.
+    this.seed = seed.orElse(random.nextLong()) & 0x7fffffffffffffffL;
   }
 
   private boolean isRangeScanFlavour() {
@@ -129,9 +134,6 @@ public class RangeScanCreateRequest extends PredeterminedPartitionRequest<RangeS
       payload.put("sampling", mapOf(
         "samples", limit,
         "seed", seed
-          // Server drops connection if negative. Force positive by clearing sign bit.
-          .map(it -> it & 0x7fffffffffffffffL)
-          .orElse(0L)
       ));
     }
 

@@ -76,7 +76,7 @@ public abstract class ScanType {
   }
 
   /**
-   * Creates a new KV sampling scan, which randomly samples documents up until the configured limit and no custom seed.
+   * Creates a new KV sampling scan, which randomly selects documents up until the configured limit, with a random seed.
    *
    * @param limit the number of documents to limit sampling to.
    * @return a newly created {@link RangeScan} to be passed into the Collection API.
@@ -86,10 +86,11 @@ public abstract class ScanType {
   }
 
   /**
-   * Creates a new KV sampling scan, which randomly samples documents up until the configured limit with a custom seed.
+   * Creates a new KV sampling scan, which randomly selects documents up until the configured limit, with the specified seed.
    *
    * @param limit the number of documents to limit sampling to.
-   * @param seed the custom seed used for sampling.
+   * @param seed seed for the random number generator that selects the documents.
+   * <b>CAVEAT</b>: Specifying the same seed does not guarantee the same documents are selected.
    * @return a newly created {@link RangeScan} to be passed into the Collection API.
    */
   public static SamplingScan samplingScan(final long limit, final long seed) {

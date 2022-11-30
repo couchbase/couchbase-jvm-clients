@@ -60,7 +60,9 @@ object ScanType {
 
   /** Samples documents randomly from the collection until reaching `limit` documents.
     *
-    * An optional `seed` can be provided to truly randomise the results.
+    * @param seed seed for the random number generator that selects the documents.
+    *             If not specified, defaults to a random number.
+    *             <b>CAVEAT</b>: Specifying the same seed does not guarantee the same documents are selected.
     */
   case class SamplingScan(limit: Long, seed: Long = Random.nextLong()) extends ScanType
 

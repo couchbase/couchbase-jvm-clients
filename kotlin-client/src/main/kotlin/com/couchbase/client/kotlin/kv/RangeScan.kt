@@ -25,7 +25,6 @@ import com.couchbase.client.kotlin.kv.KvScanConsistency.Companion.consistentWith
 import com.couchbase.client.kotlin.kv.KvScanConsistency.Companion.notBounded
 import com.couchbase.client.kotlin.util.StorageSize
 import com.couchbase.client.kotlin.util.StorageSize.Companion.bytes
-import kotlin.random.Random
 
 @VolatileCouchbaseApi
 public val DEFAULT_SCAN_BATCH_SIZE_LIMIT: StorageSize = RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT.bytes
@@ -49,7 +48,7 @@ public sealed class ScanType {
 
     public class Sample internal constructor(
         public val limit: Long,
-        public val seed: Long,
+        public val seed: Long?,
     ) : ScanType() {
         init {
             require(limit > 0) { "Sample size limit must be > 0 but got $limit" }
@@ -85,15 +84,12 @@ public sealed class ScanType {
          * Selects random documents.
          *
          * @param limit Upper bound (inclusive) on the number of items to select.
-         * @param seed Seed for the random number generator that selects the items.
-         * Defaults to a random number. **CAVEAT:** Due to an implementation quirk,
-         * results are not deterministic even if you use the same seed, unless
-         * sorting is enabled (which is not recommended for sample scans;
-         * see the note on [ScanSort.ASCENDING]).
+         * @param seed Seed for the random number generator that selects the items, or null to use a random seed.
+         * **CAVEAT:** Specifying the same seed does not guarantee the same documents are selected.
          */
         public fun sample(
             limit: Long,
-            seed: Long = Random.nextLong(),
+            seed: Long? = null,
         ): Sample = Sample(
             limit = limit,
             seed = seed,

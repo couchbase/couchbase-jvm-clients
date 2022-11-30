@@ -26,11 +26,26 @@ import com.couchbase.client.core.kv.CoreRangeScanSort;
 public enum ScanSort {
 
   /**
-   * No sorting is applied, the results are returned as they are streamed from the servers.
+   * Do not sort the results.
+   * <p>
+   * Fast and efficient. Results are emitted in the order they arrive from each partition.
    */
   NONE,
+
   /**
-   * Ascending sorting is applied to all the keys in the results.
+   * Sort the results by document ID in lexicographic order.
+   * <p>
+   * Reasonably efficient. Suitable for large range scans, since it *does not*
+   * require buffering the entire result set in memory.
+   * <p>
+   * <b>CAVEAT:</b> When used with a {@link ScanType#samplingScan} scan, the behavior is unspecified
+   * and may change in a future version. Likely outcomes include:
+   * <ul>
+   *   <li> Skewing the results towards "low" document IDs.
+   *   <li> Not actually sorting.
+   * </ul>
+   * If you require sorted results from a sample scan, please use {@link ScanSort#NONE},
+   * then collect the results into a list and sort the list.
    */
   ASCENDING;
 
