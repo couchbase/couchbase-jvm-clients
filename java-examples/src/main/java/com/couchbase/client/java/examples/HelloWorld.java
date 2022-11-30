@@ -22,41 +22,33 @@ import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.kv.GetResult;
 
 /**
- * This example connects to a bucket, opens a collection and performs a simple operation.
- *
- * <p>If this program fails executing properly, there is a good chance your cluster is not set up
- * yet with the travel-sample bucket or you are pointing the code at the wrong hostname (or you
- * use wrong credentials).</p>
+ * This example connects to a bucket, opens a collection, and performs a simple operation.
+ * <p>
+ * If this program does not run properly, make sure the "travel-sample" bucket is
+ * present in your cluster. Also check the address in the connection string,
+ * and the username and password.
  */
 public class HelloWorld {
 
   public static void main(String... args) {
 
-    /*
-     * Connect to the cluster with a hostname and credentials.
-     */
-    Cluster cluster = Cluster.connect("10.143.190.101", "Administrator", "password");
+    // Connect to the cluster with a connection string and credentials.
+    Cluster cluster = Cluster.connect("couchbase://127.0.0.1", "Administrator", "password");
 
-    /*
-     * Open a bucket with the bucket name.
-     */
+    // Open an existing bucket.
     Bucket bucket = cluster.bucket("travel-sample");
 
-    /*
-     * Open a collection - here the default collection which is also backwards compatible to
-     * servers which do not support collections.
-     */
+    // Open a collection. Here it's the default collection, which also works with
+    // old versions of Couchbase Server that do not support user-defined collections.
     Collection collection = bucket.defaultCollection();
 
-    /*
-     * Fetch a document from the travel-sample bucket.
-     */
-    GetResult airport_1291 = collection.get("airport_1291");
+    // Fetch a document from the travel-sample bucket.
+    GetResult airport = collection.get("airport_1291");
 
-    /*
-     * Print the fetched document.
-     */
-    System.err.println(airport_1291);
+    // Print the fetched document.
+    System.err.println("*** Got document: " + airport);
 
+    // Close network connections and release resources.
+    cluster.disconnect();
   }
 }
