@@ -2,14 +2,17 @@
 <Configuration status="WARN">
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{HH:mm:ss} %-5p [%c:%L] %m%n"/>
+            <PatternLayout pattern="%d{ISO8601_OFFSET_DATE_TIME_HHCMM} %-5p [%c:%L] %m%n"/>
         </Console>
     </Appenders>
     <Loggers>
-        <Logger name="io.netty" level="warn">
-        </Logger>
+        <Logger name="com.couchbase.client.core.deps.io.netty" level="warn"/>
+
+        <!-- Uncomment if using the 'io.captureTraffic' client setting -->
+        <!-- <Logger name="com.couchbase.io" level="trace"/> -->
+
         <Root level="debug">
-            <AppenderRef ref="Console" />
+            <AppenderRef ref="Console"/>
         </Root>
     </Loggers>
 </Configuration>
