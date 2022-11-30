@@ -25,6 +25,7 @@ import com.couchbase.client.java.json.JsonObject;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -80,7 +81,7 @@ public class ScanResult {
    *
    * @param cas the cas from the doc.
    * @param expiry the expiry if fetched from the doc.
-  */
+   */
   @Stability.Internal
   public ScanResult(final boolean idOnly, final String id, final byte[] content, final int flags, final long cas,
                     final Optional<Instant> expiry, final Transcoder transcoder) {
@@ -123,7 +124,7 @@ public class ScanResult {
    * this case the caller is expected to re-do the whole "fetch-modify-update" cycle again. Please refer to the
    * SDK documentation for more information on CAS mismatches and subsequent retries.
    *
-   * @throws UnsupportedOperationException if this result came from a scan
+   * @throws NoSuchElementException if this result came from a scan
    * where {@link ScanOptions#idsOnly(boolean)} was set to true. See {@link #idOnly()}.
    */
   public long cas() {
@@ -134,8 +135,8 @@ public class ScanResult {
   /**
    * If the document has an expiry, returns the point in time when the loaded
    * document expires.
-   * <p>
-   * @throws UnsupportedOperationException if this result came from a scan
+   *
+   * @throws NoSuchElementException if this result came from a scan
    * where {@link ScanOptions#idsOnly(boolean)} was set to true. See {@link #idOnly()}.
    */
   public Optional<Instant> expiryTime() {
@@ -146,7 +147,7 @@ public class ScanResult {
   /**
    * Decodes the content of the document into a {@link JsonObject}.
    *
-   * @throws UnsupportedOperationException if this result came from a scan
+   * @throws NoSuchElementException if this result came from a scan
    * where {@link ScanOptions#idsOnly(boolean)} was set to true. See {@link #idOnly()}.
    */
   public JsonObject contentAsObject() {
@@ -156,7 +157,7 @@ public class ScanResult {
   /**
    * Decodes the content of the document into a {@link JsonArray}.
    *
-   * @throws UnsupportedOperationException if this result came from a scan
+   * @throws NoSuchElementException if this result came from a scan
    * where {@link ScanOptions#idsOnly(boolean)} was set to true. See {@link #idOnly()}.
    */
   public JsonArray contentAsArray() {
@@ -167,7 +168,7 @@ public class ScanResult {
    * Decodes the content of the document into an instance of the target class.
    *
    * @param target the target class to decode the encoded content into.
-   * @throws UnsupportedOperationException if this result came from a scan
+   * @throws NoSuchElementException if this result came from a scan
    * where {@link ScanOptions#idsOnly(boolean)} was set to true. See {@link #idOnly()}.
    */
   public <T> T contentAs(final Class<T> target) {
@@ -183,7 +184,7 @@ public class ScanResult {
    * </pre>
    *
    * @param target the type to decode the encoded content into.
-   * @throws UnsupportedOperationException if this result came from a scan
+   * @throws NoSuchElementException if this result came from a scan
    * where {@link ScanOptions#idsOnly(boolean)} was set to true. See {@link #idOnly()}.
    */
   public <T> T contentAs(final TypeRef<T> target) {
@@ -195,7 +196,7 @@ public class ScanResult {
    * Returns the raw bytes of the document content.
    *
    * @return the document content as a byte array
-   * @throws UnsupportedOperationException if this result came from a scan
+   * @throws NoSuchElementException if this result came from a scan
    * where {@link ScanOptions#idsOnly(boolean)} was set to true. See {@link #idOnly()}.
    */
   public byte[] contentAsBytes() {
@@ -205,7 +206,7 @@ public class ScanResult {
 
   private void requireBody() {
     if (idOnly) {
-      throw new UnsupportedOperationException("This result came from a scan configured to return only document IDs.");
+      throw new NoSuchElementException("This result came from a scan configured to return only document IDs.");
     }
   }
 
