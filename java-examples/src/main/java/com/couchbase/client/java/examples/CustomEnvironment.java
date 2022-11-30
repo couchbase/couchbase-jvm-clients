@@ -54,7 +54,9 @@ public class CustomEnvironment {
             // that configures the ClusterEnvironment.Builder for the environment
             // owned by this cluster.
             .environment(env -> env
-                .timeoutConfig(TimeoutConfig.kvTimeout(Duration.ofSeconds(2)))
+                .timeoutConfig(it -> it
+                  .kvTimeout(Duration.ofSeconds(2))
+                )
             ));
 
         Bucket bucket = cluster.bucket("travel-sample");
