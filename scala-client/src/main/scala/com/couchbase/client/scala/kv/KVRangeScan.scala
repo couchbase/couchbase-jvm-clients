@@ -52,7 +52,8 @@ sealed trait ScanType
 object ScanType {
 
   /** Scans documents, from document `from` to document `to`. */
-  case class RangeScan(from: ScanTerm, to: ScanTerm) extends ScanType
+  case class RangeScan(from: ScanTerm = ScanTerm.minimum(), to: ScanTerm = ScanTerm.maximum())
+      extends ScanType
 
   /** Samples documents randomly from the collection until reaching `limit` documents.
     *
