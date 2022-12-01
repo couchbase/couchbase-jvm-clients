@@ -39,6 +39,7 @@ import com.couchbase.client.java.kv.ReplicateTo;
 import com.couchbase.client.java.kv.ScanOptions;
 import com.couchbase.client.java.kv.ScanResult;
 import com.couchbase.client.java.kv.ScanSort;
+import com.couchbase.client.java.kv.ScanTerm;
 import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.perf.Counters;
@@ -56,6 +57,7 @@ import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
@@ -187,6 +189,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
 
             var builder = com.couchbase.client.protocol.sdk.kv.rangescan.ScanResult.newBuilder()
                     .setId(r.id())
+                    .setIdOnly(r.idOnly())
                     .setStreamId(request.getStreamConfig().getStreamId());
 
             if (!r.idOnly()) {
@@ -223,19 +226,34 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     }
     // [end:3.4.1]
 
-    public static com.couchbase.client.java.kv.ScanTerm convertScanTerm(com.couchbase.client.protocol.sdk.kv.rangescan.ScanTermChoice st) {
-        if (st.hasMaximum()) {
-            return com.couchbase.client.java.kv.ScanTerm.maximum();
+    public static Optional<com.couchbase.client.java.kv.ScanTerm> convertScanTerm(com.couchbase.client.protocol.sdk.kv.rangescan.ScanTermChoice st) {
+        if (st.hasDefault()) {
+            return Optional.empty();
+        }
+        else if (st.hasMaximum()) {
+            return Optional.of(com.couchbase.client.java.kv.ScanTerm.maximum());
         }
         else if (st.hasMinimum()) {
-            return com.couchbase.client.java.kv.ScanTerm.minimum();
+            return Optional.of(com.couchbase.client.java.kv.ScanTerm.minimum());
         }
         else if (st.hasTerm()) {
             var stt = st.getTerm();
             if (stt.hasExclusive() && stt.getExclusive()) {
-                return com.couchbase.client.java.kv.ScanTerm.exclusive(stt.getTerm());
+                if (stt.hasAsString()) {
+                    return Optional.of(com.couchbase.client.java.kv.ScanTerm.exclusive(stt.getAsString()));
+                }
+                else if (stt.hasAsBytes()) {
+                    return Optional.of(com.couchbase.client.java.kv.ScanTerm.exclusive(stt.getAsBytes().toByteArray()));
+                }
+                else throw new UnsupportedOperationException();
             }
-            return com.couchbase.client.java.kv.ScanTerm.inclusive(stt.getTerm());
+            if (stt.hasAsString()) {
+                return Optional.of(com.couchbase.client.java.kv.ScanTerm.inclusive(stt.getAsString()));
+            }
+            else if (stt.hasAsBytes()) {
+                return Optional.of(com.couchbase.client.java.kv.ScanTerm.inclusive(stt.getAsBytes().toByteArray()));
+            }
+            else throw new UnsupportedOperationException();
         }
         else throw new UnsupportedOperationException();
     }
@@ -243,7 +261,26 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     public static com.couchbase.client.java.kv.ScanType convertScanType(com.couchbase.client.protocol.sdk.kv.rangescan.Scan request) {
         if (request.getScanType().hasRange()) {
             var rs = request.getScanType().getRange();
-            return com.couchbase.client.java.kv.ScanType.rangeScan(convertScanTerm(rs.getFrom()), convertScanTerm(rs.getTo()));
+            if (rs.hasFromTo()) {
+                var from = convertScanTerm(rs.getFromTo().getFrom());
+                var to = convertScanTerm(rs.getFromTo().getTo());
+                if (from.isPresent() && to.isPresent()) {
+                    return com.couchbase.client.java.kv.ScanType.rangeScan(from.get(), to.get());
+                }
+                else if (from.isPresent()) {
+                    return com.couchbase.client.java.kv.ScanType.rangeScan(from.get(), ScanTerm.maximum());
+                }
+                else if (to.isPresent()) {
+                    return com.couchbase.client.java.kv.ScanType.rangeScan(ScanTerm.minimum(), to.get());
+                }
+                else {
+                    return com.couchbase.client.java.kv.ScanType.rangeScan();
+                }
+            }
+            else if (rs.hasDocIdPrefix()) {
+                return com.couchbase.client.java.kv.ScanType.prefixScan(rs.getDocIdPrefix());
+            }
+            else throw new UnsupportedOperationException();
         }
         else if (request.getScanType().hasSampling()) {
             var ss = request.getScanType().getSampling();
@@ -368,7 +405,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = ScanOptions.scanOptions();
-            if (opts.hasWithoutContent()) out.idsOnly(opts.getWithoutContent());
+            if (opts.hasIdsOnly()) out.idsOnly(opts.getIdsOnly());
             if (opts.hasConsistentWith()) out.consistentWith(convertMutationState(opts.getConsistentWith()));
             if (opts.hasSort()) {
                 out.sort(switch (opts.getSort()) {
@@ -382,6 +419,8 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             if (opts.hasBatchByteLimit()) out.batchByteLimit(opts.getBatchByteLimit());
             if (opts.hasBatchItemLimit()) out.batchItemLimit(opts.getBatchItemLimit());
+            // Presumably will be added soon, but not currently in Java SDK
+            if (opts.hasBatchTimeLimit()) throw new UnsupportedOperationException();
             return out;
         }
         else return null;

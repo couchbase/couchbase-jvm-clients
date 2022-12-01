@@ -795,9 +795,9 @@ class AsyncCollection(
         FutureConversions.javaFluxToScalaFlux(
           rangeScanOrchestrator.rangeScan(
             scan.from.term,
-            scan.from.exclusive.getOrElse(false),
+            scan.from.exclusive,
             scan.to.term,
-            scan.to.exclusive.getOrElse(false),
+            scan.to.exclusive,
             timeoutActual,
             opts.batchItemLimit
               .getOrElse(RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_ITEM_LIMIT),
@@ -816,7 +816,7 @@ class AsyncCollection(
           FutureConversions.javaFluxToScalaFlux(
             rangeScanOrchestrator.samplingScan(
               scan.limit,
-              scan.seed.map(_.asInstanceOf[java.lang.Long]).asJava,
+              Optional.of(scan.seed),
               timeoutActual,
               opts.batchItemLimit.getOrElse(0),
               opts.batchByteLimit.getOrElse(0),
@@ -834,6 +834,7 @@ class AsyncCollection(
         if (idsOnly) {
           ScanResult(
             item.key(),
+            idOnly = true,
             None,
             item.flags(),
             None,
@@ -843,6 +844,7 @@ class AsyncCollection(
         } else {
           ScanResult(
             item.key(),
+            idOnly = false,
             Some(item.value()),
             item.flags(),
             Some(item.cas()),

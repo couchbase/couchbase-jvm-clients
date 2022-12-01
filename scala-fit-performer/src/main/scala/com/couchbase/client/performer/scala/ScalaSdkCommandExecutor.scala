@@ -218,6 +218,7 @@ object ScalaSdkCommandExecutor {
     val builder = com.couchbase.client.protocol.sdk.kv.rangescan.ScanResult
       .newBuilder
       .setId(r.id)
+      .setIdOnly(r.idOnly)
       .setStreamId(request.getStreamConfig.getStreamId)
 
     r.cas.foreach(v => builder.setCas(v))
@@ -264,16 +265,34 @@ object ScalaSdkCommandExecutor {
     }
   }
 
-  def convertScanTerm(st: ScanTermChoice) = {
-    if (st.hasMaximum) {
-      ScanTerm.maximum()
+  def convertScanTerm(st: ScanTermChoice): Option[ScanTerm] = {
+    if (st.hasDefault) {
+      None
+    }
+    else if (st.hasMaximum) {
+      Some(ScanTerm.maximum())
     }
     else if (st.hasMinimum) {
-      ScanTerm.minimum()
+      Some(ScanTerm.minimum())
     }
     else if (st.hasTerm) {
       val stt = st.getTerm
-      ScanTerm(stt.getTerm.getBytes(StandardCharsets.UTF_8), if (stt.hasExclusive) Some(stt.getExclusive) else None)
+        if (stt.hasExclusive && stt.getExclusive) {
+            if (stt.hasAsString) {
+                Some(com.couchbase.client.scala.kv.ScanTerm.exclusive(stt.getAsString))
+            }
+            else if (stt.hasAsBytes) {
+                Some(com.couchbase.client.scala.kv.ScanTerm.exclusive(stt.getAsBytes.toByteArray))
+            }
+            else throw new UnsupportedOperationException();
+        }
+        if (stt.hasAsString) {
+            Some(com.couchbase.client.scala.kv.ScanTerm.inclusive(stt.getAsString))
+        }
+        else if (stt.hasAsBytes) {
+            Some(com.couchbase.client.scala.kv.ScanTerm.inclusive(stt.getAsBytes.toByteArray))
+        }
+        else throw new UnsupportedOperationException();
     }
     else throw new UnsupportedOperationException("Unknown scan term")
   }
@@ -281,13 +300,33 @@ object ScalaSdkCommandExecutor {
   def convertScanType(request: Scan): ScanType = {
     if (request.getScanType.hasRange) {
       val scan = request.getScanType.getRange
-      val from = convertScanTerm(scan.getFrom)
-      val to = convertScanTerm(scan.getTo)
-      RangeScan(from, to)
+      if (scan.hasFromTo) {
+        val from = convertScanTerm(scan.getFromTo.getFrom)
+        val to = convertScanTerm(scan.getFromTo.getTo)
+        if (from.isDefined && to.isDefined) {
+          RangeScan(from.get, to.get)
+        }
+        else if (from.isDefined) {
+          RangeScan(from.get)
+        }
+        else if (to.isDefined) {
+          RangeScan(to = to.get)
+        }
+        else RangeScan()
+      }
+      else if (scan.hasDocIdPrefix) {
+        com.couchbase.client.scala.kv.ScanType.prefixScan(scan.getDocIdPrefix)
+      }
+      else throw new UnsupportedOperationException()
     }
     else if (request.getScanType.hasSampling) {
       val scan = request.getScanType.getSampling
-      SamplingScan(scan.getLimit, if (scan.hasSeed) Some(scan.getSeed) else None)
+      if (scan.hasSeed) {
+        SamplingScan(scan.getLimit, scan.getSeed)
+      }
+      else {
+        SamplingScan(scan.getLimit)
+      }
     }
     else throw new UnsupportedOperationException("Unknown scan type")
   }
@@ -413,7 +452,7 @@ object ScalaSdkCommandExecutor {
       val opts = request.getOptions
       var out = ScanOptions()
 
-      if (opts.hasWithoutContent) out = out.idsOnly(opts.getWithoutContent)
+      if (opts.hasIdsOnly) out = out.idsOnly(opts.getIdsOnly)
       if (opts.hasConsistentWith) out = out.consistentWith(convertMutationState(opts.getConsistentWith))
       if (opts.hasSort) out = out.scanSort(if (opts.getSort == com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_NONE) ScanSort.None
       else if (opts.getSort == com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_ASCENDING) ScanSort.Ascending
@@ -422,6 +461,7 @@ object ScalaSdkCommandExecutor {
       if (opts.hasTimeoutMsecs) out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasBatchByteLimit) out = out.batchByteLimit(opts.getBatchByteLimit)
       if (opts.hasBatchItemLimit) out = out.batchItemLimit(opts.getBatchItemLimit)
+      if (opts.hasBatchTimeLimit) throw new UnsupportedOperationException();
       // Will add when adding support for Caps.OBSERVABILITY_1.
       // if (opts.hasParentSpanId) out = out.parentSpan(spans.get(opts.getParentSpanId))
       out
@@ -431,11 +471,11 @@ object ScalaSdkCommandExecutor {
   // [end:1.4.1]
 
   def convertTranscoder(transcoder: shared.Transcoder): Transcoder = {
-    if (transcoder.hasRawJson) return RawJsonTranscoder.Instance
-    else if (transcoder.hasJson) return JsonTranscoder.Instance
-    else if (transcoder.hasLegacy) return LegacyTranscoder.Instance
-    else if (transcoder.hasRawString) return RawStringTranscoder.Instance
-    else if (transcoder.hasRawBinary) return RawBinaryTranscoder.Instance
+    if (transcoder.hasRawJson) RawJsonTranscoder.Instance
+    else if (transcoder.hasJson) JsonTranscoder.Instance
+    else if (transcoder.hasLegacy) LegacyTranscoder.Instance
+    else if (transcoder.hasRawString) RawStringTranscoder.Instance
+    else if (transcoder.hasRawBinary) RawBinaryTranscoder.Instance
     else throw new UnsupportedOperationException("Unknown transcoder")
   }
 

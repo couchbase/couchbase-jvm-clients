@@ -11,16 +11,16 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Random, Try}
 
 /** A scan term identifies a point to scan from or to scan to.
   *
   * @param term      matches a particular document id pattern, such as "user_".  Since it's represented as an Array[Byte]
   *                  to support maximum() and minimum(), it's easiest to construct a ScanTerm via the methods in the
   *                  companion object.
-  * @param exclusive controls whether this term is inclusive or exclusive.
+  * @param exclusive controls whether this term is inclusive or exclusive - defaults to false.
   */
-case class ScanTerm(term: Array[Byte], exclusive: Option[Boolean] = None)
+case class ScanTerm(term: Array[Byte], exclusive: Boolean = false)
 
 object ScanTerm {
   private val min = collection.immutable.Seq.apply(0x00.toByte)
@@ -34,16 +34,16 @@ object ScanTerm {
   def maximum(): ScanTerm = inclusive(max.toArray)
 
   /** Creates a ScanTerm including `term`. */
-  def inclusive(term: String) = ScanTerm(term.getBytes(StandardCharsets.UTF_8), Option(false))
+  def inclusive(term: String): ScanTerm = ScanTerm(term.getBytes(StandardCharsets.UTF_8))
 
   /** Creates a ScanTerm including `term`. */
-  def inclusive(term: Array[Byte]) = ScanTerm(term, Option(false))
+  def inclusive(term: Array[Byte]): ScanTerm = ScanTerm(term)
 
   /** Creates a ScanTerm excluding `term`. */
-  def exclusive(term: String) = ScanTerm(term.getBytes(StandardCharsets.UTF_8), Option(true))
+  def exclusive(term: String): ScanTerm = ScanTerm(term.getBytes(StandardCharsets.UTF_8), exclusive = true)
 
   /** Creates a ScanTerm excluding `term`. */
-  def exclusive(term: Array[Byte]) = ScanTerm(term, Option(true))
+  def exclusive(term: Array[Byte]): ScanTerm = ScanTerm(term, exclusive = true)
 }
 
 /** Controls what type of scan is performed. */
@@ -51,7 +51,10 @@ sealed trait ScanType
 
 object ScanType {
 
-  /** Scans documents, from document `from` to document `to`. */
+  /** Scans documents, from document `from` to document `to`.
+    *
+    * Defaults to returning all documents in the collection.
+    */
   case class RangeScan(from: ScanTerm = ScanTerm.minimum(), to: ScanTerm = ScanTerm.maximum())
       extends ScanType
 
@@ -59,7 +62,13 @@ object ScanType {
     *
     * An optional `seed` can be provided to truly randomise the results.
     */
-  case class SamplingScan(limit: Long, seed: Option[Long]) extends ScanType
+  case class SamplingScan(limit: Long, seed: Long = Random.nextLong()) extends ScanType
+
+
+  def prefixScan(documentIdPrefix: String) = {
+    val to: Array[Byte] = documentIdPrefix.getBytes(StandardCharsets.UTF_8) :+ 0xff.asInstanceOf[Byte]
+    RangeScan(ScanTerm.inclusive(documentIdPrefix), ScanTerm.exclusive(to))
+  }
 }
 
 /** Controls if and how KV range scan results are sorted. */
@@ -193,6 +202,7 @@ case class ScanOptions(
 /** A KV range scan operation will return a stream of these.
   *
   * @param id         the unique identifier of the document
+  * @param idOnly     whether the scan was initiated with `idsOnly` set.  If so, only the `id` field is present.
   * @param cas        the document's CAS value at the time of the lookup.
   *                   Will not be present if the scan was performed with `idsOnly` set.
   * @param expiryTime the document's expiration time, if it was fetched without the `idsOnly` flag set.  If that flag
@@ -205,6 +215,7 @@ case class ScanOptions(
   */
 case class ScanResult(
     id: String,
+    idOnly: Boolean,
     private val content: Option[Array[Byte]],
     private[scala] val flags: Int,
     cas: Option[Long],
