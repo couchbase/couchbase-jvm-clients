@@ -85,7 +85,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitSingle
-import java.util.*
+import java.util.Optional
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.stream.Collectors
 import kotlin.time.Duration
@@ -584,7 +585,7 @@ public class Cluster internal constructor(
          * depending on the value of [failIfInstanceLimitReached].
          */
         @UncommittedCouchbaseApi
-        public var maxAllowedInstances : Int
+        public var maxAllowedInstances: Int
             get() = Core.getMaxAllowedInstances()
             set(value) = Core.maxAllowedInstances(value)
 
@@ -592,7 +593,7 @@ public class Cluster internal constructor(
          * True means exceeding [maxAllowedInstances] is a fatal error, false means just log a warning.
          */
         @UncommittedCouchbaseApi
-        public var failIfInstanceLimitReached : Boolean
+        public var failIfInstanceLimitReached: Boolean
             get() = Core.getFailIfInstanceLimitReached()
             set(value) = Core.failIfInstanceLimitReached(value)
 
