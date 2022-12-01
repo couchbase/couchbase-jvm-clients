@@ -23,10 +23,37 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.UUID;
 
+import static com.couchbase.client.core.util.ConnectionStringUtil.INCOMPATIBLE_CONNECTION_STRING_PARAMS;
+import static com.couchbase.client.core.util.ConnectionStringUtil.INCOMPATIBLE_CONNECTION_STRING_SCHEME;
 import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SharedClusterEnvironmentIntegrationTest extends JavaIntegrationTest {
+
+  @Test
+  void throwsOnIncompatibleConnectionString() {
+    assertIncompatibleConnectionString("couchbases://example.com", INCOMPATIBLE_CONNECTION_STRING_SCHEME);
+  }
+
+  @Test
+  void throwsOnIncompatibleConnectionStringParams() {
+    assertIncompatibleConnectionString("couchbase://example.com?foo=bar", INCOMPATIBLE_CONNECTION_STRING_PARAMS);
+  }
+
+  private void assertIncompatibleConnectionString(String connectionString, String expectedErrorMessage) {
+    try (ClusterEnvironment env = ClusterEnvironment.builder().build()) {
+      IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () ->
+        Cluster.connect(
+          connectionString,
+          ClusterOptions.clusterOptions("username", "password")
+            .environment(env)
+        )
+      );
+      assertEquals(e.getMessage(), expectedErrorMessage);
+    }
+  }
 
   @Test
   void canShareClusterEnvironment() {

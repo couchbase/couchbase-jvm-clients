@@ -19,7 +19,6 @@ package com.couchbase.client.core.util;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
-import com.couchbase.client.core.cnc.events.config.ConnectionStringIgnoredEvent;
 import com.couchbase.client.core.cnc.events.config.TlsRequiredButNotEnabledEvent;
 import com.couchbase.client.core.cnc.events.core.DnsSrvLookupDisabledEvent;
 import com.couchbase.client.core.cnc.events.core.DnsSrvLookupFailedEvent;
@@ -212,17 +211,22 @@ public class ConnectionStringUtil {
     return sb.toString();
   }
 
+  public static final String INCOMPATIBLE_CONNECTION_STRING_SCHEME =
+    "Connection string scheme indicates a secure connection," +
+      " but the shared cluster environment was not configured for TLS.";
+
+  public static final String INCOMPATIBLE_CONNECTION_STRING_PARAMS =
+    "Can't use a shared cluster environment with a connection string that has parameters.";
+
   public static void checkConnectionString(CoreEnvironment env, boolean ownsEnvironment, ConnectionString connStr) {
     boolean tls = env.securityConfig().tlsEnabled();
 
-    // Let the user know if we're ignoring bits of the connection string
-    // because they're incompatible with a shared cluster environment.
     if (!ownsEnvironment) {
       if (!tls && connStr.scheme() == COUCHBASES) {
-        env.eventBus().publish(ConnectionStringIgnoredEvent.ignoringScheme(connStr));
+        throw new IllegalArgumentException(INCOMPATIBLE_CONNECTION_STRING_SCHEME);
       }
       if (!connStr.params().isEmpty()) {
-        env.eventBus().publish(ConnectionStringIgnoredEvent.ignoringParameters(connStr));
+        throw new IllegalArgumentException(INCOMPATIBLE_CONNECTION_STRING_PARAMS);
       }
     }
 

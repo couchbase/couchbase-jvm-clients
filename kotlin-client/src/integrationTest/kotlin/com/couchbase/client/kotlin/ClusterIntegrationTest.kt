@@ -18,6 +18,9 @@ package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.error.UnambiguousTimeoutException
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.core.util.ConnectionStringUtil.INCOMPATIBLE_CONNECTION_STRING_PARAMS
+import com.couchbase.client.core.util.ConnectionStringUtil.INCOMPATIBLE_CONNECTION_STRING_SCHEME
+import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.kotlin.util.use
 import com.couchbase.client.kotlin.util.withSystemProperty
@@ -36,6 +39,25 @@ import kotlin.time.Duration.Companion.seconds
 //    http://review.couchbase.org/c/CouchbaseMock/+/148081
 @IgnoreWhen(clusterTypes = [ClusterType.MOCKED])
 private class ClusterIntegrationTest : KotlinIntegrationTest() {
+
+    @Test
+    fun `throws if shared environment not compatible with connection string scheme`() {
+        assertIncompatibleConnectionString("couchbases://example.com", INCOMPATIBLE_CONNECTION_STRING_SCHEME)
+    }
+
+    @Test
+    fun `throws if shared environment not compatible with connection string params`() {
+        assertIncompatibleConnectionString("couchbase://example.com?foo=bar", INCOMPATIBLE_CONNECTION_STRING_PARAMS)
+    }
+
+    fun assertIncompatibleConnectionString(connectionString: String, expectedErrorMessage: String) {
+        ClusterEnvironment.builder().build().use { env ->
+            val e = assertThrows<IllegalArgumentException> {
+                Cluster.connectUsingSharedEnvironment(connectionString, authenticator, env)
+            }
+            assertEquals(e.message, expectedErrorMessage)
+        }
+    }
 
     @Test
     fun `connection string parameters override cluster environment`() = runBlocking {

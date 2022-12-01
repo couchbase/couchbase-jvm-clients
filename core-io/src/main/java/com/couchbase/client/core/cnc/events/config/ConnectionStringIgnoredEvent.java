@@ -24,7 +24,13 @@ import java.time.Duration;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * @deprecated Instead of publishing this event, the SDK now throws an exception.
+ * Because this class never graduated from "volatile API" status, it will be
+ * removed from the next minor version of the SDK.
+ */
 @Stability.Volatile
+@Deprecated
 public class ConnectionStringIgnoredEvent extends AbstractEvent {
   private final ConnectionString connectionString;
   private final String description;
@@ -36,6 +42,7 @@ public class ConnectionStringIgnoredEvent extends AbstractEvent {
     this.description = requireNonNull(description);
   }
 
+  @Deprecated
   public static ConnectionStringIgnoredEvent ignoringScheme(ConnectionString connectionString) {
     return new ConnectionStringIgnoredEvent(connectionString,
         "The connection string specifies the secure 'couchbases' scheme," +
@@ -44,6 +51,7 @@ public class ConnectionStringIgnoredEvent extends AbstractEvent {
     );
   }
 
+  @Deprecated
   public static ConnectionStringIgnoredEvent ignoringParameters(ConnectionString connectionString) {
     return new ConnectionStringIgnoredEvent(connectionString,
         "The connection string has parameters, but they will be ignored because " +

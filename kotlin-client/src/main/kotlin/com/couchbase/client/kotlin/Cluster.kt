@@ -34,7 +34,6 @@ import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionString
-import com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASES
 import com.couchbase.client.core.util.ConnectionStringUtil
 import com.couchbase.client.core.util.ConnectionStringUtil.checkConnectionString
 import com.couchbase.client.kotlin.Cluster.Companion.connect
@@ -686,19 +685,7 @@ public class Cluster internal constructor(
             connectionString: String,
             authenticator: Authenticator,
             env: ClusterEnvironment,
-        ): Cluster {
-            ConnectionString.create(connectionString).apply {
-                require(scheme() != COUCHBASES || env.securityConfig().tlsEnabled()) {
-                    "Connection string scheme indicates a secure connection," +
-                            " but the shared cluster environment was not configured for TLS."
-                }
-                require(params().isEmpty()) {
-                    "Can't use a shared cluster environment with a connection string that has parameters."
-                }
-            }
-
-            return doConnect(connectionString, authenticator, env, ownsEnv = false)
-        }
+        ): Cluster = doConnect(connectionString, authenticator, env, ownsEnv = false)
 
         private fun doConnect(
             connectionString: String,
