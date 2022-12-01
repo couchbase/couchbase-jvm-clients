@@ -13,9 +13,15 @@ import java.util.function.Function;
 public abstract class IteratorBasedStreamer<T> extends Streamer<T> {
     protected volatile int demanded = 0;
     protected volatile boolean cancelled = false;
+    protected final Function<Throwable, com.couchbase.client.protocol.shared.Exception> convertException;
 
-    public IteratorBasedStreamer(PerRun perRun, String streamId, Config streamConfig, Function<T, Result> convert) {
-        super(perRun, streamId, streamConfig, convert);
+    public IteratorBasedStreamer(PerRun perRun,
+                                 String streamId,
+                                 Config streamConfig,
+                                 Function<T, Result> convertResult,
+                                 Function<Throwable, com.couchbase.client.protocol.shared.Exception> convertException) {
+        super(perRun, streamId, streamConfig, convertResult);
+        this.convertException = convertException;
     }
 
     protected abstract T next();
@@ -93,9 +99,7 @@ public abstract class IteratorBasedStreamer<T> extends Streamer<T> {
             perRun.resultsStream().enqueue(Result.newBuilder()
                     .setStream(com.couchbase.client.protocol.streams.Signal.newBuilder()
                             .setError(com.couchbase.client.protocol.streams.Error.newBuilder()
-                                    // Ideally we would convert the exception, but that's challenging to do in a
-                                    // generic way from core performer, so we best effort indicate that something
-                                    // went wrong.
+                                    .setException(convertException.apply(err))
                                     .setStreamId(streamId)))
                     .build());
         }

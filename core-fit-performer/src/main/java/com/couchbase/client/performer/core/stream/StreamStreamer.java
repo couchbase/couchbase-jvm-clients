@@ -11,11 +11,16 @@ import java.util.stream.Stream;
 /**
  * Streams back a java.util.stream.Stream.
  */
-public class StreamStreamer<T> extends IteratorBasedStreamer {
+public class StreamStreamer<T> extends IteratorBasedStreamer<T> {
     private final Iterator<T> iterator;
 
-    public StreamStreamer(Stream<T> results, PerRun perRun, String streamId, Config streamConfig, Function<T, Result> convert) {
-        super(perRun, streamId, streamConfig, convert);
+    public StreamStreamer(Stream<T> results,
+                          PerRun perRun,
+                          String streamId,
+                          Config streamConfig,
+                          Function<T, Result> convertResult,
+                          Function<Throwable, com.couchbase.client.protocol.shared.Exception> convertException) {
+        super(perRun, streamId, streamConfig, convertResult, convertException);
         this.iterator = results.iterator();
     }
 

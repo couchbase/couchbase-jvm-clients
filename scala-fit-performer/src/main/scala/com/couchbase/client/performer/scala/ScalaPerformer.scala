@@ -108,7 +108,7 @@ class ScalaPerformer extends CorePerformer {
       new ScalaSdkCommandExecutor(clusterConnections(workloads.getClusterConnectionId), counters)
     }
     else if (api == API.ASYNC) {
-      new ScalaSdkCommandExecutor(clusterConnections(workloads.getClusterConnectionId), counters)
+      new ReactiveScalaSdkCommandExecutor(clusterConnections(workloads.getClusterConnectionId), counters)
     }
     else throw new UnsupportedOperationException("Unknown API")
   }

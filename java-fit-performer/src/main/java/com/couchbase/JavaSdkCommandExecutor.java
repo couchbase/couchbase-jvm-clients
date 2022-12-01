@@ -166,9 +166,8 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             else results = collection.scan(scanType);
             result.setElapsedNanos(System.nanoTime() - start);
             var streamer = new StreamStreamer<ScanResult>(results, perRun, request.getStreamConfig().getStreamId(), request.getStreamConfig(),
-                    (ScanResult r) -> {
-                        return processScanResult(request, r);
-                    });
+                    (ScanResult r) -> processScanResult(request, r),
+                    (Throwable err) -> convertException(err));
             perRun.streamerOwner().addAndStart(streamer);
             result.setStream(com.couchbase.client.protocol.streams.Signal.newBuilder()
                     .setCreated(com.couchbase.client.protocol.streams.Created.newBuilder()

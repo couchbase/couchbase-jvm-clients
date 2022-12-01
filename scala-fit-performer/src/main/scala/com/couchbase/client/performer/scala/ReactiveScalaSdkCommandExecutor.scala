@@ -128,9 +128,9 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       val iterator = if (options == null) collection.scan(scanType)
       else collection.scan(scanType, options)
       result.setElapsedNanos(System.nanoTime - start)
-      val streamer = new ScalaIteratorStreamer[ScanResult](iterator, perRun, request.getStreamConfig.getStreamId, request.getStreamConfig, (r: AnyRef) => {
-        processScanResult(request, r.asInstanceOf[ScanResult])
-      })
+      val streamer = new ScalaIteratorStreamer[ScanResult](iterator, perRun, request.getStreamConfig.getStreamId, request.getStreamConfig,
+        (r: AnyRef) => processScanResult(request, r.asInstanceOf[ScanResult]),
+        (err: Throwable) => convertException(err))
       perRun.streamerOwner.addAndStart(streamer)
       result.setStream(com.couchbase.client.protocol.streams.Signal
         .newBuilder
