@@ -213,10 +213,10 @@ public class ConnectionStringUtil {
 
   public static final String INCOMPATIBLE_CONNECTION_STRING_SCHEME =
     "Connection string scheme indicates a secure connection," +
-      " but the shared cluster environment was not configured for TLS.";
+      " but the pre-built ClusterEnvironment was not configured for TLS.";
 
   public static final String INCOMPATIBLE_CONNECTION_STRING_PARAMS =
-    "Can't use a shared cluster environment with a connection string that has parameters.";
+    "Can't use a pre-built ClusterEnvironment with a connection string that has parameters.";
 
   public static void checkConnectionString(CoreEnvironment env, boolean ownsEnvironment, ConnectionString connStr) {
     boolean tls = env.securityConfig().tlsEnabled();
