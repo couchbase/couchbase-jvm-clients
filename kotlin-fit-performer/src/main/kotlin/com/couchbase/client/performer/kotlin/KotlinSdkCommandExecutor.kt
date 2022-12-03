@@ -17,35 +17,49 @@
 package com.couchbase.client.performer.kotlin
 
 import com.couchbase.client.core.error.CouchbaseException
+import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.codec.JacksonJsonSerializer
 import com.couchbase.client.kotlin.codec.JsonTranscoder
 import com.couchbase.client.kotlin.codec.RawBinaryTranscoder
 import com.couchbase.client.kotlin.codec.RawJsonTranscoder
 import com.couchbase.client.kotlin.codec.RawStringTranscoder
+import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_ITEM_LIMIT
+import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_SIZE_LIMIT
 import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.GetResult
+import com.couchbase.client.kotlin.kv.KvScanConsistency
 import com.couchbase.client.kotlin.kv.MutationResult
 import com.couchbase.client.kotlin.kv.PersistTo
 import com.couchbase.client.kotlin.kv.ReplicateTo
+import com.couchbase.client.kotlin.kv.ScanSort
+import com.couchbase.client.kotlin.util.StorageSize.Companion.bytes
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.perf.Counters
 import com.couchbase.client.performer.core.perf.PerRun
 import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
+import com.couchbase.client.protocol.sdk.kv.rangescan.ScanOptions
+import com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_ASCENDING
+import com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_NONE
 import com.couchbase.client.protocol.shared.CouchbaseExceptionEx
 import com.couchbase.client.protocol.shared.Exception
 import com.couchbase.client.protocol.shared.ExceptionOther
 import com.couchbase.client.protocol.shared.MutationToken
 import com.couchbase.client.protocol.shared.Transcoder
+import com.couchbase.client.protocol.streams.Created
+import com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN
+import com.couchbase.stream.FluxStreamer
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jacksonTypeRef
 import com.fasterxml.jackson.module.kotlin.jsonMapper
 import com.google.protobuf.ByteString
+import kotlinx.coroutines.reactive.asPublisher
 import kotlinx.coroutines.runBlocking
+import reactor.core.publisher.Flux
 import java.time.Instant
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -58,6 +72,7 @@ import com.couchbase.client.protocol.shared.Durability as FitDurability
 import com.couchbase.client.protocol.shared.Expiry as FitExpiry
 import com.couchbase.client.protocol.shared.PersistTo as FitPersistTo
 import com.couchbase.client.protocol.shared.ReplicateTo as FitReplicateTo
+import com.couchbase.client.protocol.streams.Signal as FitSignal
 
 /**
  * Performs each requested SDK operation
@@ -223,6 +238,73 @@ class KotlinSdkCommandExecutor(
                 result.elapsedNanos = System.nanoTime() - start
                 if (op.returnResult) populateResult(result, r)
                 else setSuccess(result)
+            } else if (op.hasRangeScan()) {
+                val request = op.rangeScan
+                val collection = connection.collection(request.collection)
+                result.initiated = TimeUtil.getTimeNow()
+
+                val options = request.options
+                val idsOnly = options.hasIdsOnly() && options.idsOnly
+
+                fun ScanOptions.ktCommon() = createCommon(hasTimeoutMsecs(), timeoutMsecs)
+
+                fun ScanOptions.ktSort() =
+                    if (!hasSort()) ScanSort.NONE
+                    else when (sort) {
+                        KV_RANGE_SCAN_SORT_NONE -> ScanSort.NONE
+                        KV_RANGE_SCAN_SORT_ASCENDING -> ScanSort.ASCENDING
+                        else -> throw UnsupportedOperationException("Unsupported scan sort: $sort")
+                    }
+
+                fun ScanOptions.ktConsistency() =
+                    if (!hasConsistentWith()) KvScanConsistency.notBounded()
+                    else options.consistentWith.toKotlin()
+
+                fun ScanOptions.ktBatchItemLimit() = if (hasBatchItemLimit()) batchItemLimit else DEFAULT_SCAN_BATCH_ITEM_LIMIT
+
+                fun ScanOptions.ktBatchSizeLimit() = if (hasBatchByteLimit()) batchByteLimit.bytes else DEFAULT_SCAN_BATCH_SIZE_LIMIT
+
+                val start = System.nanoTime()
+                val flow =
+                    if (idsOnly) collection.scanIds(
+                        type = request.scanType.toKotlin(),
+                        common = options.ktCommon(),
+                        sort = options.ktSort(),
+                        consistency = options.ktConsistency(),
+                        batchItemLimit = options.ktBatchItemLimit(),
+                        batchSizeLimit = options.ktBatchSizeLimit(),
+                    )
+                    else collection.scanDocuments(
+                        type = request.scanType.toKotlin(),
+                        common = options.ktCommon(),
+                        sort = options.ktSort(),
+                        consistency = options.ktConsistency(),
+                        batchItemLimit = options.ktBatchItemLimit(),
+                        batchSizeLimit = options.ktBatchSizeLimit(),
+                    )
+                result.elapsedNanos = System.nanoTime() - start
+
+                val results = Flux.from(flow.asPublisher())
+
+                val streamer: FluxStreamer<Any> = // "Any" is GetResult or String (document ID)
+                    FluxStreamer(
+                        results,
+                        perRun,
+                        request.streamConfig.streamId,
+                        request.streamConfig,
+                    ) { documentOrId ->
+                        processScanResult(request, documentOrId)
+                    }
+
+                perRun.streamerOwner().addAndStart(streamer)
+                result.setStream(
+                    FitSignal.newBuilder()
+                        .setCreated(
+                            Created.newBuilder()
+                                .setType(STREAM_KV_RANGE_SCAN)
+                                .setStreamId(streamer.streamId())
+                        )
+                )
             } else {
                 throw UnsupportedOperationException(IllegalArgumentException("Unknown operation"))
             }
@@ -314,6 +396,14 @@ class KotlinSdkCommandExecutor(
 }
 
 fun convertExceptionKt(raw: Throwable): Exception {
+    if (raw is IllegalArgumentException) {
+        // When there's no meaningful error context, the Kotlin SDK sometimes throws
+        // a standard IllegalArgumentException. "Promote" these to the
+        // InvalidArgumentException expected by the FIT driver.
+        // TODO: Reconsider throwing standard IllegalArgumentException
+        return convertExceptionKt(InvalidArgumentException(raw.message, raw.cause, null))
+    }
+
     if (raw is CouchbaseException || raw is UnsupportedOperationException) {
         val out = CouchbaseExceptionEx.newBuilder()
             .setName(raw.javaClass.simpleName)
