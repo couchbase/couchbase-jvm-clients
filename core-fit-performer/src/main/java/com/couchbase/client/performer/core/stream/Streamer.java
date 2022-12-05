@@ -19,17 +19,20 @@ abstract public class Streamer<T> extends Thread {
     protected final PerRun perRun;
     protected final String streamId;
     protected final Config streamConfig;
-    protected final Function<T, Result> convert;
+    protected final Function<T, Result> convertResult;
+    protected final Function<Throwable, com.couchbase.client.protocol.shared.Exception> convertException;
     protected final AtomicInteger streamed = new AtomicInteger(0);
 
     public Streamer(PerRun perRun,
                     String streamId,
                     Config streamConfig,
-                    Function<T, Result> convert) {
+                    Function<T, Result> convertResult,
+                    Function<Throwable, com.couchbase.client.protocol.shared.Exception> convertException) {
         this.perRun = perRun;
         this.streamId = streamId;
         this.streamConfig = streamConfig;
-        this.convert = convert;
+        this.convertResult = convertResult;
+        this.convertException = convertException;
     }
 
     public String streamId() {

@@ -13,15 +13,13 @@ import java.util.function.Function;
 public abstract class IteratorBasedStreamer<T> extends Streamer<T> {
     protected volatile int demanded = 0;
     protected volatile boolean cancelled = false;
-    protected final Function<Throwable, com.couchbase.client.protocol.shared.Exception> convertException;
 
     public IteratorBasedStreamer(PerRun perRun,
                                  String streamId,
                                  Config streamConfig,
                                  Function<T, Result> convertResult,
                                  Function<Throwable, com.couchbase.client.protocol.shared.Exception> convertException) {
-        super(perRun, streamId, streamConfig, convertResult);
-        this.convertException = convertException;
+        super(perRun, streamId, streamConfig, convertResult, convertException);
     }
 
     protected abstract T next();
@@ -30,7 +28,7 @@ public abstract class IteratorBasedStreamer<T> extends Streamer<T> {
 
     private void enqueueNext() {
         T next = next();
-        Result result = convert.apply(next);
+        Result result = convertResult.apply(next);
         perRun.resultsStream().enqueue(result);
         int streamedNow = streamed.incrementAndGet();
         logger.info("Streamer {} got and enqueued an item, has sent {}", streamId, streamedNow);

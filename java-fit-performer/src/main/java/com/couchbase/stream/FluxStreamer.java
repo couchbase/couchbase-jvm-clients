@@ -21,8 +21,13 @@ public class FluxStreamer<T> extends Streamer<T> {
     private final Flux<T> results;
     private final AtomicReference<BaseSubscriber> subscriberRef = new AtomicReference<>();
 
-    public FluxStreamer(Flux<T> results, PerRun perRun, String streamId, Config streamConfig, Function<T, Result> convert) {
-        super(perRun, streamId, streamConfig, convert);
+    public FluxStreamer(Flux<T> results,
+                        PerRun perRun,
+                        String streamId,
+                        Config streamConfig,
+                        Function<T, Result> convertResult,
+                        Function<Throwable, com.couchbase.client.protocol.shared.Exception> convertException) {
+        super(perRun, streamId, streamConfig, convertResult, convertException);
         this.results = results;
     }
 
@@ -49,7 +54,7 @@ public class FluxStreamer<T> extends Streamer<T> {
             protected void hookOnNext(T value) {
                 logger.info("Flux streamer {} sending one", streamId);
 
-                perRun.resultsStream().enqueue(convert.apply(value));
+                perRun.resultsStream().enqueue(convertResult.apply(value));
                 streamed.incrementAndGet();
             }
 
@@ -79,8 +84,9 @@ public class FluxStreamer<T> extends Streamer<T> {
 
                 perRun.resultsStream().enqueue(Result.newBuilder()
                         .setStream(com.couchbase.client.protocol.streams.Signal.newBuilder()
-                                // todo convert error
-                                .setError(com.couchbase.client.protocol.streams.Error.newBuilder().setStreamId(streamId)))
+                                .setError(com.couchbase.client.protocol.streams.Error.newBuilder()
+                                        .setException(convertException.apply(throwable))
+                                        .setStreamId(streamId)))
                         .build());
             }
 
