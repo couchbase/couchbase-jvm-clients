@@ -292,9 +292,9 @@ class KotlinSdkCommandExecutor(
                         perRun,
                         request.streamConfig.streamId,
                         request.streamConfig,
-                    ) { documentOrId ->
-                        processScanResult(request, documentOrId)
-                    }
+                        { documentOrId -> processScanResult(request, documentOrId) },
+                        { throwable -> convertException(throwable) }
+                    )
 
                 perRun.streamerOwner().addAndStart(streamer)
                 result.setStream(
