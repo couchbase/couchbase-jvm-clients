@@ -102,6 +102,7 @@ each service release. See the tag information for specifics of what's in there.
 | pegasus       | 3.1.x       | 1.1.x        | 2.1.x   | 0.3.x                 | 0.3.x               | 0.1.x                 | 0.1.x              |
 | hopper        | 3.2.x       | 1.2.x        | 2.2.x   | 1.0.x                 | 1.0.x               | 0.2.x                 | 0.2.x              |
 | eos           | 3.3.x       | 1.3.x        | 2.3.x   | 1.1.x                 | 1.2.x               | 0.3.x                 | 0.3.x              |
+| frontier      | 3.4.x       | 1.4.x        | 2.4.x   | 1.2.x                 | 1.3.x               | 0.4.x                 | 0.4.x              |
 
 ### Testing Info
 
@@ -117,12 +118,12 @@ Also to have maximum service coverage use a cluster which has all services enabl
 ### Building Documentation
 Documentation will be built automatically by the `mvn install` command above.
 
-According to the Maven standard, the file is named artifact-version-javadoc.jar (i.e. java-client-3.3.1-javadoc.jar).
+According to the Maven standard, the file is named artifact-version-javadoc.jar (i.e. java-client-3.4.1-javadoc.jar).
 
 This file can be extracted (jars are like zip files) with the following command:
 
 ```
-jar xvf java-client-3.3.1-javadoc.jar
+jar xvf java-client-3.4.1-javadoc.jar
 ```
 
 This will extract the contents of the javadoc file into the current directory. After the original jar is removed it can be uploaded to s3.
