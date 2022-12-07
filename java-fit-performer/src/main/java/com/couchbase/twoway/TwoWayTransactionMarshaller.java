@@ -73,7 +73,7 @@ public class TwoWayTransactionMarshaller {
         fromTest = new StreamObserver<TransactionStreamDriverToPerformer>() {
             @Override
             public void onNext(TransactionStreamDriverToPerformer next) {
-                logger.info("From driver: {}", next);
+                logger.info("From driver: {}", next.toString().trim());
 
                 if (next.hasCreate()) {
                     final TransactionCreateRequest req = next.getCreate();

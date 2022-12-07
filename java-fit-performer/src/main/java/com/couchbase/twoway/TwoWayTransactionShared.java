@@ -59,6 +59,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.function.Tuple2;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -98,7 +99,6 @@ public abstract class TwoWayTransactionShared {
     protected Logger logger;
     protected final ConcurrentHashMap<String, CountDownLatch> latches = new ConcurrentHashMap<>();
     protected String name;
-    protected String bp;
     // The result of the last get call will automatically be stashed here for use with subsequent mutation commands.
     // We may need something more complex later with multiple stashed variables, but this will likely be enough for 90%
     // of cases.
@@ -141,7 +141,6 @@ public abstract class TwoWayTransactionShared {
             boolean performanceMode,
             ConcurrentHashMap<String, RequestSpan> spans) {
         this.name = req.getName();
-        this.bp = this.name + ": ";
         logger = LoggerFactory.getLogger(this.name);
 
         final ConcurrentLinkedQueue<TransactionEvent> transactionEvents = new ConcurrentLinkedQueue<>();
@@ -220,11 +219,10 @@ public abstract class TwoWayTransactionShared {
      */
     public void create(TransactionCreateRequest req) {
         this.name = req.getName();
-        this.bp = this.name + ": ";
         logger = LoggerFactory.getLogger(this.name);
 
         req.getLatchesList().forEach(latch -> {
-            logger.info(bp, "Adding new latch '{}' count={}", latch.getName(), latch.getInitialCount());
+            logger.info("Adding new latch '{}' count={}", latch.getName(), latch.getInitialCount());
 
             CountDownLatch l = new CountDownLatch(latch.getInitialCount());
             latches.put(latch.getName(), l);
@@ -306,6 +304,8 @@ public abstract class TwoWayTransactionShared {
 
         if (request.hasStashInSlot()) {
             stashedGetMap.put(request.getStashInSlot(), getResult);
+            logger.info("Stashed {} in slot {}", getResult.id(), request.getStashInSlot());
+            // stashedGetMap.forEach((k, v) -> logger.info("Stash: {}={}", k, v));
         }
 
         if (!request.getExpectedContentJson().isEmpty()) {
@@ -501,55 +501,17 @@ public abstract class TwoWayTransactionShared {
         }
     }
 
-    protected Mono<Void> performCommandBatchBlocking(CommandBatch request, Function<TransactionCommand, Mono<Void>> call) {
-        CountDownLatch latch = new CountDownLatch(request.getCommandsCount());
-
+    protected Mono<?> performCommandBatch(CommandBatch request, Function<Tuple2<Long, TransactionCommand>, Mono<?>> call) {
         return Flux.fromIterable(request.getCommandsList())
                 .doOnSubscribe(s -> logger.info("Running {} operations, concurrency={}",
                         request.getCommandsCount(), request.getParallelism()))
+                .index()
                 .parallel(request.getParallelism())
                 .runOn(Schedulers.boundedElastic())
                 .concatMap(parallelOp -> new MonoBridge<>(call.apply(parallelOp), "not-used", this, null).external()
-                        .doOnTerminate(() -> latch.countDown())
-                .doOnNext(v -> logger.info("A parallel op {} has finished", parallelOp.getCommandCase()))
-                .doOnCancel(() -> logger.info("A parallel op {} has been cancelled", parallelOp.getCommandCase()))
-                .doOnError(err -> logger.info("A parallel op {} has errored with {}", parallelOp.getCommandCase(), err)))
-                .sequential()
-                .then(Mono.fromRunnable(() -> {
-                    logger.info("Reached end of operations with nothing throwing, waiting for all {} ops (which should be 0)", latch.getCount());
-                    try {
-                        latch.await();
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                    logger.info("All ops finished");
-                }))
-                .onErrorResume(e -> {
-                    logger.info("An op threw {}, waiting for {} remaining ops", e.getClass().getSimpleName(), latch.getCount());
-                    try {
-                        latch.await();
-                    } catch (InterruptedException ex) {
-                        throw new RuntimeException(ex);
-                    }
-                    logger.info("All ops finished, rethrowing {}", e.toString());
-                    return Mono.error(e);
-                })
-                .then()
-                .doOnNext(v -> logger.info("All parallel ops have finished"))
-                .doOnCancel(() -> logger.info("Parallel ops have been cancelled"))
-                .doOnError(v -> logger.info("Parallel ops have errored"));
-    }
-
-    protected Mono<?> performCommandBatch(CommandBatch request, Function<TransactionCommand, Mono<?>> call) {
-        return Flux.fromIterable(request.getCommandsList())
-                .doOnSubscribe(s -> logger.info("Running {} operations, concurrency={}",
-                        request.getCommandsCount(), request.getParallelism()))
-                .parallel(request.getParallelism())
-                .runOn(Schedulers.boundedElastic())
-                .concatMap(parallelOp -> new MonoBridge<>(call.apply(parallelOp), "not-used", this, null).external()
-                        .doOnNext(v -> logger.info("A parallel op {} has finished", parallelOp.getCommandCase()))
-                        .doOnCancel(() -> logger.info("A parallel op {} has been cancelled", parallelOp.getCommandCase()))
-                        .doOnError(err -> logger.info("A parallel op {} has errored with {}", parallelOp.getCommandCase(), err)))
+                        .doOnNext(v -> logger.info("{} A parallel op {} has finished", parallelOp.getT1(), parallelOp.getT2().getCommandCase()))
+                        .doOnCancel(() -> logger.info("{} A parallel op {} has been cancelled", parallelOp.getT1(), parallelOp.getT2().getCommandCase()))
+                        .doOnError(err -> logger.info("{} A parallel op {} has errored with {}", parallelOp.getT1(), parallelOp.getT2().getCommandCase(), err.getMessage())))
                 .sequential()
                 .then(Mono.fromRunnable(() -> {
                     logger.info("Reached end of operations with nothing throwing");

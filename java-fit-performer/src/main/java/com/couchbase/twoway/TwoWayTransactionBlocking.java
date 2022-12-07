@@ -117,7 +117,7 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
             TransactionAttemptRequest attempt = req.getAttempts(attemptToUse);
 
             for (TransactionCommand command : attempt.getCommandsList()) {
-                performOperation(connection, ctx, command, toTest, performanceMode);
+                performOperation(connection, ctx, command, toTest, performanceMode, "");
             }
 
             if (!performanceMode) {
@@ -148,10 +148,11 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                                   TransactionAttemptContext ctx,
                                   TransactionCommand op,
                                   @Nullable StreamObserver<TransactionStreamPerformerToDriver> toTest,
-                                  boolean performanceMode) {
+                                  boolean performanceMode,
+                                  String dbg) {
         if (op.getWaitMsecs() != 0) {
             try {
-                logger.info("Sleeping for Msecs: "+op.getWaitMsecs());
+                logger.info("{} Sleeping for Msecs: {}", dbg, op.getWaitMsecs());
                 Thread.sleep(op.getWaitMsecs());
             } catch (InterruptedException e) {
                 throw new InternalPerformerFailure(new RuntimeException(e));
@@ -163,10 +164,10 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
             var content = readJson(request.getContentJson());
             final Collection collection = connection.collection(request.getDocId());
 
-            performOperation("insert " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(),op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "insert " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(),op.getDoNotPropagateError(), performanceMode,
                 () -> {
-                    logger.info("Performing insert operation on {} on bucket {} on collection {}",
-                            request.getDocId().getDocId(),request.getDocId().getBucketName(), request.getDocId().getCollectionName());
+                    logger.info("{} Performing insert operation on {} on bucket {} on collection {}",
+                            dbg, request.getDocId().getDocId(),request.getDocId().getBucketName(), request.getDocId().getCollectionName());
                     ctx.insert(collection,
                         request.getDocId().getDocId(),
                         content);
@@ -175,7 +176,7 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
             var request = op.getInsertV2();
             var content = JavaSdkCommandExecutor.content(request.getContent());
 
-            performOperation("insert-v2", ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "insert-v2", ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                     () -> {
                         var collection = connection.collection(request.getLocation());
                         ctx.insert(collection, executor.getDocId(request.getLocation()), content);
@@ -184,15 +185,15 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
             final CommandReplace request = op.getReplace();
             var content = readJson(request.getContentJson());
 
-            performOperation("replace " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "replace " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                 () -> {
                     if (request.getUseStashedResult()) {
                         if (stashedGet.get() == null) {
                             throw new IllegalStateException("Test has not performed a get");
                         }
 
-                        logger.info("Performing replace operation on stashed get {} to new content {}",
-                                stashedGet.get(), request.getContentJson());
+                        logger.info("{} Performing replace operation on stashed get {} to new content {}",
+                                dbg, stashedGet.get(), request.getContentJson());
                         ctx.replace(stashedGet.get(), content);
                     } else if (request.hasUseStashedSlot()) {
                         if (!stashedGetMap.containsKey(request.getUseStashedSlot())) {
@@ -201,8 +202,8 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                         ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content);
                     } else {
                         final Collection collection = connection.collection(request.getDocId());
-                        logger.info("Performing replace operation on docId {} to new content {} on collection {}",
-                                request.getDocId().getDocId(), request.getContentJson(),request.getDocId().getCollectionName());
+                        logger.info("{} Performing replace operation on docId {} to new content {} on collection {}",
+                                dbg, request.getDocId().getDocId(), request.getContentJson(),request.getDocId().getCollectionName());
                         final TransactionGetResult r = ctx.get(collection, request.getDocId().getDocId());
                         ctx.replace(r, content);
                     }
@@ -211,7 +212,7 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
             var request = op.getReplaceV2();
             var content = JavaSdkCommandExecutor.content(request.getContent());
 
-            performOperation("replace-v2", ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "replace-v2", ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                     () -> {
                         if (request.hasUseStashedSlot()) {
                             if (!stashedGetMap.containsKey(request.getUseStashedSlot())) {
@@ -227,14 +228,14 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
         } else if (op.hasRemove()) {
             final CommandRemove request = op.getRemove();
 
-            performOperation("remove " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "remove " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                 () -> {
                     if (request.getUseStashedResult()) {
                         if (stashedGet.get() == null) {
                             throw new IllegalStateException("Test has not performed a get");
                         }
 
-                        logger.info("Performing remove operation on stashed get {}", stashedGet.get());
+                        logger.info("{} Performing remove operation on stashed get {}", dbg, stashedGet.get());
                         ctx.remove(stashedGet.get());
                     } else if (request.hasUseStashedSlot()) {
                         if (!stashedGetMap.containsKey(request.getUseStashedSlot())) {
@@ -243,7 +244,7 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                         ctx.remove(stashedGetMap.get(request.getUseStashedSlot()));
                     } else {
                         final Collection collection = connection.collection(request.getDocId());
-                        logger.info("Performing remove operation on docId on {}", request.getDocId().getDocId());
+                        logger.info("{} Performing remove operation on docId on {}", dbg, request.getDocId().getDocId());
                         TransactionGetResult r = ctx.get(collection, request.getDocId().getDocId());
                         ctx.remove(r);
                     }
@@ -251,7 +252,7 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
         } else if (op.hasRemoveV2()) {
             var request = op.getRemoveV2();
 
-            performOperation("remove-v2", ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "remove-v2", ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                     () -> {
                         if (request.hasUseStashedSlot()) {
                             if (!stashedGetMap.containsKey(request.getUseStashedSlot())) {
@@ -272,16 +273,16 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
             final CommandGet request = op.getGet();
             final Collection collection = connection.collection(request.getDocId());
 
-            performOperation("get " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "get " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                     () -> {
-                        logger.info("Performing get operation on {} on bucket {} on collection {}", request.getDocId().getDocId(),request.getDocId().getBucketName(),request.getDocId().getCollectionName());
+                        logger.info("{} Performing get operation on {} on bucket {} on collection {}", dbg, request.getDocId().getDocId(),request.getDocId().getBucketName(),request.getDocId().getCollectionName());
                         TransactionGetResult out = ctx.get(collection, request.getDocId().getDocId());
                         handleGetResult(request, out, connection);
                     });
         } else if (op.hasGetV2()) {
             var request = op.getGetV2();
 
-            performOperation("get-v2", ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "get-v2", ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                     () -> {
                         var collection = connection.collection(request.getLocation());
                         ctx.get(collection, executor.getDocId(request.getLocation()));
@@ -291,9 +292,9 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
             final CommandGet request = req.getGet();
             final Collection collection = connection.collection(request.getDocId());
 
-            performOperation("get optional " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "get optional " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                     () -> {
-                        logger.info("Performing getOptional operation on {} on bucket {} on collection {} ", request.getDocId().getDocId(),request.getDocId().getBucketName(),request.getDocId().getCollectionName());
+                        logger.info("{} Performing getOptional operation on {} on bucket {} on collection {} ", dbg, request.getDocId().getDocId(),request.getDocId().getBucketName(),request.getDocId().getCollectionName());
                         Optional<TransactionGetResult> out = Optional.empty();
                         try {
                             out = Optional.of(ctx.get(collection, request.getDocId().getDocId()));
@@ -305,24 +306,24 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
         } else if (op.hasWaitOnLatch()) {
             final CommandWaitOnLatch request = op.getWaitOnLatch();
             final String latchName = request.getLatchName();
-            performOperation("wait on latch " + latchName, ctx, Collections.singletonList(EXPECT_SUCCESS), op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "wait on latch " + latchName, ctx, Collections.singletonList(EXPECT_SUCCESS), op.getDoNotPropagateError(), performanceMode,
                 () -> handleWaitOnLatch(request, getLogger(ctx)));
         } else if (op.hasSetLatch()) {
             final CommandSetLatch request = op.getSetLatch();
             final String latchName = request.getLatchName();
-            performOperation("set latch " + latchName, ctx, Collections.singletonList(EXPECT_SUCCESS), op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "set latch " + latchName, ctx, Collections.singletonList(EXPECT_SUCCESS), op.getDoNotPropagateError(), performanceMode,
                     () -> handleSetLatch(request, toTest, getLogger(ctx)));
         } else if (op.hasParallelize()) {
             final CommandBatch request = op.getParallelize();
 
-            performCommandBatch(request, (parallelOp) -> Mono.fromRunnable(() -> {
-                performOperation(connection, ctx, parallelOp, toTest, performanceMode);
+            performCommandBatch(request, (parallelOpAndIndex) -> Mono.fromRunnable(() -> {
+                performOperation(connection, ctx, parallelOpAndIndex.getT2(), toTest, performanceMode, "parallel" + parallelOpAndIndex.getT1() + " ");
             }).then()).block();
         } else if (op.hasInsertRegularKv()) {
             final CommandInsertRegularKV request = op.getInsertRegularKv();
             final Collection collection = connection.collection(request.getDocId());
 
-            performOperation("KV insert " + request.getDocId().getDocId(), ctx, Collections.singletonList(EXPECT_SUCCESS), op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "KV insert " + request.getDocId().getDocId(), ctx, Collections.singletonList(EXPECT_SUCCESS), op.getDoNotPropagateError(), performanceMode,
                     () -> {
                         JsonObject content = JsonObject.fromJson(request.getContentJson());
                         collection.insert(request.getDocId().getDocId(), content);
@@ -331,7 +332,7 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
             final CommandReplaceRegularKV request = op.getReplaceRegularKv();
             final Collection collection = connection.collection(request.getDocId());
 
-            performOperation("KV replace " + request.getDocId().getDocId(), ctx, Collections.singletonList(EXPECT_SUCCESS), op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "KV replace " + request.getDocId().getDocId(), ctx, Collections.singletonList(EXPECT_SUCCESS), op.getDoNotPropagateError(), performanceMode,
                     () -> {
                         JsonObject content = JsonObject.fromJson(request.getContentJson());
                         collection.replace(request.getDocId().getDocId(), content);
@@ -340,7 +341,7 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
             final CommandRemoveRegularKV request = op.getRemoveRegularKv();
             final Collection collection = connection.collection(request.getDocId());
 
-            performOperation("KV remove " + request.getDocId().getDocId(), ctx, Collections.singletonList(EXPECT_SUCCESS), op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "KV remove " + request.getDocId().getDocId(), ctx, Collections.singletonList(EXPECT_SUCCESS), op.getDoNotPropagateError(), performanceMode,
                     () -> {
                         collection.remove(request.getDocId().getDocId());
                     });
@@ -352,7 +353,7 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
         } else if (op.hasQuery()) {
             final CommandQuery request = op.getQuery();
 
-            performOperation("Query " + request.getStatement(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
+            performOperation(dbg + "Query " + request.getStatement(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                     () -> {
                         com.couchbase.client.java.transactions.TransactionQueryOptions queryOptions = OptionsUtil.transactionQueryOptions(request);
 
