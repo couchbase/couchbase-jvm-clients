@@ -103,7 +103,7 @@ public abstract class TwoWayTransactionShared {
     // We may need something more complex later with multiple stashed variables, but this will likely be enough for 90%
     // of cases.
     protected final AtomicReference<TransactionGetResult> stashedGet = new AtomicReference<>();
-    protected final Map<Integer, TransactionGetResult> stashedGetMap = new HashMap<>();
+    protected final Map<Integer, TransactionGetResult> stashedGetMap = new ConcurrentHashMap<>();
     protected final static ExpectedResult EXPECT_SUCCESS = ExpectedResult.newBuilder().setSuccess(true).build();
     protected final @Nullable TransactionCommandExecutor executor;
     private static com.couchbase.client.protocol.transactions.TransactionResult MINIMAL_SUCCESS_RESULT = com.couchbase.client.protocol.transactions.TransactionResult.newBuilder()
