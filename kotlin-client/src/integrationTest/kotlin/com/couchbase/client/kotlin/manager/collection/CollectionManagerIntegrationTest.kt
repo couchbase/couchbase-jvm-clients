@@ -19,6 +19,7 @@ import com.couchbase.client.core.error.CollectionExistsException
 import com.couchbase.client.core.error.CollectionNotFoundException
 import com.couchbase.client.core.error.ScopeExistsException
 import com.couchbase.client.core.error.ScopeNotFoundException
+import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.kotlin.util.waitUntil
 import com.couchbase.client.test.Capabilities
@@ -51,6 +52,7 @@ internal class CollectionManagerIntegrationTest : KotlinIntegrationTest() {
         scopesToDrop += name
         manager.createScope(name)
         waitUntil { manager.scopeExists(name) }
+        ConsistencyUtil.waitUntilScopePresent(cluster.core, bucket.name, name)
         return ScopeSpec(name, emptyList())
     }
 
@@ -62,6 +64,7 @@ internal class CollectionManagerIntegrationTest : KotlinIntegrationTest() {
         val spec = CollectionSpec(scopeName, collectionName, maxExpiry)
         manager.createCollection(spec)
         waitUntil { manager.collectionExists(spec.scopeName, spec.name) }
+        ConsistencyUtil.waitUntilCollectionPresent(cluster.core, bucket.name, spec.scopeName, spec.name)
         return spec
     }
 
@@ -132,6 +135,7 @@ internal class CollectionManagerIntegrationTest : KotlinIntegrationTest() {
             collectionSpec1.let {
                 dropCollection(it)
                 waitUntil { !collectionExists(it) }
+                ConsistencyUtil.waitUntilCollectionDropped(cluster.core, bucket.name, it.scopeName, it.name)
             }
 
             assertEquals(ScopeSpec(scopeName, listOf(collectionSpec2)), getScope(scopeName))
@@ -139,12 +143,14 @@ internal class CollectionManagerIntegrationTest : KotlinIntegrationTest() {
             collectionSpec2.let {
                 dropCollection(it)
                 waitUntil { !collectionExists(it) }
+                ConsistencyUtil.waitUntilCollectionDropped(cluster.core, bucket.name, it.scopeName, it.name)
             }
 
             assertEquals(ScopeSpec(scopeName, emptyList()), getScope(scopeName))
 
             dropScope(scopeName)
             waitUntil { !scopeExists(scopeName) }
+            ConsistencyUtil.waitUntilScopeDropped(cluster.core, bucket.name, scopeName)
         }
     }
 
