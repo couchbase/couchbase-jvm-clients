@@ -12,7 +12,11 @@ import com.couchbase.client.test._
 import com.couchbase.mock.deps.org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import com.couchbase.mock.deps.org.apache.http.client.CredentialsProvider
 import com.couchbase.mock.deps.org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
-import com.couchbase.mock.deps.org.apache.http.impl.client.{BasicCredentialsProvider, CloseableHttpClient, HttpClientBuilder}
+import com.couchbase.mock.deps.org.apache.http.impl.client.{
+  BasicCredentialsProvider,
+  CloseableHttpClient,
+  HttpClientBuilder
+}
 import com.couchbase.mock.deps.org.apache.http.util.EntityUtils
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.TestInstance.Lifecycle

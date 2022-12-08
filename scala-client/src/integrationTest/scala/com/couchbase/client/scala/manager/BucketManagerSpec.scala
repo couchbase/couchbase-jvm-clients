@@ -17,7 +17,12 @@ package com.couchbase.client.scala.manager
 
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import com.couchbase.client.core.error.{BucketExistsException, BucketNotFoundException, DocumentNotFoundException, InvalidArgumentException}
+import com.couchbase.client.core.error.{
+  BucketExistsException,
+  BucketNotFoundException,
+  DocumentNotFoundException,
+  InvalidArgumentException
+}
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability.Majority
 import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral}
@@ -119,7 +124,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   def createAndDropBucketWithDefaults(): Unit = {
     val name: String = UUID.randomUUID.toString
     val bucket       = CreateBucketSettings(name, 100)
-    val found = createGetAndDestroy(name, bucket)
+    val found        = createGetAndDestroy(name, bucket)
 
     assert(!found.flushEnabled)
     assert(found.ramQuotaMB == 100)
@@ -135,9 +140,12 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   def createWithMinimumDurability(): Unit = {
     val name: String = UUID.randomUUID.toString
 
-    val bucket = createGetAndDestroy(name, CreateBucketSettings(name, 100)
-            .minimumDurabilityLevel(Durability.Majority)
-            .numReplicas(0))
+    val bucket = createGetAndDestroy(
+      name,
+      CreateBucketSettings(name, 100)
+        .minimumDurabilityLevel(Durability.Majority)
+        .numReplicas(0)
+    )
 
     assert(bucket.minimumDurabilityLevel == Majority)
   }
@@ -350,7 +358,10 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   @IgnoreWhen(missesCapabilities = Array(Capabilities.ENTERPRISE_EDITION))
   def createBucketWithCompressionModeShouldSucceedOnEE(): Unit = {
     val name = UUID.randomUUID.toString
-    val settings = createGetAndDestroy(name, CreateBucketSettings(name, 100).compressionMode(CompressionMode.Passive))
+    val settings = createGetAndDestroy(
+      name,
+      CreateBucketSettings(name, 100).compressionMode(CompressionMode.Passive)
+    )
 
     assert(settings.maxTTL.isDefined)
     assert(settings.compressionMode.isDefined)
@@ -359,7 +370,7 @@ class BucketManagerSpec extends ScalaIntegrationTest {
   @Test
   @IgnoreWhen(missesCapabilities = Array(Capabilities.ENTERPRISE_EDITION))
   def updateBucketWithCompressionModeShouldSucceedOnEE(): Unit = {
-    val name = UUID.randomUUID.toString
+    val name     = UUID.randomUUID.toString
     val settings = CreateBucketSettings(name, 100)
     buckets.create(settings).get
     waitUntilHealthy(name)

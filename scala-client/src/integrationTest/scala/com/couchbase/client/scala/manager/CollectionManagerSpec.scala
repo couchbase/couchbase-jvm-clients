@@ -63,7 +63,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
 
       result match {
         case Success(true) => true
-        case _ => false
+        case _             => false
       }
     })
   }
@@ -76,7 +76,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
 
       result match {
         case Success(false) => true
-        case _ => false
+        case _              => false
       }
     })
   }
@@ -89,7 +89,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
 
       result match {
         case Success(true) => true
-        case _ => false
+        case _             => false
       }
     })
   }
@@ -102,7 +102,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
 
       result match {
         case Success(false) => true
-        case _ => false
+        case _              => false
       }
     })
   }

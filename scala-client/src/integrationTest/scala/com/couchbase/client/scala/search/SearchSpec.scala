@@ -35,7 +35,10 @@ import org.junit.jupiter.api._
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
-@IgnoreWhen(missesCapabilities = Array(Capabilities.SEARCH), clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101)
+@IgnoreWhen(
+  missesCapabilities = Array(Capabilities.SEARCH),
+  clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101
+)
 @TestInstance(Lifecycle.PER_CLASS)
 @Disabled // Michael N - disabled due to flakyness in the CI env
 class SearchSpec extends ScalaIntegrationTest {

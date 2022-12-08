@@ -78,8 +78,7 @@ class ViewSpec extends ScalaIntegrationTest {
         assert(viewResult.rows.isEmpty)
         assert(viewResult.metaData.debugAs[JsonObject].isEmpty)
         true
-      }
-      catch {
+      } catch {
         case _: ViewNotFoundException =>
           // Intermittently on CI see this error despite previous queries on the same view succeeding.
           // Presumably hitting different nodes.
@@ -98,8 +97,7 @@ class ViewSpec extends ScalaIntegrationTest {
         assert(viewResult.rows.isEmpty)
         assert(viewResult.metaData.debugAs[JsonObject].isDefined)
         true
-      }
-      catch {
+      } catch {
         case _: ViewNotFoundException =>
           // Intermittently on CI see this error despite previous queries on the same view succeeding.
           // Presumably hitting different nodes.

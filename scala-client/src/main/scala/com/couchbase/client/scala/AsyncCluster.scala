@@ -24,9 +24,16 @@ import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionStringUtil.checkConnectionString
 import com.couchbase.client.core.util.{ConnectionString, ConnectionStringUtil}
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
+import com.couchbase.client.scala.diagnostics.{
+  DiagnosticsOptions,
+  PingOptions,
+  WaitUntilReadyOptions
+}
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
-import com.couchbase.client.scala.manager.analytics.{AsyncAnalyticsIndexManager, ReactiveAnalyticsIndexManager}
+import com.couchbase.client.scala.manager.analytics.{
+  AsyncAnalyticsIndexManager,
+  ReactiveAnalyticsIndexManager
+}
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, ReactiveBucketManager}
 import com.couchbase.client.scala.manager.eventing.AsyncEventingFunctionManager
 import com.couchbase.client.scala.manager.query.AsyncQueryIndexManager
@@ -506,11 +513,13 @@ object AsyncCluster {
       case _         => ClusterEnvironment.Builder(owned = true).connectionString(connectionString).build
     }
 
-    if (result.isFailure) result else Try {
-      val env = result.get
-      checkConnectionString(env.core, env.owned, ConnectionString.create(connectionString))
-      env
-    }
+    if (result.isFailure) result
+    else
+      Try {
+        val env = result.get
+        checkConnectionString(env.core, env.owned, ConnectionString.create(connectionString))
+        env
+      }
   }
 
   private[client] def extractClusterEnvironment(opts: ClusterOptions): Try[ClusterEnvironment] = {

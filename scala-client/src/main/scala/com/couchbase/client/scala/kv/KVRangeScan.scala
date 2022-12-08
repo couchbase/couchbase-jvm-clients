@@ -4,7 +4,12 @@ import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.codec.{JsonDeserializer, Transcoder, TranscoderWithSerializer, TranscoderWithoutSerializer}
+import com.couchbase.client.scala.codec.{
+  JsonDeserializer,
+  Transcoder,
+  TranscoderWithSerializer,
+  TranscoderWithoutSerializer
+}
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -26,7 +31,6 @@ object ScanTerm {
   private val min = collection.immutable.Seq.apply(0x00.toByte)
   private val max = collection.immutable.Seq.apply(0xFF.toByte)
 
-
   /** Creates a ScanTerm representing the absolute minimum pattern - e.g. before the first document. */
   def minimum(): ScanTerm = inclusive(min.toArray)
 
@@ -40,7 +44,8 @@ object ScanTerm {
   def inclusive(term: Array[Byte]): ScanTerm = ScanTerm(term)
 
   /** Creates a ScanTerm excluding `term`. */
-  def exclusive(term: String): ScanTerm = ScanTerm(term.getBytes(StandardCharsets.UTF_8), exclusive = true)
+  def exclusive(term: String): ScanTerm =
+    ScanTerm(term.getBytes(StandardCharsets.UTF_8), exclusive = true)
 
   /** Creates a ScanTerm excluding `term`. */
   def exclusive(term: Array[Byte]): ScanTerm = ScanTerm(term, exclusive = true)
@@ -66,9 +71,9 @@ object ScanType {
     */
   case class SamplingScan(limit: Long, seed: Long = Random.nextLong()) extends ScanType
 
-
   def prefixScan(documentIdPrefix: String) = {
-    val to: Array[Byte] = documentIdPrefix.getBytes(StandardCharsets.UTF_8) :+ 0xff.asInstanceOf[Byte]
+    val to: Array[Byte] = documentIdPrefix.getBytes(StandardCharsets.UTF_8) :+ 0xff
+      .asInstanceOf[Byte]
     RangeScan(ScanTerm.inclusive(documentIdPrefix), ScanTerm.exclusive(to))
   }
 }

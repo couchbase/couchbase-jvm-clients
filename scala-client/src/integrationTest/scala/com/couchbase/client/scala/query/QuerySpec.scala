@@ -40,9 +40,11 @@ import scala.util.{Failure, Success}
 
 // Disabling against 5.5.  See comment on QueryIndexManagerIntegrationTest for details.
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(missesCapabilities = Array(Capabilities.QUERY),
+@IgnoreWhen(
+  missesCapabilities = Array(Capabilities.QUERY),
   clusterVersionEquals = DisableQueryTestsForCluster,
-  clusterVersionIsBelow = RequireMB50132)
+  clusterVersionIsBelow = RequireMB50132
+)
 class QuerySpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster   = _
@@ -538,5 +540,5 @@ class QuerySpec extends ScalaIntegrationTest {
 object QuerySpec {
   // See QueryIndexManagerIntegrationTest.java for explanation of these.
   final val DisableQueryTestsForCluster = "5.5.6"
-  final val RequireMB50132 = "7.1.0"
+  final val RequireMB50132              = "7.1.0"
 }

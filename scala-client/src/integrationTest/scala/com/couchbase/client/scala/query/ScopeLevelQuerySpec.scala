@@ -31,8 +31,10 @@ import scala.util.{Failure, Success}
 
 @Disabled @Flaky
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(missesCapabilities = Array(Capabilities.QUERY, Capabilities.COLLECTIONS),
-  clusterVersionIsBelow = RequireMB50132)
+@IgnoreWhen(
+  missesCapabilities = Array(Capabilities.QUERY, Capabilities.COLLECTIONS),
+  clusterVersionIsBelow = RequireMB50132
+)
 class ScopeLevelQuerySpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster   = _

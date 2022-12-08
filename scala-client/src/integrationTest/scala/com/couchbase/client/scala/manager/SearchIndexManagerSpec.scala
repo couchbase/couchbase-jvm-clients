@@ -34,7 +34,10 @@ import scala.util.Failure
 
 @Disabled @Flaky
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(missesCapabilities = Array(Capabilities.SEARCH), clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101)
+@IgnoreWhen(
+  missesCapabilities = Array(Capabilities.SEARCH),
+  clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101
+)
 class SearchIndexManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster            = _
   private var bucketName: String          = _
