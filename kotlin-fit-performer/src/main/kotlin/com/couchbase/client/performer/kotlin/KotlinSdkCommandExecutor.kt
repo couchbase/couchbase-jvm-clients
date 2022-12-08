@@ -17,7 +17,6 @@
 package com.couchbase.client.performer.kotlin
 
 import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.codec.JacksonJsonSerializer
 import com.couchbase.client.kotlin.codec.JsonTranscoder
@@ -396,14 +395,6 @@ class KotlinSdkCommandExecutor(
 }
 
 fun convertExceptionKt(raw: Throwable): Exception {
-    if (raw is IllegalArgumentException) {
-        // When there's no meaningful error context, the Kotlin SDK sometimes throws
-        // a standard IllegalArgumentException. "Promote" these to the
-        // InvalidArgumentException expected by the FIT driver.
-        // TODO: Reconsider throwing standard IllegalArgumentException
-        return convertExceptionKt(InvalidArgumentException(raw.message, raw.cause, null))
-    }
-
     if (raw is CouchbaseException || raw is UnsupportedOperationException) {
         val out = CouchbaseExceptionEx.newBuilder()
             .setName(raw.javaClass.simpleName)
