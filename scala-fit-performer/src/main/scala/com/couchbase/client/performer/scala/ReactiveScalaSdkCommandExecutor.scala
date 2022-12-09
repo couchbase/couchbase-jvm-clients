@@ -20,7 +20,9 @@ import com.couchbase.client.performer.core.perf.{Counters, PerRun}
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaIteratorStreamer}
+// [start:1.4.1]
 import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
+// [end:1.4.1]
 import com.couchbase.client.scala.kv._
 
 class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: Counters) extends SdkCommandExecutor(counters) {

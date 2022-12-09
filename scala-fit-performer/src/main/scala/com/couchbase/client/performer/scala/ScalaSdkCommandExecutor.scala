@@ -30,7 +30,9 @@ import com.couchbase.client.protocol.shared.{CouchbaseExceptionEx, CouchbaseExce
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.durability.{Durability, PersistTo, ReplicateTo}
 import com.couchbase.client.scala.json.JsonObject
+// [start:1.4.1]
 import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
+// [end:1.4.1]
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.google.protobuf.ByteString
