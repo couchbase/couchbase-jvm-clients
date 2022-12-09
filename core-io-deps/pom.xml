@@ -24,16 +24,16 @@
         <shaded.native.lib.prefix>com_couchbase_client_core_deps_</shaded.native.lib.prefix>
 
         <native.folder>${project.build.directory}/native</native.folder>
-        <native.epoll.original>libnetty_transport_native_epoll_x86_64.so</native.epoll.original>
-        <native.epoll.renamed>lib${shaded.native.lib.prefix}netty_transport_native_epoll_x86_64.so</native.epoll.renamed>
-        <native.kqueue.original>libnetty_transport_native_kqueue_x86_64.jnilib</native.kqueue.original>
-        <native.kqueue.renamed>lib${shaded.native.lib.prefix}netty_transport_native_kqueue_x86_64.jnilib</native.kqueue.renamed>
-        <native.tcnative-linux.original>libnetty_tcnative_linux_x86_64.so</native.tcnative-linux.original>
-        <native.tcnative-linux.renamed>lib${shaded.native.lib.prefix}netty_tcnative_linux_x86_64.so</native.tcnative-linux.renamed>
-        <native.tcnative-osx.original>libnetty_tcnative_osx_x86_64.jnilib</native.tcnative-osx.original>
-        <native.tcnative-osx.renamed>lib${shaded.native.lib.prefix}netty_tcnative_osx_x86_64.jnilib</native.tcnative-osx.renamed>
-        <native.tcnative-windows.original>netty_tcnative_windows_x86_64.dll</native.tcnative-windows.original>
-        <native.tcnative-windows.renamed>${shaded.native.lib.prefix}netty_tcnative_windows_x86_64.dll</native.tcnative-windows.renamed>
+        <native.epoll-x86_64.original>libnetty_transport_native_epoll_x86_64.so</native.epoll-x86_64.original>
+        <native.epoll-x86_64.renamed>lib${shaded.native.lib.prefix}netty_transport_native_epoll_x86_64.so</native.epoll-x86_64.renamed>
+        <native.kqueue-x86_64.original>libnetty_transport_native_kqueue_x86_64.jnilib</native.kqueue-x86_64.original>
+        <native.kqueue-x86_64.renamed>lib${shaded.native.lib.prefix}netty_transport_native_kqueue_x86_64.jnilib</native.kqueue-x86_64.renamed>
+        <native.tcnative-linux-x86_64.original>libnetty_tcnative_linux_x86_64.so</native.tcnative-linux-x86_64.original>
+        <native.tcnative-linux-x86_64.renamed>lib${shaded.native.lib.prefix}netty_tcnative_linux_x86_64.so</native.tcnative-linux-x86_64.renamed>
+        <native.tcnative-osx-x86_64.original>libnetty_tcnative_osx_x86_64.jnilib</native.tcnative-osx-x86_64.original>
+        <native.tcnative-osx-x86_64.renamed>lib${shaded.native.lib.prefix}netty_tcnative_osx_x86_64.jnilib</native.tcnative-osx-x86_64.renamed>
+        <native.tcnative-windows-x86_64.original>netty_tcnative_windows_x86_64.dll</native.tcnative-windows-x86_64.original>
+        <native.tcnative-windows-x86_64.renamed>${shaded.native.lib.prefix}netty_tcnative_windows_x86_64.dll</native.tcnative-windows-x86_64.renamed>
     </properties>
 
     <dependencies>
@@ -164,24 +164,24 @@
                     </relocations>
                     <transformers>
                         <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                            <file>${native.folder}/META-INF/native/${native.epoll.original}</file>
-                            <resource>META-INF/native/${native.epoll.renamed}</resource>
+                            <file>${native.folder}/META-INF/native/${native.epoll-x86_64.original}</file>
+                            <resource>META-INF/native/${native.epoll-x86_64.renamed}</resource>
                         </transformer>
                         <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                            <file>${native.folder}/META-INF/native/${native.kqueue.original}</file>
-                            <resource>META-INF/native/${native.kqueue.renamed}</resource>
+                            <file>${native.folder}/META-INF/native/${native.kqueue-x86_64.original}</file>
+                            <resource>META-INF/native/${native.kqueue-x86_64.renamed}</resource>
                         </transformer>
                         <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                            <file>${native.folder}/META-INF/native/${native.tcnative-linux.original}</file>
-                            <resource>META-INF/native/${native.tcnative-linux.renamed}</resource>
+                            <file>${native.folder}/META-INF/native/${native.tcnative-linux-x86_64.original}</file>
+                            <resource>META-INF/native/${native.tcnative-linux-x86_64.renamed}</resource>
                         </transformer>
                         <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                            <file>${native.folder}/META-INF/native/${native.tcnative-osx.original}</file>
-                            <resource>META-INF/native/${native.tcnative-osx.renamed}</resource>
+                            <file>${native.folder}/META-INF/native/${native.tcnative-osx-x86_64.original}</file>
+                            <resource>META-INF/native/${native.tcnative-osx-x86_64.renamed}</resource>
                         </transformer>
                         <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                            <file>${native.folder}/META-INF/native/${native.tcnative-windows.original}</file>
-                            <resource>META-INF/native/${native.tcnative-windows.renamed}</resource>
+                            <file>${native.folder}/META-INF/native/${native.tcnative-windows-x86_64.original}</file>
+                            <resource>META-INF/native/${native.tcnative-windows-x86_64.renamed}</resource>
                         </transformer>
                     </transformers>
                     <filters>
@@ -189,11 +189,11 @@
                         <filter>
                             <artifact>*:*</artifact>
                             <excludes>
-                                <exclude>META-INF/native/${native.epoll.original}</exclude>
-                                <exclude>META-INF/native/${native.kqueue.original}</exclude>
-                                <exclude>META-INF/native/${native.tcnative-linux.original}</exclude>
-                                <exclude>META-INF/native/${native.tcnative-osx.original}</exclude>
-                                <exclude>META-INF/native/${native.tcnative-windows.original}</exclude>
+                                <exclude>META-INF/native/${native.epoll-x86_64.original}</exclude>
+                                <exclude>META-INF/native/${native.kqueue-x86_64.original}</exclude>
+                                <exclude>META-INF/native/${native.tcnative-linux-x86_64.original}</exclude>
+                                <exclude>META-INF/native/${native.tcnative-osx-x86_64.original}</exclude>
+                                <exclude>META-INF/native/${native.tcnative-windows-x86_64.original}</exclude>
                                 <resource>META-INF/services/reactor.blockhound.integration.BlockHoundIntegration</resource>
                             </excludes>
                         </filter>
