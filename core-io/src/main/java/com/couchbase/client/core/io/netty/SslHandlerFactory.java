@@ -18,13 +18,13 @@ package com.couchbase.client.core.io.netty;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.CustomTlsCiphersEnabledEvent;
-import com.couchbase.client.core.endpoint.EndpointContext;
-import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.OpenSsl;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslHandler;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslProvider;
+import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
@@ -41,10 +41,15 @@ import java.util.List;
 @Stability.Internal
 public class SslHandlerFactory {
 
-  /**
-   * Checks once if OpenSSL is available.
-   */
-  private static final boolean OPENSSL_AVAILABLE = OpenSsl.isAvailable();
+  private static class InitOnDemandHolder {
+    /**
+     * IMPORTANT: Don't access this field unless the user wants native TLS.
+     * Otherwise, Netty will load the native library anyway during
+     * {@link OpenSsl}'s static init. This causes a segfault on Alpine Linux
+     * where glibc is not available.
+     */
+    private static final boolean OPENSSL_AVAILABLE = OpenSsl.isAvailable();
+  }
 
   public static SslHandler get(final ByteBufAllocator allocator, final SecurityConfig config,
                                final EndpointContext endpointContext) throws Exception {
@@ -57,7 +62,7 @@ public class SslHandlerFactory {
     }
 
     List<String> ciphers = config.ciphers();
-    if (ciphers != null  && !ciphers.isEmpty()) {
+    if (ciphers != null && !ciphers.isEmpty()) {
       context.ciphers(ciphers);
       endpointContext.environment().eventBus().publish(
         new CustomTlsCiphersEnabledEvent(ciphers, endpointContext)
@@ -85,7 +90,8 @@ public class SslHandlerFactory {
   }
 
   private static SslContextBuilder sslContextBuilder(final boolean nativeTlsEnabled) {
-    SslProvider provider = OPENSSL_AVAILABLE && nativeTlsEnabled ? SslProvider.OPENSSL : SslProvider.JDK;
+    // Must check nativeTlsEnabled *before* OPENSSL_AVAILABLE, to prevent loading the library when not wanted
+    SslProvider provider = nativeTlsEnabled && InitOnDemandHolder.OPENSSL_AVAILABLE ? SslProvider.OPENSSL : SslProvider.JDK;
     return SslContextBuilder.forClient().sslProvider(provider);
   }
 
@@ -94,7 +100,7 @@ public class SslHandlerFactory {
    */
   @Stability.Internal
   public static boolean opensslAvailable() {
-    return OPENSSL_AVAILABLE;
+    return InitOnDemandHolder.OPENSSL_AVAILABLE;
   }
 
   /**
@@ -109,7 +115,7 @@ public class SslHandlerFactory {
    */
   @Stability.Internal
   public static List<String> defaultCiphers(final boolean nativeTlsEnabled) {
-    if (nativeTlsEnabled && !SslHandlerFactory.OPENSSL_AVAILABLE) {
+    if (nativeTlsEnabled && !InitOnDemandHolder.OPENSSL_AVAILABLE) {
       throw InvalidArgumentException.fromMessage("nativeTlsEnabled, but it is not available on this platform!");
     }
 
