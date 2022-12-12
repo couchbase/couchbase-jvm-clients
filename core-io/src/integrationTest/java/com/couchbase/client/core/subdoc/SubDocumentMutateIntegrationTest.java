@@ -42,6 +42,7 @@ class SubDocumentMutateIntegrationTest extends CoreIntegrationTest {
     env = environment().build();
     core = Core.create(env, authenticator(), seedNodes());
     core.openBucket(config().bucketname());
+    waitUntilReady(core);
   }
 
   @AfterEach

@@ -52,6 +52,7 @@ class ObserveIntegrationTest extends CoreIntegrationTest {
     env = environment().build();
     core = Core.create(env, authenticator(), seedNodes());
     core.openBucket(config().bucketname());
+    waitUntilReady(core);
     cid = CollectionIdentifier.fromDefault(config().bucketname());
 
     waitUntilCondition(() -> core.clusterConfig().hasClusterOrBucketConfig());
