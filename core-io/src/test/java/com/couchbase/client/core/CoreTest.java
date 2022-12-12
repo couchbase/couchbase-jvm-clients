@@ -35,13 +35,18 @@ import com.couchbase.client.core.cnc.SimpleEventBus;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.test.Util.readResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -54,6 +59,7 @@ import static org.mockito.Mockito.*;
  */
 @SuppressWarnings("UnassignedFluxMonoInstance")
 class CoreTest {
+  private static final Logger logger = LoggerFactory.getLogger(CoreTest.class);
 
   private static CoreEnvironment ENV;
 
@@ -63,7 +69,7 @@ class CoreTest {
 
   private static final Authenticator AUTHENTICATOR = PasswordAuthenticator.create("foo", "bar");
   
-  private static final int TIMEOUT = 500;
+  private static final int TIMEOUT = 1000;
 
   @BeforeAll
   static void beforeAll() {
@@ -92,23 +98,9 @@ class CoreTest {
     when(configProvider.closeBucket("travel-sample")).thenReturn(Mono.empty());
 
     Node mock101 = mock(Node.class);
-    when(mock101.identifier()).thenReturn(new NodeIdentifier("10.143.190.101", 8091));
-    when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock101.serviceEnabled(any(ServiceType.class))).thenReturn(true);
-    when(mock101.disconnect()).thenReturn(Mono.empty());
-
-
     Node mock102 = mock(Node.class);
-    when(mock102.identifier()).thenReturn(new NodeIdentifier("10.143.190.102", 8091));
-    when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock102.serviceEnabled(any(ServiceType.class))).thenReturn(true);
-    when(mock102.disconnect()).thenReturn(Mono.empty());
+    configureMock(mock101, "mock101", "10.143.190.101", 8091);
+    configureMock(mock102, "mock102", "10.143.190.102", 8091);
 
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
@@ -124,10 +116,13 @@ class CoreTest {
         return mocks.get(target.address());
       }
     } ) {
-      configs.tryEmitNext(clusterConfig);
+      logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
+      configs.tryEmitNext(clusterConfig).orThrow();
+      addMagicSleep();
 
-      verify(mock101, timeout(TIMEOUT).times(0))
-              .addService(ServiceType.VIEWS, 8092, Optional.empty());
+      logger.info("Validating");
+      verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
+      verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
       BucketConfig oneNodeConfig = BucketConfigParser.parse(
         readResource("one_node_config.json", CoreTest.class),
@@ -135,16 +130,22 @@ class CoreTest {
         LOCALHOST
       );
       clusterConfig.setBucketConfig(oneNodeConfig);
-      configs.tryEmitNext(clusterConfig);
+      logger.info("Emitting config");
+      configs.tryEmitNext(clusterConfig).orThrow();
+      addMagicSleep();
 
+      logger.info("Validating 1");
+      logger.info("Validating 2");
       verify(mock101, timeout(TIMEOUT).times(1))
         .addService(ServiceType.VIEWS, 8092, Optional.empty());
+      logger.info("Validating 3");
       verify(mock101, timeout(TIMEOUT).times(1))
         .addService(ServiceType.MANAGER, 8091, Optional.empty());
       verify(mock101, timeout(TIMEOUT).times(1))
         .addService(ServiceType.QUERY, 8093, Optional.empty());
       verify(mock101, timeout(TIMEOUT).times(1))
         .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
+      logger.info("Done validating");
 
       verify(mock102, never()).addService(ServiceType.VIEWS, 8092, Optional.empty());
       verify(mock102, never()).addService(ServiceType.MANAGER, 8091, Optional.empty());
@@ -157,8 +158,11 @@ class CoreTest {
         LOCALHOST
       );
       clusterConfig.setBucketConfig(twoNodeConfig);
-      configs.tryEmitNext(clusterConfig);
+      logger.info("Emitting config");
+      configs.tryEmitNext(clusterConfig).orThrow();
+      addMagicSleep();
 
+      logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(2))
         .addService(ServiceType.VIEWS, 8092, Optional.empty());
       verify(mock101, timeout(TIMEOUT).times(2))
@@ -179,6 +183,25 @@ class CoreTest {
     }
   }
 
+
+  void configureMock(Node mock, String id, String ip, int port) {
+    when(mock.identifier()).thenReturn(new NodeIdentifier(ip, port));
+    when(mock.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
+      .thenAnswer((Answer) invocation -> {
+        logger.info("{}.addService called with arguments: {}", id, Arrays.toString(invocation.getArguments()));
+        return Mono.empty();
+      });
+    when(mock.removeService(any(ServiceType.class), any(Optional.class)))
+      .thenAnswer((Answer) invocation -> {
+        logger.info("{}.removeService called with arguments: {}", id, Arrays.toString(invocation.getArguments()));
+        return Mono.empty();
+      });
+    when(mock.serviceEnabled(any(ServiceType.class))).thenReturn(true);
+    when(mock.disconnect()).thenReturn(Mono.empty());
+
+    logger.info("Configured mock {} {} {}", id, ip, port);
+  }
+
   @Test
   @SuppressWarnings("unchecked")
   void addServicesOnNewConfig() throws Exception {
@@ -191,24 +214,9 @@ class CoreTest {
     when(configProvider.closeBucket("travel-sample")).thenReturn(Mono.empty());
 
     Node mock101 = mock(Node.class);
-    when(mock101.identifier()).thenReturn(new NodeIdentifier("10.143.190.101", 8091));
-    when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock101.serviceEnabled(any(ServiceType.class))).thenReturn(true);
-    when(mock101.disconnect()).thenReturn(Mono.empty());
-
-
     Node mock102 = mock(Node.class);
-    when(mock102.identifier()).thenReturn(new NodeIdentifier("10.143.190.102", 8091));
-    when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock102.serviceEnabled(any(ServiceType.class))).thenReturn(true);
-    when(mock102.disconnect()).thenReturn(Mono.empty());
-
+    configureMock(mock101, "mock101", "10.143.190.101", 8091);
+    configureMock(mock102, "mock102", "10.143.190.102", 8091);
 
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
@@ -224,7 +232,13 @@ class CoreTest {
         return mocks.get(target.address());
       }
     } ) {
-      configs.tryEmitNext(clusterConfig);
+      logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
+      configs.tryEmitNext(clusterConfig).orThrow();
+      addMagicSleep();
+
+      logger.info("Validating");
+      verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
+      verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
       BucketConfig twoNodesConfig = BucketConfigParser.parse(
         readResource("two_nodes_config.json", CoreTest.class),
@@ -232,8 +246,11 @@ class CoreTest {
         LOCALHOST
       );
       clusterConfig.setBucketConfig(twoNodesConfig);
-      configs.tryEmitNext(clusterConfig);
+      logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
+      configs.tryEmitNext(clusterConfig).orThrow();
+      addMagicSleep();
 
+      logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(1))
         .addService(ServiceType.VIEWS, 8092, Optional.empty());
       verify(mock101, timeout(TIMEOUT).times(1))
@@ -258,8 +275,11 @@ class CoreTest {
         LOCALHOST
       );
       clusterConfig.setBucketConfig(twoNodesConfigMore);
-      configs.tryEmitNext(clusterConfig);
+      logger.info("Emitting config");
+      configs.tryEmitNext(clusterConfig).orThrow();
+      addMagicSleep();
 
+      logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(2))
         .addService(ServiceType.VIEWS, 8092, Optional.empty());
       verify(mock101, timeout(TIMEOUT).times(2))
@@ -295,22 +315,9 @@ class CoreTest {
     when(configProvider.closeBucket("travel-sample")).thenReturn(Mono.empty());
 
     Node mock101 = mock(Node.class);
-    when(mock101.identifier()).thenReturn(new NodeIdentifier("10.143.190.101", 8091));
-    when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock101.serviceEnabled(any(ServiceType.class))).thenReturn(true);
-    when(mock101.disconnect()).thenReturn(Mono.empty());
-
     Node mock102 = mock(Node.class);
-    when(mock102.identifier()).thenReturn(new NodeIdentifier("10.143.190.102", 8091));
-    when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock102.serviceEnabled(any(ServiceType.class))).thenReturn(true);
-    when(mock102.disconnect()).thenReturn(Mono.empty());
+    configureMock(mock101, "mock101", "10.143.190.101", 8091);
+    configureMock(mock102, "mock102", "10.143.190.102", 8091);
 
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
@@ -323,10 +330,17 @@ class CoreTest {
 
       @Override
       protected Node createNode(final NodeIdentifier target, final Optional<String> alternate) {
+        logger.info("createNode {} {}", target, alternate);
         return mocks.get(target.address());
       }
     } ) {
-      configs.tryEmitNext(clusterConfig);
+      logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
+      configs.tryEmitNext(clusterConfig).orThrow();
+      addMagicSleep();
+
+      logger.info("Validating");
+      verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
+      verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
       BucketConfig twoNodesConfig = BucketConfigParser.parse(
         readResource("two_nodes_config_more_services.json", CoreTest.class),
@@ -334,8 +348,11 @@ class CoreTest {
         LOCALHOST
       );
       clusterConfig.setBucketConfig(twoNodesConfig);
-      configs.tryEmitNext(clusterConfig);
+      logger.info("Emitting config");
+      configs.tryEmitNext(clusterConfig).orThrow();
+      addMagicSleep();
 
+      logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(1))
         .addService(ServiceType.VIEWS, 8092, Optional.empty());
       verify(mock101, timeout(TIMEOUT).times(1))
@@ -362,8 +379,11 @@ class CoreTest {
         LOCALHOST
       );
       clusterConfig.setBucketConfig(twoNodesLessServices);
-      configs.tryEmitNext(clusterConfig);
+      logger.info("Emitting config");
+      configs.tryEmitNext(clusterConfig).orThrow();
+      addMagicSleep();
 
+      logger.info("Validating");
       verify(mock102, timeout(TIMEOUT).times(1))
         .removeService(ServiceType.SEARCH, Optional.empty());
     }
@@ -381,22 +401,9 @@ class CoreTest {
     when(configProvider.closeBucket("travel-sample")).thenReturn(Mono.empty());
 
     Node mock101 = mock(Node.class);
-    when(mock101.identifier()).thenReturn(new NodeIdentifier("10.143.190.101", 8091));
-    when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock101.serviceEnabled(any(ServiceType.class))).thenReturn(true);
-    when(mock101.disconnect()).thenReturn(Mono.empty());
-
     Node mock102 = mock(Node.class);
-    when(mock102.identifier()).thenReturn(new NodeIdentifier("10.143.190.102", 8091));
-    when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock102.serviceEnabled(any(ServiceType.class))).thenReturn(true);
-    when(mock102.disconnect()).thenReturn(Mono.empty());
+    configureMock(mock101, "mock101", "10.143.190.101", 8091);
+    configureMock(mock102, "mock102", "10.143.190.102", 8091);
 
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
@@ -412,7 +419,13 @@ class CoreTest {
         return mocks.get(target.address());
       }
     } ){
-      configs.tryEmitNext(clusterConfig);
+      logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
+      configs.tryEmitNext(clusterConfig).orThrow();
+      addMagicSleep();
+
+      logger.info("Validating");
+      verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
+      verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
       BucketConfig twoNodesConfig = BucketConfigParser.parse(
         readResource("two_nodes_config_more_services.json", CoreTest.class),
@@ -420,8 +433,11 @@ class CoreTest {
         LOCALHOST
       );
       clusterConfig.setBucketConfig(twoNodesConfig);
-      configs.tryEmitNext(clusterConfig);
+      logger.info("Emitting config");
+      configs.tryEmitNext(clusterConfig).orThrow();
+      addMagicSleep();
 
+      logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(1))
         .addService(ServiceType.VIEWS, 8092, Optional.empty());
       verify(mock101, timeout(TIMEOUT).times(1))
@@ -448,8 +464,11 @@ class CoreTest {
         LOCALHOST
       );
       clusterConfig.setBucketConfig(twoNodesLessServices);
-      configs.tryEmitNext(clusterConfig);
+      logger.info("Emitting config");
+      configs.tryEmitNext(clusterConfig).orThrow();
+      addMagicSleep();
 
+      logger.info("Validating");
       verify(mock102, timeout(TIMEOUT).times(1)).disconnect();
     }
   }
@@ -464,28 +483,16 @@ class CoreTest {
     final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
     Sinks.Many<ClusterConfig> configs = Sinks.many().multicast().directBestEffort();
     ClusterConfig clusterConfig = new ClusterConfig();
-    when(configProvider.configs()).thenReturn(configs.asFlux());
+    when(configProvider.configs()).thenReturn(configs.asFlux()
+      .doOnNext(v -> logger.info("config emitted")));
     when(configProvider.config()).thenReturn(clusterConfig);
     when(configProvider.shutdown()).thenReturn(Mono.empty());
     when(configProvider.closeBucket("default")).thenReturn(Mono.empty());
 
     Node mock101 = mock(Node.class);
-    when(mock101.identifier()).thenReturn(new NodeIdentifier(LOCALHOST, 9000));
-    when(mock101.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock101.removeService(any(ServiceType.class), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock101.serviceEnabled(any(ServiceType.class))).thenReturn(true);
-    when(mock101.disconnect()).thenReturn(Mono.empty());
-
     Node mock102 = mock(Node.class);
-    when(mock102.identifier()).thenReturn(new NodeIdentifier(LOCALHOST, 9001));
-    when(mock102.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock102.removeService(any(ServiceType.class), any(Optional.class)))
-      .thenReturn(Mono.empty());
-    when(mock102.serviceEnabled(any(ServiceType.class))).thenReturn(true);
-    when(mock102.disconnect()).thenReturn(Mono.empty());
+    configureMock(mock101, "mock101", LOCALHOST, 9000);
+    configureMock(mock102, "mock102", LOCALHOST, 9001);
 
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("127.0.0.1:9000", mock101);
@@ -501,7 +508,13 @@ class CoreTest {
         return mocks.get(target.address() + ":" + target.managerPort());
       }
     } ) {
-      configs.tryEmitNext(clusterConfig);
+      logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
+      configs.tryEmitNext(clusterConfig).orThrow();
+      addMagicSleep();
+
+      logger.info("Validating");
+      verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
+      verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
       BucketConfig oneNodeConfig = BucketConfigParser.parse(
         readResource("cluster_run_two_nodes.json", CoreTest.class),
@@ -509,8 +522,11 @@ class CoreTest {
         LOCALHOST
       );
       clusterConfig.setBucketConfig(oneNodeConfig);
-      configs.tryEmitNext(clusterConfig);
+      logger.info("Emitting config {}", oneNodeConfig.nodes().stream().map(v -> v.hostname()).collect(Collectors.joining(", ")));
+      configs.tryEmitNext(clusterConfig).orThrow();
+      addMagicSleep();
 
+      logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(1))
         .addService(ServiceType.VIEWS, 9500, Optional.empty());
       verify(mock101, timeout(TIMEOUT).times(1))
@@ -559,4 +575,12 @@ class CoreTest {
     }
   }
 
+  // A sleep after emitting the config prevents it intermittently emitting the config twice, for reasons that are unclear.
+  static void addMagicSleep() {
+    try {
+      Thread.sleep(500);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
 }
