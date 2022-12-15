@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -108,7 +109,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
     ).forEach(item -> {
       count.incrementAndGet();
       assertTrue(item.idOnly());
-      assertThrows(UnsupportedOperationException.class, item::contentAsBytes);
+      assertThrows(NoSuchElementException.class, item::contentAsBytes);
     });
 
     assertTrue(count.get() >= DOC_IDS.size());
@@ -161,7 +162,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
     AtomicLong count = new AtomicLong(0);
     collection.scan(ScanType.samplingScan(limit), scanOptions().idsOnly(true)).forEach(item -> {
       count.incrementAndGet();
-      assertThrows(UnsupportedOperationException.class, item::contentAsBytes);
+      assertThrows(NoSuchElementException.class, item::contentAsBytes);
       assertTrue(item.idOnly());
     });
     assertEquals(limit, count.get());
