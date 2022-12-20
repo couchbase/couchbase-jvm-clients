@@ -389,10 +389,10 @@ public class ConsistencyUtil {
           } catch (InterruptedException e) {
             throw new RuntimeException(e);
           }
-        }
 
-        if (TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - start) > 30) {
-          throw new RuntimeException(debug + " timeout");
+          if (TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - start) > 30) {
+            throw new RuntimeException(debug + " timeout");
+          }
         }
       }
     }
