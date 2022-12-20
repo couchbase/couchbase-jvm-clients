@@ -17,13 +17,9 @@ package com.couchbase.client.scala.manager
 
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import com.couchbase.client.core.error.{
-  CollectionExistsException,
-  CollectionNotFoundException,
-  ScopeExistsException,
-  ScopeNotFoundException
-}
+import com.couchbase.client.core.error.{CollectionExistsException, CollectionNotFoundException, ScopeExistsException, ScopeNotFoundException}
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.scala.{Cluster, TestUtils}
 import com.couchbase.client.scala.manager.collection._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
@@ -56,6 +52,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
   }
 
   def waitForScopeToExist(scope: String) = {
+    ConsistencyUtil.waitUntilScopePresent(cluster.async.core, bucketName, scope)
     Util.waitUntilCondition(() => {
       val result = collections.scopeExists(scope)
 
@@ -69,6 +66,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
   }
 
   def waitForScopeToNotExist(scope: String) = {
+    ConsistencyUtil.waitUntilScopeDropped(cluster.async.core, bucketName, scope)
     Util.waitUntilCondition(() => {
       val result = collections.scopeExists(scope)
 
@@ -82,6 +80,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
   }
 
   def waitForCollectionToExist(collSpec: CollectionSpec): Unit = {
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.async.core, bucketName, collSpec.scopeName, collSpec.name)
     Util.waitUntilCondition(() => {
       val result = collections.collectionExists(collSpec)
 
@@ -95,6 +94,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
   }
 
   def waitForCollectionToNotExist(collSpec: CollectionSpec): Unit = {
+    ConsistencyUtil.waitUntilCollectionDropped(cluster.async.core, bucketName, collSpec.scopeName, collSpec.name)
     Util.waitUntilCondition(() => {
       val result = collections.collectionExists(collSpec)
 
@@ -133,6 +133,8 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     }
 
     collections.createScope(scope).get
+    waitForScopeToExist(scope)
+
     collections.createCollection(collSpec).get
 
     waitForCollectionToExist(collSpec)
@@ -159,9 +161,11 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     val collSpec   = CollectionSpec(collection, scope)
 
     collections.createScope(scope).get
-    collections.createCollection(collSpec).get
 
     waitForScopeToExist(scope)
+
+    collections.createCollection(collSpec).get
+
     waitForCollectionToExist(collSpec)
 
     collections.createCollection(collSpec) match {
@@ -176,6 +180,9 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     val scope = randomString
 
     collections.createScope(scope).get
+
+    waitForScopeToExist(scope)
+
     collections.dropScope(scope).get
 
     waitForScopeToNotExist(scope)
@@ -190,9 +197,10 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     val collSpec   = CollectionSpec(collection, scope)
 
     collections.createScope(scope).get
+    waitForScopeToExist(scope)
+
     collections.createCollection(collSpec).get
 
-    waitForScopeToExist(scope)
     waitForCollectionToExist(collSpec)
 
     collections.dropCollection(collSpec).get
@@ -200,12 +208,15 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     waitForCollectionToNotExist(collSpec)
 
     collections.createCollection(collSpec).get
+
+    waitForCollectionToExist(collSpec)
   }
 
   @Test
   def dropCollection_shouldFailWhen_collectionDoesNotExist(): Unit = {
     val scope = randomString
     collections.createScope(scope).get
+    waitForScopeToExist(scope)
 
     val result = collections.dropCollection(CollectionSpec("does_not_exist", scope))
     result match {
