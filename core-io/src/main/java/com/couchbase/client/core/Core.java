@@ -17,7 +17,9 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.callbacks.BeforeSendRequestCallback;
+import com.couchbase.client.core.classic.kv.ClassicCoreKvOps;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -979,6 +981,11 @@ public class Core implements AutoCloseable {
   @Override
   public void close() {
     shutdown().block();
+  }
+
+  @Stability.Internal
+  public CoreKvOps kvOps(CoreKeyspace keyspace) {
+    return new ClassicCoreKvOps(this, keyspace);
   }
 
   private static class ResponseMetricIdentifier {

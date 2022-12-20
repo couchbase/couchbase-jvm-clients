@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.codec;
 
+import com.couchbase.client.core.api.kv.CoreEncodedContent;
 import com.couchbase.client.core.error.DecodingFailureException;
 
 /**
@@ -59,7 +60,7 @@ public interface Transcoder {
   /**
    * Represents the tuple of encoded value and flags to be used on the wire.
    */
-  class EncodedValue {
+  class EncodedValue implements CoreEncodedContent {
 
     private final byte[] encoded;
     private final int flags;

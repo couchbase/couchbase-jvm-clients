@@ -1,0 +1,2 @@
+# Ignore generated gRPC code
+src/main/java

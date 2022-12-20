@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.msg.kv.CodecFlags;
+import com.couchbase.client.core.api.kv.CoreGetResult;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
@@ -74,12 +75,18 @@ public class GetResult {
    * @param cas the cas from the doc.
    * @param expiry the expiry if fetched from the doc.
    */
-  GetResult(final byte[] content, final int flags, final long cas, final Optional<Instant> expiry, Transcoder transcoder) {
+  @Stability.Internal
+  public GetResult(final byte[] content, final int flags, final long cas, final Optional<Instant> expiry, Transcoder transcoder) {
     this.cas = cas;
     this.content = content;
     this.flags = flags;
     this.expiry = expiry;
     this.transcoder = transcoder;
+  }
+
+  @Stability.Internal
+  public GetResult(CoreGetResult core, Transcoder transcoder) {
+    this(core.content(), core.flags(), core.cas(), Optional.ofNullable(core.expiry()), transcoder);
   }
 
   /**

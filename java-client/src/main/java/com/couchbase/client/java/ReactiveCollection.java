@@ -20,31 +20,17 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
-import com.couchbase.client.core.kv.CoreRangeScanItem;
-import com.couchbase.client.core.msg.kv.GetAndLockRequest;
-import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
-import com.couchbase.client.core.msg.kv.GetMetaRequest;
-import com.couchbase.client.core.msg.kv.GetRequest;
-import com.couchbase.client.core.msg.kv.InsertRequest;
-import com.couchbase.client.core.msg.kv.RemoveRequest;
-import com.couchbase.client.core.msg.kv.ReplaceRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
-import com.couchbase.client.core.msg.kv.TouchRequest;
-import com.couchbase.client.core.msg.kv.UnlockRequest;
-import com.couchbase.client.core.msg.kv.UpsertRequest;
-import com.couchbase.client.core.service.kv.ReplicaHelper;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.kv.ExistsAccessor;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.Expiry;
-import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.GetAllReplicasOptions;
 import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
@@ -52,7 +38,6 @@ import com.couchbase.client.java.kv.GetAnyReplicaOptions;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
-import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.LookupInAccessor;
 import com.couchbase.client.java.kv.LookupInOptions;
@@ -63,32 +48,23 @@ import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.RangeScan;
-import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.RemoveOptions;
-import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
-import com.couchbase.client.java.kv.SamplingScan;
 import com.couchbase.client.java.kv.ScanOptions;
 import com.couchbase.client.java.kv.ScanResult;
 import com.couchbase.client.java.kv.ScanType;
 import com.couchbase.client.java.kv.StoreSemantics;
-import com.couchbase.client.java.kv.TouchAccessor;
 import com.couchbase.client.java.kv.TouchOptions;
-import com.couchbase.client.java.kv.UnlockAccessor;
 import com.couchbase.client.java.kv.UnlockOptions;
-import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
 import static com.couchbase.client.core.util.Validators.notNull;
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.kv.ExistsOptions.existsOptions;
 import static com.couchbase.client.java.kv.GetAllReplicasOptions.getAllReplicasOptions;
 import static com.couchbase.client.java.kv.GetAndLockOptions.getAndLockOptions;
@@ -138,6 +114,11 @@ public class ReactiveCollection {
   private final AsyncCollection asyncCollection;
 
   /**
+   * Strategy for performing KV operations.
+   */
+  private final CoreKvOps kvOps;
+
+  /**
    * Holds the core context of the attached core.
    */
   private final CoreContext coreContext;
@@ -157,6 +138,7 @@ public class ReactiveCollection {
     this.coreContext = asyncCollection.core().context();
     this.core = asyncCollection.core();
     this.reactiveBinaryCollection = new ReactiveBinaryCollection(core, asyncCollection.binary());
+    this.kvOps = asyncCollection.kvOps;
   }
 
   /**
@@ -230,18 +212,11 @@ public class ReactiveCollection {
    * @return a {@link Mono} indicating once loaded or failed
    */
   public Mono<GetResult> get(final String id, final GetOptions options) {
-    return Mono.defer(() -> {
-      GetOptions.Built opts = options.build();
-      final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+    GetOptions.Built opts = options.build();
+    Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
 
-      if (opts.projections().isEmpty() && !opts.withExpiry()) {
-        GetRequest request = asyncCollection.fullGetRequest(id, opts);
-        return Reactor.wrap(request, GetAccessor.get(core, request, transcoder), true);
-      } else {
-        SubdocGetRequest request = asyncCollection.subdocGetRequest(id, opts);
-        return Reactor.wrap(request, GetAccessor.subdocGet(core, request, transcoder), true);
-      }
-    });
+    return kvOps.getReactive(opts, id, opts.projections(), opts.withExpiry())
+      .map(it -> new GetResult(it, transcoder));
   }
 
   /**
@@ -272,12 +247,11 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once loaded or failed.
    */
   public Mono<GetResult> getAndLock(final String id, final Duration lockTime, final GetAndLockOptions options) {
-    return Mono.defer(() -> {
-      GetAndLockOptions.Built opts = options.build();
-      final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
-      GetAndLockRequest request = asyncCollection.getAndLockRequest(id, lockTime, opts);
-      return Reactor.wrap(request, GetAccessor.getAndLock(core, request, transcoder), true);
-    });
+    GetAndLockOptions.Built opts = options.build();
+    Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+
+    return kvOps.getAndLockReactive(opts, id, lockTime)
+      .map(it -> new GetResult(it, transcoder));
   }
 
   /**
@@ -302,12 +276,11 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once loaded or failed.
    */
   public Mono<GetResult> getAndTouch(final String id, final Duration expiry, final GetAndTouchOptions options) {
-    return Mono.defer(() -> {
-      GetAndTouchOptions.Built opts = options.build();
-      final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
-      GetAndTouchRequest request = asyncCollection.getAndTouchRequest(id, Expiry.relative(expiry), opts);
-      return Reactor.wrap(request, GetAccessor.getAndTouch(core, request, transcoder), true);
-    });
+    GetAndTouchOptions.Built opts = options.build();
+    Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+
+    return kvOps.getAndTouchReactive(opts, id, Expiry.relative(expiry).encode())
+      .map(it -> new GetResult(it, transcoder));
   }
 
   /**
@@ -338,20 +311,12 @@ public class ReactiveCollection {
    * @return a flux of results from all replicas
    */
   public Flux<GetReplicaResult> getAllReplicas(final String id, final GetAllReplicasOptions options) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
     notNull(options, "GetAllReplicasOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
     GetAllReplicasOptions.Built opts = options.build();
     final Transcoder transcoder = Optional.ofNullable(opts.transcoder()).orElse(environment().transcoder());
 
-    return ReplicaHelper.getAllReplicasReactive(
-        core,
-        asyncCollection.collectionIdentifier(),
-        id,
-        opts.timeout().orElse(environment().timeoutConfig().kvTimeout()),
-        opts.retryStrategy().orElse(environment().retryStrategy()),
-        opts.clientContext(),
-        opts.parentSpan().orElse(null)
-    ).map(response -> GetReplicaResult.from(response, transcoder));
+    return kvOps.getAllReplicasReactive(opts, id)
+      .map(response -> GetReplicaResult.from(response, transcoder));
   }
 
   /**
@@ -376,18 +341,12 @@ public class ReactiveCollection {
    * @return a mono containing the first available replica.
    */
   public Mono<GetReplicaResult> getAnyReplica(final String id, final GetAnyReplicaOptions options) {
+    notNull(options, "GetAnyReplicaOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
     GetAnyReplicaOptions.Built opts = options.build();
     final Transcoder transcoder = Optional.ofNullable(opts.transcoder()).orElse(environment().transcoder());
 
-    return ReplicaHelper.getAnyReplicaReactive(
-        core,
-        asyncCollection.collectionIdentifier(),
-        id,
-        opts.timeout().orElse(environment().timeoutConfig().kvTimeout()),
-        opts.retryStrategy().orElse(environment().retryStrategy()),
-        opts.clientContext(),
-        opts.parentSpan().orElse(null)
-    ).map(response -> GetReplicaResult.from(response, transcoder));
+    return kvOps.getAnyReplicaReactive(opts, id)
+      .map(response -> GetReplicaResult.from(response, transcoder));
   }
 
   /**
@@ -408,11 +367,9 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once loaded or failed.
    */
   public Mono<ExistsResult> exists(final String id, final ExistsOptions options) {
-    return Mono.defer(() -> {
-      GetMetaRequest request = asyncCollection.existsRequest(id, options);
-      return Reactor
-        .wrap(request, ExistsAccessor.exists(id, core, request), true);
-    });
+    ExistsOptions.Built opts = notNull(options, "ExistsOptions").build();
+    return kvOps.existsReactive(opts, id)
+      .map(ExistsResult::from);
   }
 
   /**
@@ -433,16 +390,16 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once removed or failed.
    */
   public Mono<MutationResult> remove(final String id, final RemoveOptions options) {
-    return Mono.defer(() -> {
-      notNull(options, "RemoveOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
-      RemoveOptions.Built opts = options.build();
-      RemoveRequest request = asyncCollection.removeRequest(id, opts);
-      return Reactor.wrap(
-        request,
-        RemoveAccessor.remove(core, request, id, opts.persistTo(), opts.replicateTo()),
-        true
-      );
-    });
+    notNull(options, "RemoveOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+
+    RemoveOptions.Built opts = options.build();
+    return kvOps.removeReactive(
+        opts,
+        id,
+        opts.cas(),
+        opts.toCoreDurability()
+      )
+      .map(MutationResult::new);
   }
 
   /**
@@ -465,16 +422,19 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once inserted or failed.
    */
   public Mono<MutationResult> insert(final String id, Object content, final InsertOptions options) {
-    return Mono.defer(() -> {
-      notNull(options, "InsertOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
-      InsertOptions.Built opts = options.build();
-      InsertRequest request = asyncCollection.insertRequest(id, content, opts);
-      return Reactor.wrap(
-        request,
-        InsertAccessor.insert(core, request, id, opts.persistTo(), opts.replicateTo()),
-        true
-      );
-    });
+    notNull(options, "InsertOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+
+    InsertOptions.Built opts = options.build();
+    Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+    return kvOps.insertReactive(
+        opts,
+        id,
+        () -> transcoder.encode(content),
+        opts.toCoreDurability(),
+        opts.expiry().encode()
+      )
+      .map(MutationResult::new);
   }
 
   /**
@@ -497,16 +457,20 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once upserted or failed.
    */
   public Mono<MutationResult> upsert(final String id, Object content, final UpsertOptions options) {
-    return Mono.defer(() -> {
-      notNull(options, "UpsertOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
-      UpsertOptions.Built opts = options.build();
-      UpsertRequest request = asyncCollection.upsertRequest(id, content, opts);
-      return Reactor.wrap(
-        request,
-        UpsertAccessor.upsert(core, request, id, opts.persistTo(), opts.replicateTo()),
-        true
-      );
-    });
+    notNull(options, "UpsertOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+
+    UpsertOptions.Built opts = options.build();
+    Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+    return kvOps.upsertReactive(
+        opts,
+        id,
+        () -> transcoder.encode(content),
+        opts.toCoreDurability(),
+        opts.expiry().encode(),
+        opts.preserveExpiry()
+      )
+      .map(MutationResult::new);
   }
 
   /**
@@ -529,16 +493,21 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once replaced or failed.
    */
   public Mono<MutationResult> replace(final String id, Object content, final ReplaceOptions options) {
-    return Mono.defer(() -> {
-      notNull(options, "ReplaceOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
-      ReplaceOptions.Built opts = options.build();
-      ReplaceRequest request = asyncCollection.replaceRequest(id, content, opts);
-      return Reactor.wrap(
-        request,
-        ReplaceAccessor.replace(core, request, id, opts.persistTo(), opts.replicateTo()),
-        true
-      );
-    });
+    notNull(options, "ReplaceOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+
+    ReplaceOptions.Built opts = options.build();
+    Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+    return kvOps.replaceReactive(
+        opts,
+        id,
+        () -> transcoder.encode(content),
+        opts.cas(),
+        opts.toCoreDurability(),
+        opts.expiry().encode(),
+        opts.preserveExpiry()
+      )
+      .map(MutationResult::new);
   }
 
   /**
@@ -561,10 +530,12 @@ public class ReactiveCollection {
    * @return a {@link MutationResult} once the operation completes.
    */
   public Mono<MutationResult> touch(final String id, final Duration expiry, final TouchOptions options) {
-    return Mono.defer(() -> {
-      TouchRequest request = asyncCollection.touchRequest(id, Expiry.relative(expiry), options);
-      return Reactor.wrap(request, TouchAccessor.touch(core, request, id), true);
-    });
+    notNull(options, "TouchOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+
+    TouchOptions.Built opts = options.build();
+    return kvOps.touchReactive(opts, id, Expiry.relative(expiry).encode())
+      .map(MutationResult::new);
   }
 
   /**
@@ -587,10 +558,9 @@ public class ReactiveCollection {
    * @return the mono which completes once a response has been received.
    */
   public Mono<Void> unlock(final String id, final long cas, final UnlockOptions options) {
-    return Mono.defer(() -> {
-      UnlockRequest request = asyncCollection.unlockRequest(id, cas, options);
-      return Reactor.wrap(request, UnlockAccessor.unlock(id, core, request), true);
-    });
+    notNull(options, "UnlockOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    UnlockOptions.Built opts = options.build();
+    return kvOps.unlockReactive(opts, id, cas);
   }
 
   /**

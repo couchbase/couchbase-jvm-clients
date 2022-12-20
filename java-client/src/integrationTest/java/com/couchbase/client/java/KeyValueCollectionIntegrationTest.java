@@ -35,6 +35,8 @@ import java.util.UUID;
 
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -73,6 +75,18 @@ public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
 
     assertEquals(upsertResult.cas(), getResult.cas());
     assertEquals(content, getResult.contentAs(String.class));
+
+    checkCachesScopesAndCollections(bucket.async(), collId);
+  }
+
+  private void checkCachesScopesAndCollections(AsyncBucket bucket, String collId) {
+    assertSame(bucket.defaultScope(), bucket.defaultScope());
+    assertSame(bucket.defaultScope(), bucket.scope("_default"));
+
+    assertSame(bucket.defaultScope().defaultCollection(), bucket.defaultScope().defaultCollection());
+    assertSame(bucket.defaultScope().defaultCollection(), bucket.scope("_default").collection("_default"));
+    assertSame(bucket.defaultScope().collection(collId), bucket.defaultScope().collection(collId));
+    assertNotSame(bucket.defaultScope().collection(collId), bucket.defaultScope().defaultCollection());
   }
 
   /**
@@ -89,5 +103,4 @@ public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
       assertTrue(ex.retryReasons().contains(RetryReason.COLLECTION_NOT_FOUND));
     }
   }
-
 }

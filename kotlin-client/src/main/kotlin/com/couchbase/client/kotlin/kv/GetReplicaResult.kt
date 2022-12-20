@@ -16,7 +16,7 @@
 
 package com.couchbase.client.kotlin.kv
 
-import com.couchbase.client.core.service.kv.ReplicaHelper
+import com.couchbase.client.core.api.kv.CoreGetResult
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.Transcoder
 
@@ -26,19 +26,19 @@ import com.couchbase.client.kotlin.codec.Transcoder
  */
 public class GetReplicaResult internal constructor(
     id: String,
-    r: ReplicaHelper.GetReplicaResponse,
+    r: CoreGetResult,
     defaultTranscoder: Transcoder,
 ) : GetResult(
     id,
-    r.response.cas(),
-    Content(r.response.content(), r.response.flags()),
+    r.cas(),
+    Content(r.content(), r.flags()),
     Expiry.Unknown,
     defaultTranscoder,
 ) {
     /**
      * True if the result is from a replica; false if it's from the primary.
      */
-    public val replica: Boolean = r.isFromReplica
+    public val replica: Boolean = r.replica()
 
     override fun toString(): String {
         return "GetReplicaResult(replica=$replica, id='$id', cas=$cas, content=$content)"

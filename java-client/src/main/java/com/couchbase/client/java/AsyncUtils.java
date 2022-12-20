@@ -16,9 +16,9 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.util.CoreAsyncUtils;
+
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 public class AsyncUtils {
   private AsyncUtils() {
@@ -34,28 +34,6 @@ public class AsyncUtils {
    * @return blocks and completes on the given future while converting checked exceptions.
    */
   public static <T> T block(final CompletableFuture<T> input) {
-    try {
-      return input.get();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    } catch (ExecutionException e) {
-      final Throwable cause = e.getCause();
-      if (cause instanceof RuntimeException) {
-        // Rethrow the cause but first adjust the stack trace to point HERE instead of
-        // the thread where the exception was actually thrown, otherwise the stack trace
-        // does not include the context of the blocking call.
-        // Preserve the original async stack trace as a suppressed exception.
-        Exception suppressed = new Exception(
-            "The above exception was originally thrown by another thread at the following location.");
-        suppressed.setStackTrace(cause.getStackTrace());
-        cause.fillInStackTrace();
-        cause.addSuppressed(suppressed);
-        throw (RuntimeException) cause;
-      }
-      if (cause instanceof TimeoutException) {
-        throw new RuntimeException(cause);
-      }
-      throw new RuntimeException(e);
-    }
+    return CoreAsyncUtils.block(input);
   }
 }

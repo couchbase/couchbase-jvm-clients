@@ -17,6 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreExistsResult;
 import com.couchbase.client.core.error.CasMismatchException;
 
 import java.util.Objects;
@@ -27,6 +28,7 @@ import java.util.Objects;
  * @since 3.0.0
  */
 public class ExistsResult {
+  private static final ExistsResult NOT_FOUND = new ExistsResult(false, 0);
 
   /**
    * Holds the CAS value of the doc if it exists.
@@ -47,6 +49,11 @@ public class ExistsResult {
   ExistsResult(final boolean exists, final long cas) {
     this.exists = exists;
     this.cas = cas;
+  }
+
+  @Stability.Internal
+  public static ExistsResult from(CoreExistsResult it) {
+    return it.exists() ? new ExistsResult(true, it.cas()) : NOT_FOUND;
   }
 
   /**
