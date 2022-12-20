@@ -591,7 +591,7 @@ public class Core implements AutoCloseable {
     return Mono.defer(() -> {
       NanoTimestamp start = NanoTimestamp.now();
       return configurationProvider
-        .closeBucket(name)
+        .closeBucket(name, !shutdown.get())
         .doOnSuccess(ignored -> eventBus.publish(new BucketClosedEvent(
           start.elapsed(),
           coreContext,
@@ -741,8 +741,14 @@ public class Core implements AutoCloseable {
             .fromIterable(currentConfig.bucketConfigs().keySet())
             .flatMap(this::closeBucket)
             .then(configurationProvider.shutdown())
+            // JVMCBC-1161: The configurationProvider used to emit this empty config itself, but due to races it was unreliable.
+            .then(Mono.fromRunnable(() -> {
+              currentConfig = new ClusterConfig();
+              reconfigure();
+            }))
             // every 10ms check if all nodes have been cleared, and then move on.
             // this links the config provider shutdown with our core reconfig logic
+            // Nb this check is probably redundant with the empty config now pushed for JVMCBC-1161.
             .then(Flux.interval(Duration.ofMillis(10), coreContext.environment().scheduler()).takeUntil(i -> nodes.isEmpty()).then())
             .doOnTerminate(() -> {
               NUM_INSTANCES.decrementAndGet();

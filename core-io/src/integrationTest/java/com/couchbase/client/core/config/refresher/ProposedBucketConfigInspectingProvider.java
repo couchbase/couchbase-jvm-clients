@@ -79,8 +79,8 @@ public class ProposedBucketConfigInspectingProvider implements ConfigurationProv
   }
 
   @Override
-  public Mono<Void> closeBucket(String name) {
-    return delegate.closeBucket(name);
+  public Mono<Void> closeBucket(String name, boolean pushConfig) {
+    return delegate.closeBucket(name, pushConfig);
   }
 
   @Override

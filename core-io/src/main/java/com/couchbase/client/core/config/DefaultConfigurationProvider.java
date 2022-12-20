@@ -234,7 +234,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           })
           .then(registerRefresher(name))
           .doOnTerminate(bucketConfigLoadInProgress::decrementAndGet)
-          .onErrorResume(t -> closeBucketIgnoreShutdown(name).then(Mono.error(t)));
+          .onErrorResume(t -> closeBucketIgnoreShutdown(name, true).then(Mono.error(t)));
       } else {
         return Mono.error(new AlreadyShutdownException());
       }
@@ -402,11 +402,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   }
 
   @Override
-  public Mono<Void> closeBucket(final String name) {
+  public Mono<Void> closeBucket(final String name, boolean pushConfig) {
     return Mono.defer(() -> shutdown.get()
       ? Mono.error(new AlreadyShutdownException())
-      : closeBucketIgnoreShutdown(name)
-    );
+      : closeBucketIgnoreShutdown(name, pushConfig));
   }
 
   /**
@@ -418,13 +417,17 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    * on checking the shutdown atomic variable.</p>
    *
    * @param name the bucket name.
+   * @param pushConfig whether to push the updated config.  Here so that during shutdown we only
+   *             push one config.
    * @return completed mono once done.
    */
-  private Mono<Void> closeBucketIgnoreShutdown(final String name) {
+  private Mono<Void> closeBucketIgnoreShutdown(final String name, final boolean pushConfig) {
     return Mono
       .defer(() -> {
         currentConfig.deleteBucketConfig(name);
-        pushConfig();
+        if (pushConfig) {
+          pushConfig(false);
+        }
         return Mono.empty();
       })
       .then(keyValueRefresher.deregister(name))
@@ -437,12 +440,15 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
       if (shutdown.compareAndSet(false, true)) {
         return Flux
           .fromIterable(currentConfig.bucketConfigs().values())
-          .flatMap(bucketConfig -> closeBucketIgnoreShutdown(bucketConfig.name()))
+          // Don't push the updated config here - we'll push one final updated config in doOnTerminate
+          .flatMap(bucketConfig -> closeBucketIgnoreShutdown(bucketConfig.name(), false))
           .then(Mono.defer(this::disableAndClearGlobalConfig))
           .doOnTerminate(() -> {
             // make sure to push a final, empty config before complete to give downstream
             // consumers a chance to clean up
-            pushConfig();
+            // Note that Core.shutdown itself now also emits an empty config after this
+            // is complete, so this is probably redundant.
+            pushConfig(true);
             configsSink.emitComplete(emitFailureHandler());
           })
           .then(keyValueRefresher.shutdown())
@@ -579,7 +585,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     currentConfig.setBucketConfig(newConfig);
     checkAlternateAddress();
     updateSeedNodeList();
-    pushConfig();
+    pushConfig(false);
   }
 
   /**
@@ -605,7 +611,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     currentConfig.setGlobalConfig(newConfig);
     checkAlternateAddress();
     updateSeedNodeList();
-    pushConfig();
+    pushConfig(false);
   }
 
   /**
@@ -777,10 +783,20 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    * {@link reactor.core.publisher.Sinks.EmitResult#FAIL_NON_SERIALIZED} from happening. All other results
    * should not be happening, but just to be sure we log them as WARN, so we have a chance to debug them in the field.
    */
-  private synchronized void pushConfig() {
-    Sinks.EmitResult emitResult = configsSink.tryEmitNext(currentConfig);
-    if (emitResult != Sinks.EmitResult.OK) {
-      eventBus.publish(new ConfigPushFailedEvent(core.context(), emitResult));
+  private synchronized void pushConfig(boolean ignoreShutdown) {
+    if (ignoreShutdown || !shutdown.get()) {
+      Sinks.EmitResult emitResult = configsSink.tryEmitNext(currentConfig);
+      if (emitResult != Sinks.EmitResult.OK) {
+        eventBus.publish(new ConfigPushFailedEvent(core.context(), emitResult));
+      }
+    }
+    else {
+      eventBus.publish(new ConfigIgnoredEvent(
+        core.context(),
+        ConfigIgnoredEvent.Reason.ALREADY_SHUTDOWN,
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty()));
     }
   }
 

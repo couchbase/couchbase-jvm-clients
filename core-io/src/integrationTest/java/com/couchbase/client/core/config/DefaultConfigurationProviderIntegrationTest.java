@@ -198,10 +198,10 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     assertThrows(AlreadyShutdownException.class, () -> provider.shutdown().block());
     assertThrows(AlreadyShutdownException.class, () -> provider.openBucket("foo").block());
-    assertThrows(AlreadyShutdownException.class, () -> provider.closeBucket("foo").block());
+    assertThrows(AlreadyShutdownException.class, () -> provider.closeBucket("foo", true).block());
 
     assertTrue(configsComplete.await(1, TimeUnit.SECONDS));
-    assertEquals(3, configEvents.get());
+    assertEquals(2, configEvents.get());
   }
 
   /**
@@ -269,7 +269,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
       provider.config().bucketConfig(bucketName).name()
     );
 
-    provider.closeBucket(bucketName).timeout(DEFAULT_TIMEOUT).block();
+    provider.closeBucket(bucketName, true).timeout(DEFAULT_TIMEOUT).block();
     assertTrue(provider.config().bucketConfigs().isEmpty());
     assertEquals(2, configs.size());
     assertEquals(0, configs.get(1).bucketConfigs().size());

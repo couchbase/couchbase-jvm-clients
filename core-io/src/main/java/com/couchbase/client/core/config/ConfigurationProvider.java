@@ -81,9 +81,10 @@ public interface ConfigurationProvider  {
    * Initiates the bucket closing process.
    *
    * @param name the name of the bucket.
+   * @param pushConfig whether this should result in a config being pushed.  Not needed during e.g. shutdown.
    * @return a Mono that completes once the bucket has been logically closed.
    */
-  Mono<Void> closeBucket(String name);
+  Mono<Void> closeBucket(String name, boolean pushConfig);
 
   /**
    * Shuts down the configuration provider and all its associated resources and timers.

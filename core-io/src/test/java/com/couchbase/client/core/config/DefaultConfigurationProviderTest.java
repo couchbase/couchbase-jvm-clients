@@ -231,7 +231,7 @@ class DefaultConfigurationProviderTest {
     provider.shutdown().block();
 
     provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, newConfig, ORIGIN));
-    assertEquals(3, configsPushed.get());
+    assertEquals(2, configsPushed.get());
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
   }

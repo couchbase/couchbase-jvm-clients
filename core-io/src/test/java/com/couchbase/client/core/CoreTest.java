@@ -95,7 +95,7 @@ class CoreTest {
     when(configProvider.configs()).thenReturn(configs.asFlux());
     when(configProvider.config()).thenReturn(clusterConfig);
     when(configProvider.shutdown()).thenReturn(Mono.empty());
-    when(configProvider.closeBucket("travel-sample")).thenReturn(Mono.empty());
+    when(configProvider.closeBucket(eq("travel-sample"), anyBoolean())).thenReturn(Mono.empty());
 
     Node mock101 = mock(Node.class);
     Node mock102 = mock(Node.class);
@@ -211,7 +211,7 @@ class CoreTest {
     when(configProvider.configs()).thenReturn(configs.asFlux());
     when(configProvider.config()).thenReturn(clusterConfig);
     when(configProvider.shutdown()).thenReturn(Mono.empty());
-    when(configProvider.closeBucket("travel-sample")).thenReturn(Mono.empty());
+    when(configProvider.closeBucket(eq("travel-sample"), anyBoolean())).thenReturn(Mono.empty());
 
     Node mock101 = mock(Node.class);
     Node mock102 = mock(Node.class);
@@ -312,7 +312,7 @@ class CoreTest {
     when(configProvider.configs()).thenReturn(configs.asFlux());
     when(configProvider.config()).thenReturn(clusterConfig);
     when(configProvider.shutdown()).thenReturn(Mono.empty());
-    when(configProvider.closeBucket("travel-sample")).thenReturn(Mono.empty());
+    when(configProvider.closeBucket(eq("travel-sample"), anyBoolean())).thenReturn(Mono.empty());
 
     Node mock101 = mock(Node.class);
     Node mock102 = mock(Node.class);
@@ -398,7 +398,7 @@ class CoreTest {
     when(configProvider.configs()).thenReturn(configs.asFlux());
     when(configProvider.config()).thenReturn(clusterConfig);
     when(configProvider.shutdown()).thenReturn(Mono.empty());
-    when(configProvider.closeBucket("travel-sample")).thenReturn(Mono.empty());
+    when(configProvider.closeBucket(eq("travel-sample"), anyBoolean())).thenReturn(Mono.empty());
 
     Node mock101 = mock(Node.class);
     Node mock102 = mock(Node.class);
@@ -469,6 +469,7 @@ class CoreTest {
       addMagicSleep();
 
       logger.info("Validating");
+
       verify(mock102, timeout(TIMEOUT).times(1)).disconnect();
     }
   }
@@ -487,7 +488,7 @@ class CoreTest {
       .doOnNext(v -> logger.info("config emitted")));
     when(configProvider.config()).thenReturn(clusterConfig);
     when(configProvider.shutdown()).thenReturn(Mono.empty());
-    when(configProvider.closeBucket("default")).thenReturn(Mono.empty());
+    when(configProvider.closeBucket(eq("default"), anyBoolean())).thenReturn(Mono.empty());
 
     Node mock101 = mock(Node.class);
     Node mock102 = mock(Node.class);
@@ -495,6 +496,7 @@ class CoreTest {
     configureMock(mock102, "mock102", LOCALHOST, 9001);
 
     final Map<String, Node> mocks = new HashMap<>();
+
     mocks.put("127.0.0.1:9000", mock101);
     mocks.put("127.0.0.1:9001", mock102);
     try ( Core core = new Core(ENV, AUTHENTICATOR, SeedNode.LOCALHOST, null) {
@@ -550,7 +552,7 @@ class CoreTest {
     ClusterConfig clusterConfig = new ClusterConfig();
     when(configProvider.config()).thenReturn(clusterConfig);
     when(configProvider.shutdown()).thenReturn(Mono.empty());
-    when(configProvider.closeBucket("travel-sample")).thenReturn(Mono.empty());
+    when(configProvider.closeBucket(eq("travel-sample"), anyBoolean())).thenReturn(Mono.empty());
 
     try ( Core core = new Core(ENV, AUTHENTICATOR, SeedNode.LOCALHOST, null) {
       @Override
