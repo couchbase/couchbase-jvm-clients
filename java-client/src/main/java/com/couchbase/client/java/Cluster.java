@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreLimiter;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.DiagnosticsResult;
@@ -298,7 +299,7 @@ public class Cluster implements Closeable {
    */
   @Stability.Uncommitted
   public static void maxAllowedInstances(final int maxAllowedInstances) {
-    Core.maxAllowedInstances(maxAllowedInstances);
+    CoreLimiter.setMaxAllowedInstances(maxAllowedInstances);
   }
 
   /**
@@ -308,7 +309,7 @@ public class Cluster implements Closeable {
    */
   @Stability.Uncommitted
   public static void failIfInstanceLimitReached(final boolean failIfInstanceLimitReached) {
-    Core.failIfInstanceLimitReached(failIfInstanceLimitReached);
+    CoreLimiter.setFailIfInstanceLimitReached(failIfInstanceLimitReached);
   }
 
   /**

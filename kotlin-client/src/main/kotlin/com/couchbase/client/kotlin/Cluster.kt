@@ -17,6 +17,7 @@
 package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.CoreLimiter
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.cnc.TracingIdentifiers
@@ -585,16 +586,16 @@ public class Cluster internal constructor(
          */
         @UncommittedCouchbaseApi
         public var maxAllowedInstances: Int
-            get() = Core.getMaxAllowedInstances()
-            set(value) = Core.maxAllowedInstances(value)
+            get() = CoreLimiter.getMaxAllowedInstances()
+            set(value) = CoreLimiter.setMaxAllowedInstances(value)
 
         /**
          * True means exceeding [maxAllowedInstances] is a fatal error, false means just log a warning.
          */
         @UncommittedCouchbaseApi
         public var failIfInstanceLimitReached: Boolean
-            get() = Core.getFailIfInstanceLimitReached()
-            set(value) = Core.failIfInstanceLimitReached(value)
+            get() = CoreLimiter.getFailIfInstanceLimitReached()
+            set(value) = CoreLimiter.setFailIfInstanceLimitReached(value)
 
         /**
          * Connects to a Couchbase cluster, authenticating with username and password.

@@ -34,9 +34,9 @@ import com.couchbase.client.core.cnc.events.core.ReconfigurationIgnoredEvent;
 import com.couchbase.client.core.cnc.events.core.ServiceReconfigurationFailedEvent;
 import com.couchbase.client.core.cnc.events.core.ShutdownCompletedEvent;
 import com.couchbase.client.core.cnc.events.core.ShutdownInitiatedEvent;
-import com.couchbase.client.core.cnc.events.core.TooManyInstancesDetectedEvent;
 import com.couchbase.client.core.cnc.events.core.WatchdogInvalidStateIdentifiedEvent;
 import com.couchbase.client.core.cnc.events.core.WatchdogRunFailedEvent;
+import com.couchbase.client.core.cnc.events.transaction.TransactionsStartedEvent;
 import com.couchbase.client.core.config.AlternateAddress;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
@@ -53,7 +53,6 @@ import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
-import com.couchbase.client.core.error.TooManyInstancesException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
@@ -70,11 +69,10 @@ import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
 import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.transaction.context.CoreTransactionsContext;
 import com.couchbase.client.core.util.NanoTimestamp;
-import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
-import com.couchbase.client.core.cnc.events.transaction.TransactionsStartedEvent;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -110,21 +108,6 @@ import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
  */
 @Stability.Volatile
 public class Core implements AutoCloseable {
-
-  /**
-   * Holds the number of max allowed instances initialized at any point in time.
-   */
-  private static volatile int maxAllowedInstances = 1;
-
-  /**
-   * Holds the currently initialized number of instances.
-   */
-  private static final AtomicInteger NUM_INSTANCES = new AtomicInteger(0);
-
-  /**
-   * If the core should fail or warn if the configured instance limit is reached.
-   */
-  private static volatile boolean failIfInstanceLimitReached = false;
 
   /**
    * A reasonably unique instance ID.
@@ -280,39 +263,6 @@ public class Core implements AutoCloseable {
   }
 
   /**
-   * Configures the maximum allowed core instances before warning/failing.
-   *
-   * @param maxAllowedInstances the number of max allowed core instances. Must be greater than zero.
-   */
-  @Stability.Volatile
-  public static void maxAllowedInstances(final int maxAllowedInstances) {
-    if (maxAllowedInstances < 1) {
-      throw new IllegalArgumentException("maxAllowedInstances must be > 0, but was " + maxAllowedInstances);
-    }
-    Core.maxAllowedInstances = maxAllowedInstances;
-  }
-
-  @Stability.Internal
-  public static int getMaxAllowedInstances() {
-    return maxAllowedInstances;
-  }
-
-  /**
-   * Configures if the SDK should fail to create instead of warn if the instance limit is reached.
-   *
-   * @param failIfInstanceLimitReached true if it should throw an exception instead of warn.
-   */
-  @Stability.Volatile
-  public static void failIfInstanceLimitReached(final boolean failIfInstanceLimitReached) {
-    Core.failIfInstanceLimitReached = failIfInstanceLimitReached;
-  }
-
-  @Stability.Internal
-  public static boolean getFailIfInstanceLimitReached() {
-    return failIfInstanceLimitReached;
-  }
-
-  /**
    * Creates a new Core.
    *
    * @param environment the environment used.
@@ -328,7 +278,7 @@ public class Core implements AutoCloseable {
       throw new InvalidArgumentException("TLS not enabled but the Authenticator does only support TLS!", null, null);
     }
 
-    incrementAndVerifyNumInstances(environment.eventBus());
+    CoreLimiter.incrementAndVerifyNumInstances(environment.eventBus());
 
     this.connectionString = connectionString;
     this.seedNodes = seedNodes;
@@ -353,7 +303,7 @@ public class Core implements AutoCloseable {
       .map(c -> (BeforeSendRequestCallback) c)
       .collect(Collectors.toList());
 
-    eventBus.publish(new CoreCreatedEvent(coreContext, environment, seedNodes, NUM_INSTANCES.get(), connectionString));
+    eventBus.publish(new CoreCreatedEvent(coreContext, environment, seedNodes, CoreLimiter.numInstances(), connectionString));
 
     long watchdogInterval = INVALID_STATE_WATCHDOG_INTERVAL.getSeconds();
     if (watchdogInterval <= 1) {
@@ -368,25 +318,6 @@ public class Core implements AutoCloseable {
     this.transactionsContext = new CoreTransactionsContext(environment.meter());
     context().environment().eventBus().publish(new TransactionsStartedEvent(environment.transactionsConfig().cleanupConfig().runLostAttemptsCleanupThread(),
             environment.transactionsConfig().cleanupConfig().runRegularAttemptsCleanupThread()));
-  }
-
-  /**
-   * Checks that the number of running instances never gets over the configured limit and takes action if needed.
-   */
-  private static synchronized void incrementAndVerifyNumInstances(final EventBus eventBus) {
-    if (NUM_INSTANCES.get() >= maxAllowedInstances) {
-      String msg = "The number of connected Cluster instances (" + (NUM_INSTANCES.get() + 1) + ") exceeds " +
-        "the configured limit (" + maxAllowedInstances + "). It is recommended to create only " +
-        "one instance and reuse it across the application lifetime. Also, make sure to disconnect Clusters if they " +
-        "are not used anymore.";
-
-      if (failIfInstanceLimitReached) {
-        throw new TooManyInstancesException(msg);
-      } else {
-        eventBus.publish(new TooManyInstancesDetectedEvent(msg));
-      }
-    }
-    NUM_INSTANCES.incrementAndGet();
   }
 
   /**
@@ -751,7 +682,7 @@ public class Core implements AutoCloseable {
             // Nb this check is probably redundant with the empty config now pushed for JVMCBC-1161.
             .then(Flux.interval(Duration.ofMillis(10), coreContext.environment().scheduler()).takeUntil(i -> nodes.isEmpty()).then())
             .doOnTerminate(() -> {
-              NUM_INSTANCES.decrementAndGet();
+              CoreLimiter.decrement();
               eventBus.publish(new ShutdownCompletedEvent(start.elapsed(), coreContext));
             })
             .then();
