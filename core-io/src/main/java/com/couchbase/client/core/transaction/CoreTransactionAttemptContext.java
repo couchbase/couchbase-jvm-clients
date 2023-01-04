@@ -585,8 +585,8 @@ public class CoreTransactionAttemptContext {
             queryOptions.set("args", params);
 
             return queryWrapperBlockingLocked(sidx,
-                    null,
-                    null,
+                    queryContext.bucketName,
+                    queryContext.scopeName,
                     "EXECUTE __get",
                     queryOptions,
                     CoreTransactionAttemptContextHooks.HOOK_QUERY_KV_GET,
@@ -791,8 +791,8 @@ public class CoreTransactionAttemptContext {
             // All KV ops are done with the scanConsistency set at the BEGIN WORK default, e.g. from
             // PerTransactionConfig & TransactionConfig
             return queryWrapperBlockingLocked(sidx,
-                    null,
-                    null,
+                    queryContext.bucketName,
+                    queryContext.scopeName,
                     "EXECUTE __insert",
                     queryOptions,
                     CoreTransactionAttemptContextHooks.HOOK_QUERY_KV_INSERT,
@@ -1187,8 +1187,8 @@ public class CoreTransactionAttemptContext {
             queryOptions.set("args", params);
             
             return queryWrapperBlockingLocked(sidx,
-                    null,
-                    null,
+                    queryContext.bucketName,
+                    queryContext.scopeName,
                     "EXECUTE __update",
                     queryOptions,
                     CoreTransactionAttemptContextHooks.HOOK_QUERY_KV_REPLACE,
@@ -1270,8 +1270,8 @@ public class CoreTransactionAttemptContext {
             queryOptions.set("args", params);
 
             return queryWrapperBlockingLocked(sidx,
-                    null,
-                    null,
+                    queryContext.bucketName,
+                    queryContext.scopeName,
                     "EXECUTE __delete",
                     queryOptions,
                     CoreTransactionAttemptContextHooks.HOOK_QUERY_KV_REMOVE,
