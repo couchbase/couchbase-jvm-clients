@@ -220,8 +220,7 @@ public class CoreTransactionAttemptContext {
     // Purely for debugging (so we don't have to log the statement everywhere), associate each statement with an id
     private final AtomicInteger queryStatementIdx = new AtomicInteger(0);
 
-    // lockDebugging is true currently as full thread-safety is a new addition. It will be changed to false by default in future releases.
-    private final boolean lockDebugging = Boolean.parseBoolean(System.getProperty("com.couchbase.transactions.debug.lock", "true"));
+    private final boolean lockDebugging = Boolean.parseBoolean(System.getProperty("com.couchbase.transactions.debug.lock", "false"));
     private final boolean monoBridgeDebugging = Boolean.parseBoolean(System.getProperty("com.couchbase.transactions.debug.monoBridge", "false"));
     private final boolean threadSafetyEnabled = Boolean.parseBoolean(System.getProperty("com.couchbase.transactions.threadSafety", "true"));
 
