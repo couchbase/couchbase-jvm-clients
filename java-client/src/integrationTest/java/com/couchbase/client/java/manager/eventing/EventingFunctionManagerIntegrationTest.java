@@ -65,8 +65,8 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
     ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), "eventing");
     bucket.collections().createCollection(CollectionSpec.create("source", "eventing"));
     bucket.collections().createCollection(CollectionSpec.create("meta", "eventing"));
-    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), "source", "eventing");
-    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), "meta", "eventing");
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), "eventing", "source");
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), "eventing", "meta");
 
     sourceCollection = bucket.scope("eventing").collection("source");
     metaCollection = bucket.scope("eventing").collection("meta");
@@ -289,7 +289,7 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
       Objects.requireNonNull(state.name());
       Objects.requireNonNull(state.status());
 
-      LOGGER.info("Function {} waiting for {}:{}", state, funcName, status);
+      LOGGER.debug("Function {} waiting for {}:{}", state, funcName, status);
 
       return state.name().equals(funcName) && state.status() == status;
     });

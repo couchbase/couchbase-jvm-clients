@@ -66,6 +66,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
 
   private static Cluster cluster;
   private static Collection collection;
+  private static final Duration TIMEOUT = Duration.ofMinutes(4);
 
   @BeforeAll
   static void beforeAll() {
@@ -92,7 +93,8 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
   @Test
   void fullRangeScanOnCollectionWithContent() {
     AtomicLong count = new AtomicLong(0);
-    collection.scan(ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.maximum())).forEach(item -> {
+    collection.scan(ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.maximum()),
+        scanOptions().timeout(TIMEOUT)).forEach(item -> {
       count.incrementAndGet();
       assertTrue(item.contentAsBytes().length > 0);
       assertFalse(item.idOnly());
@@ -120,7 +122,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
     List<String> results = collection
       .scan(
         ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.inclusive("c-ba5ff9da-bb87-4dd0-be8e-6d24010062a1")),
-        scanOptions().sort(ScanSort.ASCENDING)
+        scanOptions().sort(ScanSort.ASCENDING).timeout(TIMEOUT)
       )
       .map(ScanResult::id)
       .collect(Collectors.toList());
