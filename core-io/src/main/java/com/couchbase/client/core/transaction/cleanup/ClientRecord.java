@@ -81,7 +81,7 @@ public class ClientRecord {
     private final Core core;
     private final SimpleEventBusLogger LOGGER;
 
-    public static String CLIENT_RECORD_DOC_ID = "_txn:client-record";
+    public static final String CLIENT_RECORD_DOC_ID = "_txn:client-record";
     private static final String FIELD_HEARTBEAT = "heartbeat_ms";
     private static final String FIELD_EXPIRES = "expires_ms";
     private static final String FIELD_NUM_ATRS = "num_atrs";

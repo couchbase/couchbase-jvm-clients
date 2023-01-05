@@ -50,11 +50,11 @@ import static com.couchbase.client.core.cnc.events.transaction.TransactionEvent.
  */
 @Stability.Internal
 public class CoreTransactionsCleanup {
-    public static String CATEGORY = DEFAULT_CATEGORY + ".cleanup";
-    public static String CATEGORY_STATS = DEFAULT_CATEGORY + ".cleanup.stats";
-    public static String CATEGORY_CLIENT_RECORD = DEFAULT_CATEGORY + ".clientrecord";
-    public static String LOST_CATEGORY = DEFAULT_CATEGORY + ".cleanup.lost";
-    public static String REGULAR_CATEGORY = DEFAULT_CATEGORY + ".cleanup.regular";
+    public static final String CATEGORY = DEFAULT_CATEGORY + ".cleanup";
+    public static final String CATEGORY_STATS = DEFAULT_CATEGORY + ".cleanup.stats";
+    public static final String CATEGORY_CLIENT_RECORD = DEFAULT_CATEGORY + ".clientrecord";
+    public static final String LOST_CATEGORY = DEFAULT_CATEGORY + ".cleanup.lost";
+    public static final String REGULAR_CATEGORY = DEFAULT_CATEGORY + ".cleanup.regular";
 
     private final Core core;
     private final CoreTransactionsConfig config;

@@ -32,7 +32,7 @@ import java.time.Duration;
  */
 @Stability.Uncommitted
 public abstract class TransactionEvent extends AbstractEvent {
-    public static String DEFAULT_CATEGORY = Event.CATEGORY_PREFIX + "transactions";
+    public static final String DEFAULT_CATEGORY = Event.CATEGORY_PREFIX + "transactions";
 
     protected TransactionEvent(Severity severity, String category) {
         super(severity, category, Duration.ZERO, null);

@@ -181,16 +181,16 @@ public class CoreTransactionAttemptContext {
         }
     }
 
-    public static int TRANSACTION_STATE_BIT_COMMIT_NOT_ALLOWED = 0x1;
-    public static int TRANSACTION_STATE_BIT_APP_ROLLBACK_NOT_ALLOWED = 0x2;
-    public static int TRANSACTION_STATE_BIT_SHOULD_NOT_ROLLBACK = 0x4;
-    public static int TRANSACTION_STATE_BIT_SHOULD_NOT_RETRY = 0x8;
+    public static final int TRANSACTION_STATE_BIT_COMMIT_NOT_ALLOWED = 0x1;
+    public static final int TRANSACTION_STATE_BIT_APP_ROLLBACK_NOT_ALLOWED = 0x2;
+    public static final int TRANSACTION_STATE_BIT_SHOULD_NOT_ROLLBACK = 0x4;
+    public static final int TRANSACTION_STATE_BIT_SHOULD_NOT_RETRY = 0x8;
 
     // Bits 0-3: BehaviourFlags
     // Bits 4-6: FinalErrorToRaise
-    public static int STATE_BITS_POSITION_FINAL_ERROR = 4;
-    public static int STATE_BITS_MASK_FINAL_ERROR = 0b1110000;
-    public static int STATE_BITS_MASK_BITS =        0b0001111;
+    public static final int STATE_BITS_POSITION_FINAL_ERROR = 4;
+    public static final int STATE_BITS_MASK_FINAL_ERROR = 0b1110000;
+    public static final int STATE_BITS_MASK_BITS =        0b0001111;
 
     private final AtomicInteger stateBits = new AtomicInteger(0);
 
@@ -236,7 +236,7 @@ public class CoreTransactionAttemptContext {
     private MeteringUnits.MeteringUnitsBuilder meteringUnitsBuilder = new MeteringUnits.MeteringUnitsBuilder();
 
     // Just a safety measure to make sure we don't get into hard tight loops
-    public static Duration DEFAULT_DELAY_RETRYING_OPERATION = Duration.ofMillis(3);
+    public static final Duration DEFAULT_DELAY_RETRYING_OPERATION = Duration.ofMillis(3);
 
     private static final reactor.util.retry.Retry RETRY_OPERATION_UNTIL_EXPIRY = Retry.anyOf(RetryOperationException.class)
             .exponentialBackoff(Duration.ofMillis(1), Duration.ofMillis(100))

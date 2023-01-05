@@ -28,9 +28,9 @@ import java.util.concurrent.TimeUnit;
  */
 @Stability.Volatile
 public class WanDevelopmentProfile implements ConfigurationProfile {
-  public static Duration CONNECT_TIMEOUT = Duration.ofSeconds(20);
-  public static Duration KV_TIMEOUT = Duration.ofSeconds(20);
-  public static Duration SERVICE_TIMEOUT = Duration.ofSeconds(120);
+  public static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(20);
+  public static final Duration KV_TIMEOUT = Duration.ofSeconds(20);
+  public static final Duration SERVICE_TIMEOUT = Duration.ofSeconds(120);
 
 
   @Override
