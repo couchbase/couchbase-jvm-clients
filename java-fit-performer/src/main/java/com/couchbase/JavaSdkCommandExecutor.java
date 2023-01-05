@@ -36,10 +36,12 @@ import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.ReplicateTo;
+// [start:3.4.1]
 import com.couchbase.client.java.kv.ScanOptions;
 import com.couchbase.client.java.kv.ScanResult;
 import com.couchbase.client.java.kv.ScanSort;
 import com.couchbase.client.java.kv.ScanTerm;
+// [end:3.4.1]
 import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.perf.Counters;
@@ -223,7 +225,6 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                     .build();
         }
     }
-    // [end:3.4.1]
 
     public static Optional<com.couchbase.client.java.kv.ScanTerm> convertScanTerm(com.couchbase.client.protocol.sdk.kv.rangescan.ScanTermChoice st) {
         if (st.hasDefault()) {
@@ -292,6 +293,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             throw new UnsupportedOperationException();
         }
     }
+    // [end:3.4.1]
 
     @Override
     protected Exception convertException(Throwable raw) {
