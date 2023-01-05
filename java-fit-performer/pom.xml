@@ -35,14 +35,19 @@
             <artifactId>java-client</artifactId>
         </dependency>
 
+        <!-- The tracing & metrics versions are currently temporary hardcoded, as otherwise they'll depend on the SNAPSHOT versions in the top-level pom.xml,
+           which currently aren't being published.  The exact version of these libraries shouldn't matter and there shouldn't be any binary compatibility issues
+           with different versions of the Java SDK being used. -->
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>tracing-opentelemetry</artifactId>
+            <version>1.1.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>metrics-opentelemetry</artifactId>
+            <version>0.4.0</version>
         </dependency>
 
         <dependency>
