@@ -81,7 +81,10 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
   }
 
   /**
-   * Sets the expiry for the document. By default the document will never expire.
+   * Sets the expiry for the document. By default, the document will never expire.
+   * <p>
+   * <b>CAVEAT:</b> If the counter document already exists, this option is ignored
+   * and the document's current expiry is preserved.
    * <p>
    * The duration must be less than 50 years. For expiry further in the
    * future, use {@link #expiry(Instant)}.
@@ -95,7 +98,10 @@ public class IncrementOptions extends CommonDurabilityOptions<IncrementOptions> 
   }
 
   /**
-   * Sets the expiry for the document. By default the document will never expire.
+   * Sets the expiry for the document. By default, the document will never expire.
+   * <p>
+   * <b>CAVEAT:</b> If the counter document already exists, this option is ignored
+   * and the document's current expiry is preserved.
    *
    * @param expiry the point in time when the document will expire (epoch second zero means never expire).
    * @return this options class for chaining purposes.

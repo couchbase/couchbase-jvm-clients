@@ -112,6 +112,9 @@ case class DecrementOptions(
 
   /** Changes the expiry setting used for this operation.
     *
+    * <b>CAVEAT:</b> If the counter document already exists, this option is ignored
+    * and the document's current expiry is preserved.
+    *
     * This overload should be used for any expiration times < 30 days.  If over that, use the overload that takes an
     * `Instant` instead.
     *
@@ -128,6 +131,9 @@ case class DecrementOptions(
   }
 
   /** Changes the expiry setting used for this operation.
+    *
+    * <b>CAVEAT:</b> If the counter document already exists, this option is ignored
+    * and the document's current expiry is preserved.
     *
     * This overload should be used for any expiration times < 30 days.  If over that, use the overload that takes an
     * `Instant` instead.
@@ -150,6 +156,9 @@ case class DecrementOptions(
   }
 
   /** Changes the expiry setting used for this operation.
+    *
+    * <b>CAVEAT:</b> If the counter document already exists, this option is ignored
+    * and the document's current expiry is preserved.
     *
     * This overload should be used for any expiration times >= 30 days.  If below that, use the overload that takes a
     * `Duration` instead.

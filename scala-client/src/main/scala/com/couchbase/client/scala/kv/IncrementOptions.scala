@@ -112,6 +112,9 @@ case class IncrementOptions(
 
   /** Changes the expiry setting used for this operation.
     *
+    * <b>CAVEAT:</b> If the counter document already exists, this option is ignored
+    * and the document's current expiry is preserved.
+    *
     * Couchbase documents optionally can have an expiration field set, e.g. when they will
     * automatically expire and be removed.  On mutations if this is left at the default (0), then any expiry
     * will be removed and the document will never expire.  If the application wants to preserve
@@ -125,6 +128,9 @@ case class IncrementOptions(
   }
 
   /** Changes the expiry setting used for this operation.
+    *
+    * <b>CAVEAT:</b> If the counter document already exists, this option is ignored
+    * and the document's current expiry is preserved.
     *
     * Couchbase documents optionally can have an expiration field set, e.g. when they will
     * automatically expire and be removed.  On mutations if this is left at the default (0), then any expiry
@@ -144,6 +150,9 @@ case class IncrementOptions(
   }
 
   /** Changes the expiry setting used for this operation.
+    *
+    * <b>CAVEAT:</b> If the counter document already exists, this option is ignored
+    * and the document's current expiry is preserved.
     *
     * This overload should be used for any expiration times >= 30 days.  If below that, use the overload that takes a
     * `Duration` instead.
