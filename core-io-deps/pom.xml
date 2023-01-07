@@ -18,7 +18,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <netty.version>4.1.85.Final</netty.version>
+        <netty.version>4.1.86.Final</netty.version>
         <jackson.version>2.14.1</jackson.version>
 
         <shaded.package.prefix>com.couchbase.client.core.deps.</shaded.package.prefix>
@@ -78,7 +78,7 @@
         <dependency>
             <groupId>org.jctools</groupId>
             <artifactId>jctools-core</artifactId>
-            <version>3.3.0</version>
+            <version>4.0.1</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
