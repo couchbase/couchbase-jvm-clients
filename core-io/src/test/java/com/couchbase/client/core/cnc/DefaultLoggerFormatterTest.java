@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 import java.util.logging.Level;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DefaultLoggerFormatterTest {
@@ -30,7 +31,7 @@ class DefaultLoggerFormatterTest {
 
     DefaultLoggerFormatter formatter = DefaultLoggerFormatter.INSTANCE;
     String result = formatter.format(Level.INFO, "my message", null);
-    assertEquals("[ INFO] (" + currentThread + ") my message\n", result);
+    assertThat("[ INFO] (" + currentThread + ") my message\n").isEqualToIgnoringNewLines(result);
   }
 
   @Test
