@@ -62,6 +62,14 @@ class AsyncUserManager(val reactive: ReactiveUserManager) {
     reactive.dropUser(username, domain, timeout, retryStrategy).toFuture
   }
 
+  def changePassword(
+      newPassword: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Unit] = {
+    reactive.changePassword(newPassword, timeout, retryStrategy).toFuture
+  }
+
   def availableRoles(
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
