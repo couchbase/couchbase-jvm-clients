@@ -23,6 +23,7 @@
         <core-io-deps.version>1.4.2-SNAPSHOT</core-io-deps.version>
         <scala-client.version>1.4.2-SNAPSHOT</scala-client.version>
         <kotlin-client.version>1.1.2-SNAPSHOT</kotlin-client.version>
+        <kotlin-examples.version>1.4.2-SNAPSHOT</kotlin-examples.version>
 
         <junit.version>5.9.1</junit.version>
         <assertj.version>3.23.1</assertj.version>
@@ -178,6 +179,7 @@
         <module>java-client</module>
         <module>osgi-feature</module>
         <module>java-examples</module>
+        <module>kotlin-examples</module>
         <module>core-io</module>
         <module>scala-implicits</module>
         <module>scala-client</module>
