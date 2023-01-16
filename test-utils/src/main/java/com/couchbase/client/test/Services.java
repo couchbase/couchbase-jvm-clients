@@ -16,18 +16,27 @@
 package com.couchbase.client.test;
 
 public enum Services {
-  KV,
-  KV_TLS,
-  MANAGER,
-  MANAGER_TLS,
-  QUERY,
-  QUERY_TLS,
-  ANALYTICS,
-  ANALYTICS_TLS,
-  SEARCH,
-  SEARCH_TLS,
-  VIEW,
-  VIEW_TLS,
-  EVENTING,
-  EVENTING_TLS
+  KV("kv"),
+  KV_TLS("kvSSL"),
+  MANAGER("mgmt"),
+  MANAGER_TLS("mgmtSSL"),
+  QUERY("n1ql"),
+  QUERY_TLS("n1qlSSL"),
+  ANALYTICS("cbas"),
+  ANALYTICS_TLS("cbasSSL"),
+  SEARCH("fts"),
+  SEARCH_TLS("ftsSSL"),
+  VIEW("capi"),
+  VIEW_TLS("capiSSL"),
+  EVENTING("eventing"),
+  EVENTING_TLS("eventingSSL");
+  private final String nodeName;
+
+  Services(String kv) {
+    this.nodeName = kv;
+  }
+
+  public String getNodeName() {
+    return nodeName;
+  }
 }

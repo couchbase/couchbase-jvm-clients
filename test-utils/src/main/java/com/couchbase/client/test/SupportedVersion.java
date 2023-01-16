@@ -15,6 +15,11 @@
  */
 package com.couchbase.client.test;
 
+import org.testcontainers.shaded.org.apache.commons.lang3.StringUtils;
+
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Represents the currently supported (tested) versions which can be used
  * in test setups.
@@ -26,18 +31,20 @@ package com.couchbase.client.test;
  */
 public enum SupportedVersion {
   SPOCK(5, 1, 2),
-  VULCAN(5, 5, 2);
+  VULCAN(5, 5, 2),
+  CHESHIRE_CAT(7, 0, 5),
+  NEO(7, 1, 3);
   // ALICE(6, 0, 0),
   // MAD_HATTER(6, 5, 0);
 
 
   /**
-   * Returns the currently latest supported version.
+   * Returns the latest currently supported version.
    */
   public static SupportedVersion latest() {
-    return VULCAN;
+    return NEO;
   }
-
+  private static final List<SupportedVersion> ALL_VALUES = Arrays.asList(SupportedVersion.values());
   private final int major;
   private final int minor;
   private final int patch;
@@ -65,13 +72,16 @@ public enum SupportedVersion {
   }
 
   public static SupportedVersion fromString(final String version) {
-    if (version.equalsIgnoreCase("VULCAN")) {
-      return VULCAN;
-    } else if (version.equalsIgnoreCase("SPOCK")) {
-      return SPOCK;
-    } else {
-      throw new UnsupportedOperationException("The given version is not supported/known. "
-        + "Please check the SupportedVersion enum for supported versions.");
+    String versionUCase = StringUtils.upperCase(version);
+    if ("LATEST".equals(versionUCase)) {
+      return latest();
     }
+
+    if (ALL_VALUES.stream().anyMatch(x -> x.name().equals(versionUCase))) {
+      return SupportedVersion.valueOf(versionUCase);
+    }
+
+    throw new UnsupportedOperationException("The given version is not supported/known. "
+      + "Please check the SupportedVersion enum for supported versions.");
   }
 }

@@ -18,7 +18,9 @@ package com.couchbase.client.test;
 
 // CHECKSTYLE:OFF IllegalImport - Allow unbundled Jackson
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +30,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -35,15 +38,26 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   private static final Logger LOGGER = LoggerFactory.getLogger(TestCluster.class);
   private static final Duration START_TIMEOUT = Duration.ofMinutes(2);
+  private static final TypeReference<HashMap<String, Object>> MAP_STRING_OBJECT =
+    new TypeReference<HashMap<String, Object>>() {};
 
   protected static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final Map<String, Function<Properties, ? extends TestCluster>> CLUSTER_BUILDERS = new HashMap<>();
 
+  static {
+    CLUSTER_BUILDERS.put("containerized", props -> new ContainerizedTestCluster(props));
+    CLUSTER_BUILDERS.put("mocked", props -> new MockTestCluster(props));
+    CLUSTER_BUILDERS.put("unmanaged", props -> new UnmanagedTestCluster(props));
+    CLUSTER_BUILDERS.put("caves", props -> new CavesTestCluster(props));
+  }
   /**
    * The topology spec defined by the child implementations.
    */
@@ -56,18 +70,10 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     Properties properties = loadProperties();
     loadFromEnv(properties);
     String clusterType = properties.getProperty("cluster.type");
-
-    if (clusterType.equals("containerized")) {
-      return new ContainerizedTestCluster(properties);
-    } else if (clusterType.equals("mocked")) {
-      return new MockTestCluster(properties);
-    } else if (clusterType.equals("unmanaged")) {
-      return new UnmanagedTestCluster(properties);
-    } else if (clusterType.equals("caves")) {
-      return new CavesTestCluster(properties);
-    } else {
+    if (!CLUSTER_BUILDERS.containsKey(clusterType)) {
       throw new IllegalStateException("Unsupported test cluster type: " + clusterType);
     }
+    return CLUSTER_BUILDERS.get(clusterType).apply(properties);
   }
 
   /**
@@ -91,6 +97,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
         try {
           Thread.sleep(250);
         } catch (InterruptedException e) {
+          LOGGER.debug("Test cluster creating was interrupted", e);
         }
       }
     }
@@ -106,131 +113,51 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
    * @param config the config.
    * @return the extracted node configs.
    */
-  @SuppressWarnings({"unchecked"})
+
   protected List<TestNodeConfig> nodesFromRaw(final String inputHost, final String config) {
     List<TestNodeConfig> result = new ArrayList<>();
-    Map<String, Object> decoded;
-    try {
-      decoded = (Map<String, Object>)
-        MAPPER.readValue(config.getBytes(UTF_8), Map.class);
-    } catch (IOException e) {
-      throw new RuntimeException("Error decoding, raw: " + config, e);
-    }
-    List<Map<String, Object>> ext = (List<Map<String, Object>>) decoded.get("nodesExt");
-    for (Map<String, Object> node : ext) {
-      Map<String, Integer> services = (Map<String, Integer>) node.get("services");
+    for (Map<String, Object> node : nodesExtFromConfig(decodeConfig(config))) {
+      Map<String, Integer> services = getServicesFromNode(node);
       String hostname = (String) node.get("hostname");
       if (hostname == null) {
         hostname = inputHost;
       }
       Map<Services, Integer> ports = new HashMap<>();
-      if (services.containsKey("kv")) {
-        ports.put(Services.KV, services.get("kv"));
-      }
-      if (services.containsKey("kvSSL")) {
-        ports.put(Services.KV_TLS, services.get("kvSSL"));
-      }
-      if (services.containsKey("mgmt")) {
-        ports.put(Services.MANAGER, services.get("mgmt"));
-      }
-      if (services.containsKey("mgmtSSL")) {
-        ports.put(Services.MANAGER_TLS, services.get("mgmtSSL"));
-      }
-      if (services.containsKey("n1ql")) {
-        ports.put(Services.QUERY, services.get("n1ql"));
-      }
-      if (services.containsKey("n1qlSSL")) {
-        ports.put(Services.QUERY_TLS, services.get("n1qlSSL"));
-      }
-      if (services.containsKey("cbas")) {
-        ports.put(Services.ANALYTICS, services.get("cbas"));
-      }
-      if (services.containsKey("cbasSSL")) {
-        ports.put(Services.ANALYTICS_TLS, services.get("cbasSSL"));
-      }
-      if (services.containsKey("fts")) {
-        ports.put(Services.SEARCH, services.get("fts"));
-      }
-      if (services.containsKey("ftsSSL")) {
-        ports.put(Services.SEARCH_TLS, services.get("ftsSSL"));
-      }
-      if (services.containsKey("capi")) {
-        ports.put(Services.VIEW, services.get("capi"));
-      }
-      if (services.containsKey("capiSSL")) {
-        ports.put(Services.VIEW_TLS, services.get("capiSSL"));
-      }
-      if (services.containsKey("eventing")) {
-        ports.put(Services.EVENTING, services.get("eventing"));
-      }
-      if (services.containsKey("eventingSSL")) {
-        ports.put(Services.EVENTING_TLS, services.get("eventingSSL"));
-      }
-      result.add(new TestNodeConfig(hostname, ports, false, Optional.empty()));
+      Arrays.stream(Services.values())
+        .filter(service -> services.containsKey(service.getNodeName()))
+        .forEach(service -> ports.put(service, services.get(service.getNodeName())));
+
+      result.add(new TestNodeConfig(hostname, ports, false));
     }
     return result;
   }
 
-  protected static ClusterVersion parseClusterVersion(Response response) {
-    java.util.Map<String, Object> decoded;
-    try {
-      decoded = (java.util.Map<String, Object>)
-              MAPPER.readValue(response.body().bytes(), java.util.Map.class);
+  @SuppressWarnings({"unchecked"})
+  private static List<Map<String, Object>> nodesExtFromConfig(Map<String, Object> decodedConfig) {
+    return (List<Map<String, Object>>) decodedConfig.get("nodesExt");
+  }
 
+  protected static ClusterVersion parseClusterVersion(Response response) {
+    try {
+      Map<String, Object> decoded = MAPPER.readValue(response.body().bytes(), MAP_STRING_OBJECT);
+      return ClusterVersion.parseString((String) decoded.get("implementationVersion"));
     } catch (IOException e) {
       throw new RuntimeException("Error decoding", e);
     }
-
-    String version = (String) decoded.get("implementationVersion");
-    return ClusterVersion.parseString(version);
   }
 
+  @SuppressWarnings({"unchecked"})
   protected int replicasFromRaw(final String config) {
-    Map<String, Object> decoded;
-    try {
-      decoded = (Map<String, Object>)
-        MAPPER.readValue(config.getBytes(UTF_8), Map.class);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    Map<String, Object> decoded = decodeConfig(config);
     Map<String, Object> serverMap = (Map<String, Object>) decoded.get("vBucketServerMap");
     return (int) serverMap.get("numReplicas");
   }
 
+  @SuppressWarnings({"unchecked"})
   protected Set<Capabilities> capabilitiesFromRaw(final String config, ClusterVersion clusterVersion) {
-    Set<Capabilities> capabilities = new HashSet<>();
-    Map<String, Object> decoded;
-    try {
-      decoded = (Map<String, Object>)
-        MAPPER.readValue(config.getBytes(UTF_8), Map.class);
-    } catch (IOException e) {
-      throw new RuntimeException("Error decoding, raw: " + config, e);
-    }
-    List<Map<String, Object>> ext = (List<Map<String, Object>>) decoded.get("nodesExt");
+    Map<String, Object> decoded = decodeConfig(config);
+    Set<Capabilities> capabilities = new HashSet<>(capabilitiesFromConfig(decoded));
 
-    for (Map<String, Object> node : ext) {
-      Map<String, Integer> services = (Map<String, Integer>) node.get("services");
-      for (String name : services.keySet()) {
-        if (name.equals("n1ql") || name.equals("n1qlSSL")) {
-          capabilities.add(Capabilities.QUERY);
-        }
-        if (name.equals("cbas") || name.equals("cbasSSL")) {
-          capabilities.add(Capabilities.ANALYTICS);
-        }
-        if (name.equals("fts") || name.equals("ftsSSL")) {
-          capabilities.add(Capabilities.SEARCH);
-        }
-        if (name.equals("capi") || name.equals("capiSSL")) {
-          capabilities.add(Capabilities.VIEWS);
-        }
-        if (name.equals("eventing") || name.equals("eventingSSL")) {
-          capabilities.add(Capabilities.EVENTING);
-        }
-        if (name.equals("backupAPI") || name.equals("backupAPIHTTPS")) {
-          capabilities.add(Capabilities.BACKUP);
-        }
-      }
-    }
     List<String> bucketCapabilities = (List<String>) decoded.get("bucketCapabilities");
     if (bucketCapabilities.contains("durableWrite")) {
       capabilities.add(Capabilities.SYNC_REPLICATION);
@@ -275,37 +202,49 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     return capabilities;
   }
 
+  private static Set<Capabilities> capabilitiesFromConfig(Map<String, Object> decoded) {
+    return nodesExtFromConfig(decoded).stream()
+      .flatMap(node -> getServicesFromNode(node).keySet().stream())
+      .flatMap(name -> Arrays.stream(Capabilities.values())
+        .filter(v -> v.getNames().contains(name))
+        .distinct())
+      .collect(Collectors.toSet());
+  }
+
+  @SuppressWarnings({"unchecked"})
+  private static Map<String, Integer> getServicesFromNode(Map<String, Object> node) {
+    return (Map<String, Integer>) node.get("services");
+  }
+
+  private static Map<String, Object> decodeConfig(String config) {
+    try {
+      return MAPPER.readValue(config.getBytes(UTF_8), MAP_STRING_OBJECT);
+    } catch (IOException e) {
+      throw new RuntimeException("Error decoding, raw: " + config, e);
+    }
+  }
+
   /**
    * Load properties from the defaults file and then override with sys properties.
    */
   private static Properties loadProperties() {
     Properties defaults = new Properties();
     try {
-      try {
-        // This file is unversioned.  Good practice is to copy integration.properties to this and make changes to this.
-        URL url = TestCluster.class.getResource("/integration.local.properties");
-        if (url != null) {
-          LOGGER.info("Found test config file {}", url.getPath());
-        }
-        defaults.load(url.openStream());
+      // This file is unversioned.  Good practice is to copy integration.properties to this and make changes to this.
+      URL url = TestCluster.class.getResource("/integration.local.properties");
+      if (url == null) {
+        url = TestCluster.class.getResource("/integration.properties");
       }
-      catch (Exception ex) {
-        URL url = TestCluster.class.getResource("/integration.properties");
-        if (url != null) {
-          LOGGER.info("Found test config file {}", url.getPath());
-        }
-        defaults.load(url.openStream());
-      }
+      LOGGER.info("Found test config file {}", url.getPath());
+      defaults.load(url.openStream());
+
     } catch (Exception ex) {
       throw new RuntimeException("Could not load properties", ex);
     }
 
     Properties all = new Properties(System.getProperties());
-    for (Map.Entry<Object, Object> property : defaults.entrySet()) {
-      if (all.getProperty(property.getKey().toString()) == null) {
-        all.put(property.getKey(), property.getValue());
-      }
-    }
+    defaults.forEach((key, value) -> all.putIfAbsent(key.toString(), value));
+
     return all;
   }
 
@@ -315,13 +254,15 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
    * @param toOverride original properties coming from the config files.
    */
   static void loadFromEnv(final Properties toOverride) {
-    for (Map.Entry<String, String> envProperty : System.getenv().entrySet()) {
-      String key = envProperty.getKey().toLowerCase().replace("_", ".");
+    Map<String, String> envParams = System.getenv();
+    envParams.entrySet().stream()
+      .filter(e -> e.getKey().toLowerCase().startsWith("cluster"))
+      .forEach(e -> toOverride.setProperty(transformKey(e), e.getValue()));
+  }
 
-      if (key.startsWith("cluster")) {
-        toOverride.setProperty(key, envProperty.getValue());
-      }
-    }
+  @NotNull
+  private static String transformKey(Map.Entry<String, String> e) {
+    return e.getKey().toLowerCase().replace("_", ".");
   }
 
   /**

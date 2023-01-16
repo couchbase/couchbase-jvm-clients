@@ -16,6 +16,10 @@
 
 package com.couchbase.client.test;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Certain capabilities used to figure out if a test can be run or not.
  */
@@ -23,27 +27,27 @@ public enum Capabilities {
   /**
    * This cluster is able to perform sync replications.
    */
-  SYNC_REPLICATION,
+  SYNC_REPLICATION("durableWrite"),
   /**
    * This cluster is able to handle N1QL queries.
    */
-  QUERY,
+  QUERY("n1ql", "n1qlSSL"),
   /**
    * This cluster is able to handle Analytics queries.
    */
-  ANALYTICS,
+  ANALYTICS("cbas", "cbasSSL"),
   /**
    * This cluster is able to handle Search queries.
    */
-  SEARCH,
+  SEARCH("fts", "ftsSSL"),
   /**
    * This cluster is able to handle Eventing functions.
    */
-  EVENTING,
+  EVENTING("eventing", "eventingSSL"),
   /**
    * This cluster is running the Backup service.
    */
-  BACKUP,
+  BACKUP("backupAPI", "backupAPIHTTPS"),
   /**
    * This cluster is able to give us a config without opening a bucket.
    */
@@ -59,7 +63,7 @@ public enum Capabilities {
   /**
    * The cluster has views enabled.
    */
-  VIEWS,
+  VIEWS("capi", "capiSSL"),
   /**
    * The cluster can create documents in a deleted state.
    */
@@ -99,9 +103,23 @@ public enum Capabilities {
   /**
    * Supports KV Range Scan operations.
    */
-  RANGE_SCAN,
+  RANGE_SCAN("rangeScan"),
   /**
    * JVMCBC-1187: There is no cluster cap for Protostellar currently, but will be ultimately.
    */
-  PROTOSTELLAR
+  PROTOSTELLAR;
+
+  private final List<String> names;
+
+  Capabilities(String... names) {
+    this.names = Arrays.asList(names);
+  }
+
+  Capabilities() {
+    this.names = Collections.emptyList();
+  }
+
+  public List<String> getNames() {
+    return names;
+  }
 }
