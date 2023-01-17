@@ -15,22 +15,46 @@
  */
 package com.couchbase.client.scala.util
 
-import com.couchbase.client.core.api.kv.{CoreAsyncResponse, CoreGetResult}
+import com.couchbase.client.core.api.kv.{CoreAsyncResponse, CoreDurability, CoreEncodedContent, CoreExistsResult, CoreGetResult, CoreMutationResult}
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
-import com.couchbase.client.scala.codec.Transcoder
+import com.couchbase.client.core.msg.kv.{DurabilityLevel, MutationToken}
+import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.core.service.kv.Observe.{ObservePersistTo, ObserveReplicateTo}
+import com.couchbase.client.scala.codec.{EncodedValue, JsonSerializer, Transcoder, TranscoderWithSerializer, TranscoderWithoutSerializer}
+import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.kv.{GetOptions, GetResult}
+import com.couchbase.client.scala.kv.{ExistsResult, GetOptions, GetResult, InsertOptions, MutationResult}
+import reactor.core.publisher.Mono
+import reactor.core.scala.publisher.SMono
 
+import java.util.function.Supplier
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.compat.java8.OptionConverters._
 
 private[scala] object CoreCommonConverters {
-  def convert(options: GetOptions): CoreCommonOptions = {
+  type HasCommonOptions = {
+    val timeout: Duration
+    val parentSpan: Option[RequestSpan]
+    val retryStrategy: Option[RetryStrategy]
+  }
+
+  def convert[T <: HasCommonOptions](options: T): CoreCommonOptions = {
     CoreCommonOptions.of(
       if (options.timeout == Duration.MinusInf) null
       else java.time.Duration.ofNanos(options.timeout.toNanos),
       options.retryStrategy.orNull,
       options.parentSpan.orNull
+    )
+  }
+
+  def makeCommonOptions(timeout: Duration): CoreCommonOptions = {
+    CoreCommonOptions.of(
+      if (timeout == Duration.MinusInf) null
+      else java.time.Duration.ofNanos(timeout.toNanos),
+      null,
+      null
     )
   }
 
@@ -49,7 +73,66 @@ private[scala] object CoreCommonConverters {
     )
   }
 
+  def convert(in: CoreMutationResult): MutationResult = {
+    MutationResult(
+      in.cas(),
+      in.mutationToken().asScala
+              .map(mt => new MutationToken(mt.partitionID, mt.partitionUUID, mt.sequenceNumber, mt.bucketName))
+    )
+  }
+
+  def convert(in: CoreExistsResult): ExistsResult = {
+    ExistsResult(in.exists(), in.cas())
+  }
+
   def convert[T](in: CoreAsyncResponse[T]): Future[T] = {
     FutureConversions.javaCFToScalaFuture(in.toFuture)
+  }
+
+  def convert[T](in: Mono[T]): SMono[T] = {
+    FutureConversions.javaMonoToScalaMono(in)
+  }
+
+  def convert(in: Durability): CoreDurability = {
+    in match {
+      case Durability.Disabled => CoreDurability.NONE
+      case Durability.ClientVerified(replicateTo, persistTo) => CoreDurability.of(persistTo match {
+        case com.couchbase.client.scala.durability.PersistTo.None => ObservePersistTo.NONE
+        case com.couchbase.client.scala.durability.PersistTo.One => ObservePersistTo.ONE
+        case com.couchbase.client.scala.durability.PersistTo.Two => ObservePersistTo.TWO
+        case com.couchbase.client.scala.durability.PersistTo.Three => ObservePersistTo.THREE
+      }, replicateTo match {
+        case com.couchbase.client.scala.durability.ReplicateTo.None => ObserveReplicateTo.NONE
+        case com.couchbase.client.scala.durability.ReplicateTo.One => ObserveReplicateTo.ONE
+        case com.couchbase.client.scala.durability.ReplicateTo.Two => ObserveReplicateTo.TWO
+        case com.couchbase.client.scala.durability.ReplicateTo.Three => ObserveReplicateTo.THREE
+      })
+      case Durability.Majority => CoreDurability.of(DurabilityLevel.MAJORITY)
+      case Durability.MajorityAndPersistToActive => CoreDurability.of(DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE)
+      case Durability.PersistToMajority => CoreDurability.of(DurabilityLevel.PERSIST_TO_MAJORITY)
+    }
+  }
+
+  def convertExpiry(in: Duration): Long = {
+    in.toSeconds
+  }
+
+  def convert(in: Duration): java.time.Duration = {
+    java.time.Duration.ofMillis(in.toMillis)
+  }
+
+  def encoder[T](transcoder: Transcoder, serializer: JsonSerializer[T], content: T): Supplier[CoreEncodedContent] = {
+    () => {
+      val value: EncodedValue = (transcoder match {
+        case x: TranscoderWithSerializer => x.encode(content, serializer)
+        case x: TranscoderWithoutSerializer => x.encode(content)
+      }).get
+
+      new CoreEncodedContent {
+        override def encoded(): Array[Byte] = value.encoded
+
+        override def flags(): Int = value.flags
+      }
+    }
   }
 }

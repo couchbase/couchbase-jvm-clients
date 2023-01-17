@@ -22,11 +22,12 @@ import com.couchbase.client.scala.datastructures._
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv._
-import com.couchbase.client.scala.util.TimeoutUtil
+import com.couchbase.client.scala.util.CoreCommonConverters.{convert, convertExpiry, encoder, makeCommonOptions}
+import com.couchbase.client.scala.util.{ExpiryUtil, TimeoutUtil}
 
-import scala.collection.compat.immutable.LazyList
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 import scala.util.{Failure, Try}
@@ -108,6 +109,7 @@ class Collection(
 
   private[scala] val kvTimeout: Durability => Duration = TimeoutUtil.kvTimeout(async.environment)
   private[scala] val kvReadTimeout: Duration           = async.kvReadTimeout
+  private[scala] val kvOps                             = async.kvOps
 
   private def block[T](in: Future[T]) =
     Collection.block(in)
@@ -128,7 +130,11 @@ class Collection(
       id: String,
       timeout: Duration = kvReadTimeout
   ): Try[GetResult] =
-    get(id, GetOptions().timeout(timeout))
+    Try(kvOps.getBlocking(makeCommonOptions(timeout),
+      id,
+      AsyncCollection.EmptyList,
+      false))
+            .map(result => convert(result, async.environment, None))
 
   /** Fetches a full document from this collection.
     *
@@ -143,10 +149,11 @@ class Collection(
       id: String,
       options: GetOptions
   ): Try[GetResult] =
-    block(
-      async
-        .get(id, options)
-    )
+    Try(kvOps.getBlocking(convert(options),
+      id,
+      options.project.asJava,
+      options.withExpiry))
+            .map(result => convert(result, async.environment, options.transcoder))
 
   /** Inserts a full document into this collection, if it does not exist already.
     *
@@ -168,14 +175,12 @@ class Collection(
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
-    block(
-      async.insert(
-        id,
-        content,
-        durability,
-        timeout
-      )
-    )
+    Try(kvOps.insertBlocking(makeCommonOptions(timeout),
+      id,
+      encoder(async.environment.transcoder, serializer, content),
+      convert(durability),
+      0))
+            .map(result => convert(result))
   }
 
   /** Inserts a full document into this collection, if it does not exist already.
@@ -193,13 +198,12 @@ class Collection(
       content: T,
       options: InsertOptions
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
-    block(
-      async.insert(
-        id,
-        content,
-        options
-      )
-    )
+    Try(kvOps.insertBlocking(convert(options),
+      id,
+      encoder(options.transcoder.getOrElse(async.environment.transcoder), serializer, content),
+      convert(options.durability),
+      ExpiryUtil.expiryActual(options.expiry, options.expiryTime)))
+            .map(result => convert(result))
   }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
@@ -224,15 +228,14 @@ class Collection(
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
-    block(
-      async.replace(
-        id,
-        content,
-        cas,
-        durability,
-        timeout
-      )
-    )
+    Try(kvOps.replaceBlocking(makeCommonOptions(timeout),
+      id,
+      encoder(async.environment.transcoder, serializer, content),
+      cas,
+      convert(durability),
+      0,
+      false))
+            .map(result => convert(result))
   }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
@@ -250,13 +253,14 @@ class Collection(
       content: T,
       options: ReplaceOptions
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
-    block(
-      async.replace(
-        id,
-        content,
-        options
-      )
-    )
+    Try(kvOps.replaceBlocking(convert(options),
+      id,
+      encoder(options.transcoder.getOrElse(async.environment.transcoder), serializer, content),
+      options.cas,
+      convert(options.durability),
+      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
+      options.preserveExpiry))
+            .map(result => convert(result))
   }
 
   /** Upserts the contents of a full document in this collection.
@@ -279,7 +283,13 @@ class Collection(
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
-    block(async.upsert(id, content, durability, timeout))
+    Try(kvOps.upsertBlocking(makeCommonOptions(timeout),
+      id,
+      encoder(async.environment.transcoder, serializer, content),
+      convert(durability),
+      0,
+      false))
+            .map(result => convert(result))
   }
 
   /** Upserts the contents of a full document in this collection.
@@ -297,7 +307,13 @@ class Collection(
       content: T,
       options: UpsertOptions
   )(implicit serializer: JsonSerializer[T]): Try[MutationResult] = {
-    block(async.upsert(id, content, options))
+    Try(kvOps.upsertBlocking(convert(options),
+      id,
+      encoder(options.transcoder.getOrElse(async.environment.transcoder), serializer, content),
+      convert(options.durability),
+      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
+      options.preserveExpiry))
+            .map(result => convert(result))
   }
 
   /** Removes a document from this collection, if it exists.
@@ -320,9 +336,11 @@ class Collection(
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): Try[MutationResult] = {
-    block(
-      async.remove(id, cas, durability, timeout)
-    )
+    Try(kvOps.removeBlocking(makeCommonOptions(timeout),
+      id,
+      cas,
+      convert(durability)))
+            .map(result => convert(result))
   }
 
   /** Removes a document from this collection, if it exists.
@@ -338,9 +356,11 @@ class Collection(
       id: String,
       options: RemoveOptions
   ): Try[MutationResult] = {
-    block(
-      async.remove(id, options)
-    )
+    Try(kvOps.removeBlocking(convert(options),
+      id,
+      options.cas,
+      convert(options.durability)))
+            .map(result => convert(result))
   }
 
   /** Sub-Document mutations allow modifying parts of a JSON document directly, which can be more efficiently than
@@ -433,9 +453,10 @@ class Collection(
       lockTime: Duration,
       timeout: Duration = kvReadTimeout
   ): Try[GetResult] =
-    block(
-      async.getAndLock(id, lockTime, timeout)
-    )
+    Try(kvOps.getAndLockBlocking(makeCommonOptions(timeout),
+      id,
+      convert(lockTime)))
+            .map(result => convert(result, async.environment, None))
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
     *
@@ -443,10 +464,8 @@ class Collection(
     * may only be modified by providing this CAS.
     *
     * @param id             $Id
-    * @param lockTime        how long to lock the document for
-    * @param timeout        $Timeout
-    * @param retryStrategy  $RetryStrategy
-    * @param parentSpan    $ParentSpan
+    * @param lockTime       how long to lock the document for
+    * @param options        $Options
     *
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
@@ -457,9 +476,10 @@ class Collection(
       lockTime: Duration,
       options: GetAndLockOptions
   ): Try[GetResult] =
-    block(
-      async.getAndLock(id, lockTime, options)
-    )
+    Try(kvOps.getAndLockBlocking(convert(options),
+      id,
+      convert(lockTime)))
+            .map(result => convert(result, async.environment, options.transcoder))
 
   /** Unlock a locked document.
     *
@@ -480,7 +500,9 @@ class Collection(
       cas: Long,
       timeout: Duration = kvReadTimeout
   ): Try[Unit] =
-    block(async.unlock(id, cas, timeout))
+    Try(kvOps.unlockBlocking(makeCommonOptions(timeout),
+      id,
+      cas)).map(_ => ())
 
   /** Unlock a locked document.
     *
@@ -498,7 +520,9 @@ class Collection(
       cas: Long,
       options: UnlockOptions
   ): Try[Unit] =
-    block(async.unlock(id, cas, options))
+    Try(kvOps.unlockBlocking(convert(options),
+      id,
+      cas)).map(_ => ())
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
     *
@@ -515,13 +539,10 @@ class Collection(
       expiry: Duration,
       options: GetAndTouchOptions
   ): Try[GetResult] =
-    block(
-      async.getAndTouch(
-        id,
-        expiry,
-        options
-      )
-    )
+    Try(kvOps.getAndTouchBlocking(convert(options),
+      id,
+      convertExpiry(expiry)))
+            .map(result => convert(result, async.environment, options.transcoder))
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
     *
@@ -541,13 +562,11 @@ class Collection(
       expiry: Duration,
       timeout: Duration = kvReadTimeout
   ): Try[GetResult] =
-    block(
-      async.getAndTouch(
-        id,
-        expiry,
-        timeout
-      )
-    )
+    Try(kvOps.getAndTouchBlocking(makeCommonOptions(timeout),
+      id,
+      convertExpiry(expiry)))
+            .map(result => convert(result, async.environment, None))
+
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
     * retrieving the entire document.
@@ -717,7 +736,8 @@ class Collection(
       id: String,
       timeout: Duration = kvReadTimeout
   ): Try[ExistsResult] =
-    block(async.exists(id, timeout))
+    Try(kvOps.existsBlocking(makeCommonOptions(timeout), id))
+            .map(result => convert(result))
 
   /** Checks if a document exists.
     *
@@ -735,7 +755,8 @@ class Collection(
       id: String,
       options: ExistsOptions
   ): Try[ExistsResult] =
-    block(async.exists(id, options))
+    Try(kvOps.existsBlocking(convert(options), id))
+            .map(result => convert(result))
 
   /** Updates the expiry of the document with the given id.
     *
@@ -754,7 +775,10 @@ class Collection(
       expiry: Duration,
       timeout: Duration = kvReadTimeout
   ): Try[MutationResult] = {
-    block(async.touch(id, expiry, timeout))
+    Try(kvOps.touchBlocking(makeCommonOptions(timeout),
+      id,
+      convertExpiry(expiry)))
+            .map(result => convert(result))
   }
 
   /** Updates the expiry of the document with the given id.
@@ -771,7 +795,10 @@ class Collection(
       expiry: Duration,
       options: TouchOptions
   ): Try[MutationResult] = {
-    block(async.touch(id, expiry, options))
+    Try(kvOps.touchBlocking(convert(options),
+      id,
+      convertExpiry(expiry)))
+            .map(result => convert(result))
   }
 
   /** Returns a [[com.couchbase.client.scala.datastructures.CouchbaseBuffer]] backed by this collection.
