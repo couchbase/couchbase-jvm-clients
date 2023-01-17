@@ -17,6 +17,7 @@
 package com.couchbase.client.core.cnc.events.request;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
+import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.retry.RetryReason;
@@ -28,11 +29,11 @@ import java.time.Duration;
  */
 public class RequestNotRetriedEvent extends AbstractEvent {
 
-  private final Class<? extends Request> clazz;
+  private final Class<?> clazz;
   private final RetryReason retryReason;
   private final Throwable throwable;
 
-  public RequestNotRetriedEvent(final Severity severity, final Class<? extends Request> clazz, final RequestContext context,
+  public RequestNotRetriedEvent(final Severity severity, final Class<?> clazz, final Context context,
                                 final RetryReason reason, final Throwable throwable) {
     super(severity, Category.REQUEST, Duration.ZERO, context);
     this.clazz = clazz;

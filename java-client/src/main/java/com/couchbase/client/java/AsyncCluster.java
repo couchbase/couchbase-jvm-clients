@@ -37,6 +37,7 @@ import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.ConnectionStringUtil;
@@ -57,13 +58,13 @@ import com.couchbase.client.java.manager.query.AsyncQueryIndexManager;
 import com.couchbase.client.java.manager.search.AsyncSearchIndexManager;
 import com.couchbase.client.java.manager.user.AsyncUserManager;
 import com.couchbase.client.java.query.QueryAccessor;
+import com.couchbase.client.java.query.QueryAccessorProtostellar;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.search.SearchAccessor;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
-import com.couchbase.client.java.transactions.Transactions;
 import com.couchbase.client.java.transactions.internal.SingleQueryTransactions;
 import reactor.core.publisher.Mono;
 
@@ -362,7 +363,14 @@ public class AsyncCluster {
     }
     else {
       JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
-      return queryAccessor.queryAsync(queryRequest(statement, opts), opts, serializer);
+      if (core.isProtostellar()) {
+        return QueryAccessorProtostellar.async(core, opts,
+          QueryAccessorProtostellar.request(core(), statement, opts, environment(), null, null),
+          serializer);
+      }
+      else {
+        return queryAccessor.queryAsync(queryRequest(statement, opts), opts, serializer);
+      }
     }
   }
 
@@ -390,7 +398,7 @@ public class AsyncCluster {
       .requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, options.parentSpan().orElse(null));
 
     QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, authenticator, statement,
-     queryBytes, options.readonly(), clientContextId, span, null, null, null);
+      queryBytes, options.readonly(), clientContextId, span, null, null, null);
     request.context().clientContext(options.clientContext());
     return request;
   }
@@ -414,6 +422,10 @@ public class AsyncCluster {
    * @return the {@link AnalyticsResult} once the response arrives successfully.
    */
   public CompletableFuture<AnalyticsResult> analyticsQuery(final String statement, final AnalyticsOptions options) {
+    if (core.isProtostellar()) {
+      throw CoreProtostellarUtil.unsupportedInProtostellar("analytics");
+    }
+
     notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
     AnalyticsOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
@@ -443,7 +455,7 @@ public class AsyncCluster {
       .requestTracer()
       .requestSpan(TracingIdentifiers.SPAN_REQUEST_ANALYTICS, opts.parentSpan().orElse(null));
     AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, authenticator,
-        queryBytes, opts.priority(), opts.readonly(), clientContextId, statement, span, null, null
+      queryBytes, opts.priority(), opts.readonly(), clientContextId, statement, span, null, null
     );
     request.context().clientContext(opts.clientContext());
     return request;
@@ -579,6 +591,10 @@ public class AsyncCluster {
    * @return the {@link DiagnosticsResult} once complete.
    */
   public CompletableFuture<DiagnosticsResult> diagnostics(final DiagnosticsOptions options) {
+    if (core.isProtostellar()) {
+      throw CoreProtostellarUtil.unsupportedCurrentlyInProtostellar();
+    }
+
     notNull(options, "DiagnosticsOptions");
     final DiagnosticsOptions.Built opts = options.build();
 

@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.callbacks.BeforeSendRequestCallback;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ import java.util.concurrent.atomic.LongAdder;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
 
+@IgnoreWhen(isProtostellar = true)
 public class BeforeSendCallbackIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

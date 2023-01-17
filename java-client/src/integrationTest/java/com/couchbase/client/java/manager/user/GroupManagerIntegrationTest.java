@@ -53,7 +53,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IgnoreWhen(
   clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA },
-  missesCapabilities = {Capabilities.USER_GROUPS, Capabilities.ENTERPRISE_EDITION}
+  missesCapabilities = {Capabilities.USER_GROUPS, Capabilities.ENTERPRISE_EDITION},
+  isProtostellar = true
 )
 class GroupManagerIntegrationTest extends JavaIntegrationTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(GroupManagerIntegrationTest.class);

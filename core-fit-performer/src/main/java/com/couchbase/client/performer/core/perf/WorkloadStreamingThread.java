@@ -152,7 +152,8 @@ public class WorkloadStreamingThread extends Thread {
                     // Wait a brief period for the responseObserver to be ready.
                     Thread.sleep(5);
                 } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                    // Unclear where the interruption is coming from on CI, but better to end gracefully with a warning than die
+                    logger.warn("Interrupted while waiting for responseObserver to be ready");
                 }
             }
         }

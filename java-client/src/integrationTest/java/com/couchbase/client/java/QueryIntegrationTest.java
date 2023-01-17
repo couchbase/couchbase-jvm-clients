@@ -42,6 +42,7 @@ import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
@@ -69,7 +70,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   missesCapabilities = Capabilities.QUERY,
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
   clusterVersionIsBelow = REQUIRE_MB_50132,
-  clusterTypes = ClusterType.CAVES
+  clusterTypes = ClusterType.CAVES,
+  isProtostellar = true
 )
 class QueryIntegrationTest extends JavaIntegrationTest {
 
@@ -144,6 +146,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertTrue(result.metaData().metrics().isPresent());
     }
 
+    @IgnoreWhen(isProtostellarWillWorkLater = true) // STG bug, ignores readonly
     @Test
     void readOnlyViolation() {
         QueryOptions options = queryOptions().readonly(true);
@@ -230,6 +233,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertTrue(profile.size() > 0);
     }
 
+    @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs correct error from STG
     @Test
     void failOnSyntaxError() {
         assertThrows(ParsingFailureException.class, () -> cluster.query("invalid export"));
@@ -337,6 +341,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertEquals(1, rows.size());
     }
 
+    @IgnoreWhen(isProtostellarWillWorkLater = true) // STG bug, returns error
     @Test
     void consistentWith() {
         String id = UUID.randomUUID().toString();
@@ -430,7 +435,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(missesCapabilities = Capabilities.QUERY_PRESERVE_EXPIRY)
+    @IgnoreWhen(missesCapabilities = Capabilities.QUERY_PRESERVE_EXPIRY, isProtostellarWillWorkLater = true)
     void preserveExpiry() {
         String id = UUID.randomUUID().toString();
         collection.insert(id, FOO_CONTENT, InsertOptions.insertOptions()

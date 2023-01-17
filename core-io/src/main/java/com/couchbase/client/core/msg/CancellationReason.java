@@ -78,6 +78,12 @@ public class CancellationReason {
   public static final CancellationReason TARGET_NODE_REMOVED =
     new CancellationReason("TARGET_NODE_REMOVED", null);
 
+  /**
+   * The server reported that it cancelled the request.
+   */
+  public static final CancellationReason SERVER_CANCELLED =
+    new CancellationReason("SERVER_CANCELLED", null);
+
   private final String identifier;
   private final Object innerReason;
 

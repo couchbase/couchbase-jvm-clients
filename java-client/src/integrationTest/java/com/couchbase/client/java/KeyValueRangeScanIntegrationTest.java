@@ -51,7 +51,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(missesCapabilities = Capabilities.RANGE_SCAN)
+@IgnoreWhen(missesCapabilities = Capabilities.RANGE_SCAN,
+  isProtostellarWillWorkLater = true
+)
 class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
 
   private static final List<String> DOC_IDS = Arrays.asList(

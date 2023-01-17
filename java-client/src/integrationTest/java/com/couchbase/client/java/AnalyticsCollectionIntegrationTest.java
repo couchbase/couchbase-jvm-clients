@@ -68,7 +68,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @IgnoreWhen(
   missesCapabilities = {Capabilities.ANALYTICS, Capabilities.COLLECTIONS},
   clusterVersionIsBelow = REQUIRE_MB_50132,
-  clusterTypes = ClusterType.CAVES
+  clusterTypes = ClusterType.CAVES,
+  isProtostellar = true
 )
 class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(AnalyticsCollectionIntegrationTest.class);

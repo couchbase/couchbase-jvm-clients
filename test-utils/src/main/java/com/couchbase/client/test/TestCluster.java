@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 
@@ -165,7 +166,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       if (services.containsKey("eventingSSL")) {
         ports.put(Services.EVENTING_TLS, services.get("eventingSSL"));
       }
-      result.add(new TestNodeConfig(hostname, ports, false));
+      result.add(new TestNodeConfig(hostname, ports, false, Optional.empty()));
     }
     return result;
   }
@@ -323,4 +324,12 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     }
   }
 
+  /**
+   * Whether the test config has asked to connect to the cluster over protostellar://
+   *
+   * (Not whether the cluster has Stellar Nebula enabled).
+   */
+  public boolean isProtostellar() {
+    return false;
+  }
 }

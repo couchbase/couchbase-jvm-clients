@@ -57,7 +57,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * Transactions are heavily tested by FIT, these are some basic sanity tests for KV-only transactions.
  */
 @IgnoreWhen(clusterTypes = {ClusterType.MOCKED},
-        missesCapabilities = {Capabilities.CREATE_AS_DELETED})
+  missesCapabilities = {Capabilities.CREATE_AS_DELETED},
+  isProtostellarWillWorkLater = true
+)
 public class TransactionsIntegrationTest extends JavaIntegrationTest {
 
     static private Cluster cluster;

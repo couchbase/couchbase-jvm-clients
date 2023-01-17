@@ -187,6 +187,7 @@
         <module>tracing-opentelemetry</module>
         <module>metrics-opentelemetry</module>
         <module>metrics-micrometer</module>
+        <module>protostellar</module>
         <!-- Uncomment next lines to include the FIT performers.  They are not included by default as they require
         a) an externally built lib and b) JDK 17 -->
 <!--         <module>core-fit-performer</module>-->

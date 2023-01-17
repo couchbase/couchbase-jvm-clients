@@ -52,9 +52,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class UnmanagedTestCluster extends TestCluster {
   private static Logger logger = LoggerFactory.getLogger(UnmanagedTestCluster.class);
 
+  private static final int DEFAULT_PROTOSTELLAR_TLS_PORT = 18098;
+
   private final OkHttpClient httpClient;
   private final String seedHost;
-  private final int seedPort;
   private final boolean isDnsSrv;
   private final String adminUsername;
   private final String adminPassword;
@@ -63,10 +64,20 @@ public class UnmanagedTestCluster extends TestCluster {
   private final String certsFile;
   private volatile boolean runWithTLS;
   private final String baseUrl;
+  private final boolean isProtostellar;
 
   UnmanagedTestCluster(final Properties properties) {
-    seedHost = properties.getProperty("cluster.unmanaged.seed").split(":")[0];
-    seedPort = Integer.parseInt(properties.getProperty("cluster.unmanaged.seed").split(":")[1]);
+    // localhost:8091 or couchbases://localhost:8091 or protostellar://localhost:8091 or protostellar://localhost
+    String[] split = properties.getProperty("cluster.unmanaged.seed").split(":");
+    isProtostellar = split[0].equals("protostellar");
+    seedHost = split[split.length - 2].replace("//", "");
+    int seedPort = 0;
+    try {
+      seedPort = Integer.parseInt(split[split.length - 1]);
+    }
+    catch (NumberFormatException err) {
+      // Handling couchbase://localhost et al.
+    }
     adminUsername = properties.getProperty("cluster.adminUsername");
     adminPassword = properties.getProperty("cluster.adminPassword");
     numReplicas = Integer.parseInt(properties.getProperty("cluster.unmanaged.numReplicas"));
@@ -75,7 +86,7 @@ public class UnmanagedTestCluster extends TestCluster {
     isDnsSrv = Boolean.parseBoolean(properties.getProperty("cluster.unmanaged.dnsSrv"));
     bucketname = Optional.ofNullable(properties.getProperty("cluster.unmanaged.bucket")).orElse("");
     httpClient = setupHttpClient(runWithTLS);
-    baseUrl = (runWithTLS ? "https://" : "http://") + getNodeUrl(isDnsSrv, seedHost, runWithTLS) + ":" + seedPort;
+    baseUrl = (runWithTLS ? "https://" : "http://") + getNodeUrl(isDnsSrv, seedHost, runWithTLS) + (seedPort == 0 ? "" : (":" + seedPort));
   }
 
   @Override
@@ -140,7 +151,10 @@ public class UnmanagedTestCluster extends TestCluster {
     if (isDnsSrv) {
       // Use DNS SRV connection string in tests
       nodeConfigs = new ArrayList<>();
-      nodeConfigs.add(new TestNodeConfig(seedHost, null, true));
+      nodeConfigs.add(new TestNodeConfig(seedHost, null, true, Optional.empty()));
+    } else if (isProtostellar) {
+      nodeConfigs = new ArrayList<>();
+      nodeConfigs.add(new TestNodeConfig(seedHost, null, false, Optional.of(DEFAULT_PROTOSTELLAR_TLS_PORT)));
     } else {
       nodeConfigs = nodesFromRaw(seedHost, raw);
     }
@@ -286,5 +300,10 @@ public class UnmanagedTestCluster extends TestCluster {
       }
     }
     return seedHost;
+  }
+
+  @Override
+  public boolean isProtostellar() {
+    return isProtostellar;
   }
 }

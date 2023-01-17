@@ -47,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class BooleanTypeRef extends TypeRef<Boolean> {
 }
 
+@IgnoreWhen(isProtostellarWillWorkLater = true)
 class SubdocIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

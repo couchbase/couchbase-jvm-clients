@@ -18,7 +18,7 @@ package com.couchbase.client.scala
 import java.time.Instant
 import java.util.Optional
 import java.util.concurrent.TimeUnit
-import com.couchbase.client.core.Core
+import com.couchbase.client.core.{Core, CoreKeyspace}
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
@@ -36,8 +36,10 @@ import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.kv.handlers._
+import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import com.couchbase.client.scala.util.{ExpiryUtil, FutureConversions, TimeoutUtil}
 import reactor.core.scala.publisher.{SFlux, SMono}
+import scala.jdk.CollectionConverters._
 
 import java.nio.charset.StandardCharsets
 import scala.compat.java8.FutureConverters
@@ -92,7 +94,6 @@ class AsyncCollection(
   private[scala] val replaceHandler        = new ReplaceHandler(hp)
   private[scala] val upsertHandler         = new UpsertHandler(hp)
   private[scala] val removeHandler         = new RemoveHandler(hp)
-  private[scala] val getFullDocHandler     = new GetFullDocHandler(hp)
   private[scala] val getSubDocHandler      = new GetSubDocumentHandler(hp)
   private[scala] val getAndTouchHandler    = new GetAndTouchHandler(hp)
   private[scala] val getAndLockHandler     = new GetAndLockHandler(hp)
@@ -101,6 +102,7 @@ class AsyncCollection(
   private[scala] val getFromReplicaHandler = new GetFromReplicaHandler(hp)
   private[scala] val touchHandler          = new TouchHandler(hp)
   private[scala] val rangeScanOrchestrator = new RangeScanOrchestrator(core, collectionIdentifier)
+  private[scala] val kvOps                 = core.kvOps(CoreKeyspace.from(collectionIdentifier))
 
   val binary = new AsyncBinaryCollection(this)
 
@@ -300,72 +302,10 @@ class AsyncCollection(
       id: String,
       options: GetOptions
   ): Future[GetResult] = {
-    val project       = options.project
-    val timeout       = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
-    val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
-    val parentSpan    = options.parentSpan
-    val transcoder    = options.transcoder.getOrElse(environment.transcoder)
-    val withExpiry    = options.withExpiry
-
-    if (project.nonEmpty) {
-      getSubDocHandler.requestProject(id, project, timeout, retryStrategy, parentSpan) match {
-        case Success(request) =>
-          core.send(request)
-
-          val out = FutureConverters
-            .toScala(request.response())
-            .flatMap(response => {
-              getSubDocHandler.responseProject(request, id, response, transcoder) match {
-                case Success(v: GetResult) => Future.successful(v)
-                case Failure(err)          => Future.failed(err)
-              }
-            })
-
-          out onComplete {
-            case Success(_)                              => request.context.logicallyComplete()
-            case Failure(err: DocumentNotFoundException) => request.context.logicallyComplete()
-            case Failure(err)                            => request.context.logicallyComplete(err)
-          }
-
-          out
-
-        case Failure(err) => Future.failed(err)
-      }
-
-    } else if (withExpiry) {
-      getSubDoc(
-        id,
-        AsyncCollection.getFullDoc,
-        withExpiry,
-        timeout,
-        retryStrategy,
-        transcoder,
-        parentSpan
-      ).map(
-        lookupInResult =>
-          GetResult(
-            id,
-            Left(lookupInResult.contentAs[Array[Byte]](0).get),
-            lookupInResult.flags,
-            lookupInResult.cas,
-            lookupInResult.expiryTime,
-            transcoder
-          )
-      )
-    } else {
-      getFullDoc(id, timeout, retryStrategy, transcoder, parentSpan)
+    Try(kvOps.getAsync(convert(options), id, options.project.asJava, options.withExpiry)) match {
+      case Success(future) => convert(future).map(result => convert(result, environment, options.transcoder))
+      case Failure(err) => Future.failed(err)
     }
-  }
-
-  private def getFullDoc(
-      id: String,
-      timeout: Duration,
-      retryStrategy: RetryStrategy,
-      transcoder: Transcoder,
-      parentSpan: Option[RequestSpan]
-  ): Future[GetResult] = {
-    val req = getFullDocHandler.request(id, timeout, retryStrategy, parentSpan)
-    AsyncCollection.wrapGet(req, id, getFullDocHandler, transcoder, core)
   }
 
   private def getSubDoc(

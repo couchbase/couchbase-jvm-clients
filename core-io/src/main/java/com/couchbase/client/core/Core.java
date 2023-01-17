@@ -68,12 +68,14 @@ import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.node.ViewLocator;
+import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
 import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.transaction.context.CoreTransactionsContext;
+import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.NanoTimestamp;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -237,6 +239,8 @@ public class Core implements AutoCloseable {
   @Nullable
   private final String connectionString;
 
+  @Nullable private final CoreProtostellar protostellar;
+
   /**
    * Creates a new {@link Core} with the given environment with no connection string.
    *
@@ -305,6 +309,16 @@ public class Core implements AutoCloseable {
       .map(c -> (BeforeSendRequestCallback) c)
       .collect(Collectors.toList());
 
+    boolean isProtostellar = (!seedNodes.isEmpty() && seedNodes.stream().findFirst().get().protostellarPort().isPresent()) ||
+      (connectionString != null && ConnectionString.create(connectionString).scheme() == ConnectionString.Scheme.PROTOSTELLAR);
+
+    if (isProtostellar) {
+      this.protostellar = new CoreProtostellar(this, authenticator, seedNodes);
+    }
+    else {
+      this.protostellar = null;
+    }
+
     eventBus.publish(new CoreCreatedEvent(coreContext, environment, seedNodes, CoreLimiter.numInstances(), connectionString));
 
     long watchdogInterval = INVALID_STATE_WATCHDOG_INTERVAL.getSeconds();
@@ -320,6 +334,11 @@ public class Core implements AutoCloseable {
     this.transactionsContext = new CoreTransactionsContext(environment.meter());
     context().environment().eventBus().publish(new TransactionsStartedEvent(environment.transactionsConfig().cleanupConfig().runLostAttemptsCleanupThread(),
             environment.transactionsConfig().cleanupConfig().runRegularAttemptsCleanupThread()));
+  }
+
+  @Stability.Internal
+  public CoreProtostellar protostellar() {
+    return protostellar;
   }
 
   /**
@@ -586,6 +605,16 @@ public class Core implements AutoCloseable {
     });
   }
 
+  @Stability.Internal
+  public ValueRecorder responseMetric(final ResponseMetricIdentifier rmi) {
+    return responseMetrics.computeIfAbsent(rmi, key -> {
+      Map<String, String> tags = new HashMap<>(4);
+      tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceType);
+      tags.put(TracingIdentifiers.ATTR_OPERATION, key.requestName);
+      return coreContext.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, tags);
+    });
+  }
+
 
   /**
    * Create a {@link Node} from the given identifier.
@@ -678,6 +707,17 @@ public class Core implements AutoCloseable {
             .then(Mono.fromRunnable(() -> {
               currentConfig = new ClusterConfig();
               reconfigure();
+            }))
+            .then(Mono.defer(() -> {
+              if (isProtostellar()) {
+                return Mono.fromRunnable(() -> {
+                  // This will block, locking up a scheduler thread - but since all we're interested in doing is shutting down, that doesn't matter.
+                  protostellar.shutdown(timeout);
+                });
+              }
+              else {
+                return Mono.empty();
+              }
             }))
             // every 10ms check if all nodes have been cleared, and then move on.
             // this links the config provider shutdown with our core reconfig logic
@@ -984,11 +1024,19 @@ public class Core implements AutoCloseable {
   }
 
   @Stability.Internal
-  public CoreKvOps kvOps(CoreKeyspace keyspace) {
-    return new ClassicCoreKvOps(this, keyspace);
+  public boolean isProtostellar() {
+    return protostellar != null;
   }
 
-  private static class ResponseMetricIdentifier {
+  @Stability.Internal
+  public CoreKvOps kvOps(CoreKeyspace keyspace) {
+    return isProtostellar()
+      ? new ProtostellarCoreKvOps(this, keyspace)
+      : new ClassicCoreKvOps(this, keyspace);
+  }
+
+  @Stability.Internal
+  public static class ResponseMetricIdentifier {
 
     private final String serviceType;
     private final String requestName;
@@ -1007,6 +1055,11 @@ public class Core implements AutoCloseable {
         this.serviceType = request.serviceType().ident();
       }
       this.requestName = request.name();
+    }
+
+    public ResponseMetricIdentifier(final String serviceType, final String requestName) {
+      this.serviceType = serviceType;
+      this.requestName = requestName;
     }
 
     @Override

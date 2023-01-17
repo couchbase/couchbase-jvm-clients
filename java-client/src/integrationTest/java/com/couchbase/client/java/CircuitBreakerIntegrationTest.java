@@ -35,6 +35,7 @@ import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,6 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Verifies the default behavior of the circuit breaker when enabled.
  */
+@IgnoreWhen(isProtostellarWillWorkLater = true)
 class CircuitBreakerIntegrationTest extends JavaIntegrationTest {
 
   private Cluster cluster;

@@ -141,18 +141,24 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
 
   protected static Set<SeedNode> seedNodes() {
     return config().nodes().stream().map(cfg -> {
-      int kvPort = cfg.ports().get(Services.KV);
-      int managerPort = cfg.ports().get(Services.MANAGER);
-
-      if (config().runWithTLS()) {
-        kvPort = cfg.ports().get(Services.KV_TLS);
-        managerPort = cfg.ports().get(Services.MANAGER_TLS);
+      if (cfg.protostellarPort().isPresent()) {
+        return SeedNode.create(cfg.hostname())
+            .withProtostellarPort(cfg.protostellarPort().get());
       }
+      else {
+        int kvPort = cfg.ports().get(Services.KV);
+        int managerPort = cfg.ports().get(Services.MANAGER);
 
-      return SeedNode.create(
-        cfg.hostname(),
-        Optional.ofNullable(kvPort),
-        Optional.ofNullable(managerPort));
+        if (config().runWithTLS()) {
+          kvPort = cfg.ports().get(Services.KV_TLS);
+          managerPort = cfg.ports().get(Services.MANAGER_TLS);
+        }
+
+        return SeedNode.create(
+          cfg.hostname(),
+          Optional.ofNullable(kvPort),
+          Optional.ofNullable(managerPort));
+      }
     }).collect(Collectors.toSet());
   }
 
@@ -204,6 +210,11 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
    */
   protected static void waitForService(final Bucket bucket, final ServiceType serviceType) {
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
+
+    if (bucket.core().isProtostellar()) {
+      // Protostellar ping support will be implemented under JVMCBC-1189
+      return;
+    }
 
     Util.waitUntilCondition(() -> {
       PingResult pingResult = bucket.ping(PingOptions.pingOptions().serviceTypes(Collections.singleton(serviceType)));

@@ -96,6 +96,7 @@ public class KeyValueReactiveCollectionIntegrationTest extends JavaIntegrationTe
           .verify();
     }
 
+    @IgnoreWhen(isProtostellarWillWorkLater = true)
     @Test
     void reactiveUpsert(){
         // Upsert docs
@@ -120,6 +121,7 @@ public class KeyValueReactiveCollectionIntegrationTest extends JavaIntegrationTe
           .verifyComplete();
     }
 
+    @IgnoreWhen(isProtostellarWillWorkLater = true)
     @Test
     void reactiveReplace(){
         // Insert docs
@@ -185,7 +187,7 @@ public class KeyValueReactiveCollectionIntegrationTest extends JavaIntegrationTe
     }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true)
     void reactiveExists(){
         // Insert docs
         docIds
@@ -223,7 +225,7 @@ public class KeyValueReactiveCollectionIntegrationTest extends JavaIntegrationTe
      }
 
     @Test
-    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+    @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true)
     void reactiveTouch(){
         StepVerifier
           .create(docIds.concatMap(key -> reactiveCollection.touch(key, Duration.ofSeconds(1))))

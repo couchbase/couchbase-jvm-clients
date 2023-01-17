@@ -75,6 +75,8 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     cluster.disconnect();
   }
 
+  // This fails as no client-side projection length checks - ideally would be centralised in STG.
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   @Test
   void verifyGetExceptions() {
     DocumentNotFoundException thrown = assertThrows(
@@ -92,6 +94,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     assertThrows(InvalidArgumentException.class, () -> collection.get("foo", getOptions().project(tooManyFields)));
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   @Test
   void verifyGetAndLockExceptions() {
     DocumentNotFoundException thrown = assertThrows(
@@ -111,7 +114,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
    * be post 5.0.
    */
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true)
   void verifyGetAndLockDoubleLock() {
     String validId = UUID.randomUUID().toString();
     collection.upsert(validId, JsonObject.create());
@@ -123,6 +126,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     assertTrue(exception.context().requestContext().retryReasons().contains(RetryReason.KV_LOCKED));
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   @Test
   void verifyGetAndTouchExceptions() {
     DocumentNotFoundException thrown = assertThrows(
@@ -142,7 +146,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
    * be post 5.0.
    */
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true)
   void verifyTouchingLocked() {
     String validId = UUID.randomUUID().toString();
     collection.upsert(validId, JsonObject.create());
@@ -154,6 +158,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     assertTrue(exception.context().requestContext().retryReasons().contains(RetryReason.KV_LOCKED));
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   @Test
   void verifyExistsExceptions() {
     assertThrows(InvalidArgumentException.class, () -> collection.exists("foo", null));
@@ -182,6 +187,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     assertNotNull(thrown.context());
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   @Test
   void verifyUpsertExceptions() {
     assertThrows(InvalidArgumentException.class, () -> collection.upsert("foo", null));
@@ -189,6 +195,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     assertThrows(InvalidArgumentException.class, () -> collection.upsert("foo", "bar", null));
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   @Test
   void verifyReplaceExceptions() {
     DocumentNotFoundException thrown = assertThrows(
@@ -241,7 +248,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
    * Ignored for the mock because it still returns TMPFAIL (like the old servers)
    */
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true)
   void verifyUnlockCasMismatch() {
     String id = UUID.randomUUID().toString();
     collection.upsert(id, "foo");
@@ -350,6 +357,8 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
   /**
    * The default key length is 250, including the collection information.
    */
+  // This fails sa no client-side key length check, which would maybe require encoding the collection id to do correctly, so ideally would be done in STG.
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   @Test
   void verifyTooLongId() {
     String longId = "The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. " +
