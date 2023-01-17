@@ -45,7 +45,6 @@ import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.create
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownAsync;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownBlocking;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownReactive;
-import static com.couchbase.client.core.protostellar.ProtostellarRequest.REQUEST_QUERY;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 
@@ -185,7 +184,7 @@ public class QueryAccessorProtostellar {
     span.attribute(TracingIdentifiers.ATTR_STATEMENT, statement);
     ProtostellarRequest<com.couchbase.client.protostellar.query.v1.QueryRequest> out = new ProtostellarRequest<>(core,
       ServiceType.QUERY,
-      REQUEST_QUERY,
+      TracingIdentifiers.SPAN_REQUEST_QUERY,
       span,
       timeout,
       opts.readonly(),

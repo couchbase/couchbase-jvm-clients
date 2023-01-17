@@ -48,11 +48,6 @@ import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.conver
  */
 @Stability.Internal
 public class ProtostellarRequest<TGrpcRequest> {
-  public static final String REQUEST_KV_INSERT = "insert";
-  public static final String REQUEST_KV_REMOVE = "remove";
-  public static final String REQUEST_KV_GET = "get";
-  public static final String REQUEST_QUERY = "query";
-
   private final Core core;
   private final @Nullable RequestSpan span;
   private final long absoluteTimeout;

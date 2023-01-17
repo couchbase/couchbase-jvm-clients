@@ -75,9 +75,18 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateExistsParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGetAllReplicasParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGetAndLockParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGetAndTouchParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGetAnyReplicaParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGetParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateInsertParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateRemoveParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateReplaceParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateTouchParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateUnlockParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateUpsertParams;
 import static com.couchbase.client.core.classic.ClassicHelper.maybeWrapWithLegacyDurability;
 import static com.couchbase.client.core.classic.ClassicHelper.setClientContext;
 import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
@@ -261,8 +270,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
       String key,
       Duration lockTime
   ) {
-    notNull(lockTime, "lockTime");
-    notNullOrEmpty(key, "Document ID");
+    validateGetAndLockParams(common, key, lockTime);
 
     Duration timeout = timeout(common);
     RetryStrategy retryStrategy = retryStrategy(common);
@@ -292,7 +300,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
       String key,
       long expiration
   ) {
-    notNullOrEmpty(key, "Document ID");
+    validateGetAndTouchParams(common, key, expiration);
 
     Duration timeout = timeout(common);
     RetryStrategy retryStrategy = retryStrategy(common);
@@ -390,7 +398,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
       long expiry,
       boolean preserveExpiry
   ) {
-    notNullOrEmpty(key, "Document ID");
+    validateUpsertParams(common, key, content, durability, expiry, preserveExpiry);
 
     Duration timeout = timeout(common, durability);
     RetryStrategy retryStrategy = retryStrategy(common);
@@ -452,7 +460,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
       long expiry,
       boolean preserveExpiry
   ) {
-    notNullOrEmpty(key, "Document ID");
+    validateReplaceParams(common, key, content, cas, durability, expiry, preserveExpiry);
 
     Duration timeout = timeout(common, durability);
     RetryStrategy retryStrategy = retryStrategy(common);
@@ -552,7 +560,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
 
   @Override
   public CoreAsyncResponse<CoreExistsResult> existsAsync(CoreCommonOptions common, String key) {
-    notNullOrEmpty(key, "Document ID");
+    validateExistsParams(common, key);
 
     Duration timeout = timeout(common);
     RetryStrategy retryStrategy = retryStrategy(common);
@@ -580,7 +588,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
 
   @Override
   public CoreAsyncResponse<CoreMutationResult> touchAsync(CoreCommonOptions common, String key, long expiry) {
-    notNullOrEmpty(key, "Document ID");
+    validateTouchParams(common, key, expiry);
 
     Duration timeout = timeout(common);
     RetryStrategy retryStrategy = retryStrategy(common);
@@ -603,10 +611,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
 
   @Override
   public CoreAsyncResponse<Void> unlockAsync(CoreCommonOptions common, String key, long cas) {
-    notNullOrEmpty(key, "Document ID");
-    if (cas == 0) {
-      throw new InvalidArgumentException("Unlock CAS must not be 0", null, ReducedKeyValueErrorContext.create(key, collectionIdentifier));
-    }
+    validateUnlockParams(common, key, cas, collectionIdentifier);
 
     Duration timeout = timeout(common);
     RetryStrategy retryStrategy = retryStrategy(common);
@@ -629,7 +634,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
 
   @Override
   public Flux<CoreGetResult> getAllReplicasReactive(CoreCommonOptions common, String key) {
-    notNullOrEmpty(key, "Document ID");
+    validateGetAllReplicasParams(common, key);
 
     Duration timeout = timeout(common);
     RetryStrategy retryStrategy = retryStrategy(common);
@@ -656,7 +661,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
 
   @Override
   public Mono<CoreGetResult> getAnyReplicaReactive(CoreCommonOptions common, String key) {
-    notNullOrEmpty(key, "Document ID");
+    validateGetAnyReplicaParams(common, key);
 
     RequestSpan getAnySpan = span(common, TracingIdentifiers.SPAN_GET_ANY_REPLICA);
     return getAllReplicasReactive(common.withParentSpan(getAnySpan), key)

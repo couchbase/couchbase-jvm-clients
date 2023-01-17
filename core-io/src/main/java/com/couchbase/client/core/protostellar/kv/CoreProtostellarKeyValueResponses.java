@@ -17,14 +17,20 @@ package com.couchbase.client.core.protostellar.kv;
 
 import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreExistsResult;
 import com.couchbase.client.core.api.kv.CoreGetResult;
 import com.couchbase.client.core.api.kv.CoreKvResponseMetadata;
 import com.couchbase.client.core.api.kv.CoreMutationResult;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
+import com.couchbase.client.protostellar.kv.v1.ExistsResponse;
 import com.couchbase.client.protostellar.kv.v1.GetResponse;
 import com.couchbase.client.protostellar.kv.v1.InsertResponse;
 import com.couchbase.client.protostellar.kv.v1.RemoveResponse;
+import com.couchbase.client.protostellar.kv.v1.ReplaceResponse;
+import com.couchbase.client.protostellar.kv.v1.TouchResponse;
+import com.couchbase.client.protostellar.kv.v1.UnlockResponse;
+import com.couchbase.client.protostellar.kv.v1.UpsertResponse;
 import reactor.util.annotation.Nullable;
 
 import java.util.Optional;
@@ -46,7 +52,27 @@ public class CoreProtostellarKeyValueResponses {
     return convertMutationResult(keyspace, key, response.getCas(), response.hasMutationToken() ? response.getMutationToken() : null);
   }
 
-  public static CoreMutationResult convertMutationResult(CoreKeyspace keyspace, String key, long cas, @Nullable com.couchbase.client.protostellar.kv.v1.MutationToken mt) {
+  public static CoreMutationResult convertResponse(CoreKeyspace keyspace, String key, ReplaceResponse response) {
+    return convertMutationResult(keyspace, key, response.getCas(), response.hasMutationToken() ? response.getMutationToken() : null);
+  }
+
+  public static CoreMutationResult convertResponse(CoreKeyspace keyspace, String key, UpsertResponse response) {
+    return convertMutationResult(keyspace, key, response.getCas(), response.hasMutationToken() ? response.getMutationToken() : null);
+  }
+
+  public static CoreMutationResult convertResponse(CoreKeyspace keyspace, String key, TouchResponse response) {
+    return convertMutationResult(keyspace, key, response.getCas(), response.hasMutationToken() ? response.getMutationToken() : null);
+  }
+
+  public static CoreMutationResult convertResponse(CoreKeyspace keyspace, String key, UnlockResponse response) {
+    return convertMutationResult(keyspace, key, 0, null);
+  }
+
+  public static CoreExistsResult convertResponse(CoreKeyspace keyspace, String key, ExistsResponse response) {
+    return new CoreExistsResult(null, keyspace, key, response.getCas(), response.getResult());
+  }
+
+  private static CoreMutationResult convertMutationResult(CoreKeyspace keyspace, String key, long cas, @Nullable com.couchbase.client.protostellar.kv.v1.MutationToken mt) {
     Optional<MutationToken> mutationToken;
     if (mt != null) {
       mutationToken = Optional.of(new MutationToken((short) mt.getVbucketId(), mt.getVbucketId(), mt.getSeqNo(), mt.getBucketName()));
@@ -56,7 +82,7 @@ public class CoreProtostellarKeyValueResponses {
     return new CoreMutationResult(null, keyspace, key, cas, mutationToken);
   }
 
-  public static CoreGetResult convertGetResponse(CoreKeyspace keyspace, String key, GetResponse response) {
+  public static CoreGetResult convertResponse(CoreKeyspace keyspace, String key, GetResponse response) {
     return new CoreGetResult(CoreKvResponseMetadata.NONE,
       keyspace,
       key,

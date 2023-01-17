@@ -385,7 +385,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     });
   }
 
-  @IgnoreWhen(isProtostellarWillWorkLater = true)
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-355
   @Test
   void remove() {
     String id = UUID.randomUUID().toString();
@@ -437,7 +437,6 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertThrows(DocumentExistsException.class, () -> collection.insert(id, expected));
   }
 
-  @IgnoreWhen(isProtostellarWillWorkLater = true)
   @Test
   void upsert() {
     String id = UUID.randomUUID().toString();
