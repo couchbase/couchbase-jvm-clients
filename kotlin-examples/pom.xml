@@ -15,13 +15,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <exec.mainClass>com.couchbase.client.kotlin.examples.HelloWorld</exec.mainClass>
         <kotlin.version>1.6.20</kotlin.version>
+        <kotlin.coroutines.version>1.6.4</kotlin.coroutines.version>
     </properties>
-    <repositories>
-        <repository>
-            <id>oss.sonatype.org</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </repository>
-    </repositories>
     <dependencies>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -29,9 +24,19 @@
             <version>${kotlin.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-coroutines-jdk8</artifactId>
+            <version>${kotlin.coroutines.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-reflect</artifactId>
             <version>${kotlin.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-coroutines-reactive</artifactId>
+            <version>${kotlin.coroutines.version}</version>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
@@ -61,12 +66,6 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
             <version>5.9.2</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains.spek</groupId>
-            <artifactId>spek-junit-platform-engine</artifactId>
-            <version>1.1.5</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -132,8 +131,7 @@
                 </dependencies>
                 <configuration>
                     <includes>
-                        <include>**/*Spec.*</include>
-                        <include>**/*Test.*</include>
+                        <include>${project.basedir}/src/test/kotlin</include>
                     </includes>
                 </configuration>
             </plugin>
@@ -150,7 +148,28 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- running docker container before the integration tests and clearing it after -->
+<!--            <plugin>-->
+<!--                <groupId>com.spotify</groupId>-->
+<!--                <artifactId>dockerfile-maven-plugin</artifactId>-->
+<!--                <version>1.4.13</version>-->
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <id>default</id>-->
+<!--                        <goals>-->
+<!--                            <goal>build</goal>-->
+<!--                            <goal>tag</goal>-->
+<!--                            <goal>push</goal>-->
+<!--                        </goals>-->
+<!--                    </execution>-->
+<!--                </executions>-->
+<!--                <configuration>-->
+<!--                    <dockerfile>./Dockerfile</dockerfile>-->
+<!--                    <tag>latest</tag>-->
+<!--                    <buildArgs>-->
+<!--                        <JAR_FILE>${project.build.finalName}.jar</JAR_FILE>-->
+<!--                    </buildArgs>-->
+<!--                </configuration>-->
+<!--            </plugin>-->
             <plugin>
                 <groupId>io.fabric8</groupId>
                 <artifactId>docker-maven-plugin</artifactId>
@@ -166,6 +185,9 @@
                                 <image>
                                     <name>couchbase</name>
                                     <alias>db</alias>
+                                    <build>
+                                        <contextDir>${project.basedir}</contextDir>
+                                    </build>
                                     <run>
                                         <containerNamePattern>couchbase</containerNamePattern>
                                         <ports>
@@ -189,7 +211,7 @@
                                             <port>18097:18097</port>
                                         </ports>
                                         <wait>
-                                            <time>1000000</time>
+                                            <time>300000</time>
                                         </wait>
                                     </run>
                                 </image>
