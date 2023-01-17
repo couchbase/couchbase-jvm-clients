@@ -18,6 +18,7 @@ package com.couchbase.client.test;
 
 import com.couchbase.client.test.caves.CavesControlServer;
 import com.couchbase.client.test.caves.CavesProcess;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import okhttp3.Credentials;
@@ -25,12 +26,15 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -40,15 +44,29 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class CavesTestCluster extends TestCluster {
-
-  private static final String CAVES_VERSION = "v0.0.1-71";
-
   private static final Logger LOGGER = LoggerFactory.getLogger(CavesTestCluster.class);
+  private static final Pattern IPV_6_PATTERN = Pattern.compile("^\\[(.+)]:(\\d+(=\\w+)?)$");
+  private static final String CAVES_VERSION = "v0.0.1-71";
+  private static final String BUCKET_NAME = "default";
+  private static final String USERNAME = "Administrator";
+  private static final String PASSWORD = "password";
+  private static final String AUTHORIZATION = "Authorization";
+  private static final String AUTH_URL = "/pools/default/b/" + BUCKET_NAME;
+  private static final String POOLS_URL = "/pools";
+  private static final String BASE_URL_PATTERN = "http://%s:%s%s";
+  private static final Function<String, String> REMOVE_SCHEMA = str -> str.replaceAll("\\w+://", "");
+  private static final Function<String, String> REMOVE_PARAMS = str -> str.replaceAll("\\?.*", "");
+  private static final Function<String, String> REMOVE_USERNAME = str -> str.replaceAll(".*@", "");
+  private static final Function<String, String> CLEANUP = str -> REMOVE_SCHEMA
+    .andThen(REMOVE_USERNAME)
+    .andThen(REMOVE_PARAMS)
+    .apply(str);
 
   private volatile CavesProcess cavesProcess;
 
@@ -63,6 +81,12 @@ public class CavesTestCluster extends TestCluster {
     .build();
 
   private final Properties properties;
+  private static final Map<DetectedOs, String> OS_TO_BINARY_NAME = new HashMap<>();
+
+  static {
+    OS_TO_BINARY_NAME.put(DetectedOs.Windows, "gocaves-windows.exe");
+    OS_TO_BINARY_NAME.put(DetectedOs.Macos, "gocaves-macos");
+  }
 
   CavesTestCluster(final Properties properties) {
     this.properties = properties;
@@ -75,17 +99,70 @@ public class CavesTestCluster extends TestCluster {
   TestClusterConfig _start() throws Exception {
     LOGGER.info("Starting CAVES");
 
+    Path binPath = getCavesBinary();
+
+    controlServer.start();
+
+    cavesProcess = new CavesProcess(binPath, controlServer.port());
+    cavesProcess.start();
+
+    controlServer.receivedHello().get(10, TimeUnit.SECONDS);
+
+    LOGGER.debug("Received hello from CAVES, proceeding with cluster setup.");
+
+    Map<String, Object> response = controlServer.startTesting(testId, "java-sdk");
+    String connstr = (String) response.get("connstr");
+    List<String> mgmtAddrs = (List<String>) response.get("mgmt_addrs");
+
+    LOGGER.info("CAVES connection string is {}", connstr);
+
+    List<UnresolvedSocket> mgmtSockets = mgmtAddrs.stream().flatMap(s -> parseHosts(s).stream()).collect(Collectors.toList());
+
+    String host = mgmtSockets.get(0).hostname;
+    int port = mgmtSockets.get(0).port;
+
+    Request.Builder builder = new Request.Builder()
+      .header(AUTHORIZATION, Credentials.basic(USERNAME, PASSWORD));
+
+    String rawConfig = getRawConfig(builder, host, port);
+    ClusterVersion clusterVersion = getGetClusterVersionResponse(builder, host, port);
+
+    return new TestClusterConfig(
+      BUCKET_NAME,
+      USERNAME,
+      PASSWORD,
+      nodesFromRaw(host, rawConfig),
+      replicasFromRaw(rawConfig),
+      Optional.empty(),
+      capabilitiesFromRaw(rawConfig, clusterVersion),
+      clusterVersion,
+      false
+    );
+  }
+
+  @NotNull
+  private ClusterVersion getGetClusterVersionResponse(Request.Builder builderWithAuthorisation, String host, int port) throws IOException {
+    Response getClusterVersionResponse = httpClient.newCall(builderWithAuthorisation
+      .url(String.format(BASE_URL_PATTERN, host, port, POOLS_URL))
+      .build())
+      .execute();
+    return parseClusterVersion(getClusterVersionResponse);
+  }
+
+  @NotNull
+  private String getRawConfig(Request.Builder builderWithAuthorisation, String host, int port) throws IOException {
+    Request authorization = builderWithAuthorisation
+      .url(String.format(BASE_URL_PATTERN, host, port, AUTH_URL))
+      .build();
+    return httpClient.newCall(authorization).execute().body().string();
+  }
+
+  @NotNull
+  private Path getCavesBinary() throws IOException {
     DetectedOs os = detectOs();
-    String binaryName;
-    switch (os) {
-      case Macos:
-        binaryName = "gocaves-macos";
-        break;
-      case Windows:
-        binaryName = "gocaves-windows.exe";
-        break;
-      default:
-        binaryName = "gocaves-linux";
+    String binaryName = "gocaves-linux";
+    if (OS_TO_BINARY_NAME.containsKey(os)) {
+      binaryName = OS_TO_BINARY_NAME.get(os);
     }
 
     String cavesVersion = properties.getProperty("cluster.caves.version", CAVES_VERSION);
@@ -98,75 +175,28 @@ public class CavesTestCluster extends TestCluster {
     String binaryWithVersion = binaryName + "-" + cavesVersion;
     Path binPath = Paths.get(tmpDir, binaryWithVersion);
 
-    if (!Files.exists(binPath)) {
-      LOGGER.info("CAVES binary with path {} does not exist, downloading...", binPath);
-      LOGGER.debug("Downloading from {}", downloadUrl);
-
-      Request request = new Request.Builder().url(downloadUrl).build();
-      Response response = httpClient.newCall(request).execute();
-
-      InputStream inputStream = response.body().byteStream();
-      Files.copy(inputStream, binPath);
-      response.body().close();
-
-      Set<PosixFilePermission> perms = new HashSet<>();
-      perms.add(PosixFilePermission.OWNER_EXECUTE);
-      Files.setPosixFilePermissions(binPath, perms);
-
-      LOGGER.debug("Completed downloading the CAVES binary");
-    } else {
+    if (Files.exists(binPath)) {
       LOGGER.debug("CAVES binary with path {} already exists, not re-downloading.", binPath);
+      return binPath.toAbsolutePath();
     }
 
-    controlServer.start();
+    LOGGER.info("CAVES binary with path {} does not exist, downloading...", binPath);
+    LOGGER.debug("Downloading from {}", downloadUrl);
 
-    cavesProcess = new CavesProcess(binPath.toAbsolutePath(), controlServer.port());
-    cavesProcess.start();
+    Request request = new Request.Builder().url(downloadUrl).build();
+    Response response = httpClient.newCall(request).execute();
 
-    controlServer.receivedHello().get(10, TimeUnit.SECONDS);
+    InputStream inputStream = response.body().byteStream();
+    Files.copy(inputStream, binPath);
+    response.body().close();
 
-    LOGGER.debug("Received hello from CAVES, proceeding with cluster setup.");
+    Set<PosixFilePermission> perms = new HashSet<>();
+    perms.add(PosixFilePermission.OWNER_EXECUTE);
+    Files.setPosixFilePermissions(binPath, perms);
 
+    LOGGER.debug("Completed downloading the CAVES binary");
 
-    Map<String, Object> response = controlServer.startTesting(testId, "java-sdk");
-    String connstr = (String) response.get("connstr");
-    List<String> mgmtAddrs = (List<String>) response.get("mgmt_addrs");
-
-    LOGGER.info("CAVES connection string is {}", connstr);
-
-    List<UnresolvedSocket> mgmtSockets = mgmtAddrs.stream().flatMap(s -> parseHosts(s).stream()).collect(Collectors.toList());
-
-    String bucketname = "default";
-    String username = "Administrator";
-    String password = "password";
-
-    Response getResponse = httpClient.newCall(new Request.Builder()
-      .header("Authorization", Credentials.basic(username, password))
-      .url("http://" + mgmtSockets.get(0).hostname + ":" + mgmtSockets.get(0).port + "/pools/default/b/" + bucketname)
-      .build())
-      .execute();
-
-    String raw = getResponse.body().string();
-
-    Response getClusterVersionResponse = httpClient.newCall(new Request.Builder()
-      .header("Authorization", Credentials.basic(username, password))
-      .url("http://" + mgmtSockets.get(0).hostname + ":" + mgmtSockets.get(0).port + "/pools")
-      .build())
-      .execute();
-
-    ClusterVersion clusterVersion = parseClusterVersion(getClusterVersionResponse);
-
-    return new TestClusterConfig(
-      bucketname,
-      username,
-      password,
-      nodesFromRaw(mgmtSockets.get(0).hostname, raw),
-      replicasFromRaw(raw),
-      Optional.empty(),
-      capabilitiesFromRaw(raw, clusterVersion),
-      clusterVersion,
-      false
-    );
+    return binPath.toAbsolutePath();
   }
 
   public Map<String, Object> endTesting() throws Exception {
@@ -196,11 +226,11 @@ public class CavesTestCluster extends TestCluster {
 
     if (osName.contains("mac")) {
       return DetectedOs.Macos;
-    } else if (osName.contains("win")) {
-      return DetectedOs.Windows;
-    } else {
-      return DetectedOs.Linux;
     }
+    if (osName.contains("win")) {
+      return DetectedOs.Windows;
+    }
+    return DetectedOs.Linux;
   }
 
   enum DetectedOs {
@@ -210,65 +240,80 @@ public class CavesTestCluster extends TestCluster {
   }
 
   private static List<UnresolvedSocket> parseHosts(final String input) {
-    String schemeRemoved = input.replaceAll("\\w+://", "");
-    String usernameRemoved = schemeRemoved.replaceAll(".*@", "");
-    String paramsRemoved = usernameRemoved.replaceAll("\\?.*", "");
-    String[] splitted = paramsRemoved.split(",");
+    String[] splitted = CLEANUP.apply(input).split(",");
 
     List<UnresolvedSocket> hosts = new ArrayList<>();
 
-    Pattern ipv6pattern = Pattern.compile("^\\[(.+)]:(\\d+(=\\w+)?)$");
-    for (int i = 0; i < splitted.length; i++) {
-      String singleHost = splitted[i];
+    for (String singleHost : splitted) {
       if (singleHost == null || singleHost.isEmpty()) {
         continue;
       }
       singleHost = singleHost.trim();
 
-      Matcher matcher = ipv6pattern.matcher(singleHost);
-      if (singleHost.startsWith("[") && singleHost.endsWith("]")) {
+      Matcher matcher = IPV_6_PATTERN.matcher(singleHost);
+      if (isIPv6Address(singleHost)) {
         // this is an ipv6 addr!
         singleHost = singleHost.substring(1, singleHost.length() - 1);
-        hosts.add(new UnresolvedSocket(singleHost, 0, Optional.empty()));
+        hosts.add(createHost(singleHost, 0));
       } else if (matcher.matches()) {
         // this is ipv6 with addr and port!
         String rawPort = matcher.group(2);
+        String host = matcher.group(1);
         if (rawPort.contains("=")) {
           String[] portParts = rawPort.split("=");
-          hosts.add(new UnresolvedSocket(
-            matcher.group(1),
-            Integer.parseInt(portParts[0]),
-            Optional.of(PortType.fromString(portParts[1])))
-          );
+          hosts.add(createHost(host, Integer.parseInt(portParts[0]),
+            Optional.of(PortType.fromString(portParts[1]))));
         } else {
-          hosts.add(new UnresolvedSocket(
-            matcher.group(1),
-            Integer.parseInt(matcher.group(2)),
-            Optional.empty()
-          ));
+          hosts.add(createHost(host, Integer.parseInt(matcher.group(2))));
         }
       } else {
         // either ipv4 or a hostname
         String[] parts = singleHost.split(":");
+        String host = parts[0];
         if (parts.length == 1) {
-          hosts.add(new UnresolvedSocket(parts[0], 0, Optional.empty()));
+          hosts.add(createHost(host, 0));
         } else {
           if (parts[1].contains("=")) {
             // has custom port type
             String[] portParts = parts[1].split("=");
-            hosts.add(new UnresolvedSocket(
-              parts[0],
+            hosts.add(createHost(host,
               Integer.parseInt(portParts[0]),
               Optional.of(PortType.fromString(portParts[1])))
             );
           } else {
             int port = Integer.parseInt(parts[1]);
-            hosts.add(new UnresolvedSocket(parts[0], port, Optional.empty()));
+            hosts.add(createHost(host, port));
           }
         }
       }
     }
     return hosts;
+  }
+
+  private static UnresolvedSocket createHost(String host, int port, Optional<PortType> portType) {
+    return new UnresolvedSocket(host, port, portType);
+  }
+  private static UnresolvedSocket createHost(String host, int port) {
+    return new UnresolvedSocket(host, port, Optional.empty());
+  }
+
+  private static boolean isIPv6Address(String singleHost) {
+    return singleHost.startsWith("[") && singleHost.endsWith("]");
+  }
+
+  @NotNull
+  private static String removeParams(String usernameRemoved) {
+    return usernameRemoved.replaceAll("\\?.*", "");
+  }
+
+  @NotNull
+  private static String removeSchema(String input) {
+    return input.replaceAll("\\w+://", "");
+  }
+
+  @NotNull
+  private static String removeUsername(String schemeRemoved) {
+    return schemeRemoved.replaceAll(".*@", "");
   }
 
   static class UnresolvedSocket {
@@ -306,8 +351,17 @@ public class CavesTestCluster extends TestCluster {
   }
 
   enum PortType {
-    MANAGER,
-    KV;
+    MANAGER("http","manager"),
+    KV("mcd","kv");
+    private final List<String> values;
+
+    PortType(String... values) {
+      this.values = Arrays.asList(values);
+    }
+
+    public List<String> getValues() {
+      return values;
+    }
 
     /**
      * Turn the raw representation into an enum.
@@ -319,13 +373,10 @@ public class CavesTestCluster extends TestCluster {
      * @return the enum if it could be determined.
      */
     static PortType fromString(final String input) {
-      if (input.equalsIgnoreCase("http") || input.equalsIgnoreCase("manager")) {
-        return PortType.MANAGER;
-      } else if (input.equalsIgnoreCase("mcd") || input.equalsIgnoreCase("kv")) {
-        return PortType.KV;
-      } else {
-        throw new RuntimeException("Unsupported port type \"" + input + "\"");
-      }
+      return Arrays.stream(PortType.values())
+        .filter(portType -> portType.getValues().contains(input.toLowerCase()))
+        .findFirst()
+        .orElseThrow(() -> new RuntimeException("Unsupported port type \"" + input + "\""));
     }
   }
 
