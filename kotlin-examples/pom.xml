@@ -98,9 +98,9 @@
             <plugin>
                 <groupId>io.fabric8</groupId>
                 <artifactId>docker-maven-plugin</artifactId>
-                <version>0.40.3</version>
+                <version>0.40.0</version>
                 <configuration>
-                    <imagePullPolicy>never</imagePullPolicy>
+                    <imagePullPolicy>ifNotPresent</imagePullPolicy>
 <!--                    <volumes>-->
 <!--                        <volume>-->
 <!--                            <name>db-data</name>-->
@@ -109,19 +109,47 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>prepare-it-database</id>
+                        <id>start</id>
+                        <phase>pre-integration-test</phase>
                         <goals>
                             <goal>build</goal>
-                            <goal>volume-create</goal>
-                            <goal>start</goal>
                         </goals>
                         <configuration>
                             <images>
                                 <image>
                                     <name>couchbase-test</name>
                                     <build>
+                                        <dockerFile>${project.basedir}/Dockerfile</dockerFile>
                                         <contextDir>${project.basedir}</contextDir>
                                     </build>
+                                </image>
+                            </images>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>prepare-it-database</id>
+                        <goals>
+<!--                            <goal>build</goal>-->
+<!--                            <goal>run</bgoal>-->
+<!--                            <goal>volume-create</goal>-->
+                            <goal>start</goal>
+                        </goals>
+                        <configuration>
+                            <images>
+                                <image>
+                                    <name>couchbase-test</name>
+<!--                                    <build>-->
+
+<!--                                        <from>couchbase:latest</from>-->
+<!--                                        <ports>-->
+<!--                                            <port>8091</port>-->
+<!--                                        </ports>-->
+<!--                                        <assembly>-->
+<!--                                            <name>entrypoint.sh</name>-->
+<!--                                            <targetDir>/entrypoint.sh</targetDir>-->
+<!--                                        </assembly>-->
+<!--                                        <entryPoint>/entrypoint.sh</entryPoint>-->
+<!--                                    </build>-->
                                     <run>
                                         <containerNamePattern>couchbase</containerNamePattern>
                                         <ports>
@@ -149,7 +177,7 @@
                         <id>remove-it-database</id>
                         <goals>
                             <goal>stop</goal>
-                            <goal>volume-remove</goal>
+<!--                            <goal>volume-remove</goal>-->
                         </goals>
                     </execution>
                 </executions>
