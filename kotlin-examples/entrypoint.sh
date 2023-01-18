@@ -28,14 +28,14 @@ couchbase-cli cluster-init -c 127.0.0.1 \
     --cluster-analytics-ramsize 1024 \
     --index-storage-setting default
 
-#echo "Creating bucket"
-#couchbase-cli bucket-create -c 127.0.0.1 \
-#  --username Administrator \
-#  --password password \
-#  --bucket travel-sample \
-#  --bucket-type couchbase \
-#  --bucket-ramsize 100 \
-#  --bucket-replica 1 \
+echo "Creating bucket"
+couchbase-cli bucket-create -c 127.0.0.1 \
+  --username Administrator \
+  --password password \
+  --bucket travel-sample \
+  --bucket-type couchbase \
+  --bucket-ramsize 100 \
+  --bucket-replica 1 \
 
 echo "Enable audit logging"
 couchbase-cli setting-audit -c 127.0.0.1 \

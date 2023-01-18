@@ -13,7 +13,6 @@
     <properties>
         <jdk.version>1.8</jdk.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <exec.mainClass>com.couchbase.client.kotlin.examples.HelloWorld</exec.mainClass>
         <kotlin.version>1.6.20</kotlin.version>
         <kotlin.coroutines.version>1.6.4</kotlin.coroutines.version>
     </properties>
@@ -57,12 +56,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.jetbrains.spek</groupId>
-            <artifactId>spek-api</artifactId>
-            <version>1.1.5</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
             <version>5.9.2</version>
@@ -76,62 +69,11 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.1.0</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <transformers>
-                                <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>${exec.mainClass}</mainClass>
-                                </transformer>
-                                <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                            </transformers>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>1.6.0</version>
-                <configuration>
-                    <executable>java</executable>
-                    <arguments>
-                        <argument>-noverify</argument>
-                        <argument>-XX:TieredStopAtLevel=1</argument>
-                        <argument>-Dcom.sun.management.jmxremote</argument>
-                        <argument>-classpath</argument>
-                        <classpath/>
-                        <argument>${exec.mainClass}</argument>
-                    </arguments>
-                </configuration>
-            </plugin>
-            <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.22.0</version>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.junit.platform</groupId>
-                        <artifactId>junit-platform-surefire-provider</artifactId>
-                        <version>1.1.1</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.junit.jupiter</groupId>
-                        <artifactId>junit-jupiter-engine</artifactId>
-                        <version>5.1.0</version>
-                    </dependency>
-                </dependencies>
                 <configuration>
                     <includes>
-                        <include>${project.basedir}/src/test/kotlin</include>
+                        <include>${project.basedir}/src/integrationTest/kotlin</include>
                     </includes>
                 </configuration>
             </plugin>
@@ -139,6 +81,11 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>3.0.0-M8</version>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                    </includes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
@@ -148,43 +95,30 @@
                     </execution>
                 </executions>
             </plugin>
-<!--            <plugin>-->
-<!--                <groupId>com.spotify</groupId>-->
-<!--                <artifactId>dockerfile-maven-plugin</artifactId>-->
-<!--                <version>1.4.13</version>-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <id>default</id>-->
-<!--                        <goals>-->
-<!--                            <goal>build</goal>-->
-<!--                            <goal>tag</goal>-->
-<!--                            <goal>push</goal>-->
-<!--                        </goals>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--                <configuration>-->
-<!--                    <dockerfile>./Dockerfile</dockerfile>-->
-<!--                    <tag>latest</tag>-->
-<!--                    <buildArgs>-->
-<!--                        <JAR_FILE>${project.build.finalName}.jar</JAR_FILE>-->
-<!--                    </buildArgs>-->
-<!--                </configuration>-->
-<!--            </plugin>-->
             <plugin>
                 <groupId>io.fabric8</groupId>
                 <artifactId>docker-maven-plugin</artifactId>
                 <version>0.40.3</version>
+                <configuration>
+                    <imagePullPolicy>never</imagePullPolicy>
+<!--                    <volumes>-->
+<!--                        <volume>-->
+<!--                            <name>db-data</name>-->
+<!--                        </volume>-->
+<!--                    </volumes>-->
+                </configuration>
                 <executions>
                     <execution>
                         <id>prepare-it-database</id>
                         <goals>
+                            <goal>build</goal>
+                            <goal>volume-create</goal>
                             <goal>start</goal>
                         </goals>
                         <configuration>
                             <images>
                                 <image>
-                                    <name>couchbase</name>
-                                    <alias>db</alias>
+                                    <name>couchbase-test</name>
                                     <build>
                                         <contextDir>${project.basedir}</contextDir>
                                     </build>
@@ -195,24 +129,17 @@
                                             <port>8092:8092</port>
                                             <port>8093:8093</port>
                                             <port>8094:8094</port>
-                                            <port>8095:8095</port>
-                                            <port>8096:8096</port>
-                                            <port>8097:8097</port>
-                                            <port>9123:9123</port>
-                                            <port>11207:11207</port>
                                             <port>11210:11210</port>
                                             <port>11280:11280</port>
-                                            <port>18091:18091</port>
-                                            <port>18092:18092</port>
-                                            <port>18093:18093</port>
-                                            <port>18094:18094</port>
-                                            <port>18095:18095</port>
-                                            <port>18096:18096</port>
-                                            <port>18097:18097</port>
                                         </ports>
                                         <wait>
-                                            <time>300000</time>
+                                            <time>10000</time>
                                         </wait>
+<!--                                        <volumes>-->
+<!--                                            <bind>-->
+<!--                                                <volume>db-data</volume>-->
+<!--                                            </bind>-->
+<!--                                        </volumes>-->
                                     </run>
                                 </image>
                             </images>
@@ -222,6 +149,7 @@
                         <id>remove-it-database</id>
                         <goals>
                             <goal>stop</goal>
+                            <goal>volume-remove</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -237,17 +165,6 @@
                     <jvmTarget>${jdk.version}</jvmTarget>
                 </configuration>
                 <executions>
-<!--                    <execution>-->
-<!--                        <id>kapt</id>-->
-<!--                        <goals>-->
-<!--                            <goal>kapt</goal>-->
-<!--                        </goals>-->
-<!--                        <configuration>-->
-<!--                            <sourceDirs>-->
-<!--                                <sourceDir>src/main/kotlin</sourceDir>-->
-<!--                            </sourceDirs>-->
-<!--                        </configuration>-->
-<!--                    </execution>-->
                     <execution>
                         <id>compile</id>
                         <goals>
@@ -259,17 +176,6 @@
                             </sourceDirs>
                         </configuration>
                     </execution>
-<!--                    <execution>-->
-<!--                        <id>test-kapt</id>-->
-<!--                        <goals>-->
-<!--                            <goal>test-kapt</goal>-->
-<!--                        </goals>-->
-<!--                        <configuration>-->
-<!--                            <sourceDirs>-->
-<!--                                <sourceDir>src/test/kotlin</sourceDir>-->
-<!--                            </sourceDirs>-->
-<!--                        </configuration>-->
-<!--                    </execution>-->
                     <execution>
                         <id>test-compile</id>
                         <goals>
@@ -277,8 +183,7 @@
                         </goals>
                         <configuration>
                             <sourceDirs>
-                                <sourceDir>src/test/kotlin</sourceDir>
-<!--                                <sourceDir>target/generated-sources/kapt/test</sourceDir>-->
+                                <sourceDir>${project.basedir}/src/integrationTest/kotlin</sourceDir>
                             </sourceDirs>
                         </configuration>
                     </execution>
@@ -332,4 +237,29 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <test-source-directory>src/integrationTest/kotlin</test-source-directory>
+                <test-resource-directory>src/integrationTest/resources</test-resource-directory>
+            </properties>
+        </profile>
+        <profile>
+            <id>unit</id>
+            <activation>
+                <property>
+                    <name>unit</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <test-source-directory>src/test/kotlin</test-source-directory>
+                <test-resource-directory>src/test/resources</test-resource-directory>
+            </properties>
+        </profile>
+    </profiles>
 </project>

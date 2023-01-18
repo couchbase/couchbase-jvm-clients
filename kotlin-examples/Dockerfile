@@ -1,4 +1,4 @@
-FROM couchbase/server:latest
+FROM couchbase:latest
 EXPOSE 8091
-COPY ./couchbase-setup.sh /entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
