@@ -20,17 +20,24 @@ package com.couchbase.client.test;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.jetbrains.annotations.NotNull;
+import okhttp3.Credentials;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import okhttp3.Response;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -46,10 +53,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   private static final Logger LOGGER = LoggerFactory.getLogger(TestCluster.class);
   private static final Duration START_TIMEOUT = Duration.ofMinutes(2);
-  private static final TypeReference<HashMap<String, Object>> MAP_STRING_OBJECT =
-    new TypeReference<HashMap<String, Object>>() {};
-
-  protected static final ObjectMapper MAPPER = new ObjectMapper();
   private static final Map<String, Function<Properties, ? extends TestCluster>> CLUSTER_BUILDERS = new HashMap<>();
 
   static {
@@ -58,10 +61,27 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     CLUSTER_BUILDERS.put("unmanaged", props -> new UnmanagedTestCluster(props));
     CLUSTER_BUILDERS.put("caves", props -> new CavesTestCluster(props));
   }
+
   /**
    * The topology spec defined by the child implementations.
    */
   private volatile TestClusterConfig config;
+  protected static final TypeReference<HashMap<String, Object>> MAP_STRING_OBJECT =
+    new TypeReference<HashMap<String, Object>>() {};
+
+  protected static final ObjectMapper MAPPER = new ObjectMapper();
+  protected static final int ACCEPTED = 202;
+  protected static final String AUTH_HEADER = "Authorization";
+  protected static final String POOLS_URL = "/pools";
+  protected static final String POOLS_DEFAULT_URL = POOLS_URL + "/default";
+  protected static final String POOLS_CERTIFICATE_URL = POOLS_DEFAULT_URL + "/certificate";
+  protected static final String AUTH_URL = POOLS_DEFAULT_URL + "/b/";
+  protected static final String BUCKET_URL = POOLS_DEFAULT_URL + "/buckets";
+  protected volatile String bucketname;
+  protected String baseUrl;
+  protected String adminUsername;
+  protected String adminPassword;
+  protected OkHttpClient httpClient;
 
   /**
    * Creates the Test cluster (either managed ur unmanaged).
@@ -260,9 +280,46 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       .forEach(e -> toOverride.setProperty(transformKey(e), e.getValue()));
   }
 
-  @NotNull
   private static String transformKey(Map.Entry<String, String> e) {
     return e.getKey().toLowerCase().replace("_", ".");
+  }
+
+  protected Request.Builder builderWithAuth() {
+    return new Request.Builder()
+      .header(AUTH_HEADER, Credentials.basic(adminUsername, adminPassword));
+  }
+
+  protected String getRawConfig(Request.Builder builderWithAuthorisation) throws IOException {
+    Request authorization = builderWithAuthorisation
+      .url(baseUrl + AUTH_URL + bucketname)
+      .build();
+    return httpClient.newCall(authorization).execute().body().string();
+  }
+
+  protected ClusterVersion getClusterVersionFromServer(Request.Builder builder) throws IOException {
+    Response response = httpClient.newCall(builder
+        .url(baseUrl + POOLS_URL)
+        .build())
+      .execute();
+    return parseClusterVersion(response);
+  }
+
+  protected Optional<List<X509Certificate>> loadClusterCertificate() {
+    try {
+      Response getResponse = httpClient.newCall(builderWithAuth()
+          .url(baseUrl + POOLS_CERTIFICATE_URL)
+          .build())
+        .execute();
+
+      String raw = getResponse.body().string();
+
+      CertificateFactory cf = CertificateFactory.getInstance("X.509");
+      Certificate cert = cf.generateCertificate(new ByteArrayInputStream(raw.getBytes(UTF_8)));
+      return Optional.of(Collections.singletonList((X509Certificate) cert));
+    } catch (Exception ex) {
+      // could not load certificate, maybe add logging? could be CE instance.
+      return Optional.empty();
+    }
   }
 
   /**

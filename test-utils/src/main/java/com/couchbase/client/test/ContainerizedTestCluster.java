@@ -19,28 +19,23 @@ package com.couchbase.client.test;
 // CHECKSTYLE:OFF IllegalImport - Allow unbundled Jackson
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
-import okhttp3.Credentials;
 import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -51,26 +46,19 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * @since 2.0.0
  */
 public class ContainerizedTestCluster extends TestCluster {
-
-  private static final ObjectMapper MAPPER = new ObjectMapper();
-
   private static final Logger LOGGER = LoggerFactory.getLogger(ContainerizedTestCluster.class);
-
-  private final OkHttpClient httpClient = new OkHttpClient.Builder().build();
 
   private final SupportedVersion version;
   private final int numNodes;
-  private final String adminUsername;
-  private final String adminPassword;
-  private volatile String bucketname;
   private final List<CouchbaseContainer> containers = new CopyOnWriteArrayList<>();
-
 
   ContainerizedTestCluster(final Properties properties) {
     version = SupportedVersion.fromString(properties.getProperty("cluster.containerized.version"));
     numNodes = Integer.parseInt(properties.getProperty("cluster.containerized.numNodes"));
     adminUsername = properties.getProperty("cluster.adminUsername");
     adminPassword = properties.getProperty("cluster.adminPassword");
+    this.baseUrl = "http://%s:%s";
+    httpClient = new OkHttpClient.Builder().build();
   }
 
   @Override
@@ -82,52 +70,38 @@ public class ContainerizedTestCluster extends TestCluster {
   TestClusterConfig _start() throws Exception {
     LOGGER.info("Starting Containerized Cluster of {} nodes", numNodes);
     long start = System.nanoTime();
-    for (int i = 0; i < numNodes; i++) {
-      CouchbaseContainer container = new CouchbaseContainer(version);
-      containers.add(container);
-      container.start();
-    }
+    IntStream.range(0, numNodes)
+      .mapToObj(x -> new CouchbaseContainer(version))
+      .peek(GenericContainer::start)
+      .forEach(containers::add);
     long end = System.nanoTime();
     LOGGER.debug("Starting Containerized Cluster took {}s", TimeUnit.NANOSECONDS.toSeconds(end - start));
 
-    String seedHost = containers.get(0).getContainerIpAddress();
-    int seedPort = containers.get(0).getMappedPort(CouchbaseContainer.CouchbasePort.REST);
-
-    initFirstNode(containers.get(0), seedHost, seedPort);
+    CouchbaseContainer firstContainer = containers.get(0);
+    String seedHost = firstContainer.getContainerIpAddress();
+    int seedPort = firstContainer.getMappedPort(CouchbaseContainer.CouchbasePort.REST);
+    this.baseUrl = String.format(baseUrl, seedHost, seedPort);
+    initFirstNode(firstContainer, seedPort);
     // todo: then add all others with services to the cluster
     // todo: then rebalance
 
     bucketname = UUID.randomUUID().toString();
-
-    Response postResponse = httpClient.newCall(new Request.Builder()
-      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-      .url("http://" + seedHost + ":" + seedPort + "/pools/default/buckets")
-      .post(new FormBody.Builder()
-        .add("name", bucketname)
-        .add("ramQuotaMB", "100")
+    Request.Builder builder = builderWithAuth();
+    Response postResponse = httpClient.newCall(builder
+        .url(baseUrl + BUCKET_URL)
+        .post(new FormBody.Builder()
+          .add("name", bucketname)
+          .add("ramQuotaMB", "100")
+          .build())
         .build())
-      .build())
       .execute();
 
-    if (postResponse.code() != 202) {
+    if (postResponse.code() != ACCEPTED) {
       throw new Exception("Could not create bucket: " + postResponse);
     }
 
-    Response getResponse = httpClient.newCall(new Request.Builder()
-      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-      .url("http://" + seedHost + ":" + seedPort + "/pools/default/b/" + bucketname)
-      .build())
-      .execute();
-
-    String raw = getResponse.body().string();
-
-    Response getClusterVersionResponse = httpClient.newCall(new Request.Builder()
-            .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-            .url("http://" + seedHost + ":" + seedPort + "/pools")
-            .build())
-            .execute();
-
-    ClusterVersion clusterVersion = parseClusterVersion(getClusterVersionResponse);
+    String raw = getRawConfig(builder);
+    ClusterVersion clusterVersion = getClusterVersionFromServer(builder);
 
     return new TestClusterConfig(
       bucketname,
@@ -135,32 +109,17 @@ public class ContainerizedTestCluster extends TestCluster {
       adminPassword,
       nodesFromRaw(seedHost, raw),
       replicasFromRaw(raw),
-      loadClusterCertificate(seedHost, seedPort),
+      loadClusterCertificate(),
       capabilitiesFromRaw(raw, clusterVersion),
       clusterVersion,
       false
     );
   }
 
-  private Optional<List<X509Certificate>> loadClusterCertificate(String seedHost, int seedPort) throws Exception {
-    Response getResponse = httpClient.newCall(new Request.Builder()
-      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-      .url("http://" + seedHost + ":" + seedPort + "/pools/default/certificate")
-      .build())
-      .execute();
-
-    String raw = getResponse.body().string();
-
-    CertificateFactory cf = CertificateFactory.getInstance("X.509");
-    Certificate cert = cf.generateCertificate(new ByteArrayInputStream(raw.getBytes(UTF_8)));
-    return Optional.of(Collections.singletonList((X509Certificate) cert));
-  }
-
-
-  private void initFirstNode(CouchbaseContainer container, String seedHost, int seedPort) throws Exception {
-    httpClient.newCall(new Request.Builder()
-      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-      .url("http://" + seedHost + ":" + seedPort + "/pools/default")
+  private void initFirstNode(CouchbaseContainer container, int seedPort) throws Exception {
+    Request.Builder builder = builderWithAuth();
+    httpClient.newCall(builder
+      .url(baseUrl + POOLS_URL)
       .post(new FormBody.Builder()
         .add("memoryQuota", "256")
         .add("indexMemoryQuota", "256")
@@ -168,22 +127,20 @@ public class ContainerizedTestCluster extends TestCluster {
       .build())
       .execute();
 
-    httpClient.newCall(new Request.Builder()
-      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-      .url("http://" + seedHost + ":" + seedPort + "/node/controller/setupServices")
+    httpClient.newCall(builder
+      .url(baseUrl + "/node/controller/setupServices")
       .post(new FormBody.Builder()
         .add("services", "kv,n1ql,index,fts")
         .build())
       .build())
       .execute();
 
-    httpClient.newCall(new Request.Builder()
-      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-      .url("http://" + seedHost + ":" + seedPort + "/settings/web")
+    httpClient.newCall(builder
+        .url(baseUrl + "/settings/web")
       .post(new FormBody.Builder()
         .add("username", adminUsername)
         .add("password", adminPassword)
-        .add("port", "" + seedPort)
+        .add("port", String.valueOf(seedPort))
         .build())
       .build())
       .execute();
@@ -193,7 +150,7 @@ public class ContainerizedTestCluster extends TestCluster {
 
   private HttpWaitStrategy createNodeWaitStrategy() {
     return new HttpWaitStrategy()
-      .forPath("/pools/default/")
+      .forPath(POOLS_URL)
       .withBasicCredentials(adminUsername, adminPassword)
       .forStatusCode(HTTP_OK)
       .forResponsePredicate(response -> {
@@ -215,9 +172,8 @@ public class ContainerizedTestCluster extends TestCluster {
   public void close() {
     LOGGER.info("Stopping Containerized Cluster of {} nodes", containers.size());
     long start = System.nanoTime();
-    for (CouchbaseContainer container : containers) {
-      container.stop();
-    }
+    containers.forEach(CouchbaseContainer::stop);
+
     long end = System.nanoTime();
     LOGGER.debug("Stopping Containerized Cluster took {}s", TimeUnit.NANOSECONDS.toSeconds(end - start));
   }

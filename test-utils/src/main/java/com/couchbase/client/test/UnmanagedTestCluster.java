@@ -18,7 +18,6 @@ package com.couchbase.client.test;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import okhttp3.Credentials;
 import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -28,39 +27,31 @@ import javax.naming.NamingException;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.Certificate;
+import java.security.SecureRandom;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.test.DnsSrvUtil.fromDnsSrv;
-import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 
 public class UnmanagedTestCluster extends TestCluster {
-  private static Logger logger = LoggerFactory.getLogger(UnmanagedTestCluster.class);
-
+  private static final Logger LOGGER = LoggerFactory.getLogger(UnmanagedTestCluster.class);
   private static final int DEFAULT_PROTOSTELLAR_TLS_PORT = 18098;
-
-  private final OkHttpClient httpClient;
   private final String seedHost;
   private final boolean isDnsSrv;
-  private final String adminUsername;
-  private final String adminPassword;
-  private volatile String bucketname;
   private final int numReplicas;
   private final String certsFile;
   private volatile boolean runWithTLS;
@@ -98,48 +89,15 @@ public class UnmanagedTestCluster extends TestCluster {
 
   @Override
   TestClusterConfig _start() throws Exception {
-    if (bucketname.isEmpty()) {
-      bucketname = UUID.randomUUID().toString();
+    Request.Builder builder = builderWithAuth();
+    createOrReuseBucket(builder);
 
-      Response postResponse = httpClient.newCall(new Request.Builder()
-        .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-        .url(baseUrl + "/pools/default/buckets")
-        .post(new FormBody.Builder()
-          .add("name", bucketname)
-          .add("bucketType", "membase")
-          .add("ramQuotaMB", "100")
-          .add("replicaNumber", Integer.toString(numReplicas))
-          .add("flushEnabled", "1")
-          .build())
-        .build())
-        .execute();
+    String raw = getRawConfig(builder);
 
-      if (postResponse.code() != 202) {
-        throw new Exception("Could not create bucket: "
-          + postResponse + ", Reason: "
-          + postResponse.body().string());
-      }
-    }
+    LOGGER.info("Bucket raw results: {}", raw);
 
-    Response getResponse = httpClient.newCall(new Request.Builder()
-      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-      .url(baseUrl + "/pools/default/b/" + bucketname)
-      .build())
-      .execute();
-
-    String raw = getResponse.body().string();
-
-    logger.info("Bucket raw results: {}", raw);
-
-    waitUntilAllNodesHealthy();
-
-    Response getClusterVersionResponse = httpClient.newCall(new Request.Builder()
-      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-      .url(baseUrl + "/pools")
-      .build())
-      .execute();
-
-    ClusterVersion clusterVersion = parseClusterVersion(getClusterVersionResponse);
+    waitUntilAllNodesHealthy(builder);
+    ClusterVersion clusterVersion = getClusterVersionFromServer(builder);
 
     Optional<List<X509Certificate>> certs = loadClusterCertificate();
 
@@ -174,46 +132,51 @@ public class UnmanagedTestCluster extends TestCluster {
     );
   }
 
-  private Optional<List<X509Certificate>> loadClusterCertificate() {
-    try {
-      Response getResponse = httpClient.newCall(new Request.Builder()
-        .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-        .url(baseUrl + "/pools/default/certificate")
+  private void createOrReuseBucket(Request.Builder builder) throws Exception {
+    if (nonNull(bucketname) && !bucketname.isEmpty()) {
+      return;
+    }
+    bucketname = UUID.randomUUID().toString();
+
+    Response postResponse = httpClient.newCall(builder
+        .url(baseUrl + BUCKET_URL)
+        .post(new FormBody.Builder()
+          .add("name", bucketname)
+          .add("bucketType", "membase")
+          .add("ramQuotaMB", "100")
+          .add("replicaNumber", Integer.toString(numReplicas))
+          .add("flushEnabled", "1")
+          .build())
         .build())
-        .execute();
+      .execute();
 
-      String raw = getResponse.body().string();
-
-      CertificateFactory cf = CertificateFactory.getInstance("X.509");
-      Certificate cert = cf.generateCertificate(new ByteArrayInputStream(raw.getBytes(UTF_8)));
-      return Optional.of(Collections.singletonList((X509Certificate) cert));
-    } catch (Exception ex) {
-      // could not load certificate, maybe add logging? could be CE instance.
-      return Optional.empty();
+    if (postResponse.code() != ACCEPTED) {
+      throw new Exception("Could not create bucket: "
+        + postResponse + ", Reason: "
+        + postResponse.body().string());
     }
   }
 
   private Optional<List<X509Certificate>> loadMultipleRootCertsFromFile() {
-    if (certsFile != null) {
-      try (FileInputStream fis = new FileInputStream(certsFile)){
-        List<X509Certificate> certs = new ArrayList<>();
-        CertificateFactory cf = CertificateFactory.getInstance("X.509");
-        Collection certCollection = cf.generateCertificates(fis);
-        certCollection.forEach(c -> certs.add((X509Certificate) c));
-        return Optional.of(certs);
-      } catch (Exception ex) {
-        // Could not load certs
-        return Optional.empty();
-      }
+    if (isNull(certsFile)) {
+      return Optional.empty();
     }
-    return Optional.empty();
+
+    try (FileInputStream fis = new FileInputStream(certsFile)) {
+      return Optional.of(CertificateFactory.getInstance("X.509")
+        .generateCertificates(fis).stream()
+        .map(X509Certificate.class::cast)
+        .collect(Collectors.toList()));
+    } catch (Exception ex) {
+      // Could not load certs
+      return Optional.empty();
+    }
   }
 
-  private void waitUntilAllNodesHealthy() throws Exception {
+  private void waitUntilAllNodesHealthy(Request.Builder builder) throws Exception {
     while(true) {
-      Response getResponse = httpClient.newCall(new Request.Builder()
-        .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-        .url(baseUrl + "/pools/default/")
+      Response getResponse = httpClient.newCall(builder
+        .url(baseUrl + POOLS_URL)
         .build())
         .execute();
 
@@ -221,8 +184,7 @@ public class UnmanagedTestCluster extends TestCluster {
 
       Map<String, Object> decoded;
       try {
-        decoded = (Map<String, Object>)
-          MAPPER.readValue(raw, Map.class);
+        decoded = MAPPER.readValue(raw, MAP_STRING_OBJECT);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -245,9 +207,8 @@ public class UnmanagedTestCluster extends TestCluster {
   @Override
   public void close() {
     try {
-      httpClient.newCall(new Request.Builder()
-        .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-        .url(baseUrl + "/pools/default/buckets/" + bucketname)
+      httpClient.newCall(builderWithAuth()
+        .url(baseUrl + BUCKET_URL + bucketname)
         .delete()
         .build()).execute();
     } catch (Exception ex) {
@@ -256,7 +217,7 @@ public class UnmanagedTestCluster extends TestCluster {
   }
 
   private OkHttpClient setupHttpClient(boolean useTLS) {
-    OkHttpClient.Builder builder =  new OkHttpClient().newBuilder()
+    OkHttpClient.Builder builder = new OkHttpClient().newBuilder()
       .connectTimeout(30, TimeUnit.SECONDS)
       .readTimeout(30, TimeUnit.SECONDS)
       .writeTimeout(30, TimeUnit.SECONDS);
@@ -265,16 +226,16 @@ public class UnmanagedTestCluster extends TestCluster {
     TrustManager[] trustAllCerts = new TrustManager[]{
       new X509TrustManager() {
         @Override
-        public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+        public void checkClientTrusted(X509Certificate[] chain, String authType) {
         }
 
         @Override
-        public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+        public void checkServerTrusted(X509Certificate[] chain, String authType) {
         }
 
         @Override
-        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-          return new java.security.cert.X509Certificate[]{};
+        public X509Certificate[] getAcceptedIssuers() {
+          return new X509Certificate[]{};
         }
       }
     };
@@ -282,12 +243,12 @@ public class UnmanagedTestCluster extends TestCluster {
     if (useTLS) {
       try {
         SSLContext sslContext = SSLContext.getInstance("SSL");
-        sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+        sslContext.init(null, trustAllCerts, new SecureRandom());
         builder
           .sslSocketFactory(sslContext.getSocketFactory(), (X509TrustManager) trustAllCerts[0])
           .hostnameVerifier((hostname, session) -> true);
       } catch (NoSuchAlgorithmException | KeyManagementException e) {
-        logger.warn("Couldn't create secure http/s client, using basic http", e);
+        LOGGER.warn("Couldn't create secure http/s client, using basic http", e);
       }
     }
     return builder.build();
@@ -298,7 +259,7 @@ public class UnmanagedTestCluster extends TestCluster {
       try {
         return fromDnsSrv(seedHost, false, runWithTLS, null).get(0);
       } catch (NamingException e) {
-        logger.warn("Failed to resolve DNS SRV records, attempting to run with seed host", e);
+        LOGGER.warn("Failed to resolve DNS SRV records, attempting to run with seed host", e);
       }
     }
     return seedHost;

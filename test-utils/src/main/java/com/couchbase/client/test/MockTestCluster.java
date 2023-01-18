@@ -25,6 +25,7 @@ import com.couchbase.mock.security.sasl.ShaSaslServerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -76,7 +77,8 @@ public class MockTestCluster extends TestCluster {
     mock.start();
     mock.waitForStartup();
 
-    for (Bucket bucket : mock.getBuckets().values()) {
+    Collection<Bucket> buckets = mock.getBuckets().values();
+    for (Bucket bucket : buckets) {
       for (MemcachedServer server : bucket.getServers()) {
         server.setCccpEnabled(true);
 
@@ -87,7 +89,7 @@ public class MockTestCluster extends TestCluster {
     }
 
     List<TestNodeConfig> nodeConfigs = new ArrayList<>();
-    for (Bucket bucket : mock.getBuckets().values()) {
+    for (Bucket bucket : buckets) {
       for (MemcachedServer server : bucket.getServers()) {
         Map<Services, Integer> ports = new HashMap<>();
         ports.put(Services.KV, server.getPort());
