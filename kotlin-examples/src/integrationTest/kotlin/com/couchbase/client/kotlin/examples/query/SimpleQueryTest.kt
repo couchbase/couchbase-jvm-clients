@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import com.couchbase.client.kotlin.manager.query.QueryIndexManager
 
 class SimpleQueryTest {
 
@@ -22,7 +21,7 @@ class SimpleQueryTest {
         @BeforeAll
         fun setUp() {
             ConnectionUtils.withBucket(TEST_BUCKET) { cluster, bucket ->
-                val manager = cluster.queryIndexes.createPrimaryIndex(Keyspace(TEST_BUCKET))
+                cluster.queryIndexes.createPrimaryIndex(Keyspace(TEST_BUCKET))
                 val collection: Collection = bucket.defaultCollection()
                 collection.upsert(TEST_ID, TEST_CONTENT)
             }
