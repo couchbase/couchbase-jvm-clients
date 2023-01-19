@@ -110,7 +110,7 @@ public class UnmanagedTestCluster extends TestCluster {
     if (isDnsSrv) {
       // Use DNS SRV connection string in tests
       nodeConfigs = new ArrayList<>();
-      nodeConfigs.add(new TestNodeConfig(seedHost, null, true, Optional.empty()));
+      nodeConfigs.add(new TestNodeConfig(seedHost, null, true));
     } else if (isProtostellar) {
       nodeConfigs = new ArrayList<>();
       Map<Services,Integer> ports = Collections.emptyMap();

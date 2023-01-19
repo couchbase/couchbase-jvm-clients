@@ -32,6 +32,10 @@ public class TestNodeConfig {
     this.protostellarPort = protostellarPort;
   }
 
+  public TestNodeConfig(String hostname, Map<Services, Integer> ports, boolean dns) {
+    this(hostname, ports, dns, Optional.empty());
+  }
+
   public String hostname() {
     return hostname;
   }
