@@ -9,3 +9,4 @@ const val TEST_CONTENT = "Airline 10"
 const val NEW_CONTENT = "Airline 11"
 val TEST_KEYSPACE = Keyspace(TEST_BUCKET)
 val TEST_KEYSPACE_INDEX = Keyspace(TEST_BUCKET_INDEX)
+const val SECONDARY_INDEX_NAME = "test-secondary-index"

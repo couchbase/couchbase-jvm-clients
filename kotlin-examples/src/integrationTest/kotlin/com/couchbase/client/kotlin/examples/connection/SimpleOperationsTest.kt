@@ -11,10 +11,13 @@ import com.couchbase.client.kotlin.kv.GetResult
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.api.assertThrows
 
+@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class SimpleOperationsTest {
 
     @Test
@@ -30,8 +33,7 @@ class SimpleOperationsTest {
     @Test
     @Order(2)
     fun `get data from bucket`() {
-        ConnectionUtils.withBucket(TEST_BUCKET) { _, bucket ->
-            val collection: Collection = bucket.defaultCollection()
+        ConnectionUtils.withDefaultCollection(TEST_BUCKET) { _, collection ->
             val result: GetResult = collection.get(TEST_ID)
             val contentAsString = result.contentAs<String>()
             assertTrue(contentAsString.contains(TEST_CONTENT))
@@ -43,8 +45,7 @@ class SimpleOperationsTest {
     @Test
     @Order(3)
     fun `update data in bucket`() {
-        ConnectionUtils.withBucket(TEST_BUCKET) { _, bucket ->
-            val collection: Collection = bucket.defaultCollection()
+        ConnectionUtils.withDefaultCollection(TEST_BUCKET) { _, collection ->
             collection.upsert(TEST_ID, NEW_CONTENT)
             val result: GetResult = collection.get(TEST_ID)
             val contentAsString = result.contentAs<String>()
@@ -57,8 +58,7 @@ class SimpleOperationsTest {
     @Test
     @Order(4)
     fun `delete data from bucket`() {
-        ConnectionUtils.withBucket(TEST_BUCKET) { _, bucket ->
-            val collection: Collection = bucket.defaultCollection()
+        ConnectionUtils.withDefaultCollection(TEST_BUCKET) { _, collection ->
             collection.remove(TEST_ID)
             assertThrows<DocumentNotFoundException> {
                 collection.get(TEST_ID)
