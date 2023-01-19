@@ -6,8 +6,10 @@ import com.couchbase.client.kotlin.examples.util.ConnectionUtils
 import com.couchbase.client.kotlin.examples.util.TEST_BUCKET
 import com.couchbase.client.kotlin.examples.util.TEST_CONTENT
 import com.couchbase.client.kotlin.examples.util.TEST_ID
+import com.couchbase.client.kotlin.examples.util.TEST_KEYSPACE
 import com.couchbase.client.kotlin.query.execute
 import com.google.gson.Gson
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
@@ -21,9 +23,17 @@ class SimpleQueryTest {
         @BeforeAll
         fun setUp() {
             ConnectionUtils.withBucket(TEST_BUCKET) { cluster, bucket ->
-                cluster.queryIndexes.createPrimaryIndex(Keyspace(TEST_BUCKET))
+                cluster.queryIndexes.createPrimaryIndex(TEST_KEYSPACE)
                 val collection: Collection = bucket.defaultCollection()
                 collection.upsert(TEST_ID, TEST_CONTENT)
+            }
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun clear() {
+            ConnectionUtils.withCluster {
+                it.queryIndexes.dropPrimaryIndex(TEST_KEYSPACE)
             }
         }
     }
