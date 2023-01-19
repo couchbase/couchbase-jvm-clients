@@ -43,7 +43,6 @@ import com.couchbase.client.java.kv.LookupInAccessor;
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
-import com.couchbase.client.java.kv.MutateInAccessor;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
@@ -53,7 +52,6 @@ import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.ScanOptions;
 import com.couchbase.client.java.kv.ScanResult;
 import com.couchbase.client.java.kv.ScanType;
-import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.kv.TouchOptions;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertOptions;
@@ -64,6 +62,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
+import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.kv.ExistsOptions.existsOptions;
 import static com.couchbase.client.java.kv.GetAllReplicasOptions.getAllReplicasOptions;
@@ -617,16 +616,24 @@ public class ReactiveCollection {
    */
   public Mono<MutateInResult> mutateIn(final String id, final List<MutateInSpec> specs,
                                        final MutateInOptions options) {
-    return Mono.defer(() -> {
-      notNull(options, "MutateInOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
-      MutateInOptions.Built opts = options.build();
-      Duration timeout = AsyncCollection.decideKvTimeout(opts, environment().timeoutConfig());
+    notNull(options, "MutateInOptions", () -> ReducedKeyValueErrorContext.create(id, async().collectionIdentifier()));
+    notNull(specs, "MutationSpecs", () -> ReducedKeyValueErrorContext.create(id, async().collectionIdentifier()));
 
-      return Mono.fromFuture(asyncCollection.mutateInRequest(id, specs, opts, timeout))
-              .flatMap(request -> Reactor.wrap(request,
-                          MutateInAccessor.mutateIn(core, request, id, opts.persistTo(), opts.replicateTo(), opts.storeSemantics() == StoreSemantics.INSERT, environment().jsonSerializer()),
-                          true));
-    });
+    MutateInOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+    return kvOps.subdocMutateReactive(
+        opts,
+        id,
+        () -> transform(specs, it -> it.toCore(serializer)),
+        opts.storeSemantics().toCore(),
+        opts.cas(),
+        opts.toCoreDurability(),
+        opts.expiry().encode(),
+        opts.preserveExpiry(),
+        opts.accessDeleted(),
+        opts.createAsDeleted()
+      )
+      .map(it -> new MutateInResult(it, serializer));
   }
 
   /**

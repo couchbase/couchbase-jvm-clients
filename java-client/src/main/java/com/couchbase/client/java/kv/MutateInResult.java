@@ -16,16 +16,10 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.msg.kv.MutationToken;
-import com.couchbase.client.core.msg.kv.SubDocumentField;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.TypeRef;
-
-import java.util.NoSuchElementException;
-import java.util.Optional;
-
-import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
 /**
  * This result is returned from successful KeyValue subdocument mutation responses.
@@ -37,23 +31,17 @@ public class MutateInResult extends MutationResult {
   /**
    * Holds the encoded subdoc responses.
    */
-  private final SubDocumentField[] encoded;
+  private final CoreSubdocMutateResult core;
 
   /**
    * The default JSON serializer that should be used.
    */
   private final JsonSerializer serializer;
 
-  /**
-   * Creates a new {@link MutateInResult}.
-   *
-   * @param encoded the encoded subdoc fields.
-   * @param cas the cas of the outer doc.
-   * @param mutationToken the mutation token of the doc, if present.
-   */
-  MutateInResult(final SubDocumentField[] encoded, final long cas, final Optional<MutationToken> mutationToken, JsonSerializer serializer) {
-    super(cas, mutationToken);
-    this.encoded = encoded;
+  @Stability.Internal
+  public MutateInResult(final CoreSubdocMutateResult core, JsonSerializer serializer) {
+    super(core.cas(), core.mutationToken());
+    this.core = core;
     this.serializer = serializer;
   }
 
@@ -88,7 +76,7 @@ public class MutateInResult extends MutationResult {
    * @return the decoded content into the generic type requested.
    */
   public <T> T contentAs(int index, final Class<T> target, final JsonSerializer serializer) {
-    return serializer.deserialize(target, getFieldAtIndex(index).value());
+    return serializer.deserialize(target, core.field(index).value());
   }
 
   /**
@@ -100,47 +88,6 @@ public class MutateInResult extends MutationResult {
    * @return the decoded content into the generic type requested.
    */
   public <T> T contentAs(int index, final TypeRef<T> target, final JsonSerializer serializer) {
-    return serializer.deserialize(target, getFieldAtIndex(index).value());
-  }
-
-  private SubDocumentField getFieldAtIndex(int index) {
-    if (index >= 0 && index < encoded.length) {
-      SubDocumentField value = encoded[index];
-      if (value == null) {
-        throw new NoSuchElementException("No result exists at index " + index);
-      }
-      value.error().map(err -> {
-        throw err;
-      });
-      return value;
-    }
-    else {
-      throw InvalidArgumentException.fromMessage("Index " + index + " is invalid");
-    }
-  }
-
-  @Override
-  public String toString() {
-    return "MutateInResult{" +
-      "encoded=" + redactUser(encoded) +
-      '}';
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
-
-    MutateInResult that = (MutateInResult) o;
-
-    return encoded != null ? encoded.equals(that.encoded) : that.encoded == null;
-  }
-
-  @Override
-  public int hashCode() {
-    int result = super.hashCode();
-    result = 31 * result + (encoded != null ? encoded.hashCode() : 0);
-    return result;
+    return serializer.deserialize(target, core.field(index).value());
   }
 }

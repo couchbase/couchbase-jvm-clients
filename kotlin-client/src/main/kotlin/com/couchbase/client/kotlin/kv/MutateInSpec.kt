@@ -16,11 +16,11 @@
 
 package com.couchbase.client.kotlin.kv
 
+import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand
 import com.couchbase.client.core.error.subdoc.PathExistsException
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.msg.kv.CodecFlags.JSON_COMPAT_FLAGS
 import com.couchbase.client.core.msg.kv.SubdocCommandType
-import com.couchbase.client.core.msg.kv.SubdocMutateRequest
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.TypeRef
@@ -48,20 +48,18 @@ public class MutateInSpec {
         private val xattr: Boolean,
         private val fragment: T,
         private val fragmentType: TypeRef<T>,
-        private val index: Int,
         private val createParent: Boolean?,
         private val arrayElementType: TypeRef<*>?,
     ) {
-        internal fun encode(defaultCreateParent: Boolean, serializer: JsonSerializer): SubdocMutateRequest.Command {
+        internal fun encode(defaultCreateParent: Boolean, serializer: JsonSerializer): CoreSubdocMutateCommand {
             if (fragment is MutateInMacro) {
-                return SubdocMutateRequest.Command(
+                return CoreSubdocMutateCommand(
                     type,
                     path,
                     serializer.serialize(fragment.value, typeRef()),
                     createParent ?: defaultCreateParent,
                     true, // macro implies xattr
-                    true,
-                    index
+                    true
                 )
             }
 
@@ -74,14 +72,13 @@ public class MutateInSpec {
                 else -> serializer.serialize(fragment, fragmentType)
             }
 
-            return SubdocMutateRequest.Command(
+            return CoreSubdocMutateCommand(
                 type,
                 path,
                 fragmentBytes,
                 createParent ?: defaultCreateParent,
                 xattr,
-                false,
-                index
+                false
             )
         }
     }
@@ -103,7 +100,7 @@ public class MutateInSpec {
         arrayElementType: TypeRef<*>? = null,
     ) {
         checkNotExecuted()
-        commands.add(Command(type, path, xattr, fragment, fragmentType, commands.size, createParent, arrayElementType))
+        commands.add(Command(type, path, xattr, fragment, fragmentType, createParent, arrayElementType))
     }
 
     /**

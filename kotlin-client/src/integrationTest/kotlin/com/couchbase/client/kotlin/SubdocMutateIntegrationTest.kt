@@ -20,6 +20,7 @@ import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.error.subdoc.PathExistsException
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
 import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException
+import com.couchbase.client.core.msg.kv.SubdocMutateRequest.SUBDOC_MAX_FIELDS
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.LookupInSpec
 import com.couchbase.client.kotlin.kv.MutateInMacro
@@ -28,8 +29,8 @@ import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.insert
 import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.upsert
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.test.Capabilities
-import com.couchbase.client.test.ClusterType.MOCKED
 import com.couchbase.client.test.ClusterType.CAVES
+import com.couchbase.client.test.ClusterType.MOCKED
 import com.couchbase.client.test.IgnoreWhen
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -68,6 +69,17 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
     @Test
     fun `no commands`(): Unit = runBlocking {
         assertThrows<IllegalArgumentException> { collection.mutateIn(nextId(), MutateInSpec()) }
+    }
+
+    @Test
+    fun `too many commands`(): Unit = runBlocking {
+        assertThrows<IllegalArgumentException> {
+            collection.mutateIn(nextId()) {
+                repeat(SUBDOC_MAX_FIELDS + 1) {
+                    upsert("foo", "bar")
+                }
+            }
+        }
     }
 
     @Test

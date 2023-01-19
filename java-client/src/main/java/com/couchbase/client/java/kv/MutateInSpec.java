@@ -17,7 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
+import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.java.codec.JsonSerializer;
 
 import java.util.List;
@@ -38,13 +38,12 @@ public abstract class MutateInSpec {
      * Internal operation called from the encoding side that encodes the spec into its internal representation.
      *
      * @param serializer the serializer that should be used.
-     * @param originalIndex the original index of the command.
      * @return the encoded command.
      */
     @Stability.Internal
-    public abstract SubdocMutateRequest.Command encode(JsonSerializer serializer, int originalIndex);
+    public abstract CoreSubdocMutateCommand toCore(JsonSerializer serializer);
 
-    /**
+  /**
      * Creates a spec with the intention of replacing an existing value in a JSON document.
      * <p>
      * If the path is empty (""), then the value will be used for the document's full body. Will

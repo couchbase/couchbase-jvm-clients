@@ -15,8 +15,8 @@
  */
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
-import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.java.codec.JsonSerializer;
 
@@ -43,15 +43,15 @@ public class Remove extends MutateInSpec {
         return this;
     }
 
-    public SubdocMutateRequest.Command encode(final JsonSerializer defaultSerializer, int originalIndex) {
-        return new SubdocMutateRequest.Command(
+    @Override
+    public CoreSubdocMutateCommand toCore(JsonSerializer serializer) {
+        return new CoreSubdocMutateCommand(
                 path.isEmpty() ? SubdocCommandType.DELETE_DOC : SubdocCommandType.DELETE,
                 path,
                 Bytes.EMPTY_BYTE_ARRAY,
                 false,
                 xattr,
-                false,
-                originalIndex
+                false
         );
     }
 }

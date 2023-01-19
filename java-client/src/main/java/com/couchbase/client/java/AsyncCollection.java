@@ -21,10 +21,8 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvOps;
-import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -39,7 +37,6 @@ import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.kv.ReplicaHelper;
-import com.couchbase.client.core.util.BucketConfigUtil;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -59,7 +56,6 @@ import com.couchbase.client.java.kv.LookupInAccessor;
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
-import com.couchbase.client.java.kv.MutateInAccessor;
 import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
@@ -72,7 +68,6 @@ import com.couchbase.client.java.kv.SamplingScan;
 import com.couchbase.client.java.kv.ScanOptions;
 import com.couchbase.client.java.kv.ScanResult;
 import com.couchbase.client.java.kv.ScanType;
-import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.kv.TouchOptions;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertOptions;
@@ -88,6 +83,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_EXISTS_OPTIONS;
@@ -709,18 +705,23 @@ public class AsyncCollection {
                                                     final List<MutateInSpec> specs,
                                                     final MutateInOptions options) {
     notNull(options, "MutateInOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(specs, "MutationSpecs", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+
     MutateInOptions.Built opts = options.build();
-    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
-    return mutateInRequest(id, specs, opts, timeout)
-            .thenCompose(request -> MutateInAccessor.mutateIn(
-                      core,
-                      request,
-                      id,
-                      opts.persistTo(),
-                      opts.replicateTo(),
-                      opts.storeSemantics() == StoreSemantics.INSERT,
-                      environment.jsonSerializer()
-              ));
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+
+    return kvOps.subdocMutateAsync(
+      opts,
+      id,
+      () -> transform(specs, it -> it.toCore(serializer)),
+      opts.storeSemantics().toCore(),
+      opts.cas(),
+      opts.toCoreDurability(),
+      opts.expiry().encode(),
+      opts.preserveExpiry(),
+      opts.accessDeleted(),
+      opts.createAsDeleted()
+    ).thenApply(it -> new MutateInResult(it, serializer));
   }
 
 
@@ -796,78 +797,6 @@ public class AsyncCollection {
     return coreScanStream.map(item -> new ScanResult(opts.idsOnly(), item.key(), item.value(), item.flags(),
       item.cas(), Optional.ofNullable(item.expiry()), transcoder)
     );
-  }
-
-  /**
-   * Helper method to create the underlying subdoc mutate request.
-   *
-   * @param id the outer document ID.
-   * @param specs the spec which specifies the type of mutations to perform.
-   * @param opts custom options to modify the mutation options.
-   * @return the subdoc mutate request.
-   */
-  CompletableFuture<SubdocMutateRequest> mutateInRequest(final String id, final List<MutateInSpec> specs,
-                                                         final MutateInOptions.Built opts, final Duration timeout) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNullOrEmpty(specs, "MutateInSpecs", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-
-    if (specs.isEmpty()) {
-      throw SubdocMutateRequest.errIfNoCommands(ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    } else if (specs.size() > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
-      throw SubdocMutateRequest.errIfTooManyCommands(ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    }
-
-    final boolean requiresBucketConfig = opts.createAsDeleted() || opts.storeSemantics() == StoreSemantics.REVIVE ;
-    CompletableFuture<BucketConfig> bucketConfigFuture;
-
-    if (requiresBucketConfig) {
-      bucketConfigFuture = BucketConfigUtil.waitForBucketConfig(core, bucketName(), timeout).toFuture();
-    }
-    else {
-      // Nothing will be using the bucket config so just provide null
-      bucketConfigFuture = CompletableFuture.completedFuture(null);
-    }
-
-    return bucketConfigFuture.thenCompose(bucketConfig -> {
-        RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-        JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
-
-        final RequestSpan span = environment
-          .requestTracer()
-          .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN, opts.parentSpan().orElse(null));
-
-        ArrayList<SubdocMutateRequest.Command> commands = new ArrayList<>(specs.size());
-
-      final RequestSpan encodeSpan = CbTracing.newSpan(coreContext, TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
-      long start = System.nanoTime();
-
-      try {
-          for (int i = 0; i < specs.size(); i++) {
-            MutateInSpec spec = specs.get(i);
-            commands.add(spec.encode(serializer, i));
-          }
-        } finally {
-          encodeSpan.end();
-        }
-      long end = System.nanoTime();
-
-      // xattrs come first
-      commands.sort(Comparator.comparing(v -> !v.xattr()));
-
-      long expiry = opts.expiry().encode();
-      SubdocMutateRequest request = new SubdocMutateRequest(timeout, coreContext, collectionIdentifier, bucketConfig, retryStrategy, id,
-          opts.storeSemantics() == StoreSemantics.INSERT, opts.storeSemantics() == StoreSemantics.UPSERT,
-              opts.storeSemantics() == StoreSemantics.REVIVE,
-          opts.accessDeleted(), opts.createAsDeleted(), commands, expiry, opts.preserveExpiry(), opts.cas(),
-          opts.durabilityLevel(), span
-        );
-        request.context()
-          .clientContext(opts.clientContext())
-          .encodeLatency(end - start);
-        final CompletableFuture<SubdocMutateRequest> future = new CompletableFuture<>();
-        future.complete(request);
-        return future;
-    });
   }
 
   /**

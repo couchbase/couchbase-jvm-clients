@@ -25,6 +25,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.core.api.kv.CoreStoreSemantics.REPLACE;
+import static com.couchbase.client.core.api.kv.CoreStoreSemantics.REVIVE;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
@@ -82,6 +84,14 @@ public class CoreKvParamValidators {
 
   public static void validateGetAnyReplicaParams(CoreCommonOptions common, String key) {
     validateCommonOptions(common, key);
+  }
+
+  public static void validateSubdocMutateParams(CoreCommonOptions common, String key, CoreStoreSemantics storeSemantics, long cas) {
+    validateCommonOptions(common, key);
+    if (cas != 0 && (storeSemantics != REPLACE && storeSemantics != REVIVE)) {
+      // Not mentioning REVIVE in the user-facing error message, since it's internal API.
+      throw InvalidArgumentException.fromMessage("A non-zero CAS value requires \"replace\" store semantics.");
+    }
   }
 
   private static void validateCommonOptions(CoreCommonOptions common, String key) {

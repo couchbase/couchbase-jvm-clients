@@ -16,18 +16,34 @@
 
 package com.couchbase.client.kotlin.kv
 
+import com.couchbase.client.core.api.kv.CoreStoreSemantics
+import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.insert
+import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.replace
+import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.upsert
 
 /**
  * Describes how the outer document store semantics on subdoc should act.
+ *
+ * Create instances using the [insert], [upsert], and [replace] companion
+ * factory methods.
  */
 public sealed class StoreSemantics {
+    internal abstract fun toCore(): CoreStoreSemantics
+
     public class Replace internal constructor(
         public val cas: Long,
         public val createParent: Boolean,
-    ) : StoreSemantics()
+    ) : StoreSemantics() {
+        override fun toCore() = CoreStoreSemantics.REPLACE
+    }
 
-    public object Upsert : StoreSemantics()
-    public object Insert : StoreSemantics()
+    public object Upsert : StoreSemantics() {
+        override fun toCore() = CoreStoreSemantics.UPSERT
+    }
+
+    public object Insert : StoreSemantics() {
+        override fun toCore() = CoreStoreSemantics.INSERT
+    }
 
     public companion object {
         private val ReplaceNoCasCreateParent = Replace(0, true)

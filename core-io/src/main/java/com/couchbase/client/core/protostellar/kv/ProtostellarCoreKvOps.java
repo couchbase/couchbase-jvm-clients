@@ -26,6 +26,9 @@ import com.couchbase.client.core.api.kv.CoreExistsResult;
 import com.couchbase.client.core.api.kv.CoreGetResult;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.api.kv.CoreMutationResult;
+import com.couchbase.client.core.api.kv.CoreStoreSemantics;
+import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
+import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.protostellar.CoreProtostellarAccessors;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
@@ -36,7 +39,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.function.Supplier;
 
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.convertTimeout;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateSubdocMutateParams;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.existsRequest;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.getAndLockRequest;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.getAndTouchRequest;
@@ -138,7 +141,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
       (endpoint) -> endpoint.kvStub().withDeadline(request.deadline()).insert(request.request()),
       (response) -> CoreProtostellarKeyValueResponses.convertResponse(keyspace, key, response));
   }
-  
+
   @Override
   public CoreMutationResult upsertBlocking(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, long expiry, boolean preserveExpiry) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.UpsertRequest> request = upsertRequest(core, keyspace, common, key, content, durability, expiry, preserveExpiry);
@@ -274,6 +277,14 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   @Override
   public Mono<CoreGetResult> getAnyReplicaReactive(CoreCommonOptions common, String key) {
     // Protostellar get-from-replica support is currently incomplete.
+    throw unsupported();
+  }
+
+  @Override
+  public CoreAsyncResponse<CoreSubdocMutateResult> subdocMutateAsync(CoreCommonOptions common, String key, Supplier<List<CoreSubdocMutateCommand>> commands, CoreStoreSemantics storeSemantics, long cas, CoreDurability durability, long expiry, boolean preserveExpiry, boolean accessDeleted, boolean createAsDeleted) {
+    validateSubdocMutateParams(common, key, storeSemantics, cas);
+
+    // Protostellar mutate-in support is currently incomplete.
     throw unsupported();
   }
 

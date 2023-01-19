@@ -304,4 +304,68 @@ public interface CoreKvOps {
       String key
   );
 
+  CoreAsyncResponse<CoreSubdocMutateResult> subdocMutateAsync(
+      CoreCommonOptions common,
+      String key,
+      Supplier<List<CoreSubdocMutateCommand>> commands,
+      CoreStoreSemantics storeSemantics,
+      long cas,
+      CoreDurability durability,
+      long expiry,
+      boolean preserveExpiry,
+      boolean accessDeleted,
+      boolean createAsDeleted
+  );
+
+  default CoreSubdocMutateResult subdocMutateBlocking(
+      CoreCommonOptions common,
+      String key,
+      Supplier<List<CoreSubdocMutateCommand>> commands,
+      CoreStoreSemantics storeSemantics,
+      long cas,
+      CoreDurability durability,
+      long expiry,
+      boolean preserveExpiry,
+      boolean accessDeleted,
+      boolean createAsDeleted
+  ) {
+    return subdocMutateAsync(
+        common,
+        key,
+        commands,
+        storeSemantics,
+        cas,
+        durability,
+        expiry,
+        preserveExpiry,
+        accessDeleted,
+        createAsDeleted
+    ).toBlocking();
+  }
+
+  default Mono<CoreSubdocMutateResult> subdocMutateReactive(
+      CoreCommonOptions common,
+      String key,
+      Supplier<List<CoreSubdocMutateCommand>> commands,
+      CoreStoreSemantics storeSemantics,
+      long cas,
+      CoreDurability durability,
+      long expiry,
+      boolean preserveExpiry,
+      boolean accessDeleted,
+      boolean createAsDeleted
+  ) {
+    return Mono.defer(() -> subdocMutateAsync(
+        common,
+        key,
+        commands,
+        storeSemantics,
+        cas,
+        durability,
+        expiry,
+        preserveExpiry,
+        accessDeleted,
+        createAsDeleted
+    ).toMono());
+  }
 }

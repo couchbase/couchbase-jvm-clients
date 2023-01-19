@@ -17,6 +17,8 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.api.kv.CoreStoreSemantics;
+import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.config.BucketCapabilities;
@@ -44,9 +46,14 @@ import com.couchbase.client.core.util.Bytes;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
+import static com.couchbase.client.core.api.kv.CoreStoreSemantics.INSERT;
+import static com.couchbase.client.core.api.kv.CoreStoreSemantics.REVIVE;
+import static com.couchbase.client.core.api.kv.CoreStoreSemantics.UPSERT;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Status;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
@@ -60,6 +67,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFle
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Comparator.comparing;
 
 public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateResponse> implements SyncDurabilityRequest {
 
@@ -75,6 +83,8 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
   public static final int SUBDOC_MAX_FIELDS = 16;
 
+  private static final Comparator<Command> xattrsFirst = comparing(it -> !it.xattr());
+
   private final byte flags;
   private final long expiration;
   private final boolean preserveExpiry;
@@ -86,7 +96,48 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   private final boolean insertDocument;
 
   public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
-                             final BucketConfig bucketConfig, final RetryStrategy retryStrategy, final String key,
+                             @Nullable final BucketConfig bucketConfig, final RetryStrategy retryStrategy, final String key,
+                             final CoreStoreSemantics storeSemantics,
+                             final boolean accessDeleted, final boolean createAsDeleted,
+                             final List<CoreSubdocMutateCommand> commands, long expiration,
+                             boolean preserveExpiry,
+                             long cas,
+                             final Optional<DurabilityLevel> syncReplicationType, final RequestSpan span) {
+    this(
+      timeout, ctx, collectionIdentifier, bucketConfig, retryStrategy, key,
+      storeSemantics == INSERT, storeSemantics == UPSERT, storeSemantics == REVIVE,
+      accessDeleted, createAsDeleted,
+      convertCommands(commands),
+      expiration, preserveExpiry, cas, syncReplicationType, span
+    );
+  }
+
+  private static List<Command> convertCommands(List<CoreSubdocMutateCommand> commands) {
+    List<SubdocMutateRequest.Command> result = new ArrayList<>(commands.size());
+    for (int i = 0, len = commands.size(); i < len; i++) {
+      CoreSubdocMutateCommand core = commands.get(i);
+      result.add(new SubdocMutateRequest.Command(
+        core.type(),
+        core.path(),
+        core.fragment(),
+        core.createParent(),
+        core.xattr(),
+        core.expandMacro(),
+        i
+      ));
+    }
+
+    // xattrs must come first. decode() puts the results back in original order.
+    result.sort(xattrsFirst);
+    return result;
+  }
+
+  /**
+   * @deprecated Please use the other constructor instead.
+   */
+  @Deprecated
+  public SubdocMutateRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
+                             @Nullable final BucketConfig bucketConfig, final RetryStrategy retryStrategy, final String key,
                              final boolean insertDocument, final boolean upsertDocument, final boolean reviveDocument,
                              final boolean accessDeleted, final boolean createAsDeleted,
                              final List<Command> commands, long expiration,
@@ -97,15 +148,19 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     this.insertDocument = insertDocument;
     byte flags = 0;
 
-    if (createAsDeleted) {
-      if (!bucketConfig.bucketCapabilities().contains(BucketCapabilities.CREATE_AS_DELETED)) {
-        throw new FeatureNotAvailableException("Cannot use createAsDeleted Sub-Document flag, as it is not supported by this version of the cluster");
+    // If caller provided a bucket config, do a pre-flight check. Otherwise, caller is responsible for
+    // converting the server's INVALID_REQUEST error into something more helpful.
+    if (bucketConfig != null) {
+      if (createAsDeleted) {
+        if (!bucketConfig.bucketCapabilities().contains(BucketCapabilities.CREATE_AS_DELETED)) {
+          throw new FeatureNotAvailableException("Cannot use createAsDeleted Sub-Document flag, as it is not supported by this version of the cluster");
+        }
       }
-    }
 
-    if (reviveDocument) {
-      if (!bucketConfig.bucketCapabilities().contains(BucketCapabilities.SUBDOC_REVIVE_DOCUMENT)) {
+      if (reviveDocument) {
+        if (!bucketConfig.bucketCapabilities().contains(BucketCapabilities.SUBDOC_REVIVE_DOCUMENT)) {
           throw new FeatureNotAvailableException("Cannot use ReviveDocument Sub-Document flag, as it is not supported by this version of the cluster");
+        }
       }
     }
 
@@ -308,19 +363,11 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   }
 
   public static InvalidArgumentException errIfNoCommands(ErrorContext errorContext) {
-    return new InvalidArgumentException(
-      "Argument validation failed",
-      InvalidArgumentException.fromMessage("No SubDocument commands provided"),
-      errorContext
-    );
+    return new InvalidArgumentException("At least one sub-document operation must be provided.", null, errorContext);
   }
 
   public static InvalidArgumentException errIfTooManyCommands(ErrorContext errorContext) {
-    return new InvalidArgumentException(
-      "Argument validation failed",
-      InvalidArgumentException.fromMessage("A maximum of " + SubdocMutateRequest.SUBDOC_MAX_FIELDS + " fields can be provided"),
-      errorContext
-    );
+    return new InvalidArgumentException("A maximum of " + SubdocMutateRequest.SUBDOC_MAX_FIELDS + " sub-document operations can be provided.", null, errorContext);
   }
 
   public boolean insertDocument() {

@@ -42,8 +42,8 @@ import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.kv.ReplaceBodyWithXattr;
+import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
@@ -1170,16 +1170,15 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     @IgnoreWhen(hasCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
     @Test
     void reviveDocumentOnClusterThatDoesNotSupportIt() {
-        try {
-            coll.mutateIn("request-is-not-sent", Collections.singletonList(
-                            upsert("foo", "bar").xattr()),
-                    MutateInOptions.mutateInOptions()
-                            .accessDeleted(true)
-                            .storeSemantics(StoreSemantics.REVIVE));
-            fail();
-        }
-        catch (FeatureNotAvailableException ignored) {
-        }
+        assertThrows(FeatureNotAvailableException.class, () ->
+            coll.mutateIn(
+                docId(),
+                listOf(upsert("foo", "bar").xattr()),
+                MutateInOptions.mutateInOptions()
+                    .accessDeleted(true)
+                    .storeSemantics(StoreSemantics.REVIVE)
+            )
+        );
     }
 
     @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})

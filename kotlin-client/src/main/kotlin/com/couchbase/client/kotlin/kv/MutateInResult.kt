@@ -16,30 +16,19 @@
 
 package com.couchbase.client.kotlin.kv
 
-import com.couchbase.client.core.msg.kv.MutationToken
-import com.couchbase.client.core.msg.kv.SubDocumentField
+import com.couchbase.client.core.api.kv.CoreSubdocMutateResult
 import com.couchbase.client.kotlin.internal.toStringUtf8
 
 public class MutateInResult(
-    private val size: Int,
-    private val fields: List<SubDocumentField?>,
-    cas: Long,
-    mutationToken: MutationToken?,
+    private val core: CoreSubdocMutateResult,
     private val spec: MutateInSpec,
-) : MutationResult(cas, mutationToken) {
+) : MutationResult(core.cas(), core.mutationToken().orElse(null)) {
 
     public val SubdocLong.value: Long get() = content(this).toStringUtf8().toLong()
 
-    internal fun get(index: Int): SubDocumentField {
-        checkIndex(index, 0 until size)
-        val field = fields[index] ?: throw NoSuchElementException("No subdoc value at index $index")
-        field.error().map { throw it }
-        return field
-    }
-
     internal fun content(subdoc: SubdocLong): ByteArray {
         checkSpec(subdoc.spec)
-        return get(subdoc.index).value()
+        return core.field(subdoc.index).value()
     }
 
     private fun checkSpec(spec: MutateInSpec) {

@@ -16,8 +16,8 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
-import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.java.codec.JsonSerializer;
 
 /**
@@ -56,15 +56,15 @@ public class Increment extends MutateInSpec {
         return this;
     }
 
-    public SubdocMutateRequest.Command encode(final JsonSerializer serializer, int originalIndex) {
-        return new SubdocMutateRequest.Command(
+    @Override
+    public CoreSubdocMutateCommand toCore(JsonSerializer serializer) {
+        return new CoreSubdocMutateCommand(
                 SubdocCommandType.COUNTER,
                 path,
                 serializer.serialize(delta),
                 createPath,
                 xattr,
-                false,
-                originalIndex
+                false
         );
     }
 }

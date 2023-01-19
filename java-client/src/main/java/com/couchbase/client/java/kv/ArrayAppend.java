@@ -16,8 +16,8 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
-import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.java.codec.JsonSerializer;
 
 import java.util.List;
@@ -59,15 +59,15 @@ public class ArrayAppend extends MutateInSpec {
         return this;
     }
 
-    public SubdocMutateRequest.Command encode(final JsonSerializer serializer, int originalIndex) {
-        return new SubdocMutateRequest.Command(
+    @Override
+    public CoreSubdocMutateCommand toCore(final JsonSerializer serializer) {
+        return new CoreSubdocMutateCommand(
             SubdocCommandType.ARRAY_PUSH_LAST,
             path,
             MutateInUtil.convertDocsToBytes(doc, serializer),
             createPath,
             xattr,
-            expandMacro,
-            originalIndex
+            expandMacro
         );
     }
 }

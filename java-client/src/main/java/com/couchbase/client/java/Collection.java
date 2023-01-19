@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvOps;
+import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentExistsException;
@@ -26,6 +27,7 @@ import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.datastructures.CouchbaseArrayList;
 import com.couchbase.client.java.datastructures.CouchbaseArraySet;
@@ -70,6 +72,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_EXISTS_OPTIONS;
@@ -78,6 +81,7 @@ import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_LOCK_
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_TOUCH_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_INSERT_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_MUTATE_IN_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_REMOVE_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_REPLACE_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_TOUCH_OPTIONS;
@@ -654,7 +658,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutateInResult mutateIn(final String id, final List<MutateInSpec> specs) {
-    return block(async().mutateIn(id, specs));
+    return mutateIn(id, specs, DEFAULT_MUTATE_IN_OPTIONS);
   }
 
   /**
@@ -670,7 +674,25 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutateInResult mutateIn(final String id, final List<MutateInSpec> specs, final MutateInOptions options) {
-    return block(async().mutateIn(id, specs, options));
+    notNull(options, "MutateInOptions", () -> ReducedKeyValueErrorContext.create(id, async().collectionIdentifier()));
+    notNull(specs, "MutationSpecs", () -> ReducedKeyValueErrorContext.create(id, async().collectionIdentifier()));
+
+    MutateInOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+    CoreSubdocMutateResult coreResult = kvOps.subdocMutateBlocking(
+      opts,
+      id,
+      () -> transform(specs, it -> it.toCore(serializer)),
+      opts.storeSemantics().toCore(),
+      opts.cas(),
+      opts.toCoreDurability(),
+      opts.expiry().encode(),
+      opts.preserveExpiry(),
+      opts.accessDeleted(),
+      opts.createAsDeleted()
+    );
+
+    return new MutateInResult(coreResult, serializer);
   }
 
   /**

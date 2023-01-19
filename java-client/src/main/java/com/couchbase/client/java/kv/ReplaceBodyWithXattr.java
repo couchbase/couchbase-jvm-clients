@@ -17,29 +17,30 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
+import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
+import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.java.codec.JsonSerializer;
 
 import static com.couchbase.client.core.msg.kv.SubdocCommandType.REPLACE_BODY_WITH_XATTR;
 
 @Stability.Internal
 public class ReplaceBodyWithXattr extends MutateInSpec {
-    private static final byte[] FRAGMENT = new byte[]{};
+    private static final byte[] FRAGMENT = Bytes.EMPTY_BYTE_ARRAY;
     private final String src;
 
     public ReplaceBodyWithXattr(String src) {
         this.src = src;
     }
 
-    public SubdocMutateRequest.Command encode(final JsonSerializer serializer, int originalIndex) {
-        return new SubdocMutateRequest.Command(
+    @Override
+    public CoreSubdocMutateCommand toCore(final JsonSerializer serializer) {
+        return new CoreSubdocMutateCommand(
                 REPLACE_BODY_WITH_XATTR,
                 src,
                 FRAGMENT,
                 false,
                 true,
-                false,
-                originalIndex
+                false
         );
     }
 }

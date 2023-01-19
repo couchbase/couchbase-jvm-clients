@@ -29,16 +29,21 @@ import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.api.kv.CoreKvResponseMetadata;
 import com.couchbase.client.core.api.kv.CoreLookupInMacro;
 import com.couchbase.client.core.api.kv.CoreMutationResult;
+import com.couchbase.client.core.api.kv.CoreStoreSemantics;
+import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
+import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
 import com.couchbase.client.core.classic.ClassicHelper;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.config.BucketCapabilities;
+import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
-import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -56,6 +61,7 @@ import com.couchbase.client.core.msg.kv.SubDocumentField;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
+import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.msg.kv.TouchRequest;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.msg.kv.UpsertRequest;
@@ -68,8 +74,10 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -84,19 +92,23 @@ import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGet
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateInsertParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateRemoveParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateReplaceParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateSubdocMutateParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateTouchParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateUnlockParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateUpsertParams;
+import static com.couchbase.client.core.api.kv.CoreStoreSemantics.INSERT;
+import static com.couchbase.client.core.api.kv.CoreStoreSemantics.REVIVE;
 import static com.couchbase.client.core.classic.ClassicHelper.maybeWrapWithLegacyDurability;
 import static com.couchbase.client.core.classic.ClassicHelper.setClientContext;
+import static com.couchbase.client.core.config.BucketCapabilities.CREATE_AS_DELETED;
+import static com.couchbase.client.core.config.BucketCapabilities.SUBDOC_REVIVE_DOCUMENT;
 import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
 import static com.couchbase.client.core.msg.ResponseStatus.EXISTS;
+import static com.couchbase.client.core.msg.ResponseStatus.INVALID_REQUEST;
 import static com.couchbase.client.core.msg.ResponseStatus.LOCKED;
 import static com.couchbase.client.core.msg.ResponseStatus.NOT_FOUND;
 import static com.couchbase.client.core.msg.ResponseStatus.NOT_STORED;
 import static com.couchbase.client.core.msg.ResponseStatus.SUBDOC_FAILURE;
-import static com.couchbase.client.core.util.Validators.notNull;
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
@@ -667,6 +679,85 @@ public final class ClassicCoreKvOps implements CoreKvOps {
     return getAllReplicasReactive(common.withParentSpan(getAnySpan), key)
         .next()
         .doFinally(signalType -> getAnySpan.end());
+  }
+
+  @Override
+  public CoreAsyncResponse<CoreSubdocMutateResult> subdocMutateAsync(
+      CoreCommonOptions common,
+      String key,
+      Supplier<List<CoreSubdocMutateCommand>> commands,
+      CoreStoreSemantics storeSemantics,
+      long cas,
+      CoreDurability durability,
+      long expiry,
+      boolean preserveExpiry,
+      boolean accessDeleted,
+      boolean createAsDeleted
+  ) {
+    validateSubdocMutateParams(common, key, storeSemantics, cas);
+    Duration timeout = timeout(common, durability);
+    RetryStrategy retryStrategy = retryStrategy(common);
+
+    RequestSpan span = span(common, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN);
+
+    final RequestSpan encodeSpan = span(span, TracingIdentifiers.SPAN_REQUEST_ENCODING);
+    long encodingStartNanos = System.nanoTime();
+    List<CoreSubdocMutateCommand> encodedCommands;
+    try {
+      encodedCommands = commands.get();
+    } finally {
+      encodeSpan.end();
+    }
+    long encodingEndNanos = System.nanoTime();
+
+    if (encodedCommands.isEmpty()) {
+      throw SubdocMutateRequest.errIfNoCommands(ReducedKeyValueErrorContext.create(key, collectionIdentifier));
+    } else if (encodedCommands.size() > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
+      throw SubdocMutateRequest.errIfTooManyCommands(ReducedKeyValueErrorContext.create(key, collectionIdentifier));
+    }
+
+    BucketConfig bucketConfig = null; // skip the pre-flight capability check
+
+    SubdocMutateRequest request = new SubdocMutateRequest(
+        timeout, ctx, collectionIdentifier, bucketConfig, retryStrategy, key,
+        storeSemantics,
+        accessDeleted, createAsDeleted, encodedCommands, expiry, preserveExpiry, cas,
+        durability.levelIfSynchronous(), span
+    );
+
+    request.context()
+        .clientContext(common.clientContext())
+        .encodeLatency(encodingEndNanos - encodingStartNanos);
+
+    CompletableFuture<CoreSubdocMutateResult> future = executeWithoutMarkingComplete(
+        request,
+        (req, res) -> {
+          if (createAsDeleted || storeSemantics == REVIVE) {
+            // Bucket config guaranteed to be non-null, since the request was successfully dispatched.
+            Set<BucketCapabilities> capabilities = core.clusterConfig().bucketConfig(keyspace.bucket()).bucketCapabilities();
+            if (storeSemantics == REVIVE && !capabilities.contains(SUBDOC_REVIVE_DOCUMENT)) {
+              throw new FeatureNotAvailableException("This cluster version does not support 'Revive' store semantics.");
+            }
+            if (createAsDeleted && !capabilities.contains(CREATE_AS_DELETED)) {
+              throw new FeatureNotAvailableException("This cluster version does not support 'Create as deleted'.");
+            }
+          }
+          throw res.throwError(request, storeSemantics == INSERT);
+        },
+        it -> new CoreSubdocMutateResult(
+            keyspace,
+            key,
+            CoreKvResponseMetadata.from(it.flexibleExtras()),
+            it.cas(),
+            it.mutationToken(),
+            Arrays.asList(it.values())
+        )
+    );
+
+    future = maybeWrapWithLegacyDurability(future, key, durability, core, request)
+        .whenComplete((response, failure) -> markComplete(request, failure));
+
+    return ClassicHelper.newAsyncResponse(request, future);
   }
 
   private <T extends BaseResponse, R> CompletableFuture<R> execute(

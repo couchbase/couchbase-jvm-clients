@@ -16,8 +16,8 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
-import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.java.codec.JsonSerializer;
 
 /**
@@ -64,15 +64,15 @@ public class Upsert extends MutateInSpec {
         return this;
     }
 
-  public SubdocMutateRequest.Command encode(final JsonSerializer serializer, int originalIndex) {
-    return new SubdocMutateRequest.Command(
-      SubdocCommandType.DICT_UPSERT,
+    @Override
+    public CoreSubdocMutateCommand toCore(final JsonSerializer serializer) {
+      return new CoreSubdocMutateCommand(
+        SubdocCommandType.DICT_UPSERT,
         path,
         serializer.serialize(doc),
         createPath,
         xattr,
-        expandMacro,
-        originalIndex
+        expandMacro
     );
   }
 }

@@ -27,15 +27,13 @@ import com.couchbase.client.core.error.DefaultErrorUtil
 import com.couchbase.client.core.error.DocumentExistsException
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.error.DocumentUnretrievableException
-import com.couchbase.client.core.error.context.KeyValueErrorContext.completedRequest
+import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.kv.CoreRangeScanItem
 import com.couchbase.client.core.kv.RangeScanOrchestrator
 import com.couchbase.client.core.msg.Request
 import com.couchbase.client.core.msg.Response
-import com.couchbase.client.core.msg.ResponseStatus.EXISTS
-import com.couchbase.client.core.msg.ResponseStatus.NOT_STORED
 import com.couchbase.client.core.msg.ResponseStatus.SUBDOC_FAILURE
 import com.couchbase.client.core.msg.kv.KeyValueRequest
 import com.couchbase.client.core.msg.kv.MutationToken
@@ -49,7 +47,6 @@ import com.couchbase.client.kotlin.codec.TypeRef
 import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.env.env
-import com.couchbase.client.kotlin.internal.isAnyOf
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.internal.toSaturatedInt
 import com.couchbase.client.kotlin.internal.toStringUtf8
@@ -70,8 +67,6 @@ import com.couchbase.client.kotlin.kv.MutationResult
 import com.couchbase.client.kotlin.kv.ScanSort
 import com.couchbase.client.kotlin.kv.ScanType
 import com.couchbase.client.kotlin.kv.StoreSemantics
-import com.couchbase.client.kotlin.kv.internal.levelIfSynchronous
-import com.couchbase.client.kotlin.kv.internal.observe
 import com.couchbase.client.kotlin.util.StorageSize
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -664,58 +659,28 @@ public class Collection internal constructor(
         accessDeleted: Boolean = false,
         createAsDeleted: Boolean = false,
     ): MutateInResult {
-        require(spec.commands.isNotEmpty()) { "Must specify at least one mutation" }
-        require(spec.commands.size <= 16) { "Must specify no more than 16 mutations" }
         spec.checkNotExecuted()
         spec.executed = true
 
         val defaultCreateParent = (storeSemantics as? StoreSemantics.Replace)?.createParent ?: true
-        val encodedCommands = spec.commands.map { it.encode(defaultCreateParent, serializer ?: defaultJsonSerializer) }
-        val timeout = common.actualKvTimeout(durability)
-
-        val request = SubdocMutateRequest(
-            timeout,
-            core.context(),
-            collectionId,
-            if (createAsDeleted) scope.bucket.config(timeout.toKotlinDuration()) else null,
-            common.actualRetryStrategy(),
-            id,
-            storeSemantics == StoreSemantics.Insert,
-            storeSemantics == StoreSemantics.Upsert,
-            false,
-            accessDeleted,
-            createAsDeleted,
-            encodedCommands.sortedBy { !it.xattr() }, // xattr commands must come first
-            expiry.encode(),
-            preserveExpiry,
-            (storeSemantics as? StoreSemantics.Replace)?.cas ?: 0L,
-            durability.levelIfSynchronous(),
-            common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN),
-        )
+        val cas: Long = (storeSemantics as? StoreSemantics.Replace)?.cas ?: 0L
+        val actualSerializer = serializer ?: defaultJsonSerializer
 
         try {
-            core.exec(request, common).let { response ->
-                if (response.status().success()) {
-                    if (durability is Durability.ClientVerified) {
-                        observe(request, id, durability, response.cas(), response.mutationToken())
-                    }
-                    return MutateInResult(
-                        spec.commands.size,
-                        response.values().toList(),
-                        response.cas(),
-                        response.mutationToken().orElse(null),
-                        spec,
-                    )
-                }
+            val coreResult = kvOps.subdocMutateAsync(
+                common.toCore(),
+                id,
+                { spec.commands.map { it.encode(defaultCreateParent, actualSerializer) } },
+                storeSemantics.toCore(),
+                cas,
+                durability.toCore(),
+                expiry.encode(),
+                preserveExpiry, accessDeleted, createAsDeleted
+            ).await()
 
-                if (storeSemantics == StoreSemantics.Insert && response.status().isAnyOf(EXISTS, NOT_STORED)) {
-                    throw DocumentExistsException(completedRequest(request, response))
-                }
-                if (response.status() == SUBDOC_FAILURE) response.error().map { throw it }
-                throw DefaultErrorUtil.keyValueStatusToException(request, response)
-            }
-        } finally {
-            request.logicallyComplete()
+            return MutateInResult(coreResult, spec)
+        } catch (e: InvalidArgumentException) {
+            throw IllegalArgumentException(e.message, e)
         }
     }
 
