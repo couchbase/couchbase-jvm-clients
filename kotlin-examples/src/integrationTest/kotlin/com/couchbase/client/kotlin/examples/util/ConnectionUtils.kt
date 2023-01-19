@@ -6,10 +6,12 @@ import kotlinx.coroutines.runBlocking
 
 class ConnectionUtils {
     companion object {
+        @JvmStatic
         fun getCluster(): Cluster {
             return Cluster.connect("couchbase://127.0.0.1", "Administrator", "password")
         }
 
+        @JvmStatic
         fun withCluster(block: suspend (Cluster) -> Unit) {
             runBlocking {
                 val cluster = getCluster()
@@ -21,6 +23,7 @@ class ConnectionUtils {
             }
         }
 
+        @JvmStatic
         fun withBucket(bucketName: String, block: suspend (Cluster, Bucket) -> Unit) {
             withCluster { cluster ->
                 val bucket = cluster.bucket(bucketName)
