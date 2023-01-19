@@ -8,14 +8,12 @@ import com.couchbase.client.kotlin.examples.util.TEST_ID
 import com.couchbase.client.kotlin.examples.util.TEST_KEYSPACE
 import com.couchbase.client.kotlin.query.execute
 import com.google.gson.Gson
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-@ExperimentalCoroutinesApi
 class SimpleQueryTest {
 
     private val gson = Gson()
