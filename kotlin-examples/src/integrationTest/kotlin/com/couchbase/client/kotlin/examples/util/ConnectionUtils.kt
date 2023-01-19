@@ -31,6 +31,14 @@ class ConnectionUtils {
             }
         }
 
+        @JvmStatic
+        fun withDefaultCollection(bucketName: String, block: suspend (Cluster, com.couchbase.client.kotlin.Collection) -> Unit) {
+            withBucket(bucketName) { cluster, bucket ->
+                val collection = bucket.defaultCollection()
+                block(cluster, collection)
+            }
+        }
+
     }
 
 }
