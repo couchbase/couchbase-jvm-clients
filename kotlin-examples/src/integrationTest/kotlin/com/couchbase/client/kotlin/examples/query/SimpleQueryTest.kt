@@ -1,6 +1,7 @@
 package com.couchbase.client.kotlin.examples.query
 
 import com.couchbase.client.kotlin.Collection
+import com.couchbase.client.kotlin.Keyspace
 import com.couchbase.client.kotlin.examples.util.ConnectionUtils
 import com.couchbase.client.kotlin.examples.util.TEST_BUCKET
 import com.couchbase.client.kotlin.examples.util.TEST_CONTENT
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import com.couchbase.client.kotlin.manager.query.QueryIndexManager
 
 class SimpleQueryTest {
 
@@ -19,8 +21,8 @@ class SimpleQueryTest {
         @JvmStatic
         @BeforeAll
         fun setUp() {
-            ConnectionUtils
-            ConnectionUtils.withBucket(TEST_BUCKET) { _, bucket ->
+            ConnectionUtils.withBucket(TEST_BUCKET) { cluster, bucket ->
+                val manager = cluster.queryIndexes.createPrimaryIndex(Keyspace(TEST_BUCKET))
                 val collection: Collection = bucket.defaultCollection()
                 collection.upsert(TEST_ID, TEST_CONTENT)
             }
