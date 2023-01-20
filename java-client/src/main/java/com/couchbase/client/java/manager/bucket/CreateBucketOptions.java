@@ -20,12 +20,20 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
 public class CreateBucketOptions extends CommonOptions<CreateBucketOptions> {
-
+  private boolean ignoreIfExists;
   public static CreateBucketOptions createBucketOptions() {
     return new CreateBucketOptions();
   }
 
   private CreateBucketOptions() {
+  }
+
+  /**
+   * If the bucket exists, an exception will be thrown unless this is set to true.
+   */
+  public CreateBucketOptions ignoreIfExists(boolean ignore) {
+    this.ignoreIfExists = ignore;
+    return this;
   }
 
   @Stability.Internal
@@ -35,5 +43,8 @@ public class CreateBucketOptions extends CommonOptions<CreateBucketOptions> {
 
   public class Built extends BuiltCommonOptions {
     Built() { }
+    public boolean ignoreIfExists() {
+      return ignoreIfExists;
+    }
   }
 }

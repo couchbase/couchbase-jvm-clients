@@ -20,14 +20,20 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.CommonOptions;
 
 public class DropBucketOptions extends CommonOptions<DropBucketOptions> {
-
+  private boolean ignoreIfNotExists;
   public static DropBucketOptions dropBucketOptions() {
     return new DropBucketOptions();
   }
 
   private DropBucketOptions() {
   }
-
+  /**
+   * If the bucket exists, an exception will be thrown unless this is set to true.
+   */
+  public DropBucketOptions ignoreIfNotExists(boolean ignore) {
+    this.ignoreIfNotExists = ignore;
+    return this;
+  }
   @Stability.Internal
   public Built build() {
     return new Built();
@@ -35,5 +41,8 @@ public class DropBucketOptions extends CommonOptions<DropBucketOptions> {
 
   public class Built extends BuiltCommonOptions {
     Built() { }
+    public boolean ignoreIfNotExists() {
+      return ignoreIfNotExists;
+    }
   }
 }

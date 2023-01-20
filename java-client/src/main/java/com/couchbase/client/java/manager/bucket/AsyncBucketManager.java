@@ -33,6 +33,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import static com.couchbase.client.core.util.CbCollections.transformValues;
+import static com.couchbase.client.core.util.CbThrowables.hasCause;
+import static com.couchbase.client.core.util.CbThrowables.throwIfUnchecked;
 import static com.couchbase.client.java.manager.bucket.BucketType.MEMCACHED;
 import static com.couchbase.client.java.manager.bucket.CreateBucketOptions.createBucketOptions;
 import static com.couchbase.client.java.manager.bucket.DropBucketOptions.dropBucketOptions;
@@ -98,7 +100,16 @@ public class AsyncBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> createBucket(final BucketSettings settings, final CreateBucketOptions options) {
-    return coreBucketManager.createBucket(toMap(settings), options.build());
+    CreateBucketOptions.Built bltOptions = options.build();
+
+    CompletableFuture<Void> result = coreBucketManager.createBucket(toMap(settings), bltOptions);
+    return result.exceptionally(t -> {
+      if (bltOptions.ignoreIfExists() && hasCause(t, BucketExistsException.class)) {
+        return null;
+      }
+      throwIfUnchecked(t);
+      throw new CouchbaseException(t.getMessage(), t);
+    });
   }
 
   /**
@@ -176,7 +187,15 @@ public class AsyncBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> dropBucket(final String bucketName, final DropBucketOptions options) {
-    return coreBucketManager.dropBucket(bucketName, options.build());
+    DropBucketOptions.Built bltOptions = options.build();
+    return coreBucketManager.dropBucket(bucketName, bltOptions)
+      .exceptionally(t -> {
+        if (bltOptions.ignoreIfNotExists() && hasCause(t, BucketNotFoundException.class)) {
+          return null;
+        }
+        throwIfUnchecked(t);
+        throw new CouchbaseException(t.getMessage(), t);
+      });
   }
 
   /**
