@@ -219,6 +219,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void verifyTouchExceptions() {
     assertThrows(InvalidArgumentException.class, () -> collection.touch("foo", null));
     assertThrows(InvalidArgumentException.class, () -> collection.touch(null, Duration.ofSeconds(1), null));
@@ -232,6 +233,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void verifyUnlockExceptions() {
     assertThrows(InvalidArgumentException.class, () -> collection.unlock(null, 0));
     assertThrows(InvalidArgumentException.class, () -> collection.unlock("foo", 0));
@@ -286,6 +288,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void verifyGetAllReplicasExceptions() {
     assertThrows(InvalidArgumentException.class, () -> collection.getAllReplicas(null));
     assertThrows(InvalidArgumentException.class, () -> collection.getAllReplicas("foo", null));

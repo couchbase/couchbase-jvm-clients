@@ -225,7 +225,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
     });
   }
 
-  // This is probably superfluous since ConsistencyUtil.waitUntilCollectionPresent.
+  // This also checks maxTTL, while ConsistencyUtil.waitUntilCollectionPresent only checks the name
   protected static boolean collectionExists(CollectionManager collectionManager, CollectionSpec spec) {
     try {
       List<ScopeSpec> scopeList = collectionManager.getAllScopes();

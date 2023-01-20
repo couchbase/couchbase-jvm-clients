@@ -85,6 +85,10 @@ public class CoreProtostellarUtil {
     return Deadline.after(timeout.toMillis(), TimeUnit.MILLISECONDS);
   }
 
+  public static Duration managementTimeout(Optional<Duration> customTimeout, Core core) {
+    return customTimeout.orElse(core.context().environment().timeoutConfig().managementTimeout());
+  }
+
   public static int convertToFlags(DocumentContentType contentType) {
     int flags = 0;
     switch (contentType) {

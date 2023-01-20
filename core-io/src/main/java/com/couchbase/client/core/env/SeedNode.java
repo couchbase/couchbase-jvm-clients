@@ -81,7 +81,7 @@ public class SeedNode {
                                 final Optional<Integer> clusterManagerPort) {
     return new SeedNode(address, kvPort, clusterManagerPort, Optional.empty());
   }
-
+  
   private SeedNode(final String address,
                    final Optional<Integer> kvPort,
                    final Optional<Integer> clusterManagerPort,

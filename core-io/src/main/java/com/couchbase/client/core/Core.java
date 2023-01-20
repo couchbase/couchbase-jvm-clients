@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.callbacks.BeforeSendRequestCallback;
 import com.couchbase.client.core.classic.kv.ClassicCoreKvOps;
+import com.couchbase.client.core.classic.manager.ClassicCoreCollectionManagerOps;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -56,6 +57,7 @@ import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
+import com.couchbase.client.core.manager.CoreCollectionManager;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
@@ -69,6 +71,7 @@ import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
+import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
@@ -1033,6 +1036,13 @@ public class Core implements AutoCloseable {
     return isProtostellar()
       ? new ProtostellarCoreKvOps(this, keyspace)
       : new ClassicCoreKvOps(this, keyspace);
+  }
+
+  @Stability.Internal
+  public CoreCollectionManager collectionManager(String bucketName) {
+    return isProtostellar()
+      ? new ProtostellarCoreCollectionManagerOps(this, bucketName)
+      : new ClassicCoreCollectionManagerOps(this, bucketName);
   }
 
   @Stability.Internal

@@ -41,6 +41,7 @@ import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.protostellar.ProtostellarStatsCollector;
 import com.couchbase.client.core.util.HostAndPort;
+import com.couchbase.client.protostellar.admin.collection.v1.CollectionAdminGrpc;
 import com.couchbase.client.protostellar.analytics.v1.AnalyticsGrpc;
 import com.couchbase.client.protostellar.internal.hooks.v1.HooksGrpc;
 import com.couchbase.client.protostellar.kv.v1.KvGrpc;
@@ -76,6 +77,7 @@ public class ProtostellarEndpoint {
   private final AnalyticsGrpc.AnalyticsStub analyticsStub;
   private final QueryGrpc.QueryStub queryStub;
   private final HooksGrpc.HooksBlockingStub hooksBlockingStub;
+  private final CollectionAdminGrpc.CollectionAdminFutureStub collectionAdminStub;
   private final String hostname;
   private final int port;
   private final Core core;
@@ -195,6 +197,7 @@ public class ProtostellarEndpoint {
     analyticsStub = AnalyticsGrpc.newStub(managedChannel).withCallCredentials(creds);
     queryStub = QueryGrpc.newStub(managedChannel).withCallCredentials(creds);
     hooksBlockingStub = HooksGrpc.newBlockingStub(managedChannel).withCallCredentials(creds);
+    collectionAdminStub = CollectionAdminGrpc.newFutureStub(managedChannel).withCallCredentials(creds);
   }
 
   private ManagedChannel channel() {
@@ -324,6 +327,10 @@ public class ProtostellarEndpoint {
 
   public HooksGrpc.HooksBlockingStub hooksBlockingStub() {
     return hooksBlockingStub;
+  }
+
+  public CollectionAdminGrpc.CollectionAdminFutureStub collectionAdminStub() {
+    return collectionAdminStub;
   }
 
   /**

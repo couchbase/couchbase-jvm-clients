@@ -18,12 +18,14 @@ package com.couchbase.client.java.manager.collection;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.classic.manager.ClassicCoreCollectionManagerOps;
 import com.couchbase.client.core.error.CollectionExistsException;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.manager.CoreCollectionManager;
+import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
 import com.couchbase.client.java.AsyncBucket;
 
 import java.time.Duration;
@@ -63,8 +65,8 @@ public class AsyncCollectionManager {
    */
   @Stability.Internal
   public AsyncCollectionManager(final Core core, final String bucketName) {
-    this.coreCollectionManager = new CoreCollectionManager(core, bucketName);
-  }
+      this.coreCollectionManager = core.collectionManager(bucketName);
+   }
 
   /**
    * Creates a collection if it does not already exist.
@@ -94,13 +96,9 @@ public class AsyncCollectionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> createCollection(final CollectionSpec collectionSpec,
-                                                  final CreateCollectionOptions options) {
-    return coreCollectionManager.createCollection(
-        collectionSpec.scopeName(),
-        collectionSpec.name(),
-        collectionSpec.maxExpiry(),
-        options.build()
-    );
+      final CreateCollectionOptions options) {
+    return coreCollectionManager.createCollection(collectionSpec.scopeName(), collectionSpec.name(),
+        collectionSpec.maxExpiry(), options.build());
   }
 
   /**
@@ -152,7 +150,7 @@ public class AsyncCollectionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> dropCollection(final CollectionSpec collectionSpec,
-                                                final DropCollectionOptions options) {
+      final DropCollectionOptions options) {
     return coreCollectionManager.dropCollection(collectionSpec.scopeName(), collectionSpec.name(), options.build());
   }
 
@@ -246,14 +244,11 @@ public class AsyncCollectionManager {
     return coreCollectionManager.getAllScopes(options.build())
         // Note that because ns_server returns a different manifest format, we need to do some munching to
         // turn this into the same collections manifest format for sanity.
-        .thenApply(manifest ->
-            manifest.scopes().stream()
-                .map(s -> ScopeSpec.create(
-                    s.name(),
-                    s.collections().stream()
-                        .map(c -> CollectionSpec.create(c.name(), s.name(), Duration.ofSeconds(c.maxExpiry())))
-                        .collect(Collectors.toSet()))
-                )
-                .collect(Collectors.toList()));
+        .thenApply(manifest -> manifest.scopes().stream()
+            .map(s -> ScopeSpec.create(s.name(),
+                s.collections().stream()
+                    .map(c -> CollectionSpec.create(c.name(), s.name(), Duration.ofSeconds(c.maxExpiry())))
+                    .collect(Collectors.toSet())))
+            .collect(Collectors.toList()));
   }
 }
