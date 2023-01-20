@@ -17,16 +17,15 @@
 package com.couchbase.client.java.manager.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonDropOptions;
 
 import java.util.Optional;
 
 /**
  * Customizes how an index is dropped.
  */
-public class DropIndexAnalyticsOptions extends CommonOptions<DropIndexAnalyticsOptions> {
+public class DropIndexAnalyticsOptions extends CommonDropOptions<DropIndexAnalyticsOptions> {
 
-  private boolean ignoreIfNotExists;
   private Optional<String> dataverseName = Optional.empty();
 
   private DropIndexAnalyticsOptions() {}
@@ -38,17 +37,6 @@ public class DropIndexAnalyticsOptions extends CommonOptions<DropIndexAnalyticsO
    */
   public static DropIndexAnalyticsOptions dropIndexAnalyticsOptions() {
     return new DropIndexAnalyticsOptions();
-  }
-
-  /**
-   * Ignore the drop operation if the index does not exist.
-   *
-   * @param ignore if true no exception will be thrown if the index does not exist.
-   * @return this {@link DropIndexAnalyticsOptions} for chaining purposes.
-   */
-  public DropIndexAnalyticsOptions ignoreIfNotExists(final boolean ignore) {
-    this.ignoreIfNotExists = ignore;
-    return this;
   }
 
   /**
@@ -67,13 +55,9 @@ public class DropIndexAnalyticsOptions extends CommonOptions<DropIndexAnalyticsO
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltDropOptions {
 
     Built() { }
-
-    public boolean ignoreIfNotExists() {
-      return ignoreIfNotExists;
-    }
 
     public Optional<String> dataverseName() {
       return dataverseName;

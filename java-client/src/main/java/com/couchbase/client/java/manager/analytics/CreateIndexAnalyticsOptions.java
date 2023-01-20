@@ -17,16 +17,15 @@
 package com.couchbase.client.java.manager.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonCreateOptions;
 
 import java.util.Optional;
 
 /**
  * Customizes how an index is created.
  */
-public class CreateIndexAnalyticsOptions extends CommonOptions<CreateIndexAnalyticsOptions> {
+public class CreateIndexAnalyticsOptions extends CommonCreateOptions<CreateIndexAnalyticsOptions> {
 
-  private boolean ignoreIfExists;
   private Optional<String> dataverseName = Optional.empty();
 
   private CreateIndexAnalyticsOptions() {
@@ -39,17 +38,6 @@ public class CreateIndexAnalyticsOptions extends CommonOptions<CreateIndexAnalyt
    */
   public static CreateIndexAnalyticsOptions createIndexAnalyticsOptions() {
     return new CreateIndexAnalyticsOptions();
-  }
-
-  /**
-   * Ignore the create operation if the index exists.
-   *
-   * @param ignore if true no exception will be thrown if the index already exists.
-   * @return this {@link CreateIndexAnalyticsOptions} for chaining purposes.
-   */
-  public CreateIndexAnalyticsOptions ignoreIfExists(final boolean ignore) {
-    this.ignoreIfExists = ignore;
-    return this;
   }
 
   /**
@@ -68,13 +56,9 @@ public class CreateIndexAnalyticsOptions extends CommonOptions<CreateIndexAnalyt
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltCreateOptions {
 
     Built() { }
-
-    public boolean ignoreIfExists() {
-      return ignoreIfExists;
-    }
 
     public Optional<String> dataverseName() {
       return dataverseName;

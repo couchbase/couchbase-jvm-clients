@@ -17,14 +17,12 @@
 package com.couchbase.client.java.manager.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonDropOptions;
 
 /**
  * Allows customizing how an analytics dataverse is dropped.
  */
-public class DropDataverseAnalyticsOptions extends CommonOptions<DropDataverseAnalyticsOptions> {
-
-  private boolean ignoreIfNotExists;
+public class DropDataverseAnalyticsOptions extends CommonDropOptions<DropDataverseAnalyticsOptions> {
 
   private DropDataverseAnalyticsOptions() {
   }
@@ -38,26 +36,12 @@ public class DropDataverseAnalyticsOptions extends CommonOptions<DropDataverseAn
     return new DropDataverseAnalyticsOptions();
   }
 
-  /**
-   * Customizes if a non-existing dataverse should throw an exception or not (false by default, so it will throw).
-   *
-   * @param ignore true if no exception should be raised if the dataverse does not exist.
-   * @return this options class for chaining purposes.
-   */
-  public DropDataverseAnalyticsOptions ignoreIfNotExists(final boolean ignore) {
-    this.ignoreIfNotExists = ignore;
-    return this;
-  }
-
   @Stability.Internal
   public Built build() {
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltDropOptions {
     Built() { }
-    public boolean ignoreIfNotExists() {
-      return ignoreIfNotExists;
-    }
   }
 }

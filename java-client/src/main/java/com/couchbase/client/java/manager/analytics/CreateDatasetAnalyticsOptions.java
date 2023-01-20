@@ -17,16 +17,15 @@
 package com.couchbase.client.java.manager.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonCreateOptions;
 
 import java.util.Optional;
 
 /**
  * Allows customizing how datasets are created.
  */
-public class CreateDatasetAnalyticsOptions extends CommonOptions<CreateDatasetAnalyticsOptions> {
+public class CreateDatasetAnalyticsOptions extends CommonCreateOptions<CreateDatasetAnalyticsOptions> {
 
-  private boolean ignoreIfExists;
   private Optional<String> dataverseName = Optional.empty();
   private Optional<String> condition = Optional.empty();
 
@@ -40,17 +39,6 @@ public class CreateDatasetAnalyticsOptions extends CommonOptions<CreateDatasetAn
    */
   public static CreateDatasetAnalyticsOptions createDatasetAnalyticsOptions() {
     return new CreateDatasetAnalyticsOptions();
-  }
-
-  /**
-   * Customizes if an already existing dataset should throw an exception or not (false by default, so it will throw).
-   *
-   * @param ignore true if no exception should be raised if the dataset already exists.
-   * @return this options class for chaining purposes.
-   */
-  public CreateDatasetAnalyticsOptions ignoreIfExists(final boolean ignore) {
-    this.ignoreIfExists = ignore;
-    return this;
   }
 
   /**
@@ -80,13 +68,9 @@ public class CreateDatasetAnalyticsOptions extends CommonOptions<CreateDatasetAn
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltCreateOptions {
 
     Built() { }
-
-    public boolean ignoreIfExists() {
-      return ignoreIfExists;
-    }
 
     public Optional<String> dataverseName() {
       return dataverseName;
