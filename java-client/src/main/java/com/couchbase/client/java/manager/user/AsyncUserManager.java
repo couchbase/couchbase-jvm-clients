@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeRefere
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.GroupNotFoundException;
 import com.couchbase.client.core.error.UserNotFoundException;
 import com.couchbase.client.core.json.Mapper;
@@ -40,7 +41,9 @@ import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
 import static com.couchbase.client.core.endpoint.http.CoreHttpRequest.Builder.newForm;
 import static com.couchbase.client.core.error.HttpStatusCodeException.couchbaseResponseStatus;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static com.couchbase.client.core.util.CbThrowables.propagate;
+import static com.couchbase.client.core.util.CbThrowables.throwIfUnchecked;
 import static com.couchbase.client.java.manager.user.ChangePasswordOptions.changePasswordOptions;
 import static com.couchbase.client.java.manager.user.DropGroupOptions.dropGroupOptions;
 import static com.couchbase.client.java.manager.user.DropUserOptions.dropUserOptions;
@@ -203,11 +206,19 @@ public class AsyncUserManager {
 
     AuthDomain domain = AuthDomain.LOCAL;
 
-    return httpClient.delete(pathForUser(domain, username), options.build())
-        .trace(TracingIdentifiers.SPAN_REQUEST_MU_DROP_USER)
-        .exec(core)
-        .exceptionally(translateNotFound(() -> UserNotFoundException.forUser(domain.alias(), username)))
-        .thenApply(response -> null);
+    DropUserOptions.Built bltOptions = options.build();
+    CompletableFuture<Void> result = httpClient.delete(pathForUser(domain, username), bltOptions)
+      .trace(TracingIdentifiers.SPAN_REQUEST_MU_DROP_USER)
+      .exec(core)
+      .exceptionally(translateNotFound(() -> UserNotFoundException.forUser(domain.alias(), username)))
+      .thenApply(response -> null);
+    return result.exceptionally(t -> {
+      if (bltOptions.ignoreIfNotExists() && hasCause(t, UserNotFoundException.class)) {
+        return null;
+      }
+      throwIfUnchecked(t);
+      throw new CouchbaseException(t.getMessage(), t);
+    });
   }
 
   public CompletableFuture<Group> getGroup(String groupName) {
@@ -264,11 +275,19 @@ public class AsyncUserManager {
   }
 
   public CompletableFuture<Void> dropGroup(String groupName, DropGroupOptions options) {
-    return httpClient.delete(pathForGroup(groupName), options.build())
-        .trace(TracingIdentifiers.SPAN_REQUEST_MU_DROP_GROUP)
-        .exec(core)
-        .exceptionally(translateNotFound(() -> GroupNotFoundException.forGroup(groupName)))
-        .thenApply(response -> null);
+    DropGroupOptions.Built bltOptions = options.build();
+    CompletableFuture<Void> result = httpClient.delete(pathForGroup(groupName), bltOptions)
+      .trace(TracingIdentifiers.SPAN_REQUEST_MU_DROP_GROUP)
+      .exec(core)
+      .exceptionally(translateNotFound(() -> GroupNotFoundException.forGroup(groupName)))
+      .thenApply(response -> null);
+    return result.exceptionally(t -> {
+      if (bltOptions.ignoreIfNotExists() && hasCause(t, GroupNotFoundException.class)) {
+        return null;
+      }
+      throwIfUnchecked(t);
+      throw new CouchbaseException(t.getMessage(), t);
+    });
   }
 
   private static Function<Throwable, CoreHttpResponse> translateNotFound(Supplier<? extends RuntimeException> exceptionSupplier) {

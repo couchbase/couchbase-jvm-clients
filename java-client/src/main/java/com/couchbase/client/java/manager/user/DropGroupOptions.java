@@ -17,10 +17,10 @@
 package com.couchbase.client.java.manager.user;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonDropOptions;
 
 @Stability.Volatile
-public class DropGroupOptions extends CommonOptions<DropGroupOptions> {
+public class DropGroupOptions extends CommonDropOptions<DropGroupOptions> {
 
   public static DropGroupOptions dropGroupOptions() {
     return new DropGroupOptions();
@@ -31,7 +31,7 @@ public class DropGroupOptions extends CommonOptions<DropGroupOptions> {
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltDropOptions {
     Built() { }
   }
 }
