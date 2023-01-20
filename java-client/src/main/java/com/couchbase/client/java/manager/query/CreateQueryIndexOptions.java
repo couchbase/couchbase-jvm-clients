@@ -18,7 +18,7 @@ package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonCreateOptions;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,11 +30,10 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 /**
  * Allows customizing how a query index is created.
  */
-public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptions> {
+public class CreateQueryIndexOptions extends CommonCreateOptions<CreateQueryIndexOptions> {
 
   private final Map<String, Object> with = new HashMap<>();
 
-  private boolean ignoreIfExists;
   private String scopeName;
   private String collectionName;
 
@@ -48,17 +47,6 @@ public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptio
    */
   public static CreateQueryIndexOptions createQueryIndexOptions() {
     return new CreateQueryIndexOptions();
-  }
-
-  /**
-   * Set to true if no exception should be thrown if the index already exists (false by default).
-   *
-   * @param ignoreIfExists true if no exception should be thrown if the index already exists.
-   * @return this options builder for chaining purposes.
-   */
-  public CreateQueryIndexOptions ignoreIfExists(final boolean ignoreIfExists) {
-    this.ignoreIfExists = ignoreIfExists;
-    return this;
   }
 
   /**
@@ -139,13 +127,9 @@ public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptio
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltCreateOptions {
 
     Built() { }
-
-    public boolean ignoreIfExists() {
-      return ignoreIfExists;
-    }
 
     public Map<String, Object> with() {
       return with;

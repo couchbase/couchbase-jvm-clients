@@ -40,7 +40,7 @@ public class CreateScopeOptions extends CommonCreateOptions<CreateScopeOptions> 
     return new Built();
   }
 
-  public class Built extends BuildCreateOptions {
+  public class Built extends BuiltCreateOptions {
     Built() { }
   }
 }

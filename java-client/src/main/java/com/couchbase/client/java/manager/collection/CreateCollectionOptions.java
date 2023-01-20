@@ -40,7 +40,7 @@ public class CreateCollectionOptions extends CommonCreateOptions<CreateCollectio
     return new Built();
   }
 
-  public class Built extends BuildCreateOptions {
+  public class Built extends BuiltCreateOptions {
     Built() { }
   }
 

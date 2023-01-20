@@ -15,18 +15,18 @@
  */
 package com.couchbase.client.java;
 
-public abstract class CommonCreateOptions<CSELF extends CommonCreateOptions<CSELF>> extends CommonOptions<CSELF> {
+public abstract class CommonCreateOptions<SELF extends CommonCreateOptions<SELF>> extends CommonOptions<SELF> {
   private boolean ignoreIfExists;
 
   /**
    * If the bucket exists, an exception will be thrown unless this is set to true.
    */
-  public CommonCreateOptions<CSELF> ignoreIfExists(boolean ignore) {
+  public SELF ignoreIfExists(boolean ignore) {
     this.ignoreIfExists = ignore;
-    return this;
+    return self();
   }
 
-  protected abstract class BuildCreateOptions extends BuiltCommonOptions {
+  protected abstract class BuiltCreateOptions extends BuiltCommonOptions {
 
     public boolean ignoreIfExists() {
       return ignoreIfExists;

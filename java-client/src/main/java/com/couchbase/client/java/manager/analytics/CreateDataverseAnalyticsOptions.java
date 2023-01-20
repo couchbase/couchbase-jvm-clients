@@ -17,14 +17,12 @@
 package com.couchbase.client.java.manager.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonCreateOptions;
 
 /**
  * Allows customizing how an analytics dataverse is created.
  */
-public class CreateDataverseAnalyticsOptions extends CommonOptions<CreateDataverseAnalyticsOptions> {
-
-  private boolean ignoreIfExists;
+public class CreateDataverseAnalyticsOptions extends CommonCreateOptions<CreateDataverseAnalyticsOptions> {
 
   private CreateDataverseAnalyticsOptions() {
   }
@@ -38,28 +36,14 @@ public class CreateDataverseAnalyticsOptions extends CommonOptions<CreateDataver
     return new CreateDataverseAnalyticsOptions();
   }
 
-  /**
-   * Customizes if an already existing dataverse should throw an exception or not (false by default, so it will throw).
-   *
-   * @param ignore true if no exception should be raised if the dataverse already exists.
-   * @return this options class for chaining purposes.
-   */
-  public CreateDataverseAnalyticsOptions ignoreIfExists(final boolean ignore) {
-    this.ignoreIfExists = ignore;
-    return this;
-  }
-
   @Stability.Internal
   public Built build() {
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltCreateOptions {
 
     Built() { }
 
-    public boolean ignoreIfExists() {
-      return ignoreIfExists;
-    }
   }
 }

@@ -18,7 +18,7 @@ package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonDropOptions;
 
 import java.util.Optional;
 
@@ -27,9 +27,8 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 /**
  * Allows customizing how primary indexes are dropped.
  */
-public class DropPrimaryQueryIndexOptions extends CommonOptions<DropPrimaryQueryIndexOptions> {
+public class DropPrimaryQueryIndexOptions extends CommonDropOptions<DropPrimaryQueryIndexOptions> {
 
-  private boolean ignoreIfNotExists;
   private String scopeName;
   private String collectionName;
 
@@ -43,14 +42,6 @@ public class DropPrimaryQueryIndexOptions extends CommonOptions<DropPrimaryQuery
    */
   public static DropPrimaryQueryIndexOptions dropPrimaryQueryIndexOptions() {
     return new DropPrimaryQueryIndexOptions();
-  }
-
-  /**
-   * If the index does not exist, an exception will be thrown unless this is set to true.
-   */
-  public DropPrimaryQueryIndexOptions ignoreIfNotExists(boolean ignore) {
-    this.ignoreIfNotExists = ignore;
-    return this;
   }
 
   /**
@@ -90,11 +81,8 @@ public class DropPrimaryQueryIndexOptions extends CommonOptions<DropPrimaryQuery
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltDropOptions {
     Built() { }
-    public boolean ignoreIfNotExists() {
-      return ignoreIfNotExists;
-    }
 
     public Optional<String> scopeName() {
       return Optional.ofNullable(scopeName);

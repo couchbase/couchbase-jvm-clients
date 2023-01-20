@@ -17,16 +17,15 @@
 package com.couchbase.client.java.manager.analytics;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonDropOptions;
 
 import java.util.Optional;
 
 /**
  * Allows customizing how datasets are dropped.
  */
-public class DropDatasetAnalyticsOptions extends CommonOptions<DropDatasetAnalyticsOptions> {
+public class DropDatasetAnalyticsOptions extends CommonDropOptions<DropDatasetAnalyticsOptions> {
 
-  private boolean ignoreIfNotExists;
   private Optional<String> dataverseName = Optional.empty();
 
   private DropDatasetAnalyticsOptions() {
@@ -39,17 +38,6 @@ public class DropDatasetAnalyticsOptions extends CommonOptions<DropDatasetAnalyt
    */
   public static DropDatasetAnalyticsOptions dropDatasetAnalyticsOptions() {
     return new DropDatasetAnalyticsOptions();
-  }
-
-  /**
-   * Customizes if a non-existing dataset should throw an exception or not (false by default, so it will throw).
-   *
-   * @param ignore true if no exception should be raised if the dataset does not exist.
-   * @return this options class for chaining purposes.
-   */
-  public DropDatasetAnalyticsOptions ignoreIfNotExists(final boolean ignore) {
-    this.ignoreIfNotExists = ignore;
-    return this;
   }
 
   /**
@@ -68,11 +56,8 @@ public class DropDatasetAnalyticsOptions extends CommonOptions<DropDatasetAnalyt
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltDropOptions {
     Built() { }
-    public boolean ignoreIfNotExists() {
-      return ignoreIfNotExists;
-    }
 
     public Optional<String> dataverseName() {
       return dataverseName;

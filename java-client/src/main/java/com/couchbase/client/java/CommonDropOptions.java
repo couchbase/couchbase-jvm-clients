@@ -15,15 +15,15 @@
  */
 package com.couchbase.client.java;
 
-public abstract class CommonDropOptions<DSELF extends CommonDropOptions<DSELF>> extends CommonOptions<DSELF> {
+public abstract class CommonDropOptions<SELF extends CommonDropOptions<SELF>> extends CommonOptions<SELF> {
   private boolean ignoreIfNotExists;
 
   /**
    * If the bucket exists, an exception will be thrown unless this is set to true.
    */
-  public CommonDropOptions<DSELF> ignoreIfNotExists(boolean ignore) {
+  public SELF ignoreIfNotExists(boolean ignore) {
     this.ignoreIfNotExists = ignore;
-    return this;
+    return self();
   }
 
   protected abstract class BuiltDropOptions extends BuiltCommonOptions {

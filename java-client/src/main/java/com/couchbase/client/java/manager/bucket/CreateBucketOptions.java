@@ -32,7 +32,7 @@ public class CreateBucketOptions extends CommonCreateOptions<CreateBucketOptions
     return new Built();
   }
 
-  public class Built extends BuildCreateOptions {
+  public class Built extends BuiltCreateOptions {
     Built() { }
   }
 }
