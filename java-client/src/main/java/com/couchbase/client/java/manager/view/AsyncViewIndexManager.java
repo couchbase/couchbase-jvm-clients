@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DesignDocumentNotFoundException;
 import com.couchbase.client.core.error.context.ReducedViewErrorContext;
 import com.couchbase.client.core.json.Mapper;
@@ -32,6 +33,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.util.CbStrings.removeStart;
+import static com.couchbase.client.core.util.CbThrowables.hasCause;
+import static com.couchbase.client.core.util.CbThrowables.throwIfUnchecked;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.manager.view.DropDesignDocumentOptions.dropDesignDocumentOptions;
@@ -196,7 +199,15 @@ public class AsyncViewIndexManager {
     notNull(namespace, "DesignDocumentNamespace", () -> new ReducedViewErrorContext(name, null, bucket));
     notNull(options, "DropDesignDocumentOptions", () -> new ReducedViewErrorContext(name, null, bucket));
 
-    return coreManager.dropDesignDocument(name, namespace == PRODUCTION, options.build());
+    DropDesignDocumentOptions.Built bltOptions = options.build();
+    return coreManager.dropDesignDocument(name, namespace == PRODUCTION, bltOptions)
+      .exceptionally(t -> {
+        if (bltOptions.ignoreIfNotExists() && hasCause(t, DesignDocumentNotFoundException.class)) {
+          return null;
+        }
+        throwIfUnchecked(t);
+        throw new CouchbaseException(t.getMessage(), t);
+      });
   }
 
   private static ObjectNode toJson(final DesignDocument doc) {

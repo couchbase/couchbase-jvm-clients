@@ -17,9 +17,9 @@
 package com.couchbase.client.java.manager.view;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonDropOptions;
 
-public class DropDesignDocumentOptions extends CommonOptions<DropDesignDocumentOptions> {
+public class DropDesignDocumentOptions extends CommonDropOptions<DropDesignDocumentOptions> {
   private DropDesignDocumentOptions() {
   }
 
@@ -32,7 +32,7 @@ public class DropDesignDocumentOptions extends CommonOptions<DropDesignDocumentO
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltDropOptions {
     Built() { }
   }
 }
