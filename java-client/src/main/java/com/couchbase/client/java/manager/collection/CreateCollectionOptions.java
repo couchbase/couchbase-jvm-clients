@@ -17,12 +17,12 @@
 package com.couchbase.client.java.manager.collection;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonCreateOptions;
 
 /**
  * Allows to customize the behavior of the create collection operation.
  */
-public class CreateCollectionOptions extends CommonOptions<CreateCollectionOptions> {
+public class CreateCollectionOptions extends CommonCreateOptions<CreateCollectionOptions> {
 
   private CreateCollectionOptions() { }
 
@@ -40,7 +40,7 @@ public class CreateCollectionOptions extends CommonOptions<CreateCollectionOptio
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuildCreateOptions {
     Built() { }
   }
 

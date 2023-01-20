@@ -17,12 +17,12 @@
 package com.couchbase.client.java.manager.collection;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonCreateOptions;
 
 /**
  * Allows to customize the behavior of the create scope operation.
  */
-public class CreateScopeOptions extends CommonOptions<CreateScopeOptions> {
+public class CreateScopeOptions extends CommonCreateOptions<CreateScopeOptions> {
 
   private CreateScopeOptions() { }
 
@@ -40,7 +40,7 @@ public class CreateScopeOptions extends CommonOptions<CreateScopeOptions> {
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuildCreateOptions {
     Built() { }
   }
 }

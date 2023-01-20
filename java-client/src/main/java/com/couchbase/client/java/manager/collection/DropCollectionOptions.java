@@ -17,12 +17,12 @@
 package com.couchbase.client.java.manager.collection;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonDropOptions;
 
 /**
  * Allows to customize the behavior of the drop collection operation.
  */
-public class DropCollectionOptions extends CommonOptions<DropCollectionOptions> {
+public class DropCollectionOptions extends CommonDropOptions<DropCollectionOptions> {
 
   private DropCollectionOptions() { }
 
@@ -40,7 +40,7 @@ public class DropCollectionOptions extends CommonOptions<DropCollectionOptions> 
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltDropOptions {
     Built() { }
   }
 }

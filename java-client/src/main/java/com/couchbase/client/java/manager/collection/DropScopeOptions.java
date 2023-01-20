@@ -17,12 +17,12 @@
 package com.couchbase.client.java.manager.collection;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonDropOptions;
 
 /**
  * Allows to customize the behavior of the drop scope operation.
  */
-public class DropScopeOptions extends CommonOptions <DropScopeOptions> {
+public class DropScopeOptions extends CommonDropOptions<DropScopeOptions> {
 
   private DropScopeOptions() { }
 
@@ -40,7 +40,7 @@ public class DropScopeOptions extends CommonOptions <DropScopeOptions> {
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltDropOptions {
     Built() { }
   }
 }

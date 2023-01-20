@@ -34,6 +34,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.util.CbThrowables.hasCause;
+import static com.couchbase.client.core.util.CbThrowables.throwIfUnchecked;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.manager.collection.CreateCollectionOptions.createCollectionOptions;
@@ -96,9 +98,21 @@ public class AsyncCollectionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> createCollection(final CollectionSpec collectionSpec,
-      final CreateCollectionOptions options) {
-    return coreCollectionManager.createCollection(collectionSpec.scopeName(), collectionSpec.name(),
-        collectionSpec.maxExpiry(), options.build());
+                                                  final CreateCollectionOptions options) {
+    CreateCollectionOptions.Built bltOptions = options.build();
+    CompletableFuture<Void> result = coreCollectionManager.createCollection(
+      collectionSpec.scopeName(),
+      collectionSpec.name(),
+      collectionSpec.maxExpiry(),
+      bltOptions
+    );
+    return result.exceptionally(t -> {
+      if (bltOptions.ignoreIfExists() && hasCause(t, CollectionExistsException.class)) {
+        return null;
+      }
+      throwIfUnchecked(t);
+      throw new CouchbaseException(t.getMessage(), t);
+    });
   }
 
   /**
@@ -123,7 +137,15 @@ public class AsyncCollectionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> createScope(final String scopeName, final CreateScopeOptions options) {
-    return coreCollectionManager.createScope(scopeName, options.build());
+    CreateScopeOptions.Built bltOptions = options.build();
+    CompletableFuture<Void> result = coreCollectionManager.createScope(scopeName, bltOptions);
+    return result.exceptionally(t -> {
+      if (bltOptions.ignoreIfExists() && hasCause(t, ScopeExistsException.class)) {
+        return null;
+      }
+      throwIfUnchecked(t);
+      throw new CouchbaseException(t.getMessage(), t);
+    });
   }
 
   /**
@@ -150,8 +172,16 @@ public class AsyncCollectionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> dropCollection(final CollectionSpec collectionSpec,
-      final DropCollectionOptions options) {
-    return coreCollectionManager.dropCollection(collectionSpec.scopeName(), collectionSpec.name(), options.build());
+                                                final DropCollectionOptions options) {
+    DropCollectionOptions.Built bltOptions = options.build();
+    CompletableFuture<Void> result = coreCollectionManager.dropCollection(collectionSpec.scopeName(), collectionSpec.name(), bltOptions);
+    return result.exceptionally(t -> {
+      if (bltOptions.ignoreIfNotExists() && hasCause(t, CollectionNotFoundException.class)) {
+        return null;
+      }
+      throwIfUnchecked(t);
+      throw new CouchbaseException(t.getMessage(), t);
+    });
   }
 
   /**
@@ -176,7 +206,15 @@ public class AsyncCollectionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> dropScope(final String scopeName, final DropScopeOptions options) {
-    return coreCollectionManager.dropScope(scopeName, options.build());
+    DropScopeOptions.Built bltOptions = options.build();
+    CompletableFuture<Void> result = coreCollectionManager.dropScope(scopeName, bltOptions);
+    return result.exceptionally(t -> {
+      if (bltOptions.ignoreIfNotExists() && hasCause(t, ScopeNotFoundException.class)) {
+        return null;
+      }
+      throwIfUnchecked(t);
+      throw new CouchbaseException(t.getMessage(), t);
+    });
   }
 
   /**
