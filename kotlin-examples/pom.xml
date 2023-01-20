@@ -108,11 +108,6 @@
                 <version>0.40.0</version>
                 <configuration>
                     <imagePullPolicy>ifNotPresent</imagePullPolicy>
-<!--                    <volumes>-->
-<!--                        <volume>-->
-<!--                            <name>db-data</name>-->
-<!--                        </volume>-->
-<!--                    </volumes>-->
                 </configuration>
                 <executions>
                     <execution>
