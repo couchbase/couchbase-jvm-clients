@@ -20,7 +20,7 @@ class ManagerBucketOperationsExample {
         ConnectionUtils.withCluster {
             it.buckets.createBucket(
                 BUCKET_NAME,
-                ramQuota = 256.mebibytes,
+                ramQuota = 128.mebibytes,
                 replicas = 1
             )
         }
@@ -32,7 +32,7 @@ class ManagerBucketOperationsExample {
         ConnectionUtils.withCluster {
             it.buckets.updateBucket(
                 BUCKET_NAME,
-                ramQuota = 512.mebibytes,
+                ramQuota = 256.mebibytes,
                 replicas = 2
             )
         }
