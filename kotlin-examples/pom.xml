@@ -90,7 +90,7 @@
                 <version>3.0.0-M8</version>
                 <configuration>
                     <includes>
-                        <include>**/*Test.java</include>
+                        <include>**/*Example.java</include>
                     </includes>
                 </configuration>
                 <executions>

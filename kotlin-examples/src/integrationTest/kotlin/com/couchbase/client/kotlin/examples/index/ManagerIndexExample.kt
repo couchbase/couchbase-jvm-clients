@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class SimpleIndexTest {
+class ManagerIndexExample {
 
     @Test
     @Order(1)

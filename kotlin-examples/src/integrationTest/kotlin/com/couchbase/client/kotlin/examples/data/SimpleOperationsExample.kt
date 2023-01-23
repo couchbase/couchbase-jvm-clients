@@ -1,4 +1,4 @@
-package com.couchbase.client.kotlin.examples.connection
+package com.couchbase.client.kotlin.examples.data
 
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.kotlin.Collection
@@ -18,7 +18,7 @@ import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.api.assertThrows
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class SimpleOperationsTest {
+class SimpleOperationsExample {
 
     @Test
     @Order(1)

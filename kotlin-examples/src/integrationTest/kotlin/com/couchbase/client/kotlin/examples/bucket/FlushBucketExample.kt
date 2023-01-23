@@ -20,7 +20,7 @@ private const val DOCUMENTS_AMOUNT = 100
 private const val PER_DOCUMENT_DELAY = 100L
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class FlushBucketTest {
+class FlushBucketExample {
 
     companion object {
 

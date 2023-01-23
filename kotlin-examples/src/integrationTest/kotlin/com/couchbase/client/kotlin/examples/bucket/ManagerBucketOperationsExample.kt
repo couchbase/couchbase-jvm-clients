@@ -9,10 +9,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.api.assertThrows
 
-private const val BUCKET_NAME = "temp-bucket-1"
+private const val BUCKET_NAME = "temp-bucket-manager"
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class SimpleBucketOperationsTest {
+class ManagerBucketOperationsExample {
 
     @Test
     @Order(1)
@@ -48,7 +48,7 @@ class SimpleBucketOperationsTest {
 
     @Test
     @Order(4)
-    fun `exception when bucket does not exist`() {
+    fun `throw an exception when bucket does not exist`() {
         ConnectionUtils.withCluster {
             assertThrows<BucketNotFoundException> {
                 it.buckets.getBucket(BUCKET_NAME)

@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class SimpleQueryTest {
+class SimpleQueryExample {
 
     private val gson = Gson()
     companion object {
