@@ -42,8 +42,6 @@ class ManagerIndexExample {
             it.queryIndexes.createIndex(TEST_KEYSPACE_INDEX, SECONDARY_INDEX_NAME, listOf("field1"))
             val indexes = it.queryIndexes.getAllIndexes(TEST_KEYSPACE_INDEX)
             val createdIndex = indexes.find { index -> index.name == SECONDARY_INDEX_NAME }
-            println("!!!Index")
-            println(createdIndex)
             assertNotNull(createdIndex)
         }
     }
