@@ -22,7 +22,6 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeRefere
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.GroupNotFoundException;
 import com.couchbase.client.core.error.UserNotFoundException;
 import com.couchbase.client.core.json.Mapper;
@@ -217,7 +216,7 @@ public class AsyncUserManager {
         return null;
       }
       throwIfUnchecked(t);
-      throw new CouchbaseException(t.getMessage(), t);
+      throw new RuntimeException(t);
     });
   }
 
@@ -286,7 +285,7 @@ public class AsyncUserManager {
         return null;
       }
       throwIfUnchecked(t);
-      throw new CouchbaseException(t.getMessage(), t);
+      throw new RuntimeException(t);
     });
   }
 

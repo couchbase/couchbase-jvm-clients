@@ -108,7 +108,7 @@ public class AsyncBucketManager {
         return null;
       }
       throwIfUnchecked(t);
-      throw new CouchbaseException(t.getMessage(), t);
+      throw new RuntimeException(t);
     });
   }
 
@@ -194,7 +194,7 @@ public class AsyncBucketManager {
           return null;
         }
         throwIfUnchecked(t);
-        throw new CouchbaseException(t.getMessage(), t);
+        throw new RuntimeException(t);
       });
   }
 

@@ -20,7 +20,6 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DesignDocumentNotFoundException;
 import com.couchbase.client.core.error.context.ReducedViewErrorContext;
 import com.couchbase.client.core.json.Mapper;
@@ -206,7 +205,7 @@ public class AsyncViewIndexManager {
           return null;
         }
         throwIfUnchecked(t);
-        throw new CouchbaseException(t.getMessage(), t);
+        throw new RuntimeException(t);
       });
   }
 
