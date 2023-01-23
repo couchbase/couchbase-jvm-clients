@@ -2,6 +2,7 @@ package com.couchbase.client.kotlin.examples.util
 
 import com.couchbase.client.kotlin.Bucket
 import com.couchbase.client.kotlin.Cluster
+import com.couchbase.client.kotlin.http.CouchbaseHttpClient
 import kotlinx.coroutines.runBlocking
 
 class ConnectionUtils {
@@ -36,6 +37,13 @@ class ConnectionUtils {
             withBucket(bucketName) { cluster, bucket ->
                 val collection = bucket.defaultCollection()
                 block(cluster, collection)
+            }
+        }
+
+        @JvmStatic
+        fun withHttpClient(block: suspend (Cluster, CouchbaseHttpClient) -> Unit) {
+            withCluster {
+                block(it, it.httpClient)
             }
         }
 
