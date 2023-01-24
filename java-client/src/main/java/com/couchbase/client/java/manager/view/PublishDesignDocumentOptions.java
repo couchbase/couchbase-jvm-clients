@@ -17,9 +17,9 @@
 package com.couchbase.client.java.manager.view;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonCreateOptions;
 
-public class PublishDesignDocumentOptions extends CommonOptions<PublishDesignDocumentOptions> {
+public class PublishDesignDocumentOptions extends CommonCreateOptions<PublishDesignDocumentOptions> {
   private PublishDesignDocumentOptions() {
   }
 
@@ -32,7 +32,7 @@ public class PublishDesignDocumentOptions extends CommonOptions<PublishDesignDoc
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltCreateOptions {
     Built() { }
   }
 }

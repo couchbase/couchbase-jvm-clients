@@ -169,8 +169,15 @@ public class AsyncViewIndexManager {
   public CompletableFuture<Void> publishDesignDocument(final String name, final PublishDesignDocumentOptions options) {
     notNullOrEmpty(name, "Name", () -> new ReducedViewErrorContext(null, null, bucket));
     notNull(options, "PublishDesignDocumentOptions", () -> new ReducedViewErrorContext(name, null, bucket));
-
-    return coreManager.publishDesignDocument(name, options.build());
+    PublishDesignDocumentOptions.Built bltOptions = options.build();
+    return coreManager.publishDesignDocument(name, bltOptions)
+      .exceptionally(t -> {
+        if (bltOptions.ignoreIfExists() && hasCause(t, DesignDocumentNotFoundException.class)) {
+          return null;
+        }
+        throwIfUnchecked(t);
+        throw new RuntimeException(t);
+      });
   }
 
   /**
