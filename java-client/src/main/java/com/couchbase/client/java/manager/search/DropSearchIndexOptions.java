@@ -17,9 +17,9 @@
 package com.couchbase.client.java.manager.search;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonDropOptions;
 
-public class DropSearchIndexOptions extends CommonOptions<DropSearchIndexOptions> {
+public class DropSearchIndexOptions extends CommonDropOptions<DropSearchIndexOptions> {
 
   private DropSearchIndexOptions() {}
 
@@ -32,7 +32,7 @@ public class DropSearchIndexOptions extends CommonOptions<DropSearchIndexOptions
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltDropOptions {
     Built() { }
   }
 

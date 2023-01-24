@@ -40,6 +40,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
+import static com.couchbase.client.core.util.CbThrowables.hasCause;
+import static com.couchbase.client.core.util.CbThrowables.throwIfUnchecked;
 import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -246,10 +248,17 @@ public class AsyncSearchIndexManager {
    */
   public CompletableFuture<Void> dropIndex(final String name, final DropSearchIndexOptions options) {
     notNullOrEmpty(name, "Search Index Name");
-
-    return searchHttpClient.delete(path(indexPath(name)), options.build())
+    DropSearchIndexOptions.Built bltOptions = options.build();
+    return searchHttpClient.delete(path(indexPath(name)), bltOptions)
       .trace(TracingIdentifiers.SPAN_REQUEST_MS_DROP_INDEX)
       .exec(core)
+      .exceptionally(t -> {
+        if (bltOptions.ignoreIfNotExists() && hasCause(t, IndexNotFoundException.class)) {
+          return null;
+        }
+        throwIfUnchecked(t);
+        throw new RuntimeException(t);
+      })
       .thenApply(response -> null);
   }
 
