@@ -295,7 +295,15 @@ public class AsyncEventingFunctionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> undeployFunction(final String name, final UndeployFunctionOptions options) {
-    return coreManager.undeployFunction(name, options.build());
+    UndeployFunctionOptions.Built bltOptions = options.build();
+    return coreManager.undeployFunction(name, bltOptions)
+      .exceptionally(t -> {
+        if (bltOptions.ignoreIfNotExists() && hasCause(t, EventingFunctionNotFoundException.class)) {
+          return null;
+        }
+        throwIfUnchecked(t);
+        throw new RuntimeException(t);
+      });
   }
 
   /**
@@ -328,7 +336,15 @@ public class AsyncEventingFunctionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> pauseFunction(final String name, final PauseFunctionOptions options) {
-    return coreManager.pauseFunction(name, options.build());
+    PauseFunctionOptions.Built bltOptions = options.build();
+    return coreManager.pauseFunction(name, bltOptions)
+      .exceptionally(t -> {
+        if (bltOptions.ignoreIfNotExists() && hasCause(t, EventingFunctionNotFoundException.class)) {
+          return null;
+        }
+        throwIfUnchecked(t);
+        throw new RuntimeException(t);
+      });
   }
 
   /**
@@ -369,7 +385,15 @@ public class AsyncEventingFunctionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> resumeFunction(final String name, final ResumeFunctionOptions options) {
-    return coreManager.resumeFunction(name, options.build());
+    ResumeFunctionOptions.Built bltOptions = options.build();
+    return coreManager.resumeFunction(name, bltOptions)
+      .exceptionally(t -> {
+        if (bltOptions.ignoreIfNotExists() && hasCause(t, EventingFunctionNotFoundException.class)) {
+          return null;
+        }
+        throwIfUnchecked(t);
+        throw new RuntimeException(t);
+      });
   }
 
   /**
