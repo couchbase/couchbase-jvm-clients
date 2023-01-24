@@ -33,7 +33,6 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.rnorth.ducttape.unreliables.Unreliables;
 
-import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -43,6 +42,7 @@ import static com.couchbase.client.java.view.DesignDocumentNamespace.DEVELOPMENT
 import static com.couchbase.client.java.view.DesignDocumentNamespace.PRODUCTION;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -145,10 +145,38 @@ class ViewManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  void dropDesignDocShouldFailsIfNotFound() {
+    DropDesignDocumentOptions options = DropDesignDocumentOptions.dropDesignDocumentOptions();
+    assertThrows(DesignDocumentNotFoundException.class,
+      () -> views.dropDesignDocument("doesnotexist", DEVELOPMENT, options));
+  }
+
+  @Test
+  void dropDesignDocCanIgnoreNotFound() {
+    DropDesignDocumentOptions options = DropDesignDocumentOptions.dropDesignDocumentOptions()
+      .ignoreIfNotExists(true);
+    assertDoesNotThrow(() -> views.dropDesignDocument("doesnotexist", DEVELOPMENT, options));
+  }
+
+  @Test
   void publishAbsentDesignDoc() {
     DesignDocumentNotFoundException e = assertThrows(DesignDocumentNotFoundException.class,
         () -> views.publishDesignDocument("doesnotexist"));
     assertEquals("doesnotexist", e.name());
+  }
+
+  @Test
+  void publishDesignDocShouldFailsIfNotFound() {
+    PublishDesignDocumentOptions options = PublishDesignDocumentOptions.publishDesignDocumentOptions();
+    assertThrows(DesignDocumentNotFoundException.class,
+        () -> views.publishDesignDocument("doesnotexist", options));
+  }
+
+  @Test
+  void publishDesignDocCanIgnoreNotFound() {
+    PublishDesignDocumentOptions options = PublishDesignDocumentOptions.publishDesignDocumentOptions()
+      .ignoreIfExists(true);
+    assertDoesNotThrow(() -> views.publishDesignDocument("doesnotexist", options));
   }
 
   @Test

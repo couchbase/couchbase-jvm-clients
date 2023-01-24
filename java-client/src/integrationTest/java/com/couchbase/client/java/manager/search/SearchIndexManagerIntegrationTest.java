@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -132,6 +133,23 @@ class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
 
     assertThrows(IndexNotFoundException.class, () -> indexes.getIndex(name));
     assertThrows(IndexNotFoundException.class, () -> indexes.dropIndex(name));
+  }
+
+  @Test
+  void dropIndexFailsIfNotFound() {
+    String name = "idx-" + UUID.randomUUID().toString().substring(0, 8);
+
+    DropSearchIndexOptions options = DropSearchIndexOptions.dropSearchIndexOptions();
+    assertThrows(IndexNotFoundException.class, () -> indexes.dropIndex(name, options));
+  }
+
+  @Test
+  void dropIndexCanIgnoreNotFound() {
+    String name = "idx-" + UUID.randomUUID().toString().substring(0, 8);
+
+    DropSearchIndexOptions options = DropSearchIndexOptions.dropSearchIndexOptions()
+      .ignoreIfNotExists(true);
+    assertDoesNotThrow(() -> indexes.dropIndex(name, options));
   }
 
   /**

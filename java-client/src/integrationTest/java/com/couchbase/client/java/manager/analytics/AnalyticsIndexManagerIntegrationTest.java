@@ -75,6 +75,7 @@ import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonMap;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -194,7 +195,7 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  void createDataverseCanIgoreIfExists() {
+  void createDataverseCanIgnoreIfExists() {
     analytics.createDataverse(dataverse, createDataverseAnalyticsOptions().ignoreIfExists(true));
   }
 
@@ -368,14 +369,11 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
         createDatasetAnalyticsOptions()
             .dataverseName(dataverse));
 
-    analytics.dropIndex(index, dataset,
-        dropIndexAnalyticsOptions()
-            .ignoreIfNotExists(true));
+    DropIndexAnalyticsOptions options = dropIndexAnalyticsOptions().ignoreIfNotExists(true);
+    assertDoesNotThrow(() -> analytics.dropIndex(index, dataset, options));
 
-    analytics.dropIndex(index, dataset,
-        dropIndexAnalyticsOptions()
-            .dataverseName(dataverse)
-            .ignoreIfNotExists(true));
+    assertDoesNotThrow(() -> analytics.dropIndex(index, dataset,
+      options.dataverseName(dataverse)));
   }
 
   @Test
@@ -396,9 +394,8 @@ class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
     assertThrows(IndexExistsException.class, () -> analytics.createIndex(index, dataset, fields));
 
     // do the ignoreIfExists check here to, since the setup is a pain
-    analytics.createIndex(index, dataset, fields,
-        createIndexAnalyticsOptions()
-            .ignoreIfExists(true));
+    assertDoesNotThrow(() -> analytics.createIndex(index, dataset, fields,
+      createIndexAnalyticsOptions().ignoreIfExists(true)));
 
     // now again, specifying the dataverse
     analytics.createIndex(index, dataset, fields,

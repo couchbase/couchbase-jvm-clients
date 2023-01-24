@@ -52,13 +52,13 @@ import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrati
 import static com.couchbase.client.java.manager.query.WatchQueryIndexesOptions.watchQueryIndexesOptions;
 import static com.couchbase.client.test.Capabilities.COLLECTIONS;
 import static com.couchbase.client.test.Capabilities.QUERY;
-import static com.couchbase.client.test.Capabilities.SUBDOC_REVIVE_DOCUMENT;
 import static com.couchbase.client.test.ClusterType.CAVES;
 import static com.couchbase.client.test.ClusterType.MOCKED;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toSet;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -132,7 +132,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     assertThrows(IndexExistsException.class, () -> indexes.createPrimaryIndex(bucketName, options));
 
     // but this should succeed
-    indexes.createPrimaryIndex(bucketName, options.ignoreIfExists(true));
+    assertDoesNotThrow(() -> indexes.createPrimaryIndex(bucketName, options.ignoreIfExists(true)));
   }
 
   @IgnoreWhen(isProtostellarWillWorkLater = true) // needs fixed STG query error handling
@@ -147,7 +147,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     assertThrows(IndexExistsException.class, () -> indexes.createIndex(bucketName, indexName, fields, options));
 
     // but this should succeed
-    indexes.createIndex(bucketName, indexName, fields, options.ignoreIfExists(true));
+    assertDoesNotThrow(() -> indexes.createIndex(bucketName, indexName, fields, options.ignoreIfExists(true)));
   }
 
   @Test
@@ -217,7 +217,9 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     assertThrows(IndexNotFoundException.class, () ->
       indexes.dropPrimaryIndex(bucketName, enrich(dropPrimaryQueryIndexOptions())));
 
-    indexes.dropPrimaryIndex(bucketName, enrich(dropPrimaryQueryIndexOptions().ignoreIfNotExists(true)));
+    assertDoesNotThrow(() ->
+      indexes.dropPrimaryIndex(bucketName, enrich(dropPrimaryQueryIndexOptions()
+        .ignoreIfNotExists(true))));
 
     indexes.createPrimaryIndex(bucketName, enrich(createPrimaryQueryIndexOptions()));
     assertTrue(getIndex("#primary").primary());
@@ -231,8 +233,8 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
   void dropIndex() {
     assertThrows(IndexNotFoundException.class, () -> indexes.dropIndex(bucketName, "foo", enrich(dropQueryIndexOptions())));
 
-    indexes.dropIndex(bucketName, "foo", enrich(dropQueryIndexOptions()
-      .ignoreIfNotExists(true)));
+    assertDoesNotThrow(() -> indexes.dropIndex(bucketName, "foo", enrich(dropQueryIndexOptions()
+      .ignoreIfNotExists(true))));
 
     indexes.createIndex(bucketName, "foo", setOf("a", "b"), enrich(createQueryIndexOptions()));
     assertFalse(getIndex("foo").primary());

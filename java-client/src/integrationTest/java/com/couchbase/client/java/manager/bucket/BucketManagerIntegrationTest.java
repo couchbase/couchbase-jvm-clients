@@ -40,7 +40,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 
-import java.time.Duration;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -52,6 +51,7 @@ import static com.couchbase.client.java.manager.bucket.EvictionPolicyType.NOT_RE
 import static com.couchbase.client.java.manager.bucket.EvictionPolicyType.NO_EVICTION;
 import static com.couchbase.client.java.manager.bucket.EvictionPolicyType.VALUE_ONLY;
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -375,6 +375,23 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     BucketSettings settings = buckets.getBucket(name);
     settings.compressionMode(CompressionMode.PASSIVE);
     buckets.updateBucket(settings);
+  }
+
+  @Test
+  void createBucketCanIgnoreBucketExists() {
+    CreateBucketOptions options = CreateBucketOptions
+      .createBucketOptions()
+      .ignoreIfExists(true);
+    assertDoesNotThrow(() ->
+      buckets.createBucket(BucketSettings.create(config().bucketname()), options));
+  }
+
+  @Test
+  void dropBucketCanIgnoreNotFound() {
+    DropBucketOptions options = DropBucketOptions
+      .dropBucketOptions()
+      .ignoreIfNotExists(true);
+    assertDoesNotThrow(() -> buckets.dropBucket("does-not-exist", options));
   }
 
   /**

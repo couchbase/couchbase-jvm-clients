@@ -19,7 +19,6 @@ package com.couchbase.client.java.manager.user;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.UserNotFoundException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -57,6 +56,7 @@ import static com.couchbase.client.java.util.GroupUserManagementUtil.dropUserQui
 import static com.couchbase.client.test.Capabilities.COLLECTIONS;
 import static com.couchbase.client.test.Capabilities.ENTERPRISE_EDITION;
 import static java.util.Collections.singleton;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -305,5 +305,19 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
     UserNotFoundException e = assertThrows(UserNotFoundException.class, () -> users.dropUser(name));
     assertEquals(name, e.username());
     assertEquals(LOCAL.alias(), e.domain());
+  }
+
+  @Test
+  void dropUserShouldFailsIfNotFound() {
+    String name = "doesnotexist";
+    DropUserOptions options = DropUserOptions.dropUserOptions();
+    assertThrows(UserNotFoundException.class, () -> users.dropUser(name, options));
+  }
+
+  @Test
+  void dropUserCanIgnoreNotFound() {
+    String name = "doesnotexist";
+    DropUserOptions options = DropUserOptions.dropUserOptions().ignoreIfNotExists(true);
+    assertDoesNotThrow(() -> users.dropUser(name, options));
   }
 }

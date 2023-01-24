@@ -33,11 +33,11 @@ import org.opentest4j.AssertionFailedError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         clusterVersionIsBelow = "7.1.2",
         isProtostellar = true) // MB-52649
 public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest {
-  private static Logger LOGGER = LoggerFactory.getLogger(EventingFunctionManagerIntegrationTest.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(EventingFunctionManagerIntegrationTest.class);
 
   private static Cluster cluster;
   private static Collection sourceCollection;
@@ -155,6 +155,62 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
         assertThrows(EventingFunctionNotFoundException.class, () -> functions.dropFunction(funcName));
         assertThrows(EventingFunctionNotFoundException.class, () -> functions.undeployFunction(funcName));
         assertThrows(EventingFunctionNotFoundException.class, () -> functions.resumeFunction(funcName));
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  @Test
+  void canIgnoreNotFound() {
+    String funcName = UUID.randomUUID().toString();
+    DeployFunctionOptions deployOptions = DeployFunctionOptions.deployFunctionOptions().ignoreIfNotExists(true);
+    PauseFunctionOptions pauseOptions = PauseFunctionOptions.pauseFunctionOptions().ignoreIfNotExists(true);
+    assertDoesNotThrow(() -> functions.deployFunction(funcName, deployOptions));
+    assertDoesNotThrow(() -> functions.pauseFunction(funcName, pauseOptions));
+
+    DropFunctionOptions dropOptions = DropFunctionOptions.dropFunctionOptions().ignoreIfNotExists(true);
+    UndeployFunctionOptions undeployOptions = UndeployFunctionOptions.undeployFunctionOptions().ignoreIfNotExists(true);
+    ResumeFunctionOptions resumeOptions = ResumeFunctionOptions.resumeFunctionOptions().ignoreIfNotExists(true);
+
+    // see MB-47840 on why those are not EventingFunctionNotFoundException
+    try {
+      assertThrows(EventingFunctionNotDeployedException.class, () -> functions.dropFunction(funcName, dropOptions));
+      assertThrows(EventingFunctionNotDeployedException.class, () -> functions.undeployFunction(funcName, undeployOptions));
+      assertThrows(EventingFunctionNotDeployedException.class, () -> functions.resumeFunction(funcName, resumeOptions));
+    } catch (AssertionFailedError err) {
+      if (err.getCause() instanceof EventingFunctionNotFoundException) {
+        assertDoesNotThrow(() -> functions.dropFunction(funcName, dropOptions));
+        assertDoesNotThrow(() -> functions.undeployFunction(funcName, undeployOptions));
+        assertDoesNotThrow(() -> functions.resumeFunction(funcName, resumeOptions));
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  @Test
+  void shouldFailIfNotFound() {
+    String funcName = UUID.randomUUID().toString();
+    DeployFunctionOptions deployOptions = DeployFunctionOptions.deployFunctionOptions();
+    PauseFunctionOptions pauseOptions = PauseFunctionOptions.pauseFunctionOptions();
+    assertThrows(EventingFunctionNotFoundException.class, () -> functions.deployFunction(funcName, deployOptions));
+    assertThrows(EventingFunctionNotFoundException.class, () -> functions.pauseFunction(funcName, pauseOptions));
+
+    DropFunctionOptions dropOptions = DropFunctionOptions.dropFunctionOptions();
+    UndeployFunctionOptions undeployOptions = UndeployFunctionOptions.undeployFunctionOptions();
+    ResumeFunctionOptions resumeOptions = ResumeFunctionOptions.resumeFunctionOptions();
+
+    // see MB-47840 on why those are not EventingFunctionNotFoundException
+    try {
+      assertThrows(EventingFunctionNotDeployedException.class, () -> functions.dropFunction(funcName, dropOptions));
+      assertThrows(EventingFunctionNotDeployedException.class, () -> functions.undeployFunction(funcName, undeployOptions));
+      assertThrows(EventingFunctionNotDeployedException.class, () -> functions.resumeFunction(funcName, resumeOptions));
+    } catch (AssertionFailedError err) {
+      if (err.getCause() instanceof EventingFunctionNotFoundException) {
+        assertThrows(EventingFunctionNotFoundException.class, () -> functions.dropFunction(funcName, dropOptions));
+        assertThrows(EventingFunctionNotFoundException.class, () -> functions.undeployFunction(funcName, undeployOptions));
+        assertThrows(EventingFunctionNotFoundException.class, () -> functions.resumeFunction(funcName, resumeOptions));
       } else {
         throw err;
       }

@@ -17,7 +17,6 @@
 package com.couchbase.client.java.manager.user;
 
 import com.couchbase.client.core.error.GroupNotFoundException;
-import com.couchbase.client.core.error.UserNotFoundException;
 import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -33,7 +32,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -45,6 +43,7 @@ import static com.couchbase.client.java.util.GroupUserManagementUtil.dropGroupQu
 import static com.couchbase.client.java.util.GroupUserManagementUtil.dropUserQuietly;
 import static com.couchbase.client.test.Capabilities.COLLECTIONS;
 import static java.util.Collections.emptySet;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -180,6 +179,20 @@ class GroupManagerIntegrationTest extends JavaIntegrationTest {
     String name = "doesnotexist";
     GroupNotFoundException e = assertThrows(GroupNotFoundException.class, () -> users.dropGroup(name));
     assertEquals(name, e.groupName());
+  }
+
+  @Test
+  void dropGroupShouldFailsIfNotFound() {
+    String name = "doesnotexist";
+    DropGroupOptions options = DropGroupOptions.dropGroupOptions();
+    assertThrows(GroupNotFoundException.class, () -> users.dropGroup(name, options));
+  }
+
+  @Test
+  void dropGroupCanIgnoreNotFound() {
+    String name = "doesnotexist";
+    DropGroupOptions options = DropGroupOptions.dropGroupOptions().ignoreIfNotExists(true);
+    assertDoesNotThrow(() -> users.dropGroup(name, options));
   }
 
   @Test

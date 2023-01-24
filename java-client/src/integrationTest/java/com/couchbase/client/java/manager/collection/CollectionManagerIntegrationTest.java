@@ -39,6 +39,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -235,6 +236,58 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
       ScopeNotFoundException.class,
       () ->  collections.dropCollection(CollectionSpec.create("chester", "dude-where-is-my-scope"))
     );
+  }
+
+  @Test
+  void createCollectionCanIgnoreExists() {
+    String scope = randomString();
+    collections.createScope(scope);
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
+    waitUntilCondition(() -> scopeExists(collections, scope));
+
+    CollectionSpec collectionSpec = CollectionSpec.create(randomString(), scope);
+    collections.createCollection(collectionSpec);
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec.scopeName(), collectionSpec.name());
+
+    CreateCollectionOptions options = CreateCollectionOptions
+      .createCollectionOptions()
+      .ignoreIfExists(true);
+    assertDoesNotThrow(() -> collections.createCollection(collectionSpec, options));
+  }
+
+  @Test
+  void dropCollectionCanIgnoreNotFound() {
+    String scope = randomString();
+    collections.createScope(scope);
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
+    waitUntilCondition(() -> scopeExists(collections, scope));
+
+    CollectionSpec collectionSpec = CollectionSpec.create(randomString(), scope);
+
+    DropCollectionOptions options = DropCollectionOptions
+      .dropCollectionOptions()
+      .ignoreIfNotExists(true);
+    assertDoesNotThrow(() -> collections.dropCollection(collectionSpec, options));
+  }
+
+  @Test
+  void createScopeCanIgnoreExists() {
+    String scope = randomString();
+
+    collections.createScope(scope);
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
+    waitUntilCondition(() -> scopeExists(collections, scope));
+    CreateScopeOptions options = CreateScopeOptions.createScopeOptions()
+      .ignoreIfExists(true);
+    assertDoesNotThrow(() -> collections.createScope(scope, options));
+  }
+
+  @Test
+  void dropScopeCanIgnoreNotFound() {
+    String scope = randomString();
+    DropScopeOptions options = DropScopeOptions.dropScopeOptions()
+      .ignoreIfNotExists(true);
+    assertDoesNotThrow(() -> collections.dropScope(scope, options));
   }
 
   /**
