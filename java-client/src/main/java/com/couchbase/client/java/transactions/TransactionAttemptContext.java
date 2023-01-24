@@ -17,6 +17,8 @@
 package com.couchbase.client.java.transactions;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreQueryContext;
+import com.couchbase.client.core.api.query.CoreQueryOptions;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -32,7 +34,7 @@ import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.Scope;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.transactions.internal.OptionsUtil;
+import reactor.util.annotation.Nullable;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -207,14 +209,13 @@ public class TransactionAttemptContext {
     public TransactionQueryResult query(Scope scope,
                              String statement,
                              TransactionQueryOptions options) {
-        ObjectNode opts = OptionsUtil.createTransactionOptions(scope == null ? null : scope.reactive(), statement, options);
+        CoreQueryOptions opts = options != null ? options.builder().build() : null;
         return internal.queryBlocking(statement,
-                        scope == null ? null : scope.bucketName(),
-                        scope == null ? null : scope.name(),
+                        scope == null ? null : CoreQueryContext.of(scope.bucketName(), scope.name()),
                         opts,
                         false)
                 .publishOn(internal.core().context().environment().transactionsSchedulers().schedulerBlocking())
-                .map(response -> new TransactionQueryResult(response.header, response.rows, response.trailer, serializer()))
+                .map(response -> new TransactionQueryResult(response, serializer()))
                 .block();
     }
 

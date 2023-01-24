@@ -16,12 +16,17 @@
 
 package com.couchbase.client.java.query;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreQueryMetaData;
 import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Stores any non-rows results related to the execution of a particular N1QL query.
@@ -29,22 +34,34 @@ import java.util.Optional;
  * @author Graham Pople
  * @since 1.0.0
  */
-public abstract class QueryMetaData {
+public class QueryMetaData {
+    CoreQueryMetaData internal;
+
+    @Stability.Internal
+    public QueryMetaData(CoreQueryMetaData internal) {
+      this.internal = internal;
+    }
 
     /**
      * Returns the request identifier string of the query request
      */
-    public abstract String requestId();
+    public String requestId() {
+      return internal.requestId();
+    }
 
     /**
      * Returns the client context identifier string set on the query request.
      */
-    public abstract String clientContextId();
+    public String clientContextId() {
+      return internal.clientContextId();
+    }
 
     /**
      * Returns the raw query execution status as returned by the query engine
      */
-    public abstract QueryStatus status();
+    public QueryStatus status() {
+      return QueryStatus.from(internal.status().name());
+    }
 
     /**
      * Returns the signature as returned by the query engine which is then decoded to {@link JsonObject}
@@ -53,7 +70,16 @@ public abstract class QueryMetaData {
      *
      * @throws DecodingFailureException when the signature cannot be decoded successfully
      */
-    public abstract Optional<JsonObject> signature();
+    public Optional<JsonObject> signature() {
+      return internal.signature().map(v -> {
+        try {
+          return JacksonTransformers.MAPPER.readValue(v, JsonObject.class);
+        } catch (IOException ex) {
+          throw new DecodingFailureException(ex);
+        }
+      });
+    }
+
 
     /**
      * Returns the profiling information returned by the query engine which is then decoded to {@link JsonObject}
@@ -62,14 +88,24 @@ public abstract class QueryMetaData {
      *
      * @throws DecodingFailureException when the profile cannot be decoded successfully
      */
-    public abstract Optional<JsonObject> profile();
+    public Optional<JsonObject> profile() {
+      return internal.profile().map(v -> {
+        try {
+          return JacksonTransformers.MAPPER.readValue(v, JsonObject.class);
+        } catch (IOException ex) {
+          throw new DecodingFailureException(ex);
+        }
+      });
+    }
 
     /**
      * Returns the {@link QueryMetrics} as returned by the query engine if enabled.
      *
      * @throws DecodingFailureException when the metrics cannot be decoded successfully
      */
-    public abstract Optional<QueryMetrics> metrics();
+    public Optional<QueryMetrics> metrics() {
+      return internal.metrics().map(QueryMetrics::new);
+    }
 
     /**
      * Returns any warnings returned by the query engine, as a {@link JsonArray}.
@@ -78,5 +114,10 @@ public abstract class QueryMetaData {
      *
      * @throws DecodingFailureException when the warnings cannot be decoded successfully
      */
-    public abstract List<QueryWarning> warnings();
+    public List<QueryWarning> warnings() {
+      return internal.warnings()
+        .stream()
+        .map(v -> new QueryWarning(v.inner()))
+        .collect(Collectors.toList());
+    }
 }

@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.msg.query;
+package com.couchbase.client.core.classic.query;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.msg.query.PreparedStatement;
+import com.couchbase.client.core.msg.query.QueryRequest;
+import com.couchbase.client.core.msg.query.QueryResponse;
 import reactor.core.publisher.Mono;
 
 /**

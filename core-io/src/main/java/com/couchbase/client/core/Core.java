@@ -18,9 +18,11 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvOps;
+import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.callbacks.BeforeSendRequestCallback;
 import com.couchbase.client.core.classic.kv.ClassicCoreKvOps;
 import com.couchbase.client.core.classic.manager.ClassicCoreCollectionManagerOps;
+import com.couchbase.client.core.classic.query.ClassicCoreQueryOps;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -71,6 +73,7 @@ import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
+import com.couchbase.client.core.protostellar.query.ProtostellarCoreQueryOps;
 import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
@@ -1036,6 +1039,13 @@ public class Core implements AutoCloseable {
     return isProtostellar()
       ? new ProtostellarCoreKvOps(this, keyspace)
       : new ClassicCoreKvOps(this, keyspace);
+  }
+
+  @Stability.Internal
+  public CoreQueryOps queryOps() {
+    return isProtostellar()
+      ? new ProtostellarCoreQueryOps(this)
+      : new ClassicCoreQueryOps(this);
   }
 
   @Stability.Internal

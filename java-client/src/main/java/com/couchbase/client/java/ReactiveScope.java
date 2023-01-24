@@ -26,11 +26,9 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.query.QueryAccessorProtostellar;
+import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
-import com.couchbase.client.java.transactions.internal.ErrorUtil;
-import com.couchbase.client.java.transactions.internal.SingleQueryTransactions;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
@@ -151,24 +149,9 @@ public class ReactiveScope {
   public Mono<ReactiveQueryResult> query(final String statement, final QueryOptions options) {
     notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
-    if (opts.asTransaction()) {
-      return SingleQueryTransactions.singleQueryTransactionStreaming(core(), asyncScope.environment(), statement, bucketName(), name(), opts, ErrorUtil::convertTransactionFailedSingleQuery);
-    }
-    else {
-      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-      return Mono.defer(() -> {
-        if (core().isProtostellar()) {
-          return QueryAccessorProtostellar.reactive(core(),
-            opts,
-            QueryAccessorProtostellar.request(core(), statement, opts, environment(), async().bucketName(), name()),
-            serializer);
-        }
-        else {
-          return async().queryAccessor().queryReactive(
-            async().queryRequest(bucketName(), name(), statement, opts, core(), environment()), opts, serializer);
-        }
-      });
-    }
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+    return async().queryOps.queryReactive(statement, opts, asyncScope.queryContext, null, QueryAccessor::convertCoreQueryError)
+      .map(result -> new ReactiveQueryResult(result, serializer));
   }
 
   /**

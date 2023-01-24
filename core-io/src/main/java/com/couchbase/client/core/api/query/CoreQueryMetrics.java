@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.query;
-
-import com.couchbase.client.core.api.query.CoreQueryMetrics;
+package com.couchbase.client.core.api.query;
 
 import java.time.Duration;
 
@@ -25,77 +23,50 @@ import java.time.Duration;
  *
  * @since 3.0.0
  */
-public class QueryMetrics {
-
-  private final CoreQueryMetrics internal;
-
-  QueryMetrics(CoreQueryMetrics internal) {
-    this.internal = internal;
-  }
+public interface CoreQueryMetrics {
 
   /**
    * @return The total time taken for the request, that is the time from when the
    * request was received until the results were returned, in a human-readable
    * format (eg. 123.45ms for a little over 123 milliseconds).
    */
-  public Duration elapsedTime() {
-    return internal.elapsedTime();
-  }
+  Duration elapsedTime();
 
   /**
    * @return The time taken for the execution of the request, that is the time from
    * when query execution started until the results were returned, in a human-readable
    * format (eg. 123.45ms for a little over 123 milliseconds).
    */
-  public Duration executionTime() {
-    return internal.executionTime();
-  }
+  Duration executionTime();
 
   /**
    * @return the total number of results selected by the engine before restriction
    * through LIMIT clause.
    */
-  public long sortCount() {
-    return internal.sortCount();
-  }
+  long sortCount();
 
   /**
    * @return The total number of objects in the results.
    */
-  public long resultCount() {
-    return internal.resultCount();
-  }
+  long resultCount();
 
   /**
    * @return The total number of bytes in the results.
    */
-  public long resultSize() {
-    return internal.resultSize();
-  }
+  long resultSize();
 
   /**
    * @return The number of mutations that were made during the request.
    */
-  public long mutationCount() {
-    return internal.mutationCount();
-  }
+  long mutationCount();
 
   /**
    * @return The number of errors that occurred during the request.
    */
-  public long errorCount() {
-    return internal.errorCount();
-  }
+  long errorCount();
 
   /**
    * @return The number of warnings that occurred during the request.
    */
-  public long warningCount() {
-    return internal.warningCount();
-  }
-
-  @Override
-  public String toString() {
-    return internal.toString();
-  }
+  long warningCount();
 }

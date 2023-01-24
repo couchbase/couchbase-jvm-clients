@@ -13,24 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.query;
+package com.couchbase.client.core.protostellar.query;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreQueryMetaData;
+import com.couchbase.client.core.api.query.CoreQueryMetrics;
+import com.couchbase.client.core.api.query.CoreQueryStatus;
+import com.couchbase.client.core.api.query.CoreQueryWarning;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
-import com.couchbase.client.java.analytics.AnalyticsWarning;
-import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.protostellar.query.v1.QueryResponse;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-@Stability.Volatile
-public class QueryMetaDataProtostellar extends QueryMetaData {
+import static com.couchbase.client.core.util.Validators.notNull;
+
+@Stability.Internal
+public class ProtostellarCoreQueryMetaData extends CoreQueryMetaData {
   private final QueryResponse.MetaData metaData;
 
-  public QueryMetaDataProtostellar(QueryResponse.MetaData metaData) {
-    this.metaData = metaData;
+  public ProtostellarCoreQueryMetaData(QueryResponse.MetaData metaData) {
+    this.metaData = notNull(metaData, "metaData");
   }
 
   @Override
@@ -44,56 +48,56 @@ public class QueryMetaDataProtostellar extends QueryMetaData {
   }
 
   @Override
-  public QueryStatus status() {
+  public CoreQueryStatus status() {
     switch (metaData.getStatus()) {
       case RUNNING:
-        return QueryStatus.RUNNING;
+        return CoreQueryStatus.RUNNING;
       case SUCCESS:
-        return QueryStatus.SUCCESS;
+        return CoreQueryStatus.SUCCESS;
       case ERRORS:
-        return QueryStatus.ERRORS;
+        return CoreQueryStatus.ERRORS;
       case COMPLETED:
-        return QueryStatus.COMPLETED;
+        return CoreQueryStatus.COMPLETED;
       case STOPPED:
-        return QueryStatus.STOPPED;
+        return CoreQueryStatus.STOPPED;
       case TIMEOUT:
-        return QueryStatus.TIMEOUT;
+        return CoreQueryStatus.TIMEOUT;
       case CLOSED:
-        return QueryStatus.CLOSED;
+        return CoreQueryStatus.CLOSED;
       case FATAL:
-        return QueryStatus.FATAL;
+        return CoreQueryStatus.FATAL;
       case ABORTED:
-        return QueryStatus.ABORTED;
+        return CoreQueryStatus.ABORTED;
     }
-    return QueryStatus.UNKNOWN;
+    return CoreQueryStatus.UNKNOWN;
   }
 
   @Override
-  public Optional<JsonObject> signature() {
-    return Optional.of(JsonObject.fromJson(metaData.getSignature().toByteArray()));
+  public Optional<byte[]> signature() {
+    return Optional.of(metaData.getSignature().toByteArray());
   }
 
   @Override
-  public Optional<JsonObject> profile() {
+  public Optional<byte[]> profile() {
     if (metaData.hasProfile()) {
-      return Optional.of(JsonObject.fromJson(metaData.getProfile().toByteArray()));
+      return Optional.of(metaData.getProfile().toByteArray());
     }
     return Optional.empty();
   }
 
   @Override
-  public Optional<QueryMetrics> metrics() {
+  public Optional<CoreQueryMetrics> metrics() {
     if (metaData.hasMetrics()) {
-      return Optional.of(new QueryMetricsProtostellar(metaData.getMetrics()));
+      return Optional.of(new ProtostellarCoreQueryMetrics(metaData.getMetrics()));
     }
     return Optional.empty();
   }
 
   @Override
-  public List<QueryWarning> warnings() {
+  public List<CoreQueryWarning> warnings() {
     return metaData.getWarningsList()
-      .stream()
-      .map(warning -> new QueryWarning(new ErrorCodeAndMessage(warning.getCode(), warning.getMessage(), false, null)))
-      .collect(Collectors.toList());
+        .stream()
+        .map(warning -> new CoreQueryWarning(new ErrorCodeAndMessage(warning.getCode(), warning.getMessage(), false, null)))
+        .collect(Collectors.toList());
   }
 }

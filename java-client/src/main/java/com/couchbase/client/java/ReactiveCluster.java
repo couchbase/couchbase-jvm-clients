@@ -44,7 +44,7 @@ import com.couchbase.client.java.manager.query.AsyncQueryIndexManager;
 import com.couchbase.client.java.manager.query.ReactiveQueryIndexManager;
 import com.couchbase.client.java.manager.search.ReactiveSearchIndexManager;
 import com.couchbase.client.java.manager.user.ReactiveUserManager;
-import com.couchbase.client.java.query.QueryAccessorProtostellar;
+import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.search.SearchAccessor;
@@ -53,8 +53,6 @@ import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.ReactiveSearchResult;
 import com.couchbase.client.java.transactions.ReactiveTransactions;
 import com.couchbase.client.java.transactions.Transactions;
-import com.couchbase.client.java.transactions.internal.ErrorUtil;
-import com.couchbase.client.java.transactions.internal.SingleQueryTransactions;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -286,29 +284,9 @@ public class ReactiveCluster {
   public Mono<ReactiveQueryResult> query(final String statement, final QueryOptions options) {
     notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
-    if (opts.asTransaction()) {
-      return SingleQueryTransactions.singleQueryTransactionStreaming(core(), environment(), statement, null, null, opts, ErrorUtil::convertTransactionFailedSingleQuery);
-    }
-    else {
-      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-      return Mono.defer(() -> {
-        if (core().isProtostellar()) {
-          return QueryAccessorProtostellar.reactive(
-            core(),
-            opts,
-            QueryAccessorProtostellar.request(core(), statement, opts, environment(), null, null),
-            serializer
-          );
-        }
-        else {
-          return asyncCluster.queryAccessor().queryReactive(
-            asyncCluster.queryRequest(statement, opts),
-            opts,
-            serializer
-          );
-        }
-      });
-    }
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+    return async().queryOps.queryReactive(statement, opts, null, null, QueryAccessor::convertCoreQueryError)
+      .map(result -> new ReactiveQueryResult(result, serializer));
   }
 
   /**

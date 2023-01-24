@@ -27,6 +27,7 @@ import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
@@ -42,7 +43,7 @@ import com.couchbase.client.java.manager.eventing.EventingFunctionManager;
 import com.couchbase.client.java.manager.query.QueryIndexManager;
 import com.couchbase.client.java.manager.search.SearchIndexManager;
 import com.couchbase.client.java.manager.user.UserManager;
-import com.couchbase.client.java.query.QueryAccessorProtostellar;
+import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.search.SearchOptions;
@@ -68,6 +69,8 @@ import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTION
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_DIAGNOSTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
+import static com.couchbase.client.java.query.QueryAccessor.convertCoreQueryError;
+
 /**
  * The {@link Cluster} is the main entry point when connecting to a Couchbase cluster.
  * <p>
@@ -441,17 +444,10 @@ public class Cluster implements Closeable {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public QueryResult query(final String statement, final QueryOptions options) {
-    if (core().isProtostellar()) {
-      QueryOptions.Built opts = options.build();
-      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-      return QueryAccessorProtostellar.blocking(core(),
-        opts,
-        QueryAccessorProtostellar.request(core(), statement, options.build(), environment(), null, null),
-        serializer);
-    }
-    else {
-      return block(async().query(statement, options));
-    }
+    notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
+    final QueryOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+    return new QueryResult(async().queryOps.queryBlocking(statement, opts, null, null, QueryAccessor::convertCoreQueryError), serializer);
   }
 
   /**

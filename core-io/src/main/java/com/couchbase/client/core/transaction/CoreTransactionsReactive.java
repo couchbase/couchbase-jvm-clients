@@ -18,14 +18,21 @@ package com.couchbase.client.core.transaction;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreQueryContext;
+import com.couchbase.client.core.api.query.CoreQueryMetaData;
+import com.couchbase.client.core.api.query.CoreQueryOptions;
+import com.couchbase.client.core.api.query.CoreQueryOptionsTransactions;
+import com.couchbase.client.core.api.query.CoreQueryResult;
+import com.couchbase.client.core.api.query.CoreReactiveQueryResult;
+import com.couchbase.client.core.classic.query.ClassicCoreReactiveQueryResult;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.TextNode;
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionCommitAmbiguousException;
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionExpiredException;
 import com.couchbase.client.core.error.transaction.TransactionOperationFailedException;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
-import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.reactor.DefaultRetry;
 import com.couchbase.client.core.retry.reactor.Jitter;
@@ -51,7 +58,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -266,14 +272,13 @@ public class CoreTransactionsReactive {
 
     /**
      * Performs a single query transaction, with a scope context and custom configuration.
+     * Results are streaming, hence `errorConverter` is required to handle any errors during streaming.
      */
-    @Stability.Uncommitted
-    public Mono<QueryResponse> query(String statement,
-                                     String bucketName,
-                                     String scopeName,
-                                     ObjectNode queryOptions,
-                                     Optional<RequestSpan> parentSpan,
-                                     Consumer<RuntimeException> errorConverter) {
+    public Mono<CoreReactiveQueryResult> query(String statement,
+                                               @Nullable CoreQueryContext queryContext,
+                                               CoreQueryOptions queryOptions,
+                                               Optional<RequestSpan> parentSpan,
+                                               Function<Throwable, RuntimeException> errorConverter) {
         return Mono.defer(() -> {
             CoreMergedTransactionConfig merged = new CoreMergedTransactionConfig(config, Optional.empty());
             CoreTransactionContext overall =
@@ -288,15 +293,14 @@ public class CoreTransactionsReactive {
                 return createAttemptContext(overall, merged, attemptId);
             });
 
-            AtomicReference<QueryResponse> qr = new AtomicReference<>();
+            AtomicReference<ClassicCoreReactiveQueryResult> qr = new AtomicReference<>();
 
             Function<CoreTransactionAttemptContext, Mono<Void>> runLogic = (ctx) -> Mono.defer(() -> {
                 return ctx.doQueryOperation("single query streaming", statement, parentSpan.map(SpanWrapper::new).orElse(null),
                                 (sidx, lockToken, span) -> {
                                     span.attribute(TracingIdentifiers.ATTR_TRANSACTION_SINGLE_QUERY, true);
                                     return ctx.queryWrapperLocked(0,
-                                                    bucketName,
-                                                    scopeName,
+                                                    queryContext,
                                                     statement,
                                                     queryOptions,
                                                     CoreTransactionAttemptContextHooks.HOOK_QUERY,
@@ -313,32 +317,43 @@ public class CoreTransactionsReactive {
                         .then();
             });
 
-            Consumer<Throwable> errorHandler = singleQueryHandleErrorDuringRowStreaming(overall, errorConverter);
+            Function<Throwable, RuntimeException> errorHandler = singleQueryHandleErrorDuringRowStreaming(overall, errorConverter);
 
             return executeTransaction(createAttempt, merged, overall, runLogic, true)
                     .then(Mono.defer(() -> {
-                        QueryResponse orig = qr.get();
+                        ClassicCoreReactiveQueryResult orig = qr.get();
 
                         if (orig == null) {
                             // It's a bug to reach here.  If the query errored then that should have been raised.
                             return Mono.error(new CoreTransactionFailedException(new IllegalStateException("No query has been run"), overall.LOGGER, overall.transactionId()));
                         }
 
-                        Flux<QueryChunkRow> rows = orig.rows()
-                                .onErrorResume(err -> {
-                                    // Will throw
-                                    errorHandler.accept(err);
-                                    return Mono.empty();
-                                });
+                        // Need to return the original result, but customed to call our errorHandler during the row streaming.
+                        return Mono.just(new CoreReactiveQueryResult() {
+                            @Override
+                            public Flux<QueryChunkRow> rows() {
+                                return orig.rows()
+                                        .onErrorResume(err -> {
+                                            return Mono.error(errorHandler.apply(err));
+                                        });
+                            }
 
-                        QueryResponse wrapped = new QueryResponse(orig.status(), orig.header(), rows, orig.trailer());
-                        return Mono.just(wrapped);
+                            @Override
+                            public Mono<CoreQueryMetaData> metaData() {
+                                return orig.metaData();
+                            }
+
+                            @Override
+                            public NodeIdentifier lastDispatchedTo() {
+                                return orig.lastDispatchedTo();
+                            }
+                        });
                     }));
         });
     }
 
-    private static Consumer<Throwable> singleQueryHandleErrorDuringRowStreaming(CoreTransactionContext overall,
-                                                                                Consumer<RuntimeException> errorConverter) {
+    private static Function<Throwable, RuntimeException> singleQueryHandleErrorDuringRowStreaming(CoreTransactionContext overall,
+                                                                                                  Function<Throwable, RuntimeException> errorConverter) {
         return (err) -> {
             RuntimeException converted = QueryUtil.convertQueryError(err);
 
@@ -371,19 +386,19 @@ public class CoreTransactionsReactive {
                 }
             }
 
-            // This will throw
-            errorConverter.accept(ret);
+            return errorConverter.apply(ret);
         };
     }
 
     // Used only by single query transactions
-    public Mono<CoreTransactionAttemptContext.BufferedQueryResponse> queryBlocking(String statement,
-                                                                                   String bucketName,
-                                                                                   String scopeName,
-                                                                                   ObjectNode queryOptions,
-                                                                                   Optional<RequestSpan> parentSpan) {
+    public Mono<CoreQueryResult> queryBlocking(String statement,
+                                               @Nullable CoreQueryContext qc,
+                                               CoreQueryOptions queryOptions,
+                                               Optional<RequestSpan> parentSpan) {
         return Mono.defer(() -> {
-            queryOptions.put("tximplicit", true);
+            // Not strictly speaking a copy, but does the same job - we're not modifying the original.
+            CoreQueryOptionsTransactions optionsCopy = new CoreQueryOptionsTransactions(queryOptions);
+            optionsCopy.put("tximplicit", TextNode.valueOf("true"));
 
             CoreMergedTransactionConfig merged = new CoreMergedTransactionConfig(config, parentSpan.map(CoreTransactionOptions::create));
             CoreTransactionContext overall =
@@ -398,10 +413,10 @@ public class CoreTransactionsReactive {
                 return createAttemptContext(overall, merged, attemptId);
             });
 
-            AtomicReference<CoreTransactionAttemptContext.BufferedQueryResponse> qr = new AtomicReference<>();
+            AtomicReference<CoreQueryResult> qr = new AtomicReference<>();
 
             Function<CoreTransactionAttemptContext, Mono<Void>> runLogic = (ctx) -> Mono.defer(() -> {
-                return ctx.queryBlocking(statement, bucketName, scopeName, queryOptions, true)
+                return ctx.queryBlocking(statement, qc, optionsCopy, true)
                         // All rows have already been streamed and buffered, so it's ok to save this
                         .doOnNext(ret -> qr.set(ret))
                         .then();

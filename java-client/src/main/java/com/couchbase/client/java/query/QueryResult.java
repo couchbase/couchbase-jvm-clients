@@ -17,33 +17,34 @@
 package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreQueryResult;
 import com.couchbase.client.core.error.DecodingFailureException;
-import com.couchbase.client.core.msg.query.QueryChunkHeader;
-import com.couchbase.client.core.msg.query.QueryChunkRow;
-import com.couchbase.client.core.msg.query.QueryChunkTrailer;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonObject;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * The result of a N1QL query, including rows and associated metadata.
  *
  * @since 3.0.0
  */
-public abstract class QueryResult {
+public class QueryResult {
     /**
      * The default serializer to use.
      */
-    protected final JsonSerializer serializer;
+    private final JsonSerializer serializer;
+
+    private final CoreQueryResult internal;
 
     /**
      * Creates a new QueryResult.
      */
     @Stability.Internal
-    public QueryResult(final JsonSerializer serializer) {
+    public QueryResult(final CoreQueryResult internal, final JsonSerializer serializer) {
+        this.internal = internal;
         this.serializer = serializer;
     }
 
@@ -62,7 +63,11 @@ public abstract class QueryResult {
      * @param target the target class to deserialize into.
      * @throws DecodingFailureException if any row could not be successfully deserialized.
      */
-    public abstract <T> List<T> rowsAs(final Class<T> target);
+    public <T> List<T> rowsAs(final Class<T> target) {
+      return internal.rows()
+        .map(row -> serializer.deserialize(target, row.data()))
+        .collect(Collectors.toList());
+    }
 
     /**
      * Returns all rows, converted into instances of the target type.
@@ -70,10 +75,16 @@ public abstract class QueryResult {
      * @param target the target type to deserialize into.
      * @throws DecodingFailureException if any row could not be successfully deserialized.
      */
-    public abstract  <T> List<T> rowsAs(final TypeRef<T> target);
+    public <T> List<T> rowsAs(final TypeRef<T> target) {
+      return internal.rows()
+        .map(row -> serializer.deserialize(target, row.data()))
+        .collect(Collectors.toList());
+    }
 
     /**
      * Returns the {@link QueryMetaData} giving access to the additional metadata associated with this query.
      */
-    public abstract QueryMetaData metaData();
+    public QueryMetaData metaData() {
+      return new QueryMetaData(internal.metaData());
+    }
 }

@@ -20,21 +20,24 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.query.QueryAccessorProtostellar;
+import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
+import static com.couchbase.client.java.query.QueryAccessor.convertCoreQueryError;
 
 /**
  * The scope identifies a group of collections and allows high application
@@ -163,16 +166,10 @@ public class Scope {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public QueryResult query(final String statement, final QueryOptions options) {
-    if (core().isProtostellar()) {
-      QueryOptions.Built opts = options.build();
-      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-      return QueryAccessorProtostellar.blocking(core(), opts,
-        QueryAccessorProtostellar.request(core(), statement, options.build(), environment(), bucketName(), name()),
-        serializer);
-    }
-    else {
-      return block(async().query(statement, options));
-    }
+    notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
+    final QueryOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ?  environment().jsonSerializer() : opts.serializer();
+    return new QueryResult(async().queryOps.queryBlocking(statement, opts, asyncScope.queryContext, null, QueryAccessor::convertCoreQueryError), serializer);
   }
 
   /**

@@ -54,7 +54,7 @@ public interface CoreCommonOptions {
   @Nullable
   default Map<String, Object> clientContext() { return null; }
 
-  static CoreCommonOptions of(Duration timeout, RetryStrategy retryStrategy, RequestSpan parentSpan) {
+  static CoreCommonOptions of(@Nullable Duration timeout, @Nullable RetryStrategy retryStrategy, @Nullable RequestSpan parentSpan) {
     if (timeout == null && retryStrategy == null && parentSpan == null) {
       return DEFAULT;
     }
@@ -73,6 +73,29 @@ public interface CoreCommonOptions {
       @Override
       public Optional<RequestSpan> parentSpan() {
         return Optional.ofNullable(parentSpan);
+      }
+    };
+  }
+
+  static CoreCommonOptions ofOptional(Optional<Duration> timeout, Optional<RetryStrategy> retryStrategy, Optional<RequestSpan> parentSpan) {
+    if (!timeout.isPresent() && !retryStrategy.isPresent() && !parentSpan.isPresent()) {
+      return DEFAULT;
+    }
+
+    return new CoreCommonOptions() {
+      @Override
+      public Optional<Duration> timeout() {
+        return timeout;
+      }
+
+      @Override
+      public Optional<RetryStrategy> retryStrategy() {
+        return retryStrategy;
+      }
+
+      @Override
+      public Optional<RequestSpan> parentSpan() {
+        return parentSpan;
       }
     };
   }

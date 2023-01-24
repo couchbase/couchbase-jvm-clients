@@ -72,6 +72,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES },
   clusterVersionIsBelow = REQUIRE_MB_50132,
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
+  // query_context not currently working in STG
   isProtostellarWillWorkLater = true
 )
 class QueryCollectionIntegrationTest extends JavaIntegrationTest {

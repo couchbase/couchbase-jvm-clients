@@ -17,6 +17,8 @@
 package com.couchbase.client.java.transactions;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreQueryContext;
+import com.couchbase.client.core.api.query.CoreQueryOptions;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -27,7 +29,6 @@ import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.java.ReactiveCollection;
 import com.couchbase.client.java.ReactiveScope;
 import com.couchbase.client.java.codec.JsonSerializer;
-import com.couchbase.client.java.transactions.internal.OptionsUtil;
 import reactor.core.publisher.Mono;
 
 import java.util.Objects;
@@ -186,12 +187,11 @@ public class ReactiveTransactionAttemptContext {
     public Mono<TransactionQueryResult> query(final ReactiveScope scope,
                                               final String statement,
                                               final TransactionQueryOptions options) {
-        ObjectNode opts = OptionsUtil.createTransactionOptions(scope, statement, options);
+        CoreQueryOptions opts = options != null ? options.builder().build() : null;
         return internal.queryBlocking(statement,
-                        scope == null ? null : scope.bucketName(),
-                        scope == null ? null : scope.name(),
+                        scope == null ? null : CoreQueryContext.of(scope.bucketName(), scope.name()),
                         opts,
                         false)
-                .map(response -> new TransactionQueryResult(response.header, response.rows, response.trailer, serializer()));
+                .map(response -> new TransactionQueryResult(response, serializer()));
     }
 }

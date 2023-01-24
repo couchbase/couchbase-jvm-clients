@@ -18,6 +18,14 @@ package com.couchbase.client.core.transaction;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreQueryContext;
+import com.couchbase.client.core.api.query.CoreQueryOps;
+import com.couchbase.client.core.api.query.CoreQueryOptions;
+import com.couchbase.client.core.api.query.CoreQueryOptionsTransactions;
+import com.couchbase.client.core.api.query.CoreQueryResult;
+import com.couchbase.client.core.classic.query.ClassicCoreQueryResult;
+import com.couchbase.client.core.api.query.CoreQueryStatus;
+import com.couchbase.client.core.classic.query.ClassicCoreReactiveQueryResult;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
@@ -25,12 +33,14 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.BooleanNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.IntNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.TextNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.util.RawValue;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
-import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.error.transaction.ActiveTransactionRecordEntryNotFoundException;
@@ -65,14 +75,7 @@ import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.msg.kv.SubdocMutateResponse;
-import com.couchbase.client.core.msg.query.CoreQueryAccessor;
-import com.couchbase.client.core.msg.query.QueryChunkHeader;
-import com.couchbase.client.core.msg.query.QueryChunkRow;
-import com.couchbase.client.core.msg.query.QueryChunkTrailer;
-import com.couchbase.client.core.msg.query.QueryRequest;
-import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.node.NodeIdentifier;
-import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.reactor.Jitter;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
@@ -169,15 +172,13 @@ import static com.couchbase.client.core.transaction.util.CoreTransactionAttemptC
  */
 @Stability.Internal
 public class CoreTransactionAttemptContext {
-    static class QueryContext {
+    static class TransactionQueryContext {
         public final NodeIdentifier queryTarget;
-        public final @Nullable String bucketName;
-        public final @Nullable String scopeName;
+        public final @Nullable CoreQueryContext queryContext;
 
-        public QueryContext(NodeIdentifier queryTarget, @Nullable String bucketName, @Nullable String scopeName) {
+        public TransactionQueryContext(NodeIdentifier queryTarget, @Nullable CoreQueryContext queryContext) {
             this.queryTarget = Objects.requireNonNull(queryTarget);
-            this.bucketName = bucketName;
-            this.scopeName = scopeName;
+            this.queryContext = queryContext;
         }
     }
 
@@ -216,7 +217,7 @@ public class CoreTransactionAttemptContext {
     // [EXP-ROLLBACK] [EXP-COMMIT-OVERTIME]: Internal flag to indicate that transaction has expired.  After,
     // this, one attempt will be made to rollback the txn (or commit it, if the expiry happened during commit).
     private volatile boolean expiryOvertimeMode = false;
-    private volatile @Nullable QueryContext queryContext = null;
+    private volatile @Nullable TransactionQueryContext queryContext = null;
     // Purely for debugging (so we don't have to log the statement everywhere), associate each statement with an id
     private final AtomicInteger queryStatementIdx = new AtomicInteger(0);
 
@@ -231,7 +232,7 @@ public class CoreTransactionAttemptContext {
 
     private final int EXPIRY_THRESHOLD = Integer.parseInt(System.getProperty("com.couchbase.transactions.expiryThresholdMs", "10"));
 
-    private final CoreQueryAccessor coreQueryAccessor;
+    private final CoreQueryOps queryOps;
     private MeteringUnits.MeteringUnitsBuilder meteringUnitsBuilder = new MeteringUnits.MeteringUnitsBuilder();
 
     // Just a safety measure to make sure we don't get into hard tight loops
@@ -255,7 +256,7 @@ public class CoreTransactionAttemptContext {
         this.startTimeClient = Duration.ofNanos(System.nanoTime());
         this.parent = Objects.requireNonNull(parent);
         this.hooks = Objects.requireNonNull(hooks);
-        this.coreQueryAccessor = new CoreQueryAccessor(core);
+        this.queryOps = core.queryOps();
 
         attemptSpan = SpanWrapperUtil.createOp(this, tracer(), null, null, TracingIdentifiers.TRANSACTION_OP_ATTEMPT, parentSpan.orElse(null));
     }
@@ -580,12 +581,11 @@ public class CoreTransactionAttemptContext {
                     .add(makeKeyspace(collection))
                     .add(id);
 
-            ObjectNode queryOptions = Mapper.createObjectNode();
-            queryOptions.set("args", params);
+            CoreQueryOptionsTransactions queryOptions = new CoreQueryOptionsTransactions();
+            queryOptions.raw("args", params);
 
             return queryWrapperBlockingLocked(sidx,
-                    queryContext.bucketName,
-                    queryContext.scopeName,
+                    queryContext.queryContext,
                     "EXECUTE __get",
                     queryOptions,
                     CoreTransactionAttemptContextHooks.HOOK_QUERY_KV_GET,
@@ -598,7 +598,7 @@ public class CoreTransactionAttemptContext {
                     lt,
                     true)
 
-                    .map(result -> result.rows)
+                    .map(result -> result.collectRows())
 
                     .map(rows -> {
                         Optional<CoreTransactionGetResult> ret;
@@ -784,14 +784,13 @@ public class CoreTransactionAttemptContext {
             int sidx = queryStatementIdx.getAndIncrement();
             AtomicReference<ReactiveLock.Waiter> lt = new AtomicReference<>(lockToken);
 
-            ObjectNode queryOptions = Mapper.createObjectNode();
-            queryOptions.set("args", params);
+            CoreQueryOptionsTransactions queryOptions = new CoreQueryOptionsTransactions();
+            queryOptions.raw("args", params);
 
             // All KV ops are done with the scanConsistency set at the BEGIN WORK default, e.g. from
             // PerTransactionConfig & TransactionConfig
             return queryWrapperBlockingLocked(sidx,
-                    queryContext.bucketName,
-                    queryContext.scopeName,
+                    queryContext.queryContext,
                     "EXECUTE __insert",
                     queryOptions,
                     CoreTransactionAttemptContextHooks.HOOK_QUERY_KV_INSERT,
@@ -805,7 +804,7 @@ public class CoreTransactionAttemptContext {
                     true)
 
                     .flatMap(result -> unlock(lt.get(), "insertWithQueryLocked end", false)
-                            .thenReturn(result.rows))
+                            .thenReturn(result.collectRows()))
 
                     .map(rows -> {
                         if (rows.isEmpty()) {
@@ -1182,12 +1181,11 @@ public class CoreTransactionAttemptContext {
             int sidx = queryStatementIdx.getAndIncrement();
             AtomicReference<ReactiveLock.Waiter> lt = new AtomicReference<>(lockToken);
 
-            ObjectNode queryOptions = Mapper.createObjectNode();
-            queryOptions.set("args", params);
+            CoreQueryOptionsTransactions queryOptions = new CoreQueryOptionsTransactions();
+            queryOptions.raw("args", params);
             
             return queryWrapperBlockingLocked(sidx,
-                    queryContext.bucketName,
-                    queryContext.scopeName,
+                    queryContext.queryContext,
                     "EXECUTE __update",
                     queryOptions,
                     CoreTransactionAttemptContextHooks.HOOK_QUERY_KV_REPLACE,
@@ -1201,7 +1199,7 @@ public class CoreTransactionAttemptContext {
                     true)
 
                     .flatMap(result -> unlock(lt.get(), "replaceWithQueryLocked end", false)
-                            .thenReturn(result.rows))
+                            .thenReturn(result.collectRows()))
 
                     .map(rows -> {
                         if (rows.isEmpty()) {
@@ -1265,12 +1263,11 @@ public class CoreTransactionAttemptContext {
             int sidx = queryStatementIdx.getAndIncrement();
             AtomicReference<ReactiveLock.Waiter> lt = new AtomicReference<>(lockToken);
 
-            ObjectNode queryOptions = Mapper.createObjectNode();
-            queryOptions.set("args", params);
+            CoreQueryOptionsTransactions queryOptions = new CoreQueryOptionsTransactions();
+            queryOptions.raw("args", params);
 
             return queryWrapperBlockingLocked(sidx,
-                    queryContext.bucketName,
-                    queryContext.scopeName,
+                    queryContext.queryContext,
                     "EXECUTE __delete",
                     queryOptions,
                     CoreTransactionAttemptContextHooks.HOOK_QUERY_KV_REMOVE,
@@ -2348,10 +2345,9 @@ public class CoreTransactionAttemptContext {
             int sidx = queryStatementIdx.getAndIncrement();
 
             return queryWrapperBlockingLocked(sidx,
-                    queryContext.bucketName,
-                    queryContext.scopeName,
+                    queryContext.queryContext,
                     "COMMIT",
-                    Mapper.createObjectNode(),
+                    null,
                     CoreTransactionAttemptContextHooks.HOOK_QUERY_COMMIT,
                     false,
                     // existingErrorCheck false as it's already been done in commitInternalLocked
@@ -3317,9 +3313,6 @@ public class CoreTransactionAttemptContext {
     /**
      * Rolls back the transaction.  All staged replaces, inserts and removals will be removed.  The transaction will not
      * be retried, so this will be the final attempt.
-     * <p>
-     * The semantics are the same as {@link AttemptContext#rollback()}, except that the a <code>Mono</code> is returned
-     * so the operation can be performed asynchronously.
      */
     public Mono<Void> rollback() {
         return createMonoBridge("rollback", Mono.defer(() -> {
@@ -3425,10 +3418,9 @@ public class CoreTransactionAttemptContext {
             int statementIdx = queryStatementIdx.getAndIncrement();
 
             return queryWrapperBlockingLocked(statementIdx,
-                    queryContext.bucketName,
-                    queryContext.scopeName,
+                    queryContext.queryContext,
                     "ROLLBACK",
-                    Mapper.createObjectNode(),
+                    null,
                     CoreTransactionAttemptContextHooks.HOOK_QUERY_ROLLBACK,
                     false, false,null, null, span, false, null, appRollback)
 
@@ -4062,38 +4054,30 @@ public class CoreTransactionAttemptContext {
      * A very low-level query call, see queryWrapper for a call that does useful logging wrapping and basic error
      * handling.
      */
-    private Mono<QueryResponse> queryInternal(final int sidx,
-                                              @Nullable final String bucketName,
-                                              @Nullable final String scopeName,
-                                              final String statement,
-                                              final ObjectNode options,
-                                              @Nullable final SpanWrapper pspan,
-                                              final boolean tximplicit) {
+    private Mono<ClassicCoreReactiveQueryResult> queryInternal(final int sidx,
+                                                               @Nullable final CoreQueryContext qc,
+                                                               final String statement,
+                                                               final CoreQueryOptionsTransactions options,
+                                                               @Nullable final SpanWrapper pspan,
+                                                               final boolean tximplicit) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, TracingIdentifiers.SPAN_REQUEST_QUERY, pspan);
-
             return hooks.beforeQuery.apply(this, statement)
 
                     .then(Mono.defer(() -> {
                         assertNotLocked("queryInternal");
 
                         // The metrics are invaluable for debugging, override user's setting
-                        options.put("metrics", true);
+                        options.put("metrics", BooleanNode.getTrue());
 
                         if (tximplicit) {
-                            options.put("tximplicit", true);
-                        }
-
-                        if (bucketName != null && scopeName != null) {
-                            String queryContext = QueryRequest.queryContext(bucketName, scopeName);
-                            options.put("query_context", queryContext);
+                            options.put("tximplicit", BooleanNode.getTrue());
                         }
 
                         if (tximplicit) {
 
                             // Workaround for MB-50914 on older server versions
-                            if (!options.has("scan_consistency")) {
-                                options.put("scan_consistency", "request_plus");
+                            if (options.scanConsistency() == null) {
+                                options.put("scan_consistency", TextNode.valueOf("request_plus"));
                             }
 
                             applyQueryOptions(config, options, expiryRemainingMillis());
@@ -4101,41 +4085,19 @@ public class CoreTransactionAttemptContext {
 
                         logger().info(attemptId, "q%d using query params %s", sidx, options.toString());
 
-                        options.put("statement", statement);
+                        // This is thread-safe as we're under lock.
+                        NodeIdentifier target = queryContext == null ? null : queryContext.queryTarget;
 
-                        byte[] encoded;
-                        try {
-                            encoded = Mapper.writer().writeValueAsBytes(options);
-                        } catch (JsonProcessingException e) {
-                            throw new EncodingFailureException(e);
-                        }
-                        boolean readonly = options.path("readonly").asBoolean(false);
-
-                        QueryRequest request = new QueryRequest(queryTimeout(),
-                                core.context(),
-                                BestEffortRetryStrategy.INSTANCE,
-                                core.context().authenticator(),
-                                statement,
-                                encoded,
-                                readonly,
-                                "query",
-                                span.span(),
-                                bucketName,
-                                scopeName,
-                                queryContext == null ? null : queryContext.queryTarget);
-
-                        // TODO ESI adhoc (with adhoc=false) get null lastDispatchedToNode
-                        return coreQueryAccessor.query(request, true)
+                        return queryOps.queryReactive(statement, options, qc, target, null)
                                 .publishOn(scheduler())
+                                // It has to be a CoreReactiveQueryResultClassic: we go down a different path entirely with Protostellar.
+                                .map(v -> (ClassicCoreReactiveQueryResult) v)
                                 .doOnNext(v -> {
                                     if (queryContext == null) {
-                                        queryContext = new QueryContext(request.context().lastDispatchedToNode(), bucketName, scopeName);
+                                        queryContext = new TransactionQueryContext(v.lastDispatchedTo(), qc);
                                         logger().info(attemptId, "q%d got query node id %s", sidx, RedactableArgument.redactMeta(queryContext.queryTarget));
                                     }
-                                    request.context().logicallyComplete();
-                                })
-                                // This finishs the span
-                                .doOnError(err -> request.context().logicallyComplete(err));
+                                });
                     }))
 
                     .flatMap(result -> hooks.afterQuery.apply(this, statement)
@@ -4157,20 +4119,19 @@ public class CoreTransactionAttemptContext {
      *
      * @param lockToken if null, the lock is held throughout
      */
-    public Mono<QueryResponse> queryWrapperLocked(final int sidx,
-                                                   @Nullable final String bucketName,
-                                                   @Nullable final String scopeName,
-                                                   final String statement,
-                                                   final ObjectNode options,
-                                                   final String hookPoint,
-                                                   final boolean isBeginWork,
-                                                   final boolean existingErrorCheck,
-                                                   @Nullable final ObjectNode txdata,
-                                                   @Nullable final ArrayNode params,
-                                                   @Nullable final SpanWrapper span,
-                                                   final boolean tximplicit,
-                                                   AtomicReference<ReactiveLock.Waiter> lockToken,
-                                                   final boolean updateInternalState) {
+    public Mono<ClassicCoreReactiveQueryResult> queryWrapperLocked(final int sidx,
+                                                                   @Nullable CoreQueryContext qc,
+                                                                   final String statement,
+                                                                   @Nullable final CoreQueryOptions options,
+                                                                   final String hookPoint,
+                                                                   final boolean isBeginWork,
+                                                                   final boolean existingErrorCheck,
+                                                                   @Nullable final ObjectNode txdata,
+                                                                   @Nullable final ArrayNode params,
+                                                                   @Nullable final SpanWrapper span,
+                                                                   final boolean tximplicit,
+                                                                   AtomicReference<ReactiveLock.Waiter> lockToken,
+                                                                   final boolean updateInternalState) {
         return Mono.defer(() -> {
             assertLocked("queryWrapper q" + sidx);
 
@@ -4183,11 +4144,14 @@ public class CoreTransactionAttemptContext {
 
             if (!tximplicit && !queryModeLocked() && !isBeginWork) {
                 // Thread-safety 7.6: need to unlock (to avoid deadlocks), wait for all KV ops, lock
-                beginWorkIfNeeded = beginWorkIfNeeded(sidx, bucketName, scopeName, statement, lockToken, span);
+                beginWorkIfNeeded = beginWorkIfNeeded(sidx, qc, statement, lockToken, span);
             }
 
+            // Not strictly speaking a copy, but does the same job - we're not modifying the original.
+            CoreQueryOptionsTransactions optionsCopy = new CoreQueryOptionsTransactions(options);
+
             if (txdata != null) {
-                options.set("txdata", txdata);
+                optionsCopy.raw("txdata", txdata);
             }
 
             // Important: Keep this routine in sync with queryWrapperReactiveLocked, which is an unavoidable C&P.
@@ -4198,25 +4162,11 @@ public class CoreTransactionAttemptContext {
 
                     .then(Mono.defer(() -> {
                         if (!tximplicit && !isBeginWork) {
-                            options.put("txid", attemptId);
+                            optionsCopy.raw("txid", TextNode.valueOf(attemptId));
                         }
-                        return queryInternal(sidx, bucketName, scopeName, statement, options, span, tximplicit);
+                        return queryInternal(sidx, qc, statement, optionsCopy, span, tximplicit);
                     }));
         });
-    }
-
-    // This is basically a QueryResult, which we don't have in core
-    @Stability.Internal
-    public static class BufferedQueryResponse {
-        public final QueryChunkHeader header;
-        public final List<QueryChunkRow> rows;
-        public final QueryChunkTrailer trailer;
-
-        BufferedQueryResponse(QueryChunkHeader header, List<QueryChunkRow> rows, QueryChunkTrailer trailer) {
-            this.header = header;
-            this.rows = rows;
-            this.trailer = trailer;
-        }
     }
 
     // As per CBD-4594, we discovered after release of the API that it's not (easily) possible to support
@@ -4224,24 +4174,22 @@ public class CoreTransactionAttemptContext {
     // report that the transaction should retry, and this would be missed and a generic fast-fail
     // reported at COMMIT time instead.  So, buffer the rows internally so errors are definitely
     // caught.
-    private Mono<BufferedQueryResponse> queryWrapperBlockingLocked(final int sidx,
-                                                   @Nullable final String bucketName,
-                                                   @Nullable final String scopeName,
-                                                   final String statement,
-                                                   final ObjectNode options,
-                                                   final String hookPoint,
-                                                   final boolean isBeginWork,
-                                                   final boolean existingErrorCheck,
-                                                   @Nullable final ObjectNode txdata,
-                                                   @Nullable final ArrayNode params,
-                                                   @Nullable final SpanWrapper span,
-                                                   final boolean tximplicit,
-                                                   AtomicReference<ReactiveLock.Waiter> lockToken,
-                                                   final boolean updateInternalState) {
+    private Mono<CoreQueryResult> queryWrapperBlockingLocked(final int sidx,
+                                                             @Nullable final CoreQueryContext qc,
+                                                             final String statement,
+                                                             @Nullable final CoreQueryOptions options,
+                                                             final String hookPoint,
+                                                             final boolean isBeginWork,
+                                                             final boolean existingErrorCheck,
+                                                             @Nullable final ObjectNode txdata,
+                                                             @Nullable final ArrayNode params,
+                                                             @Nullable final SpanWrapper span,
+                                                             final boolean tximplicit,
+                                                             AtomicReference<ReactiveLock.Waiter> lockToken,
+                                                             final boolean updateInternalState) {
         return Mono.defer(() -> {
             return queryWrapperLocked(sidx,
-                    bucketName,
-                    scopeName,
+                    qc,
                     statement,
                     options,
                     hookPoint,
@@ -4253,6 +4201,8 @@ public class CoreTransactionAttemptContext {
                     tximplicit,
                     lockToken,
                     updateInternalState)
+
+                    .map(result -> result.internal())
 
                     .flatMap(result -> {
                         return result.rows()
@@ -4271,7 +4221,7 @@ public class CoreTransactionAttemptContext {
 
                                             return Mono.error(err);
                                         })
-                                        .map(trailer -> new BufferedQueryResponse(result.header(), rows, trailer)));
+                                        .map(trailer -> new ClassicCoreQueryResult(result.header(), rows, trailer, null)));
                     })
 
                     .onErrorResume(err -> {
@@ -4291,17 +4241,9 @@ public class CoreTransactionAttemptContext {
                     .flatMap(result -> {
                         long elapsed = span.elapsedMicros();
 
-                        try {
-                            JsonNode metrics = Mapper.reader().readValue(result.trailer.metrics().get(), JsonNode.class);
-                            logger().info(attemptId, "q%d returned with metrics %s after %dus", sidx,
-                                    metrics, elapsed);
-                        } catch (IOException e) {
-                            logger().info(attemptId, "q%d returned after %dus, unable to parse metrics %s", sidx,
-                                    elapsed, e);
-                        }
+                        logger().info(attemptId, "q%d returned with metrics %s after %dus", sidx, result.metaData().metrics().get(), elapsed);
 
-
-                        if (result.trailer.status().equals("FATAL")) {
+                        if (result.metaData().status() ==  CoreQueryStatus.FATAL) {
                             TransactionOperationFailedException err = operationFailed(updateInternalState, createError().build());
                             return Mono.error(err);
                         } else {
@@ -4312,8 +4254,7 @@ public class CoreTransactionAttemptContext {
     }
 
     private Mono<Void> beginWorkIfNeeded(int sidx,
-                                         @Nullable final String bucketName,
-                                         @Nullable final String scopeName,
+                                         @Nullable final CoreQueryContext qc,
                                          String statement,
                                          AtomicReference<ReactiveLock.Waiter> lockToken,
                                          SpanWrapper span) {
@@ -4329,7 +4270,7 @@ public class CoreTransactionAttemptContext {
                     boolean stillNeedsBeginWork = !queryModeLocked();
                     LOGGER.info(attemptId, "q%d after reacquiring lock stillNeedsBeginWork=%s", sidx, stillNeedsBeginWork);
                     if (!queryModeLocked()) {
-                        return queryBeginWorkLocked(bucketName, scopeName, span);
+                        return queryBeginWorkLocked(qc, span);
                     } else {
                         return Mono.empty();
                     }
@@ -4351,7 +4292,7 @@ public class CoreTransactionAttemptContext {
         return out;
     }
 
-    private static ObjectNode applyQueryOptions(CoreMergedTransactionConfig config, ObjectNode options, long txtimeout) {
+    private static CoreQueryOptionsTransactions applyQueryOptions(CoreMergedTransactionConfig config, CoreQueryOptionsTransactions options, long txtimeout) {
         // The BEGIN WORK scan consistency determines the default for all queries in the transaction.
         String scanConsistency = null;
 
@@ -4361,7 +4302,7 @@ public class CoreTransactionAttemptContext {
 
         // If not set, will default (in query) to REQUEST_PLUS
         if (scanConsistency != null) {
-            options.put("scan_consistency", scanConsistency);
+            options.put("scan_consistency", TextNode.valueOf(scanConsistency));
         }
 
         // http://src.couchbase.org/source/xref/cheshire-cat/goproj/src/github.com/couchbase/query/server/http/service_request.go search '// Request argument names'
@@ -4384,29 +4325,28 @@ public class CoreTransactionAttemptContext {
                 throw new IllegalArgumentException("Unknown durability level " + durabilityLevel);
         }
 
-        options.put("durability_level", durabilityLevelString);
-        options.put("txtimeout", txtimeout + "ms");
+        options.put("durability_level", TextNode.valueOf(durabilityLevelString));
+        options.put("txtimeout", TextNode.valueOf(txtimeout + "ms"));
         config.metadataCollection().ifPresent(metadataCollection -> {
             options.put("atrcollection",
-                    String.format("`%s`.`%s`.`%s`",
+                    TextNode.valueOf(String.format("`%s`.`%s`.`%s`",
                             metadataCollection.bucket(),
                             metadataCollection.scope().orElse(DEFAULT_SCOPE),
-                            metadataCollection.collection().orElse(DEFAULT_COLLECTION)));
+                            metadataCollection.collection().orElse(DEFAULT_COLLECTION))));
         });
-        options.put("numatrs", config.numAtrs());
+        options.put("numatrs", IntNode.valueOf(config.numAtrs()));
 
         return options;
     }
 
-    private Mono<Void> queryBeginWorkLocked(@Nullable final String bucketName,
-                                            @Nullable final String scopeName,
+    private Mono<Void> queryBeginWorkLocked(@Nullable CoreQueryContext qc,
                                             final SpanWrapper span) {
         return Mono.defer(() -> {
             assertLocked("queryBeginWork");
 
             ObjectNode txdata = makeQueryTxDataLocked();
 
-            ObjectNode options = Mapper.createObjectNode();
+            CoreQueryOptionsTransactions options = new CoreQueryOptionsTransactions();
             applyQueryOptions(config, options, expiryRemainingMillis());
 
             String statement = "BEGIN WORK";
@@ -4415,8 +4355,7 @@ public class CoreTransactionAttemptContext {
             // Using a null lockToken will keep it locked throughout BEGIN WORK.
             // Update: no longer important as the body of queryWrapper does not unlock anymore.
             return queryWrapperBlockingLocked(statementIdx,
-                    bucketName,
-                    scopeName,
+                    qc,
                     statement,
                     options,
                     CoreTransactionAttemptContextHooks.HOOK_QUERY_BEGIN_WORK,
@@ -4448,10 +4387,9 @@ public class CoreTransactionAttemptContext {
      * Used by AttemptContext, buffers all query rows in-memory.
      */
 
-    public Mono<BufferedQueryResponse> queryBlocking(final String statement,
-                                                     @Nullable final String bucketName,
-                                                     @Nullable final String scopeName,
-                                                     final ObjectNode options,
+    public Mono<CoreQueryResult> queryBlocking(final String statement,
+                                                     @Nullable CoreQueryContext qc,
+                                                     @Nullable final CoreQueryOptions options,
                                                      final boolean tximplicit) {
         return doQueryOperation("query blocking",
                 statement,
@@ -4460,7 +4398,7 @@ public class CoreTransactionAttemptContext {
                     if (tximplicit) {
                         span.attribute(TracingIdentifiers.ATTR_TRANSACTION_SINGLE_QUERY, true);
                     }
-                    return queryWrapperBlockingLocked(sidx, bucketName, scopeName, statement, options, CoreTransactionAttemptContextHooks.HOOK_QUERY, false, true, null, null, span, tximplicit, lockToken, true);
+                    return queryWrapperBlockingLocked(sidx, qc, statement, options, CoreTransactionAttemptContextHooks.HOOK_QUERY, false, true, null, null, span, tximplicit, lockToken, true);
                 });
     }
 

@@ -13,38 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.query;
+package com.couchbase.client.core.protostellar.query;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.codec.JsonSerializer;
-import com.couchbase.client.java.codec.TypeRef;
+import com.couchbase.client.core.api.query.CoreQueryMetaData;
+import com.couchbase.client.core.api.query.CoreReactiveQueryResult;
+import com.couchbase.client.core.msg.query.QueryChunkRow;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.protostellar.query.v1.QueryResponse;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-@Stability.Volatile
-public class ReactiveQueryResultProtostellar extends ReactiveQueryResult {
+import static com.couchbase.client.core.util.Validators.notNull;
+
+@Stability.Internal
+public class ProtostellarCoreReactiveQueryResult extends CoreReactiveQueryResult {
 
   private final Flux<QueryResponse> responses;
 
-  ReactiveQueryResultProtostellar(Flux<QueryResponse> responses, final JsonSerializer serializer) {
-    super(serializer);
-    this.responses = responses;
+  public ProtostellarCoreReactiveQueryResult(Flux<QueryResponse> responses) {
+    this.responses = notNull(responses, "responses");
   }
 
-  public <T> Flux<T> rowsAs(final Class<T> target) {
+  public Flux<QueryChunkRow> rows() {
     return responses.flatMap(response -> Flux.fromIterable(response.getRowsList())
-      .map(row -> serializer.deserialize(target, row.toByteArray())));
+      .map(row -> new QueryChunkRow(row.toByteArray())));
   }
 
-  public <T> Flux<T> rowsAs(final TypeRef<T> target) {
-    return responses.flatMap(response -> Flux.fromIterable(response.getRowsList())
-      .map(row -> serializer.deserialize(target, row.toByteArray())));
-  }
-
-  public Mono<QueryMetaData> metaData() {
+  public Mono<CoreQueryMetaData> metaData() {
     return responses.takeUntil(response -> response.hasMetaData())
       .single()
-      .map(response -> new QueryMetaDataProtostellar(response.getMetaData()));
+      .map(response -> new ProtostellarCoreQueryMetaData(response.getMetaData()));
+  }
+
+  @Override
+  public NodeIdentifier lastDispatchedTo() {
+    return null;
   }
 }

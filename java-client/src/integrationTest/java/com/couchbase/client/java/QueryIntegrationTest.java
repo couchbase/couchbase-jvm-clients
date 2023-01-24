@@ -70,8 +70,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   missesCapabilities = Capabilities.QUERY,
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
   clusterVersionIsBelow = REQUIRE_MB_50132,
-  clusterTypes = ClusterType.CAVES,
-  isProtostellar = true
+  clusterTypes = ClusterType.CAVES
 )
 class QueryIntegrationTest extends JavaIntegrationTest {
 

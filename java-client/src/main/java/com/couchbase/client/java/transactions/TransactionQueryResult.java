@@ -17,6 +17,7 @@
 package com.couchbase.client.java.transactions;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreQueryResult;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
@@ -25,7 +26,6 @@ import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.QueryMetaData;
-import com.couchbase.client.java.query.QueryMetaDataHttp;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,21 +38,7 @@ import java.util.Objects;
  * reliably take place.
  */
 public class TransactionQueryResult {
-
-    /**
-     * Stores the encoded rows from the query response.
-     */
-    private final List<QueryChunkRow> rows;
-
-    /**
-     * The header holds associated metadata that came back before the rows streamed.
-     */
-    private final QueryChunkHeader header;
-
-    /**
-     * The trailer holds associated metadata that came back after the rows streamed.
-     */
-    private final QueryChunkTrailer trailer;
+   private final CoreQueryResult internal;
 
     /**
      * The default serializer to use.
@@ -61,17 +47,11 @@ public class TransactionQueryResult {
 
     /**
      * Creates a new TransactionQueryResult.
-     *
-     * @param header the query header.
-     * @param rows the query rows.
-     * @param trailer the query trailer.
      */
     @Stability.Internal
-    public TransactionQueryResult(final QueryChunkHeader header, final List<QueryChunkRow> rows, final QueryChunkTrailer trailer,
+    public TransactionQueryResult(CoreQueryResult internal,
                                   final JsonSerializer serializer) {
-        this.rows = Objects.requireNonNull(rows);
-        this.header = Objects.requireNonNull(header);
-        this.trailer = Objects.requireNonNull(trailer);
+        this.internal = Objects.requireNonNull(internal);
         this.serializer = Objects.requireNonNull(serializer);
     }
 
@@ -91,6 +71,7 @@ public class TransactionQueryResult {
      * @throws DecodingFailureException if any row could not be successfully deserialized.
      */
     public <T> List<T> rowsAs(final Class<T> target) {
+        List<QueryChunkRow> rows = internal.collectRows();
         final List<T> converted = new ArrayList<>(rows.size());
         for (QueryChunkRow row : rows) {
             converted.add(serializer.deserialize(target, row.data()));
@@ -105,6 +86,7 @@ public class TransactionQueryResult {
      * @throws DecodingFailureException if any row could not be successfully deserialized.
      */
     public <T> List<T> rowsAs(final TypeRef<T> target) {
+        List<QueryChunkRow> rows = internal.collectRows();
         final List<T> converted = new ArrayList<>(rows.size());
         for (QueryChunkRow row : rows) {
             converted.add(serializer.deserialize(target, row.data()));
@@ -116,15 +98,6 @@ public class TransactionQueryResult {
      * Returns the {@link QueryMetaData} giving access to the additional metadata associated with this query.
      */
     public QueryMetaData metaData() {
-        return QueryMetaDataHttp.from(header, trailer);
-    }
-
-    @Override
-    public String toString() {
-        return "TransactionQueryResult{" +
-            "rows=" + rows +
-            ", header=" + header +
-            ", trailer=" + trailer +
-            '}';
+        return new QueryMetaData(internal.metaData());
     }
 }

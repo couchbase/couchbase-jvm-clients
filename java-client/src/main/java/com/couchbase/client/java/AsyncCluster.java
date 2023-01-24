@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.diagnostics.ClusterState;
@@ -58,14 +59,12 @@ import com.couchbase.client.java.manager.query.AsyncQueryIndexManager;
 import com.couchbase.client.java.manager.search.AsyncSearchIndexManager;
 import com.couchbase.client.java.manager.user.AsyncUserManager;
 import com.couchbase.client.java.query.QueryAccessor;
-import com.couchbase.client.java.query.QueryAccessorProtostellar;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.search.SearchAccessor;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
-import com.couchbase.client.java.transactions.internal.SingleQueryTransactions;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
@@ -91,6 +90,7 @@ import static com.couchbase.client.java.ReactiveCluster.DEFAULT_PING_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_WAIT_UNTIL_READY_OPTIONS;
+import static com.couchbase.client.java.query.QueryAccessor.convertCoreQueryError;
 
 /**
  * The {@link AsyncCluster} is the main entry point when connecting to a Couchbase cluster using the async API.
@@ -133,8 +133,6 @@ public class AsyncCluster {
 
   private final AsyncSearchIndexManager searchIndexManager;
 
-  private final QueryAccessor queryAccessor;
-
   private final AsyncUserManager userManager;
 
   private final AsyncBucketManager bucketManager;
@@ -151,6 +149,11 @@ public class AsyncCluster {
    * Stores already opened buckets for reuse.
    */
   private final Map<String, AsyncBucket> bucketCache = new ConcurrentHashMap<>();
+
+  /**
+   * Strategy for performing query operations.
+   */
+  final CoreQueryOps queryOps;
 
   /**
    * Connect to a Couchbase cluster with a username and a password as authentication credentials.
@@ -258,13 +261,13 @@ public class AsyncCluster {
     this.environment = environment;
     this.core = Core.create(environment.get(), authenticator, seedNodes, connectionString);
     this.searchIndexManager = new AsyncSearchIndexManager(core);
-    this.queryAccessor = new QueryAccessor(core);
     this.userManager = new AsyncUserManager(core);
     this.bucketManager = new AsyncBucketManager(core);
     this.queryIndexManager = new AsyncQueryIndexManager(this);
     this.analyticsIndexManager = new AsyncAnalyticsIndexManager(this);
     this.eventingFunctionManager = new AsyncEventingFunctionManager(core);
     this.authenticator = authenticator;
+    this.queryOps = core.queryOps();
 
     core.initGlobalConfig();
   }
@@ -357,50 +360,9 @@ public class AsyncCluster {
   public CompletableFuture<QueryResult> query(final String statement, final QueryOptions options) {
     notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
-
-    if (opts.asTransaction()) {
-      return SingleQueryTransactions.singleQueryTransactionBuffered(core, environment(), statement, null, null, opts).toFuture();
-    }
-    else {
-      JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
-      if (core.isProtostellar()) {
-        return QueryAccessorProtostellar.async(core, opts,
-          QueryAccessorProtostellar.request(core(), statement, opts, environment(), null, null),
-          serializer);
-      }
-      else {
-        return queryAccessor.queryAsync(queryRequest(statement, opts), opts, serializer);
-      }
-    }
-  }
-
-  /**
-   * Helper method to construct the query request.
-   *
-   * @param statement the statement of the query.
-   * @param options the options.
-   * @return the constructed query request.
-   */
-  QueryRequest queryRequest(final String statement, final QueryOptions.Built options) {
-    notNullOrEmpty(statement, "Statement", () -> new ReducedQueryErrorContext(statement));
-    Duration timeout = options.timeout().orElse(environment.get().timeoutConfig().queryTimeout());
-    RetryStrategy retryStrategy = options.retryStrategy().orElse(environment.get().retryStrategy());
-
-    final JsonObject query = JsonObject.create();
-    query.put("statement", statement);
-    query.put("timeout", encodeDurationToMs(timeout));
-    options.injectParams(query);
-
-    final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
-    final String clientContextId = query.getString("client_context_id");
-    final RequestSpan span = environment()
-      .requestTracer()
-      .requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, options.parentSpan().orElse(null));
-
-    QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, authenticator, statement,
-      queryBytes, options.readonly(), clientContextId, span, null, null, null);
-    request.context().clientContext(options.clientContext());
-    return request;
+    JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
+    return queryOps.queryAsync(statement, opts, null, null, QueryAccessor::convertCoreQueryError)
+      .thenApply(r -> new QueryResult(r, serializer));
   }
 
   /**
@@ -557,14 +519,6 @@ public class AsyncCluster {
         return Mono.empty();
       }
     }));
-  }
-
-  /**
-   * Provides access to the internal query accessor.
-   */
-  @Stability.Internal
-  QueryAccessor queryAccessor() {
-    return queryAccessor;
   }
 
   /**

@@ -18,13 +18,19 @@ package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreQueryOptions;
+import com.couchbase.client.core.api.query.CoreQueryProfile;
+import com.couchbase.client.core.api.query.CoreQueryScanConsistency;
+import com.couchbase.client.core.api.shared.CoreMutationState;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
-import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.transaction.config.CoreSingleQueryTransactionOptions;
-import com.couchbase.client.core.util.Golang;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -34,13 +40,10 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.transactions.config.SingleQueryTransactionOptions;
-import com.couchbase.client.protostellar.query.v1.QueryRequest;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -64,13 +67,12 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   private Integer pipelineBatch;
   private Integer pipelineCap;
   private JsonArray positionalParameters;
-  private QueryProfile profile;
+  private CoreQueryProfile profile;
   private Map<String, Object> raw;
   private boolean readonly = false;
-  private String scanWait;
-  private Duration scanWaitOriginal;
+  private Duration scanWait;
   private Integer scanCap;
-  private QueryScanConsistency scanConsistency;
+  private CoreQueryScanConsistency scanConsistency;
   private JsonSerializer serializer;
   private boolean flexIndex = false;
   private Boolean preserveExpiry = null;
@@ -152,7 +154,16 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    */
   public QueryOptions scanConsistency(final QueryScanConsistency scanConsistency) {
     notNull(scanConsistency, "QueryScanConsistency");
-    this.scanConsistency = scanConsistency;
+    switch (scanConsistency) {
+      case NOT_BOUNDED:
+        this.scanConsistency = CoreQueryScanConsistency.NOT_BOUNDED;
+        break;
+      case REQUEST_PLUS:
+        this.scanConsistency = CoreQueryScanConsistency.REQUEST_PLUS;
+        break;
+      default:
+        throw new InvalidArgumentException("Unknown scan consistency type " + scanConsistency, null, null);
+    }
     consistentWith = null;
     return this;
   }
@@ -187,7 +198,19 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    */
   public QueryOptions profile(final QueryProfile profile) {
     notNull(profile, "QueryProfile");
-    this.profile = profile;
+    switch (profile) {
+      case OFF:
+        this.profile = CoreQueryProfile.OFF;
+        break;
+      case PHASES:
+        this.profile = CoreQueryProfile.PHASES;
+        break;
+      case TIMINGS:
+        this.profile = CoreQueryProfile.TIMINGS;
+        break;
+      default:
+        throw new InvalidArgumentException("Unknown profile type " + profile, null, null);
+    }
     return this;
   }
 
@@ -237,12 +260,10 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
    */
   public QueryOptions scanWait(final Duration wait) {
     notNull(wait, "Wait Duration");
-    if (this.scanConsistency != null && this.scanConsistency == QueryScanConsistency.NOT_BOUNDED) {
+    if (this.scanConsistency != null && this.scanConsistency == CoreQueryScanConsistency.NOT_BOUNDED) {
       this.scanWait = null;
-      this.scanWaitOriginal = null;
     } else {
-      this.scanWait = Golang.encodeDurationToMs(wait);
-      this.scanWaitOriginal = wait;
+      this.scanWait = wait;
     }
     return this;
   }
@@ -436,255 +457,135 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   }
 
   @Stability.Internal
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltCommonOptions implements CoreQueryOptions {
+    private final CoreCommonOptions common;
 
-    Built() { }
-
-    boolean adhoc() {
-      return adhoc;
+    Built() {
+      common = CoreCommonOptions.ofOptional(timeout(), retryStrategy(), parentSpan());
     }
 
     public boolean readonly() {
       return readonly;
     }
 
+    @Override
+    public Duration scanWait() {
+      return scanWait;
+    }
+
+    @Override
+    public Integer scanCap() {
+      return scanCap;
+    }
+
+    @Override
+    public CoreQueryScanConsistency scanConsistency() {
+      return scanConsistency;
+    }
+
+    @Override
+    public boolean flexIndex() {
+      return flexIndex;
+    }
+
+    @Override
+    public Boolean preserveExpiry() {
+      return preserveExpiry;
+    }
+
     public JsonSerializer serializer() {
       return serializer;
+    }
+
+    @Override
+    public boolean adhoc() {
+      return adhoc;
     }
 
     public String clientContextId() {
       return clientContextId;
     }
 
+    @Override
+    public CoreMutationState consistentWith() {
+      if (consistentWith == null) {
+        return null;
+      }
+
+      return new CoreMutationState(consistentWith);
+    }
+
+    @Override
+    public Integer maxParallelism() {
+      return maxParallelism;
+    }
+
+    @Override
+    public boolean metrics() {
+      return metrics;
+    }
+
+    @Override
+    public ObjectNode namedParameters() {
+      if (namedParameters == null) {
+        return null;
+      }
+
+      try {
+        return (ObjectNode) Mapper.reader().readTree(namedParameters.toString());
+      } catch (JsonProcessingException e) {
+        throw new InvalidArgumentException("Unable to convert named parameters", e, null);
+      }
+    }
+
+    @Override
+    public Integer pipelineBatch() {
+      return pipelineBatch;
+    }
+
+    @Override
+    public Integer pipelineCap() {
+      return pipelineCap;
+    }
+
+    @Override
+    public ArrayNode positionalParameters() {
+      if (positionalParameters == null) {
+        return null;
+      }
+
+      try {
+        return (ArrayNode) Mapper.reader().readTree(positionalParameters.toString());
+      } catch (JsonProcessingException e) {
+        throw new InvalidArgumentException("Unable to convert named parameters", e, null);
+      }
+    }
+
+    @Override
+    public CoreQueryProfile profile() {
+      return profile;
+    }
+
+    @Override
+    public JsonNode raw() {
+      if (raw == null) {
+        return null;
+      }
+
+      return QueryOptionsUtil.convert(raw);
+    }
+
     public boolean asTransaction() {
       return asTransaction;
     }
 
-    public void injectParams(final com.couchbase.client.protostellar.query.v1.QueryRequest.Builder input) {
-      input.setClientContextId(clientContextId == null ? UUID.randomUUID().toString() : clientContextId);
-
-      if (scanConsistency != null) {
-        input.setScanConsistency(QueryRequest.QueryScanConsistency.valueOf(scanConsistency.name()));
-      }
-
-      boolean positionalPresent = positionalParameters != null && !positionalParameters.isEmpty();
-      if (namedParameters != null && !namedParameters.isEmpty()) {
-        if (positionalPresent) {
-          throw InvalidArgumentException.fromMessage("Both positional and named parameters cannot be present at the same time!");
-        }
-
-        namedParameters.getNames().forEach(key -> {
-          Object value = namedParameters.get(key);
-          try {
-            ByteString bs = ByteString.copyFrom(Mapper.writer().writeValueAsBytes(value));
-            input.putNamedParameters(key, bs);
-          } catch (JsonProcessingException e) {
-            throw new InvalidArgumentException("Unable to JSON encode named parameter " + key, e, null);
-          }
-        });
-      }
-
-      if (positionalPresent) {
-        positionalParameters.iterator().forEachRemaining(it -> {
-          try {
-            input.addPositionalParameters(ByteString.copyFrom(Mapper.writer().writeValueAsBytes(it)));
-          } catch (JsonProcessingException e) {
-            throw new InvalidArgumentException("Unable to JSON encode positional parameter " + it, e, null);
-          }
-        });
-      }
-
-
-      if (scanConsistency == QueryScanConsistency.REQUEST_PLUS) {
-        input.setScanConsistency(QueryRequest.QueryScanConsistency.REQUEST_PLUS);
-      }
-
-      if (consistentWith != null) {
-        for (MutationToken token : consistentWith) {
-          input.addConsistentWith(com.couchbase.client.protostellar.kv.v1.MutationToken.newBuilder()
-              .setSeqNo(token.sequenceNumber())
-              .setVbucketId(token.partitionID())
-              .setVbucketUuid(token.partitionUUID())
-              .setBucketName(token.bucketName())
-              .build());
-        }
-      }
-
-      if (profile != null && profile != QueryProfile.OFF) {
-        switch (profile) {
-          case TIMINGS:
-            input.setProfileMode(QueryRequest.QueryProfileMode.TIMINGS);
-            break;
-          case PHASES:
-            input.setProfileMode(QueryRequest.QueryProfileMode.PHASES);
-            break;
-        }
-      }
-
-      QueryRequest.TuningOptions.Builder tuning = null;
-
-      if (scanWait != null && !scanWait.isEmpty()) {
-        if (scanConsistency == null || QueryScanConsistency.NOT_BOUNDED != scanConsistency) {
-          if (tuning == null) {
-            tuning = QueryRequest.TuningOptions.newBuilder();
-          }
-          tuning.setScanWait(com.couchbase.client.core.deps.com.google.protobuf.Duration.newBuilder().setSeconds(TimeUnit.NANOSECONDS.toSeconds(scanWaitOriginal.toNanos())));
-        }
-      }
-
-      if (maxParallelism != null) {
-        if (tuning == null) {
-          tuning = QueryRequest.TuningOptions.newBuilder();
-        }
-        tuning.setMaxParallelism(maxParallelism);
-      }
-
-      if (pipelineCap != null) {
-        if (tuning == null) {
-          tuning = QueryRequest.TuningOptions.newBuilder();
-        }
-        tuning.setPipelineCap(pipelineCap);
-      }
-
-      if (pipelineBatch != null) {
-        if (tuning == null) {
-          tuning = QueryRequest.TuningOptions.newBuilder();
-        }
-        tuning.setPipelineBatch(pipelineBatch);
-      }
-
-      if (scanCap != null) {
-        if (tuning == null) {
-          tuning = QueryRequest.TuningOptions.newBuilder();
-        }
-        tuning.setScanCap(scanCap);
-      }
-
-      if (!metrics) {
-        if (tuning == null) {
-          tuning = QueryRequest.TuningOptions.newBuilder();
-        }
-        tuning.setDisableMetrics(!metrics);
-      }
-
-      if (readonly) {
-        input.setReadOnly(readonly);
-      }
-
-      if (flexIndex) {
-        input.setFlexIndex(flexIndex);
-      }
-
-      if (preserveExpiry != null) {
-        input.setPreserveExpiry(preserveExpiry);
-      }
-
-      if (!adhoc) {
-        input.setPrepared(true);
-      }
-
-      if (raw != null) {
-        throw new UnsupportedOperationException("Raw options cannot be used together with Protostellar");
-      }
-    }
-
-    @Stability.Internal
-    public void injectParams(final JsonObject queryJson) {
-      queryJson.put("client_context_id", clientContextId == null ? UUID.randomUUID().toString() : clientContextId);
-
-      boolean positionalPresent = positionalParameters != null && !positionalParameters.isEmpty();
-      if (namedParameters != null && !namedParameters.isEmpty()) {
-        if (positionalPresent) {
-          throw InvalidArgumentException.fromMessage("Both positional and named parameters cannot be present at the same time!");
-        }
-
-        namedParameters.getNames().forEach(key -> {
-          Object value = namedParameters.get(key);
-          if (key.charAt(0) != '$') {
-            queryJson.put('$' + key, value);
-          } else {
-            queryJson.put(key, value);
-          }
-        });
-      }
-
-      if (positionalPresent) {
-        queryJson.put("args", positionalParameters);
-      }
-
-      if (scanConsistency != null && scanConsistency != QueryScanConsistency.NOT_BOUNDED) {
-        queryJson.put("scan_consistency", scanConsistency.toString());
-      }
-
-      if (consistentWith != null) {
-        JsonObject mutationState = JsonObject.create();
-        for (MutationToken token : consistentWith) {
-          JsonObject bucket = mutationState.getObject(token.bucketName());
-          if (bucket == null) {
-            bucket = JsonObject.create();
-            mutationState.put(token.bucketName(), bucket);
-          }
-
-          bucket.put(
-            String.valueOf(token.partitionID()),
-            JsonArray.from(token.sequenceNumber(), String.valueOf(token.partitionUUID()))
-          );
-        }
-        queryJson.put("scan_vectors", mutationState);
-        queryJson.put("scan_consistency", "at_plus");
-      }
-
-      if (profile != null && profile != QueryProfile.OFF) {
-        queryJson.put("profile", profile.toString());
-      }
-
-      if (scanWait != null && !scanWait.isEmpty()) {
-        if (scanConsistency == null || QueryScanConsistency.NOT_BOUNDED != scanConsistency) {
-          queryJson.put("scan_wait", scanWait);
-        }
-      }
-
-      if (maxParallelism != null) {
-        queryJson.put("max_parallelism", maxParallelism.toString());
-      }
-
-      if (pipelineCap != null) {
-        queryJson.put("pipeline_cap", pipelineCap.toString());
-      }
-
-      if (pipelineBatch != null) {
-        queryJson.put("pipeline_batch", pipelineBatch.toString());
-      }
-
-      if (scanCap != null) {
-        queryJson.put("scan_cap", scanCap.toString());
-      }
-
-      if (!metrics) {
-        queryJson.put("metrics", false);
-      }
-
-      if (readonly) {
-        queryJson.put("readonly", true);
-      }
-
-      if (flexIndex) {
-        queryJson.put("use_fts", true);
-      }
-
-      if (preserveExpiry != null) {
-        queryJson.put("preserve_expiry", preserveExpiry);
-      }
-
-      if (raw != null) {
-        for (Map.Entry<String, Object> entry : raw.entrySet()) {
-          queryJson.put(entry.getKey(), entry.getValue());
-        }
-      }
-    }
-
     public CoreSingleQueryTransactionOptions asTransactionOptions() {
       return asTransactionOptions;
+    }
+
+    @Override
+    public CoreCommonOptions commonOptions() {
+      return common;
     }
   }
 

@@ -331,7 +331,7 @@ public class RequestContext extends CoreContext {
    * @param clientContext the payload to set.
    */
   @Stability.Internal
-  public RequestContext clientContext(final Map<String, Object> clientContext) {
+  public RequestContext clientContext(@Nullable final Map<String, Object> clientContext) {
     if (clientContext != null) {
       this.clientContext = clientContext;
     }

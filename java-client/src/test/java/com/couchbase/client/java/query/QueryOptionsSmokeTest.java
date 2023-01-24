@@ -15,11 +15,13 @@
  */
 package com.couchbase.client.java.query;
 
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.java.json.JsonObject;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
+import static com.couchbase.client.core.classic.query.ClassicCoreQueryOps.convertOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -31,18 +33,16 @@ class QueryOptionsSmokeTest {
     void testScanConsistency() {
         QueryOptions options = QueryOptions.queryOptions().scanConsistency(QueryScanConsistency.REQUEST_PLUS);
         QueryOptions.Built opts = options.build();
-        JsonObject queryJson = JsonObject.create();
-        opts.injectParams(queryJson);
-        assertEquals(queryJson.get("scan_consistency"), "request_plus");
+        ObjectNode queryJson = convertOptions(opts);
+        assertEquals(queryJson.get("scan_consistency").textValue(), "request_plus");
     }
 
     @Test
     void testProfile() {
         QueryOptions options = QueryOptions.queryOptions().profile(QueryProfile.TIMINGS);
         QueryOptions.Built opts = options.build();
-        JsonObject queryJson = JsonObject.create();
-        opts.injectParams(queryJson);
-        assertEquals(queryJson.get("profile"), "timings");
+        ObjectNode queryJson = convertOptions(opts);
+        assertEquals(queryJson.get("profile").textValue(), "timings");
     }
 
     @Test
@@ -50,9 +50,8 @@ class QueryOptionsSmokeTest {
         String randomId = UUID.randomUUID().toString();
         QueryOptions options = QueryOptions.queryOptions().clientContextId(randomId);
         QueryOptions.Built opts = options.build();
-        JsonObject queryJson = JsonObject.create();
-        opts.injectParams(queryJson);
-        assertEquals(queryJson.get("client_context_id"), randomId);
+        ObjectNode queryJson = convertOptions(opts);
+        assertEquals(queryJson.get("client_context_id").textValue(), randomId);
     }
 
 }

@@ -17,8 +17,8 @@
 package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreReactiveQueryResult;
 import com.couchbase.client.core.error.DecodingFailureException;
-import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonObject;
@@ -30,16 +30,18 @@ import reactor.core.publisher.Mono;
  *
  * @since 3.0.0
  */
-public abstract class ReactiveQueryResult {
+public class ReactiveQueryResult {
 
 	/**
 	 * The default serializer to use.
 	 */
-	protected final JsonSerializer serializer;
+	private final JsonSerializer serializer;
+  private final CoreReactiveQueryResult internal;
 
 	@Stability.Internal
-	public ReactiveQueryResult(final JsonSerializer serializer) {
+	public ReactiveQueryResult(final CoreReactiveQueryResult internal, final JsonSerializer serializer) {
 		this.serializer = serializer;
+    this.internal = internal;
 	}
 
 	/**
@@ -60,7 +62,10 @@ public abstract class ReactiveQueryResult {
 	 * @return {@link Flux}
    * @throws DecodingFailureException (async) if the decoding cannot be completed successfully
 	 */
-	public abstract <T> Flux<T> rowsAs(Class<T> target);
+	public <T> Flux<T> rowsAs(Class<T> target) {
+    return internal.rows()
+      .map(row -> serializer.deserialize(target, row.data()));
+  }
 
   /**
    * Get a {@link Flux} which publishes the rows that were fetched by the query which are then decoded to the
@@ -70,7 +75,10 @@ public abstract class ReactiveQueryResult {
    * @return {@link Flux}
    * @throws DecodingFailureException (async) if the decoding cannot be completed successfully
    */
-	public abstract <T> Flux<T> rowsAs(TypeRef<T> target);
+	public <T> Flux<T> rowsAs(TypeRef<T> target) {
+    return internal.rows()
+      .map(row -> serializer.deserialize(target, row.data()));
+  }
 
 	/**
 	 * Returns a {@link Mono} containing a {@link QueryMetaData},  giving access to the additional metadata associated with
@@ -79,5 +87,7 @@ public abstract class ReactiveQueryResult {
 	 * Note that the metadata will only be available once all rows have been received, so it is recommended that you
 	 * first handle the rows in your code, and then the metadata.  This will avoid buffering all the rows in-memory.
 	 */
-	public abstract Mono<QueryMetaData> metaData();
+	public Mono<QueryMetaData> metaData() {
+    return internal.metaData().map(QueryMetaData::new);
+  }
 }

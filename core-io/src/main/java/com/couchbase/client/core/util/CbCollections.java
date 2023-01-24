@@ -319,4 +319,16 @@ public class CbCollections {
         .stream()
         .collect(toMap(Map.Entry::getKey, entry -> transformer.apply(entry.getValue())));
   }
+
+  /**
+   * Returns an unmodifiable list containing all elements of the given iterable.
+   * Subsequent changes to the original iterable are not reflected in the returned list.
+   *
+   * @throws NullPointerException if original is null or contains any nulls
+   */
+  public static <E> List<E> listCopyOf(Iterable<? extends E> original) {
+    List<E> result = new ArrayList<>();
+    original.forEach(it -> result.add(requireNonNull(it, "List may not contain null.")));
+    return unmodifiableList(result);
+  }
 }

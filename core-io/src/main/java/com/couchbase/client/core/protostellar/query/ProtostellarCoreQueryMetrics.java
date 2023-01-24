@@ -13,20 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.query;
+package com.couchbase.client.core.protostellar.query;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreQueryMetrics;
 import com.couchbase.client.core.util.ProtostellarUtil;
 import com.couchbase.client.protostellar.query.v1.QueryResponse;
 
 import java.time.Duration;
 
-@Stability.Volatile
-public class QueryMetricsProtostellar extends QueryMetrics {
+import static com.couchbase.client.core.util.Validators.notNull;
+
+@Stability.Internal
+public class ProtostellarCoreQueryMetrics implements CoreQueryMetrics {
   private final QueryResponse.MetaData.Metrics metrics;
 
-  public QueryMetricsProtostellar(QueryResponse.MetaData.Metrics metrics) {
-    this.metrics = metrics;
+  public ProtostellarCoreQueryMetrics(QueryResponse.MetaData.Metrics metrics) {
+    this.metrics = notNull(metrics, "metrics");
   }
 
   @Override

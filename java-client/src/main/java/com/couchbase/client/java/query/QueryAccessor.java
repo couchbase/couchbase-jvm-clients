@@ -20,73 +20,23 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
-import com.couchbase.client.core.msg.query.CoreQueryAccessor;
+import com.couchbase.client.core.error.transaction.internal.CoreTransactionCommitAmbiguousException;
+import com.couchbase.client.core.error.transaction.internal.CoreTransactionExpiredException;
+import com.couchbase.client.core.error.transaction.internal.CoreTransactionFailedException;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.java.codec.JsonSerializer;
-import reactor.core.publisher.Mono;
+import com.couchbase.client.java.transactions.error.TransactionCommitAmbiguousException;
+import com.couchbase.client.java.transactions.error.TransactionExpiredException;
+import com.couchbase.client.java.transactions.error.TransactionFailedException;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
-/**
- * Converts requests and responses for N1QL queries.
- * <p>
- * Note that this accessor also transparently deals with prepared statements and the associated query
- * cache.
- * <p>
- * Also, this class has internal functionality and is not intended to be called from the user directly.
- */
 @Stability.Internal
 public class QueryAccessor {
-
-  private final CoreQueryAccessor coreQueryAccessor;
-
-  public QueryAccessor(final Core core) {
-    this.coreQueryAccessor = new CoreQueryAccessor(core);
-  }
-
-  /**
-   * Performs a N1QL query and returns the result as a future.
-   * <p>
-   * Note that compared to the reactive method, this one collects the rows into a list and makes sure
-   * everything is part of the result. If you need backpressure, go with reactive.
-   *
-   * @param request the request to perform.
-   * @param options query options to use.
-   * @return the future once the result is complete.
-   */
-  public CompletableFuture<QueryResult> queryAsync(final QueryRequest request, final QueryOptions.Built options,
-                                                   final JsonSerializer serializer) {
-    return coreQueryAccessor.query(request, options.adhoc())
-        .flatMap(response -> response
-            .rows()
-            .collectList()
-            .flatMap(rows -> response
-                .trailer()
-                .map(trailer -> (QueryResult) new QueryResultHttp(response.header(), rows, trailer, serializer))
-            )
-        )
-        .toFuture();
-  }
-
-  /**
-   * Performs a N1QL query and returns the result as a Mono.
-   *
-   * @param request the request to perform.
-   * @param options query options to use.
-   * @return the mono once the result is complete.
-   */
-  public Mono<ReactiveQueryResult> queryReactive(final QueryRequest request, final QueryOptions.Built options,
-                                                 final JsonSerializer serializer) {
-    return coreQueryAccessor.query(request, options.adhoc())
-        .map(r -> new ReactiveQueryResultHttp(r, serializer));
-  }
-
   /**
    * Used by the transactions library, this provides some binary interface protection against
    * QueryRequest/TargetedQueryRequest changing.
@@ -108,4 +58,19 @@ public class QueryAccessor {
         queryBytes, readonly, clientContextId, parentSpan, null, null, target);
   }
 
+  public static RuntimeException convertCoreQueryError(Throwable err) {
+    if (err instanceof CoreTransactionCommitAmbiguousException) {
+      return new TransactionCommitAmbiguousException((CoreTransactionCommitAmbiguousException) err);
+    } else if (err instanceof CoreTransactionExpiredException) {
+      return new TransactionExpiredException((CoreTransactionExpiredException) err);
+    } else if (err instanceof CoreTransactionFailedException) {
+      return new TransactionFailedException((CoreTransactionFailedException) err);
+    }
+
+    if (err instanceof RuntimeException) {
+      return (RuntimeException) err;
+    }
+
+    return new RuntimeException(err);
+  }
 }

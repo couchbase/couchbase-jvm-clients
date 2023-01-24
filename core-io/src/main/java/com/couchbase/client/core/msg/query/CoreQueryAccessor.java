@@ -18,6 +18,9 @@ package com.couchbase.client.core.msg.query;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.classic.query.EnhancedPreparedStatementStrategy;
+import com.couchbase.client.core.classic.query.LegacyPreparedStatementStrategy;
+import com.couchbase.client.core.classic.query.PreparedStatementStrategy;
 import com.couchbase.client.core.cnc.events.request.PreparedStatementRetriedEvent;
 import com.couchbase.client.core.config.ClusterCapabilities;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -35,6 +38,7 @@ import static com.couchbase.client.core.retry.RetryOrchestrator.capDuration;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
+@Deprecated // Being replaced with CoreQueryOps
 public class CoreQueryAccessor {
   /**
    * The maximum number of entries in the prepared statement cache.

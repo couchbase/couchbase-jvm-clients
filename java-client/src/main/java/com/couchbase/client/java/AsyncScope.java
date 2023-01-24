@@ -18,6 +18,8 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreQueryContext;
+import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -26,7 +28,6 @@ import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
-import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
@@ -35,11 +36,8 @@ import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.QueryAccessor;
-import com.couchbase.client.java.query.QueryAccessorProtostellar;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
-import com.couchbase.client.java.transactions.internal.ErrorUtil;
-import com.couchbase.client.java.transactions.internal.SingleQueryTransactions;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -53,6 +51,7 @@ import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
+import static com.couchbase.client.java.query.QueryAccessor.convertCoreQueryError;
 
 /**
  * The scope identifies a group of collections and allows high application
@@ -85,9 +84,11 @@ public class AsyncScope {
   private final ClusterEnvironment environment;
 
   /**
-   * for executing queries
+   * For executing queries.
    */
-  private final QueryAccessor queryAccessor;
+  final CoreQueryOps queryOps;
+  final CoreQueryContext queryContext;
+
   /**
    * Stores already opened collections for reuse.
    */
@@ -107,7 +108,8 @@ public class AsyncScope {
     this.bucketName = bucketName;
     this.core = core;
     this.environment = environment;
-    this.queryAccessor = new QueryAccessor(core);
+    this.queryOps = core.queryOps();
+    queryContext = CoreQueryContext.of(bucketName, scopeName);
   }
 
   /**
@@ -140,15 +142,6 @@ public class AsyncScope {
   public ClusterEnvironment environment() {
     return environment;
 
-  }
-  /**
-   * Provides access to the underlying {@link QueryAccessor}.
-   *
-   * <p>This is advanced API, use with care!</p>
-   */
-  @Stability.Volatile
-  QueryAccessor queryAccessor() {
-    return queryAccessor;
   }
 
   /**
@@ -217,53 +210,9 @@ public class AsyncScope {
   public CompletableFuture<QueryResult> query(final String statement, final QueryOptions options) {
     notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
-    if (opts.asTransaction()) {
-      return SingleQueryTransactions.singleQueryTransactionBuffered(core, environment, statement, bucketName, scopeName, opts)
-              .onErrorResume(ErrorUtil::convertTransactionFailedInternal)
-              .toFuture();
-    }
-    else {
-      JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
-      if (core.isProtostellar()) {
-        return QueryAccessorProtostellar.async(core, opts,
-          QueryAccessorProtostellar.request(core(), statement, opts, environment(), bucketName, scopeName),
-          serializer);
-      }
-      else {
-        return queryAccessor.queryAsync(queryRequest(bucketName(), scopeName, statement, opts, core, environment()), opts,
-          serializer);
-      }
-    }
-  }
-
-  /**
-   * Helper method to construct the query request. ( copied from Cluster )
-   *
-   * @param statement the statement of the query.
-   * @param options the options.
-   * @return the constructed query request.
-   */
-   static QueryRequest queryRequest(final String bucketName, final String scopeName, final String statement,
-                                    final QueryOptions.Built options, final Core core, final ClusterEnvironment environment) {
-    notNullOrEmpty(statement, "Statement", () -> new ReducedQueryErrorContext(statement));
-    Duration timeout = options.timeout().orElse(environment.timeoutConfig().queryTimeout());
-    RetryStrategy retryStrategy = options.retryStrategy().orElse(environment.retryStrategy());
-
-    final JsonObject query = JsonObject.create();
-    query.put("statement", statement);
-    query.put("timeout", encodeDurationToMs(timeout));
-    String queryContext = QueryRequest.queryContext(bucketName, scopeName);
-    query.put("query_context", queryContext);
-    options.injectParams(query);
-    final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
-    final String clientContextId = query.getString("client_context_id");
-    final RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY,
-        options.parentSpan().orElse(null));
-
-    QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(),
-        statement, queryBytes, options.readonly(), clientContextId, span, bucketName, scopeName, null);
-    request.context().clientContext(options.clientContext());
-    return request;
+    JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
+    return queryOps.queryAsync(statement, opts, queryContext, null, QueryAccessor::convertCoreQueryError)
+      .thenApply(r -> new QueryResult(r, serializer));
   }
 
   /**
