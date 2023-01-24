@@ -16,12 +16,12 @@
 package com.couchbase.client.java.manager.eventing;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.CommonDropOptions;
 
 /**
  * Allows to customize the behavior of the eventing functions drop operation.
  */
-public class DropFunctionOptions extends CommonOptions<DropFunctionOptions> {
+public class DropFunctionOptions extends CommonDropOptions<DropFunctionOptions> {
   private DropFunctionOptions() {
   }
 
@@ -39,7 +39,7 @@ public class DropFunctionOptions extends CommonOptions<DropFunctionOptions> {
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltDropOptions {
     Built() { }
   }
 

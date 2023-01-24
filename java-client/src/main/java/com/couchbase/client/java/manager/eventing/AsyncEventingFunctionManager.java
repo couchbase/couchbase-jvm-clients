@@ -43,6 +43,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.core.util.CbThrowables.hasCause;
+import static com.couchbase.client.core.util.CbThrowables.throwIfUnchecked;
 import static com.couchbase.client.java.manager.eventing.GetAllFunctionsOptions.getAllFunctionsOptions;
 
 /**
@@ -202,7 +204,15 @@ public class AsyncEventingFunctionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> dropFunction(final String name, final DropFunctionOptions options) {
-    return coreManager.dropFunction(name, options.build());
+    DropFunctionOptions.Built bltOptions = options.build();
+    return coreManager.dropFunction(name, bltOptions)
+      .exceptionally(t -> {
+        if (bltOptions.ignoreIfNotExists() && hasCause(t, EventingFunctionNotFoundException.class)) {
+          return null;
+        }
+        throwIfUnchecked(t);
+        throw new RuntimeException(t);
+      });
   }
 
   /**
@@ -235,7 +245,16 @@ public class AsyncEventingFunctionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> deployFunction(final String name, final DeployFunctionOptions options) {
-    return coreManager.deployFunction(name, options.build());
+    DeployFunctionOptions.Built bltOptions = options.build();
+
+    return coreManager.deployFunction(name, bltOptions)
+      .exceptionally(t -> {
+        if (bltOptions.ignoreIfNotExists() && hasCause(t, EventingFunctionNotFoundException.class)) {
+          return null;
+        }
+        throwIfUnchecked(t);
+        throw new RuntimeException(t);
+      });
   }
 
   /**
