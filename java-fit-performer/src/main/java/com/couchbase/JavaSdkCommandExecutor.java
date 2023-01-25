@@ -43,6 +43,14 @@ import com.couchbase.client.java.kv.ScanSort;
 import com.couchbase.client.java.kv.ScanTerm;
 // [end:3.4.1]
 import com.couchbase.client.java.kv.UpsertOptions;
+import com.couchbase.client.java.manager.query.BuildQueryIndexOptions;
+import com.couchbase.client.java.manager.query.CreatePrimaryQueryIndexOptions;
+import com.couchbase.client.java.manager.query.CreateQueryIndexOptions;
+import com.couchbase.client.java.manager.query.DropPrimaryQueryIndexOptions;
+import com.couchbase.client.java.manager.query.DropQueryIndexOptions;
+import com.couchbase.client.java.manager.query.GetAllQueryIndexesOptions;
+import com.couchbase.client.java.manager.query.QueryIndex;
+import com.couchbase.client.java.manager.query.WatchQueryIndexesOptions;
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.perf.Counters;
 import com.couchbase.client.performer.core.perf.PerRun;
@@ -50,6 +58,8 @@ import com.couchbase.client.performer.core.stream.StreamStreamer;
 import com.couchbase.client.performer.core.util.ErrorUtil;
 import com.couchbase.client.protocol.run.Result;
 import com.couchbase.client.protocol.sdk.kv.rangescan.Scan;
+import com.couchbase.client.protocol.sdk.management.query.BuildDeferredIndexesOptions;
+import com.couchbase.client.protocol.sdk.management.query.QueryIndexType;
 import com.couchbase.client.protocol.shared.*;
 import com.couchbase.client.protocol.shared.Exception;
 import com.couchbase.utils.ClusterConnection;
@@ -59,8 +69,10 @@ import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
@@ -176,6 +188,72 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                             .setType(STREAM_KV_RANGE_SCAN)
                             .setStreamId(streamer.streamId())));
         // [end:3.4.1]
+        } else if (op.hasCreatePrimaryIndex()) {
+            var request = op.getCreatePrimaryIndex();
+            var options = createOptions(request, spans);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            if (options == null) connection.cluster().queryIndexes().createPrimaryIndex(request.getBucketName());
+            else connection.cluster().queryIndexes().createPrimaryIndex(request.getBucketName(), options);
+            result.setElapsedNanos(System.nanoTime() - start);
+            setSuccess(result);
+        } else if (op.hasCreateIndex()) {
+            var request = op.getCreateIndex();
+            var options = createOptions(request, spans);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            var fields = request.getFieldsList().stream().map(f -> f.toString()).collect(Collectors.toSet());
+            if (options == null) connection.cluster().queryIndexes().createIndex(request.getBucketName(), request.getIndexName(), fields);
+            else connection.cluster().queryIndexes().createIndex(request.getBucketName(),request.getIndexName(), fields, options);
+            result.setElapsedNanos(System.nanoTime() - start);
+            setSuccess(result);
+        } else if (op.hasGetAllIndexes()) {
+            var request = op.getGetAllIndexes();
+            var options = createOptions(request, spans);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            List<QueryIndex> indexes;
+            if (options == null) indexes = connection.cluster().queryIndexes().getAllIndexes(request.getBucketName());
+            else  indexes = connection.cluster().queryIndexes().getAllIndexes(request.getBucketName(), options);
+            result.setElapsedNanos(System.nanoTime() - start);
+            if (op.getReturnResult()) populateResult(result, indexes);
+            else setSuccess(result);
+        } else if (op.hasDropPrimaryIndex()) {
+            var request = op.getDropPrimaryIndex();
+            var options = createOptions(request, spans);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            if (options == null) connection.cluster().queryIndexes().dropPrimaryIndex(request.getBucketName());
+            else connection.cluster().queryIndexes().dropPrimaryIndex(request.getBucketName(), options);
+            result.setElapsedNanos(System.nanoTime() - start);
+            setSuccess(result);
+        } else if (op.hasDropIndex()) {
+            var request = op.getDropIndex();
+            var options = createOptions(request, spans);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            if (options == null) connection.cluster().queryIndexes().dropIndex(request.getBucketName(), request.getIndexName());
+            else connection.cluster().queryIndexes().dropIndex(request.getBucketName(), request.getIndexName(), options);
+            result.setElapsedNanos(System.nanoTime() - start);
+            setSuccess(result);
+        } else if (op.hasWatchIndexes()) {
+            var request = op.getWatchIndexes();
+            var options = createOptions(request);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            if (options == null) connection.cluster().queryIndexes().watchIndexes(request.getBucketName(), request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs()));
+            else connection.cluster().queryIndexes().watchIndexes(request.getBucketName(), request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs()), options);
+            result.setElapsedNanos(System.nanoTime() - start);
+            setSuccess(result);
+        } else if (op.hasBuildDeferredIndexes()) {
+            var request = op.getBuildDeferredIndexes();
+            var options = createOptions(request, spans);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            if (options == null) connection.cluster().queryIndexes().buildDeferredIndexes(request.getBucketName());
+            else connection.cluster().queryIndexes().buildDeferredIndexes(request.getBucketName(), options);
+            result.setElapsedNanos(System.nanoTime() - start);
+            setSuccess(result);
         } else {
             throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"));
         }
@@ -366,6 +444,26 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 .setGetResult(builder));
     }
 
+    public static void populateResult(com.couchbase.client.protocol.run.Result.Builder result, List<QueryIndex> indexes) {
+        var builder = com.couchbase.client.protocol.sdk.management.query.QueryIndexes.newBuilder();
+        for (QueryIndex idx: indexes) {
+            var index = com.couchbase.client.protocol.sdk.management.query.QueryIndex.newBuilder()
+                    .setName(idx.name())
+                    .setIsPrimary(idx.primary())
+                    .setState(idx.state())
+                    .setKeyspace(idx.keyspace())
+                    .setType(QueryIndexType.valueOf(idx.type().toUpperCase()));
+
+            idx.indexKey().forEach(k -> index.addIndexKey((String) k));
+            if (idx.condition().isPresent()) index.setCondition(idx.condition().get());
+            if (idx.partition().isPresent()) index.setPartition(idx.partition().get());
+
+            builder.addIndexes(index);
+        }
+        result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
+                .setQueryIndexes(builder));
+    }
+
     public static Object content(Content content) {
         if (content.hasPassthroughString()) {
             return content.getPassthroughString();
@@ -399,6 +497,100 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             return out;
         }
         else return null;
+    }
+
+    public static @Nullable GetAllQueryIndexesOptions createOptions(com.couchbase.client.protocol.sdk.management.query.GetAllIndexes request, ConcurrentHashMap<String, RequestSpan> spans) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = GetAllQueryIndexesOptions.getAllQueryIndexesOptions();
+            if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
+            if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+            return out;
+        } else return null;
+    }
+
+    public static @Nullable CreatePrimaryQueryIndexOptions createOptions(com.couchbase.client.protocol.sdk.management.query.CreatePrimaryIndex request, ConcurrentHashMap<String, RequestSpan> spans) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = CreatePrimaryQueryIndexOptions.createPrimaryQueryIndexOptions();
+            if (opts.hasIgnoreIfExists()) out.ignoreIfExists(opts.getIgnoreIfExists());
+            if (opts.hasDeferred()) out.deferred(opts.getDeferred());
+            if (opts.hasIndexName()) out.indexName(opts.getIndexName());
+            if (opts.hasNumReplicas()) out.numReplicas(opts.getNumReplicas());
+            if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
+            if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+            return out;
+        }
+        else return null;
+    }
+
+    public static @Nullable CreateQueryIndexOptions createOptions(com.couchbase.client.protocol.sdk.management.query.CreateIndex request, ConcurrentHashMap<String, RequestSpan> spans) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = CreateQueryIndexOptions.createQueryIndexOptions();
+            if (opts.hasIgnoreIfExists()) out.ignoreIfExists(opts.getIgnoreIfExists());
+            if (opts.hasDeferred()) out.deferred(opts.getDeferred());
+            if (opts.hasNumReplicas()) out.numReplicas(opts.getNumReplicas());
+            if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
+            if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+            return out;
+        }
+        else return null;
+    }
+
+    public static @Nullable DropPrimaryQueryIndexOptions createOptions(com.couchbase.client.protocol.sdk.management.query.DropPrimaryIndex request, ConcurrentHashMap<String, RequestSpan> spans) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = DropPrimaryQueryIndexOptions.dropPrimaryQueryIndexOptions();
+            if (opts.hasIgnoreIfNotExists()) out.ignoreIfNotExists(opts.getIgnoreIfNotExists());
+            if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
+            if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+            return out;
+        } else return null;
+    }
+
+    public static @Nullable DropQueryIndexOptions createOptions(com.couchbase.client.protocol.sdk.management.query.DropIndex request, ConcurrentHashMap<String, RequestSpan> spans) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = DropQueryIndexOptions.dropQueryIndexOptions();
+            if (opts.hasIgnoreIfNotExists()) out.ignoreIfNotExists(opts.getIgnoreIfNotExists());
+            if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
+            if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+            return out;
+        } else return null;
+    }
+
+    public static @Nullable WatchQueryIndexesOptions createOptions(com.couchbase.client.protocol.sdk.management.query.WatchIndexes request) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = WatchQueryIndexesOptions.watchQueryIndexesOptions();
+            if (opts.hasWatchPrimary()) out.watchPrimary(opts.getWatchPrimary());
+            if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
+            if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+            return out;
+        } else return null;
+    }
+
+    public static @Nullable BuildQueryIndexOptions createOptions(com.couchbase.client.protocol.sdk.management.query.BuildDeferredIndexes request, ConcurrentHashMap<String, RequestSpan> spans) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = BuildQueryIndexOptions.buildDeferredQueryIndexesOptions();
+            if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
+            if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+            return out;
+        } else return null;
     }
 
     // [start:3.4.1]

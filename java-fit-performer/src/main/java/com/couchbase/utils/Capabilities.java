@@ -15,7 +15,6 @@
  */
 package com.couchbase.utils;
 
-import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.protocol.sdk.Caps;
 
 import java.util.ArrayList;
@@ -32,6 +31,8 @@ public class Capabilities {
         // [start:3.4.1]
         out.add(Caps.SDK_KV_RANGE_SCAN);
         // [end:3.4.1]
+
+        out.add(Caps.SDK_QUERY_INDEX_MANAGEMENT);
 
         return out;
     }

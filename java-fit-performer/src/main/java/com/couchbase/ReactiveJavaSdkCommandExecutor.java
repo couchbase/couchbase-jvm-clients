@@ -21,6 +21,7 @@ import com.couchbase.client.java.kv.MutationResult;
 // [start:3.4.1]
 import com.couchbase.client.java.kv.ScanResult;
 // [end:3.4.1]
+import com.couchbase.client.java.manager.query.QueryIndex;
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.perf.Counters;
 import com.couchbase.client.performer.core.perf.PerRun;
@@ -32,7 +33,11 @@ import com.google.protobuf.ByteString;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static com.couchbase.JavaSdkCommandExecutor.*;
 import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
@@ -165,7 +170,80 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                                 .setType(STREAM_KV_RANGE_SCAN)
                                 .setStreamId(streamer.streamId())));
                 return Mono.just(result.build());
-            // [end:3.4.1]
+                // [end:3.4.1]
+            } else if (op.hasCreatePrimaryIndex()) {
+                var request = op.getCreatePrimaryIndex();
+                var options = createOptions(request, spans);
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                if (options == null) connection.cluster().reactive().queryIndexes().createPrimaryIndex(request.getBucketName()).block();
+                else connection.cluster().reactive().queryIndexes().createPrimaryIndex(request.getBucketName(), options).block();
+                result.setElapsedNanos(System.nanoTime() - start);
+                setSuccess(result);
+                return Mono.just(result.build());
+            } else if (op.hasCreateIndex()) {
+                var request = op.getCreateIndex();
+                var options = createOptions(request, spans);
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                var fields = request.getFieldsList().stream().map(f -> f.toString()).collect(Collectors.toSet());
+                if (options == null) connection.cluster().reactive().queryIndexes().createIndex(request.getBucketName(), request.getIndexName(), fields).block();
+                else connection.cluster().reactive().queryIndexes().createIndex(request.getBucketName(),request.getIndexName(), fields, options).block();
+                result.setElapsedNanos(System.nanoTime() - start);
+                setSuccess(result);
+                return Mono.just(result.build());
+            } else if (op.hasGetAllIndexes()) {
+                var request = op.getGetAllIndexes();
+                var options = createOptions(request, spans);
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                Flux<QueryIndex> indexes;
+                if (options == null) indexes = connection.cluster().reactive().queryIndexes().getAllIndexes(request.getBucketName());
+                else  indexes = connection.cluster().reactive().queryIndexes().getAllIndexes(request.getBucketName(), options);
+                result.setElapsedNanos(System.nanoTime() - start);
+                if (op.getReturnResult()) populateResult(result, Objects.requireNonNull(indexes.collectList().block(Duration.ofSeconds(10))));
+                else setSuccess(result);
+                return Mono.just(result.build());
+            } else if (op.hasDropPrimaryIndex()) {
+                var request = op.getDropPrimaryIndex();
+                var options = createOptions(request, spans);
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                if (options == null) connection.cluster().reactive().queryIndexes().dropPrimaryIndex(request.getBucketName()).block();
+                else connection.cluster().reactive().queryIndexes().dropPrimaryIndex(request.getBucketName(), options).block();
+                result.setElapsedNanos(System.nanoTime() - start);
+                setSuccess(result);
+                return Mono.just(result.build());
+            } else if (op.hasDropIndex()) {
+                var request = op.getDropIndex();
+                var options = createOptions(request, spans);
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                if (options == null) connection.cluster().reactive().queryIndexes().dropIndex(request.getBucketName(), request.getIndexName()).block();
+                else connection.cluster().queryIndexes().reactive().dropIndex(request.getBucketName(), request.getIndexName(), options).block();
+                result.setElapsedNanos(System.nanoTime() - start);
+                setSuccess(result);
+                return Mono.just(result.build());
+            } else if (op.hasWatchIndexes()) {
+                var request = op.getWatchIndexes();
+                var options = createOptions(request);
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                if (options == null) connection.cluster().reactive().queryIndexes().watchIndexes(request.getBucketName(), request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs())).block();
+                else connection.cluster().reactive().queryIndexes().watchIndexes(request.getBucketName(), request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs()), options).block();
+                result.setElapsedNanos(System.nanoTime() - start);
+                setSuccess(result);
+                return Mono.just(result.build());
+            } else if (op.hasBuildDeferredIndexes()) {
+                var request = op.getBuildDeferredIndexes();
+                var options = createOptions(request, spans);
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                if (options == null) connection.cluster().reactive().queryIndexes().buildDeferredIndexes(request.getBucketName()).block();
+                else connection.cluster().reactive().queryIndexes().buildDeferredIndexes(request.getBucketName(), options).block();
+                result.setElapsedNanos(System.nanoTime() - start);
+                setSuccess(result);
+                return Mono.just(result.build());
             } else {
                 return Mono.error(new UnsupportedOperationException(new IllegalArgumentException("Unknown operation")));
             }
