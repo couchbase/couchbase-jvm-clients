@@ -160,7 +160,7 @@ public class CouchbaseContainer extends GenericContainer<CouchbaseContainer> {
   }
 
   enum CouchbasePort {
-    REST("rest_port", 8091, true),
+    REST("rest_port", 8091, false),
     CAPI("capi_port", 8092, false),
     QUERY("query_port", 8093, false),
     FTS("fts_http_port", 8094, false),
