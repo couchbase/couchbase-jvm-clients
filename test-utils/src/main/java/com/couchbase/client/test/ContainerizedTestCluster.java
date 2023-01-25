@@ -92,6 +92,7 @@ public class ContainerizedTestCluster extends TestCluster {
         .post(new FormBody.Builder()
           .add("name", bucketname)
           .add("ramQuotaMB", "100")
+          .add("flushEnabled", "1")
           .build())
         .build())
       .execute();
