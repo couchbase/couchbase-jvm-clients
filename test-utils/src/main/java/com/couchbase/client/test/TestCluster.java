@@ -70,7 +70,6 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     new TypeReference<HashMap<String, Object>>() {};
 
   protected static final ObjectMapper MAPPER = new ObjectMapper();
-  protected static final int ACCEPTED = 202;
   protected static final String AUTH_HEADER = "Authorization";
   protected static final String POOLS_URL = "/pools";
   protected static final String POOLS_DEFAULT_URL = POOLS_URL + "/default";

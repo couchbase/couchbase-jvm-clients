@@ -44,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.test.DnsSrvUtil.fromDnsSrv;
+import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
@@ -150,7 +151,7 @@ public class UnmanagedTestCluster extends TestCluster {
         .build())
       .execute();
 
-    if (postResponse.code() != ACCEPTED) {
+    if (postResponse.code() != HTTP_ACCEPTED) {
       throw new Exception("Could not create bucket: "
         + postResponse + ", Reason: "
         + postResponse.body().string());

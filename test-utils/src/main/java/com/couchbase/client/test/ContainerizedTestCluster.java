@@ -37,6 +37,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
+import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -85,21 +86,8 @@ public class ContainerizedTestCluster extends TestCluster {
     // todo: then add all others with services to the cluster
     // todo: then rebalance
 
-    bucketname = UUID.randomUUID().toString();
     Request.Builder builder = builderWithAuth();
-    Response postResponse = httpClient.newCall(builder
-        .url(baseUrl + BUCKET_URL)
-        .post(new FormBody.Builder()
-          .add("name", bucketname)
-          .add("ramQuotaMB", "100")
-          .add("flushEnabled", "1")
-          .build())
-        .build())
-      .execute();
-
-    if (postResponse.code() != ACCEPTED) {
-      throw new Exception("Could not create bucket: " + postResponse);
-    }
+    createBucket(builder);
 
     String raw = getRawConfig(builder);
     ClusterVersion clusterVersion = getClusterVersionFromServer(builder);
@@ -115,6 +103,23 @@ public class ContainerizedTestCluster extends TestCluster {
       clusterVersion,
       false
     );
+  }
+
+  private void createBucket(Request.Builder builder) throws Exception {
+    bucketname = UUID.randomUUID().toString();
+    Response postResponse = httpClient.newCall(builder
+        .url(baseUrl + BUCKET_URL)
+        .post(new FormBody.Builder()
+          .add("name", bucketname)
+          .add("ramQuotaMB", "100")
+          .add("flushEnabled", "1")
+          .build())
+        .build())
+      .execute();
+
+    if (postResponse.code() != HTTP_ACCEPTED) {
+      throw new Exception("Could not create bucket: " + postResponse);
+    }
   }
 
   private void initFirstNode(CouchbaseContainer container, int seedPort) throws Exception {
