@@ -141,7 +141,7 @@ public class ContainerizedTestCluster extends TestCluster {
       .execute();
 
     httpClient.newCall(builder
-        .url(baseUrl + "/settings/web")
+      .url(baseUrl + WEB_SETTINGS_URL)
       .post(new FormBody.Builder()
         .add("username", adminUsername)
         .add("password", adminPassword)

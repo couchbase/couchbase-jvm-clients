@@ -71,6 +71,8 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
 
   protected static final ObjectMapper MAPPER = new ObjectMapper();
   protected static final String AUTH_HEADER = "Authorization";
+  protected static final String SETTINGS_URL = "/settings";
+  protected static final String WEB_SETTINGS_URL = SETTINGS_URL + "/web";
   protected static final String POOLS_URL = "/pools";
   protected static final String POOLS_DEFAULT_URL = POOLS_URL + "/default";
   protected static final String POOLS_CERTIFICATE_URL = POOLS_DEFAULT_URL + "/certificate";
