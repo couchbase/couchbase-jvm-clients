@@ -191,6 +191,8 @@ public class QueryChunkResponseParser
         );
       } else if (code == 1191 || code == 1192 || code == 1193 || code == 1194) {
         return new RateLimitedException(errorContext);
+      } else if (code == 1197) {
+        return new FeatureNotAvailableException("This server requires that scope.query() be used rather than cluster.query()");
       } else if (code == 3230) {
         String feature = null;
         if (message.contains("Advisor") || message.contains("Advise")) {
