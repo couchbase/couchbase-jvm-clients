@@ -260,6 +260,10 @@
                             <pattern>com.google</pattern>
                             <shadedPattern>${shaded.package.prefix}com.google</shadedPattern>
                         </relocation>
+                        <relocation>
+                            <pattern>io.perfmark</pattern>
+                            <shadedPattern>${shaded.package.prefix}io.perfmark</shadedPattern>
+                        </relocation>
                     </relocations>
                     <transformers>
                         <!-- Required for gRPC -->
