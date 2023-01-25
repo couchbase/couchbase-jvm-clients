@@ -1,4 +1,4 @@
-package com.couchbase.client.kotlin.examples.data
+package com.couchbase.client.kotlin.examples.query
 
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.kotlin.Collection
@@ -16,6 +16,14 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.api.assertThrows
+
+/**
+ *
+ * Simple CRUD operations on a bucket with the default collection.
+ *
+ * Note on the update example: for a more complex use case, see the [SubdocOperationsExample]
+ *
+ */
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class SimpleOperationsExample {
@@ -46,7 +54,7 @@ class SimpleOperationsExample {
     @Order(3)
     fun `update data in bucket`() {
         ConnectionUtils.withDefaultCollection(TEST_BUCKET) { _, collection ->
-            collection.upsert(TEST_ID, NEW_CONTENT)
+            collection.upsert(TEST_ID, NEW_CONTENT) // insert or replace data
             val result: GetResult = collection.get(TEST_ID)
             val contentAsString = result.contentAs<String>()
             assertFalse(contentAsString.contains(TEST_CONTENT))

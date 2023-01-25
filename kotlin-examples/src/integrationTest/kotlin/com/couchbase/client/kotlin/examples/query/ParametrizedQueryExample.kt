@@ -12,6 +12,12 @@ import org.junit.jupiter.api.Test
 private const val BUCKET_NAME = "travel-sample-parametrized-query"
 private const val LIMIT = 5
 
+/**
+ *
+ * Two ways of creating a parametrized query: named and positional arguments.
+ *
+ */
+
 class ParametrizedQueryExample {
 
     companion object {
@@ -25,7 +31,7 @@ class ParametrizedQueryExample {
                 for(i in 1..LIMIT) {
                     runBlocking { collection.insert("airport_$i", mapOf("type" to "airport")) }
                 }
-                cluster.queryIndexes.createPrimaryIndex(Keyspace(BUCKET_NAME))
+                cluster.queryIndexes.createPrimaryIndex(Keyspace(BUCKET_NAME)) // queries won't work without a primary index
             }
         }
     }
@@ -47,7 +53,7 @@ class ParametrizedQueryExample {
         ConnectionUtils.withCluster {
             val params = QueryParameters.named("type" to "airport")
             val result = it.query(
-                "SELECT * FROM `$BUCKET_NAME` WHERE type = \$type limit $LIMIT",
+                "SELECT * FROM `$BUCKET_NAME` WHERE type = \$type limit $LIMIT", // need to escape the $ in the query cause of Kotlin string interpolation
                 parameters = params
             ).execute()
             assertEquals(LIMIT, result.rows.size)

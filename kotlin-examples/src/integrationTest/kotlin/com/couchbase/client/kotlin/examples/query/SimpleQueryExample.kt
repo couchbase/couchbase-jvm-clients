@@ -14,6 +14,12 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
+/**
+ *
+ * Simple N1QL queries with data and metadata.
+ *
+ */
+
 class SimpleQueryExample {
 
     private val gson = Gson()
@@ -62,13 +68,5 @@ class SimpleQueryExample {
             assertTrue(content["travel-sample"].equals(TEST_CONTENT))
         }
     }
-
-//    @Test
-//    fun `simple insert`() {
-//        // Use ConnectionUtils.withCluster method to create an insert query to a TEST_BUCKET
-//        ConnectionUtils.withCluster { cluster ->
-//            val result = cluster.query("INSERT INTO `$TEST_BUCKET` (KEY, VALUE) VALUES ('key', 'value')").execute()
-//        }
-//    }
 
 }

@@ -5,12 +5,24 @@ import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.http.CouchbaseHttpClient
 import kotlinx.coroutines.runBlocking
 
+/**
+ *
+ * Small utils for testing purposes.
+ *
+ */
+
 class ConnectionUtils {
     companion object {
         @JvmStatic
         fun getCluster(): Cluster {
             return Cluster.connect("couchbase://127.0.0.1", "Administrator", "password")
         }
+
+        /**
+         *
+         * Since most of the operations are suspendable, we need to wrap them in runBlocking
+         *
+         */
 
         @JvmStatic
         fun withCluster(block: suspend (Cluster) -> Unit) {

@@ -18,8 +18,16 @@ import org.junit.jupiter.api.TestMethodOrder
 
 private const val BUCKET_NAME = "temp-bucket-http-client"
 
+/**
+ *
+ * Simple CRUD operations with bucket plus the statistics API.
+ *
+ */
+
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class HttpClientBucketOperationsExample {
+
+    private val gson = Gson()
 
     @Test
     @Order(1)
@@ -33,7 +41,7 @@ class HttpClientBucketOperationsExample {
                     "ramQuotaMB" to "128",
                     "replicaNumber" to "1",
                     "bucketType" to "couchbase",
-                    "flushEnabled" to "1",
+                    "flushEnabled" to "1", // required to enable flush operation
                 )
             )
             assertTrue(cluster.buckets.getAllBuckets().any { it.name == BUCKET_NAME })
@@ -66,7 +74,7 @@ class HttpClientBucketOperationsExample {
                 target = HttpTarget.manager(),
                 path = formatPath("/pools/default/buckets/{}", BUCKET_NAME)
             )
-            val gson = Gson()
+            // We can use either a Map or a BucketSettings object to deserialize the response
             val bucketData = gson.fromJson(response.contentAsString, Map::class.java)
             assertEquals(BUCKET_NAME, bucketData["name"])
         }
@@ -80,7 +88,7 @@ class HttpClientBucketOperationsExample {
                 target = HttpTarget.manager(),
                 path = "/pools/default/buckets"
             )
-            val gson = Gson()
+            // We can use either a Map or a BucketSettings object to deserialize the response
             val bucketSettingsList = gson.fromJson(response.contentAsString, Array<BucketSettings>::class.java)
             assertTrue(bucketSettingsList.any { it.name == BUCKET_NAME })
         }
@@ -97,11 +105,16 @@ class HttpClientBucketOperationsExample {
                     "zoom" to "minute"
                 )
             )
-            val gson = Gson()
             val bucketStats = gson.fromJson(response.contentAsString, Map::class.java)
             assertTrue(bucketStats.containsKey("op"))
         }
     }
+
+    /**
+     *
+     * Just another way to flush the bucket
+     *
+     */
 
     @Test
     @Order(6)

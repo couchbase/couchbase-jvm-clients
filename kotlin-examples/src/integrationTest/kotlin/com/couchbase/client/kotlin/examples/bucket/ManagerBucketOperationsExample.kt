@@ -11,6 +11,12 @@ import org.junit.jupiter.api.assertThrows
 
 private const val BUCKET_NAME = "temp-bucket-manager"
 
+/**
+ *
+ * Simple CRUD operations on a bucket with the [com.couchbase.client.kotlin.manager.bucket.BucketManager] API.
+ *
+ */
+
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class ManagerBucketOperationsExample {
 

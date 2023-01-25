@@ -10,6 +10,13 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 
+/**
+ *
+ * Index management operations with a [com.couchbase.client.kotlin.manager.query.QueryIndexManager]
+ * Also could be done with CLI
+ *
+ */
+
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class ManagerIndexExample {
 

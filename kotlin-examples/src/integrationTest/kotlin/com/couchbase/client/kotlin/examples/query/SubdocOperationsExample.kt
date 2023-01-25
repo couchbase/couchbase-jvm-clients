@@ -14,6 +14,13 @@ import org.junit.jupiter.api.TestMethodOrder
 
 private const val BUCKET_NAME = "travel-sample-subdoc"
 
+/**
+ *
+ * LookupInSpec and MutateInSpec are used to perform sub-document operations.
+ * LookupInSpec is used to retrieve data from a document, and MutateInSpec is used to modify data in a document.
+ *
+ */
+
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class SubdocOperationsExample {
 
@@ -23,7 +30,7 @@ class SubdocOperationsExample {
         fun setup() {
 	        ConnectionUtils.withCluster { cluster ->
 		        cluster.buckets.createBucket(BUCKET_NAME)
-		        cluster.queryIndexes.createPrimaryIndex(Keyspace(BUCKET_NAME))
+		        cluster.queryIndexes.createPrimaryIndex(Keyspace(BUCKET_NAME)) // queries won't work without a primary index
 		        val data = mapOf(
 			        "name" to "Product 1",
 			        "price" to 9.99,
@@ -46,6 +53,7 @@ class SubdocOperationsExample {
 			    val orders = count("orders")
 		    }
 		    val bucket = cluster.bucket(BUCKET_NAME)
+            // There is also an option without a lambda
             bucket.defaultCollection().lookupIn("product_1", spec) {
 			    with(spec) {
 				    assertEquals("Product 1", name.contentAs<String>())

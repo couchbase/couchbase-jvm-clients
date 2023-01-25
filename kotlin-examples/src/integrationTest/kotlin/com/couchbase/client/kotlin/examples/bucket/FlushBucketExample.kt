@@ -19,20 +19,18 @@ private const val BUCKET_NAME = "temp-bucket-2"
 private const val DOCUMENTS_AMOUNT = 100
 private const val PER_DOCUMENT_DELAY = 100L
 
+/**
+ *
+ * An example to how flush a bucket.
+ *
+ * To enable this, we should set flushEnabled to true in the bucket settings. This isn't a recommended practice for production.
+ *
+ */
+
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class FlushBucketExample {
 
     companion object {
-
-        /**
-         *
-         * We are inserting a small delay between the creation of the bucket and other operations
-         * to give indexer time to catch up. The timing will vary depending on the machine and collection size.
-         * This is not a recommended practice, but it is used here to keep the example simple.
-         *
-         * We also enable the flush operation for the bucket. This is not recommended for production
-         *
-         */
 
         @JvmStatic
         @BeforeAll
@@ -69,6 +67,7 @@ class FlushBucketExample {
     fun `flush bucket`() {
         ConnectionUtils.withCluster {
             it.buckets.flushBucket(BUCKET_NAME)
+            // There is a chance that the flush operation is not completed when the next query is executed. That depends on the cluster load and amount of data.
             val resultAfterFlush = getAllDocuments()
             assertEquals(0, resultAfterFlush.rows.size)
         }

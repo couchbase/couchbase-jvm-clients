@@ -2,6 +2,12 @@ package com.couchbase.client.kotlin.examples.util
 
 import com.couchbase.client.kotlin.Keyspace
 
+/**
+ *
+ * Just some constants for testing purposes
+ *
+ */
+
 const val TEST_BUCKET = "travel-sample"
 const val TEST_BUCKET_INDEX = "travel-sample-index"
 const val TEST_ID = "airline_10"
