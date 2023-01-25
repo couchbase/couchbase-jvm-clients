@@ -288,15 +288,15 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       .header(AUTH_HEADER, Credentials.basic(adminUsername, adminPassword));
   }
 
-  protected String getRawConfig(Request.Builder builderWithAuthorisation) throws IOException {
-    Request authorization = builderWithAuthorisation
+  protected String getRawConfig() throws IOException {
+    Request authorization = builderWithAuth()
       .url(baseUrl + AUTH_URL + bucketname)
       .build();
     return httpClient.newCall(authorization).execute().body().string();
   }
 
-  protected ClusterVersion getClusterVersionFromServer(Request.Builder builder) throws IOException {
-    Response response = httpClient.newCall(builder
+  protected ClusterVersion getClusterVersionFromServer() throws IOException {
+    Response response = httpClient.newCall(builderWithAuth()
         .url(baseUrl + POOLS_URL)
         .build())
       .execute();

@@ -90,15 +90,14 @@ public class UnmanagedTestCluster extends TestCluster {
 
   @Override
   TestClusterConfig _start() throws Exception {
-    Request.Builder builder = builderWithAuth();
-    createOrReuseBucket(builder);
+    createOrReuseBucket();
 
-    String raw = getRawConfig(builder);
+    String raw = getRawConfig();
 
     LOGGER.info("Bucket raw results: {}", raw);
 
-    waitUntilAllNodesHealthy(builder);
-    ClusterVersion clusterVersion = getClusterVersionFromServer(builder);
+    waitUntilAllNodesHealthy();
+    ClusterVersion clusterVersion = getClusterVersionFromServer();
 
     Optional<List<X509Certificate>> certs = loadClusterCertificate();
 
@@ -133,13 +132,13 @@ public class UnmanagedTestCluster extends TestCluster {
     );
   }
 
-  private void createOrReuseBucket(Request.Builder builder) throws Exception {
+  private void createOrReuseBucket() throws Exception {
     if (nonNull(bucketname) && !bucketname.isEmpty()) {
       return;
     }
     bucketname = UUID.randomUUID().toString();
 
-    Response postResponse = httpClient.newCall(builder
+    Response postResponse = httpClient.newCall(builderWithAuth()
         .url(baseUrl + BUCKET_URL)
         .post(new FormBody.Builder()
           .add("name", bucketname)
@@ -174,9 +173,9 @@ public class UnmanagedTestCluster extends TestCluster {
     }
   }
 
-  private void waitUntilAllNodesHealthy(Request.Builder builder) throws Exception {
+  private void waitUntilAllNodesHealthy() throws Exception {
     while(true) {
-      Response getResponse = httpClient.newCall(builder
+      Response getResponse = httpClient.newCall(builderWithAuth()
         .url(baseUrl + POOLS_URL)
         .build())
         .execute();

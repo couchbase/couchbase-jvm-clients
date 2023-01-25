@@ -86,11 +86,10 @@ public class ContainerizedTestCluster extends TestCluster {
     // todo: then add all others with services to the cluster
     // todo: then rebalance
 
-    Request.Builder builder = builderWithAuth();
-    createBucket(builder);
+    createBucket();
 
-    String raw = getRawConfig(builder);
-    ClusterVersion clusterVersion = getClusterVersionFromServer(builder);
+    String raw = getRawConfig();
+    ClusterVersion clusterVersion = getClusterVersionFromServer();
 
     return new TestClusterConfig(
       bucketname,
@@ -105,9 +104,9 @@ public class ContainerizedTestCluster extends TestCluster {
     );
   }
 
-  private void createBucket(Request.Builder builder) throws Exception {
+  private void createBucket() throws Exception {
     bucketname = UUID.randomUUID().toString();
-    Response postResponse = httpClient.newCall(builder
+    Response postResponse = httpClient.newCall(builderWithAuth()
         .url(baseUrl + BUCKET_URL)
         .post(new FormBody.Builder()
           .add("name", bucketname)
@@ -156,7 +155,7 @@ public class ContainerizedTestCluster extends TestCluster {
 
   private HttpWaitStrategy createNodeWaitStrategy() {
     return new HttpWaitStrategy()
-      .forPath(POOLS_URL)
+      .forPath(POOLS_DEFAULT_URL)
       .withBasicCredentials(adminUsername, adminPassword)
       .forStatusCode(HTTP_OK)
       .forResponsePredicate(response -> {

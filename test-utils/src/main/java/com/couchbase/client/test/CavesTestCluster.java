@@ -108,10 +108,9 @@ public class CavesTestCluster extends TestCluster {
     String host = mgmtSockets.get(0).hostname;
     int port = mgmtSockets.get(0).port;
     this.baseUrl = String.format(baseUrl, host, port);
-    Request.Builder builder = builderWithAuth();
 
-    String rawConfig = getRawConfig(builder);
-    ClusterVersion clusterVersion = getClusterVersionFromServer(builder);
+    String rawConfig = getRawConfig();
+    ClusterVersion clusterVersion = getClusterVersionFromServer();
 
     return new TestClusterConfig(
       bucketname,
