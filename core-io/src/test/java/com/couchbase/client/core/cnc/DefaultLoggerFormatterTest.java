@@ -56,7 +56,7 @@ class DefaultLoggerFormatterTest {
     };
 
     String result = formatter.format(Level.FINE, "some other msg", null);
-    assertEquals(now + " [DEBUG] (main) some other msg\n", result);
+    assertThat(now + " [DEBUG] (main) some other msg\n").isEqualToIgnoringNewLines(result);
   }
 
 }

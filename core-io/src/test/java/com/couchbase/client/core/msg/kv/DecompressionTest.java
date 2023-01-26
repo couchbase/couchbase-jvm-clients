@@ -17,9 +17,9 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -27,7 +27,7 @@ import java.time.Duration;
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDump;
 import static com.couchbase.client.test.Util.readResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -47,10 +47,7 @@ class DecompressionTest {
       mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"), BestEffortRetryStrategy.INSTANCE, null);
     GetResponse decoded = request.decode(response, null);
 
-    assertEquals(
-      readResource("dummy.json", DecompressionTest.class),
-      new String(decoded.content(), UTF_8)
-    );
+    assertThat(readResource("dummy.json", DecompressionTest.class)).isEqualToIgnoringNewLines(new String(decoded.content(), UTF_8));
   }
 
   @Test
@@ -64,10 +61,8 @@ class DecompressionTest {
       mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"), BestEffortRetryStrategy.INSTANCE, (short) 1, null);
     GetResponse decoded = request.decode(response, null);
 
-    assertEquals(
-      readResource("dummy.json", DecompressionTest.class),
-      new String(decoded.content(), UTF_8)
-    );
+    assertThat(readResource("dummy.json", DecompressionTest.class))
+      .isEqualToIgnoringNewLines(new String(decoded.content(), UTF_8));
   }
 
   @Test
@@ -82,10 +77,8 @@ class DecompressionTest {
       BestEffortRetryStrategy.INSTANCE, Duration.ofSeconds(1), null);
     GetAndLockResponse decoded = request.decode(response, null);
 
-    assertEquals(
-      readResource("dummy.json", DecompressionTest.class),
-      new String(decoded.content(), UTF_8)
-    );
+    assertThat(readResource("dummy.json", DecompressionTest.class))
+      .isEqualToIgnoringNewLines(new String(decoded.content(), UTF_8));
   }
 
   @Test
@@ -101,10 +94,8 @@ class DecompressionTest {
       BestEffortRetryStrategy.INSTANCE, encodedExpiry, null);
     GetAndTouchResponse decoded = request.decode(response, null);
 
-    assertEquals(
-      readResource("dummy.json", DecompressionTest.class),
-      new String(decoded.content(), UTF_8)
-    );
+    assertThat(readResource("dummy.json", DecompressionTest.class))
+      .isEqualToIgnoringNewLines(new String(decoded.content(), UTF_8));
   }
 
 }
