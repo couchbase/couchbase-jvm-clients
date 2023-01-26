@@ -1,5 +1,6 @@
 package com.couchbase.client.scala.kv
 
+import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocMutateRequest}
 import com.couchbase.client.scala.codec.JsonSerializer
@@ -231,7 +232,7 @@ object MutateInSpec {
 
 /** Represents an intent to perform a single SubDocument mutation. */
 sealed trait MutateInSpec {
-  private[scala] def convert(originalIndex: Int): SubdocMutateRequest.Command
+  private[scala] def convert: CoreSubdocMutateCommand
 
   private[scala] val typ: SubdocCommandType
 }
@@ -244,15 +245,14 @@ trait MutateInSpecStandard extends MutateInSpec {
   private[scala] val _createPath: Boolean
   private[scala] val _expandMacro: Boolean
 
-  private[scala] def convert(originalIndex: Int) =
-    new SubdocMutateRequest.Command(
+  private[scala] def convert =
+    new CoreSubdocMutateCommand(
       typ,
       path,
       value,
       _createPath,
       _xattr,
-      _expandMacro,
-      originalIndex
+      _expandMacro
     )
 
   private[scala] def value = fragment.get
@@ -307,15 +307,14 @@ case class Replace(
     copy(path, fragment, _xattr = true, _expandMacro = _expandMacro)
   }
 
-  def convert(originalIndex: Int) =
-    new SubdocMutateRequest.Command(
+  def convert =
+    new CoreSubdocMutateCommand(
       typ,
       path,
       fragment.get,
       false,
       _xattr,
-      _expandMacro,
-      originalIndex
+      _expandMacro
     )
 }
 
@@ -361,8 +360,8 @@ case class Remove(path: String, private[scala] val _xattr: Boolean = false) exte
     copy(path, _xattr = true)
   }
 
-  def convert(originalIndex: Int) =
-    new SubdocMutateRequest.Command(typ, path, Array[Byte](), false, _xattr, false, originalIndex)
+  def convert =
+    new CoreSubdocMutateCommand(typ, path, Array[Byte](), false, _xattr, false)
 }
 
 case class ArrayAppend(
@@ -503,9 +502,9 @@ case class Increment(
     copy(path, delta, _xattr, _createPath = true)
   }
 
-  def convert(originalIndex: Int) = {
+  def convert = {
     val bytes = delta.toString.getBytes(CharsetUtil.UTF_8)
-    new SubdocMutateRequest.Command(typ, path, bytes, _createPath, _xattr, false, originalIndex)
+    new CoreSubdocMutateCommand(typ, path, bytes, _createPath, _xattr, false)
   }
 
 }

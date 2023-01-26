@@ -39,10 +39,8 @@ import com.couchbase.client.scala.util.CoreCommonConverters.{
   makeCommonOptions
 }
 import com.couchbase.client.scala.util.{ExpiryUtil, FutureConversions, TimeoutUtil}
-import reactor.core.scala.publisher.{SFlux, SMono}
+import reactor.core.scala.publisher.SFlux
 
-import java.time.Instant
-import java.util
 import java.util.Optional
 import scala.compat.java8.FutureConverters
 import scala.compat.java8.OptionConverters._
@@ -93,7 +91,6 @@ class AsyncCollection(
     new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(name))
   private[scala] val hp                    = HandlerParams(core, bucketName, collectionIdentifier, environment)
   private[scala] val getSubDocHandler      = new GetSubDocumentHandler(hp)
-  private[scala] val mutateInHandler       = new MutateInHandler(hp)
   private[scala] val getFromReplicaHandler = new GetFromReplicaHandler(hp)
   private[scala] val rangeScanOrchestrator = new RangeScanOrchestrator(core, collectionIdentifier)
   private[scala] val kvOps                 = core.kvOps(CoreKeyspace.from(collectionIdentifier))
@@ -343,8 +340,16 @@ class AsyncCollection(
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): Future[MutateInResult] = {
-    val opts = MutateInOptions().cas(cas).document(document).durability(durability).timeout(timeout)
-    mutateIn(id, spec, opts)
+    convert(kvOps.subdocMutateAsync(makeCommonOptions(timeout),
+      id,
+      () => spec.map(v => v.convert).asJava,
+      convert(document),
+      cas,
+      convert(durability),
+      0,
+      false,
+      false,
+      false)).map(result => convert(result))
   }
 
   /** Sub-Document mutations allow modifying parts of a JSON document directly, which can be more efficiently than
@@ -356,64 +361,16 @@ class AsyncCollection(
       spec: collection.Seq[MutateInSpec],
       options: MutateInOptions
   ): Future[MutateInResult] = {
-
-    val timeoutActual =
-      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
-
-    val req: SMono[SubdocMutateRequest] = mutateInHandler.request(
+    convert(kvOps.subdocMutateAsync(convert(options),
       id,
-      spec,
+      () => spec.map(v => v.convert).asJava,
+      convert(options.document),
       options.cas,
-      options.document,
-      options.durability,
+      convert(options.durability),
       ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
       options.preserveExpiry,
-      timeoutActual,
-      options.retryStrategy.getOrElse(environment.retryStrategy),
       options.accessDeleted,
-      options.createAsDeleted,
-      options.transcoder.getOrElse(environment.transcoder),
-      options.parentSpan
-    )
-
-    req.toFuture.flatMap(request => {
-      core.send(request)
-
-      val out = FutureConverters
-        .toScala(request.response())
-        .map(response => mutateInHandler.response(request, id, options.document, response))
-
-      out onComplete {
-        case Success(_)   => request.context.logicallyComplete()
-        case Failure(err) => request.context.logicallyComplete(err)
-      }
-
-      options.durability match {
-        case ClientVerified(replicateTo, persistTo) =>
-          out.flatMap(response => {
-
-            val observeCtx = new ObserveContext(
-              core.context(),
-              PersistTo.asCore(persistTo),
-              ReplicateTo.asCore(replicateTo),
-              response.mutationToken.asJava,
-              response.cas,
-              collectionIdentifier,
-              id,
-              false,
-              timeoutActual,
-              request.requestSpan()
-            )
-
-            FutureConversions
-              .javaMonoToScalaFuture(Observe.poll(observeCtx))
-              // After the observe return the original response
-              .map(_ => response)
-          })
-
-        case _ => out
-      }
-    })
+      options.createAsDeleted)).map(result => convert(result))
   }
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.

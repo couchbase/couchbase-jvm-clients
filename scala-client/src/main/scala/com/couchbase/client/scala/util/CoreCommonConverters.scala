@@ -21,20 +21,16 @@ import com.couchbase.client.core.api.kv.{
   CoreEncodedContent,
   CoreExistsResult,
   CoreGetResult,
-  CoreMutationResult
+  CoreMutationResult,
+  CoreStoreSemantics,
+  CoreSubdocMutateResult
 }
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.msg.kv.{DurabilityLevel, MutationToken}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.kv.Observe.{ObservePersistTo, ObserveReplicateTo}
-import com.couchbase.client.scala.codec.{
-  EncodedValue,
-  JsonSerializer,
-  Transcoder,
-  TranscoderWithSerializer,
-  TranscoderWithoutSerializer
-}
+import com.couchbase.client.scala.codec.{EncodedValue, JsonSerializer, Transcoder, TranscoderWithSerializer, TranscoderWithoutSerializer}
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv.{
@@ -42,7 +38,9 @@ import com.couchbase.client.scala.kv.{
   GetOptions,
   GetResult,
   InsertOptions,
-  MutationResult
+  MutationResult,
+  MutateInResult,
+  StoreSemantics
 }
 import reactor.core.publisher.Mono
 import reactor.core.scala.publisher.SMono
@@ -104,6 +102,16 @@ private[scala] object CoreCommonConverters {
     )
   }
 
+  def convert(in: CoreSubdocMutateResult): MutateInResult = {
+    MutateInResult(
+      in.key(),
+      in,
+      in.cas(),
+      in.mutationToken().asScala
+              .map(mt => new MutationToken(mt.partitionID, mt.partitionUUID, mt.sequenceNumber, mt.bucketName))
+    )
+  }
+
   def convert(in: CoreExistsResult): ExistsResult = {
     ExistsResult(in.exists(), in.cas())
   }
@@ -149,7 +157,15 @@ private[scala] object CoreCommonConverters {
     java.time.Duration.ofMillis(in.toMillis)
   }
 
-  def encoder[T](
+    def convert(in: StoreSemantics): CoreStoreSemantics = {
+        in match {
+            case StoreSemantics.Replace => CoreStoreSemantics.REPLACE
+            case StoreSemantics.Insert => CoreStoreSemantics.INSERT
+            case StoreSemantics.Upsert => CoreStoreSemantics.UPSERT
+        }
+    }
+
+    def encoder[T](
       transcoder: Transcoder,
       serializer: JsonSerializer[T],
       content: T

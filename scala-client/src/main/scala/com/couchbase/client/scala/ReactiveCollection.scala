@@ -246,9 +246,16 @@ class ReactiveCollection(async: AsyncCollection) {
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): SMono[MutateInResult] = {
-    SMono.defer(
-      () => SMono.fromFuture(async.mutateIn(id, spec, cas, document, durability, timeout))
-    )
+    convert(kvOps.subdocMutateReactive(makeCommonOptions(timeout),
+      id,
+      () => spec.map(v => v.convert).asJava,
+      convert(document),
+      cas,
+      convert(durability),
+      0,
+      false,
+      false,
+      false)).map(result => convert(result))
   }
 
   /** SubDocument mutations allow modifying parts of a JSON document directly, which can be more efficiently than
@@ -260,7 +267,16 @@ class ReactiveCollection(async: AsyncCollection) {
       spec: collection.Seq[MutateInSpec],
       options: MutateInOptions
   ): SMono[MutateInResult] = {
-    SMono.defer(() => SMono.fromFuture(async.mutateIn(id, spec, options)))
+    convert(kvOps.subdocMutateReactive(convert(options),
+      id,
+      () => spec.map(v => v.convert).asJava,
+      convert(options.document),
+      options.cas,
+      convert(options.durability),
+      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
+      options.preserveExpiry,
+      options.accessDeleted,
+      options.createAsDeleted)).map(result => convert(result))
   }
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
