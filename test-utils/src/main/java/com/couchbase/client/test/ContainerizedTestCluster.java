@@ -30,6 +30,7 @@ import okhttp3.Response;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
@@ -88,17 +89,17 @@ public class ContainerizedTestCluster extends TestCluster {
 
     createBucket();
 
-    String raw = getRawConfig();
+    Map<String, Object> decodedConfig = decodeConfig(getRawConfig());
     ClusterVersion clusterVersion = getClusterVersionFromServer();
 
     return new TestClusterConfig(
       bucketname,
       adminUsername,
       adminPassword,
-      nodesFromRaw(seedHost, raw),
-      replicasFromRaw(raw),
+      nodesFromConfig(seedHost, decodedConfig),
+      replicasFromConfig(decodedConfig),
       loadClusterCertificate(),
-      capabilitiesFromRaw(raw, clusterVersion),
+      capabilitiesFromConfig(decodedConfig, clusterVersion),
       clusterVersion,
       false
     );

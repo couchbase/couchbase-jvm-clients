@@ -54,6 +54,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   private static final Logger LOGGER = LoggerFactory.getLogger(TestCluster.class);
   private static final Duration START_TIMEOUT = Duration.ofMinutes(2);
   private static final Map<String, Function<Properties, ? extends TestCluster>> CLUSTER_BUILDERS = new HashMap<>();
+  private static final ClusterVersion VERSION_NEO = ClusterVersion.parseString("7.1.0");
 
   static {
     CLUSTER_BUILDERS.put("containerized", props -> new ContainerizedTestCluster(props));
@@ -131,13 +132,13 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   /**
    * Helper method to extract the node configs from a raw bucket config.
    *
-   * @param config the config.
+   * @param config the decoded config.
    * @return the extracted node configs.
    */
 
-  protected List<TestNodeConfig> nodesFromRaw(final String inputHost, final String config) {
+  protected List<TestNodeConfig> nodesFromConfig(final String inputHost, final Map<String, Object> config) {
     List<TestNodeConfig> result = new ArrayList<>();
-    for (Map<String, Object> node : nodesExtFromConfig(decodeConfig(config))) {
+    for (Map<String, Object> node : nodesExtFromConfig(config)) {
       Map<String, Integer> services = getServicesFromNode(node);
       String hostname = (String) node.get("hostname");
       if (hostname == null) {
@@ -154,8 +155,8 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   }
 
   @SuppressWarnings({"unchecked"})
-  private static List<Map<String, Object>> nodesExtFromConfig(Map<String, Object> decodedConfig) {
-    return (List<Map<String, Object>>) decodedConfig.get("nodesExt");
+  private static List<Map<String, Object>> nodesExtFromConfig(Map<String, Object> config) {
+    return (List<Map<String, Object>>) config.get("nodesExt");
   }
 
   protected static ClusterVersion parseClusterVersion(Response response) {
@@ -168,63 +169,43 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   }
 
   @SuppressWarnings({"unchecked"})
-  protected int replicasFromRaw(final String config) {
-    Map<String, Object> decoded = decodeConfig(config);
-    Map<String, Object> serverMap = (Map<String, Object>) decoded.get("vBucketServerMap");
+  protected int replicasFromConfig(final Map<String, Object> config) {
+    Map<String, Object> serverMap = (Map<String, Object>) config.get("vBucketServerMap");
     return (int) serverMap.get("numReplicas");
   }
 
   @SuppressWarnings({"unchecked"})
-  protected Set<Capabilities> capabilitiesFromRaw(final String config, ClusterVersion clusterVersion) {
-    Map<String, Object> decoded = decodeConfig(config);
-    Set<Capabilities> capabilities = new HashSet<>(capabilitiesFromConfig(decoded));
+  protected Set<Capabilities> capabilitiesFromConfig(final Map<String, Object> config, ClusterVersion clusterVersion) {
+    Set<Capabilities> capabilities = new HashSet<>(capabilitiesFromConfig(config));
 
-    List<String> bucketCapabilities = (List<String>) decoded.get("bucketCapabilities");
-    if (bucketCapabilities.contains("durableWrite")) {
-      capabilities.add(Capabilities.SYNC_REPLICATION);
-      /// GCCCP was also added in 6.5 when sync replication was added, so we can assume the same.
-      capabilities.add(Capabilities.GLOBAL_CONFIG);
-      // same for user groups
-      capabilities.add(Capabilities.USER_GROUPS);
-    }
-    if (bucketCapabilities.contains("collections")) {
-      capabilities.add(Capabilities.COLLECTIONS);
-      capabilities.add(Capabilities.PRESERVE_EXPIRY); // also added in 7.0
-    }
-    if (bucketCapabilities.contains("tombstonedUserXAttrs")) {
-      // note: 6.6 and later
-      capabilities.add(Capabilities.CREATE_AS_DELETED);
-      capabilities.add(Capabilities.BUCKET_MINIMUM_DURABILITY);
-    }
+    List<String> bucketCapabilities = (List<String>) config.get("bucketCapabilities");
+    Arrays.stream(Capabilities.values())
+      .filter(c -> c.getNames().stream().anyMatch(bucketCapabilities::contains))
+      .forEach(capabilities::add);
+
+    addVersionDependentCapabilities(clusterVersion, capabilities);
+    return capabilities;
+  }
+
+  private static void addVersionDependentCapabilities(ClusterVersion clusterVersion, Set<Capabilities> capabilities) {
     if (!clusterVersion.isCommunityEdition()) {
       capabilities.add(Capabilities.ENTERPRISE_EDITION);
     }
-    if (bucketCapabilities.contains("subdoc.ReplaceBodyWithXattr")) {
-      capabilities.add(Capabilities.SUBDOC_REPLACE_BODY_WITH_XATTR);
-    }
-    if (bucketCapabilities.contains("subdoc.ReviveDocument")) {
-      capabilities.add(Capabilities.SUBDOC_REVIVE_DOCUMENT);
-    }
-    if (clusterVersion.majorVersion() == 7 && clusterVersion.minorVersion() == 1) {
+    if (VERSION_NEO.equals(clusterVersion)) {
       //Rate limiting only available on 7.1
       capabilities.add(Capabilities.RATE_LIMITING);
     }
-    if (clusterVersion.majorVersion() > 7
-      || (clusterVersion.majorVersion() == 7 && clusterVersion.minorVersion() >= 1)) {
+    if (clusterVersion.gtOrEquals(VERSION_NEO)) {
       capabilities.add(Capabilities.QUERY_PRESERVE_EXPIRY);
 
       if (!clusterVersion.isCommunityEdition()) {
         capabilities.add(Capabilities.STORAGE_BACKEND);
       }
     }
-    if (bucketCapabilities.contains("rangeScan")) {
-      capabilities.add(Capabilities.RANGE_SCAN);
-    }
-    return capabilities;
   }
 
-  private static Set<Capabilities> capabilitiesFromConfig(Map<String, Object> decoded) {
-    return nodesExtFromConfig(decoded).stream()
+  private static Set<Capabilities> capabilitiesFromConfig(Map<String, Object> config) {
+    return nodesExtFromConfig(config).stream()
       .flatMap(node -> getServicesFromNode(node).keySet().stream())
       .flatMap(name -> Arrays.stream(Capabilities.values())
         .filter(v -> v.getNames().contains(name))
@@ -237,7 +218,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     return (Map<String, Integer>) node.get("services");
   }
 
-  private static Map<String, Object> decodeConfig(String config) {
+  protected static Map<String, Object> decodeConfig(String config) {
     try {
       return MAPPER.readValue(config.getBytes(UTF_8), MAP_STRING_OBJECT);
     } catch (IOException e) {

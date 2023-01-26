@@ -109,17 +109,17 @@ public class CavesTestCluster extends TestCluster {
     int port = mgmtSockets.get(0).port;
     this.baseUrl = String.format(baseUrl, host, port);
 
-    String rawConfig = getRawConfig();
+    Map<String, Object> decodedConfig = decodeConfig(getRawConfig());
     ClusterVersion clusterVersion = getClusterVersionFromServer();
 
     return new TestClusterConfig(
       bucketname,
       adminUsername,
       adminPassword,
-      nodesFromRaw(host, rawConfig),
-      replicasFromRaw(rawConfig),
+      nodesFromConfig(host, decodedConfig),
+      replicasFromConfig(decodedConfig),
       Optional.empty(),
-      capabilitiesFromRaw(rawConfig, clusterVersion),
+      capabilitiesFromConfig(decodedConfig, clusterVersion),
       clusterVersion,
       false
     );

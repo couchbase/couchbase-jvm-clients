@@ -51,15 +51,15 @@ public enum Capabilities {
   /**
    * This cluster is able to give us a config without opening a bucket.
    */
-  GLOBAL_CONFIG,
+  GLOBAL_CONFIG("durableWrite"),
   /**
    * This cluster is able to assign users to groups.
    */
-  USER_GROUPS,
+  USER_GROUPS("durableWrite"),
   /**
    * The cluster has collections enabled.
    */
-  COLLECTIONS,
+  COLLECTIONS("collections"),
   /**
    * The cluster has views enabled.
    */
@@ -67,11 +67,11 @@ public enum Capabilities {
   /**
    * The cluster can create documents in a deleted state.
    */
-  CREATE_AS_DELETED,
+  CREATE_AS_DELETED("tombstonedUserXAttrs"),
   /**
    * The cluster supports specifying a minimum durability level on the bucket.
    */
-  BUCKET_MINIMUM_DURABILITY,
+  BUCKET_MINIMUM_DURABILITY("tombstonedUserXAttrs"),
   /**
    * The cluster can modify a document without changing its expiry.
    */
@@ -83,11 +83,11 @@ public enum Capabilities {
   /**
    * The cluster supports a Sub-Document instruction to replace a document's body with an xattr
    */
-  SUBDOC_REPLACE_BODY_WITH_XATTR,
+  SUBDOC_REPLACE_BODY_WITH_XATTR("subdoc.ReplaceBodyWithXattr"),
   /**
    * The cluster supports the Sub-Document ReviveDocument flag to turn a tombstone into a regular document, preserving xattrs.
    */
-  SUBDOC_REVIVE_DOCUMENT,
+  SUBDOC_REVIVE_DOCUMENT("subdoc.ReviveDocument"),
   /**
    * The cluster supports rate limiting.
    */

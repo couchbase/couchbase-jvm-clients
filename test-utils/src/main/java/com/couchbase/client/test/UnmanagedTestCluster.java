@@ -20,7 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
 import okhttp3.Response;
 
 import javax.naming.NamingException;
@@ -93,6 +92,7 @@ public class UnmanagedTestCluster extends TestCluster {
     createOrReuseBucket();
 
     String raw = getRawConfig();
+    Map<String, Object> decodedConfig = decodeConfig(raw);
 
     LOGGER.info("Bucket raw results: {}", raw);
 
@@ -116,7 +116,7 @@ public class UnmanagedTestCluster extends TestCluster {
       Map<Services,Integer> ports = Collections.emptyMap();
       nodeConfigs.add(new TestNodeConfig(seedHost, ports, false, Optional.of(DEFAULT_PROTOSTELLAR_TLS_PORT)));
     } else {
-      nodeConfigs = nodesFromRaw(seedHost, raw);
+      nodeConfigs = nodesFromConfig(seedHost, decodedConfig);
     }
 
     return new TestClusterConfig(
@@ -124,9 +124,9 @@ public class UnmanagedTestCluster extends TestCluster {
       adminUsername,
       adminPassword,
       nodeConfigs,
-      replicasFromRaw(raw),
+      replicasFromConfig(decodedConfig),
       certs,
-      capabilitiesFromRaw(raw, clusterVersion),
+      capabilitiesFromConfig(decodedConfig, clusterVersion),
       clusterVersion,
       runWithTLS
     );

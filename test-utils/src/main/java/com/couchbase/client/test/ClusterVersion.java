@@ -95,4 +95,8 @@ public class ClusterVersion implements Comparable<ClusterVersion> {
   public int compareTo(@NotNull ClusterVersion o) {
     return naturalOrder.compare(this, o);
   }
+
+  public boolean gtOrEquals(ClusterVersion version) {
+    return this.compareTo(version) >= 0;
+  }
 }
