@@ -57,6 +57,7 @@ public class ContainerizedTestCluster extends TestCluster {
   ContainerizedTestCluster(final Properties properties) {
     version = SupportedVersion.fromString(properties.getProperty("cluster.containerized.version"));
     numNodes = Integer.parseInt(properties.getProperty("cluster.containerized.numNodes"));
+    numReplicas = Integer.parseInt(properties.getProperty("cluster.containerized.numReplicas"));
     adminUsername = properties.getProperty("cluster.adminUsername");
     adminPassword = properties.getProperty("cluster.adminPassword");
     this.baseUrl = "http://%s:%s";
@@ -111,7 +112,9 @@ public class ContainerizedTestCluster extends TestCluster {
         .url(baseUrl + BUCKET_URL)
         .post(new FormBody.Builder()
           .add("name", bucketname)
+          .add("bucketType", "membase")
           .add("ramQuotaMB", "100")
+          .add("replicaNumber", Integer.toString(numReplicas))
           .add("flushEnabled", "1")
           .build())
         .build())

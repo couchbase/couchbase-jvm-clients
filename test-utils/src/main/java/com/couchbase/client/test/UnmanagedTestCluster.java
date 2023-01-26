@@ -52,10 +52,8 @@ public class UnmanagedTestCluster extends TestCluster {
   private static final int DEFAULT_PROTOSTELLAR_TLS_PORT = 18098;
   private final String seedHost;
   private final boolean isDnsSrv;
-  private final int numReplicas;
   private final String certsFile;
   private volatile boolean runWithTLS;
-  private final String baseUrl;
   private final boolean isProtostellar;
 
   UnmanagedTestCluster(final Properties properties) {
@@ -92,9 +90,9 @@ public class UnmanagedTestCluster extends TestCluster {
     createOrReuseBucket();
 
     String raw = getRawConfig();
-    Map<String, Object> decodedConfig = decodeConfig(raw);
-
     LOGGER.info("Bucket raw results: {}", raw);
+
+    Map<String, Object> decodedConfig = decodeConfig(raw);
 
     waitUntilAllNodesHealthy();
     ClusterVersion clusterVersion = getClusterVersionFromServer();
@@ -176,7 +174,7 @@ public class UnmanagedTestCluster extends TestCluster {
   private void waitUntilAllNodesHealthy() throws Exception {
     while(true) {
       Response getResponse = httpClient.newCall(builderWithAuth()
-        .url(baseUrl + POOLS_URL)
+        .url(baseUrl + POOLS_DEFAULT_URL)
         .build())
         .execute();
 

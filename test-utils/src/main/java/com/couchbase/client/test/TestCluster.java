@@ -84,6 +84,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   protected String adminUsername;
   protected String adminPassword;
   protected OkHttpClient httpClient;
+  protected int numReplicas;
 
   /**
    * Creates the Test cluster (either managed ur unmanaged).
