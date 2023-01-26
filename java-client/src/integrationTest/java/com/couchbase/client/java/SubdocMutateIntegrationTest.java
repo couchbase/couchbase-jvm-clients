@@ -25,6 +25,7 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.subdoc.DocumentAlreadyAliveException;
 import com.couchbase.client.core.error.subdoc.PathExistsException;
+import com.couchbase.client.core.error.subdoc.PathInvalidException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -65,8 +66,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus.CAN_ONLY_REVIVE_DELETED_DOCUMENTS;
 import static com.couchbase.client.core.util.CbCollections.listOf;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.java.kv.MutateInOptions.mutateInOptions;
 import static com.couchbase.client.java.kv.MutateInSpec.upsert;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -130,6 +134,20 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     @Test
     void noCommands() {
         assertThrows(InvalidArgumentException.class, () -> coll.mutateIn(docId(), Collections.emptyList()));
+    }
+
+    @Test
+    @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+    void invalidPath() {
+        String docId = docId();
+        coll.upsert(docId, emptyMap());
+
+        assertThrows(PathInvalidException.class, () ->
+            coll.mutateIn(
+                docId,
+                singletonList(MutateInSpec.insert("x[1]", "bar"))
+            )
+        );
     }
 
     @Test

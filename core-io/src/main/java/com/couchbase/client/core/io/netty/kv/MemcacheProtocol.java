@@ -35,6 +35,7 @@ import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.NumberTooBigException;
 import com.couchbase.client.core.error.subdoc.PathExistsException;
+import com.couchbase.client.core.error.subdoc.PathInvalidException;
 import com.couchbase.client.core.error.subdoc.PathMismatchException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.error.subdoc.PathTooDeepException;
@@ -898,6 +899,8 @@ public enum MemcacheProtocol {
         return new PathMismatchException(ctx);
       case PATH_TOO_BIG:
         return new PathTooDeepException(ctx);
+      case PATH_INVALID:
+        return new PathInvalidException(ctx);
       case DOC_TOO_DEEP:
         return new DocumentTooDeepException(ctx);
       case VALUE_CANTINSERT:

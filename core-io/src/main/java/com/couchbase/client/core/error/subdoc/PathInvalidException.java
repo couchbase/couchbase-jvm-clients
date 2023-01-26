@@ -26,6 +26,10 @@ import com.couchbase.client.core.error.context.SubDocumentErrorContext;
  */
 public class PathInvalidException extends CouchbaseException {
 
+    public PathInvalidException(SubDocumentErrorContext ctx) {
+        this("The path has a syntax error or is not appropriate for the operation.", ctx);
+    }
+
     public PathInvalidException(final String message, final SubDocumentErrorContext ctx) {
         super(message, ctx);
     }

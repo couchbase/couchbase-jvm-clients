@@ -18,9 +18,8 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CasMismatchException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
-import com.couchbase.client.core.error.subdoc.PathInvalidException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
 import com.couchbase.client.core.msg.kv.SubDocumentField;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
@@ -165,23 +164,14 @@ public class LookupInResult {
   }
 
   private SubDocumentField getFieldAtIndex(int index) {
-    if (index >= 0 && index < encoded.length) {
+    try {
       SubDocumentField value = encoded[index];
-      if (value == null) {
-        throw new PathInvalidException(
-          "No result exists at index",
-          new SubDocumentErrorContext(ctx, index, null, null)
-        );
-      }
-      if (value.error().isPresent()) {
-        throw value.error().get();
-      }
+      value.error().ifPresent(it -> {
+        throw it;
+      });
       return value;
-    } else {
-      throw new PathInvalidException(
-        "Index is out of bounds",
-        new SubDocumentErrorContext(ctx, index, null, null)
-      );
+    } catch (IndexOutOfBoundsException e) {
+      throw InvalidArgumentException.fromMessage("Index " + index + " is out of bounds; must be >= 0 and < " + encoded.length);
     }
   }
 
