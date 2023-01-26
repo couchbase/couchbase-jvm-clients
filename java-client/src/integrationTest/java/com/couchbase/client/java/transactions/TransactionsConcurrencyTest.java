@@ -48,7 +48,9 @@ import static org.junit.jupiter.api.Assertions.fail;
   missesCapabilities = {Capabilities.CREATE_AS_DELETED}
 )
 public class TransactionsConcurrencyTest extends JavaIntegrationTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(TransactionsConcurrencyTest.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(TransactionsConcurrencyTest.class);
+  private static final Duration TIMEOUT = Duration.ofSeconds(32);
+  private static final int THREADS_COUNT = 200;
 
     static private Cluster cluster;
     static private Collection collection;
@@ -81,7 +83,7 @@ public class TransactionsConcurrencyTest extends JavaIntegrationTest {
                 String docId = UUID.randomUUID().toString();
                 JsonObject content = JsonObject.create().put("foo", "bar");
 
-                cluster.transactions().run((ctx) -> {
+                cluster.transactions().run(ctx -> {
                             Thread ct = Thread.currentThread();
                             LOGGER.info("In lambda on thread {} {}, was on {} {}", ct.getId(), ct.getName(), t.getId(), t.getName());
                             assertTrue(ct.getName().startsWith("cb-txn"));
@@ -95,7 +97,7 @@ public class TransactionsConcurrencyTest extends JavaIntegrationTest {
                         },
                         // Once hotspot is warmed up these transactions take a second or two to complete.  Before then,
                         // it can take close to the default 15 seconds.
-                        TransactionOptions.transactionOptions().timeout(Duration.ofSeconds(30)));
+                        TransactionOptions.transactionOptions().timeout(TIMEOUT));
 
                 Thread t2 = Thread.currentThread();
 
@@ -108,7 +110,7 @@ public class TransactionsConcurrencyTest extends JavaIntegrationTest {
             }
         };
         List<Thread> threads = new ArrayList<>();
-        for (int i = 0; i < 200; i++) {
+        for (int i = 0; i < THREADS_COUNT; i++) {
             LOGGER.info("Creating thread {}", i);
 
             Thread t = new Thread(r, "thread-" + i);
