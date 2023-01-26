@@ -542,6 +542,6 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     collection.upsert(id, JsonObject.create());
 
     assertThrows(XattrUnknownVirtualAttributeException.class, () ->
-            collection.lookupIn(id, Arrays.asList(LookupInSpec.get("$vbucket").xattr())));
+            collection.lookupIn(id, Collections.singletonList(get("$vbucket").xattr())));
   }
 }
