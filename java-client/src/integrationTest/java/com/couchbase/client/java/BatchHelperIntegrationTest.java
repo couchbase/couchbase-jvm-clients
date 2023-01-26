@@ -40,7 +40,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Verifies the functionality of the {@link BatchHelper}.
  */
-@IgnoreWhen(clusterTypes = ClusterType.CAVES)
+@IgnoreWhen(clusterTypes = ClusterType.CAVES,
+  isProtostellarWillWorkLater = true
+)
 public class BatchHelperIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;

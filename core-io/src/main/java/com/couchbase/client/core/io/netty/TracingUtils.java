@@ -24,6 +24,7 @@ import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.SyncDurabilityRequest;
+import reactor.util.annotation.Nullable;
 
 /**
  * Contains various utils to set attributes for tracing spans.
@@ -44,13 +45,16 @@ public class TracingUtils {
    * @param remotePort the remote port.
    * @param operationId the unique operation ID - can be null (then ignored).
    */
-  public static void setCommonDispatchSpanAttributes(final RequestSpan span, final String localId,
-                                                     final String localHost, final int localPort,
-                                                     final String remoteHost, final int remotePort,
-                                                     final String operationId) {
+  public static void setCommonDispatchSpanAttributes(final RequestSpan span, @Nullable final String localId,
+                                                     @Nullable final String localHost, final int localPort,
+                                                     @Nullable final String remoteHost, final int remotePort,
+                                                     @Nullable final String operationId) {
     span.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
     span.attribute(TracingIdentifiers.ATTR_NET_TRANSPORT, TracingIdentifiers.ATTR_NET_TRANSPORT_TCP);
-    span.attribute(TracingIdentifiers.ATTR_LOCAL_ID, localId);
+
+    if (localId != null) {
+      span.attribute(TracingIdentifiers.ATTR_LOCAL_ID, localId);
+    }
 
     if (localHost != null) {
       span.attribute(TracingIdentifiers.ATTR_LOCAL_HOSTNAME, localHost);

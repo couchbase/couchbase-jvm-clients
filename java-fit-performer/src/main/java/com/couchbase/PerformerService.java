@@ -175,6 +175,23 @@ public class PerformerService extends CorePerformer {
             // Need this callback as we have to configure hooks to do something with a Cluster that we haven't created yet.
             Supplier<ClusterConnection> getCluster = () -> clusterConnections.get(clusterConnectionId);
             var onClusterConnectionClose = new ArrayList<Runnable>();
+
+            request.getTunablesMap().forEach((k, v) -> {
+                logger.info("Setting cluster-level tunable {}={}", k, v);
+                if (v != null) {
+                    System.setProperty(k, v);
+                }
+            });
+
+            onClusterConnectionClose.add(() -> {
+                request.getTunablesMap().forEach((k, v) -> {
+                    logger.info("Clearing cluster-level tunable {}", k);
+                    if (v != null) {
+                        System.clearProperty(k);
+                    }
+                });
+            });
+
             var clusterEnvironment = OptionsUtil.convertClusterConfig(request, getCluster, onClusterConnectionClose);
 
             var connection = new ClusterConnection(request.getClusterHostname(),

@@ -23,6 +23,7 @@ import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.ArraySetOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -42,6 +43,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@IgnoreWhen(isProtostellarWillWorkLater = true)
 class CouchbaseArraySetTest extends JavaIntegrationTest {
 
     private static Cluster cluster;

@@ -42,7 +42,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @IgnoreWhen(
   missesCapabilities = Capabilities.ANALYTICS,
-  clusterTypes = ClusterType.CAVES
+  clusterTypes = ClusterType.CAVES,
+  isProtostellar = true
 )
 class AnalyticsIntegrationTest extends JavaIntegrationTest {
 

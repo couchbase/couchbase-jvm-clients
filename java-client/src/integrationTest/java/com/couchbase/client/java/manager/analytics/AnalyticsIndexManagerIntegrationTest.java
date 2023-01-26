@@ -84,7 +84,10 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 @Disabled
 @Flaky
-@IgnoreWhen(clusterTypes = {MOCKED, CAVES}, missesCapabilities = ANALYTICS)
+@IgnoreWhen(clusterTypes = {MOCKED, CAVES},
+  missesCapabilities = ANALYTICS,
+  isProtostellar = true
+)
 class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   private static final String dataset = "myDataset";

@@ -18,9 +18,12 @@ package com.couchbase.client.core.endpoint.http;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.retry.RetryStrategy;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 
 @Stability.Internal
@@ -47,6 +50,9 @@ public interface CoreCommonOptions {
   Optional<RetryStrategy> retryStrategy();
 
   Optional<RequestSpan> parentSpan();
+
+  @Nullable
+  default Map<String, Object> clientContext() { return null; }
 
   static CoreCommonOptions of(Duration timeout, RetryStrategy retryStrategy, RequestSpan parentSpan) {
     if (timeout == null && retryStrategy == null && parentSpan == null) {

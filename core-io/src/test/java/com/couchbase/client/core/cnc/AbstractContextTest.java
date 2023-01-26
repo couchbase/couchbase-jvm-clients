@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -47,7 +48,7 @@ class AbstractContextTest {
         input.put("foo", "bar");
       }
     };
-    assertEquals("{\n  \"foo\" : \"bar\"\n}", ctx.exportAsString(Context.ExportFormat.JSON_PRETTY));
+    assertThat("{\n  \"foo\" : \"bar\"\n}").isEqualToIgnoringNewLines(ctx.exportAsString(Context.ExportFormat.JSON_PRETTY));
   }
 
   @Test

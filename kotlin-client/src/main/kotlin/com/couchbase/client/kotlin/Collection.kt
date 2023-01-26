@@ -17,7 +17,9 @@
 package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.CoreKeyspace
 import com.couchbase.client.core.annotation.SinceCouchbase
+import com.couchbase.client.core.api.kv.CoreAsyncResponse
 import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.env.TimeoutConfig
 import com.couchbase.client.core.error.CasMismatchException
@@ -25,7 +27,6 @@ import com.couchbase.client.core.error.DefaultErrorUtil
 import com.couchbase.client.core.error.DocumentExistsException
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.error.DocumentUnretrievableException
-import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.error.context.KeyValueErrorContext.completedRequest
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext
 import com.couchbase.client.core.io.CollectionIdentifier
@@ -33,25 +34,13 @@ import com.couchbase.client.core.kv.CoreRangeScanItem
 import com.couchbase.client.core.kv.RangeScanOrchestrator
 import com.couchbase.client.core.msg.Request
 import com.couchbase.client.core.msg.Response
-import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.ResponseStatus.EXISTS
 import com.couchbase.client.core.msg.ResponseStatus.NOT_STORED
 import com.couchbase.client.core.msg.ResponseStatus.SUBDOC_FAILURE
-import com.couchbase.client.core.msg.kv.GetAndLockRequest
-import com.couchbase.client.core.msg.kv.GetAndTouchRequest
-import com.couchbase.client.core.msg.kv.GetMetaRequest
-import com.couchbase.client.core.msg.kv.GetRequest
-import com.couchbase.client.core.msg.kv.InsertRequest
 import com.couchbase.client.core.msg.kv.KeyValueRequest
 import com.couchbase.client.core.msg.kv.MutationToken
-import com.couchbase.client.core.msg.kv.RemoveRequest
-import com.couchbase.client.core.msg.kv.ReplaceRequest
 import com.couchbase.client.core.msg.kv.SubdocGetRequest
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest
-import com.couchbase.client.core.msg.kv.TouchRequest
-import com.couchbase.client.core.msg.kv.UnlockRequest
-import com.couchbase.client.core.msg.kv.UpsertRequest
-import com.couchbase.client.core.service.kv.ReplicaHelper
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.JsonSerializer
@@ -81,10 +70,8 @@ import com.couchbase.client.kotlin.kv.MutationResult
 import com.couchbase.client.kotlin.kv.ScanSort
 import com.couchbase.client.kotlin.kv.ScanType
 import com.couchbase.client.kotlin.kv.StoreSemantics
-import com.couchbase.client.kotlin.kv.internal.encodeInSpan
 import com.couchbase.client.kotlin.kv.internal.levelIfSynchronous
 import com.couchbase.client.kotlin.kv.internal.observe
-import com.couchbase.client.kotlin.kv.internal.subdocGet
 import com.couchbase.client.kotlin.util.StorageSize
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -132,6 +119,8 @@ public class Collection internal constructor(
     internal fun CommonOptions.actualRetryStrategy() = retryStrategy ?: env.retryStrategy()
     internal fun CommonOptions.actualSpan(name: String) = env.requestTracer().requestSpan(name, parentSpan)
 
+    private val kvOps = core.kvOps(CoreKeyspace.from(collectionId))
+
     /**
      * Gets a document from this collection.
      *
@@ -153,23 +142,18 @@ public class Collection internal constructor(
         withExpiry: Boolean = false,
         project: List<String> = emptyList(),
     ): GetResult {
-        if (!withExpiry && project.isEmpty()) {
-            val request = GetRequest(
-                validateDocumentId(id),
-                common.actualKvTimeout(Durability.none()),
-                core.context(),
-                collectionId,
-                common.actualRetryStrategy(),
-                common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET),
-            )
-
-            return exec(request, common) {
+        return kvOps.getAsync(
+            common.toCore(),
+            validateDocumentId(id),
+            project,
+            withExpiry
+        ).await().let {
+            if (withExpiry) {
+                val expiry = it.expiry()?.let { instant -> Expiry.of(instant) } ?: Expiry.none()
+                GetResult.withKnownExpiry(id, it.cas(), Content(it.content(), it.flags()), defaultTranscoder, expiry)
+            } else {
                 GetResult.withUnknownExpiry(id, it.cas(), Content(it.content(), it.flags()), defaultTranscoder)
             }
-        }
-
-        subdocGet(validateDocumentId(id), withExpiry, project, common).let {
-            return GetResult(id, it.cas, Content(it.content, it.flags), it.expiry, defaultTranscoder)
         }
     }
 
@@ -317,17 +301,11 @@ public class Collection internal constructor(
         lockTime: Duration,
         common: CommonOptions = CommonOptions.Default,
     ): GetResult {
-        val request = GetAndLockRequest(
+        return kvOps.getAndLockAsync(
+            common.toCore(),
             validateDocumentId(id),
-            common.actualKvTimeout(Durability.none()),
-            core.context(),
-            collectionId,
-            common.actualRetryStrategy(),
             lockTime.toJavaDuration(),
-            common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_LOCK),
-        )
-
-        return exec(request, common) {
+        ).await().let {
             GetResult.withUnknownExpiry(id, it.cas(), Content(it.content(), it.flags()), defaultTranscoder)
         }
     }
@@ -337,17 +315,11 @@ public class Collection internal constructor(
         expiry: Expiry,
         common: CommonOptions = CommonOptions.Default,
     ): GetResult {
-        val request = GetAndTouchRequest(
+        return kvOps.getAndTouchAsync(
+            common.toCore(),
             validateDocumentId(id),
-            common.actualKvTimeout(Durability.none()),
-            core.context(),
-            collectionId,
-            common.actualRetryStrategy(),
             expiry.encode(),
-            common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH),
-        )
-
-        return exec(request, common) {
+        ).await().let {
             GetResult.withKnownExpiry(id, it.cas(), Content(it.content(), it.flags()), defaultTranscoder, expiry)
         }
     }
@@ -355,15 +327,10 @@ public class Collection internal constructor(
     public fun getAllReplicas(
         id: String,
         common: CommonOptions = CommonOptions.Default,
-    ): Flow<GetReplicaResult> = ReplicaHelper.getAllReplicasReactive(
-        core,
-        collectionId,
-        id,
-        common.actualKvTimeout(Durability.none()),
-        common.actualRetryStrategy(),
-        common.clientContext,
-        common.parentSpan,
-    ).asFlow().map { GetReplicaResult(id, it, defaultTranscoder) }
+    ): Flow<GetReplicaResult> {
+        return kvOps.getAllReplicasReactive(common.toCore(), id)
+            .asFlow().map { GetReplicaResult(id, it, defaultTranscoder) }
+    }
 
     /**
      * @throws DocumentUnretrievableException if the document could not be
@@ -386,15 +353,8 @@ public class Collection internal constructor(
         id: String,
         common: CommonOptions = CommonOptions.Default,
     ): GetReplicaResult? {
-        val response = ReplicaHelper.getAnyReplicaReactive(
-            core,
-            collectionId,
-            id,
-            common.actualKvTimeout(Durability.none()),
-            common.actualRetryStrategy(),
-            common.clientContext,
-            common.parentSpan,
-        ).awaitFirstOrNull() ?: return null
+        val response = kvOps.getAnyReplicaReactive(common.toCore(), id)
+            .awaitFirstOrNull() ?: return null
 
         return GetReplicaResult(id, response, defaultTranscoder)
     }
@@ -403,26 +363,11 @@ public class Collection internal constructor(
         id: String,
         common: CommonOptions = CommonOptions.Default,
     ): ExistsResult {
-        val request = GetMetaRequest(
-            validateDocumentId(id),
-            common.actualKvTimeout(Durability.none()),
-            core.context(),
-            collectionId,
-            common.actualRetryStrategy(),
-            common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_EXISTS),
-        )
-
-        try {
-            val response = core.exec(request, common)
-            val success = response.status().success()
-
-            return when {
-                success && !response.deleted() -> ExistsResult(true, response.cas())
-                success || response.status() == ResponseStatus.NOT_FOUND -> ExistsResult.NotFound
-                else -> throw DefaultErrorUtil.keyValueStatusToException(request, response)
-            }
-        } finally {
-            request.logicallyComplete()
+        return kvOps.existsAsync(
+            common.toCore(),
+            id,
+        ).await().let {
+            if (it.exists()) ExistsResult(it.exists(), it.cas()) else ExistsResult.NotFound
         }
     }
 
@@ -436,21 +381,12 @@ public class Collection internal constructor(
         durability: Durability = Durability.none(),
         cas: Long = 0,
     ): MutationResult {
-        val request = RemoveRequest(
-            validateDocumentId(id),
+        return kvOps.removeAsync(
+            common.toCore(),
+            id,
             cas,
-            common.actualKvTimeout(durability),
-            core.context(),
-            collectionId,
-            common.actualRetryStrategy(),
-            durability.levelIfSynchronous(),
-            common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_REMOVE),
-        )
-
-        return exec(request, common) {
-            if (durability is Durability.ClientVerified) {
-                observe(request, id, durability, it.cas(), it.mutationToken())
-            }
+            durability.toCore(),
+        ).await().let {
             MutationResult(it.cas(), it.mutationToken().orElse(null))
         }
     }
@@ -495,34 +431,14 @@ public class Collection internal constructor(
         durability: Durability,
         expiry: Expiry,
     ): MutationResult {
-        val span = common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_INSERT)
-        val (encodedContent, encodingNanos) = encodeInSpan(transcoder, content, contentType, span)
-
-        val request = InsertRequest(
-            validateDocumentId(id),
-            encodedContent.bytes,
+        return kvOps.insertAsync(
+            common.toCore(),
+            id,
+            { (transcoder ?: defaultTranscoder).encode(content, contentType).toCore() },
+            durability.toCore(),
             expiry.encode(),
-            encodedContent.flags,
-            common.actualKvTimeout(durability),
-            core.context(),
-            collectionId,
-            common.actualRetryStrategy(),
-            durability.levelIfSynchronous(),
-            span,
-        )
-        request.context().encodeLatency(encodingNanos)
-
-        try {
-            return exec(request, common) {
-                if (durability is Durability.ClientVerified) {
-                    observe(request, id, durability, it.cas(), it.mutationToken())
-                }
-                MutationResult(it.cas(), it.mutationToken().orElse(null))
-            }
-        } catch (t: CasMismatchException) {
-            throw DocumentExistsException(t.context())
-        } catch (t: DocumentNotFoundException) { // Map NOT_STORED
-            throw DocumentExistsException(t.context())
+        ).await().let {
+            MutationResult(it.cas(), it.mutationToken().orElse(null))
         }
     }
 
@@ -557,28 +473,14 @@ public class Collection internal constructor(
         expiry: Expiry,
         preserveExpiry: Boolean,
     ): MutationResult {
-        val span = common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_UPSERT)
-        val (encodedContent, encodingNanos) = encodeInSpan(transcoder, content, contentType, span)
-
-        val request = UpsertRequest(
-            validateDocumentId(id),
-            encodedContent.bytes,
+        return kvOps.upsertAsync(
+            common.toCore(),
+            id,
+            { (transcoder ?: defaultTranscoder).encode(content, contentType).toCore() },
+            durability.toCore(),
             expiry.encode(),
             preserveExpiry,
-            encodedContent.flags,
-            common.actualKvTimeout(durability),
-            core.context(),
-            collectionId,
-            common.actualRetryStrategy(),
-            durability.levelIfSynchronous(),
-            span,
-        )
-        request.context().encodeLatency(encodingNanos)
-
-        return exec(request, common) {
-            if (durability is Durability.ClientVerified) {
-                observe(request, id, durability, it.cas(), it.mutationToken())
-            }
+        ).await().let {
             MutationResult(it.cas(), it.mutationToken().orElse(null))
         }
     }
@@ -610,29 +512,15 @@ public class Collection internal constructor(
         preserveExpiry: Boolean,
         cas: Long,
     ): MutationResult {
-        val span = common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_REPLACE)
-        val (encodedContent, encodingNanos) = encodeInSpan(transcoder, content, contentType, span)
-
-        val request = ReplaceRequest(
-            validateDocumentId(id),
-            encodedContent.bytes,
+        return kvOps.replaceAsync(
+            common.toCore(),
+            id,
+            { (transcoder ?: defaultTranscoder).encode(content, contentType).toCore() },
+            cas,
+            durability.toCore(),
             expiry.encode(),
             preserveExpiry,
-            encodedContent.flags,
-            common.actualKvTimeout(durability),
-            cas,
-            core.context(),
-            collectionId,
-            common.actualRetryStrategy(),
-            durability.levelIfSynchronous(),
-            span,
-        )
-        request.context().encodeLatency(encodingNanos)
-
-        return exec(request, common) {
-            if (durability is Durability.ClientVerified) {
-                observe(request, id, durability, it.cas(), it.mutationToken())
-            }
+        ).await().let {
             MutationResult(it.cas(), it.mutationToken().orElse(null))
         }
     }
@@ -642,17 +530,11 @@ public class Collection internal constructor(
         expiry: Expiry,
         common: CommonOptions = CommonOptions.Default,
     ): MutationResult {
-        val request = TouchRequest(
-            common.actualKvTimeout(Durability.none()),
-            core.context(),
-            collectionId,
-            common.actualRetryStrategy(),
-            validateDocumentId(id),
-            expiry.encode(),
-            common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_TOUCH),
-        )
-
-        return exec(request, common) {
+        return kvOps.touchAsync(
+            common.toCore(),
+            id,
+            expiry.encode()
+        ).await().let {
             MutationResult(it.cas(), it.mutationToken().orElse(null))
         }
     }
@@ -662,18 +544,11 @@ public class Collection internal constructor(
         cas: Long,
         common: CommonOptions = CommonOptions.Default,
     ) {
-        if (cas == 0L) throw InvalidArgumentException("Unlock CAS must be non-zero.", null, ReducedKeyValueErrorContext.create(id, collectionId))
-
-        val request = UnlockRequest(
-            common.actualKvTimeout(Durability.none()),
-            core.context(),
-            collectionId,
-            common.actualRetryStrategy(),
-            validateDocumentId(id),
+        kvOps.unlockAsync(
+            common.toCore(),
+            id,
             cas,
-            common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_UNLOCK)
-        )
-        exec(request, common) {}
+        ).await()
     }
 
     /**
@@ -890,3 +765,5 @@ internal fun validateDocumentId(id: String): String {
     require(id.isNotEmpty()) { "Document ID must not be empty." }
     return id
 }
+
+internal suspend fun <T> CoreAsyncResponse<T>.await() = toFuture().await()

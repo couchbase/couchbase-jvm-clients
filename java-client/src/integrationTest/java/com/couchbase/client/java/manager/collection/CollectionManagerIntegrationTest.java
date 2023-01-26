@@ -42,9 +42,10 @@ import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(missesCapabilities = Capabilities.COLLECTIONS, clusterTypes = ClusterType.CAVES)
+@IgnoreWhen(missesCapabilities = Capabilities.COLLECTIONS,
+  clusterTypes = ClusterType.CAVES
+)
 class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
@@ -64,6 +65,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void shouldCreateScopeAndCollection() {
     String scopeName = randomString();
     String collection = randomString();
@@ -94,6 +96,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void shouldThrowWhenScopeAlreadyExists() {
     String scope = randomString();
 
@@ -104,6 +107,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void shouldThrowWhenCollectionAlreadyExists() {
     String scope = randomString();
     collections.createScope(scope);
@@ -118,6 +122,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void shouldDropScopeAndCollections() {
     String scope = randomString();
     String collection1 = randomString();
@@ -151,7 +156,8 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.ENTERPRISE_EDITION)
+  // gRpc for protostellare createCollectionRequest has no maxTTL
+  @IgnoreWhen(missesCapabilities = Capabilities.ENTERPRISE_EDITION, isProtostellarWillWorkLater = true)
   void shouldCreateCollectionWithMaxExpiry() {
     String scope = randomString();
     String collection1 = randomString();
@@ -168,8 +174,8 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec1.scopeName(), collectionSpec1.name());
     ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec2.scopeName(), collectionSpec2.name());
 
-    waitUntilCondition(() -> collectionExists(collections, collectionSpec1));
-    waitUntilCondition(() -> collectionExists(collections, collectionSpec2));
+    waitUntilCondition(() -> collectionExists(collections, collectionSpec1));  // maxTTL must also match
+    waitUntilCondition(() -> collectionExists(collections, collectionSpec2));  // maxTTL must also match
 
     for (ScopeSpec ss : collections.getAllScopes()) {
       if (!ss.name().equals(scope)) {
@@ -218,6 +224,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
    * This test tries to create a collection under a scope which does not exist.
    */
   @Test
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void failCollectionOpIfScopeNotFound() {
     assertThrows(
       ScopeNotFoundException.class,

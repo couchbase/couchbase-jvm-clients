@@ -16,17 +16,20 @@
 package com.couchbase.client.test;
 
 import java.util.Map;
+import java.util.Optional;
 
 public class TestNodeConfig {
 
   private final String hostname;
   private final Map<Services, Integer> ports;
   private final boolean dns;
+  private final Optional<Integer> protostellarPort;
 
-  public TestNodeConfig(String hostname, Map<Services, Integer> ports, boolean dns) {
+  public TestNodeConfig(String hostname, Map<Services, Integer> ports, boolean dns, Optional<Integer> protostellarPort) {
     this.hostname = hostname;
     this.ports = ports;
     this.dns = dns;
+    this.protostellarPort = protostellarPort;
   }
 
   public String hostname() {
@@ -39,6 +42,10 @@ public class TestNodeConfig {
 
   public boolean isDns() {
     return dns;
+  }
+
+  public Optional<Integer> protostellarPort() {
+    return protostellarPort;
   }
 
   @Override

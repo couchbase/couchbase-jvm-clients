@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.msg.kv;
 
-import com.couchbase.client.core.msg.BaseResponse;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.ResponseStatus;
 
 /**
@@ -24,13 +24,14 @@ import com.couchbase.client.core.msg.ResponseStatus;
  *
  * @since 2.0.0
  */
-public class GetResponse extends KeyValueBaseResponse {
+@Stability.Internal
+public final class GetResponse extends KeyValueBaseResponse {
 
   private final byte[] content;
   private final long cas;
   private final int flags;
 
-  GetResponse(final ResponseStatus status, final byte[] content, final long cas, final int flags) {
+  public GetResponse(final ResponseStatus status, final byte[] content, final long cas, final int flags) {
     super(status);
     this.content = content;
     this.cas = cas;

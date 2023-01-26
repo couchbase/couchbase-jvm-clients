@@ -30,6 +30,7 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@IgnoreWhen(isProtostellarWillWorkLater = true)
 class KeyValueManyEndpointsTest extends JavaIntegrationTest {
 
   private Cluster cluster;

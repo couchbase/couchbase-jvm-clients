@@ -36,7 +36,8 @@ import static com.couchbase.client.java.http.HttpPutOptions.httpPutOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES})
+@IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES},
+  isProtostellar = true)
 class CouchbaseHttpClientIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

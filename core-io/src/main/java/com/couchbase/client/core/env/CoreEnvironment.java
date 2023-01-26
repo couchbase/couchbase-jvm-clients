@@ -58,6 +58,11 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.jar.Attributes;
@@ -132,6 +137,7 @@ public class CoreEnvironment implements AutoCloseable {
   private final LoggerConfig loggerConfig;
   private final RetryStrategy retryStrategy;
   private final Supplier<Scheduler> scheduler;
+  private final Supplier<Executor> executor;
   private final int schedulerThreadCount;
   private final OrphanReporter orphanReporter;
   private final long maxNumRequestsInRetry;
@@ -161,6 +167,19 @@ public class CoreEnvironment implements AutoCloseable {
       .orElse(new OwnedSupplier<>(
         Schedulers.newParallel("cb-comp", schedulerThreadCount, true))
       );
+
+    // JVMCBC-1196: configuration options for the executor will be provided.
+    String executorMaxThreadCountRaw = System.getProperty("com.couchbase.protostellar.executorMaxThreadCount");
+    int maxThreadCount = Runtime.getRuntime().availableProcessors();
+    if (executorMaxThreadCountRaw != null) {
+      maxThreadCount = Integer.parseInt(executorMaxThreadCountRaw);
+    }
+
+    this.executor = new OwnedSupplier<>(new ThreadPoolExecutor(0, maxThreadCount,
+      60L, TimeUnit.SECONDS,
+      new SynchronousQueue<>(),
+      new CouchbaseThreadFactory("cb-exec")));
+
     this.eventBus = Optional
       .ofNullable(builder.eventBus)
       .orElse(new OwnedSupplier<>(DefaultEventBus.create(scheduler.get())));
@@ -371,6 +390,14 @@ public class CoreEnvironment implements AutoCloseable {
   }
 
   /**
+   * Returns the executor used to schedule non-reactive async tasks across the SDK.
+   */
+  @Stability.Internal
+  public Executor executor() {
+    return executor.get();
+  }
+
+  /**
    * Returns the request tracer for response time observability.
    * <p>
    * Note that this right now is unsupported, volatile API and subject to change!
@@ -494,6 +521,15 @@ public class CoreEnvironment implements AutoCloseable {
       .then(Mono.defer(() -> {
         if (scheduler instanceof OwnedSupplier) {
           scheduler.get().dispose();
+        }
+        return Mono.empty();
+      }))
+      .then(Mono.defer(() -> {
+        if (executor instanceof OwnedSupplier) {
+          if (executor.get() instanceof ThreadPoolExecutor) {
+            ((ThreadPoolExecutor) executor.get()).shutdown();
+          }
+          else throw new IllegalStateException("Unknown but owned executor type");
         }
         return Mono.empty();
       }))

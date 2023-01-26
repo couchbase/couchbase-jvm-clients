@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.annotation.Stability;
 import reactor.util.annotation.Nullable;
 
 import java.util.Collections;
@@ -54,6 +55,12 @@ public class SeedNode {
    */
   private final Optional<Integer> clusterManagerPort;
 
+
+  /**
+   * If present, an alternate Protostellar port.
+   */
+  private final Optional<Integer> protostellarPort;
+
   /**
    * Creates a seed node from a hostname and the default ports.
    *
@@ -72,13 +79,17 @@ public class SeedNode {
    */
   public static SeedNode create(final String address, final Optional<Integer> kvPort,
                                 final Optional<Integer> clusterManagerPort) {
-    return new SeedNode(address, kvPort, clusterManagerPort);
+    return new SeedNode(address, kvPort, clusterManagerPort, Optional.empty());
   }
-
-  private SeedNode(final String address, final Optional<Integer> kvPort, final Optional<Integer> clusterManagerPort) {
+  
+  private SeedNode(final String address,
+                   final Optional<Integer> kvPort,
+                   final Optional<Integer> clusterManagerPort,
+                   final Optional<Integer> protostellarPort) {
     this.address = notNullOrEmpty(address, "Address");
     this.kvPort = notNull(kvPort, "KvPort");
     this.clusterManagerPort = notNull(clusterManagerPort, "ClusterManagerPort");
+    this.protostellarPort = notNull(protostellarPort, "ProtostellarPort");
   }
 
   /**
@@ -97,6 +108,16 @@ public class SeedNode {
    */
   public SeedNode withManagerPort(@Nullable Integer port) {
     return SeedNode.create(address(), kvPort(), Optional.ofNullable(port));
+  }
+
+  /**
+   * Returns a copy of this seed node, with the given Protostellar port.
+   *
+   * @param port (nullable) null means absent Protostellar port.
+   */
+  @Stability.Volatile
+  public SeedNode withProtostellarPort(@Nullable Integer port) {
+    return new SeedNode(address(), kvPort(), clusterManagerPort(), Optional.ofNullable(port));
   }
 
   /**
@@ -120,12 +141,21 @@ public class SeedNode {
     return clusterManagerPort;
   }
 
+  /**
+   * If present, the Protostellar port.
+   */
+  @Stability.Volatile
+  public Optional<Integer> protostellarPort() {
+    return protostellarPort;
+  }
+
   @Override
   public String toString() {
     return "SeedNode{" +
       "address='" + address + '\'' +
       ", kvPort=" + kvPort +
       ", mgmtPort=" + clusterManagerPort +
+      ", psPort=" + protostellarPort +
       '}';
   }
 
@@ -136,12 +166,13 @@ public class SeedNode {
     SeedNode seedNode = (SeedNode) o;
     return Objects.equals(address, seedNode.address) &&
       Objects.equals(kvPort, seedNode.kvPort) &&
-      Objects.equals(clusterManagerPort, seedNode.clusterManagerPort);
+      Objects.equals(clusterManagerPort, seedNode.clusterManagerPort) &&
+      Objects.equals(protostellarPort, seedNode.protostellarPort);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(address, kvPort, clusterManagerPort);
+    return Objects.hash(address, kvPort, clusterManagerPort, protostellarPort);
   }
 
 }

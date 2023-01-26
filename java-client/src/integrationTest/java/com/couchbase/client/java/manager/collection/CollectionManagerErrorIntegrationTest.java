@@ -36,6 +36,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@IgnoreWhen(isProtostellarWillWorkLater = true)
 public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

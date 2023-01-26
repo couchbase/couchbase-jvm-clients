@@ -62,7 +62,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @IgnoreWhen(clusterTypes = {CAVES, MOCKED},
   missesCapabilities = QUERY,
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
-  clusterVersionIsBelow = REQUIRE_MB_50132)
+  clusterVersionIsBelow = REQUIRE_MB_50132,
+  isProtostellar = true
+)
 public class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
   // Disabling against 5.5 as there appear to be several query bugs (SCBC-246, SCBC-251).  Hardcoding 5.5.6 as that's
   // the current 5.5-release and it's unlikely to change.

@@ -77,6 +77,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 /**
  * Ported from the Scala SubdocMutateSpec tests.  Please keep in sync.
  */
+@IgnoreWhen(isProtostellarWillWorkLater = true)
 class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     private static Logger LOGGER = LoggerFactory.getLogger(SubdocMutateIntegrationTest.class);
 

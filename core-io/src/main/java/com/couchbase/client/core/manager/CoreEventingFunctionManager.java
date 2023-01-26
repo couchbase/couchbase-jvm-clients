@@ -23,6 +23,7 @@ import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
 import com.couchbase.client.core.msg.RequestTarget;
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -74,6 +75,7 @@ public class CoreEventingFunctionManager {
   }
 
   public CompletableFuture<Void> upsertFunction(final String name, byte[] function, final CoreCommonOptions options) {
+    checkIfProtostellar();
     return httpClient
       .post(path(pathForFunction(name)), options).json(function)
       .trace(TracingIdentifiers.SPAN_REQUEST_ME_UPSERT)
@@ -83,6 +85,7 @@ public class CoreEventingFunctionManager {
   }
 
   public CompletableFuture<Void> dropFunction(final String name, final CoreCommonOptions options) {
+    checkIfProtostellar();
     return httpClient
       .delete(path(pathForFunction(name)), options)
       .trace(TracingIdentifiers.SPAN_REQUEST_ME_DROP)
@@ -92,6 +95,7 @@ public class CoreEventingFunctionManager {
   }
 
   public CompletableFuture<Void> deployFunction(final String name, final CoreCommonOptions options) {
+    checkIfProtostellar();
     return httpClient
       .post(path(pathForDeploy(name)), options)
       .trace(TracingIdentifiers.SPAN_REQUEST_ME_DEPLOY)
@@ -101,6 +105,7 @@ public class CoreEventingFunctionManager {
   }
 
   public CompletableFuture<byte[]> getAllFunctions(final CoreCommonOptions options) {
+    checkIfProtostellar();
     return httpClient
       .get(path(pathForFunctions()), options)
       .trace(TracingIdentifiers.SPAN_REQUEST_ME_GET_ALL)
@@ -110,6 +115,7 @@ public class CoreEventingFunctionManager {
   }
 
   public CompletableFuture<byte[]> getFunction(final String name, final CoreCommonOptions options) {
+    checkIfProtostellar();
     return httpClient
       .get(path(pathForFunction(name)), options)
       .trace(TracingIdentifiers.SPAN_REQUEST_ME_GET)
@@ -119,6 +125,7 @@ public class CoreEventingFunctionManager {
   }
 
   public CompletableFuture<Void> pauseFunction(final String name, final CoreCommonOptions options) {
+    checkIfProtostellar();
     return httpClient
       .post(path(pathForPause(name)), options)
       .trace(TracingIdentifiers.SPAN_REQUEST_ME_PAUSE)
@@ -128,6 +135,7 @@ public class CoreEventingFunctionManager {
   }
 
   public CompletableFuture<Void> resumeFunction(final String name, final CoreCommonOptions options) {
+    checkIfProtostellar();
     return httpClient
       .post(path(pathForResume(name)), options)
       .trace(TracingIdentifiers.SPAN_REQUEST_ME_RESUME)
@@ -137,6 +145,7 @@ public class CoreEventingFunctionManager {
   }
 
   public CompletableFuture<Void> undeployFunction(final String name, final CoreCommonOptions options) {
+    checkIfProtostellar();
     return httpClient
       .post(path(pathForUndeploy(name)), options)
       .trace(TracingIdentifiers.SPAN_REQUEST_ME_UNDEPLOY)
@@ -146,6 +155,7 @@ public class CoreEventingFunctionManager {
   }
 
   public CompletableFuture<byte[]> functionsStatus(final CoreCommonOptions options) {
+    checkIfProtostellar();
     return httpClient
       .get(path(pathForStatus()), options)
       .trace(TracingIdentifiers.SPAN_REQUEST_ME_STATUS)
@@ -154,4 +164,9 @@ public class CoreEventingFunctionManager {
       .thenApply(CoreHttpResponse::content);
   }
 
+  private void checkIfProtostellar() {
+    if (core.isProtostellar()) {
+      throw CoreProtostellarUtil.unsupportedInProtostellar("eventing function management");
+    }
+  }
 }

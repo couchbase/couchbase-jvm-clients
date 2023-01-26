@@ -38,6 +38,7 @@ import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@IgnoreWhen(isProtostellarWillWorkLater = true)
 class ObserveIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
@@ -133,6 +134,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
     ));
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   @Test
   void disallowObserveWhenTokensDisabled() {
     Cluster cluster = createCluster(env -> env.ioConfig(IoConfig.enableMutationTokens(false)));

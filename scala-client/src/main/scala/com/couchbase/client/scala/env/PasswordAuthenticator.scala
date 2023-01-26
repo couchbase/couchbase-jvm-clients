@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala.env
 
+import com.couchbase.client.core.deps.io.grpc.Metadata
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest
 import com.couchbase.client.core.endpoint.EndpointContext
@@ -49,4 +50,5 @@ case class PasswordAuthenticator(username: String, password: String) extends Aut
     inner.authHttpRequest(serviceType, request)
   }
 
+    override def authProtostellarRequest(metadata: Metadata): Unit = inner.authProtostellarRequest(metadata)
 }

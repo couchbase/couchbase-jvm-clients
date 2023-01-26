@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.CommonOptions;
 
@@ -116,6 +118,12 @@ public abstract class CommonDurabilityOptions<SELF extends CommonDurabilityOptio
       return durabilityLevel;
     }
 
+    @Stability.Internal
+    public CoreDurability toCoreDurability() {
+      return durabilityLevel().isPresent()
+        ? CoreDurability.of(durabilityLevel().get())
+        : CoreDurability.of(persistTo().coreHandle(), replicateTo().coreHandle());
+    }
   }
 
 }

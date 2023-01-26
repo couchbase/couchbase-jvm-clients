@@ -23,6 +23,7 @@ import com.couchbase.client.java.collections.support.TestObject;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MapOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -41,6 +42,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@IgnoreWhen(isProtostellarWillWorkLater = true)
 class CouchbaseMapTest extends JavaIntegrationTest {
 
     private static Cluster cluster;

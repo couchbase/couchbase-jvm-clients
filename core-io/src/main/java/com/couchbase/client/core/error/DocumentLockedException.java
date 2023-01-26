@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 
 /**
@@ -31,6 +32,10 @@ import com.couchbase.client.core.error.context.KeyValueErrorContext;
 public class DocumentLockedException extends CouchbaseException {
 
   public DocumentLockedException(KeyValueErrorContext ctx) {
+    this((ErrorContext) ctx);
+  }
+
+  public DocumentLockedException(ErrorContext ctx) {
     super("Server indicates the document is (already) locked", ctx);
   }
 

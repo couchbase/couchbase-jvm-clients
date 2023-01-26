@@ -1,29 +1,22 @@
 package com.couchbase.client.scala.manager
 
-import java.util.concurrent.TimeUnit
 import com.couchbase.client.core.error.{CouchbaseException, UserNotFoundException}
-import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConsistencyUtil
+import com.couchbase.client.scala.env.PasswordAuthenticator
 import com.couchbase.client.scala.manager.user._
 import com.couchbase.client.scala.util.CouchbasePickler._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
+import com.couchbase.client.scala.{Cluster, ClusterOptions, Collection, TestUtils}
 import com.couchbase.client.test._
 import com.couchbase.mock.deps.org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import com.couchbase.mock.deps.org.apache.http.client.CredentialsProvider
 import com.couchbase.mock.deps.org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
-import com.couchbase.mock.deps.org.apache.http.impl.client.{
-  BasicCredentialsProvider,
-  CloseableHttpClient,
-  HttpClientBuilder
-}
+import com.couchbase.mock.deps.org.apache.http.impl.client.{BasicCredentialsProvider, CloseableHttpClient, HttpClientBuilder}
 import com.couchbase.mock.deps.org.apache.http.util.EntityUtils
-import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
+import org.junit.jupiter.api.Assertions.{assertEquals, assertNotEquals, assertThrows}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
-import reactor.core.scala.publisher.SMono
 
-import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
@@ -105,6 +98,35 @@ class UserManagerSpec extends ScalaIntegrationTest {
   def dropTestUser(): Unit = {
     dropUserQuietly(Username)
     assertUserAbsent(Username)
+  }
+
+  @Test
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.ENTERPRISE_EDITION))
+  private def changePasswordTest(): Unit = {
+    val username       = "newUsername"
+    val origPassword   = "password"
+    val newPassword    = "newPassword"
+    val role           = Role("admin")
+    val authenticator  = PasswordAuthenticator(username, origPassword)
+    val clusterOptions = ClusterOptions(authenticator, environment.build.toOption)
+
+    users
+      .upsertUser(
+        User(username).password(origPassword).displayName("ChangePassword Test User").roles(role)
+      )
+      .get
+    waitUntilUserPresent(username)
+
+    val newCluster = Cluster.connect(connectionString, clusterOptions).get
+    newCluster.waitUntilReady(WaitUntilReadyDefault)
+
+    val newUsers = newCluster.users
+    newUsers.changePassword(newPassword)
+
+    assertCanAuthenticate(username, newPassword, true)
+    assertCanAuthenticate(username, origPassword, false)
+
+    newCluster.disconnect()
   }
 
   @Test
@@ -236,7 +258,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
     waitUntilUserPresent(Username)
 
     // must be a specific kind of admin for this to succeed (not exactly sure which)
-    assertCanAuthenticate(Username, origPassword)
+    assertCanAuthenticate(Username, origPassword, true)
 
     var userMeta: UserAndMetadata = users.getUser(Username, AuthDomain.Local).get
     assertEquals(AuthDomain.Local, userMeta.domain)
@@ -258,7 +280,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
       }
     })
 
-    assertCanAuthenticate(Username, origPassword)
+    assertCanAuthenticate(Username, origPassword, true)
 
     users
       .upsertUser(
@@ -276,7 +298,7 @@ class UserManagerSpec extends ScalaIntegrationTest {
       }
     })
 
-    assertCanAuthenticate(Username, newPassword)
+    assertCanAuthenticate(Username, newPassword, true)
 
     userMeta = users.getUser(Username, AuthDomain.Local).get
     assertEquals("Renamed", userMeta.user.displayName)
@@ -285,7 +307,11 @@ class UserManagerSpec extends ScalaIntegrationTest {
     checkRoleOrigins(userMeta, "ro_admin<-[user]", "bucket_full_access[*]<-[user]")
   }
 
-  private def assertCanAuthenticate(username: String, password: String): Unit = {
+  private def assertCanAuthenticate(
+      username: String,
+      password: String,
+      expectSuccess: Boolean
+  ): Unit = {
     val provider: CredentialsProvider = new BasicCredentialsProvider
     provider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password))
     var client: CloseableHttpClient     = null
@@ -296,7 +322,12 @@ class UserManagerSpec extends ScalaIntegrationTest {
       val hostAndPort: String  = node.hostname + ":" + node.ports.get(Services.MANAGER)
       response = client.execute(new HttpGet("http://" + hostAndPort + "/pools"))
       val body: String = EntityUtils.toString(response.getEntity)
-      assertEquals(200, response.getStatusLine.getStatusCode, "Server response: " + body)
+
+      if (expectSuccess) {
+        assertEquals(200, response.getStatusLine.getStatusCode, "Server response: " + body)
+      } else {
+        assertNotEquals(200, response.getStatusLine.getStatusCode, "Server response: " + body)
+      }
     } finally {
       if (client != null) client.close()
       if (response != null) response.close()

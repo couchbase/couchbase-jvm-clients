@@ -1,6 +1,7 @@
 package com.couchbase.client.kotlin.kv
 
 import com.couchbase.client.core.annotation.SinceCouchbase
+import com.couchbase.client.core.api.kv.CoreDurability
 import com.couchbase.client.core.msg.kv.DurabilityLevel
 import com.couchbase.client.core.msg.kv.DurabilityLevel.MAJORITY
 import com.couchbase.client.core.msg.kv.DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE
@@ -16,6 +17,8 @@ import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 public sealed class Durability {
     internal abstract fun isPersistent(): Boolean
 
+    internal abstract fun toCore(): CoreDurability
+
     @Deprecated(
         level = DeprecationLevel.WARNING,
         replaceWith = ReplaceWith("Durability.None", "com.couchbase.client.kotlin.kv.Durability"),
@@ -23,11 +26,13 @@ public sealed class Durability {
     )
     public object Disabled : Durability() {
         override fun isPersistent(): Boolean = false
+        override fun toCore(): CoreDurability = CoreDurability.NONE
         override fun toString(): String = "Disabled"
     }
 
     public object None : Durability() {
         override fun isPersistent(): Boolean = false
+        override fun toCore(): CoreDurability = CoreDurability.NONE
         override fun toString(): String = "None"
     }
 
@@ -37,6 +42,8 @@ public sealed class Durability {
     ) : Durability() {
         override fun isPersistent(): Boolean =
             level == MAJORITY_AND_PERSIST_TO_ACTIVE || level == PERSIST_TO_MAJORITY
+
+        override fun toCore(): CoreDurability = CoreDurability.of(level)
     }
 
     public data class ClientVerified internal constructor(
@@ -44,6 +51,7 @@ public sealed class Durability {
         val replicateTo: ReplicateTo,
     ) : Durability() {
         override fun isPersistent(): Boolean = persistTo != PersistTo.NONE
+        override fun toCore(): CoreDurability = CoreDurability.of(persistTo.coreHandle, replicateTo.coreHandle)
     }
 
     public companion object {

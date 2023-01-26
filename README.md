@@ -91,10 +91,11 @@ These trains are named after historic computers for your delight.
 Tags in each branch are named `branchname-ga` for the initial GA release, and then subsequently `branchname-sr-n` for
 each service release. See the tag information for specifics of what's in there.
 
+ - [Frontier](https://en.wikipedia.org/wiki/Frontier_(supercomputer)
  - [Eos](https://nvidianews.nvidia.com/news/nvidia-announces-dgx-h100-systems-worlds-most-advanced-enterprise-ai-infrastructure) (Initial Release 2022-03-26)
- - [Colossus](https://en.wikipedia.org/wiki/Colossus_computer) (Initial Release 2020-01-10)
- - [Pegasus](https://en.wikipedia.org/wiki/Ferranti_Pegasus) (Initial Release 2020-12-02)
  - [Hopper](https://en.wikipedia.org/wiki/Grace_Hopper) (Initial Release 2021-07-20)
+ - [Pegasus](https://en.wikipedia.org/wiki/Ferranti_Pegasus) (Initial Release 2020-12-02)
+ - [Colossus](https://en.wikipedia.org/wiki/Colossus_computer) (Initial Release 2020-01-10)
 
 | Release Train | Java-Client | Scala-Client | Core-Io | Tracing-OpenTelemetry | Tracing-OpenTracing | Metrics-OpenTelemetry | Metrics-Micrometer |
 |---------------|-------------|--------------|---------|-----------------------|---------------------|-----------------------|--------------------|
@@ -123,7 +124,7 @@ According to the Maven standard, the file is named artifact-version-javadoc.jar 
 This file can be extracted (jars are like zip files) with the following command:
 
 ```
-jar xvf java-client-3.4.1-javadoc.jar
+jar xvf java-client-3.4.2-javadoc.jar
 ```
 
 This will extract the contents of the javadoc file into the current directory. After the original jar is removed it can be uploaded to s3.

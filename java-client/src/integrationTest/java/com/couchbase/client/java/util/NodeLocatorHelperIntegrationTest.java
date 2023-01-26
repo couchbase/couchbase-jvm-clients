@@ -18,6 +18,7 @@ package com.couchbase.client.java.util;
 
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +28,7 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@IgnoreWhen(isProtostellar = true)
 class NodeLocatorHelperIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;

@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+option go_package = "github.com/couchbase/stellar-nebula/genproto/admin_bucket_v1;admin_bucket_v1";
+option ruby_package = "Couchbase::StellarNebula::Generated::BucketAdmin::V1";
+option java_package = "com.couchbase.client.protostellar.admin.bucket.v1";
+option java_multiple_files = true;
+
+package couchbase.admin.bucket.v1;
+
+import "couchbase/kv.v1.proto";
+
+service BucketAdmin {
+  rpc ListBuckets(ListBucketsRequest) returns (ListBucketsResponse) {}
+
+  rpc CreateBucket(CreateBucketRequest) returns (CreateBucketResponse) {}
+  rpc UpdateBucket(UpdateBucketRequest) returns (UpdateBucketResponse) {}
+  rpc DeleteBucket(DeleteBucketRequest) returns (DeleteBucketResponse) {}
+}
+
+enum BucketType {
+  COUCHBASE = 0;
+  MEMCACHED = 1;
+  EPHEMERAL = 2;
+}
+
+enum EvictionMode {
+  FULL = 0;
+  NOT_RECENTLY_USED = 1;
+  VALUE_ONLY = 2;
+  NONE = 3;
+}
+
+enum CompressionMode {
+  OFF = 0;
+  PASSIVE = 1;
+  ACTIVE = 2;
+}
+
+enum StorageBackend {
+  COUCHSTORE = 0;
+  MAGMA = 1;
+}
+
+enum ConflictResolutionType {
+  TIMESTAMP = 0;
+  SEQUENCE_NUMBER = 1;
+  CUSTOM = 2;
+}
+
+message ListBucketsRequest {}
+
+message ListBucketsResponse {
+  message Bucket {
+    string bucket_name = 1;
+    bool flush_enabled = 2;
+    uint64 ram_quota_bytes = 3;
+    uint32 num_replicas = 4;
+    bool replica_indexes = 5;
+    BucketType bucket_type = 6;
+    EvictionMode eviction_mode = 7;
+    uint32 max_expiry_secs = 8;
+    CompressionMode compression_mode = 9;
+    couchbase.kv.v1.DurabilityLevel minimum_durability_level = 10;
+    StorageBackend storage_backend = 11;
+    ConflictResolutionType conflict_resolution_type = 12;
+  }
+
+  repeated Bucket buckets = 1;
+}
+
+message CreateBucketRequest {
+  string bucket_name = 1;
+  BucketType bucket_type = 2;
+  uint64 ram_quota_bytes = 3;
+  uint32 num_replicas = 4;
+  optional bool flush_enabled = 5;
+  optional bool replica_indexes = 6;
+  optional EvictionMode eviction_mode = 7;
+  optional uint32 max_expiry_secs = 8;
+  optional CompressionMode compression_mode = 9;
+  optional couchbase.kv.v1.DurabilityLevel minimum_durability_level = 10;
+  optional StorageBackend storage_backend = 11;
+  optional ConflictResolutionType conflict_resolution_type = 12;
+}
+
+message CreateBucketResponse { string bucket_uuid = 1; }
+
+message UpdateBucketRequest {
+  string bucket_name = 1;
+  reserved 2; // bucket_type
+  optional uint64 ram_quota_bytes = 3;
+  optional uint32 num_replicas = 4;
+  optional bool flush_enabled = 5;
+  optional bool replica_indexes = 6;
+  optional EvictionMode eviction_mode = 7;
+  optional uint32 max_expiry_secs = 8;
+  optional CompressionMode compression_mode = 9;
+  optional couchbase.kv.v1.DurabilityLevel minimum_durability_level = 10;
+  reserved 11; // storage_backend
+  optional ConflictResolutionType conflict_resolution_type = 12;
+}
+
+message UpdateBucketResponse {}
+
+message DeleteBucketRequest { string bucket_name = 1; }
+
+message DeleteBucketResponse {}

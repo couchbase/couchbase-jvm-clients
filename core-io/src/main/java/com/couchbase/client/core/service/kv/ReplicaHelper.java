@@ -63,6 +63,10 @@ public class ReplicaHelper {
     throw new AssertionError("not instantiable");
   }
 
+  /**
+   * @deprecated Please use {@link com.couchbase.client.core.api.kv.CoreGetResult} in new code.
+   */
+  @Deprecated
   public static class GetReplicaResponse {
     private final GetResponse response;
     private final boolean fromReplica;
@@ -79,27 +83,6 @@ public class ReplicaHelper {
     public GetResponse getResponse() {
       return response;
     }
-  }
-
-  /**
-   * @param clientContext (nullable)
-   * @param parentSpan (nullable)
-   */
-  public static Mono<GetReplicaResponse> getAnyReplicaReactive(
-      final Core core,
-      final CollectionIdentifier collectionIdentifier,
-      final String documentId,
-      final Duration timeout,
-      final RetryStrategy retryStrategy,
-      Map<String, Object> clientContext,
-      RequestSpan parentSpan
-  ) {
-    RequestSpan getAnySpan = core.context().environment().requestTracer()
-        .requestSpan(TracingIdentifiers.SPAN_GET_ANY_REPLICA, parentSpan);
-
-    return getAllReplicasReactive(core, collectionIdentifier, documentId, timeout, retryStrategy, clientContext, getAnySpan)
-        .next()
-        .doFinally(signalType -> getAnySpan.end());
   }
 
   /**

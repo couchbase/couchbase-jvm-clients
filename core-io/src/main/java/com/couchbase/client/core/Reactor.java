@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
@@ -71,6 +72,29 @@ public class Reactor {
         }
       });
     }
+    return mono.onErrorResume(err -> {
+      if (err instanceof CompletionException) {
+        return Mono.error(err.getCause());
+      } else {
+        return Mono.error(err);
+      }
+    });
+  }
+
+  /**
+   * Converts the given future into a mono. Runs the given cancellation task
+   * when the mono is cancelled.
+   */
+  @Stability.Internal
+  public static <T> Mono<T> wrap(final CompletableFuture<T> response, final Runnable cancellationTask) {
+    Mono<T> mono = MyLittleAssemblyFactory.callOnAssembly(new SilentMonoCompletionStage<>(response));
+
+    mono = mono.doFinally(st -> {
+      if (st == SignalType.CANCEL) {
+        cancellationTask.run();
+      }
+    });
+
     return mono.onErrorResume(err -> {
       if (err instanceof CompletionException) {
         return Mono.error(err.getCause());

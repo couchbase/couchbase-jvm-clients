@@ -44,7 +44,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES , ClusterType.CAPELLA},
         missesCapabilities = {Capabilities.COLLECTIONS, Capabilities.EVENTING},
-        clusterVersionIsBelow = "7.1.2") // MB-52649
+        clusterVersionIsBelow = "7.1.2",
+        isProtostellar = true) // MB-52649
 public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest {
   private static Logger LOGGER = LoggerFactory.getLogger(EventingFunctionManagerIntegrationTest.class);
 

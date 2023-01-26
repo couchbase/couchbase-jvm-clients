@@ -46,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+@IgnoreWhen(isProtostellarWillWorkLater = true)
 public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

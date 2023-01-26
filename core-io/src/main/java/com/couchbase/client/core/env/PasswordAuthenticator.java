@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.deps.io.grpc.Metadata;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
@@ -28,6 +29,7 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.core.deps.io.grpc.Metadata.ASCII_STRING_MARSHALLER;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -120,6 +122,11 @@ public class PasswordAuthenticator implements Authenticator {
       HttpHeaderNames.AUTHORIZATION,
       cachedHttpAuthHeader != null ? cachedHttpAuthHeader : encodeAuthHttpHeader()
     );
+  }
+
+  @Override
+  public void authProtostellarRequest(Metadata metadata) {
+    metadata.put(Metadata.Key.of("Authorization", ASCII_STRING_MARSHALLER), encodeAuthHttpHeader());
   }
 
   /**

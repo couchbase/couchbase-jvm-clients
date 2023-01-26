@@ -36,112 +36,50 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
  *
  * @since 3.0.0
  */
-public class QueryMetrics {
-
-	public static final QueryMetrics EMPTY_METRICS = new QueryMetrics();
-
-	/**
-	 * Provides a pointer into the root nodes of the raw response for easier decoding.
-	 */
-	private final JsonNode rootNode;
-
-	private QueryMetrics() {
-		this(Bytes.EMPTY_BYTE_ARRAY);
-	}
-
-	QueryMetrics(final byte[] raw) {
-		try {
-			this.rootNode = JacksonTransformers.MAPPER.readTree(raw);
-		} catch (IOException e) {
-			throw new ViewServiceException("Could not parse analytics metrics!");
-		}
-	}
+public abstract class QueryMetrics {
 
 	/**
 	 * @return The total time taken for the request, that is the time from when the
 	 * request was received until the results were returned, in a human-readable
 	 * format (eg. 123.45ms for a little over 123 milliseconds).
 	 */
-	public Duration elapsedTime() {
-		return decode(String.class, "elapsedTime").map(Golang::parseDuration).orElse(Duration.ZERO);
-	}
+	public abstract Duration elapsedTime();
 
 	/**
 	 * @return The time taken for the execution of the request, that is the time from
 	 * when query execution started until the results were returned, in a human-readable
 	 * format (eg. 123.45ms for a little over 123 milliseconds).
 	 */
-	public Duration executionTime() {
-		return decode(String.class, "executionTime").map(Golang::parseDuration).orElse(Duration.ZERO);
-	}
+	public abstract Duration executionTime();
 
 	/**
 	 * @return the total number of results selected by the engine before restriction
 	 * through LIMIT clause.
 	 */
-	public long sortCount() {
-		return decode(Long.class, "sortCount").orElse(0L);
-	}
+	public abstract long sortCount();
 
 	/**
 	 * @return The total number of objects in the results.
 	 */
-	public long resultCount() {
-		return decode(Long.class, "resultCount").orElse(0L);
-	}
+	public abstract long resultCount();
 
 	/**
 	 * @return The total number of bytes in the results.
 	 */
-	public long resultSize() {
-		return decode(Long.class, "resultSize").orElse(0L);
-	}
+	public abstract long resultSize();
 
 	/**
 	 * @return The number of mutations that were made during the request.
 	 */
-	public long mutationCount() {
-		return decode(Long.class, "mutationCount").orElse(0L);
-	}
+	public abstract long mutationCount();
+
 	/**
 	 * @return The number of errors that occurred during the request.
 	 */
-	public long errorCount() {
-		return decode(Long.class, "errorCount").orElse(0L);
-	}
+	public abstract long errorCount();
 
 	/**
 	 * @return The number of warnings that occurred during the request.
 	 */
-	public long warningCount() {
-		return decode(Long.class, "warningCount").orElse(0L);
-	}
-
-	/**
-	 * Helper method to turn a given path of the raw data into the target class.
-	 *
-	 * @param target the target class to decode into.
-	 * @param path the path of the raw json.
-	 * @param <T> the generic type to decide into.
-	 * @return the generic decoded object if present and not null.
-	 */
-	private <T> Optional<T> decode(final Class<T> target, final String path) {
-		try {
-			JsonNode subNode = rootNode.path(path);
-			if (subNode == null || subNode.isNull() || subNode.isMissingNode()) {
-				return Optional.empty();
-			}
-			return Optional.ofNullable(JacksonTransformers.MAPPER.treeToValue(subNode, target));
-		} catch (JsonProcessingException e) {
-			throw new DecodingFailureException("Could not decode " + path + " in analytics metrics!");
-		}
-	}
-
-
-	@Override
-	public String toString() {
-		return "QueryMetrics{" +
-			"raw=" + redactUser(Mapper.encodeAsString(rootNode)) +
-			'}';
-	}
+	public abstract long warningCount();
 }

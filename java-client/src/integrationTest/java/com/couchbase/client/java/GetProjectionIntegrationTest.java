@@ -35,6 +35,7 @@ import static org.junit.Assert.assertEquals;
  *
  * @since 3.0.0
  */
+@IgnoreWhen(isProtostellarWillWorkLater = true)
 class GetProjectionIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;

@@ -33,7 +33,9 @@ import java.time.Duration;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen( missesCapabilities = { Capabilities.ANALYTICS })
+@IgnoreWhen( missesCapabilities = { Capabilities.ANALYTICS },
+  isProtostellar = true
+)
 class AnalyticsErrorIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;

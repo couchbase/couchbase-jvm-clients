@@ -63,7 +63,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA})
+@IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA},
+  isProtostellarWillWorkLater = true
+)
 class UserManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

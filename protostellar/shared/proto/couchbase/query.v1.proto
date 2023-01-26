@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+option go_package = "github.com/couchbase/stellar-nebula/genproto/query_v1;query_v1";
+option ruby_package = "Couchbase::StellarNebula::Generated::Query::V1";
+option java_package = "com.couchbase.client.protostellar.query.v1";
+option java_multiple_files = true;
+
+package couchbase.query.v1;
+
+import "google/protobuf/duration.proto";
+import "couchbase/kv.v1.proto";
+
+service Query {
+  rpc Query(QueryRequest) returns (stream QueryResponse) {}
+}
+
+message QueryRequest {
+  optional string bucket_name = 1;
+  optional string scope_name = 2;
+  string statement = 3;
+
+  optional bool read_only = 4;
+  optional bool prepared = 5;
+
+  message TuningOptions {
+    optional uint32 max_parallelism = 1;
+    optional uint32 pipeline_batch = 2;
+    optional uint32 pipeline_cap = 3;
+    optional google.protobuf.Duration scan_wait = 4;
+    optional uint32 scan_cap = 5;
+    optional bool disable_metrics = 6;
+  }
+  optional TuningOptions tuning_options = 6;
+
+  optional string client_context_id = 7;
+
+  enum QueryScanConsistency {
+    NOT_BOUNDED = 0;
+    REQUEST_PLUS = 1;
+  }
+  optional QueryScanConsistency scan_consistency = 8;
+  repeated bytes positional_parameters = 9;
+  map<string, bytes> named_parameters = 10;
+  optional bool flex_index = 11;
+  optional bool preserve_expiry = 12;
+  repeated couchbase.kv.v1.MutationToken consistent_with = 13;
+
+  enum QueryProfileMode {
+    OFF = 0;
+    PHASES = 1;
+    TIMINGS = 2;
+  }
+  optional QueryProfileMode profile_mode = 14;
+}
+
+message QueryResponse {
+  repeated bytes rows = 1;
+
+  message MetaData {
+    message Warning {
+      uint32 code = 1;
+      string message = 2;
+    }
+
+    enum MetaDataStatus {
+      RUNNING = 0;
+      SUCCESS = 1;
+      ERRORS = 2;
+      COMPLETED = 3;
+      STOPPED = 4;
+      TIMEOUT = 5;
+      CLOSED = 6;
+      FATAL = 7;
+      ABORTED = 8;
+      UNKNOWN = 9;
+    }
+
+    string request_id = 1;
+    string client_context_id = 2;
+
+    message Metrics {
+      google.protobuf.Duration elapsed_time = 1;
+      google.protobuf.Duration execution_time = 2;
+      uint64 result_count = 3;
+      uint64 result_size = 4;
+      uint64 mutation_count = 5;
+      uint64 sort_count = 6;
+      uint64 error_count = 7;
+      uint64 warning_count = 8;
+    }
+    optional Metrics metrics = 3;
+    MetaDataStatus status = 4;
+    repeated Warning warnings = 5;
+    optional bytes profile = 6;
+    bytes signature = 7;
+  }
+  optional MetaData meta_data = 2;
+}

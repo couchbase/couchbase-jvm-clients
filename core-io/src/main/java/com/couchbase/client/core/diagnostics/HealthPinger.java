@@ -31,6 +31,7 @@ import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.kv.KvPingRequest;
 import com.couchbase.client.core.msg.kv.KvPingResponse;
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
@@ -68,6 +69,10 @@ public class HealthPinger {
   public static Mono<PingResult> ping(final Core core, final Optional<Duration> timeout, final RetryStrategy retryStrategy,
                                 final Set<ServiceType> serviceTypes, final Optional<String> reportId, final Optional<String> bucketName) {
     return Mono.defer(() -> {
+      if (core.isProtostellar()) {
+        return Mono.error(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar());
+      }
+
       Set<RequestTarget> targets = extractPingTargets(core.clusterConfig(), bucketName);
       if (!isNullOrEmpty(serviceTypes)) {
         targets = targets.stream().filter(t -> serviceTypes.contains(t.serviceType())).collect(Collectors.toSet());

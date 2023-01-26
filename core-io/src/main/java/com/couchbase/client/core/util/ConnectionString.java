@@ -164,6 +164,7 @@ public class ConnectionString {
   public enum Scheme {
     COUCHBASE,
     COUCHBASES,
+    PROTOSTELLAR
     ;
 
     private static Scheme parse(String s) {
@@ -271,7 +272,8 @@ public class ConnectionString {
   @Stability.Internal
   public enum PortType {
     MANAGER,
-    KV;
+    KV,
+    PROTOSTELLAR;
 
     /**
      * Turn the raw representation into an enum.

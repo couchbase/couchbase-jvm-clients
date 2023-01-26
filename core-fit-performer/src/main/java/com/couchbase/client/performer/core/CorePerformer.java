@@ -74,6 +74,13 @@ abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServic
     public void run(com.couchbase.client.protocol.run.Request request,
                                      StreamObserver<com.couchbase.client.protocol.run.Result> responseObserver) {
         try {
+            request.getTunablesMap().forEach((k, v) -> {
+                logger.info("Setting tunable {}={}", k, v);
+                if (v != null) {
+                    System.setProperty(k, v);
+                }
+            });
+
             // A runId lets us find streams created by this run
             var runId = UUID.randomUUID().toString();
 
@@ -109,6 +116,12 @@ abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServic
             responseObserver.onError(Status.UNIMPLEMENTED.withDescription(err.toString()).asException());
         } catch (Exception err) {
             responseObserver.onError(Status.UNKNOWN.withDescription(err.toString()).asException());
+        } finally {
+            request.getTunablesMap().forEach((k, v) -> {
+                logger.info("Clearing property {}", k);
+                System.clearProperty(k);
+            });
+
         }
     }
 

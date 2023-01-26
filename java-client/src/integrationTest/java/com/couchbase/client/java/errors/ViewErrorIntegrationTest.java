@@ -23,6 +23,7 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.manager.view.DesignDocument;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.java.view.DesignDocumentNamespace;
+import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
@@ -33,7 +34,9 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@IgnoreWhen(clusterTypes = ClusterType.CAPELLA)
+@IgnoreWhen(clusterTypes = ClusterType.CAPELLA,
+  missesCapabilities = {Capabilities.VIEWS},
+  isProtostellar = true)
 class ViewErrorIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;

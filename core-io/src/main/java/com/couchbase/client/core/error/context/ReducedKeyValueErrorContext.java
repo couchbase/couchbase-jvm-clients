@@ -30,7 +30,7 @@ public class ReducedKeyValueErrorContext extends ErrorContext {
   private final String id;
   private final CollectionIdentifier collectionIdentifier;
 
-  private ReducedKeyValueErrorContext(final String id, final CollectionIdentifier collectionIdentifier) {
+  protected ReducedKeyValueErrorContext(final String id, final CollectionIdentifier collectionIdentifier) {
     super(null);
     this.id = id;
     this.collectionIdentifier = collectionIdentifier;
