@@ -18,7 +18,10 @@ package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
+import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.transaction.config.CoreSingleQueryTransactionOptions;
 import com.couchbase.client.core.util.Golang;
@@ -31,11 +34,13 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.transactions.config.SingleQueryTransactionOptions;
+import com.couchbase.client.protostellar.query.v1.QueryRequest;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -63,6 +68,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   private Map<String, Object> raw;
   private boolean readonly = false;
   private String scanWait;
+  private Duration scanWaitOriginal;
   private Integer scanCap;
   private QueryScanConsistency scanConsistency;
   private JsonSerializer serializer;
@@ -233,8 +239,10 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
     notNull(wait, "Wait Duration");
     if (this.scanConsistency != null && this.scanConsistency == QueryScanConsistency.NOT_BOUNDED) {
       this.scanWait = null;
+      this.scanWaitOriginal = null;
     } else {
       this.scanWait = Golang.encodeDurationToMs(wait);
+      this.scanWaitOriginal = wait;
     }
     return this;
   }
@@ -450,6 +458,134 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
 
     public boolean asTransaction() {
       return asTransaction;
+    }
+
+    public void injectParams(final com.couchbase.client.protostellar.query.v1.QueryRequest.Builder input) {
+      input.setClientContextId(clientContextId == null ? UUID.randomUUID().toString() : clientContextId);
+
+      if (scanConsistency != null) {
+        input.setScanConsistency(QueryRequest.QueryScanConsistency.valueOf(scanConsistency.name()));
+      }
+
+      boolean positionalPresent = positionalParameters != null && !positionalParameters.isEmpty();
+      if (namedParameters != null && !namedParameters.isEmpty()) {
+        if (positionalPresent) {
+          throw InvalidArgumentException.fromMessage("Both positional and named parameters cannot be present at the same time!");
+        }
+
+        namedParameters.getNames().forEach(key -> {
+          Object value = namedParameters.get(key);
+          try {
+            ByteString bs = ByteString.copyFrom(Mapper.writer().writeValueAsBytes(value));
+            input.putNamedParameters(key, bs);
+          } catch (JsonProcessingException e) {
+            throw new InvalidArgumentException("Unable to JSON encode named parameter " + key, e, null);
+          }
+        });
+      }
+
+      if (positionalPresent) {
+        positionalParameters.iterator().forEachRemaining(it -> {
+          try {
+            input.addPositionalParameters(ByteString.copyFrom(Mapper.writer().writeValueAsBytes(it)));
+          } catch (JsonProcessingException e) {
+            throw new InvalidArgumentException("Unable to JSON encode positional parameter " + it, e, null);
+          }
+        });
+      }
+
+
+      if (scanConsistency == QueryScanConsistency.REQUEST_PLUS) {
+        input.setScanConsistency(QueryRequest.QueryScanConsistency.REQUEST_PLUS);
+      }
+
+      if (consistentWith != null) {
+        for (MutationToken token : consistentWith) {
+          input.addConsistentWith(com.couchbase.client.protostellar.kv.v1.MutationToken.newBuilder()
+              .setSeqNo(token.sequenceNumber())
+              .setVbucketId(token.partitionID())
+              .setVbucketUuid(token.partitionUUID())
+              .setBucketName(token.bucketName())
+              .build());
+        }
+      }
+
+      if (profile != null && profile != QueryProfile.OFF) {
+        switch (profile) {
+          case TIMINGS:
+            input.setProfileMode(QueryRequest.QueryProfileMode.TIMINGS);
+            break;
+          case PHASES:
+            input.setProfileMode(QueryRequest.QueryProfileMode.PHASES);
+            break;
+        }
+      }
+
+      QueryRequest.TuningOptions.Builder tuning = null;
+
+      if (scanWait != null && !scanWait.isEmpty()) {
+        if (scanConsistency == null || QueryScanConsistency.NOT_BOUNDED != scanConsistency) {
+          if (tuning == null) {
+            tuning = QueryRequest.TuningOptions.newBuilder();
+          }
+          tuning.setScanWait(com.couchbase.client.core.deps.com.google.protobuf.Duration.newBuilder().setSeconds(TimeUnit.NANOSECONDS.toSeconds(scanWaitOriginal.toNanos())));
+        }
+      }
+
+      if (maxParallelism != null) {
+        if (tuning == null) {
+          tuning = QueryRequest.TuningOptions.newBuilder();
+        }
+        tuning.setMaxParallelism(maxParallelism);
+      }
+
+      if (pipelineCap != null) {
+        if (tuning == null) {
+          tuning = QueryRequest.TuningOptions.newBuilder();
+        }
+        tuning.setPipelineCap(pipelineCap);
+      }
+
+      if (pipelineBatch != null) {
+        if (tuning == null) {
+          tuning = QueryRequest.TuningOptions.newBuilder();
+        }
+        tuning.setPipelineBatch(pipelineBatch);
+      }
+
+      if (scanCap != null) {
+        if (tuning == null) {
+          tuning = QueryRequest.TuningOptions.newBuilder();
+        }
+        tuning.setScanCap(scanCap);
+      }
+
+      if (!metrics) {
+        if (tuning == null) {
+          tuning = QueryRequest.TuningOptions.newBuilder();
+        }
+        tuning.setDisableMetrics(!metrics);
+      }
+
+      if (readonly) {
+        input.setReadOnly(readonly);
+      }
+
+      if (flexIndex) {
+        input.setFlexIndex(flexIndex);
+      }
+
+      if (preserveExpiry != null) {
+        input.setPreserveExpiry(preserveExpiry);
+      }
+
+      if (!adhoc) {
+        input.setPrepared(true);
+      }
+
+      if (raw != null) {
+        throw new UnsupportedOperationException("Raw options cannot be used together with Protostellar");
+      }
     }
 
     @Stability.Internal

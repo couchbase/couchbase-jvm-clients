@@ -28,6 +28,8 @@ import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.util.ConnectionString.PortType;
 import com.couchbase.client.core.util.ConnectionString.UnresolvedSocket;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingException;
@@ -44,6 +46,7 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.ConnectionString.PortType.KV;
 import static com.couchbase.client.core.util.ConnectionString.PortType.MANAGER;
+import static com.couchbase.client.core.util.ConnectionString.PortType.PROTOSTELLAR;
 import static com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASES;
 import static java.util.stream.Collectors.groupingBy;
 
@@ -52,6 +55,7 @@ import static java.util.stream.Collectors.groupingBy;
  */
 @Stability.Internal
 public class ConnectionStringUtil {
+  private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionStringUtil.class);
 
   private ConnectionStringUtil() {
   }
@@ -145,13 +149,21 @@ public class ConnectionStringUtil {
 
     groupedByHost.forEach((host, addresses) -> {
       Map<PortType, Integer> ports = new EnumMap<>(PortType.class);
+      PortType assumedPortType = connectionString.scheme() == ConnectionString.Scheme.PROTOSTELLAR ? PortType.PROTOSTELLAR : PortType.KV;
       addresses.stream()
-          .filter(it -> it.port() != 0)
-          .forEach(it -> ports.put(it.portType().orElse(KV), it.port()));
+        .filter(it -> it.port() != 0)
+        .forEach(it -> {
+          if (connectionString.scheme() == ConnectionString.Scheme.PROTOSTELLAR && (it.portType().isPresent() && it.portType().get() != PROTOSTELLAR)) {
+            LOGGER.warn("Using port type {} with connection scheme {}; this is probably an application error", it.portType().get(), connectionString.scheme());
+          }
+
+          ports.put(it.portType().orElse(assumedPortType), it.port());
+        });
 
       seedNodes.add(SeedNode.create(host)
           .withKvPort(ports.get(KV))
           .withManagerPort(ports.get(MANAGER))
+          .withProtostellarPort(ports.get(PROTOSTELLAR))
       );
     });
 

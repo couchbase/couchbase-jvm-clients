@@ -17,7 +17,7 @@
 package com.couchbase.client.core.cnc.events.request;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
-import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.retry.RetryReason;
 
 import java.time.Duration;
@@ -27,7 +27,7 @@ public class RequestRetryScheduledEvent extends AbstractEvent {
   private final Class<?> request;
   private final RetryReason retryReason;
 
-  public RequestRetryScheduledEvent(Duration duration, RequestContext context, Class<?> request, final RetryReason reason) {
+  public RequestRetryScheduledEvent(Duration duration, Context context, Class<?> request, final RetryReason reason) {
     super(Severity.DEBUG, Category.REQUEST, duration, context);
     this.request = request;
     this.retryReason = reason;

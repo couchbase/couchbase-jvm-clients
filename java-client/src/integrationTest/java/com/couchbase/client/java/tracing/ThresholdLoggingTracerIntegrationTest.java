@@ -41,6 +41,7 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@IgnoreWhen(isProtostellarWillWorkLater = true)
 public class ThresholdLoggingTracerIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;

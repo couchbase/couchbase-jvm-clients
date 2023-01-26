@@ -26,6 +26,7 @@ import com.couchbase.client.java.view.DesignDocumentNamespace;
 import com.couchbase.client.java.view.ViewResult;
 import com.couchbase.client.java.view.ViewRow;
 import com.couchbase.client.java.view.ViewScanConsistency;
+import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.Flaky;
 import com.couchbase.client.test.IgnoreWhen;
@@ -45,7 +46,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES})
+@IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES},
+  missesCapabilities = {Capabilities.VIEWS},
+  isProtostellar = true)
 class ViewIntegrationTest extends JavaIntegrationTest {
 
   private static final String DDOC_NAME = "everything";

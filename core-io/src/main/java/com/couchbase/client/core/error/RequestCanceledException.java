@@ -17,6 +17,7 @@
 package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.AbstractContext;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.msg.CancellationReason;
 
@@ -27,6 +28,11 @@ public class RequestCanceledException extends CouchbaseException {
   public RequestCanceledException(String message, CancellationReason reason, CancellationErrorContext ctx) {
     super(message, ctx);
     this.reason = reason;
+  }
+
+  public static RequestCanceledException shuttingDown(AbstractContext context) {
+    CancellationErrorContext ctx = new CancellationErrorContext(context);
+    throw new RequestCanceledException("Request cancelled as in the process of shutting down", CancellationReason.SHUTDOWN, ctx);
   }
 
   @Override

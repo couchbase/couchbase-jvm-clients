@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+option go_package = "github.com/couchbase/stellar-nebula/genproto/internal_hooks_v1;internal_hooks_v1";
+option ruby_package = "Couchbase::StellarNebula::Generated::InternalHooks::V1";
+option java_package = "com.couchbase.client.protostellar.internal.hooks.v1";
+option java_multiple_files = true;
+
+package couchbase.internal.hooks.v1;
+
+import "google/protobuf/any.proto";
+
+service Hooks {
+  rpc CreateHooksContext(CreateHooksContextRequest)
+      returns (CreateHooksContextResponse) {}
+  rpc DestroyHooksContext(DestroyHooksContextRequest)
+      returns (DestroyHooksContextResponse) {}
+
+  rpc AddHooks(AddHooksRequest) returns (AddHooksResponse) {}
+
+  rpc WatchBarrier(WatchBarrierRequest) returns (stream WatchBarrierResponse) {}
+  rpc SignalBarrier(SignalBarrierRequest) returns (SignalBarrierResponse) {}
+}
+
+message CreateHooksContextRequest { string id = 1; }
+
+message CreateHooksContextResponse {}
+
+message DestroyHooksContextRequest { string id = 1; }
+
+message DestroyHooksContextResponse {}
+
+enum ComparisonOperator {
+  EQUAL = 0;
+  NOT_EQUAL = 1;
+  GREATER_THAN = 2;
+  GREATER_THAN_OR_EQUAL = 3;
+  LESS_THAN = 4;
+  LESS_THAN_OR_EQUAL = 5;
+}
+
+message ValueRef {
+  oneof value {
+    string request_field = 1;
+    string counter_value = 2;
+    bytes json_value = 3;
+  }
+}
+
+message HookCondition {
+  ValueRef left = 1;
+  ComparisonOperator op = 2;
+  ValueRef right = 3;
+}
+
+message HookAction {
+  message If {
+    repeated HookCondition cond = 1;
+    repeated HookAction match = 2;
+    repeated HookAction no_match = 3;
+  }
+
+  message Counter {
+    string counter_id = 1;
+    int64 delta = 2;
+  }
+
+  message WaitOnBarrier { string barrier_id = 1; }
+
+  message SignalBarrier {
+    string barrier_id = 1;
+    bool signal_all = 2;
+  }
+
+  message ReturnResponse { google.protobuf.Any value = 1; }
+
+  message ReturnError {
+    int32 code = 1;
+    string message = 2;
+    repeated google.protobuf.Any details = 3;
+  }
+
+  message Execute {}
+
+  oneof action {
+    If if = 1;
+    Counter counter = 2;
+    WaitOnBarrier wait_on_barrier = 3;
+    SignalBarrier signal_barrier = 4;
+    ReturnResponse return_response = 5;
+    ReturnError return_error = 6;
+    Execute execute = 7;
+  }
+}
+
+message Hook {
+  string name = 1;
+  string description = 2;
+  string target_method = 3;
+  repeated HookAction actions = 4;
+}
+
+message AddHooksRequest {
+  string hooks_context_id = 1;
+  repeated Hook hooks = 2;
+}
+
+message AddHooksResponse {}
+
+message WatchBarrierRequest {
+  string hooks_context_id = 1;
+  string barrier_id = 2;
+}
+
+message WatchBarrierResponse { string wait_id = 2; }
+
+message SignalBarrierRequest {
+  string hooks_context_id = 1;
+  string barrier_id = 2;
+  optional string wait_id = 3;
+}
+
+message SignalBarrierResponse {}

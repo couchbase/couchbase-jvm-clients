@@ -15,13 +15,8 @@
  */
 package com.couchbase.client.scala
 
-import java.time.Instant
-import java.util.Optional
-import java.util.concurrent.TimeUnit
-import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error._
 import com.couchbase.client.core.error.context.KeyValueErrorContext
 import com.couchbase.client.core.io.CollectionIdentifier
@@ -30,20 +25,25 @@ import com.couchbase.client.core.msg.Response
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.kv.{Observe, ObserveContext}
+import com.couchbase.client.core.{Core, CoreKeyspace}
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.kv.handlers._
+import com.couchbase.client.scala.util.CoreCommonConverters.{convert, convertExpiry, encoder, makeCommonOptions}
 import com.couchbase.client.scala.util.{ExpiryUtil, FutureConversions, TimeoutUtil}
 import reactor.core.scala.publisher.{SFlux, SMono}
 
-import java.nio.charset.StandardCharsets
+import java.time.Instant
+import java.util
+import java.util.Optional
 import scala.compat.java8.FutureConverters
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 import scala.language.implicitConversions
 import scala.util.{Failure, Success, Try}
 
@@ -87,20 +87,11 @@ class AsyncCollection(
   private[scala] val collectionIdentifier =
     new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(name))
   private[scala] val hp                    = HandlerParams(core, bucketName, collectionIdentifier, environment)
-  private[scala] val existsHandler         = new ExistsHandler(hp)
-  private[scala] val insertHandler         = new InsertHandler(hp)
-  private[scala] val replaceHandler        = new ReplaceHandler(hp)
-  private[scala] val upsertHandler         = new UpsertHandler(hp)
-  private[scala] val removeHandler         = new RemoveHandler(hp)
-  private[scala] val getFullDocHandler     = new GetFullDocHandler(hp)
   private[scala] val getSubDocHandler      = new GetSubDocumentHandler(hp)
-  private[scala] val getAndTouchHandler    = new GetAndTouchHandler(hp)
-  private[scala] val getAndLockHandler     = new GetAndLockHandler(hp)
   private[scala] val mutateInHandler       = new MutateInHandler(hp)
-  private[scala] val unlockHandler         = new UnlockHandler(hp)
   private[scala] val getFromReplicaHandler = new GetFromReplicaHandler(hp)
-  private[scala] val touchHandler          = new TouchHandler(hp)
   private[scala] val rangeScanOrchestrator = new RangeScanOrchestrator(core, collectionIdentifier)
+  private[scala] val kvOps                 = core.kvOps(CoreKeyspace.from(collectionIdentifier))
 
   val binary = new AsyncBinaryCollection(this)
 
@@ -142,8 +133,11 @@ class AsyncCollection(
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    val opts = InsertOptions().durability(durability).timeout(timeout)
-    insert(id, content, opts)
+    convert(kvOps.insertAsync(makeCommonOptions(timeout),
+      id,
+      encoder(environment.transcoder, serializer, content),
+      convert(durability),
+      0)).map(result => convert(result))
   }
 
   /** Inserts a full document into this collection, if it does not exist already.
@@ -154,21 +148,12 @@ class AsyncCollection(
       content: T,
       options: InsertOptions
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    val timeoutActual =
-      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
-
-    val req = insertHandler.request(
+    convert(kvOps.insertAsync(convert(options),
       id,
-      content,
-      options.durability,
-      ExpiryUtil.expiryActual(options.expiry, options.expiryTime, Instant.now),
-      timeoutActual,
-      options.retryStrategy.getOrElse(environment.retryStrategy),
-      options.transcoder.getOrElse(environment.transcoder),
-      serializer,
-      options.parentSpan
-    )
-    wrapWithDurability(req, id, insertHandler, options.durability, false, timeoutActual)
+      encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
+      convert(options.durability),
+      ExpiryUtil.expiryActual(options.expiry, options.expiryTime)))
+            .map(result => convert(result))
   }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
@@ -181,8 +166,14 @@ class AsyncCollection(
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    val opts = ReplaceOptions().cas(cas).durability(durability).timeout(timeout)
-    replace(id, content, opts)
+    convert(kvOps.replaceAsync(makeCommonOptions(timeout),
+      id,
+      encoder(environment.transcoder, serializer, content),
+      cas,
+      convert(durability),
+      0,
+      false))
+            .map(result => convert(result))
   }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
@@ -193,22 +184,14 @@ class AsyncCollection(
       content: T,
       options: ReplaceOptions
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    val timeoutActual =
-      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
-    val req = replaceHandler.request(
+    convert(kvOps.replaceAsync(convert(options),
       id,
-      content,
+      encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
       options.cas,
-      options.durability,
+      convert(options.durability),
       ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-      options.preserveExpiry,
-      timeoutActual,
-      options.retryStrategy.getOrElse(environment.retryStrategy),
-      options.transcoder.getOrElse(environment.transcoder),
-      serializer,
-      options.parentSpan
-    )
-    wrapWithDurability(req, id, replaceHandler, options.durability, false, timeoutActual)
+      options.preserveExpiry))
+            .map(result => convert(result))
   }
 
   /** Upserts the contents of a full document in this collection.
@@ -220,8 +203,13 @@ class AsyncCollection(
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    val opts = UpsertOptions().durability(durability).timeout(timeout)
-    upsert(id, content, opts)
+    convert(kvOps.upsertAsync(makeCommonOptions(timeout),
+      id,
+      encoder(environment.transcoder, serializer, content),
+      convert(durability),
+      0,
+      false))
+            .map(result => convert(result))
   }
 
   /** Upserts the contents of a full document in this collection.
@@ -232,21 +220,13 @@ class AsyncCollection(
       content: T,
       options: UpsertOptions
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    val timeoutActual =
-      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
-    val req = upsertHandler.request(
+    convert(kvOps.upsertAsync(convert(options),
       id,
-      content,
-      options.durability,
+      encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
+      convert(options.durability),
       ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-      options.preserveExpiry,
-      timeoutActual,
-      options.retryStrategy.getOrElse(environment.retryStrategy),
-      options.transcoder.getOrElse(environment.transcoder),
-      serializer,
-      options.parentSpan
-    )
-    wrapWithDurability(req, id, upsertHandler, options.durability, false, timeoutActual)
+      options.preserveExpiry))
+            .map(result => convert(result))
   }
 
   /** Removes a document from this collection, if it exists.
@@ -258,8 +238,11 @@ class AsyncCollection(
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): Future[MutationResult] = {
-    val opts = RemoveOptions().cas(cas).durability(durability).timeout(timeout)
-    remove(id, opts)
+    convert(kvOps.removeAsync(makeCommonOptions(timeout),
+      id,
+      cas,
+      convert(durability)))
+            .map(result => convert(result))
   }
 
   /** Removes a document from this collection, if it exists.
@@ -269,17 +252,11 @@ class AsyncCollection(
       id: String,
       options: RemoveOptions
   ): Future[MutationResult] = {
-    val timeoutActual =
-      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
-    val req = removeHandler.request(
+    convert(kvOps.removeAsync(convert(options),
       id,
       options.cas,
-      options.durability,
-      timeoutActual,
-      options.retryStrategy.getOrElse(environment.retryStrategy),
-      options.parentSpan
-    )
-    wrapWithDurability(req, id, removeHandler, options.durability, true, timeoutActual)
+      convert(options.durability)))
+            .map(result => convert(result))
   }
 
   /** Fetches a full document from this collection.
@@ -289,8 +266,11 @@ class AsyncCollection(
       id: String,
       timeout: Duration = kvReadTimeout
   ): Future[GetResult] = {
-    val opts = GetOptions().timeout(timeout)
-    get(id, opts)
+    convert(kvOps.getAsync(makeCommonOptions(timeout),
+      id,
+      AsyncCollection.EmptyList,
+      false))
+            .map(result => convert(result, environment, None))
   }
 
   /** Fetches a full document from this collection.
@@ -300,72 +280,11 @@ class AsyncCollection(
       id: String,
       options: GetOptions
   ): Future[GetResult] = {
-    val project       = options.project
-    val timeout       = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
-    val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
-    val parentSpan    = options.parentSpan
-    val transcoder    = options.transcoder.getOrElse(environment.transcoder)
-    val withExpiry    = options.withExpiry
-
-    if (project.nonEmpty) {
-      getSubDocHandler.requestProject(id, project, timeout, retryStrategy, parentSpan) match {
-        case Success(request) =>
-          core.send(request)
-
-          val out = FutureConverters
-            .toScala(request.response())
-            .flatMap(response => {
-              getSubDocHandler.responseProject(request, id, response, transcoder) match {
-                case Success(v: GetResult) => Future.successful(v)
-                case Failure(err)          => Future.failed(err)
-              }
-            })
-
-          out onComplete {
-            case Success(_)                              => request.context.logicallyComplete()
-            case Failure(err: DocumentNotFoundException) => request.context.logicallyComplete()
-            case Failure(err)                            => request.context.logicallyComplete(err)
-          }
-
-          out
-
-        case Failure(err) => Future.failed(err)
-      }
-
-    } else if (withExpiry) {
-      getSubDoc(
-        id,
-        AsyncCollection.getFullDoc,
-        withExpiry,
-        timeout,
-        retryStrategy,
-        transcoder,
-        parentSpan
-      ).map(
-        lookupInResult =>
-          GetResult(
-            id,
-            Left(lookupInResult.contentAs[Array[Byte]](0).get),
-            lookupInResult.flags,
-            lookupInResult.cas,
-            lookupInResult.expiryTime,
-            transcoder
-          )
-      )
-    } else {
-      getFullDoc(id, timeout, retryStrategy, transcoder, parentSpan)
-    }
-  }
-
-  private def getFullDoc(
-      id: String,
-      timeout: Duration,
-      retryStrategy: RetryStrategy,
-      transcoder: Transcoder,
-      parentSpan: Option[RequestSpan]
-  ): Future[GetResult] = {
-    val req = getFullDocHandler.request(id, timeout, retryStrategy, parentSpan)
-    AsyncCollection.wrapGet(req, id, getFullDocHandler, transcoder, core)
+    convert(kvOps.getAsync(convert(options),
+      id,
+      options.project.asJava,
+      options.withExpiry))
+            .map(result => convert(result, environment, options.transcoder))
   }
 
   private def getSubDoc(
@@ -493,8 +412,10 @@ class AsyncCollection(
       lockTime: Duration,
       timeout: Duration = kvReadTimeout
   ): Future[GetResult] = {
-    val opts = GetAndLockOptions().timeout(timeout)
-    getAndLock(id, lockTime, opts)
+    convert(kvOps.getAndLockAsync(makeCommonOptions(timeout),
+      id,
+      convert(lockTime)))
+            .map(result => convert(result, environment, None))
   }
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
@@ -505,21 +426,10 @@ class AsyncCollection(
       lockTime: Duration,
       options: GetAndLockOptions
   ): Future[GetResult] = {
-    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
-    val req = getAndLockHandler.request(
+    convert(kvOps.getAndLockAsync(convert(options),
       id,
-      lockTime,
-      timeout,
-      options.retryStrategy.getOrElse(environment.retryStrategy),
-      options.parentSpan
-    )
-    AsyncCollection.wrapGet(
-      req,
-      id,
-      getAndLockHandler,
-      options.transcoder.getOrElse(environment.transcoder),
-      core
-    )
+      convert(lockTime)))
+            .map(result => convert(result, environment, options.transcoder))
   }
 
   /** Unlock a locked document.
@@ -530,8 +440,9 @@ class AsyncCollection(
       cas: Long,
       timeout: Duration = kvReadTimeout
   ): Future[Unit] = {
-    val opts = UnlockOptions().timeout(timeout)
-    unlock(id, cas, opts)
+    convert(kvOps.unlockAsync(makeCommonOptions(timeout),
+      id,
+      cas)).map(_ => ())
   }
 
   /** Unlock a locked document.
@@ -542,15 +453,9 @@ class AsyncCollection(
       cas: Long,
       options: UnlockOptions
   ): Future[Unit] = {
-    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
-    val req = unlockHandler.request(
+    convert(kvOps.unlockAsync(convert(options),
       id,
-      cas,
-      timeout,
-      options.retryStrategy.getOrElse(environment.retryStrategy),
-      options.parentSpan
-    )
-    wrap(req, id, unlockHandler)
+      cas)).map(_ => ())
   }
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
@@ -561,8 +466,10 @@ class AsyncCollection(
       expiry: Duration,
       timeout: Duration = kvReadTimeout
   ): Future[GetResult] = {
-    val opts = GetAndTouchOptions().timeout(timeout)
-    getAndTouch(id, expiry, opts)
+    convert(kvOps.getAndTouchAsync(makeCommonOptions(timeout),
+      id,
+      convertExpiry(expiry)))
+            .map(result => convert(result, environment, None))
   }
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
@@ -573,21 +480,10 @@ class AsyncCollection(
       expiry: Duration,
       options: GetAndTouchOptions
   ): Future[GetResult] = {
-    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
-    val in = getAndTouchHandler.request(
+    convert(kvOps.getAndTouchAsync(convert(options),
       id,
-      expiry,
-      timeout,
-      options.retryStrategy.getOrElse(environment.retryStrategy),
-      options.parentSpan
-    )
-    AsyncCollection.wrapGet(
-      in,
-      id,
-      getAndTouchHandler,
-      options.transcoder.getOrElse(environment.transcoder),
-      core
-    )
+      convertExpiry(expiry)))
+            .map(result => convert(result, environment, options.transcoder))
   }
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
@@ -717,8 +613,8 @@ class AsyncCollection(
       id: String,
       timeout: Duration = kvReadTimeout
   ): Future[ExistsResult] = {
-    val opts = ExistsOptions().timeout(timeout)
-    exists(id, opts)
+    convert(kvOps.existsAsync(makeCommonOptions(timeout), id))
+            .map(result => convert(result))
   }
 
   /** Checks if a document exists.
@@ -728,14 +624,8 @@ class AsyncCollection(
       id: String,
       options: ExistsOptions
   ): Future[ExistsResult] = {
-    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
-    val req = existsHandler.request(
-      id,
-      timeout,
-      options.retryStrategy.getOrElse(environment.retryStrategy),
-      options.parentSpan
-    )
-    wrap(req, id, existsHandler)
+    convert(kvOps.existsAsync(convert(options), id))
+            .map(result => convert(result))
   }
 
   /** Updates the expiry of the document with the given id.
@@ -746,8 +636,10 @@ class AsyncCollection(
       expiry: Duration,
       timeout: Duration = kvReadTimeout
   ): Future[MutationResult] = {
-    val opts = TouchOptions().timeout(timeout)
-    touch(id, expiry, opts)
+    convert(kvOps.touchAsync(makeCommonOptions(timeout),
+      id,
+      convertExpiry(expiry)))
+            .map(result => convert(result))
   }
 
   /** Updates the expiry of the document with the given id.
@@ -758,15 +650,10 @@ class AsyncCollection(
       expiry: Duration,
       options: TouchOptions
   ): Future[MutationResult] = {
-    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
-    val req = touchHandler.request(
+    convert(kvOps.touchAsync(convert(options),
       id,
-      ExpiryUtil.expiryActual(expiry, None),
-      timeout,
-      options.retryStrategy.getOrElse(environment.retryStrategy),
-      options.parentSpan
-    )
-    wrap(req, id, touchHandler)
+      ExpiryUtil.expiryActual(expiry, None)))
+            .map(result => convert(result))
   }
 
   private[scala] def scanRequest(scanType: ScanType, opts: ScanOptions): SFlux[ScanResult] = {
@@ -873,7 +760,7 @@ class AsyncCollection(
 }
 
 object AsyncCollection {
-  private[scala] val getFullDoc = Array(LookupInSpec.get(""))
+  private[scala] val EmptyList = new java.util.ArrayList[String]()
 
   private def wrap[Resp <: Response, Res](
       in: Try[KeyValueRequest[Resp]],
@@ -888,61 +775,6 @@ object AsyncCollection {
         val out = FutureConverters
           .toScala(request.response())
           .map(response => handler.response(request, id, response))
-
-        out onComplete {
-          case Success(_)   => request.context.logicallyComplete()
-          case Failure(err) => request.context.logicallyComplete(err)
-        }
-
-        out
-
-      case Failure(err) => Future.failed(err)
-    }
-  }
-
-  private def wrapGet[Resp <: Response, Res](
-      in: Try[KeyValueRequest[Resp]],
-      id: String,
-      handler: KeyValueRequestHandlerWithTranscoder[Resp, Res],
-      transcoder: Transcoder,
-      core: Core
-  )(implicit ec: ExecutionContext): Future[Res] = {
-    in match {
-      case Success(request) =>
-        core.send(request)
-
-        val out = FutureConverters
-          .toScala(request.response())
-          .map(response => {
-            handler.response(request, id, response, transcoder)
-          })
-
-        out onComplete {
-          case Success(_)                              => request.context.logicallyComplete()
-          case Failure(err: DocumentNotFoundException) => request.context.logicallyComplete()
-          case Failure(err)                            => request.context.logicallyComplete(err)
-        }
-
-        out
-
-      case Failure(err) => Future.failed(err)
-    }
-  }
-
-  private def wrap[Resp <: Response, Res](
-      in: Try[KeyValueRequest[Resp]],
-      id: String,
-      handler: KeyValueRequestHandlerWithTranscoder[Resp, Res],
-      transcoder: Transcoder,
-      core: Core
-  )(implicit ec: ExecutionContext): Future[Res] = {
-    in match {
-      case Success(request) =>
-        core.send[Resp](request)
-
-        val out = FutureConverters
-          .toScala(request.response())
-          .map(response => handler.response(request, id, response, transcoder))
 
         out onComplete {
           case Success(_)   => request.context.logicallyComplete()

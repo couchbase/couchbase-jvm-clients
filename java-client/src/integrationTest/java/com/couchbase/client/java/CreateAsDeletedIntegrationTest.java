@@ -51,7 +51,9 @@ import static org.junit.jupiter.api.Assertions.fail;
 /**
  * Test the CreateAsDeleted flag added with MB-37374 in 6.6.
  */
-@IgnoreWhen(missesCapabilities = Capabilities.CREATE_AS_DELETED)
+@IgnoreWhen(missesCapabilities = Capabilities.CREATE_AS_DELETED,
+  isProtostellarWillWorkLater = true
+)
 class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

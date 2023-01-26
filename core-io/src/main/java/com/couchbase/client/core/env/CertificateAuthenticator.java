@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.deps.io.grpc.Metadata;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
@@ -128,6 +129,12 @@ public class CertificateAuthenticator implements Authenticator {
       throw InvalidArgumentException.fromMessage("Either a key certificate or a key manager factory" +
         " can be provided, but not both!");
     }
+  }
+
+  @Override
+  public void authProtostellarRequest(Metadata metadata) {
+    // To be added under JVMCBC-1195
+    throw new UnsupportedOperationException("CertificateAuthenticator is not supported with Protostellar");
   }
 
   @Override

@@ -25,6 +25,7 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.search.SearchChunkTrailer;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.msg.search.SearchResponse;
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.search.result.DateRangeSearchFacetResult;
 import com.couchbase.client.java.search.result.NumericRangeSearchFacetResult;
@@ -59,6 +60,7 @@ public class SearchAccessor {
 
     public static CompletableFuture<SearchResult> searchQueryAsync(final Core core, final SearchRequest request,
                                                                    final JsonSerializer serializer) {
+        checkIfProtostellar(core);
         core.send(request);
         return Mono.fromFuture(request.response())
           .flatMap(response -> response.rows()
@@ -76,6 +78,7 @@ public class SearchAccessor {
 
     public static Mono<ReactiveSearchResult> searchQueryReactive(final Core core, final SearchRequest request,
                                                                  final JsonSerializer serializer) {
+        checkIfProtostellar(core);
         core.send(request);
         return Mono
           .fromFuture(request.response())
@@ -131,4 +134,9 @@ public class SearchAccessor {
         return new SearchMetaData(status.errors(), metrics);
     }
 
+    private static void checkIfProtostellar(Core core) {
+        if (core.isProtostellar()) {
+           throw CoreProtostellarUtil.unsupportedInProtostellar("search");
+        }
+    }
 }

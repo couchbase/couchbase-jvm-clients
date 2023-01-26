@@ -145,15 +145,14 @@ public class MutationTokenAggregator implements Iterable<MutationToken> {
       MutationTokenAggregator state = new MutationTokenAggregator();
       for (String bucketName : source.keySet()) {
         Map<String, List<Object>> bucket = (Map<String, List<Object>>) source.get(bucketName);
-        for (String vbid : bucket.keySet()) {
-          List<Object> values = bucket.get(vbid);
+        bucket.forEach((vbid, values) ->
           state.add(new MutationToken(
-              Short.parseShort(vbid),
-              Long.parseLong((String) values.get(1)),
-              ((Number) values.get(0)).longValue(),
-              bucketName
-          ));
-        }
+            Short.parseShort(vbid),
+            Long.parseLong((String) values.get(1)),
+            ((Number) values.get(0)).longValue(),
+            bucketName
+          ))
+        );
       }
       return state;
     } catch (Exception ex) {

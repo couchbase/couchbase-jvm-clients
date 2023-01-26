@@ -16,6 +16,7 @@
 
 package com.couchbase.client.kotlin.codec
 
+import com.couchbase.client.core.api.kv.CoreEncodedContent
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled
 import com.couchbase.client.core.msg.kv.CodecFlags
@@ -70,6 +71,9 @@ public class Content(public val bytes: ByteArray, public val flags: Int) {
 
         return "Content(length=${bytes.size}, flags=$flags, type=${type} value=${convertContentToString()})"
     }
+
+    // Don't implement CoreEncodedContent directly, since that would add a redundant "encoded" getter.
+    internal fun toCore() = CoreEncodedContent.of(bytes, flags)
 
     private fun convertContentToString(): String {
         if (bytes.isEmpty()) return ""

@@ -47,7 +47,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+@IgnoreWhen(clusterTypes = ClusterType.MOCKED,
+  isProtostellar = true
+)
 @Disabled // JCBC-1529
 class ViewManagerIntegrationTest extends JavaIntegrationTest {
 

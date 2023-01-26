@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+option go_package = "github.com/couchbase/stellar-nebula/genproto/routing_v1;routing_v1";
+option ruby_package = "Couchbase::StellarNebula::Generated::Routing::V1";
+option java_package = "com.couchbase.client.protostellar.routing.v1";
+option java_multiple_files = true;
+
+package couchbase.routing.v1;
+
+service Routing {
+  rpc WatchRouting(WatchRoutingRequest) returns (stream WatchRoutingResponse) {}
+}
+
+message RoutingEndpoint {
+  string id = 1;
+  string server_group = 2;
+  string address = 3;
+}
+
+message DataRoutingEndpoint {
+  uint32 endpoint_idx = 1;
+  repeated uint32 local_vbuckets = 2;
+  repeated uint32 group_vbuckets = 3;
+}
+
+message VbucketDataRoutingStrategy {
+  repeated DataRoutingEndpoint endpoints = 1;
+  uint32 num_vbuckets = 3;
+}
+
+message QueryRoutingEndpoint { uint32 endpoint_idx = 1; }
+
+message QueryRouting { repeated QueryRoutingEndpoint endpoints = 1; }
+
+message ViewsRoutingEndpoint { uint32 endpoint_idx = 1; }
+
+message ViewsRouting { repeated ViewsRoutingEndpoint endpoints = 1; }
+
+message WatchRoutingRequest {
+  // Specifies the specific bucket that will be accessed.
+  optional string bucket_name = 1;
+}
+
+message WatchRoutingResponse {
+  // Represents the revision of this configuration.  The revision not being
+  // included indicates that this configuration is not versioned.  Configuration
+  // revisions can only be compared for responses from the same request values
+  // (different buckets may have uniquely incremented revisions).  Revision
+  // comparison is done in order of the revision data, for instance we may have
+  // [major, minor, patch].  Revisions may be any number of values long, and any
+  // missing values should be assumed as 0 (except in the completely empty case,
+  // where it is considered unused).
+  repeated uint64 revision = 1;
+
+  // Represents a complete list of all endpoints that are available for this
+  // cluster.
+  repeated RoutingEndpoint endpoints = 2;
+
+  oneof data_routing { VbucketDataRoutingStrategy vbucket_data_routing = 3; }
+  optional QueryRouting query_routing = 4;
+  optional ViewsRouting views_routing = 5;
+}

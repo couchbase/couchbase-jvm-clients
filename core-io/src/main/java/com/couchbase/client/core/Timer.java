@@ -123,23 +123,38 @@ public class Timer {
       return;
     }
 
-    outstandingForRetry.incrementAndGet();
     schedule(() -> {
-      outstandingForRetry.decrementAndGet();
       if (!request.completed()) {
         core.send(request, false);
       }
     }, runAfter);
   }
 
+  public Timeout schedule(final Runnable callback, final Duration runAfter) {
+    return schedule(callback, runAfter, false);
+  }
+
   /**
    * Schedule an arbitrary task for this timer.
+   *
+   * @param respectMax whether maxNumRequestsInRetry should be respected.  Will return null if the operation was not scheduled for this reason.
    */
-  public Timeout schedule(final Runnable callback, final Duration runAfter) {
+  public Timeout schedule(final Runnable callback, final Duration runAfter, boolean respectMax) {
     if (stopped) {
       return null;
     }
-    return wheelTimer.newTimeout(timeout -> callback.run(), runAfter.toNanos(), TimeUnit.NANOSECONDS);
+
+    if (outstandingForRetry.incrementAndGet() >= maxNumRequestsInRetry) {
+      if (respectMax) {
+        outstandingForRetry.getAndDecrement();
+        return null;
+      }
+    }
+
+    return wheelTimer.newTimeout(timeout -> {
+      outstandingForRetry.decrementAndGet();
+      callback.run();
+    }, runAfter.toNanos(), TimeUnit.NANOSECONDS);
   }
 
   /**

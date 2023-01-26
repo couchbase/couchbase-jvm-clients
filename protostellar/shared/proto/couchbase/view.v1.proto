@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+option go_package = "github.com/couchbase/stellar-nebula/genproto/view_v1;view_v1";
+option ruby_package = "Couchbase::StellarNebula::Generated::View::V1";
+option java_package = "com.couchbase.client.protostellar.view.v1";
+option java_multiple_files = true;
+
+package couchbase.view.v1;
+
+service View {
+  rpc ViewQuery(ViewQueryRequest) returns (stream ViewQueryResponse) {}
+}
+
+message ViewQueryRequest {
+  string bucket_name = 8;
+  string design_document_name = 1;
+  string view_name = 2;
+
+  optional uint32 skip = 3;
+  optional uint32 limit = 4;
+
+  enum ScanConsistency {
+    NOT_BOUNDED = 0;
+    REQUEST_PLUS = 1;
+    UPDATE_AFTER = 2;
+  }
+  enum ErrorMode {
+    CONTINUE = 0;
+    STOP = 1;
+  }
+  enum DesignDocumentNamespace {
+    PRODUCTION = 0;
+    DEVELOPMENT = 1;
+  }
+  enum Order {
+    ASCENDING = 0;
+    DESCENDING = 1;
+  }
+  optional ScanConsistency scan_consistency = 5;
+  optional bool reduce = 6;
+  optional bool group = 7;
+  optional uint32 group_level = 9;
+  optional bytes key = 10;
+  repeated bytes keys = 11;
+  optional bytes start_key = 12;
+  optional bytes end_key = 13;
+  optional bool inclusive_end = 14;
+  optional string start_key_doc_id = 15;
+  optional string end_key_doc_id = 16;
+  optional ErrorMode on_error = 17;
+  optional bool debug = 18;
+  optional DesignDocumentNamespace namespace = 19;
+  optional Order order = 20;
+}
+
+message ViewQueryResponse {
+  message Row {
+    string id = 1;
+    bytes key = 2;
+    bytes value = 3;
+  }
+  repeated Row rows = 1;
+
+  message MetaData {
+    uint64 total_rows = 1;
+    bytes debug = 2;
+  }
+  optional MetaData meta_data = 2;
+}

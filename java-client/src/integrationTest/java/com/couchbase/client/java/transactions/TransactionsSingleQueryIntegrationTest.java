@@ -34,8 +34,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * Transactions are heavily tested by FIT, these are some basic sanity tests for single query transactions.
  */
 @IgnoreWhen(clusterTypes = {ClusterType.MOCKED},
-        // Using COLLECTIONS as a proxy for 7.0+, which is when query added support for transactions
-        missesCapabilities = {Capabilities.CREATE_AS_DELETED, Capabilities.COLLECTIONS, Capabilities.QUERY})
+  // Using COLLECTIONS as a proxy for 7.0+, which is when query added support for transactions
+  missesCapabilities = {Capabilities.CREATE_AS_DELETED, Capabilities.COLLECTIONS, Capabilities.QUERY},
+  isProtostellarWillWorkLater = true
+)
 public class TransactionsSingleQueryIntegrationTest extends JavaIntegrationTest {
 
     static private Cluster cluster;

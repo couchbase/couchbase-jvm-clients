@@ -20,12 +20,16 @@ import com.couchbase.client.performer.core.perf.PerRun;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashSet;
+import java.util.Set;
+
 // A useful abstraction layer between the core performer and the per-SDK performers.  Allows refactoring most of the logic
 // into the core performer.
 // Note it's tempting to put shared things from core-io here, such as RequestSpans, but for technical reasons
 // we cannot make the core FIT performer depend on core-io, without making it impossible to test different versions of it.
 public abstract class SdkCommandExecutor extends Executor {
     protected final Logger logger = LoggerFactory.getLogger(SdkCommandExecutor.class);
+    private final Set<String> errorsSeen = new HashSet<>();
 
     public SdkCommandExecutor(Counters counters) {
         super(counters);
@@ -41,7 +45,13 @@ public abstract class SdkCommandExecutor extends Executor {
             return performOperation(command, perRun);
         } catch (RuntimeException err) {
             if (err instanceof UnsupportedOperationException) {
-                logger.warn("Failed to perform unsupported operation: {}", command, err);
+                // The perf test can easily create hundreds of thousands of these errors per second, creating gigabytes of logging very quickly.
+                // So only log the first example of each error.
+                // This isn't thread-safe for performance so the first error could log a few times.
+                if (!errorsSeen.contains(err.getMessage())) {
+                    logger.warn("Failed to perform unsupported operation: {}", command, err);
+                    errorsSeen.add(err.getMessage());
+                }
             }
 
             return com.couchbase.client.protocol.run.Result.newBuilder()

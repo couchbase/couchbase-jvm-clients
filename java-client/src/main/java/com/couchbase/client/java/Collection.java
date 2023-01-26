@@ -18,12 +18,15 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
+import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.datastructures.CouchbaseArrayList;
 import com.couchbase.client.java.datastructures.CouchbaseArraySet;
 import com.couchbase.client.java.datastructures.CouchbaseMap;
@@ -33,6 +36,7 @@ import com.couchbase.client.java.kv.ArrayListOptions;
 import com.couchbase.client.java.kv.ArraySetOptions;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
+import com.couchbase.client.java.kv.Expiry;
 import com.couchbase.client.java.kv.GetAllReplicasOptions;
 import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
@@ -66,8 +70,19 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.AsyncUtils.block;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_EXISTS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_ALL_REPLICAS_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_LOCK_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_TOUCH_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_INSERT_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_REMOVE_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_REPLACE_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_TOUCH_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_UNLOCK_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_UPSERT_OPTIONS;
 import static com.couchbase.client.java.kv.ArrayListOptions.arrayListOptions;
 import static com.couchbase.client.java.kv.ArraySetOptions.arraySetOptions;
 import static com.couchbase.client.java.kv.MapOptions.mapOptions;
@@ -101,6 +116,11 @@ public class Collection {
   private final BinaryCollection binaryCollection;
 
   /**
+   * Strategy for performing KV operations.
+   */
+  private final CoreKvOps kvOps;
+
+  /**
    * Creates a new {@link Collection}.
    *
    * @param asyncCollection the underlying async collection.
@@ -109,6 +129,7 @@ public class Collection {
     this.asyncCollection = asyncCollection;
     reactiveCollection = new ReactiveCollection(asyncCollection);
     binaryCollection = new BinaryCollection(asyncCollection.binary());
+    this.kvOps = asyncCollection.kvOps;
   }
 
   /**
@@ -184,7 +205,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult get(final String id) {
-    return block(async().get(id));
+    return get(id, DEFAULT_GET_OPTIONS);
   }
 
   /**
@@ -198,7 +219,12 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult get(final String id, final GetOptions options) {
-    return block(async().get(id, options));
+    GetOptions.Built opts = notNull(options, "options").build();
+
+    return new GetResult(
+      kvOps.getBlocking(opts, id, opts.projections(), opts.withExpiry()),
+      opts.transcoder() == null ? environment().transcoder() : opts.transcoder()
+    );
   }
 
   /**
@@ -216,7 +242,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult getAndLock(final String id, final Duration lockTime) {
-    return block(async().getAndLock(id, lockTime));
+    return getAndLock(id, lockTime, DEFAULT_GET_AND_LOCK_OPTIONS);
   }
 
   /**
@@ -235,7 +261,12 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult getAndLock(final String id, final Duration lockTime, final GetAndLockOptions options) {
-    return block(async().getAndLock(id, lockTime, options));
+    GetAndLockOptions.Built opts = notNull(options, "options").build();
+
+    return new GetResult(
+      kvOps.getAndLockBlocking(opts, id, lockTime),
+      opts.transcoder() == null ? environment().transcoder() : opts.transcoder()
+    );
   }
 
   /**
@@ -249,7 +280,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult getAndTouch(final String id, final Duration expiry) {
-    return block(async().getAndTouch(id, expiry));
+    return getAndTouch(id, expiry, DEFAULT_GET_AND_TOUCH_OPTIONS);
   }
 
   /**
@@ -264,7 +295,13 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult getAndTouch(final String id, final Duration expiry, final GetAndTouchOptions options) {
-    return block(async().getAndTouch(id, expiry, options));
+    notNull(expiry, "expiry");
+    GetAndTouchOptions.Built opts = notNull(options, "options").build();
+
+    return new GetResult(
+      kvOps.getAndTouchBlocking(opts, id, Expiry.relative(expiry).encode()),
+      opts.transcoder() == null ? environment().transcoder() : opts.transcoder()
+    );
   }
 
   /**
@@ -334,7 +371,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public ExistsResult exists(final String id) {
-    return block(async().exists(id));
+    return exists(id, DEFAULT_EXISTS_OPTIONS);
   }
 
   /**
@@ -346,7 +383,8 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public ExistsResult exists(final String id, final ExistsOptions options) {
-    return block(async().exists(id, options));
+    ExistsOptions.Built opts = notNull(options, "options").build();
+    return ExistsResult.from(kvOps.existsBlocking(opts, id));
   }
 
   /**
@@ -360,7 +398,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult remove(final String id) {
-    return block(async().remove(id));
+    return remove(id, DEFAULT_REMOVE_OPTIONS);
   }
 
   /**
@@ -375,7 +413,14 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult remove(final String id, final RemoveOptions options) {
-    return block(async().remove(id, options));
+    notNull(options, "RemoveOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    RemoveOptions.Built opts = options.build();
+    return new MutationResult(kvOps.removeBlocking(
+      opts,
+      id,
+      opts.cas(),
+      opts.toCoreDurability()
+    ));
   }
 
   /**
@@ -389,7 +434,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult insert(final String id, final Object content) {
-    return block(async().insert(id, content));
+    return insert(id, content, DEFAULT_INSERT_OPTIONS);
   }
 
   /**
@@ -404,7 +449,18 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult insert(final String id, final Object content, final InsertOptions options) {
-    return block(async().insert(id, content, options));
+    notNull(options, "InsertOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+
+    InsertOptions.Built opts = options.build();
+    Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+    return new MutationResult(kvOps.insertBlocking(
+      opts,
+      id,
+      () -> transcoder.encode(content),
+      opts.toCoreDurability(),
+      opts.expiry().encode()
+    ));
   }
 
   /**
@@ -417,7 +473,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult upsert(final String id, final Object content) {
-    return block(async().upsert(id, content));
+    return upsert(id, content, DEFAULT_UPSERT_OPTIONS);
   }
 
   /**
@@ -431,7 +487,19 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult upsert(final String id, final Object content, final UpsertOptions options) {
-    return block(async().upsert(id, content, options));
+    notNull(options, "UpsertOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+
+    UpsertOptions.Built opts = options.build();
+    Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+    return new MutationResult(kvOps.upsertBlocking(
+      opts,
+      id,
+      () -> transcoder.encode(content),
+      opts.toCoreDurability(),
+      opts.expiry().encode(),
+      opts.preserveExpiry()
+    ));
   }
 
   /**
@@ -446,7 +514,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult replace(final String id, final Object content) {
-    return block(async().replace(id, content));
+    return replace(id, content, DEFAULT_REPLACE_OPTIONS);
   }
 
   /**
@@ -462,7 +530,20 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult replace(final String id, final Object content, final ReplaceOptions options) {
-    return block(async().replace(id, content, options));
+    notNull(options, "ReplaceOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+
+    ReplaceOptions.Built opts = options.build();
+    Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+    return new MutationResult(kvOps.replaceBlocking(
+      opts,
+      id,
+      () -> transcoder.encode(content),
+      opts.cas(),
+      opts.toCoreDurability(),
+      opts.expiry().encode(),
+      opts.preserveExpiry()
+    ));
   }
 
   /**
@@ -476,7 +557,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult touch(final String id, Duration expiry) {
-    return block(async().touch(id, expiry));
+    return touch(id, expiry, DEFAULT_TOUCH_OPTIONS);
   }
 
   /**
@@ -491,7 +572,13 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult touch(final String id, Duration expiry, final TouchOptions options) {
-    return block(async().touch(id, expiry, options));
+    notNull(options, "TouchOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+
+    TouchOptions.Built opts = options.build();
+    return new MutationResult(
+      kvOps.touchBlocking(opts, id, Expiry.relative(expiry).encode())
+    );
   }
 
   /**
@@ -505,7 +592,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public void unlock(final String id, long cas) {
-    block(async().unlock(id, cas));
+    unlock(id, cas, DEFAULT_UNLOCK_OPTIONS);
   }
 
 
@@ -521,7 +608,9 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public void unlock(final String id, long cas, final UnlockOptions options) {
-    block(async().unlock(id, cas, options));
+    notNull(options, "UnlockOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    UnlockOptions.Built opts = options.build();
+    kvOps.unlockBlocking(opts, id, cas);
   }
 
   /**

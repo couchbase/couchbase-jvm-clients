@@ -59,13 +59,17 @@ public class ServiceNotAvailableIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(hasCapabilities = Capabilities.ANALYTICS)
+  @IgnoreWhen(hasCapabilities = Capabilities.ANALYTICS,
+    // Fails with FeatureNotAvailableException instead
+    isProtostellar = true)
   void shouldFailIfAnalyticsNotPresent() {
     assertThrows(ServiceNotAvailableException.class, () -> cluster.analyticsQuery("select 1=1"));
   }
 
   @Test
-  @IgnoreWhen(hasCapabilities = Capabilities.SEARCH)
+  @IgnoreWhen(hasCapabilities = Capabilities.SEARCH,
+    // Fails with FeatureNotAvailableException instead
+    isProtostellar = true)
   void shouldFailIfSearchNotPresent() {
     assertThrows(
       ServiceNotAvailableException.class,

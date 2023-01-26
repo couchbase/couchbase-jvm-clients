@@ -264,6 +264,27 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
                 assertEquals(nearFutureExpiry, it.expiry)
             }
         }
+
+        @Test
+        fun `with projections mismatch`(): Unit = runBlocking {
+            val id = nextId()
+            collection.upsert(id, mapOf("foo" to "bar", "x" to "y"), expiry = nearFutureExpiry)
+
+            assertEquals(
+                mapOf("foo" to "bar"),
+                collection.get(id, project = listOf("foo", "foo[0]")).contentAs<Any>(),
+            )
+
+            assertEquals(
+                mapOf("foo" to "bar"),
+                collection.get(id, project = listOf("foo", "absent")).contentAs<Any>(),
+            )
+
+            assertEquals(
+                mapOf("foo" to "bar"),
+                collection.get(id, project = listOf("foo", "foo[0]", "absent")).contentAs<Any>(),
+            )
+        }
     }
 
     @Nested

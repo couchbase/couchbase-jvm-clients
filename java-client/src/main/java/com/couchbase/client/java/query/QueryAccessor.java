@@ -68,7 +68,7 @@ public class QueryAccessor {
             .collectList()
             .flatMap(rows -> response
                 .trailer()
-                .map(trailer -> new QueryResult(response.header(), rows, trailer, serializer))
+                .map(trailer -> (QueryResult) new QueryResultHttp(response.header(), rows, trailer, serializer))
             )
         )
         .toFuture();
@@ -84,7 +84,7 @@ public class QueryAccessor {
   public Mono<ReactiveQueryResult> queryReactive(final QueryRequest request, final QueryOptions.Built options,
                                                  final JsonSerializer serializer) {
     return coreQueryAccessor.query(request, options.adhoc())
-        .map(r -> new ReactiveQueryResult(r, serializer));
+        .map(r -> new ReactiveQueryResultHttp(r, serializer));
   }
 
   /**

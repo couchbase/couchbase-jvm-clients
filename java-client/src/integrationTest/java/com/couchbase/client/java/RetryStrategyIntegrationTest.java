@@ -25,6 +25,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@IgnoreWhen(isProtostellarWillWorkLater = true)
 class RetryStrategyIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

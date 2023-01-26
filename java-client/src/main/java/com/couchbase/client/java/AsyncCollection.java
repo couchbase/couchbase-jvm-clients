@@ -18,7 +18,9 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -32,20 +34,9 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.kv.CoreRangeScanItem;
 import com.couchbase.client.core.kv.RangeScanOrchestrator;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.core.msg.kv.GetAndLockRequest;
-import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
-import com.couchbase.client.core.msg.kv.GetMetaRequest;
-import com.couchbase.client.core.msg.kv.GetRequest;
-import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.MutationToken;
-import com.couchbase.client.core.msg.kv.RemoveRequest;
-import com.couchbase.client.core.msg.kv.ReplaceRequest;
-import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
-import com.couchbase.client.core.msg.kv.TouchRequest;
-import com.couchbase.client.core.msg.kv.UnlockRequest;
-import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.kv.ReplicaHelper;
 import com.couchbase.client.core.util.BucketConfigUtil;
@@ -53,11 +44,9 @@ import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.kv.CommonDurabilityOptions;
-import com.couchbase.client.java.kv.ExistsAccessor;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.Expiry;
-import com.couchbase.client.java.kv.GetAccessor;
 import com.couchbase.client.java.kv.GetAllReplicasOptions;
 import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
@@ -65,10 +54,8 @@ import com.couchbase.client.java.kv.GetAnyReplicaOptions;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
-import com.couchbase.client.java.kv.InsertAccessor;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.LookupInAccessor;
-import com.couchbase.client.java.kv.LookupInMacro;
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
@@ -79,20 +66,15 @@ import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.RangeScan;
-import com.couchbase.client.java.kv.RemoveAccessor;
 import com.couchbase.client.java.kv.RemoveOptions;
-import com.couchbase.client.java.kv.ReplaceAccessor;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.SamplingScan;
 import com.couchbase.client.java.kv.ScanOptions;
 import com.couchbase.client.java.kv.ScanResult;
 import com.couchbase.client.java.kv.ScanType;
 import com.couchbase.client.java.kv.StoreSemantics;
-import com.couchbase.client.java.kv.TouchAccessor;
 import com.couchbase.client.java.kv.TouchOptions;
-import com.couchbase.client.java.kv.UnlockAccessor;
 import com.couchbase.client.java.kv.UnlockOptions;
-import com.couchbase.client.java.kv.UpsertAccessor;
 import com.couchbase.client.java.kv.UpsertOptions;
 import reactor.core.publisher.Flux;
 
@@ -185,6 +167,11 @@ public class AsyncCollection {
   private final RangeScanOrchestrator rangeScanOrchestrator;
 
   /**
+   * Strategy for performing KV operations.
+   */
+  final CoreKvOps kvOps;
+
+  /**
    * Creates a new {@link AsyncCollection}.
    *
    * @param name the name of the collection.
@@ -203,6 +190,7 @@ public class AsyncCollection {
     this.collectionIdentifier = new CollectionIdentifier(bucket, Optional.of(scopeName), Optional.of(name));
     this.asyncBinaryCollection = new AsyncBinaryCollection(core, environment, collectionIdentifier);
     this.rangeScanOrchestrator = new RangeScanOrchestrator(core, collectionIdentifier);
+    this.kvOps = core.kvOps(CoreKeyspace.from(collectionIdentifier));
   }
 
   /**
@@ -279,117 +267,8 @@ public class AsyncCollection {
     final GetOptions.Built opts = options.build();
 
     final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
-    if (opts.projections().isEmpty() && !opts.withExpiry()) {
-      return GetAccessor.get(core, fullGetRequest(id, opts), transcoder);
-    } else {
-      return GetAccessor.subdocGet(core, subdocGetRequest(id, opts), transcoder);
-    }
-  }
-
-  /**
-   * Helper method to create a get request for a full doc fetch.
-   *
-   * @param id the document id which is used to uniquely identify it.
-   * @param opts custom options to change the default behavior.
-   * @return the get request.
-   */
-  @Stability.Internal
-  GetRequest fullGetRequest(final String id, final GetOptions.Built opts) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-
-    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET, opts.parentSpan().orElse(null));
-    GetRequest request = new GetRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy, span);
-    request.context().clientContext(opts.clientContext());
-    return request;
-  }
-
-  /**
-   * Helper method to create a get request for a subdoc fetch.
-   *
-   * @param id the document id which is used to uniquely identify it.
-   * @param opts custom options to change the default behavior.
-   * @return the subdoc get request.
-   */
-  @Stability.Internal
-  SubdocGetRequest subdocGetRequest(final String id, final GetOptions.Built opts) {
-    try {
-      notNullOrEmpty(id, "Id");
-
-      if (opts.withExpiry()) {
-        if (opts.projections().size() > 15) {
-          throw InvalidArgumentException.fromMessage("Only a maximum of 16 fields can be "
-            + "projected per request due to a server limitation (includes the expiration macro as one field).");
-        }
-      } else {
-        if (opts.projections().size() > 16) {
-          throw InvalidArgumentException.fromMessage("Only a maximum of 16 fields can be "
-            + "projected per request due to a server limitation.");
-        }
-      }
-    } catch (Exception cause) {
-      throw new InvalidArgumentException(
-        "Argument validation failed",
-        cause,
-        ReducedKeyValueErrorContext.create(id, collectionIdentifier)
-      );
-    }
-
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-
-    List<SubdocGetRequest.Command> commands = new ArrayList<>(16);
-
-    if (!opts.projections().isEmpty()) {
-      if (opts.projections().size() > 16) {
-        throw new UnsupportedOperationException("Only a maximum of 16 fields can be "
-          + "projected per request.");
-      }
-
-      List<String> projections = opts.projections();
-      for (int i = 0; i < projections.size(); i ++) {
-        commands.add(new SubdocGetRequest.Command(SubdocCommandType.GET, projections.get(i), false, commands.size()));
-      }
-    } else {
-      commands.add(new SubdocGetRequest.Command(
-        SubdocCommandType.GET_DOC,
-        "",
-        false,
-        commands.size()
-      ));
-    }
-
-    if (opts.withExpiry()) {
-      // xattrs must go first
-      commands.add(0, new SubdocGetRequest.Command(
-        SubdocCommandType.GET,
-        LookupInMacro.EXPIRY_TIME,
-        true,
-        commands.size()
-      ));
-
-      // If we have projections, there is no need to fetch the flags
-      // since only JSON is supported that implies the flags.
-      // This will also "force" the transcoder on the read side to be
-      // JSON aware since the flags are going to be hard-set to the
-      // JSON compat flags.
-      if (opts.projections().isEmpty()) {
-        commands.add(1, new SubdocGetRequest.Command(
-          SubdocCommandType.GET,
-          LookupInMacro.FLAGS,
-          true,
-          commands.size()
-        ));
-      }
-    }
-
-    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN,  opts.parentSpan().orElse(null));
-    SubdocGetRequest request = new SubdocGetRequest(
-      timeout, coreContext, collectionIdentifier, retryStrategy, id, (byte) 0x00, commands, span
-    );
-    request.context().clientContext(opts.clientContext());
-    return request;
+    return kvOps.getAsync(opts, id, opts.projections(), opts.withExpiry())
+      .thenApply(coreGetResult -> new GetResult(coreGetResult, transcoder));
   }
 
   /**
@@ -424,31 +303,8 @@ public class AsyncCollection {
     notNull(options, "GetAndLockOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     GetAndLockOptions.Built opts = options.build();
     final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
-    return GetAccessor.getAndLock(core, getAndLockRequest(id, lockTime, opts), transcoder);
-  }
-
-  /**
-   * Helper method to create the get and lock request.
-   *
-   * @param id the document id which is used to uniquely identify it.
-   * @param lockTime how long to lock the document for.  Any values above 30 seconds will be
-   *                 treated as 30 seconds.
-   * @param opts custom options to change the default behavior.
-   * @return the get and lock request.
-   */
-  @Stability.Internal
-  GetAndLockRequest getAndLockRequest(final String id, final Duration lockTime, final GetAndLockOptions.Built opts) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNull(lockTime, "LockTime", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-
-    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_LOCK, opts.parentSpan().orElse(null));
-    GetAndLockRequest request = new GetAndLockRequest(
-      id, timeout, coreContext, collectionIdentifier, retryStrategy, lockTime, span
-    );
-    request.context().clientContext(opts.clientContext());
-    return request;
+    return kvOps.getAndLockAsync(opts, id, lockTime)
+      .thenApply(coreGetResult -> new GetResult(coreGetResult, transcoder));
   }
 
   /**
@@ -478,31 +334,8 @@ public class AsyncCollection {
     notNull(options, "GetAndTouchOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     GetAndTouchOptions.Built opts = options.build();
     final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
-    return GetAccessor.getAndTouch(core, getAndTouchRequest(id, Expiry.relative(expiry), opts), transcoder);
-  }
-
-  /**
-   * Helper method for get and touch requests.
-   *
-   * @param id the document id which is used to uniquely identify it.
-   * @param expiry the new expiration time for the document.
-   * @param opts custom options to change the default behavior.
-   * @return the get and touch request.
-   */
-  @Stability.Internal
-  GetAndTouchRequest getAndTouchRequest(final String id, final Expiry expiry, final GetAndTouchOptions.Built opts) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH, opts.parentSpan().orElse(null));
-    long encodedExpiry = expiry.encode();
-    GetAndTouchRequest request = new GetAndTouchRequest(
-      id, timeout, coreContext, collectionIdentifier, retryStrategy, encodedExpiry, span
-    );
-    request.context().clientContext(opts.clientContext());
-    return request;
+    return kvOps.getAndTouchAsync(opts, id, Expiry.relative(expiry).encode())
+      .thenApply(coreGetResult -> new GetResult(coreGetResult, transcoder));
   }
 
   /**
@@ -592,29 +425,10 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
   public CompletableFuture<ExistsResult> exists(final String id, final ExistsOptions options) {
-    return ExistsAccessor.exists(id, core, existsRequest(id, options));
+    ExistsOptions.Built opts = notNull(options, "options").build();
+    return kvOps.existsAsync(opts, id).toFuture()
+      .thenApply(ExistsResult::from);
   }
-
-  /**
-   * Helper method to create the exists request from its options.
-   *
-   * @param id the document ID
-   * @param options custom options to change the default behavior
-   * @return the observe request used for exists.
-   */
-  GetMetaRequest existsRequest(final String id, final ExistsOptions options) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNull(options, "ExistsOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    ExistsOptions.Built opts = options.build();
-
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_EXISTS, opts.parentSpan().orElse(null));
-    GetMetaRequest request = new GetMetaRequest(id, timeout, coreContext, collectionIdentifier, retryStrategy, span);
-    request.context().clientContext(opts.clientContext());
-    return request;
-  }
-
 
   /**
    * Removes a Document from a collection with default options.
@@ -636,27 +450,14 @@ public class AsyncCollection {
   public CompletableFuture<MutationResult> remove(final String id, final RemoveOptions options) {
     notNull(options, "RemoveOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     RemoveOptions.Built opts = options.build();
-    return RemoveAccessor.remove(core, removeRequest(id, opts), id, opts.persistTo(), opts.replicateTo());
-  }
 
-  /**
-   * Helper method to create the remove request.
-   *
-   * @param id the id of the document to remove.
-   * @param opts custom options to change the default behavior.
-   * @return the remove request.
-   */
-  RemoveRequest removeRequest(final String id, final RemoveOptions.Built opts) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    final RequestSpan span = environment
-      .requestTracer()
-      .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_REMOVE, opts.parentSpan().orElse(null));
-    RemoveRequest request = new RemoveRequest(id, opts.cas(), timeout,
-      coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
-    request.context().clientContext(opts.clientContext());
-    return request;
+    return kvOps.removeAsync(
+        opts,
+        id,
+        opts.cas(),
+        opts.toCoreDurability()
+      )
+      .toFuture().thenApply(MutationResult::new);
   }
 
   /**
@@ -680,48 +481,18 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutationResult> insert(final String id, Object content, final InsertOptions options) {
     notNull(options, "InsertOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    InsertOptions.Built opts = options.build();
-    return InsertAccessor.insert(core, insertRequest(id, content, opts), id, opts.persistTo(), opts.replicateTo());
-  }
-
-  /**
-   * Helper method to generate the insert request.
-   *
-   * @param id the document id to insert.
-   * @param content the document content to insert.
-   * @param opts custom options to customize the insert behavior.
-   * @return the insert request.
-   */
-  InsertRequest insertRequest(final String id, final Object content, final InsertOptions.Built opts) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
-    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+    InsertOptions.Built opts = options.build();
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
-
-    final RequestSpan span = environment
-      .requestTracer()
-      .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_INSERT, opts.parentSpan().orElse(null));
-
-
-    final RequestSpan encodeSpan = CbTracing.newSpan(coreContext, TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
-    long start = System.nanoTime();
-    Transcoder.EncodedValue encoded;
-    try {
-      encoded = transcoder.encode(content);
-    } finally {
-      encodeSpan.end();
-    }
-    long end = System.nanoTime();
-
-    long expiry = opts.expiry().encode();
-    InsertRequest request = new InsertRequest(id, encoded.encoded(), expiry, encoded.flags(),
-      timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
-    request.context()
-      .clientContext(opts.clientContext())
-      .encodeLatency(end - start);
-    return request;
+    return kvOps.insertAsync(
+        opts,
+        id,
+        () -> transcoder.encode(content),
+        opts.toCoreDurability(),
+        opts.expiry().encode()
+      )
+      .toFuture().thenApply(MutationResult::new);
   }
 
   /**
@@ -745,47 +516,19 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutationResult> upsert(final String id, Object content, final UpsertOptions options) {
     notNull(options, "UpsertOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    UpsertOptions.Built opts = options.build();
-    return UpsertAccessor.upsert(core, upsertRequest(id, content, opts), id, opts.persistTo(), opts.replicateTo());
-  }
-
-  /**
-   * Helper method to generate the upsert request.
-   *
-   * @param id the document id to upsert.
-   * @param content the document content to upsert.
-   * @param opts custom options to customize the upsert behavior.
-   * @return the upsert request.
-   */
-  UpsertRequest upsertRequest(final String id, final Object content, final UpsertOptions.Built opts) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
-    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+    UpsertOptions.Built opts = options.build();
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
-
-    final RequestSpan span = environment
-      .requestTracer()
-      .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_UPSERT, opts.parentSpan().orElse(null));
-
-    final RequestSpan encodeSpan = CbTracing.newSpan(coreContext, TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
-    long start = System.nanoTime();
-    Transcoder.EncodedValue encoded;
-    try {
-      encoded = transcoder.encode(content);
-    } finally {
-      encodeSpan.end();
-    }
-    long end = System.nanoTime();
-
-    long expiry = opts.expiry().encode();
-    final UpsertRequest request = new UpsertRequest(id, encoded.encoded(), expiry, opts.preserveExpiry(), encoded.flags(),
-      timeout, coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
-    request.context()
-      .clientContext(opts.clientContext())
-      .encodeLatency(end - start);
-    return request;
+    return kvOps.upsertAsync(
+        opts,
+        id,
+        () -> transcoder.encode(content),
+        opts.toCoreDurability(),
+        opts.expiry().encode(),
+        opts.preserveExpiry()
+      )
+      .toFuture().thenApply(MutationResult::new);
   }
 
   /**
@@ -809,47 +552,20 @@ public class AsyncCollection {
    */
   public CompletableFuture<MutationResult> replace(final String id, Object content, final ReplaceOptions options) {
     notNull(options, "ReplaceOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    ReplaceOptions.Built opts = options.build();
-    return ReplaceAccessor.replace(core, replaceRequest(id, content, opts), id, opts.persistTo(), opts.replicateTo());
-  }
-
-  /**
-   * Helper method to generate the replace request.
-   *
-   * @param id the document id to replace.
-   * @param content the document content to replace.
-   * @param opts custom options to customize the replace behavior.
-   * @return the replace request.
-   */
-  ReplaceRequest replaceRequest(final String id, final Object content, final ReplaceOptions.Built opts) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
-    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+    ReplaceOptions.Built opts = options.build();
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
-
-    final RequestSpan span = environment
-      .requestTracer()
-      .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_REPLACE, opts.parentSpan().orElse(null));
-
-    final RequestSpan encodeSpan = CbTracing.newSpan(coreContext, TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
-    long start = System.nanoTime();
-    Transcoder.EncodedValue encoded;
-    try {
-      encoded = transcoder.encode(content);
-    } finally {
-      encodeSpan.end();
-    }
-    long end = System.nanoTime();
-
-    long expiry = opts.expiry().encode();
-    ReplaceRequest request = new ReplaceRequest(id, encoded.encoded(), expiry, opts.preserveExpiry(), encoded.flags(),
-      timeout, opts.cas(), coreContext, collectionIdentifier, retryStrategy, opts.durabilityLevel(), span);
-    request.context()
-      .clientContext(opts.clientContext())
-      .encodeLatency(end - start);
-    return request;
+    return kvOps.replaceAsync(
+        opts,
+        id,
+        () -> transcoder.encode(content),
+        opts.cas(),
+        opts.toCoreDurability(),
+        opts.expiry().encode(),
+        opts.preserveExpiry()
+      )
+      .toFuture().thenApply(MutationResult::new);
   }
 
   /**
@@ -872,32 +588,12 @@ public class AsyncCollection {
    * @return a {@link MutationResult} once the operation completes.
    */
   public CompletableFuture<MutationResult> touch(final String id, final Duration expiry, final TouchOptions options) {
-    notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    return TouchAccessor.touch(core, touchRequest(id, Expiry.relative(expiry), options), id);
-  }
-
-  /**
-   * Helper method to create the touch request.
-   *
-   * @param id the id of the document to update.
-   * @param expiry the new expiry for the document.
-   * @param options the custom options.
-   * @return the touch request.
-   */
-  TouchRequest touchRequest(final String id, final Expiry expiry, final TouchOptions options) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     notNull(options, "TouchOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    TouchOptions.Built opts = options.build();
+    notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
 
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_TOUCH, opts.parentSpan().orElse(null));
-    long encodedExpiry = expiry.encode();
-    TouchRequest request = new TouchRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
-        encodedExpiry, span);
-    request.context().clientContext(opts.clientContext());
-    return request;
+    TouchOptions.Built opts = options.build();
+    return kvOps.touchAsync(opts, id, Expiry.relative(expiry).encode())
+      .toFuture().thenApply(MutationResult::new);
   }
 
   /**
@@ -920,31 +616,9 @@ public class AsyncCollection {
    * @return the future which completes once a response has been received.
    */
   public CompletableFuture<Void> unlock(final String id, final long cas, final UnlockOptions options) {
-    return UnlockAccessor.unlock(id, core, unlockRequest(id, cas, options));
-  }
-
-  /**
-   * Helper method to create the unlock request.
-   *
-   * @param id the id of the document.
-   * @param cas the CAS value which is needed to unlock it.
-   * @param options the options to customize.
-   * @return the unlock request.
-   */
-  UnlockRequest unlockRequest(final String id, final long cas, final UnlockOptions options) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNull(options, "UnlockOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    if (cas == 0) {
-      throw new InvalidArgumentException("CAS cannot be 0", null, ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    }
+    notNull(options, "UnlockOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     UnlockOptions.Built opts = options.build();
-
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_UNLOCK, opts.parentSpan().orElse(null));
-    UnlockRequest request = new UnlockRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, cas, span);
-    request.context().clientContext(opts.clientContext());
-    return request;
+    return kvOps.unlockAsync(opts, id, cas).toFuture();
   }
 
   /**

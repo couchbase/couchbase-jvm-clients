@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+option go_package = "github.com/couchbase/stellar-nebula/genproto/analytics_v1;analytics_v1";
+option ruby_package = "Couchbase::StellarNebula::Generated::Analytics::V1";
+option java_package = "com.couchbase.client.protostellar.analytics.v1";
+option java_multiple_files = true;
+
+package couchbase.analytics.v1;
+
+import "google/protobuf/duration.proto";
+
+service Analytics {
+  rpc AnalyticsQuery(AnalyticsQueryRequest)
+      returns (stream AnalyticsQueryResponse) {}
+}
+
+message AnalyticsQueryRequest {
+  optional string bucket_name = 8;
+  optional string scope_name = 9;
+  string statement = 1;
+
+  optional bool read_only = 2;
+  optional string client_context_id = 3;
+  optional bool priority = 4;
+
+  enum ScanConsistency {
+    NOT_BOUNDED = 0;
+    REQUEST_PLUS = 1;
+  }
+  optional ScanConsistency scan_consistency = 5;
+  repeated bytes positional_parameters = 6;
+  map<string, bytes> named_parameters = 7;
+}
+
+message AnalyticsQueryResponse {
+  repeated bytes rows = 1;
+
+  message Metrics {
+    google.protobuf.Duration elapsed_time = 1;
+    google.protobuf.Duration execution_time = 2;
+    uint64 result_count = 3;
+    uint64 result_size = 4;
+    uint64 mutation_count = 5;
+    uint64 sort_count = 6;
+    uint64 error_count = 7;
+    uint64 warning_count = 8;
+    uint64 processed_objects = 9;
+  }
+
+  message MetaData {
+    message Warning {
+      uint32 code = 1;
+      string message = 2;
+    }
+
+    string request_id = 1;
+    string client_context_id = 2;
+    Metrics metrics = 3;
+    bytes signature = 4;
+    repeated Warning warnings = 5;
+    string status = 6;
+  }
+  optional MetaData meta_data = 2;
+}

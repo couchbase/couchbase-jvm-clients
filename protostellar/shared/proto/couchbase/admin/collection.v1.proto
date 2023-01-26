@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+option go_package = "github.com/couchbase/stellar-nebula/genproto/admin_collection_v1;admin_collection_v1";
+option ruby_package = "Couchbase::StellarNebula::Generated::CollectionAdmin::V1";
+option java_package = "com.couchbase.client.protostellar.admin.collection.v1";
+option java_multiple_files = true;
+
+package couchbase.admin.collection.v1;
+
+service CollectionAdmin {
+  rpc ListCollections(ListCollectionsRequest)
+      returns (ListCollectionsResponse) {}
+
+  rpc CreateScope(CreateScopeRequest) returns (CreateScopeResponse) {}
+  rpc DeleteScope(DeleteScopeRequest) returns (DeleteScopeResponse) {}
+  rpc CreateCollection(CreateCollectionRequest)
+      returns (CreateCollectionResponse) {}
+  rpc DeleteCollection(DeleteCollectionRequest)
+      returns (DeleteCollectionResponse) {}
+}
+
+message ListCollectionsRequest { string bucket_name = 1; }
+
+message ListCollectionsResponse {
+  message Collection { string name = 1; }
+
+  message Scope {
+    string name = 1;
+    repeated Collection collections = 2;
+  }
+
+  repeated Scope scopes = 1;
+}
+
+message CreateScopeRequest {
+  string bucket_name = 1;
+  string scope_name = 2;
+}
+
+message CreateScopeResponse {}
+
+message DeleteScopeRequest {
+  string bucket_name = 1;
+  string scope_name = 2;
+}
+
+message DeleteScopeResponse {}
+
+message CreateCollectionRequest {
+  string bucket_name = 1;
+  string scope_name = 2;
+  string collection_name = 3;
+}
+
+message CreateCollectionResponse {}
+
+message DeleteCollectionRequest {
+  string bucket_name = 1;
+  string scope_name = 2;
+  string collection_name = 3;
+}
+
+message DeleteCollectionResponse {}

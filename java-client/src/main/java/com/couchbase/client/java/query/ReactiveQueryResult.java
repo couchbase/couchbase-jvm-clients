@@ -30,18 +30,15 @@ import reactor.core.publisher.Mono;
  *
  * @since 3.0.0
  */
-public class ReactiveQueryResult {
-
-	private final QueryResponse response;
+public abstract class ReactiveQueryResult {
 
 	/**
 	 * The default serializer to use.
 	 */
-	private final JsonSerializer serializer;
+	protected final JsonSerializer serializer;
 
 	@Stability.Internal
-	public ReactiveQueryResult(final QueryResponse response, final JsonSerializer serializer) {
-		this.response = response;
+	public ReactiveQueryResult(final JsonSerializer serializer) {
 		this.serializer = serializer;
 	}
 
@@ -63,9 +60,7 @@ public class ReactiveQueryResult {
 	 * @return {@link Flux}
    * @throws DecodingFailureException (async) if the decoding cannot be completed successfully
 	 */
-	public <T> Flux<T> rowsAs(Class<T> target) {
-		return response.rows().map(n -> serializer.deserialize(target, n.data()));
-	}
+	public abstract <T> Flux<T> rowsAs(Class<T> target);
 
   /**
    * Get a {@link Flux} which publishes the rows that were fetched by the query which are then decoded to the
@@ -75,9 +70,7 @@ public class ReactiveQueryResult {
    * @return {@link Flux}
    * @throws DecodingFailureException (async) if the decoding cannot be completed successfully
    */
-	public <T> Flux<T> rowsAs(TypeRef<T> target) {
-		return response.rows().map(n -> serializer.deserialize(target, n.data()));
-	}
+	public abstract <T> Flux<T> rowsAs(TypeRef<T> target);
 
 	/**
 	 * Returns a {@link Mono} containing a {@link QueryMetaData},  giving access to the additional metadata associated with
@@ -86,8 +79,5 @@ public class ReactiveQueryResult {
 	 * Note that the metadata will only be available once all rows have been received, so it is recommended that you
 	 * first handle the rows in your code, and then the metadata.  This will avoid buffering all the rows in-memory.
 	 */
-	public Mono<QueryMetaData> metaData() {
-		return response.trailer().map(t -> QueryMetaData.from(response.header(), t));
-	}
-
+	public abstract Mono<QueryMetaData> metaData();
 }

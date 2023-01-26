@@ -33,41 +33,17 @@ import java.util.List;
  *
  * @since 3.0.0
  */
-public class QueryResult {
-
-    /**
-     * Stores the encoded rows from the query response.
-     */
-    private final List<QueryChunkRow> rows;
-
-    /**
-     * The header holds associated metadata that came back before the rows streamed.
-     */
-    private final QueryChunkHeader header;
-
-    /**
-     * The trailer holds associated metadata that came back after the rows streamed.
-     */
-    private final QueryChunkTrailer trailer;
-
+public abstract class QueryResult {
     /**
      * The default serializer to use.
      */
-    private final JsonSerializer serializer;
+    protected final JsonSerializer serializer;
 
     /**
      * Creates a new QueryResult.
-     *
-     * @param header the query header.
-     * @param rows the query rows.
-     * @param trailer the query trailer.
      */
     @Stability.Internal
-    public QueryResult(final QueryChunkHeader header, final List<QueryChunkRow> rows, final QueryChunkTrailer trailer,
-                final JsonSerializer serializer) {
-        this.rows = rows;
-        this.header = header;
-        this.trailer = trailer;
+    public QueryResult(final JsonSerializer serializer) {
         this.serializer = serializer;
     }
 
@@ -86,13 +62,7 @@ public class QueryResult {
      * @param target the target class to deserialize into.
      * @throws DecodingFailureException if any row could not be successfully deserialized.
      */
-    public <T> List<T> rowsAs(final Class<T> target) {
-        final List<T> converted = new ArrayList<>(rows.size());
-        for (QueryChunkRow row : rows) {
-            converted.add(serializer.deserialize(target, row.data()));
-        }
-        return converted;
-    }
+    public abstract <T> List<T> rowsAs(final Class<T> target);
 
     /**
      * Returns all rows, converted into instances of the target type.
@@ -100,27 +70,10 @@ public class QueryResult {
      * @param target the target type to deserialize into.
      * @throws DecodingFailureException if any row could not be successfully deserialized.
      */
-    public <T> List<T> rowsAs(final TypeRef<T> target) {
-        final List<T> converted = new ArrayList<>(rows.size());
-        for (QueryChunkRow row : rows) {
-            converted.add(serializer.deserialize(target, row.data()));
-        }
-        return converted;
-    }
+    public abstract  <T> List<T> rowsAs(final TypeRef<T> target);
 
     /**
      * Returns the {@link QueryMetaData} giving access to the additional metadata associated with this query.
      */
-    public QueryMetaData metaData() {
-        return QueryMetaData.from(header, trailer);
-    }
-
-    @Override
-    public String toString() {
-        return "QueryResult{" +
-            "rows=" + rows +
-            ", header=" + header +
-            ", trailer=" + trailer +
-            '}';
-    }
+    public abstract QueryMetaData metaData();
 }

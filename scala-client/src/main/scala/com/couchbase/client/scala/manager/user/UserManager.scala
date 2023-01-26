@@ -63,6 +63,14 @@ class UserManager(val async: AsyncUserManager, val reactive: ReactiveUserManager
     Collection.block(async.dropUser(username, domain, timeout, retryStrategy))
   }
 
+  def changePassword(
+      newPassword: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Try[Unit] = {
+    Collection.block(async.changePassword(newPassword, timeout, retryStrategy))
+  }
+
   def availableRoles(
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy

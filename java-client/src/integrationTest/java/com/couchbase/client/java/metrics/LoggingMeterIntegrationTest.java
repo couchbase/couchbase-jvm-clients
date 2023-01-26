@@ -25,6 +25,7 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@IgnoreWhen(isProtostellarWillWorkLater = true)
 class LoggingMeterIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;

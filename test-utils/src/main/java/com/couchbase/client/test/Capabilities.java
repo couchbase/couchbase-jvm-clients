@@ -99,5 +99,9 @@ public enum Capabilities {
   /**
    * Supports KV Range Scan operations.
    */
-  RANGE_SCAN
+  RANGE_SCAN,
+  /**
+   * JVMCBC-1187: There is no cluster cap for Protostellar currently, but will be ultimately.
+   */
+  PROTOSTELLAR
 }

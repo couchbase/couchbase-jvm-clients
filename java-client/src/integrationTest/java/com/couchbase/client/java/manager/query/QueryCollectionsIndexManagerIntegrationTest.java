@@ -69,7 +69,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @IgnoreWhen(clusterTypes = { CAVES, MOCKED },
   missesCapabilities = { QUERY, COLLECTIONS },
-  clusterVersionIsBelow = REQUIRE_MB_50132)
+  clusterVersionIsBelow = REQUIRE_MB_50132
+)
 public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   // time to allow for watch operations that are expected to succeed eventually
@@ -122,6 +123,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     );
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // needs fixed STG query error handling
   @Test
   void createDuplicatePrimaryIndex() {
     CreatePrimaryQueryIndexOptions options = enrich(createPrimaryQueryIndexOptions());
@@ -133,6 +135,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     indexes.createPrimaryIndex(bucketName, options.ignoreIfExists(true));
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // needs fixed STG query error handling
   @Test
   void createDuplicateSecondaryIndex() {
     final String indexName = "foo" + UUID.randomUUID();
@@ -208,6 +211,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
       .orElseThrow(() -> new AssertionError("Index '" + indexName + "' not found in scope '" + scope + "' collection '" + collection + "'"));
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // needs fixed STG query error handling
   @Test
   void dropPrimaryIndex() {
     assertThrows(IndexNotFoundException.class, () ->
@@ -222,6 +226,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     assertNoIndexesPresent();
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // needs fixed STG query error handling
   @Test
   void dropIndex() {
     assertThrows(IndexNotFoundException.class, () -> indexes.dropIndex(bucketName, "foo", enrich(dropQueryIndexOptions())));
@@ -391,6 +396,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     assertEquals("online", getIndex("#primary").state());
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // needs fixed STG query error handling
   @Test
   void reactiveErrorPropagationSmokeTest() {
     assertThrows(IndexNotFoundException.class, () ->
@@ -404,6 +410,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
         .block());
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // needs fixed STG query error handling
   @Test
   void reactiveMonosAreColdAndRepeatable() throws InterruptedException {
     // This should NOT result in the index being created.

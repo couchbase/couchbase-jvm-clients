@@ -42,7 +42,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(missesCapabilities = Capabilities.SEARCH, clusterTypes = ClusterType.CAVES, clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101)
+@IgnoreWhen(missesCapabilities = Capabilities.SEARCH,
+  clusterTypes = ClusterType.CAVES,
+  clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101,
+  isProtostellar = true
+)
 class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SearchIndexManagerIntegrationTest.class);

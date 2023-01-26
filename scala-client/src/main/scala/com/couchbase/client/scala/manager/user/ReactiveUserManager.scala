@@ -63,6 +63,8 @@ class ReactiveUserManager(private val core: Core) {
 
   private def pathForGroup(name: String) = pathForGroups + "/" + urlEncode(name)
 
+  private def pathForPassword = "/controller/changePassword"
+
   private def sendRequest(request: GenericManagerRequest): SMono[GenericManagerResponse] = {
     ManagerUtil.sendRequest(core, request)
   }
@@ -176,6 +178,23 @@ class ReactiveUserManager(private val core: Core) {
             case Failure(err) => SMono.error(err)
             case _            => SMono.just(())
           }
+        }
+      })
+  }
+
+  def changePassword(
+      newPassword: String,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
+
+    val params = UrlQueryStringBuilder.createForUrlSafeNames().add("password", newPassword)
+
+    sendRequest(HttpMethod.POST, pathForPassword, params, timeout, retryStrategy)
+      .flatMap((response: GenericManagerResponse) => {
+        checkStatus(response, "change user password") match {
+          case Failure(err) => SMono.error(err)
+          case _            => SMono.just(())
         }
       })
   }
