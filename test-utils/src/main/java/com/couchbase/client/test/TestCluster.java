@@ -35,7 +35,6 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -138,21 +137,26 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
    */
 
   protected List<TestNodeConfig> nodesFromConfig(final String inputHost, final Map<String, Object> config) {
-    List<TestNodeConfig> result = new ArrayList<>();
-    for (Map<String, Object> node : nodesExtFromConfig(config)) {
-      Map<String, Integer> services = getServicesFromNode(node);
-      String hostname = (String) node.get("hostname");
-      if (hostname == null) {
-        hostname = inputHost;
-      }
-      Map<Services, Integer> ports = new HashMap<>();
-      Arrays.stream(Services.values())
-        .filter(service -> services.containsKey(service.getNodeName()))
-        .forEach(service -> ports.put(service, services.get(service.getNodeName())));
+    return nodesExtFromConfig(config).stream()
+      .map(node -> createNode(node, inputHost))
+      .collect(Collectors.toList());
+  }
 
-      result.add(new TestNodeConfig(hostname, ports, false));
-    }
-    return result;
+  private static TestNodeConfig createNode(Map<String, Object> node, String defaultHost) {
+    return new TestNodeConfig(getHostname(node, defaultHost),
+      getPorts(getServicesFromNode(node)), false);
+  }
+
+  private static String getHostname(Map<String, Object> node, String defaultHost) {
+    return Optional.ofNullable(node.get("hostname"))
+      .map(String.class::cast)
+      .orElse(defaultHost);
+  }
+
+  private static Map<Services, Integer> getPorts(Map<String, Integer> services) {
+    return Arrays.stream(Services.values())
+      .filter(service -> services.containsKey(service.getNodeName()))
+      .collect(Collectors.toMap(service -> service, service -> services.get(service.getNodeName())));
   }
 
   @SuppressWarnings({"unchecked"})
