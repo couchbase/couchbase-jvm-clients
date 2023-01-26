@@ -75,6 +75,7 @@ public class CavesTestCluster extends TestCluster {
     this.baseUrl = "http://%s:%s";
     this.adminUsername = "Administrator";
     this.adminPassword = "password";
+    this.bucketname = "default";
     httpClient = new OkHttpClient.Builder()
       .connectTimeout(30, TimeUnit.SECONDS)
       .readTimeout(30, TimeUnit.SECONDS)
