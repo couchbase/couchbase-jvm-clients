@@ -17,18 +17,26 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.CasMismatchException;
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.PathInvalidException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownVirtualAttributeException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
-
+import com.couchbase.client.java.codec.RawStringTranscoder;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.kv.*;
+import com.couchbase.client.java.kv.GetResult;
+import com.couchbase.client.java.kv.LookupInMacro;
+import com.couchbase.client.java.kv.LookupInResult;
+import com.couchbase.client.java.kv.LookupInSpec;
+import com.couchbase.client.java.kv.MutateInOptions;
+import com.couchbase.client.java.kv.MutateInResult;
+import com.couchbase.client.java.kv.MutateInSpec;
+import com.couchbase.client.java.kv.StoreSemantics;
+import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
@@ -37,17 +45,20 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.java.kv.LookupInSpec.get;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyMap;
-import static java.util.Collections.singletonList;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BooleanTypeRef extends TypeRef<Boolean> {
 }
@@ -173,6 +184,74 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
         listOf(LookupInSpec.get("x[")) // syntax error
       ).contentAs(0, String.class)
     );
+  }
+
+  @Test
+  void xattrOrder() {
+    String docId = UUID.randomUUID().toString();
+    collection.upsert(docId, mapOf("magicWord", "xyzzy"));
+
+    // Must be okay for xattr lookups to come after normal lookups
+    LookupInResult result = collection.lookupIn(docId, listOf(
+      LookupInSpec.get("magicWord"),
+      LookupInSpec.get("someXattr").xattr()
+    ));
+
+    assertEquals("xyzzy", result.contentAs(0, String.class));
+    assertFalse(result.exists(1));
+  }
+
+  @Test
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  void notJson() {
+    String docId = UUID.randomUUID().toString();
+    collection.upsert(
+      docId,
+      "I am not JSON!",
+      UpsertOptions.upsertOptions()
+        .transcoder(RawStringTranscoder.INSTANCE)
+    );
+
+    // Overall request succeeds
+    LookupInResult result = collection.lookupIn(
+      docId,
+      listOf(LookupInSpec.get("x"))
+    );
+
+    // Touching the items triggers the exception
+    assertThrows(DocumentNotJsonException.class, () -> result.contentAs(0, String.class));
+
+    // Arguably should throw DocumentNotJsonException, but this is the current behavior, so...
+    assertFalse(result.exists(0));
+  }
+
+  @Test
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  void notJsonMulti() {
+    String docId = UUID.randomUUID().toString();
+    collection.upsert(
+      docId,
+      "I am not JSON!",
+      UpsertOptions.upsertOptions()
+        .transcoder(RawStringTranscoder.INSTANCE)
+    );
+
+    // Overall request succeeds
+    LookupInResult result = collection.lookupIn(
+      docId,
+      listOf(
+        LookupInSpec.get("x"),
+        LookupInSpec.get("y")
+      )
+    );
+
+    // Touching the items triggers the exception
+    assertThrows(DocumentNotJsonException.class, () -> result.contentAs(0, String.class));
+    assertThrows(DocumentNotJsonException.class, () -> result.contentAs(1, String.class));
+
+    // Arguably should throw DocumentNotJsonException, but this is the current behavior, so...
+    assertFalse(result.exists(0));
+    assertFalse(result.exists(1));
   }
 
   @Test
