@@ -403,16 +403,20 @@ class Collection(
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): Try[MutateInResult] = {
-    Try(kvOps.subdocMutateBlocking(makeCommonOptions(timeout),
-      id,
-      () => spec.map(v => v.convert).asJava,
-      convert(document),
-      cas,
-      convert(durability),
-      0,
-      false,
-      false,
-      false)).map(result => convert(result))
+    Try(
+      kvOps.subdocMutateBlocking(
+        makeCommonOptions(timeout),
+        id,
+        () => spec.map(v => v.convert).asJava,
+        convert(document),
+        cas,
+        convert(durability),
+        0,
+        false,
+        false,
+        false
+      )
+    ).map(result => convert(result))
   }
 
   /** Sub-Document mutations allow modifying parts of a JSON document directly, which can be more efficiently than
@@ -434,16 +438,20 @@ class Collection(
       spec: collection.Seq[MutateInSpec],
       options: MutateInOptions
   ): Try[MutateInResult] = {
-    Try(kvOps.subdocMutateBlocking(convert(options),
-      id,
-      () => spec.map(v => v.convert).asJava,
-      convert(options.document),
-      options.cas,
-      convert(options.durability),
-      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-      options.preserveExpiry,
-      options.accessDeleted,
-      options.createAsDeleted)).map(result => convert(result))
+    Try(
+      kvOps.subdocMutateBlocking(
+        convert(options),
+        id,
+        () => spec.map(v => v.convert).asJava,
+        convert(options.document),
+        options.cas,
+        convert(options.durability),
+        ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
+        options.preserveExpiry,
+        options.accessDeleted,
+        options.createAsDeleted
+      )
+    ).map(result => convert(result))
   }
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.

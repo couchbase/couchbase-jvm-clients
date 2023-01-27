@@ -54,12 +54,12 @@ case class MutateInResult(
     */
   def contentAs[T](index: Int)(implicit deserializer: JsonDeserializer[T]): Try[T] = {
     Try(content.field(index))
-            .flatMap(field => {
-              field.error().asScala match {
-                case Some(err) => Failure(err)
-                case _ =>
-                  deserializer.deserialize(field.value())
-              }
-            })
+      .flatMap(field => {
+        field.error().asScala match {
+          case Some(err) => Failure(err)
+          case _ =>
+            deserializer.deserialize(field.value())
+        }
+      })
   }
 }

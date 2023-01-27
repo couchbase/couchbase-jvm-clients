@@ -30,7 +30,13 @@ import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.msg.kv.{DurabilityLevel, MutationToken}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.kv.Observe.{ObservePersistTo, ObserveReplicateTo}
-import com.couchbase.client.scala.codec.{EncodedValue, JsonSerializer, Transcoder, TranscoderWithSerializer, TranscoderWithoutSerializer}
+import com.couchbase.client.scala.codec.{
+  EncodedValue,
+  JsonSerializer,
+  Transcoder,
+  TranscoderWithSerializer,
+  TranscoderWithoutSerializer
+}
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv.{
@@ -133,8 +139,12 @@ private[scala] object CoreCommonConverters {
       in.key(),
       in,
       in.cas(),
-      in.mutationToken().asScala
-              .map(mt => new MutationToken(mt.partitionID, mt.partitionUUID, mt.sequenceNumber, mt.bucketName))
+      in.mutationToken()
+        .asScala
+        .map(
+          mt =>
+            new MutationToken(mt.partitionID, mt.partitionUUID, mt.sequenceNumber, mt.bucketName)
+        )
     )
   }
 
@@ -187,15 +197,15 @@ private[scala] object CoreCommonConverters {
     java.time.Duration.ofMillis(in.toMillis)
   }
 
-    def convert(in: StoreSemantics): CoreStoreSemantics = {
-        in match {
-            case StoreSemantics.Replace => CoreStoreSemantics.REPLACE
-            case StoreSemantics.Insert => CoreStoreSemantics.INSERT
-            case StoreSemantics.Upsert => CoreStoreSemantics.UPSERT
-        }
+  def convert(in: StoreSemantics): CoreStoreSemantics = {
+    in match {
+      case StoreSemantics.Replace => CoreStoreSemantics.REPLACE
+      case StoreSemantics.Insert  => CoreStoreSemantics.INSERT
+      case StoreSemantics.Upsert  => CoreStoreSemantics.UPSERT
     }
+  }
 
-    def encoder[T](
+  def encoder[T](
       transcoder: Transcoder,
       serializer: JsonSerializer[T],
       content: T

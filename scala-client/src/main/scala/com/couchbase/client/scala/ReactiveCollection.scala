@@ -16,9 +16,7 @@
 
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.CoreKeyspace
 import com.couchbase.client.core.annotation.Stability.Volatile
-import com.couchbase.client.core.msg.kv.GetRequest
 import com.couchbase.client.scala.codec.JsonSerializer
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
@@ -36,7 +34,6 @@ import reactor.core.scala.publisher.{SFlux, SMono}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
-import scala.util.{Failure, Success, Try}
 
 /** Provides asynchronous access to all collection APIs, based around reactive programming using the
   * [[https://projectreactor.io/ Project Reactor]] library.  This is the main entry-point
@@ -244,16 +241,20 @@ class ReactiveCollection(async: AsyncCollection) {
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): SMono[MutateInResult] = {
-    convert(kvOps.subdocMutateReactive(makeCommonOptions(timeout),
-      id,
-      () => spec.map(v => v.convert).asJava,
-      convert(document),
-      cas,
-      convert(durability),
-      0,
-      false,
-      false,
-      false)).map(result => convert(result))
+    convert(
+      kvOps.subdocMutateReactive(
+        makeCommonOptions(timeout),
+        id,
+        () => spec.map(v => v.convert).asJava,
+        convert(document),
+        cas,
+        convert(durability),
+        0,
+        false,
+        false,
+        false
+      )
+    ).map(result => convert(result))
   }
 
   /** SubDocument mutations allow modifying parts of a JSON document directly, which can be more efficiently than
@@ -265,16 +266,20 @@ class ReactiveCollection(async: AsyncCollection) {
       spec: collection.Seq[MutateInSpec],
       options: MutateInOptions
   ): SMono[MutateInResult] = {
-    convert(kvOps.subdocMutateReactive(convert(options),
-      id,
-      () => spec.map(v => v.convert).asJava,
-      convert(options.document),
-      options.cas,
-      convert(options.durability),
-      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-      options.preserveExpiry,
-      options.accessDeleted,
-      options.createAsDeleted)).map(result => convert(result))
+    convert(
+      kvOps.subdocMutateReactive(
+        convert(options),
+        id,
+        () => spec.map(v => v.convert).asJava,
+        convert(options.document),
+        options.cas,
+        convert(options.durability),
+        ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
+        options.preserveExpiry,
+        options.accessDeleted,
+        options.createAsDeleted
+      )
+    ).map(result => convert(result))
   }
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
