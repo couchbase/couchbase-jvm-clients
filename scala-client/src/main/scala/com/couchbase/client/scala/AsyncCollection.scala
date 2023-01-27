@@ -35,6 +35,7 @@ import com.couchbase.client.scala.kv.handlers._
 import com.couchbase.client.scala.util.CoreCommonConverters.{
   convert,
   convertExpiry,
+  convertReplica,
   encoder,
   makeCommonOptions
 }
@@ -484,8 +485,9 @@ class AsyncCollection(
       id: String,
       timeout: Duration = kvReadTimeout
   ): Future[GetReplicaResult] = {
-    val opts = GetAnyReplicaOptions().timeout(timeout)
-    getAnyReplica(id, opts)
+    convert(kvOps.getAnyReplicaReactive(makeCommonOptions(timeout), id))
+      .map(result => convertReplica(result, environment, None))
+      .toFuture
   }
 
   /** Retrieves any available version of the document.
@@ -495,10 +497,16 @@ class AsyncCollection(
       id: String,
       options: GetAnyReplicaOptions
   ): Future[GetReplicaResult] = {
-    getAllReplicas(id, options.convert).take(1).head
+    convert(kvOps.getAnyReplicaReactive(convert(options), id))
+      .map(result => convertReplica(result, environment, None))
+      .toFuture
   }
 
   /** Retrieves all available versions of the document.
+    *
+    * Note that this will block the user's thread until all versions have been returned (or failed).
+    *
+    * Users needing a true non-blocking streaming version should use the reactive version.
     *
     * $Same */
   def getAllReplicas(
@@ -511,56 +519,25 @@ class AsyncCollection(
 
   /** Retrieves all available versions of the document.
     *
+    * Note that this will block the user's thread until all versions have been returned (or failed).
+    *
+    * Users needing a true non-blocking streaming version should use the reactive version.
+    *
     * $Same */
   def getAllReplicas(
       id: String,
       options: GetAllReplicasOptions
   ): Seq[Future[GetReplicaResult]] = {
-    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
-    val reqsTry: Try[Seq[GetRequest]] =
-      getFromReplicaHandler.requestAll(
-        id,
-        timeout,
-        options.retryStrategy.getOrElse(environment.retryStrategy),
-        options.parentSpan
-      )
-
-    reqsTry match {
-      case Failure(err) => Seq(Future.failed(err))
-
-      case Success(reqs: Seq[GetRequest]) =>
-        reqs.map(request => {
-          core.send(request)
-
-          val out = FutureConverters
-            .toScala(request.response())
-            .flatMap(response => {
-              val isReplica = request match {
-                case _: GetRequest => false
-                case _             => true
-              }
-              getFromReplicaHandler.response(
-                request,
-                id,
-                response,
-                isReplica,
-                options.transcoder.getOrElse(environment.transcoder)
-              ) match {
-                case Some(x) => Future.successful(x)
-                case _ =>
-                  val ctx = KeyValueErrorContext.completedRequest(request, response)
-                  Future.failed(new DocumentNotFoundException(ctx))
-              }
-            })
-
-          out onComplete {
-            case Success(_)                              => request.context.logicallyComplete()
-            case Failure(err: DocumentNotFoundException) => request.context.logicallyComplete()
-            case Failure(err)                            => request.context.logicallyComplete(err)
-          }
-          out
-        })
-    }
+    // With the move to kvOps (and Protostellar support), we don't know how many replicas we're
+    // getting until we've got them all.  Previously we would check the config for this information.
+    // Since the API here returns a Seq and not a Future, there is unfortunately
+    // no option but to block & buffer the stream and return already completed/failed Futures.
+    // Users that require a true streaming solution should use the reactive version.
+    convert(kvOps.getAllReplicasReactive(convert(options), id))
+      .map(result => convertReplica(result, environment, None))
+      .collectSeq()
+      .block(options.timeout)
+      .map(result => Future.successful(result))
   }
 
   /** Checks if a document exists.

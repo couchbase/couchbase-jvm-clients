@@ -26,6 +26,7 @@ import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.util.CoreCommonConverters.{
   convert,
   convertExpiry,
+  convertReplica,
   encoder,
   makeCommonOptions
 }
@@ -54,11 +55,8 @@ class ReactiveCollection(async: AsyncCollection) {
   private[scala] val kvTimeout: Durability => Duration = TimeoutUtil.kvTimeout(async.environment)
   private[scala] val kvReadTimeout: Duration           = async.kvReadTimeout
   private val environment                              = async.environment
-  private val core                                     = async.core
   private implicit val ec: ExecutionContext            = async.ec
   private[scala] val kvOps                             = async.kvOps
-
-  import com.couchbase.client.scala.util.DurationConversions._
 
   def name: String       = async.name
   def bucketName: String = async.bucketName
@@ -380,7 +378,8 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       timeout: Duration = kvReadTimeout
   ): SMono[GetReplicaResult] = {
-    SMono.defer(() => getAnyReplica(id, GetAnyReplicaOptions().timeout(timeout)))
+    convert(kvOps.getAnyReplicaReactive(makeCommonOptions(timeout), id))
+      .map(result => convertReplica(result, environment, None))
   }
 
   /** Retrieves any available version of the document.
@@ -390,10 +389,8 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       options: GetAnyReplicaOptions
   ): SMono[GetReplicaResult] = {
-    val timeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
-    getAllReplicas(id, options.convert)
-      .timeout(timeout)
-      .next()
+    convert(kvOps.getAnyReplicaReactive(convert(options), id))
+      .map(result => convertReplica(result, environment, None))
   }
 
   /** Retrieves all available versions of the document.
@@ -403,7 +400,8 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       timeout: Duration = kvReadTimeout
   ): SFlux[GetReplicaResult] = {
-    getAllReplicas(id, GetAllReplicasOptions().timeout(timeout))
+    convert(kvOps.getAllReplicasReactive(makeCommonOptions(timeout), id))
+      .map(result => convertReplica(result, environment, None))
   }
 
   /** Retrieves all available versions of the document.
@@ -413,41 +411,8 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       options: GetAllReplicasOptions
   ): SFlux[GetReplicaResult] = {
-    val retryStrategy = options.retryStrategy.getOrElse(environment.retryStrategy)
-    val transcoder    = options.transcoder.getOrElse(environment.transcoder)
-    val timeout       = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
-
-    val reqsTry: Try[Seq[GetRequest]] =
-      async.getFromReplicaHandler.requestAll(id, timeout, retryStrategy, options.parentSpan)
-
-    reqsTry match {
-      case Failure(err) => SFlux.error(err)
-
-      case Success(reqs: Seq[GetRequest]) =>
-        SFlux.defer({
-          val monos: Seq[SMono[GetReplicaResult]] = reqs.map(request => {
-            core.send(request)
-
-            FutureConversions
-              .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-              .flatMap(r => {
-                val isReplica = request match {
-                  case _: GetRequest => false
-                  case _             => true
-                }
-                async.getFromReplicaHandler.response(request, id, r, isReplica, transcoder) match {
-                  case Some(getResult) => SMono.just(getResult)
-                  case _               => SMono.empty[GetReplicaResult]
-                }
-              })
-              .doOnNext(_ => request.context.logicallyComplete)
-              .doOnError(err => request.context().logicallyComplete(err))
-          })
-
-          SFlux.mergeSequential(monos).timeout(timeout)
-        })
-    }
-
+    convert(kvOps.getAllReplicasReactive(convert(options), id))
+      .map(result => convertReplica(result, environment, None))
   }
 
   /** Updates the expiry of the document with the given id.

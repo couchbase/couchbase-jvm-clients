@@ -44,6 +44,16 @@ import com.couchbase.client.scala.kv.{
 }
 import reactor.core.publisher.Mono
 import reactor.core.scala.publisher.SMono
+import com.couchbase.client.scala.kv.{
+  ExistsResult,
+  GetReplicaResult,
+  GetResult,
+  MutateInResult,
+  MutationResult,
+  StoreSemantics
+}
+import reactor.core.publisher.{Flux, Mono}
+import reactor.core.scala.publisher.{SFlux, SMono}
 
 import java.util.function.Supplier
 import scala.concurrent.Future
@@ -90,6 +100,22 @@ private[scala] object CoreCommonConverters {
     )
   }
 
+  def convertReplica(
+      in: CoreGetResult,
+      env: ClusterEnvironment,
+      transcoder: Option[Transcoder]
+  ): GetReplicaResult = {
+    new GetReplicaResult(
+      in.key(),
+      Left(in.content()),
+      in.flags(),
+      in.cas(),
+      Option(in.expiry()),
+      in.replica(),
+      transcoder.getOrElse(env.transcoder)
+    )
+  }
+
   def convert(in: CoreMutationResult): MutationResult = {
     MutationResult(
       in.cas(),
@@ -122,6 +148,10 @@ private[scala] object CoreCommonConverters {
 
   def convert[T](in: Mono[T]): SMono[T] = {
     FutureConversions.javaMonoToScalaMono(in)
+  }
+
+  def convert[T](in: Flux[T]): SFlux[T] = {
+    FutureConversions.javaFluxToScalaFlux(in)
   }
 
   def convert(in: Durability): CoreDurability = {
