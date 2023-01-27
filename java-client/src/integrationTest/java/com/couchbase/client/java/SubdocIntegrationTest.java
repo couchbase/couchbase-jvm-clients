@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.CasMismatchException;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
@@ -24,6 +25,7 @@ import com.couchbase.client.core.error.subdoc.PathInvalidException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownVirtualAttributeException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
+import com.couchbase.client.core.util.CbThrowables;
 import com.couchbase.client.java.codec.RawStringTranscoder;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
@@ -45,12 +47,17 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.core.util.CbThrowables.findCause;
+import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static com.couchbase.client.java.kv.LookupInSpec.get;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyMap;
@@ -59,6 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class BooleanTypeRef extends TypeRef<Boolean> {
 }
@@ -184,6 +192,26 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
         listOf(LookupInSpec.get("x[")) // syntax error
       ).contentAs(0, String.class)
     );
+  }
+
+  @Test
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  void tooManyCommands() {
+    String docId = UUID.randomUUID().toString();
+
+    List<LookupInSpec> specs = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      specs.add(LookupInSpec.get("foo" + i));
+    }
+
+    CouchbaseException e = assertThrows(CouchbaseException.class, () ->
+      collection.lookupIn(docId, specs)
+    );
+
+    if (!hasCause(e, InvalidArgumentException.class)) {
+      e.printStackTrace();
+      fail("Expected cause to be InvalidArgumentException, but got the above stack trace.");
+    }
   }
 
   @Test

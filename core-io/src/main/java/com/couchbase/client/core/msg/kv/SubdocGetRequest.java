@@ -21,6 +21,8 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
@@ -130,11 +132,14 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
   @Override
   public SubdocGetResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
+    short rawStatus = status(response);
     Optional<ByteBuf> maybeBody = body(response);
-    SubDocumentField[] values;
-    List<CouchbaseException> errors = null;
     MemcacheProtocol.FlexibleExtras flexibleExtras = MemcacheProtocol.flexibleExtras(response);
 
+    checkCommandLimit(rawStatus, maybeBody, flexibleExtras);
+
+    SubDocumentField[] values;
+    List<CouchbaseException> errors = null;
     if (maybeBody.isPresent()) {
       ByteBuf body = maybeBody.get();
       values = new SubDocumentField[commands.size()];
@@ -158,7 +163,6 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       values = new SubDocumentField[0];
     }
 
-    short rawStatus = status(response);
     ResponseStatus status = decodeStatus(response);
     boolean isDeleted = rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE_DELETED.status()
             || rawStatus == Status.SUBDOC_SUCCESS_DELETED_DOCUMENT.status();
@@ -196,6 +200,31 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
     // Do not handle SUBDOC_INVALID_COMBO here, it indicates a client-side bug
     return new SubdocGetResponse(status, error, values, cas(response), isDeleted, flexibleExtras);
+  }
+
+  private void checkCommandLimit(short rawStatus, Optional<ByteBuf> maybeBody, FlexibleExtras flexibleExtras) {
+    if (rawStatus == Status.SUBDOC_INVALID_COMBO.status()) {
+      // Assume we are not sending lookups and mutations in the same request.
+      // The server also uses this error code when there are too many commands.
+      String msg = "Sub-document lookup failed with error code INVALID_COMBO," +
+        " which probably means too many sub-document operations in a single request.";
+
+      if (maybeBody.isPresent()) {
+        // The body includes the actual sub-doc operation limit.
+        // Include it in the exception message, but only if it looks like a JSON object.
+        String body = maybeBody.get().toString(UTF_8);
+        if (body.startsWith("{")) {
+          msg += " Server said: " + body;
+        }
+      }
+
+      ErrorContext errorContext = createSubDocumentExceptionContext(
+        SubDocumentOpResponseStatus.INVALID_COMBO,
+        flexibleExtras
+      );
+
+      throw new InvalidArgumentException(msg, null, errorContext);
+    }
   }
 
   private SubDocumentErrorContext createSubDocumentExceptionContext(SubDocumentOpResponseStatus status,
