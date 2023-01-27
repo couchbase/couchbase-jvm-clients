@@ -33,6 +33,8 @@ import java.time.Duration;
 public class BucketConfigUtil {
     private BucketConfigUtil() {}
 
+    private static final Duration retryDelay = Duration.ofMillis(100);
+
     /**
      * A bucket config can be null while the bucket has not been opened.  This method allows easily for a config to be
      * available.
@@ -40,8 +42,6 @@ public class BucketConfigUtil {
     public static Mono<BucketConfig> waitForBucketConfig(final Core core,
                                                          final String bucketName,
                                                          final Duration timeout) {
-        final Duration retryDelay = Duration.ofMillis(100);
-
         return Mono.fromCallable(() -> {
             final BucketConfig bucketConfig = core.clusterConfig().bucketConfig(bucketName);
             if (bucketConfig == null) {
