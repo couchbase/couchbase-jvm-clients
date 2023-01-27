@@ -32,7 +32,12 @@ import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.kv.handlers._
-import com.couchbase.client.scala.util.CoreCommonConverters.{convert, convertExpiry, encoder, makeCommonOptions}
+import com.couchbase.client.scala.util.CoreCommonConverters.{
+  convert,
+  convertExpiry,
+  encoder,
+  makeCommonOptions
+}
 import com.couchbase.client.scala.util.{ExpiryUtil, FutureConversions, TimeoutUtil}
 import reactor.core.scala.publisher.{SFlux, SMono}
 
@@ -133,11 +138,15 @@ class AsyncCollection(
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    convert(kvOps.insertAsync(makeCommonOptions(timeout),
-      id,
-      encoder(environment.transcoder, serializer, content),
-      convert(durability),
-      0)).map(result => convert(result))
+    convert(
+      kvOps.insertAsync(
+        makeCommonOptions(timeout),
+        id,
+        encoder(environment.transcoder, serializer, content),
+        convert(durability),
+        0
+      )
+    ).map(result => convert(result))
   }
 
   /** Inserts a full document into this collection, if it does not exist already.
@@ -148,12 +157,15 @@ class AsyncCollection(
       content: T,
       options: InsertOptions
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    convert(kvOps.insertAsync(convert(options),
-      id,
-      encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
-      convert(options.durability),
-      ExpiryUtil.expiryActual(options.expiry, options.expiryTime)))
-            .map(result => convert(result))
+    convert(
+      kvOps.insertAsync(
+        convert(options),
+        id,
+        encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
+        convert(options.durability),
+        ExpiryUtil.expiryActual(options.expiry, options.expiryTime)
+      )
+    ).map(result => convert(result))
   }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
@@ -166,14 +178,17 @@ class AsyncCollection(
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    convert(kvOps.replaceAsync(makeCommonOptions(timeout),
-      id,
-      encoder(environment.transcoder, serializer, content),
-      cas,
-      convert(durability),
-      0,
-      false))
-            .map(result => convert(result))
+    convert(
+      kvOps.replaceAsync(
+        makeCommonOptions(timeout),
+        id,
+        encoder(environment.transcoder, serializer, content),
+        cas,
+        convert(durability),
+        0,
+        false
+      )
+    ).map(result => convert(result))
   }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
@@ -184,14 +199,17 @@ class AsyncCollection(
       content: T,
       options: ReplaceOptions
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    convert(kvOps.replaceAsync(convert(options),
-      id,
-      encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
-      options.cas,
-      convert(options.durability),
-      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-      options.preserveExpiry))
-            .map(result => convert(result))
+    convert(
+      kvOps.replaceAsync(
+        convert(options),
+        id,
+        encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
+        options.cas,
+        convert(options.durability),
+        ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
+        options.preserveExpiry
+      )
+    ).map(result => convert(result))
   }
 
   /** Upserts the contents of a full document in this collection.
@@ -203,13 +221,16 @@ class AsyncCollection(
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    convert(kvOps.upsertAsync(makeCommonOptions(timeout),
-      id,
-      encoder(environment.transcoder, serializer, content),
-      convert(durability),
-      0,
-      false))
-            .map(result => convert(result))
+    convert(
+      kvOps.upsertAsync(
+        makeCommonOptions(timeout),
+        id,
+        encoder(environment.transcoder, serializer, content),
+        convert(durability),
+        0,
+        false
+      )
+    ).map(result => convert(result))
   }
 
   /** Upserts the contents of a full document in this collection.
@@ -220,13 +241,16 @@ class AsyncCollection(
       content: T,
       options: UpsertOptions
   )(implicit serializer: JsonSerializer[T]): Future[MutationResult] = {
-    convert(kvOps.upsertAsync(convert(options),
-      id,
-      encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
-      convert(options.durability),
-      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-      options.preserveExpiry))
-            .map(result => convert(result))
+    convert(
+      kvOps.upsertAsync(
+        convert(options),
+        id,
+        encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
+        convert(options.durability),
+        ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
+        options.preserveExpiry
+      )
+    ).map(result => convert(result))
   }
 
   /** Removes a document from this collection, if it exists.
@@ -238,11 +262,8 @@ class AsyncCollection(
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): Future[MutationResult] = {
-    convert(kvOps.removeAsync(makeCommonOptions(timeout),
-      id,
-      cas,
-      convert(durability)))
-            .map(result => convert(result))
+    convert(kvOps.removeAsync(makeCommonOptions(timeout), id, cas, convert(durability)))
+      .map(result => convert(result))
   }
 
   /** Removes a document from this collection, if it exists.
@@ -252,11 +273,8 @@ class AsyncCollection(
       id: String,
       options: RemoveOptions
   ): Future[MutationResult] = {
-    convert(kvOps.removeAsync(convert(options),
-      id,
-      options.cas,
-      convert(options.durability)))
-            .map(result => convert(result))
+    convert(kvOps.removeAsync(convert(options), id, options.cas, convert(options.durability)))
+      .map(result => convert(result))
   }
 
   /** Fetches a full document from this collection.
@@ -266,11 +284,8 @@ class AsyncCollection(
       id: String,
       timeout: Duration = kvReadTimeout
   ): Future[GetResult] = {
-    convert(kvOps.getAsync(makeCommonOptions(timeout),
-      id,
-      AsyncCollection.EmptyList,
-      false))
-            .map(result => convert(result, environment, None))
+    convert(kvOps.getAsync(makeCommonOptions(timeout), id, AsyncCollection.EmptyList, false))
+      .map(result => convert(result, environment, None))
   }
 
   /** Fetches a full document from this collection.
@@ -280,11 +295,8 @@ class AsyncCollection(
       id: String,
       options: GetOptions
   ): Future[GetResult] = {
-    convert(kvOps.getAsync(convert(options),
-      id,
-      options.project.asJava,
-      options.withExpiry))
-            .map(result => convert(result, environment, options.transcoder))
+    convert(kvOps.getAsync(convert(options), id, options.project.asJava, options.withExpiry))
+      .map(result => convert(result, environment, options.transcoder))
   }
 
   private def getSubDoc(
@@ -412,10 +424,8 @@ class AsyncCollection(
       lockTime: Duration,
       timeout: Duration = kvReadTimeout
   ): Future[GetResult] = {
-    convert(kvOps.getAndLockAsync(makeCommonOptions(timeout),
-      id,
-      convert(lockTime)))
-            .map(result => convert(result, environment, None))
+    convert(kvOps.getAndLockAsync(makeCommonOptions(timeout), id, convert(lockTime)))
+      .map(result => convert(result, environment, None))
   }
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
@@ -426,10 +436,8 @@ class AsyncCollection(
       lockTime: Duration,
       options: GetAndLockOptions
   ): Future[GetResult] = {
-    convert(kvOps.getAndLockAsync(convert(options),
-      id,
-      convert(lockTime)))
-            .map(result => convert(result, environment, options.transcoder))
+    convert(kvOps.getAndLockAsync(convert(options), id, convert(lockTime)))
+      .map(result => convert(result, environment, options.transcoder))
   }
 
   /** Unlock a locked document.
@@ -440,9 +448,7 @@ class AsyncCollection(
       cas: Long,
       timeout: Duration = kvReadTimeout
   ): Future[Unit] = {
-    convert(kvOps.unlockAsync(makeCommonOptions(timeout),
-      id,
-      cas)).map(_ => ())
+    convert(kvOps.unlockAsync(makeCommonOptions(timeout), id, cas)).map(_ => ())
   }
 
   /** Unlock a locked document.
@@ -453,9 +459,7 @@ class AsyncCollection(
       cas: Long,
       options: UnlockOptions
   ): Future[Unit] = {
-    convert(kvOps.unlockAsync(convert(options),
-      id,
-      cas)).map(_ => ())
+    convert(kvOps.unlockAsync(convert(options), id, cas)).map(_ => ())
   }
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
@@ -466,10 +470,8 @@ class AsyncCollection(
       expiry: Duration,
       timeout: Duration = kvReadTimeout
   ): Future[GetResult] = {
-    convert(kvOps.getAndTouchAsync(makeCommonOptions(timeout),
-      id,
-      convertExpiry(expiry)))
-            .map(result => convert(result, environment, None))
+    convert(kvOps.getAndTouchAsync(makeCommonOptions(timeout), id, convertExpiry(expiry)))
+      .map(result => convert(result, environment, None))
   }
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
@@ -480,10 +482,8 @@ class AsyncCollection(
       expiry: Duration,
       options: GetAndTouchOptions
   ): Future[GetResult] = {
-    convert(kvOps.getAndTouchAsync(convert(options),
-      id,
-      convertExpiry(expiry)))
-            .map(result => convert(result, environment, options.transcoder))
+    convert(kvOps.getAndTouchAsync(convert(options), id, convertExpiry(expiry)))
+      .map(result => convert(result, environment, options.transcoder))
   }
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
@@ -614,7 +614,7 @@ class AsyncCollection(
       timeout: Duration = kvReadTimeout
   ): Future[ExistsResult] = {
     convert(kvOps.existsAsync(makeCommonOptions(timeout), id))
-            .map(result => convert(result))
+      .map(result => convert(result))
   }
 
   /** Checks if a document exists.
@@ -625,7 +625,7 @@ class AsyncCollection(
       options: ExistsOptions
   ): Future[ExistsResult] = {
     convert(kvOps.existsAsync(convert(options), id))
-            .map(result => convert(result))
+      .map(result => convert(result))
   }
 
   /** Updates the expiry of the document with the given id.
@@ -636,10 +636,8 @@ class AsyncCollection(
       expiry: Duration,
       timeout: Duration = kvReadTimeout
   ): Future[MutationResult] = {
-    convert(kvOps.touchAsync(makeCommonOptions(timeout),
-      id,
-      convertExpiry(expiry)))
-            .map(result => convert(result))
+    convert(kvOps.touchAsync(makeCommonOptions(timeout), id, convertExpiry(expiry)))
+      .map(result => convert(result))
   }
 
   /** Updates the expiry of the document with the given id.
@@ -650,10 +648,8 @@ class AsyncCollection(
       expiry: Duration,
       options: TouchOptions
   ): Future[MutationResult] = {
-    convert(kvOps.touchAsync(convert(options),
-      id,
-      ExpiryUtil.expiryActual(expiry, None)))
-            .map(result => convert(result))
+    convert(kvOps.touchAsync(convert(options), id, ExpiryUtil.expiryActual(expiry, None)))
+      .map(result => convert(result))
   }
 
   private[scala] def scanRequest(scanType: ScanType, opts: ScanOptions): SFlux[ScanResult] = {

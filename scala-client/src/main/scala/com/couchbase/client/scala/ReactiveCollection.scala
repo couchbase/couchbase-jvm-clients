@@ -23,7 +23,12 @@ import com.couchbase.client.scala.codec.JsonSerializer
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv._
-import com.couchbase.client.scala.util.CoreCommonConverters.{convert, convertExpiry, encoder, makeCommonOptions}
+import com.couchbase.client.scala.util.CoreCommonConverters.{
+  convert,
+  convertExpiry,
+  encoder,
+  makeCommonOptions
+}
 import com.couchbase.client.scala.util.{ExpiryUtil, FutureConversions, TimeoutUtil}
 import reactor.core.scala.publisher.{SFlux, SMono}
 
@@ -68,12 +73,15 @@ class ReactiveCollection(async: AsyncCollection) {
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    convert(kvOps.insertReactive(makeCommonOptions(timeout),
-      id,
-      encoder(environment.transcoder, serializer, content),
-      convert(durability),
-      0))
-            .map(result => convert(result))
+    convert(
+      kvOps.insertReactive(
+        makeCommonOptions(timeout),
+        id,
+        encoder(environment.transcoder, serializer, content),
+        convert(durability),
+        0
+      )
+    ).map(result => convert(result))
   }
 
   /** Inserts a full document into this collection, if it does not exist already.
@@ -84,12 +92,15 @@ class ReactiveCollection(async: AsyncCollection) {
       content: T,
       options: InsertOptions
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    convert(kvOps.insertReactive(convert(options),
-      id,
-      encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
-      convert(options.durability),
-      ExpiryUtil.expiryActual(options.expiry, options.expiryTime)))
-            .map(result => convert(result))
+    convert(
+      kvOps.insertReactive(
+        convert(options),
+        id,
+        encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
+        convert(options.durability),
+        ExpiryUtil.expiryActual(options.expiry, options.expiryTime)
+      )
+    ).map(result => convert(result))
   }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
@@ -102,14 +113,17 @@ class ReactiveCollection(async: AsyncCollection) {
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    convert(kvOps.replaceReactive(makeCommonOptions(timeout),
-      id,
-      encoder(environment.transcoder, serializer, content),
-      cas,
-      convert(durability),
-      0,
-      false))
-            .map(result => convert(result))
+    convert(
+      kvOps.replaceReactive(
+        makeCommonOptions(timeout),
+        id,
+        encoder(environment.transcoder, serializer, content),
+        cas,
+        convert(durability),
+        0,
+        false
+      )
+    ).map(result => convert(result))
   }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
@@ -120,14 +134,17 @@ class ReactiveCollection(async: AsyncCollection) {
       content: T,
       options: ReplaceOptions
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    convert(kvOps.replaceReactive(convert(options),
-      id,
-      encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
-      options.cas,
-      convert(options.durability),
-      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-      options.preserveExpiry))
-            .map(result => convert(result))
+    convert(
+      kvOps.replaceReactive(
+        convert(options),
+        id,
+        encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
+        options.cas,
+        convert(options.durability),
+        ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
+        options.preserveExpiry
+      )
+    ).map(result => convert(result))
   }
 
   /** Upserts the contents of a full document in this collection.
@@ -139,13 +156,16 @@ class ReactiveCollection(async: AsyncCollection) {
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    convert(kvOps.upsertReactive(makeCommonOptions(timeout),
-      id,
-      encoder(environment.transcoder, serializer, content),
-      convert(durability),
-      0,
-      false))
-            .map(result => convert(result))
+    convert(
+      kvOps.upsertReactive(
+        makeCommonOptions(timeout),
+        id,
+        encoder(environment.transcoder, serializer, content),
+        convert(durability),
+        0,
+        false
+      )
+    ).map(result => convert(result))
   }
 
   /** Upserts the contents of a full document in this collection.
@@ -156,13 +176,16 @@ class ReactiveCollection(async: AsyncCollection) {
       content: T,
       options: UpsertOptions
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    convert(kvOps.upsertReactive(convert(options),
-      id,
-      encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
-      convert(options.durability),
-      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-      options.preserveExpiry))
-            .map(result => convert(result))
+    convert(
+      kvOps.upsertReactive(
+        convert(options),
+        id,
+        encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
+        convert(options.durability),
+        ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
+        options.preserveExpiry
+      )
+    ).map(result => convert(result))
   }
 
   /** Removes a document from this collection, if it exists.
@@ -174,11 +197,8 @@ class ReactiveCollection(async: AsyncCollection) {
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): SMono[MutationResult] = {
-    convert(kvOps.removeReactive(makeCommonOptions(timeout),
-      id,
-      cas,
-      convert(durability)))
-            .map(result => convert(result))
+    convert(kvOps.removeReactive(makeCommonOptions(timeout), id, cas, convert(durability)))
+      .map(result => convert(result))
   }
 
   /** Removes a document from this collection, if it exists.
@@ -188,11 +208,8 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       options: RemoveOptions
   ): SMono[MutationResult] = {
-    convert(kvOps.removeReactive(convert(options),
-      id,
-      options.cas,
-      convert(options.durability)))
-            .map(result => convert(result))
+    convert(kvOps.removeReactive(convert(options), id, options.cas, convert(options.durability)))
+      .map(result => convert(result))
   }
 
   /** Fetches a full document from this collection.
@@ -202,11 +219,8 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       timeout: Duration = kvReadTimeout
   ): SMono[GetResult] = {
-    convert(kvOps.getReactive(makeCommonOptions(timeout),
-      id,
-      AsyncCollection.EmptyList,
-      false))
-            .map(result => convert(result, environment, None))
+    convert(kvOps.getReactive(makeCommonOptions(timeout), id, AsyncCollection.EmptyList, false))
+      .map(result => convert(result, environment, None))
   }
 
   /** Fetches a full document from this collection.
@@ -216,11 +230,8 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       options: GetOptions
   ): SMono[GetResult] = {
-    convert(kvOps.getReactive(convert(options),
-      id,
-      options.project.asJava,
-      options.withExpiry))
-            .map(result => convert(result, environment, options.transcoder))
+    convert(kvOps.getReactive(convert(options), id, options.project.asJava, options.withExpiry))
+      .map(result => convert(result, environment, options.transcoder))
   }
 
   /** SubDocument mutations allow modifying parts of a JSON document directly, which can be more efficiently than
@@ -260,10 +271,8 @@ class ReactiveCollection(async: AsyncCollection) {
       lockTime: Duration,
       timeout: Duration = kvReadTimeout
   ): SMono[GetResult] = {
-    convert(kvOps.getAndLockReactive(makeCommonOptions(timeout),
-      id,
-      convert(lockTime)))
-            .map(result => convert(result, environment, None))
+    convert(kvOps.getAndLockReactive(makeCommonOptions(timeout), id, convert(lockTime)))
+      .map(result => convert(result, environment, None))
   }
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
@@ -274,10 +283,8 @@ class ReactiveCollection(async: AsyncCollection) {
       lockTime: Duration,
       options: GetAndLockOptions
   ): SMono[GetResult] = {
-    convert(kvOps.getAndLockReactive(convert(options),
-      id,
-      convert(lockTime)))
-            .map(result => convert(result, environment, options.transcoder))
+    convert(kvOps.getAndLockReactive(convert(options), id, convert(lockTime)))
+      .map(result => convert(result, environment, options.transcoder))
   }
 
   /** Unlock a locked document.
@@ -288,9 +295,7 @@ class ReactiveCollection(async: AsyncCollection) {
       cas: Long,
       timeout: Duration = kvReadTimeout
   ): SMono[Unit] = {
-    convert(kvOps.unlockReactive(makeCommonOptions(timeout),
-      id,
-      cas)).map(_ => ())
+    convert(kvOps.unlockReactive(makeCommonOptions(timeout), id, cas)).map(_ => ())
   }
 
   /** Unlock a locked document.
@@ -301,9 +306,7 @@ class ReactiveCollection(async: AsyncCollection) {
       cas: Long,
       options: UnlockOptions
   ): SMono[Unit] = {
-    convert(kvOps.unlockReactive(convert(options),
-      id,
-      cas)).map(_ => ())
+    convert(kvOps.unlockReactive(convert(options), id, cas)).map(_ => ())
   }
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
@@ -314,10 +317,8 @@ class ReactiveCollection(async: AsyncCollection) {
       expiry: Duration,
       timeout: Duration = kvReadTimeout
   ): SMono[GetResult] = {
-    convert(kvOps.getAndTouchReactive(makeCommonOptions(timeout),
-      id,
-      convertExpiry(expiry)))
-            .map(result => convert(result, environment, None))
+    convert(kvOps.getAndTouchReactive(makeCommonOptions(timeout), id, convertExpiry(expiry)))
+      .map(result => convert(result, environment, None))
   }
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
@@ -328,10 +329,8 @@ class ReactiveCollection(async: AsyncCollection) {
       expiry: Duration,
       options: GetAndTouchOptions
   ): SMono[GetResult] = {
-    convert(kvOps.getAndTouchReactive(convert(options),
-      id,
-      convertExpiry(expiry)))
-            .map(result => convert(result, environment, options.transcoder))
+    convert(kvOps.getAndTouchReactive(convert(options), id, convertExpiry(expiry)))
+      .map(result => convert(result, environment, options.transcoder))
   }
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
@@ -443,10 +442,8 @@ class ReactiveCollection(async: AsyncCollection) {
       expiry: Duration,
       timeout: Duration = kvReadTimeout
   ): SMono[MutationResult] = {
-    convert(kvOps.touchReactive(makeCommonOptions(timeout),
-      id,
-      convertExpiry(expiry)))
-            .map(result => convert(result))
+    convert(kvOps.touchReactive(makeCommonOptions(timeout), id, convertExpiry(expiry)))
+      .map(result => convert(result))
   }
 
   /** Updates the expiry of the document with the given id.
@@ -457,10 +454,8 @@ class ReactiveCollection(async: AsyncCollection) {
       expiry: Duration,
       options: TouchOptions
   ): SMono[MutationResult] = {
-    convert(kvOps.touchReactive(convert(options),
-      id,
-      convertExpiry(expiry)))
-            .map(result => convert(result))
+    convert(kvOps.touchReactive(convert(options), id, convertExpiry(expiry)))
+      .map(result => convert(result))
   }
 
   /** Checks if a document exists.
@@ -471,7 +466,7 @@ class ReactiveCollection(async: AsyncCollection) {
       timeout: Duration = kvReadTimeout
   ): SMono[ExistsResult] = {
     convert(kvOps.existsReactive(makeCommonOptions(timeout), id))
-            .map(result => convert(result))
+      .map(result => convert(result))
   }
 
   /** Checks if a document exists.
@@ -482,7 +477,7 @@ class ReactiveCollection(async: AsyncCollection) {
       options: ExistsOptions
   ): SMono[ExistsResult] = {
     convert(kvOps.existsReactive(convert(options), id))
-            .map(result => convert(result))
+      .map(result => convert(result))
   }
 
   /** Initiates a KV range scan, which will return a stream of KV documents.

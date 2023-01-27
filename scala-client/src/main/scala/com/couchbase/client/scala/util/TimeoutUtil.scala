@@ -15,7 +15,11 @@
  */
 package com.couchbase.client.scala.util
 import com.couchbase.client.core.Core
-import com.couchbase.client.scala.durability.Durability.{ClientVerified, MajorityAndPersistToActive, PersistToMajority}
+import com.couchbase.client.scala.durability.Durability.{
+  ClientVerified,
+  MajorityAndPersistToActive,
+  PersistToMajority
+}
 import com.couchbase.client.scala.durability.{Durability, PersistTo}
 import com.couchbase.client.scala.env.{ClusterEnvironment, CoreEnvironment}
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
@@ -39,8 +43,8 @@ private[scala] object TimeoutUtil {
   def kvTimeout(core: Core, durability: Durability): Duration = {
     val isPersistLevel = durability match {
       case MajorityAndPersistToActive | PersistToMajority => true
-      case v: ClientVerified => v.persistTo != PersistTo.None
-      case _ => false
+      case v: ClientVerified                              => v.persistTo != PersistTo.None
+      case _                                              => false
     }
     if (isPersistLevel) {
       javaDurationToScala(core.context.environment.timeoutConfig.kvDurableTimeout())

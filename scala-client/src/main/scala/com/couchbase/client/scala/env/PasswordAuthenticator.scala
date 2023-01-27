@@ -50,5 +50,6 @@ case class PasswordAuthenticator(username: String, password: String) extends Aut
     inner.authHttpRequest(serviceType, request)
   }
 
-    override def authProtostellarRequest(metadata: Metadata): Unit = inner.authProtostellarRequest(metadata)
+  override def authProtostellarRequest(metadata: Metadata): Unit =
+    inner.authProtostellarRequest(metadata)
 }

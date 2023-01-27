@@ -17,7 +17,12 @@ package com.couchbase.client.scala.manager
 
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import com.couchbase.client.core.error.{CollectionExistsException, CollectionNotFoundException, ScopeExistsException, ScopeNotFoundException}
+import com.couchbase.client.core.error.{
+  CollectionExistsException,
+  CollectionNotFoundException,
+  ScopeExistsException,
+  ScopeNotFoundException
+}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.scala.{Cluster, TestUtils}
@@ -80,7 +85,12 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
   }
 
   def waitForCollectionToExist(collSpec: CollectionSpec): Unit = {
-    ConsistencyUtil.waitUntilCollectionPresent(cluster.async.core, bucketName, collSpec.scopeName, collSpec.name)
+    ConsistencyUtil.waitUntilCollectionPresent(
+      cluster.async.core,
+      bucketName,
+      collSpec.scopeName,
+      collSpec.name
+    )
     Util.waitUntilCondition(() => {
       val result = collections.collectionExists(collSpec)
 
@@ -94,7 +104,12 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
   }
 
   def waitForCollectionToNotExist(collSpec: CollectionSpec): Unit = {
-    ConsistencyUtil.waitUntilCollectionDropped(cluster.async.core, bucketName, collSpec.scopeName, collSpec.name)
+    ConsistencyUtil.waitUntilCollectionDropped(
+      cluster.async.core,
+      bucketName,
+      collSpec.scopeName,
+      collSpec.name
+    )
     Util.waitUntilCondition(() => {
       val result = collections.collectionExists(collSpec)
 
