@@ -35,12 +35,21 @@ import com.couchbase.client.protostellar.kv.v1.UpsertRequest;
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateExistsParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGetAndLockParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGetAndTouchParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGetParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateInsertParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateRemoveParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateReplaceParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateSubdocMutateParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateTouchParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateUnlockParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateUpsertParams;
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.convert;
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.convertExpiry;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.convertFromFlags;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
 
@@ -79,6 +88,7 @@ public class CoreProtostellarKeyValueRequests {
       .setKey(key)
       .build());
 
+    // Needs ING-369
     if (!projections.isEmpty() || withExpiry) {
       throw new UnsupportedOperationException("Projections and withExpiry are not yet supported with Protostellar, but will be");
     }
@@ -91,31 +101,29 @@ public class CoreProtostellarKeyValueRequests {
                                                                                                                  CoreKeyspace keyspace,
                                                                                                                  String key,
                                                                                                                  Duration lockTime) {
-    throw new UnsupportedOperationException("This operation is implemented in Protostellar but not STG currently");
+    validateGetAndLockParams(opts, key, lockTime);
 
-//    validateGetAndLockParams(opts, key, lockTime);
-//
-//    Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
-//    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetAndLockRequest> out = new ProtostellarKeyValueRequest<>(core,
-//      keyspace,
-//      key,
-//      CoreDurability.NONE,
-//      TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_LOCK,
-//      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_LOCK, CoreDurability.NONE, opts.parentSpan().orElse(null)),
-//      timeout,
-//      true,
-//      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
-//      opts.clientContext());
-//
-//    out.request(com.couchbase.client.protostellar.kv.v1.GetAndLockRequest.newBuilder()
-//      .setBucketName(keyspace.bucket())
-//      .setScopeName(keyspace.scope())
-//      .setCollectionName(keyspace.collection())
-//      .setKey(key)
-//      .setLockTime((int) lockTime.toMillis())
-//      .build());
-//
-//    return out;
+    Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
+    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetAndLockRequest> out = new ProtostellarKeyValueRequest<>(core,
+      keyspace,
+      key,
+      CoreDurability.NONE,
+      TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_LOCK,
+      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_LOCK, CoreDurability.NONE, opts.parentSpan().orElse(null)),
+      timeout,
+      true,
+      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
+      opts.clientContext());
+
+    out.request(com.couchbase.client.protostellar.kv.v1.GetAndLockRequest.newBuilder()
+      .setBucketName(keyspace.bucket())
+      .setScopeName(keyspace.scope())
+      .setCollectionName(keyspace.collection())
+      .setKey(key)
+      .setLockTime((int) lockTime.toMillis())
+      .build());
+
+    return out;
   }
 
   public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest> getAndTouchRequest(Core core,
@@ -123,31 +131,29 @@ public class CoreProtostellarKeyValueRequests {
                                                                                                                    CoreKeyspace keyspace,
                                                                                                                    String key,
                                                                                                                    long expiration) {
-    throw new UnsupportedOperationException("This operation is implemented in Protostellar but not STG currently");
+    validateGetAndTouchParams(opts, key, expiration);
 
-//    validateGetAndTouchParams(opts, key, expiration);
-//
-//    Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
-//    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest> out = new ProtostellarKeyValueRequest<>(core,
-//      keyspace,
-//      key,
-//      CoreDurability.NONE,
-//      TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH,
-//      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH, CoreDurability.NONE, opts.parentSpan().orElse(null)),
-//      timeout,
-//      true,
-//      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
-//      opts.clientContext());
-//
-//    out.request(com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest.newBuilder()
-//      .setBucketName(keyspace.bucket())
-//      .setScopeName(keyspace.scope())
-//      .setCollectionName(keyspace.collection())
-//      .setKey(key)
-//      .setExpiry(convertExpiry(expiration))
-//      .build());
-//
-//    return out;
+    Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
+    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest> out = new ProtostellarKeyValueRequest<>(core,
+      keyspace,
+      key,
+      CoreDurability.NONE,
+      TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH,
+      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH, CoreDurability.NONE, opts.parentSpan().orElse(null)),
+      timeout,
+      true,
+      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
+      opts.clientContext());
+
+    out.request(com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest.newBuilder()
+      .setBucketName(keyspace.bucket())
+      .setScopeName(keyspace.scope())
+      .setCollectionName(keyspace.collection())
+      .setKey(key)
+      .setExpiry(convertExpiry(expiration))
+      .build());
+
+    return out;
   }
 
   public static ProtostellarRequest<InsertRequest> insertRequest(Core core,
@@ -185,7 +191,7 @@ public class CoreProtostellarKeyValueRequests {
       request.setExpiry(CoreProtostellarUtil.convertExpiry(expiry));
     }
     if (!durability.isNone()) {
-      request.setDurabilityLevel(CoreProtostellarUtil.convert(durability));
+      request.setDurabilityLevel(convert(durability));
     }
 
     out.request(request.build());
@@ -231,7 +237,7 @@ public class CoreProtostellarKeyValueRequests {
       request.setExpiry(CoreProtostellarUtil.convertExpiry(expiry));
     }
     if (!durability.isNone()) {
-      request.setDurabilityLevel(CoreProtostellarUtil.convert(durability));
+      request.setDurabilityLevel(convert(durability));
     }
 
     if (preserveExpiry) {
@@ -279,7 +285,7 @@ public class CoreProtostellarKeyValueRequests {
       request.setExpiry(CoreProtostellarUtil.convertExpiry(expiry));
     }
     if (!durability.isNone()) {
-      request.setDurabilityLevel(CoreProtostellarUtil.convert(durability));
+      request.setDurabilityLevel(convert(durability));
     }
 
     if (preserveExpiry) {
@@ -332,7 +338,7 @@ public class CoreProtostellarKeyValueRequests {
       .setCas(cas);
 
     if (!durability.isNone()) {
-      request.setDurabilityLevel(CoreProtostellarUtil.convert(durability));
+      request.setDurabilityLevel(convert(durability));
     }
 
     out.request(request.build());
@@ -343,30 +349,28 @@ public class CoreProtostellarKeyValueRequests {
                                                                                                          CoreKeyspace keyspace,
                                                                                                          CoreCommonOptions opts,
                                                                                                          String key) {
-    throw new UnsupportedOperationException("This operation is implemented in Protostellar but not STG currently");
+    validateExistsParams(opts, key);
 
-//    validateExistsParams(opts, key);
-//
-//    Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
-//    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.ExistsRequest> out = new ProtostellarKeyValueRequest<>(core,
-//      keyspace,
-//      key,
-//      CoreDurability.NONE,
-//      TracingIdentifiers.SPAN_REQUEST_KV_EXISTS,
-//      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_EXISTS, CoreDurability.NONE, opts.parentSpan().orElse(null)),
-//      timeout,
-//      true,
-//      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
-//      opts.clientContext());
-//
-//    com.couchbase.client.protostellar.kv.v1.ExistsRequest.Builder request = com.couchbase.client.protostellar.kv.v1.ExistsRequest.newBuilder()
-//      .setBucketName(keyspace.bucket())
-//      .setScopeName(keyspace.scope())
-//      .setCollectionName(keyspace.collection())
-//      .setKey(key);
-//
-//    out.request(request.build());
-//    return out;
+    Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
+    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.ExistsRequest> out = new ProtostellarKeyValueRequest<>(core,
+      keyspace,
+      key,
+      CoreDurability.NONE,
+      TracingIdentifiers.SPAN_REQUEST_KV_EXISTS,
+      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_EXISTS, CoreDurability.NONE, opts.parentSpan().orElse(null)),
+      timeout,
+      true,
+      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
+      opts.clientContext());
+
+    com.couchbase.client.protostellar.kv.v1.ExistsRequest.Builder request = com.couchbase.client.protostellar.kv.v1.ExistsRequest.newBuilder()
+      .setBucketName(keyspace.bucket())
+      .setScopeName(keyspace.scope())
+      .setCollectionName(keyspace.collection())
+      .setKey(key);
+
+    out.request(request.build());
+    return out;
   }
 
   public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.TouchRequest> touchRequest(Core core,
@@ -374,31 +378,29 @@ public class CoreProtostellarKeyValueRequests {
                                                                                                        CoreCommonOptions opts,
                                                                                                        String key,
                                                                                                        long expiry) {
-    throw new UnsupportedOperationException("This operation is implemented in Protostellar but not STG currently");
+    validateTouchParams(opts, key, expiry);
 
-//    validateTouchParams(opts, key, expiry);
-//
-//    Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
-//    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.TouchRequest> out = new ProtostellarKeyValueRequest<>(core,
-//      keyspace,
-//      key,
-//      CoreDurability.NONE,
-//      TracingIdentifiers.SPAN_REQUEST_KV_TOUCH,
-//      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_TOUCH, CoreDurability.NONE, opts.parentSpan().orElse(null)),
-//      timeout,
-//      true,
-//      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
-//      opts.clientContext());
-//
-//    com.couchbase.client.protostellar.kv.v1.TouchRequest.Builder request = com.couchbase.client.protostellar.kv.v1.TouchRequest.newBuilder()
-//      .setBucketName(keyspace.bucket())
-//      .setScopeName(keyspace.scope())
-//      .setCollectionName(keyspace.collection())
-//      .setExpiry(convertExpiry(expiry))
-//      .setKey(key);
-//
-//    out.request(request.build());
-//    return out;
+    Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
+    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.TouchRequest> out = new ProtostellarKeyValueRequest<>(core,
+      keyspace,
+      key,
+      CoreDurability.NONE,
+      TracingIdentifiers.SPAN_REQUEST_KV_TOUCH,
+      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_TOUCH, CoreDurability.NONE, opts.parentSpan().orElse(null)),
+      timeout,
+      false,
+      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
+      opts.clientContext());
+
+    com.couchbase.client.protostellar.kv.v1.TouchRequest.Builder request = com.couchbase.client.protostellar.kv.v1.TouchRequest.newBuilder()
+      .setBucketName(keyspace.bucket())
+      .setScopeName(keyspace.scope())
+      .setCollectionName(keyspace.collection())
+      .setExpiry(convertExpiry(expiry))
+      .setKey(key);
+
+    out.request(request.build());
+    return out;
   }
 
   public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.UnlockRequest> unlockRequest(Core core,
@@ -406,30 +408,28 @@ public class CoreProtostellarKeyValueRequests {
                                                                                                          CoreCommonOptions opts,
                                                                                                          String key,
                                                                                                          long cas) {
-    throw new UnsupportedOperationException("This operation is implemented in Protostellar but not STG currently");
+    validateUnlockParams(opts, key, cas, keyspace.toCollectionIdentifier());
 
-//    validateUnlockParams(opts, key, cas, keyspace.toCollectionIdentifier());
-//
-//    Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
-//    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.UnlockRequest> out = new ProtostellarKeyValueRequest<>(core,
-//      keyspace,
-//      key,
-//      CoreDurability.NONE,
-//      TracingIdentifiers.SPAN_REQUEST_KV_UNLOCK,
-//      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_UNLOCK, CoreDurability.NONE, opts.parentSpan().orElse(null)),
-//      timeout,
-//      true,
-//      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
-//      opts.clientContext());
-//
-//    com.couchbase.client.protostellar.kv.v1.UnlockRequest.Builder request = com.couchbase.client.protostellar.kv.v1.UnlockRequest.newBuilder()
-//      .setBucketName(keyspace.bucket())
-//      .setScopeName(keyspace.scope())
-//      .setCollectionName(keyspace.collection())
-//      .setCas(cas)
-//      .setKey(key);
-//
-//    out.request(request.build());
-//    return out;
+    Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
+    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.UnlockRequest> out = new ProtostellarKeyValueRequest<>(core,
+      keyspace,
+      key,
+      CoreDurability.NONE,
+      TracingIdentifiers.SPAN_REQUEST_KV_UNLOCK,
+      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_UNLOCK, CoreDurability.NONE, opts.parentSpan().orElse(null)),
+      timeout,
+      false,
+      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
+      opts.clientContext());
+
+    com.couchbase.client.protostellar.kv.v1.UnlockRequest.Builder request = com.couchbase.client.protostellar.kv.v1.UnlockRequest.newBuilder()
+      .setBucketName(keyspace.bucket())
+      .setScopeName(keyspace.scope())
+      .setCollectionName(keyspace.collection())
+      .setCas(cas)
+      .setKey(key);
+
+    out.request(request.build());
+    return out;
   }
 }

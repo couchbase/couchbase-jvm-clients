@@ -52,7 +52,8 @@ import static org.junit.jupiter.api.Assertions.fail;
  * Test the CreateAsDeleted flag added with MB-37374 in 6.6.
  */
 @IgnoreWhen(missesCapabilities = Capabilities.CREATE_AS_DELETED,
-  isProtostellarWillWorkLater = true
+  // This flag is not supported in Protostellar
+  isProtostellar = true
 )
 class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
 

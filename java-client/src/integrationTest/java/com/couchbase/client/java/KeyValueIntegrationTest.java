@@ -134,7 +134,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
    * Mock does not support Get Meta, so we need to ignore it there.
    */
   @Test
-  @IgnoreWhen( clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true )
+  @IgnoreWhen( clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true) // Needs ING-362
   void exists() {
     String id = UUID.randomUUID().toString();
 
@@ -204,7 +204,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   /**
    * Verify that an empty Optional is returned even though the expiry is requested.
    */
-  @IgnoreWhen(isProtostellarWillWorkLater = true)
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-369
   @Test
   void expiryRequestedButNotSetOnDoc() {
     String id = UUID.randomUUID().toString();
@@ -229,7 +229,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
    * <p>See https://github.com/couchbase/CouchbaseMock/issues/46</p>
    */
   @Test
-  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true)
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true)  // Needs ING-369
   void fullDocWithExpiration() {
     String id = UUID.randomUUID().toString();
 
@@ -252,7 +252,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true)
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true)  // Needs ING-369
   void fullDocWithExpirationAndCustomTranscoder() {
     String id = UUID.randomUUID().toString();
 
@@ -321,7 +321,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
    * <p>Once the mock is modified to return LOCKED, this test can also be run on the mock again.</p>
    */
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true)
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true) // Needs ING-370
   void getAndLock() {
     String id = UUID.randomUUID().toString();
 
@@ -352,7 +352,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
    * fixed.</p>
    */
   @Test
-  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true)
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true) // Needs ING-370
   void getAndTouch() {
     String id = UUID.randomUUID().toString();
 
@@ -413,7 +413,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
    * Regression test for JCBC-1587 (deleted flag is not honored after a previous remove).
    */
   @Test
-  @IgnoreWhen( clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true )
+  @IgnoreWhen( clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true) // Needs ING-362
   void existsReturnsFalseAfterRemove() {
     String id = UUID.randomUUID().toString();
 
@@ -491,7 +491,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
    *  which time we can remove the restriction on not running this test when mocked.
    */
   @Test
-  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true)
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true)  // Needs ING-369
   void checkExpiryBeyond2038() {
     // The server interprets the 32-bit expiry field as an unsigned
     // integer. This means the maximum value is 4294967295 seconds,
@@ -510,7 +510,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED}, isProtostellarWillWorkLater = true)
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED}, isProtostellarWillWorkLater = true)  // Needs ING-369
   void checkExpiryExactly30Days() {
     checkExpiry(Duration.ofDays(30));
   }
@@ -521,7 +521,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
    * ensures we're shielding the user from that surprising behavior.
    */
   @Test
-  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED}, isProtostellarWillWorkLater = true)
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED}, isProtostellarWillWorkLater = true)  // Needs ING-369
   void checkExpiryBeyond30Days() {
     checkExpiry(Duration.ofDays(31));
   }
@@ -582,7 +582,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   private static final Instant NEAR_FUTURE_INSTANT = Instant.now().plus(5, DAYS);
 
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY, clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true)
+  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY, clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true) // Need ING-369
   void upsertCanPreserveExpiry() {
     String id = UUID.randomUUID().toString();
     collection.upsert(id, "foo", upsertOptions()
@@ -607,7 +607,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY, clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true)
+  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY, clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true) // Need ING-369
   void replaceCanPreserveExpiry() {
     String id = UUID.randomUUID().toString();
     collection.upsert(id, "foo", upsertOptions().expiry(NEAR_FUTURE_INSTANT));
@@ -620,7 +620,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY, clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true)
+  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY, clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true) // No Protostellar support currently
   void subdocCanPreserveExpiry() {
     String id = UUID.randomUUID().toString();
 
@@ -652,7 +652,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
    * until https://github.com/couchbase/CouchbaseMock/issues/50 is resolved.
    */
   @Test
-  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED}, isProtostellarWillWorkLater = true)
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED}, isProtostellarWillWorkLater = true) // Needs ING-370
   void touch() throws Exception {
     String id = UUID.randomUUID().toString();
 
@@ -692,7 +692,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
    * The mock returns TMPFAIL instead of LOCKED, so this test is ignored on the mock.
    */
   @Test
-  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true)
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true) // Needs ING-370
   void unlock() {
     String id = UUID.randomUUID().toString();
 

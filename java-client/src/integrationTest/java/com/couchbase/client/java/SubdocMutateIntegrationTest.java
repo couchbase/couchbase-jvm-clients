@@ -81,7 +81,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 /**
  * Ported from the Scala SubdocMutateSpec tests.  Please keep in sync.
  */
-@IgnoreWhen(isProtostellarWillWorkLater = true)
+@IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-363
 class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     private static Logger LOGGER = LoggerFactory.getLogger(SubdocMutateIntegrationTest.class);
 
@@ -924,7 +924,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
               mutateInOptions().storeSemantics(StoreSemantics.UPSERT).expiry(Duration.ofSeconds(60 * 60 * 24)));
     }
 
-    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT}, isProtostellar = true) // Flag is not supported in Protostellar)
     @Test
     void replaceBodyWithXattrSimulatingTransactionalInsert() {
         String docId = docId();
@@ -952,7 +952,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         assertEquals(gr.contentAsObject(), body);
     }
 
-    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT}, isProtostellar = true) // Flag is not supported in Protostellar)
     @Test
     void replaceBodyWithXattrWithDurability() {
         String id = UUID.randomUUID().toString();
@@ -1000,7 +1000,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         assertEquals(gr.contentAsObject(), body);
     }
 
-    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT}, isProtostellar = true) // Flag is not supported in Protostellar)
     @Test
     void replaceBodyWithXattrPathNotFound() {
         String docId = docId();
@@ -1028,7 +1028,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         }
     }
 
-    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT}, isProtostellar = true) // Flag is not supported in Protostellar
     @Test
     void reviveDocumentWithoutAccessDeleted() {
         String docId = docId();
@@ -1049,7 +1049,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         }
     }
 
-    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT}, isProtostellar = true) // Flag is not supported in Protostellar)
     @Test
     void reviveDocumentOnAlreadyAliveDocument() {
         String docId = docId();
@@ -1071,7 +1071,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         }
     }
 
-    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT}, isProtostellar = true) // Flag is not supported in Protostellar)
     @Test
     void reviveDocumentWithCAS() {
         String docId = docId();
@@ -1110,7 +1110,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         }
     }
 
-    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT}, isProtostellar = true) // Flag is not supported in Protostellar)
     @Test
     void reviveDocumentWithCAS2() {
         String docId = docId();
@@ -1131,7 +1131,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
                         .storeSemantics(StoreSemantics.REVIVE));
     }
 
-    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT}, isProtostellar = true) // Flag is not supported in Protostellar)
     @Test
     void reviveDocumentWithCAS3() {
         String docId = docId();
@@ -1181,7 +1181,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         );
     }
 
-    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+    @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT}, isProtostellar = true) // Flag is not supported in Protostellar)
     @Test
     void replaceBodyWithXattrWithoutReviveDocument() {
         String docId = docId();
