@@ -191,7 +191,7 @@ public class CoreProtostellarKeyValueRequests {
       .setContentType(convertFromFlags(encoded.flags()));
 
     if (expiry != 0) {
-      request.setExpiry(CoreProtostellarUtil.convertExpiry(expiry));
+      request.setExpiry(convertExpiry(expiry));
     }
     if (!durability.isNone()) {
       request.setDurabilityLevel(convert(durability));
@@ -236,15 +236,11 @@ public class CoreProtostellarKeyValueRequests {
       .setContent(ByteString.copyFrom(encoded.encoded()))
       .setContentType(convertFromFlags(encoded.flags()));
 
-    if (expiry != 0) {
-      request.setExpiry(CoreProtostellarUtil.convertExpiry(expiry));
+    if (!preserveExpiry) {
+      request.setExpiry(convertExpiry(expiry));
     }
     if (!durability.isNone()) {
       request.setDurabilityLevel(convert(durability));
-    }
-
-    if (preserveExpiry) {
-      throw new UnsupportedOperationException("preserveExpiry is not yet supported with Protostellar, but will be");
     }
 
     out.request(request.build());
@@ -284,15 +280,11 @@ public class CoreProtostellarKeyValueRequests {
       .setContent(ByteString.copyFrom(encoded.encoded()))
       .setContentType(convertFromFlags(encoded.flags()));
 
-    if (expiry != 0) {
-      request.setExpiry(CoreProtostellarUtil.convertExpiry(expiry));
+    if (!preserveExpiry) {
+      request.setExpiry(convertExpiry(expiry));
     }
     if (!durability.isNone()) {
       request.setDurabilityLevel(convert(durability));
-    }
-
-    if (preserveExpiry) {
-      throw new UnsupportedOperationException("preserveExpiry is not yet supported with Protostellar, but will be");
     }
 
     out.request(request.build());

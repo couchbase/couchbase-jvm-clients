@@ -181,6 +181,9 @@ public class CoreProtostellarUtil {
   }
 
   public static Timestamp convertExpiry(long expiry) {
+    if (expiry == 0) {
+      return Timestamp.getDefaultInstance();
+    }
     return Timestamp.newBuilder().setSeconds(expiry).build();
   }
 
