@@ -21,11 +21,16 @@ import com.couchbase.client.core.api.kv.CoreExistsResult;
 import com.couchbase.client.core.api.kv.CoreGetResult;
 import com.couchbase.client.core.api.kv.CoreKvResponseMetadata;
 import com.couchbase.client.core.api.kv.CoreMutationResult;
+import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
+import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
 import com.couchbase.client.core.msg.kv.MutationToken;
+import com.couchbase.client.core.msg.kv.SubDocumentField;
+import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.protostellar.kv.v1.ExistsResponse;
 import com.couchbase.client.protostellar.kv.v1.GetResponse;
 import com.couchbase.client.protostellar.kv.v1.InsertResponse;
+import com.couchbase.client.protostellar.kv.v1.MutateInResponse;
 import com.couchbase.client.protostellar.kv.v1.RemoveResponse;
 import com.couchbase.client.protostellar.kv.v1.ReplaceResponse;
 import com.couchbase.client.protostellar.kv.v1.TouchResponse;
@@ -33,6 +38,8 @@ import com.couchbase.client.protostellar.kv.v1.UnlockResponse;
 import com.couchbase.client.protostellar.kv.v1.UpsertResponse;
 import reactor.util.annotation.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.convertToFlags;
@@ -73,13 +80,18 @@ public class CoreProtostellarKeyValueResponses {
   }
 
   private static CoreMutationResult convertMutationResult(CoreKeyspace keyspace, String key, long cas, @Nullable com.couchbase.client.protostellar.kv.v1.MutationToken mt) {
+    Optional<MutationToken> mutationToken = convertMutationToken(mt);
+    return new CoreMutationResult(null, keyspace, key, cas, mutationToken);
+  }
+
+  private static Optional<MutationToken> convertMutationToken(com.couchbase.client.protostellar.kv.v1.MutationToken mt) {
     Optional<MutationToken> mutationToken;
     if (mt != null) {
       mutationToken = Optional.of(new MutationToken((short) mt.getVbucketId(), mt.getVbucketId(), mt.getSeqNo(), mt.getBucketName()));
     } else {
       mutationToken = Optional.empty();
     }
-    return new CoreMutationResult(null, keyspace, key, cas, mutationToken);
+    return mutationToken;
   }
 
   public static CoreGetResult convertResponse(CoreKeyspace keyspace, String key, GetResponse response) {
@@ -91,5 +103,28 @@ public class CoreProtostellarKeyValueResponses {
       response.getCas(),
       CoreProtostellarUtil.convertExpiry(response.hasExpiry(), response.getExpiry()),
       false);
+  }
+
+  public static CoreSubdocMutateResult convertResponse(CoreKeyspace keyspace, String key, MutateInResponse response, List<CoreSubdocMutateCommand> specs) {
+    List<SubDocumentField> responses = new ArrayList<>(response.getSpecsCount());
+
+    for (int i = 0; i < response.getSpecsList().size(); i++) {
+      CoreSubdocMutateCommand original = specs.get(i);
+      MutateInResponse.Spec resp = response.getSpecsList().get(i);
+
+      responses.add(new SubDocumentField(SubDocumentOpResponseStatus.SUCCESS,
+        Optional.empty(),
+        resp.getContent().toByteArray(),
+        original.path(),
+        original.type()));
+    }
+
+
+    return new CoreSubdocMutateResult(keyspace,
+      key,
+      null,
+      response.getCas(),
+      response.hasMutationToken() ? convertMutationToken(response.getMutationToken()) : Optional.empty(),
+      responses);
   }
 }

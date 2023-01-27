@@ -20,6 +20,8 @@ import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.api.kv.CoreEncodedContent;
+import com.couchbase.client.core.api.kv.CoreStoreSemantics;
+import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -29,6 +31,7 @@ import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.core.protostellar.ProtostellarKeyValueRequest;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
 import com.couchbase.client.protostellar.kv.v1.InsertRequest;
+import com.couchbase.client.protostellar.kv.v1.MutateInRequest;
 import com.couchbase.client.protostellar.kv.v1.ReplaceRequest;
 import com.couchbase.client.protostellar.kv.v1.UpsertRequest;
 
@@ -428,6 +431,140 @@ public class CoreProtostellarKeyValueRequests {
       .setCollectionName(keyspace.collection())
       .setCas(cas)
       .setKey(key);
+
+    out.request(request.build());
+    return out;
+  }
+
+  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.MutateInRequest> mutateInRequest(Core core,
+                                                                                                             CoreKeyspace keyspace,
+                                                                                                             CoreCommonOptions opts,
+                                                                                                             String key,
+                                                                                                             List<CoreSubdocMutateCommand> commands,
+                                                                                                             CoreStoreSemantics storeSemantics,
+                                                                                                             long cas,
+                                                                                                             CoreDurability durability,
+                                                                                                             long expiry,
+                                                                                                             boolean preserveExpiry,
+                                                                                                             boolean accessDeleted,
+                                                                                                             boolean createAsDeleted) {
+    validateSubdocMutateParams(opts, key, storeSemantics, cas);
+
+    Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
+    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.MutateInRequest> out = new ProtostellarKeyValueRequest<>(core,
+      keyspace,
+      key,
+      CoreDurability.NONE,
+      TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN,
+      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN, durability, opts.parentSpan().orElse(null)),
+      timeout,
+      false,
+      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
+      opts.clientContext());
+
+    com.couchbase.client.protostellar.kv.v1.MutateInRequest.Builder request = com.couchbase.client.protostellar.kv.v1.MutateInRequest.newBuilder()
+      .setBucketName(keyspace.bucket())
+      .setScopeName(keyspace.scope())
+      .setCollectionName(keyspace.collection())
+      .setCas(cas)
+      .setKey(key)
+      .addAllSpecs(commands.stream()
+        .map(command -> {
+          MutateInRequest.Spec.Operation operation;
+
+          switch (command.type()) {
+            case COUNTER:
+              operation = MutateInRequest.Spec.Operation.COUNTER;
+              break;
+            case REPLACE:
+              operation = MutateInRequest.Spec.Operation.REPLACE;
+              break;
+            case DICT_ADD:
+              operation = MutateInRequest.Spec.Operation.INSERT;
+              break;
+            case DICT_UPSERT:
+              operation = MutateInRequest.Spec.Operation.UPSERT;
+              break;
+            case ARRAY_PUSH_FIRST:
+              operation = MutateInRequest.Spec.Operation.ARRAY_PREPEND;
+              break;
+            case ARRAY_PUSH_LAST:
+              operation = MutateInRequest.Spec.Operation.ARRAY_APPEND;
+              break;
+            case ARRAY_ADD_UNIQUE:
+              operation = MutateInRequest.Spec.Operation.ARRAY_ADD_UNIQUE;
+              break;
+            case ARRAY_INSERT:
+              operation = MutateInRequest.Spec.Operation.ARRAY_INSERT;
+              break;
+            case DELETE:
+              operation = MutateInRequest.Spec.Operation.REMOVE;
+              break;
+            default:
+              throw new IllegalArgumentException("Sub-Document mutateIn command " + command.type() + " is not supported in Protostellar");
+          }
+
+          MutateInRequest.Spec.Builder builder = MutateInRequest.Spec.newBuilder()
+            .setOperation(operation)
+            .setPath(command.path())
+            .setContent(ByteString.copyFrom(command.fragment()));
+
+          if (command.xattr() || command.expandMacro() || command.createParent()) {
+            MutateInRequest.Spec.Flags.Builder flagsBuilder = MutateInRequest.Spec.Flags.newBuilder();
+
+            if (command.xattr()) {
+              flagsBuilder.setXattr(command.xattr());
+            }
+
+            if (command.createParent()) {
+              flagsBuilder.setCreatePath(command.createParent());
+            }
+
+            if (command.expandMacro()) {
+              throw new IllegalArgumentException("expandMacro is not supported in Protostellar");
+            }
+
+            builder.setFlags(flagsBuilder);
+          }
+
+          return builder.build();
+        })
+        .collect(Collectors.toList()));
+
+    switch (storeSemantics) {
+      case REPLACE:
+        request.setStoreSemantic(MutateInRequest.StoreSemantic.REPLACE);
+        break;
+      case UPSERT:
+        request.setStoreSemantic(MutateInRequest.StoreSemantic.UPSERT);
+        break;
+      case INSERT:
+        request.setStoreSemantic(MutateInRequest.StoreSemantic.INSERT);
+        break;
+      default:
+        throw new IllegalArgumentException("Sub-Document store semantic " + storeSemantics + " is not supported in Protostellar");
+    }
+
+    if (accessDeleted) {
+      request.setFlags(MutateInRequest.Flags.newBuilder()
+        .setAccessDeleted(accessDeleted));
+    }
+
+    if (!durability.isNone()) {
+      request.setDurabilityLevel(convert(durability));
+    }
+
+    if (createAsDeleted) {
+      throw new IllegalArgumentException("createAsDeleted is not supported in mutateIn in Protostellar");
+    }
+
+    if (expiry != 0) {
+      throw new IllegalArgumentException("Setting expiry is not supported in mutateIn in Protostellar");
+    }
+
+    if (preserveExpiry) {
+      throw new IllegalArgumentException("preserveExpiry is not supported in mutateIn in Protostellar");
+    }
 
     out.request(request.build());
     return out;

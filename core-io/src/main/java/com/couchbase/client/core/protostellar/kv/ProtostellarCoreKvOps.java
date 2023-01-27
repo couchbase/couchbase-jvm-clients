@@ -45,6 +45,7 @@ import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValue
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.getAndTouchRequest;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.getRequest;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.insertRequest;
+import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.mutateInRequest;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.removeRequest;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.replaceRequest;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.touchRequest;
@@ -281,11 +282,33 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreAsyncResponse<CoreSubdocMutateResult> subdocMutateAsync(CoreCommonOptions common, String key, Supplier<List<CoreSubdocMutateCommand>> commands, CoreStoreSemantics storeSemantics, long cas, CoreDurability durability, long expiry, boolean preserveExpiry, boolean accessDeleted, boolean createAsDeleted) {
-    validateSubdocMutateParams(common, key, storeSemantics, cas);
+  public CoreSubdocMutateResult subdocMutateBlocking(CoreCommonOptions common, String key, Supplier<List<CoreSubdocMutateCommand>> commands, CoreStoreSemantics storeSemantics, long cas, CoreDurability durability, long expiry, boolean preserveExpiry, boolean accessDeleted, boolean createAsDeleted) {
+    List<CoreSubdocMutateCommand> specs = commands.get();
+    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.MutateInRequest> request = mutateInRequest(core, keyspace, common, key, specs, storeSemantics, cas, durability, expiry, preserveExpiry, accessDeleted, createAsDeleted);
+    return CoreProtostellarAccessors.blocking(core,
+      request,
+      (endpoint) -> endpoint.kvBlockingStub().withDeadline(request.deadline()).mutateIn(request.request()),
+      (response) -> CoreProtostellarKeyValueResponses.convertResponse(keyspace, key, response, specs));
+  }
 
-    // Protostellar mutate-in support is currently incomplete.
-    throw unsupported();
+  @Override
+  public CoreAsyncResponse<CoreSubdocMutateResult> subdocMutateAsync(CoreCommonOptions common, String key, Supplier<List<CoreSubdocMutateCommand>> commands, CoreStoreSemantics storeSemantics, long cas, CoreDurability durability, long expiry, boolean preserveExpiry, boolean accessDeleted, boolean createAsDeleted) {
+    List<CoreSubdocMutateCommand> specs = commands.get();
+    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.MutateInRequest> request = mutateInRequest(core, keyspace, common, key, specs, storeSemantics, cas, durability, expiry, preserveExpiry, accessDeleted, createAsDeleted);
+    return CoreProtostellarAccessors.async(core,
+      request,
+      (endpoint) -> endpoint.kvStub().withDeadline(request.deadline()).mutateIn(request.request()),
+      (response) -> CoreProtostellarKeyValueResponses.convertResponse(keyspace, key, response, specs));
+  }
+
+  @Override
+  public Mono<CoreSubdocMutateResult> subdocMutateReactive(CoreCommonOptions common, String key, Supplier<List<CoreSubdocMutateCommand>> commands, CoreStoreSemantics storeSemantics, long cas, CoreDurability durability, long expiry, boolean preserveExpiry, boolean accessDeleted, boolean createAsDeleted) {
+    List<CoreSubdocMutateCommand> specs = commands.get();
+    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.MutateInRequest> request = mutateInRequest(core, keyspace, common, key, specs, storeSemantics, cas, durability, expiry, preserveExpiry, accessDeleted, createAsDeleted);
+    return CoreProtostellarAccessors.reactive(core,
+      request,
+      (endpoint) -> endpoint.kvStub().withDeadline(request.deadline()).mutateIn(request.request()),
+      (response) -> CoreProtostellarKeyValueResponses.convertResponse(keyspace, key, response, specs));
   }
 
   private static RuntimeException unsupported() {

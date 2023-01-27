@@ -275,6 +275,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     ));
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-371
   @Test
   void verifyMutateInExceptions() {
     assertThrows(InvalidArgumentException.class, () -> collection.mutateIn(null, null));
