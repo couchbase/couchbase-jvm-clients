@@ -181,44 +181,46 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
                                                      @Nullable CoreQueryContext queryContext,
                                                      @Nullable NodeIdentifier target,
                                                      @Nullable Function<Throwable, RuntimeException> errorConverter) {
-    if (target != null) {
-      throw unsupportedInProtostellar("Targetting a specific query node");
-    }
-
-    if (options.asTransaction()) {
-      throw new IllegalStateException("Internal bug - calling code should have used singleQueryTransactionReactive instead");
-    }
-
-    ProtostellarRequest<QueryRequest> request = request(core, statement, options, queryContext);
-    Mono<CoreReactiveQueryResult> err = handleShutdownReactive(core, request);
-    if (err != null) {
-      return err;
-    }
-
-    Sinks.Many<QueryResponse> responses = Sinks.many().replay().latest();
-
-    StreamObserver<QueryResponse> response = new StreamObserver<QueryResponse>() {
-      @Override
-      public void onNext(QueryResponse response) {
-        responses.tryEmitNext(response).orThrow();
+    return Mono.defer(() -> {
+      if (target != null) {
+        throw unsupportedInProtostellar("Targetting a specific query node");
       }
 
-      @Override
-      public void onError(Throwable throwable) {
-        responses.tryEmitError(convertException(errorConverter, throwable)).orThrow();
+      if (options.asTransaction()) {
+        throw new IllegalStateException("Internal bug - calling code should have used singleQueryTransactionReactive instead");
       }
 
-      @Override
-      public void onCompleted() {
-        responses.tryEmitComplete().orThrow();
+      ProtostellarRequest<QueryRequest> request = request(core, statement, options, queryContext);
+      Mono<CoreReactiveQueryResult> err = handleShutdownReactive(core, request);
+      if (err != null) {
+        return err;
       }
-    };
 
-    core.protostellar().endpoint().queryStub()
-      .withDeadline(request.deadline())
-      .query(request.request(), response);
+      Sinks.Many<QueryResponse> responses = Sinks.many().replay().latest();
 
-    return Mono.just(new ProtostellarCoreReactiveQueryResult(responses.asFlux()));
+      StreamObserver<QueryResponse> response = new StreamObserver<QueryResponse>() {
+        @Override
+        public void onNext(QueryResponse response) {
+          responses.tryEmitNext(response).orThrow();
+        }
+
+        @Override
+        public void onError(Throwable throwable) {
+          responses.tryEmitError(convertException(errorConverter, throwable)).orThrow();
+        }
+
+        @Override
+        public void onCompleted() {
+          responses.tryEmitComplete().orThrow();
+        }
+      };
+
+      core.protostellar().endpoint().queryStub()
+              .withDeadline(request.deadline())
+              .query(request.request(), response);
+
+      return Mono.just(new ProtostellarCoreReactiveQueryResult(responses.asFlux()));
+    });
   }
 
   private static RuntimeException convertException(@Nullable Function<Throwable, RuntimeException> errorConverter, Throwable throwable) {
