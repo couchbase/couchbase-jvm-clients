@@ -393,7 +393,9 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
   }
 
   private def assertNoExpiry(docId: String): Unit = {
-    assertExpiry(docId, Instant.EPOCH)
+    val result = coll.get(docId, GetOptions().withExpiry(true)).get
+    assertTrue(result.expiry.isEmpty)
+    assertTrue(result.expiryTime.isEmpty)
   }
 
 }
