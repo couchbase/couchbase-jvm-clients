@@ -266,11 +266,6 @@ public class CoreQueryOptionsTransactions implements CoreQueryOptions {
   }
 
   @Override
-  public Map<String, Object> clientContext() {
-    return original == null ? null : original.clientContext();
-  }
-
-  @Override
   public CoreCommonOptions commonOptions() {
     return original == null ? CoreCommonOptions.DEFAULT : original.commonOptions();
   }

@@ -195,7 +195,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
     QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), statement,
         queryBytes, options.readonly(), options.clientContextId(), span,
         queryContext == null ? null : queryContext.bucket(), queryContext == null ? null : queryContext.scope(), target);
-    request.context().clientContext(options.clientContext());
+    request.context().clientContext(options.commonOptions().clientContext());
     return request;
   }
 

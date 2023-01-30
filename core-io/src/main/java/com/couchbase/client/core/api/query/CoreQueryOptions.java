@@ -87,9 +87,6 @@ public interface CoreQueryOptions {
   @Nullable
   CoreSingleQueryTransactionOptions asTransactionOptions();
 
-  @Nullable
-  Map<String, Object> clientContext();
-
   CoreCommonOptions commonOptions();
 }
 

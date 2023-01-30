@@ -248,7 +248,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
       timeout,
       opts.readonly(),
       opts.commonOptions().retryStrategy().orElse(core.context().environment().retryStrategy()),
-      opts.clientContext()
+      opts.commonOptions().clientContext()
     );
 
     QueryRequest.Builder request = convertOptions(opts);
