@@ -19,6 +19,11 @@ object TestUtils {
 
   /** Wait until ping result for the service returns success */
   def waitForService(bucket: Bucket, serviceType: ServiceType): Unit = {
+    if (bucket.async.core.isProtostellar) {
+      // Protostellar ping support will be implemented under JVMCBC-1189
+      return
+    }
+
     var done  = false
     var guard = 100
 

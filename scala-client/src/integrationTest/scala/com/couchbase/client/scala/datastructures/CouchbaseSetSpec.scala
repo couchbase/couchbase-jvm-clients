@@ -30,7 +30,11 @@ import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+@IgnoreWhen(
+  clusterTypes = Array(ClusterType.MOCKED),
+  // Needs ING-372
+  isProtostellarWillWorkLater = true
+)
 class CouchbaseSetSpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster = _

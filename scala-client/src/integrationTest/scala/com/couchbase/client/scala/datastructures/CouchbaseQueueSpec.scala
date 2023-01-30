@@ -16,12 +16,11 @@
 package com.couchbase.client.scala.datastructures
 
 import java.util.concurrent.TimeUnit
-
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection}
-import com.couchbase.client.test.ClusterAwareIntegrationTest
+import com.couchbase.client.test.{ClusterAwareIntegrationTest, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
@@ -29,6 +28,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 
+@IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-372
 @TestInstance(Lifecycle.PER_CLASS)
 class CouchbaseQueueSpec extends ScalaIntegrationTest {
 

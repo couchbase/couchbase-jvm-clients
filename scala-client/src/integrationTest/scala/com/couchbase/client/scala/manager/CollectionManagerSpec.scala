@@ -91,6 +91,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     waitForScopeToExist(scope)
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-358
   @Test
   def createCollection(): Unit = {
     val scope      = randomString
@@ -111,6 +112,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     waitForCollectionToExist(collSpec)
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-358
   @Test
   def createScopeTwice(): Unit = {
     val scope = randomString
@@ -125,6 +127,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     }
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-358
   @Test
   def createCollectionTwice(): Unit = {
     val scope      = randomString
@@ -183,6 +186,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     waitForCollectionToExist(collSpec)
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-358
   @Test
   def dropCollection_shouldFailWhen_collectionDoesNotExist(): Unit = {
     val scope = randomString
@@ -196,6 +200,7 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     }
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-358
   @Test
   def dropScope_shouldFailWhen_scopeDoesNotExist(): Unit = {
     val result = collections.dropScope("does_not_exist")

@@ -22,6 +22,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.{Duration, _}
 import scala.util.{Failure, Success, Try}
 
+@IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-363 and ING-372
 @TestInstance(Lifecycle.PER_CLASS)
 class SubdocMutateSpec extends ScalaIntegrationTest {
 

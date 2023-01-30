@@ -54,7 +54,11 @@ class KeyValueSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @IgnoreWhen(
+    clusterTypes = Array(ClusterType.MOCKED),
+    // Needs ING-362
+    isProtostellarWillWorkLater = true
+  )
   def exists(): Unit = {
     val docId = TestUtils.docId()
     coll.remove(docId)
@@ -96,7 +100,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     }
   }
 
-  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), isProtostellarWillWorkLater = true) // Needs ING-370
   @Test
   def touch(): Unit = {
     val docId = cleanupDoc()
@@ -112,7 +116,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     }
   }
 
-  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), isProtostellarWillWorkLater = true) // Needs ING-370
   @Test
   def get_and_lock(): Unit = {
     val docId = TestUtils.docId()
@@ -139,6 +143,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
     }
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-37
   @Test
   def unlock(): Unit = {
     val docId = TestUtils.docId()
@@ -165,7 +170,7 @@ class KeyValueSpec extends ScalaIntegrationTest {
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
   }
-  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), isProtostellarWillWorkLater = true) // Needs ING-370
   @Test
   def get_and_touch(): Unit = {
     val docId = TestUtils.docId()

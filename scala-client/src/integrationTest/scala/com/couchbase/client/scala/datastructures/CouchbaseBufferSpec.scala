@@ -16,13 +16,12 @@
 package com.couchbase.client.scala.datastructures
 
 import java.util.concurrent.TimeUnit
-
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
-import com.couchbase.client.test.ClusterAwareIntegrationTest
+import com.couchbase.client.test.{ClusterAwareIntegrationTest, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 
@@ -31,6 +30,7 @@ import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
+@IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-372
 @TestInstance(Lifecycle.PER_CLASS)
 class CouchbaseBufferSpec extends ScalaIntegrationTest {
 

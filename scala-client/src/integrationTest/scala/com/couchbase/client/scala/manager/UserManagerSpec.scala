@@ -24,7 +24,9 @@ import org.junit.jupiter.api._
 import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED),
+  // User management not available in PS.
+  isProtostellar = true)
 class UserManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster   = _
   private var users: UserManager = _

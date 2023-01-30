@@ -1,5 +1,3 @@
-package com.couchbase.client.scala.util
-
 /*
  * Copyright (c) 2018 Couchbase, Inc.
  *
@@ -16,15 +14,15 @@ package com.couchbase.client.scala.util
  * limitations under the License.
  */
 
-import java.util.concurrent.TimeUnit
-import com.couchbase.client.core.env.Authenticator
-import com.couchbase.client.scala.{Cluster, ClusterOptions, env}
+package com.couchbase.client.scala.util
+
 import com.couchbase.client.scala.env.{
   ClusterEnvironment,
   PasswordAuthenticator,
   SecurityConfig,
   SeedNode
 }
+import com.couchbase.client.scala.{Cluster, ClusterOptions}
 import com.couchbase.client.test.{
   ClusterAwareIntegrationTest,
   Services,
@@ -33,9 +31,11 @@ import com.couchbase.client.test.{
 }
 import org.junit.jupiter.api.Timeout
 
+import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters
-import scala.jdk.CollectionConverters._
+import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 
 /**
   * Extends the {@link ClusterAwareIntegrationTest} with scala-client specific code.
@@ -81,9 +81,13 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
     */
   protected def connectionString: String = {
     val strings = seedNodes.map((s: SeedNode) => {
-      s.kvPort match {
-        case Some(kvPort) => s.address + ":" + kvPort
-        case _            => s.address
+      s.protostellarPort match {
+        case Some(psPort) => "protostellar://" + s.address + ":" + psPort
+        case _ =>
+          s.kvPort match {
+            case Some(kvPort) => s.address + ":" + kvPort
+            case _            => s.address
+          }
       }
     })
 
@@ -93,15 +97,19 @@ trait ScalaIntegrationTest extends ClusterAwareIntegrationTest {
   protected def seedNodes =
     config.nodes.asScala
       .map((cfg: TestNodeConfig) => {
-        var kvPort   = Some(cfg.ports.get(Services.KV).toInt)
-        var httpPort = Some(cfg.ports.get(Services.MANAGER).toInt)
+        if (cfg.protostellarPort.isPresent) {
+          SeedNode(cfg.hostname, None, None, cfg.protostellarPort.asScala.map(v => v.toInt))
+        } else {
+          var kvPort   = Some(cfg.ports.get(Services.KV).toInt)
+          var httpPort = Some(cfg.ports.get(Services.MANAGER).toInt)
 
-        if (config.runWithTLS()) {
-          kvPort = Some(cfg.ports.get(Services.KV_TLS).toInt)
-          httpPort = Some(cfg.ports.get(Services.MANAGER_TLS).toInt)
+          if (config.runWithTLS()) {
+            kvPort = Some(cfg.ports.get(Services.KV_TLS).toInt)
+            httpPort = Some(cfg.ports.get(Services.MANAGER_TLS).toInt)
+          }
+
+          SeedNode(cfg.hostname, kvPort, httpPort)
         }
-
-        SeedNode(cfg.hostname, kvPort, httpPort)
       })
       .toSet
 

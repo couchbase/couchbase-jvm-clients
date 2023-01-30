@@ -88,7 +88,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), isProtostellarWillWorkLater = true) // ING-362
   def exists(): Unit = {
     val docId = TestUtils.docId()
     wrap(coll.remove(docId))
@@ -121,6 +121,8 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
   }
+
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // get is always returning expiry - ING-369
   @Test
   def insert_without_expiry(): Unit = {
     val docId = cleanupDoc()
@@ -135,7 +137,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     }
   }
 
-  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), isProtostellarWillWorkLater = true) // ING-369
   @Test
   def insert_with_expiry(): Unit = {
     val docId = cleanupDoc()
@@ -150,7 +152,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     }
   }
 
-  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), isProtostellarWillWorkLater = true) // ING-370
   @Test
   def get_and_lock(): Unit = {
     val docId = TestUtils.docId()
@@ -175,7 +177,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     }
   }
 
-  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), isProtostellarWillWorkLater = true) // ING-370
   @Test
   def get_and_touch(): Unit = {
     val docId = TestUtils.docId()

@@ -24,7 +24,12 @@ case class DocAndOperation(
 
 /** Tests related to TTL/expiry on key-value operations. */
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED)) // Mock does not support expiry
+// Mock does not support expiry
+@IgnoreWhen(
+  clusterTypes = Array(ClusterType.MOCKED),
+  // Needs ING-369
+  isProtostellarWillWorkLater = true
+)
 class KeyValueExpirySpec extends ScalaIntegrationTest {
 
   private var cluster: Cluster = _

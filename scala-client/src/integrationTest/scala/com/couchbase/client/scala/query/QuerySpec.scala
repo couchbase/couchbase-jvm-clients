@@ -144,6 +144,7 @@ class QuerySpec extends ScalaIntegrationTest {
     }
   }
 
+  @IgnoreWhen(isProtostellar = true) // PS does not support raw
   @Test
   def rawOptions(): Unit = {
     cluster.query(
@@ -214,6 +215,7 @@ class QuerySpec extends ScalaIntegrationTest {
     }
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs PS query error handling
   @Test
   def error_due_to_bad_syntax(): Unit = {
     val x = cluster.query("""select*from""")
@@ -270,6 +272,7 @@ class QuerySpec extends ScalaIntegrationTest {
     assert(out.status == QueryStatus.Success)
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs PS query error handling
   @Test
   def reactive_error_due_to_bad_syntax(): Unit = {
     Assertions.assertThrows(
@@ -485,6 +488,7 @@ class QuerySpec extends ScalaIntegrationTest {
 
   private val FooContent = JsonObject.create.put("foo", "bar")
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-338
   @Test
   def consistentWith(): Unit = {
     val id = UUID.randomUUID.toString

@@ -19,16 +19,16 @@ import scala.compat.java8.OptionConverters._
 case class SeedNode(
     address: String,
     kvPort: Option[Int] = None,
-    clusterManagerPort: Option[Int] = None
+    clusterManagerPort: Option[Int] = None,
+    protostellarPort: Option[Int] = None
 ) {
 
   private[scala] def toCore: com.couchbase.client.core.env.SeedNode = {
     com.couchbase.client.core.env.SeedNode
-      .create(
-        address,
-        kvPort.map(Integer.valueOf).asJava,
-        clusterManagerPort.map(Integer.valueOf).asJava
-      )
+      .create(address)
+      .withKvPort(kvPort.map(Integer.valueOf).orNull)
+      .withManagerPort(clusterManagerPort.map(Integer.valueOf).orNull)
+      .withProtostellarPort(protostellarPort.map(Integer.valueOf).orNull)
   }
 }
 
@@ -37,7 +37,8 @@ object SeedNode {
     SeedNode(
       sn.address,
       sn.kvPort.asScala.map(v => v.toInt),
-      sn.clusterManagerPort.asScala.map(v => v.toInt)
+      sn.clusterManagerPort.asScala.map(v => v.toInt),
+      sn.protostellarPort.asScala.map(v => v.toInt)
     )
   }
 }

@@ -27,8 +27,9 @@ import org.junit.jupiter.api._
 
 import scala.jdk.CollectionConverters._
 import scala.concurrent.duration._
+
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), isProtostellarWillWorkLater = true) // Needs JVMCBC-1189
 class PingSpec extends ScalaIntegrationTest {
   private var cluster: Cluster   = _
   private var bucket: Bucket     = _

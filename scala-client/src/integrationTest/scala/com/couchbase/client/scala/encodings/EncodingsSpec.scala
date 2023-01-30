@@ -1,7 +1,6 @@
 package com.couchbase.client.scala.encodings
 
 import java.util.concurrent.TimeUnit
-
 import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.scala.codec.JsonSerializer
 import com.couchbase.client.scala.codec.{
@@ -13,6 +12,7 @@ import com.couchbase.client.scala.codec.{
 import com.couchbase.client.scala.kv.{GetOptions, InsertOptions}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.scala.{Cluster, Collection, TestUtils}
+import com.couchbase.client.test.IgnoreWhen
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
@@ -65,6 +65,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
     assert(doc.flags == DocumentFlags.Json)
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-374
   @Test
   def encode_encoded_json_string_directly_as_string(): Unit = {
     val content = """{"hello":"world"}"""
@@ -134,6 +135,8 @@ class EncodingsSpec extends ScalaIntegrationTest {
     // The content is legal Json, but app probably meant to use RawStringTranscoder
     assert(doc.flags == DocumentFlags.Json)
   }
+
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-374
   @Test
   def encode_raw_string_directly_as_string(): Unit = {
     val content = """hello, world!"""
@@ -157,6 +160,7 @@ class EncodingsSpec extends ScalaIntegrationTest {
     }
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-374
   @Test
   def decode_raw_string(): Unit = {
     val content = """hello, world!"""
@@ -269,6 +273,9 @@ class EncodingsSpec extends ScalaIntegrationTest {
     }
   }
 
+  // This test has found a legitimate bug in that the insert is not creating a binary document in Protostellar mode, but
+  // under ING-374 how flags are handled in Protostellar is being redone anyway.
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   @Test
   def encode_raw_bytes(): Unit = {
     val content = Array[Byte](1, 2, 3, 4)

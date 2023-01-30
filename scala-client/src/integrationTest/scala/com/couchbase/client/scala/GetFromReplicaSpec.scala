@@ -12,6 +12,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
+@IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-373
 @TestInstance(Lifecycle.PER_CLASS)
 class GetFromReplicaSpec extends ScalaIntegrationTest {
 

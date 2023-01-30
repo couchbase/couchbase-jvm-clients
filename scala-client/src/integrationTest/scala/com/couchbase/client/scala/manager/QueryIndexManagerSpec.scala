@@ -176,6 +176,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     })
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs PS query error handling
   @Test
   def createDuplicatePrimaryIndex(): Unit = {
     createPrimaryIndex()
@@ -202,6 +203,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     })
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs PS query error handling
   @Test
   def createDuplicateSecondaryIndex(): Unit = {
     val indexName = "myIndex"
@@ -269,6 +271,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     assert(index.collectionName.isEmpty)
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs PS query error handling
   @Test
   def dropPrimaryIndex() = {
     cluster.queryIndexes.dropPrimaryIndex(config.bucketname()) match {
@@ -287,6 +290,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     assert(cluster.queryIndexes.getAllIndexes(config.bucketname()).get.isEmpty)
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs query error handling
   @Test
   def dropIndex() = {
     cluster.queryIndexes.dropIndex(config.bucketname(), "foo") match {
@@ -411,6 +415,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     indexes.watchIndexes(bucketName, Seq("myIndex"), 30.seconds).get
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Getting unconverted DEADLINE_EXCEEDED, will be fixed under JVMCBC-1203
   @Test
   def watchTimesOutIfOneIndexStaysDeferred(): Unit = {
     createIndex(bucketName, "indexOne", Seq("someField"))
@@ -492,7 +497,8 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     })
   }
 
-  @IgnoreWhen(clusterVersionIsBelow = RequireMB50132)
+  @IgnoreWhen(clusterVersionIsBelow = RequireMB50132,
+    isProtostellarWillWorkLater = true) // Needs PS query error handling
   @Test
   def dropCollectionIndex() = {
     val indexName = UUID.randomUUID().toString
