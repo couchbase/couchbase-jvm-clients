@@ -40,10 +40,11 @@ import com.couchbase.client.scala.manager.query.AsyncQueryIndexManager
 import com.couchbase.client.scala.manager.search.AsyncSearchIndexManager
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager}
 import com.couchbase.client.scala.query._
-import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler, SearchHandler}
+import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, SearchHandler}
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.{SearchResult, SearchRow}
+import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import com.couchbase.client.scala.util.DurationConversions.{javaDurationToScala, _}
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
@@ -92,7 +93,6 @@ class AsyncCluster(
   private[scala] val searchTimeout              = javaDurationToScala(env.timeoutConfig.searchTimeout())
   private[scala] val analyticsTimeout           = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
   private[scala] val retryStrategy              = env.retryStrategy
-  private[scala] val queryHandler               = new QueryHandler(hp)
   private[scala] val analyticsHandler           = new AnalyticsHandler(hp)
   private[scala] val searchHandler              = new SearchHandler(hp)
   private[scala] lazy val reactiveUserManager   = new ReactiveUserManager(core)
@@ -101,8 +101,7 @@ class AsyncCluster(
     new ReactiveCluster(this),
     analyticsIndexes
   )
-  private[scala] val EmptyNamedParameters      = Map.empty[String, Any]
-  private[scala] val EmptyPositionalParameters = Seq.empty[Any]
+  private[scala] val queryOps = core.queryOps()
 
   /** The AsyncBucketManager provides access to creating and getting buckets. */
   lazy val buckets = new AsyncBucketManager(reactiveBucketManager)
@@ -140,7 +139,8 @@ class AsyncCluster(
     *         `Failure`
     */
   def query(statement: String, options: QueryOptions): Future[QueryResult] = {
-    queryHandler.queryAsync(statement, options, env, None, None)
+    convert(queryOps.queryAsync(statement, options.toCore, null, null, null))
+      .map(result => convert(result))
   }
 
   /** Performs a N1QL query against the cluster.
@@ -167,11 +167,19 @@ class AsyncCluster(
       timeout: Duration = env.timeoutConfig.queryTimeout(),
       adhoc: Boolean = true
   ): Future[QueryResult] = {
-    val opts = QueryOptions()
-      .adhoc(adhoc)
-      .timeout(timeout)
-      .parameters(parameters)
-    query(statement, opts)
+    convert(
+      queryOps.queryAsync(
+        statement,
+        QueryOptions()
+          .adhoc(adhoc)
+          .timeout(timeout)
+          .parameters(parameters)
+          .toCore,
+        null,
+        null,
+        null
+      )
+    ).map(result => convert(result))
   }
 
   /** Performs an Analytics query against the cluster.

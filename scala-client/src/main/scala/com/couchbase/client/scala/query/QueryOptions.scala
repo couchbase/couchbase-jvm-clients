@@ -16,20 +16,32 @@
 
 package com.couchbase.client.scala.query
 
-import com.couchbase.client.core.annotation.{SinceCouchbase, Stability}
-
-import java.util.UUID
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.api.query.{
+  CoreQueryOptions,
+  CoreQueryProfile,
+  CoreQueryScanConsistency
+}
+import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.cnc.RequestSpan
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.{ArrayNode, ObjectNode}
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions
+import com.couchbase.client.core.error.InvalidArgumentException
+import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.logging.RedactableArgument.redactUser
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.core.util.Golang
+import com.couchbase.client.core.transaction.config.CoreSingleQueryTransactionOptions
 import com.couchbase.client.scala.json.{JsonArray, JsonArraySafe, JsonObject, JsonObjectSafe}
-import com.couchbase.client.scala.query.QueryScanConsistency.{ConsistentWith, RequestPlus}
 import com.couchbase.client.scala.util.DurationConversions._
 
+import java.{lang, time}
+import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
+import scala.jdk.CollectionConverters._
 
 /** Customize the execution of a N1QL query.
   *
@@ -271,75 +283,104 @@ case class QueryOptions(
     copy(preserveExpiry = Some(preserveExpiry))
   }
 
-  private[scala] def encode(): JsonObject = {
-    encode(JsonObject.create)
-  }
+  private[scala] def toCore: CoreQueryOptions = {
+    val x = this
 
-  private[scala] def encode(out: JsonObject): JsonObject = {
-    parameters match {
-      case Some(QueryParameters.Named(named)) =>
-        for { (k, v) <- named } {
-          val key = if (k.startsWith("$")) k else "$" + k
-          out.put(key, v)
-        }
+    val t: java.util.Optional[java.time.Duration] = timeout
+      .map(v => com.couchbase.client.scala.util.DurationConversions.scalaDurationToJava(v))
+      .asJava
+    val common = CoreCommonOptions.ofOptional(t, retryStrategy.asJava, parentSpan.asJava)
 
-      case Some(v: QueryParameters.Positional) =>
-        val arr = JsonArray.create
-        v.parameters foreach arr.add
-        out.put("args", arr)
+    new CoreQueryOptions {
+      override def adhoc(): Boolean = x.adhoc
 
-      case _ =>
+      override def clientContextId(): String = x.clientContextId.orNull
+
+      override def consistentWith(): CoreMutationState = x.scanConsistency match {
+        case Some(QueryScanConsistency.ConsistentWith(cw)) =>
+          new CoreMutationState(cw.tokens.asJava)
+        case _ => null
+      }
+
+      override def maxParallelism(): Integer = x.maxParallelism match {
+        case Some(value) => value
+        case _           => null
+      }
+
+      override def metrics(): Boolean = x.metrics
+
+      override def namedParameters(): ObjectNode = parameters match {
+        case Some(v: QueryParameters.Named) =>
+          try {
+            Mapper.convertValue(v.parameters.asJava, classOf[ObjectNode])
+          } catch {
+            case e: JsonProcessingException =>
+              throw new InvalidArgumentException("Unable to convert named parameters", e, null)
+          }
+        case _ => null
+      }
+
+      override def pipelineBatch(): Integer = x.pipelineBatch match {
+        case Some(value) => value
+        case _           => null
+      }
+
+      override def pipelineCap(): Integer = x.pipelineCap match {
+        case Some(value) => value
+        case _           => null
+      }
+
+      override def positionalParameters(): ArrayNode = parameters match {
+        case Some(v: QueryParameters.Positional) =>
+          try {
+            Mapper.convertValue(v.parameters.asJava, classOf[ArrayNode])
+          } catch {
+            case e: JsonProcessingException =>
+              throw new InvalidArgumentException("Unable to convert named parameters", e, null)
+          }
+        case _ => null
+      }
+
+      override def profile(): CoreQueryProfile = x.profile match {
+        case Some(QueryProfile.Off)     => CoreQueryProfile.OFF
+        case Some(QueryProfile.Phases)  => CoreQueryProfile.PHASES
+        case Some(QueryProfile.Timings) => CoreQueryProfile.TIMINGS
+        case _                          => CoreQueryProfile.OFF
+      }
+
+      override def raw(): JsonNode = x.raw match {
+        case Some(value) => Mapper.convertValue(value.asJava, classOf[ObjectNode])
+        case _           => null
+      }
+
+      override def readonly(): Boolean = x.readonly.getOrElse(false)
+
+      override def scanWait(): time.Duration = x.scanConsistency match {
+        case Some(QueryScanConsistency.RequestPlus(Some(scanWait))) => scanWait
+        case _                                                      => null
+      }
+
+      override def scanCap(): Integer = x.scanCap match {
+        case Some(value) => value
+        case _           => null
+      }
+
+      override def scanConsistency(): CoreQueryScanConsistency = x.scanConsistency match {
+        case Some(_: QueryScanConsistency.RequestPlus) => CoreQueryScanConsistency.REQUEST_PLUS
+        case _                                         => CoreQueryScanConsistency.NOT_BOUNDED
+      }
+
+      override def flexIndex(): Boolean = x.flexIndex
+
+      override def preserveExpiry(): lang.Boolean = x.preserveExpiry match {
+        case Some(value) => value
+        case _           => null
+      }
+
+      override def asTransactionOptions(): CoreSingleQueryTransactionOptions = null
+
+      override def commonOptions(): CoreCommonOptions = common
     }
-
-    scanConsistency match {
-      case Some(x: ConsistentWith) =>
-        out.put("scan_consistency", x.encoded)
-        val mutationState = JsonObject.create
-
-        x.consistentWith.tokens.foreach(token => {
-          val bucket: JsonObject =
-            if (mutationState.containsKey(token.bucketName)) mutationState.obj(token.bucketName)
-            else {
-              val out = JsonObject.create
-              mutationState.put(token.bucketName, out)
-              out
-            }
-
-          bucket.put(
-            token.partitionID.toString,
-            JsonArray(token.sequenceNumber, String.valueOf(token.partitionUUID))
-          )
-        })
-        out.put("scan_vectors", mutationState)
-
-      case Some(x: RequestPlus) =>
-        out.put("scan_consistency", x.encoded)
-        x.scanWait.foreach(sw => out.put("scan_wait", Golang.encodeDurationToMs(sw)))
-
-      case Some(x: QueryScanConsistency) =>
-        out.put("scan_consistency", x.encoded)
-
-      case _ =>
-    }
-    profile.foreach(v => out.put("profile", v.encoded))
-    val cciOut = clientContextId match {
-      case Some(cci) => cci
-      case _         => UUID.randomUUID().toString
-    }
-    out.put("client_context_id", cciOut)
-    maxParallelism.foreach(v => out.put("max_parallelism", v.toString))
-    pipelineCap.foreach(v => out.put("pipeline_cap", v.toString))
-    pipelineBatch.foreach(v => out.put("pipeline_batch", v.toString))
-    scanCap.foreach(v => out.put("scan_cap", v.toString))
-    out.put("metrics", metrics)
-    readonly.foreach(v => out.put("readonly", v))
-    raw.foreach(_.foreach(x => out.put(x._1, x._2)))
-    if (flexIndex) {
-      out.put("use_fts", true)
-    }
-    preserveExpiry.foreach(v => out.put("preserve_expiry", v))
-
-    out
   }
 }
 

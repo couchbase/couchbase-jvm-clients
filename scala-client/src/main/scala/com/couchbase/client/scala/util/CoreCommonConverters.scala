@@ -15,56 +15,40 @@
  */
 package com.couchbase.client.scala.util
 
-import com.couchbase.client.core.api.kv.{
-  CoreAsyncResponse,
-  CoreDurability,
-  CoreEncodedContent,
-  CoreExistsResult,
-  CoreGetResult,
-  CoreMutationResult,
-  CoreStoreSemantics,
-  CoreSubdocMutateResult
+import com.couchbase.client.core.api.kv._
+import com.couchbase.client.core.api.query.{
+  CoreQueryMetaData,
+  CoreQueryMetrics,
+  CoreQueryResult,
+  CoreQueryStatus,
+  CoreReactiveQueryResult
 }
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.msg.kv.{DurabilityLevel, MutationToken}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.kv.Observe.{ObservePersistTo, ObserveReplicateTo}
-import com.couchbase.client.scala.codec.{
-  EncodedValue,
-  JsonSerializer,
-  Transcoder,
-  TranscoderWithSerializer,
-  TranscoderWithoutSerializer
-}
+import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.kv.{
-  ExistsResult,
-  GetOptions,
-  GetResult,
-  InsertOptions,
-  MutationResult,
-  MutateInResult,
-  StoreSemantics
+import com.couchbase.client.scala.kv._
+import com.couchbase.client.scala.query.{
+  QueryMetaData,
+  QueryMetrics,
+  QueryResult,
+  QueryStatus,
+  QueryWarning,
+  ReactiveQueryResult
 }
-import reactor.core.publisher.Mono
-import reactor.core.scala.publisher.SMono
-import com.couchbase.client.scala.kv.{
-  ExistsResult,
-  GetReplicaResult,
-  GetResult,
-  MutateInResult,
-  MutationResult,
-  StoreSemantics
-}
+import com.couchbase.client.scala.util.DurationConversions._
 import reactor.core.publisher.{Flux, Mono}
 import reactor.core.scala.publisher.{SFlux, SMono}
 
 import java.util.function.Supplier
+import scala.compat.java8.OptionConverters._
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.compat.java8.OptionConverters._
+import scala.jdk.CollectionConverters._
 
 private[scala] object CoreCommonConverters {
   type HasCommonOptions = {
@@ -82,7 +66,10 @@ private[scala] object CoreCommonConverters {
     )
   }
 
-  def makeCommonOptions(timeout: Duration, retryStrategy: RetryStrategy = null): CoreCommonOptions = {
+  def makeCommonOptions(
+      timeout: Duration,
+      retryStrategy: RetryStrategy = null
+  ): CoreCommonOptions = {
     CoreCommonOptions.of(
       if (timeout == Duration.MinusInf) null
       else java.time.Duration.ofNanos(timeout.toNanos),
@@ -150,6 +137,59 @@ private[scala] object CoreCommonConverters {
 
   def convert(in: CoreExistsResult): ExistsResult = {
     ExistsResult(in.exists(), in.cas())
+  }
+
+  def convert(in: CoreQueryResult): QueryResult = {
+    QueryResult(in.collectRows().asScala, convert(in.metaData))
+  }
+
+  def convert(in: CoreReactiveQueryResult): ReactiveQueryResult = {
+    ReactiveQueryResult(
+      FutureConversions.javaFluxToScalaFlux(in.rows),
+      FutureConversions
+        .javaMonoToScalaMono(in.metaData)
+        .map(md => convert(md))
+    )
+  }
+
+  def convert(in: CoreQueryMetaData): QueryMetaData = {
+    QueryMetaData(
+      in.requestId,
+      in.clientContextId,
+      in.signature.asScala,
+      in.metrics.asScala.map(v => convert(v)),
+      in.warnings.asScala.map(v => QueryWarning(v.code, v.message)),
+      convert(in.status),
+      in.profile.asScala
+    )
+  }
+
+  def convert(in: CoreQueryMetrics): QueryMetrics = {
+    QueryMetrics(
+      in.elapsedTime,
+      in.executionTime,
+      in.resultCount,
+      in.resultSize,
+      in.mutationCount,
+      in.sortCount,
+      in.errorCount,
+      in.warningCount
+    )
+  }
+
+  def convert(in: CoreQueryStatus): QueryStatus = {
+    in match {
+      case CoreQueryStatus.RUNNING   => QueryStatus.Running
+      case CoreQueryStatus.SUCCESS   => QueryStatus.Success
+      case CoreQueryStatus.ERRORS    => QueryStatus.Errors
+      case CoreQueryStatus.COMPLETED => QueryStatus.Completed
+      case CoreQueryStatus.STOPPED   => QueryStatus.Stopped
+      case CoreQueryStatus.TIMEOUT   => QueryStatus.Timeout
+      case CoreQueryStatus.CLOSED    => QueryStatus.Closed
+      case CoreQueryStatus.FATAL     => QueryStatus.Fatal
+      case CoreQueryStatus.ABORTED   => QueryStatus.Aborted
+      case CoreQueryStatus.UNKNOWN   => QueryStatus.Unknown
+    }
   }
 
   def convert[T](in: CoreAsyncResponse[T]): Future[T] = {

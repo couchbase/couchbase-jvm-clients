@@ -39,6 +39,7 @@ import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
 import com.couchbase.client.scala.util.AsyncUtils
+import com.couchbase.client.scala.util.CoreCommonConverters.convert
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
@@ -108,7 +109,8 @@ class Cluster private[scala] (
     *         `Failure`
     */
   def query(statement: String, options: QueryOptions): Try[QueryResult] = {
-    AsyncUtils.block(async.query(statement, options))
+    Try(async.queryOps.queryBlocking(statement, options.toCore, null, null, null))
+      .map(result => convert(result))
   }
 
   /** Performs a N1QL query against the cluster.
@@ -135,7 +137,19 @@ class Cluster private[scala] (
       timeout: Duration = _env.timeoutConfig.queryTimeout(),
       adhoc: Boolean = true
   ): Try[QueryResult] = {
-    AsyncUtils.block(async.query(statement, parameters, timeout, adhoc))
+    Try(
+      async.queryOps.queryBlocking(
+        statement,
+        QueryOptions()
+          .adhoc(adhoc)
+          .timeout(timeout)
+          .parameters(parameters)
+          .toCore,
+        null,
+        null,
+        null
+      )
+    ).map(result => convert(result))
   }
 
   /** Performs an Analytics query against the cluster.

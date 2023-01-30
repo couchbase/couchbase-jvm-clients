@@ -19,16 +19,9 @@ package com.couchbase.client.scala
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics.{DiagnosticsResult, PingResult}
 import com.couchbase.client.core.env.PasswordAuthenticator
-import com.couchbase.client.scala.AsyncCluster.{
-  extractClusterEnvironment,
-  seedNodesFromConnectionString
-}
+import com.couchbase.client.scala.AsyncCluster.{extractClusterEnvironment, seedNodesFromConnectionString}
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.diagnostics.{
-  DiagnosticsOptions,
-  PingOptions,
-  WaitUntilReadyOptions
-}
+import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.manager.analytics.ReactiveAnalyticsIndexManager
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
@@ -41,6 +34,7 @@ import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchMetaData, SearchRow}
+import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
@@ -99,7 +93,8 @@ class ReactiveCluster(val async: AsyncCluster) {
       statement: String,
       options: QueryOptions
   ): SMono[ReactiveQueryResult] = {
-    async.queryHandler.queryReactive(statement, options, env, None, None)
+    convert(async.queryOps.queryReactive(statement, options.toCore, null, null, null))
+      .map(result => convert(result))
   }
 
   /** Performs a N1QL query against the cluster.
@@ -126,11 +121,19 @@ class ReactiveCluster(val async: AsyncCluster) {
       timeout: Duration = env.timeoutConfig.queryTimeout(),
       adhoc: Boolean = true
   ): SMono[ReactiveQueryResult] = {
-    val opts = QueryOptions()
-      .adhoc(adhoc)
-      .timeout(timeout)
-      .parameters(parameters)
-    query(statement, opts)
+    convert(
+      async.queryOps.queryReactive(
+        statement,
+        QueryOptions()
+          .adhoc(adhoc)
+          .timeout(timeout)
+          .parameters(parameters)
+          .toCore,
+        null,
+        null,
+        null
+      )
+    ).map(result => convert(result))
   }
 
   /** Performs an Analytics query against the cluster.

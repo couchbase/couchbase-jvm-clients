@@ -16,12 +16,12 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.env.ClusterEnvironment
-import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, QueryHandler}
+import com.couchbase.client.scala.query.handlers.AnalyticsHandler
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
+import com.couchbase.client.scala.util.CoreCommonConverters.convert
 
 import java.util.Optional
 import scala.concurrent.{ExecutionContext, Future}
@@ -48,8 +48,8 @@ class AsyncScope private[scala] (
 ) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
   private[scala] val hp                            = HandlerBasicParams(core, environment)
-  private[scala] val queryHandler                  = new QueryHandler(hp)
   private[scala] val analyticsHandler              = new AnalyticsHandler(hp)
+  private[scala] val queryOps                      = core.queryOps()
 
   /** The name of this scope. */
   def name = scopeName
@@ -88,7 +88,8 @@ class AsyncScope private[scala] (
     *         `Failure`
     */
   def query(statement: String, options: QueryOptions = QueryOptions()): Future[QueryResult] = {
-    queryHandler.queryAsync(statement, options, environment, Some(bucketName), Some(scopeName))
+    convert(queryOps.queryAsync(statement, options.toCore, null, null, null))
+      .map(result => convert(result))
   }
 
   /** Performs an Analytics query against the cluster.

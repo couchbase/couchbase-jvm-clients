@@ -116,7 +116,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
                                                        CoreQueryOptions options,
                                                        @Nullable CoreQueryContext queryContext,
                                                        @Nullable NodeIdentifier target,
-                                                       Function<Throwable, RuntimeException> errorConverter) {
+                                                       @Nullable Function<Throwable, RuntimeException> errorConverter) {
     if (options.asTransaction()) {
       CompletableFuture<CoreQueryResult> out = singleQueryTransactionBuffered(core, statement, options, queryContext).toFuture();
       return new CoreAsyncResponse(out, () -> {
@@ -126,11 +126,21 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
       Mono<QueryResponse> result = query(request, options.adhoc());
 
       CompletableFuture<CoreQueryResult> out = result
-          .onErrorMap(errorConverter::apply)
+          .onErrorMap(err -> {
+            if (errorConverter != null) {
+              return errorConverter.apply(err);
+            }
+            return err;
+          })
           .flatMap(response -> response
               .rows()
               .collectList()
-              .onErrorMap(errorConverter::apply)
+              .onErrorMap(err -> {
+                if (errorConverter != null) {
+                  return errorConverter.apply(err);
+                }
+                return err;
+              })
               .flatMap(rows -> response
                   .trailer()
                   .map(trailer -> (CoreQueryResult) new ClassicCoreQueryResult(response.header(), rows, trailer, request.context().lastDispatchedToNode()))))

@@ -17,6 +17,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, ReactiveAnalyticsResult}
 import com.couchbase.client.scala.query.{QueryOptions, ReactiveQueryResult}
+import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import reactor.core.scala.publisher.SMono
 
 import scala.concurrent.ExecutionContext
@@ -67,13 +68,8 @@ class ReactiveScope(async: AsyncScope, bucketName: String) {
       statement: String,
       options: QueryOptions = QueryOptions()
   ): SMono[ReactiveQueryResult] = {
-    async.queryHandler.queryReactive(
-      statement,
-      options,
-      async.environment,
-      Some(bucketName),
-      Some(name)
-    )
+    convert(async.queryOps.queryReactive(statement, options.toCore, null, null, null))
+      .map(result => convert(result))
   }
 
   /** Performs an Analytics query against the cluster.

@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult, ReactiveQueryResult}
 import com.couchbase.client.scala.util.AsyncUtils
+import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import reactor.core.scala.publisher.SMono
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -69,7 +70,8 @@ class Scope private[scala] (val async: AsyncScope, bucketName: String) {
     * @return a `QueryResult`
     */
   def query(statement: String, options: QueryOptions = QueryOptions()): Try[QueryResult] = {
-    AsyncUtils.block(async.query(statement, options))
+    Try(async.queryOps.queryBlocking(statement, options.toCore, null, null, null))
+      .map(result => convert(result))
   }
 
   /** Performs an Analytics query against the cluster.
