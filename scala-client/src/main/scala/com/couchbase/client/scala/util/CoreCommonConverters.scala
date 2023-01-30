@@ -82,11 +82,11 @@ private[scala] object CoreCommonConverters {
     )
   }
 
-  def makeCommonOptions(timeout: Duration): CoreCommonOptions = {
+  def makeCommonOptions(timeout: Duration, retryStrategy: RetryStrategy = null): CoreCommonOptions = {
     CoreCommonOptions.of(
       if (timeout == Duration.MinusInf) null
       else java.time.Duration.ofNanos(timeout.toNanos),
-      null,
+      retryStrategy,
       null
     )
   }

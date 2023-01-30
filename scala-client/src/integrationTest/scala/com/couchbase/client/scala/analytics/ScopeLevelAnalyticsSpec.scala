@@ -17,6 +17,7 @@ package com.couchbase.client.scala.analytics
 
 import com.couchbase.client.core.error.{DataverseExistsException, ScopeNotFoundException}
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.manager.analytics.AnalyticsIndexManager
 import com.couchbase.client.scala.manager.collection.{CollectionManager, CollectionSpec}
@@ -58,19 +59,13 @@ class ScopeLevelAnalyticsSpec extends ScalaIntegrationTest {
     println("Creating scope and waiting for it to exist..")
 
     bucket.collections.createScope(scopeName).get
-    Util.waitUntilCondition(() => {
-      val result = bucket.collections.scopeExists(scopeName)
-      result.isSuccess && result.get
-    })
+    ConsistencyUtil.waitUntilScopePresent(cluster.async.core, bucket.name, scopeName)
 
     println("Creating collection and waiting for it to exist")
 
     val collSpec = CollectionSpec(collectionName, scopeName)
     bucket.collections.createCollection(collSpec).get
-    Util.waitUntilCondition(() => {
-      val result = bucket.collections.collectionExists(collSpec)
-      result.isSuccess && result.get
-    })
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.async.core, bucket.name, scopeName, collectionName)
 
     scope = bucket.scope(scopeName)
     coll = scope.collection(collectionName)

@@ -52,7 +52,7 @@ class AsyncBucket private[scala] (
   private[scala] implicit val ec: ExecutionContext = environment.ec
   val reactive                                     = new ReactiveBucket(this)
 
-  lazy val collections = new AsyncCollectionManager(reactive.collections)
+  lazy val collections = new AsyncCollectionManager(this)
 
   lazy val viewIndexes = new AsyncViewIndexManager(reactive.viewIndexes)
 

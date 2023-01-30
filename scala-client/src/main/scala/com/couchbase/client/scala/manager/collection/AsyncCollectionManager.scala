@@ -16,31 +16,24 @@
 package com.couchbase.client.scala.manager.collection
 
 import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.scala.AsyncBucket
+import com.couchbase.client.scala.util.CoreCommonConverters.makeCommonOptions
+import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
+import com.couchbase.client.scala.util.FutureConversions
 
-import scala.concurrent.Future
 import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 
-class AsyncCollectionManager(reactive: ReactiveCollectionManager) {
-  private val bucket                       = reactive.bucket
-  private val core                         = bucket.core
-  private[scala] val defaultManagerTimeout = reactive.defaultManagerTimeout
-  private[scala] val defaultRetryStrategy  = reactive.defaultRetryStrategy
-
-  private[scala] def collectionExists(
-      collection: CollectionSpec,
-      timeout: Duration = defaultManagerTimeout,
-      retryStrategy: RetryStrategy = defaultRetryStrategy
-  ): Future[Boolean] = {
-    reactive.collectionExists(collection, timeout, retryStrategy).toFuture
-  }
-
-  private[scala] def scopeExists(
-      scopeName: String,
-      timeout: Duration = defaultManagerTimeout,
-      retryStrategy: RetryStrategy = defaultRetryStrategy
-  ): Future[Boolean] = {
-    reactive.scopeExists(scopeName, timeout, retryStrategy).toFuture
-  }
+class AsyncCollectionManager(private val bucket: AsyncBucket)(
+    implicit val ec: ExecutionContext
+) {
+  private val core = bucket.core
+  private[scala] val defaultManagerTimeout = javaDurationToScala(
+    core.context().environment().timeoutConfig().managementTimeout()
+  )
+  private[scala] val defaultRetryStrategy = core.context().environment().retryStrategy()
+  private val coreCollectionManager       = core.collectionManager(bucket.name)
 
   @deprecated(message = "use getAllScopes instead", since = "1.1.2")
   def getScope(
@@ -48,14 +41,30 @@ class AsyncCollectionManager(reactive: ReactiveCollectionManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[ScopeSpec] = {
-    reactive.getScope(scopeName, timeout, retryStrategy).toFuture
+    getAllScopes(timeout, retryStrategy)
+      .map(scopes => scopes.filter(v => v.name == scopeName).head)
   }
 
   def getAllScopes(
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Seq[ScopeSpec]] = {
-    reactive.getAllScopes(timeout, retryStrategy).collectSeq().toFuture
+    FutureConversions
+      .javaCFToScalaFutureMappingExceptions(
+        coreCollectionManager.getAllScopes(makeCommonOptions(timeout, retryStrategy))
+      )
+      .map(
+        v =>
+          v.scopes()
+            .asScala
+            .map(
+              scope =>
+                ScopeSpec(
+                  scope.name,
+                  scope.collections.asScala.map(coll => CollectionSpec(coll.name, scope.name))
+                )
+            )
+      )
   }
 
   def createCollection(
@@ -63,7 +72,16 @@ class AsyncCollectionManager(reactive: ReactiveCollectionManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Unit] = {
-    reactive.createCollection(collection, timeout, retryStrategy).toFuture
+    FutureConversions
+      .javaCFToScalaFutureMappingExceptions(
+        coreCollectionManager.createCollection(
+          collection.scopeName,
+          collection.name,
+          null,
+          makeCommonOptions(timeout, retryStrategy)
+        )
+      )
+      .map(_ => ())
   }
 
   def dropCollection(
@@ -71,7 +89,15 @@ class AsyncCollectionManager(reactive: ReactiveCollectionManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Unit] = {
-    reactive.dropCollection(collection, timeout, retryStrategy).toFuture
+    FutureConversions
+      .javaCFToScalaFutureMappingExceptions(
+        coreCollectionManager.dropCollection(
+          collection.scopeName,
+          collection.name,
+          makeCommonOptions(timeout, retryStrategy)
+        )
+      )
+      .map(_ => ())
   }
 
   def createScope(
@@ -79,7 +105,14 @@ class AsyncCollectionManager(reactive: ReactiveCollectionManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Unit] = {
-    reactive.createScope(scopeName, timeout, retryStrategy).toFuture
+    FutureConversions
+      .javaCFToScalaFutureMappingExceptions(
+        coreCollectionManager.createScope(
+          scopeName,
+          makeCommonOptions(timeout, retryStrategy)
+        )
+      )
+      .map(_ => ())
   }
 
   def dropScope(
@@ -87,6 +120,13 @@ class AsyncCollectionManager(reactive: ReactiveCollectionManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Unit] = {
-    reactive.dropScope(scopeName, timeout, retryStrategy).toFuture
+    FutureConversions
+      .javaCFToScalaFutureMappingExceptions(
+        coreCollectionManager.dropScope(
+          scopeName,
+          makeCommonOptions(timeout, retryStrategy)
+        )
+      )
+      .map(_ => ())
   }
 }

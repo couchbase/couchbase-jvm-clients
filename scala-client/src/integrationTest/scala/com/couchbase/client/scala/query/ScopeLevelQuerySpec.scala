@@ -16,6 +16,7 @@
 package com.couchbase.client.scala.query
 
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.MutationState
 import com.couchbase.client.scala.manager.collection.CollectionSpec
@@ -53,23 +54,18 @@ class ScopeLevelQuerySpec extends ScalaIntegrationTest {
     println("Creating scope and waiting for it to exist.")
 
     bucket.collections.createScope(ScopeName).get
-    Util.waitUntilCondition(() => {
-      val result    = bucket.collections.scopeExists(ScopeName)
-      val allScopes = bucket.collections.getAllScopes().get
-
-      println(s"Scope exists result: ${result}, all scopes = ${allScopes}")
-
-      result.isSuccess && result.get
-    })
+    ConsistencyUtil.waitUntilScopePresent(cluster.async.core, bucket.name, ScopeName)
 
     println("Creating collection and waiting for it to exist")
 
     val collSpec = CollectionSpec(CollectionName, ScopeName)
     bucket.collections.createCollection(collSpec).get
-    Util.waitUntilCondition(() => {
-      val result = bucket.collections.collectionExists(collSpec)
-      result.isSuccess && result.get
-    })
+    ConsistencyUtil.waitUntilCollectionPresent(
+      cluster.async.core,
+      bucket.name,
+      ScopeName,
+      CollectionName
+    )
 
     scope = bucket.scope(ScopeName)
     coll = scope.collection(CollectionName)

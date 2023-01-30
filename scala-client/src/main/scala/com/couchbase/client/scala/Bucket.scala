@@ -61,7 +61,7 @@ class Bucket private[scala] (val async: AsyncBucket) {
   /** Provides a reactive version of this API. */
   lazy val reactive: ReactiveBucket = new ReactiveBucket(async)
 
-  lazy val collections = new CollectionManager(reactive.collections)
+  lazy val collections = new CollectionManager(async.collections)
 
   lazy val viewIndexes = new ViewIndexManager(reactive.viewIndexes)
 

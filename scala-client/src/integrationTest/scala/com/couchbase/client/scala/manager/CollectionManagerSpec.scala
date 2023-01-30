@@ -58,30 +58,10 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
 
   def waitForScopeToExist(scope: String) = {
     ConsistencyUtil.waitUntilScopePresent(cluster.async.core, bucketName, scope)
-    Util.waitUntilCondition(() => {
-      val result = collections.scopeExists(scope)
-
-      println(s"Waiting for scope ${scope} to exist, result: ${result}")
-
-      result match {
-        case Success(true) => true
-        case _             => false
-      }
-    })
   }
 
   def waitForScopeToNotExist(scope: String) = {
     ConsistencyUtil.waitUntilScopeDropped(cluster.async.core, bucketName, scope)
-    Util.waitUntilCondition(() => {
-      val result = collections.scopeExists(scope)
-
-      println(s"Waiting for scope ${scope} to not exist, result: ${result}")
-
-      result match {
-        case Success(false) => true
-        case _              => false
-      }
-    })
   }
 
   def waitForCollectionToExist(collSpec: CollectionSpec): Unit = {
@@ -91,16 +71,6 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
       collSpec.scopeName,
       collSpec.name
     )
-    Util.waitUntilCondition(() => {
-      val result = collections.collectionExists(collSpec)
-
-      println(s"Waiting for collection ${collSpec} to exist, result: ${result}")
-
-      result match {
-        case Success(true) => true
-        case _             => false
-      }
-    })
   }
 
   def waitForCollectionToNotExist(collSpec: CollectionSpec): Unit = {
@@ -110,23 +80,11 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
       collSpec.scopeName,
       collSpec.name
     )
-    Util.waitUntilCondition(() => {
-      val result = collections.collectionExists(collSpec)
-
-      println(s"Waiting for collection ${collSpec} to not exist, result: ${result}")
-
-      result match {
-        case Success(false) => true
-        case _              => false
-      }
-    })
   }
 
   @Test
   def createScope(): Unit = {
     val scope = randomString
-
-    assert(!collections.scopeExists(scope).get)
 
     collections.createScope(scope).get
 
@@ -138,8 +96,6 @@ class CollectionManagerSpec extends ScalaIntegrationTest {
     val scope      = randomString
     val collection = randomString
     val collSpec   = CollectionSpec(collection, scope)
-
-    assert(!collections.collectionExists(collSpec).get)
 
     collections.createCollection(collSpec) match {
       case Success(_)                           => assert(false)

@@ -49,7 +49,7 @@ class ReactiveBucket private[scala] (val async: AsyncBucket) {
   private[scala] val hp                            = HandlerBasicParams(async.core, async.environment)
   private[scala] val viewHandler                   = new ViewHandler(hp)
 
-  lazy val collections = new ReactiveCollectionManager(async)
+  lazy val collections = new ReactiveCollectionManager(async.collections)
 
   lazy val viewIndexes = new ReactiveViewIndexManager(async.core, async.name)
 

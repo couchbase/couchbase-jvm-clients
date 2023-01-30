@@ -16,31 +16,14 @@
 package com.couchbase.client.scala.manager.collection
 
 import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.scala.Collection
 
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
-class CollectionManager(reactive: ReactiveCollectionManager) {
-  private val bucket                       = reactive.bucket
-  private val core                         = bucket.core
-  private[scala] val defaultManagerTimeout = reactive.defaultManagerTimeout
-  private[scala] val defaultRetryStrategy  = reactive.defaultRetryStrategy
-
-  private[scala] def collectionExists(
-      collection: CollectionSpec,
-      timeout: Duration = defaultManagerTimeout,
-      retryStrategy: RetryStrategy = defaultRetryStrategy
-  ): Try[Boolean] = {
-    Try(reactive.collectionExists(collection, timeout, retryStrategy).block())
-  }
-
-  private[scala] def scopeExists(
-      scopeName: String,
-      timeout: Duration = defaultManagerTimeout,
-      retryStrategy: RetryStrategy = defaultRetryStrategy
-  ): Try[Boolean] = {
-    Try(reactive.scopeExists(scopeName, timeout, retryStrategy).block())
-  }
+class CollectionManager(async: AsyncCollectionManager) {
+  private[scala] val defaultManagerTimeout = async.defaultManagerTimeout
+  private[scala] val defaultRetryStrategy  = async.defaultRetryStrategy
 
   @deprecated(message = "use getAllScopes instead", since = "1.1.2")
   def getScope(
@@ -48,14 +31,14 @@ class CollectionManager(reactive: ReactiveCollectionManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Try[ScopeSpec] = {
-    Try(reactive.getScope(scopeName, timeout, retryStrategy).block())
+    Collection.block(async.getScope(scopeName, timeout, retryStrategy))
   }
 
   def getAllScopes(
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Try[Seq[ScopeSpec]] = {
-    Try(reactive.getAllScopes(timeout, retryStrategy).collectSeq().block())
+    Collection.block(async.getAllScopes(timeout, retryStrategy))
   }
 
   def createCollection(
@@ -63,7 +46,7 @@ class CollectionManager(reactive: ReactiveCollectionManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Try[Unit] = {
-    Try(reactive.createCollection(collection, timeout, retryStrategy).block())
+    Collection.block(async.createCollection(collection, timeout, retryStrategy))
   }
 
   def dropCollection(
@@ -71,7 +54,7 @@ class CollectionManager(reactive: ReactiveCollectionManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Try[Unit] = {
-    Try(reactive.dropCollection(collection, timeout, retryStrategy).block())
+    Collection.block(async.dropCollection(collection, timeout, retryStrategy))
   }
 
   def createScope(
@@ -79,7 +62,7 @@ class CollectionManager(reactive: ReactiveCollectionManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Try[Unit] = {
-    Try(reactive.createScope(scopeName, timeout, retryStrategy).block())
+    Collection.block(async.createScope(scopeName, timeout, retryStrategy))
   }
 
   def dropScope(
@@ -87,6 +70,6 @@ class CollectionManager(reactive: ReactiveCollectionManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Try[Unit] = {
-    Try(reactive.dropScope(scopeName, timeout, retryStrategy).block())
+    Collection.block(async.dropScope(scopeName, timeout, retryStrategy))
   }
 }

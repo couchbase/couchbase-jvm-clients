@@ -21,6 +21,7 @@ import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
+
 @Volatile
 class AsyncBucketManager(val reactive: ReactiveBucketManager)(implicit val ec: ExecutionContext) {
   private[scala] val defaultManagerTimeout = reactive.defaultManagerTimeout
