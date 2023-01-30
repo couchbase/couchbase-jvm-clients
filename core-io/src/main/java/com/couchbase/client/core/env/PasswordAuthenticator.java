@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.grpc.Metadata;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
@@ -22,6 +23,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
 import com.couchbase.client.core.io.netty.kv.SaslListMechanismsHandler;
+import com.couchbase.client.core.io.netty.kv.sasl.SaslHelper;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.util.Base64;
@@ -30,9 +32,12 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.deps.io.grpc.Metadata.ASCII_STRING_MARSHALLER;
+import static com.couchbase.client.core.io.netty.kv.sasl.SaslHelper.platformHasSaslPlain;
+import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Performs authentication against a couchbase server cluster using username and password.
@@ -107,12 +112,14 @@ public class PasswordAuthenticator implements Authenticator {
   @Override
   public void authKeyValueConnection(final EndpointContext ctx, final ChannelPipeline pipeline) {
     boolean tls = ctx.environment().securityConfig().tlsEnabled();
+    boolean forceSaslPlain = tls && platformHasSaslPlain();
+
     pipeline.addLast(new SaslListMechanismsHandler(ctx));
     pipeline.addLast(new SaslAuthenticationHandler(
       ctx,
       username.get(),
       password.get(),
-      tls ? EnumSet.of(SaslMechanism.PLAIN) : allowedSaslMechanisms
+      forceSaslPlain ? EnumSet.of(SaslMechanism.PLAIN) : allowedSaslMechanisms
     ));
   }
 
@@ -137,6 +144,7 @@ public class PasswordAuthenticator implements Authenticator {
     private Supplier<String> username;
     private Supplier<String> password;
     private Set<SaslMechanism> allowedSaslMechanisms = DEFAULT_SASL_MECHANISMS;
+    private Supplier<Boolean> platformHasSaslPlain = SaslHelper::platformHasSaslPlain;
 
     /**
      * Specifies a static username that will be used for all authentication purposes.
@@ -210,6 +218,14 @@ public class PasswordAuthenticator implements Authenticator {
      */
     public Builder allowedSaslMechanisms(final Set<SaslMechanism> allowedSaslMechanisms) {
       notNullOrEmpty(allowedSaslMechanisms, "AllowedSaslMechanisms");
+
+      // Fail fast if LDAP-compatible auth won't work because platform does not have SASL PLAIN
+      if (allowedSaslMechanisms.equals(setOf(SaslMechanism.PLAIN)) && !platformHasSaslPlain.get()) {
+        throw new RuntimeException(
+          "This JVM is running in a restricted mode that prevents using SASL PLAIN for authentication."
+        );
+      }
+
       this.allowedSaslMechanisms = allowedSaslMechanisms;
       return this;
     }
@@ -242,6 +258,13 @@ public class PasswordAuthenticator implements Authenticator {
      */
     public Builder onlyEnablePlainSaslMechanism() {
       return allowedSaslMechanisms(EnumSet.of(SaslMechanism.PLAIN));
+    }
+
+    // Visible for testing
+    @Stability.Internal
+    Builder setPlatformHasSaslPlain(Supplier<Boolean> saslPlainAvailable) {
+      this.platformHasSaslPlain = requireNonNull(saslPlainAvailable);
+      return this;
     }
 
     /**

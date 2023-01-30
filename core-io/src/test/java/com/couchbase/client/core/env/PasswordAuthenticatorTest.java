@@ -29,6 +29,8 @@ import java.util.EnumSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -97,6 +99,16 @@ class PasswordAuthenticatorTest {
 
     SaslAuthenticationHandler handler = channel.pipeline().get(SaslAuthenticationHandler.class);
     assertEquals(EnumSet.of(SaslMechanism.PLAIN), handler.allowedMechanisms());
+  }
+
+  @Test
+  void onlyEnablePlainFailsIfPlainNotAvailable() {
+    Exception e = assertThrows(Exception.class, () ->
+      PasswordAuthenticator.builder()
+        .setPlatformHasSaslPlain(() -> false)
+        .onlyEnablePlainSaslMechanism()
+      );
+    assertTrue(e.getMessage().contains("PLAIN"));
   }
 
   /**

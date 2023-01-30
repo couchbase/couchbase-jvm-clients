@@ -349,7 +349,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
    * @throws SaslException if something went wrong during the creation.
    */
   private SaslClient createSaslClient(final Set<SaslMechanism> selected) throws SaslException {
-    return new CouchbaseSaslClientFactory().createSaslClient(
+    SaslClient client = new CouchbaseSaslClientFactory().createSaslClient(
       selected.stream().map(SaslMechanism::mech).toArray(String[]::new),
       null,
       "couchbase",
@@ -357,6 +357,12 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       null,
       this
     );
+
+    if (client == null) {
+      throw new SaslException("Failed to create SASL client for any of " + selected);
+    }
+
+    return client;
   }
 
   /**
