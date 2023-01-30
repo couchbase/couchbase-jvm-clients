@@ -69,7 +69,11 @@ internal class ViewIntegrationTest : KotlinIntegrationTest() {
 
     @BeforeAll
     fun setup() {
-        createDesignDocument()
+        runBlocking {
+            retry {
+                createDesignDocument()
+            }
+        }
     }
 
     @AfterAll
