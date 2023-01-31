@@ -403,13 +403,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
   private ByteBuf buildStepRequest(final ChannelHandlerContext ctx, final byte[] evaluatedBytes) {
     final String mech = saslClient.getMechanismName();
 
-    ByteBuf body;
-    if (mech.equalsIgnoreCase(SaslMechanism.PLAIN.mech())) {
-      String[] evaluated = new String(evaluatedBytes, UTF_8).split(" ");
-      body = Unpooled.copiedBuffer(username + "\0" + evaluated[1], UTF_8);
-    } else {
-      body = Unpooled.wrappedBuffer(evaluatedBytes);
-    }
+    ByteBuf body = Unpooled.wrappedBuffer(evaluatedBytes);
 
     ByteBuf key = Unpooled.copiedBuffer(mech, UTF_8);
     ByteBuf request =request(
