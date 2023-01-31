@@ -17,8 +17,6 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.protostellar.ProtostellarStatsCollector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
@@ -29,7 +27,6 @@ public class CouchbaseForkPoolThreadFactory implements ForkJoinPool.ForkJoinWork
   // JVMCBC-1187: Temporary performance-related code that will be removed pre-GA.
   public static ProtostellarStatsCollector collector;
 
-  private final Logger logger = LoggerFactory.getLogger(CouchbaseForkPoolThreadFactory.class);
   static class CouchbaseThread extends ForkJoinWorkerThread {
     public CouchbaseThread(ForkJoinPool pool) {
       super(pool);

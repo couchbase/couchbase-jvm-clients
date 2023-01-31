@@ -28,8 +28,6 @@ import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.util.ConnectionString.PortType;
 import com.couchbase.client.core.util.ConnectionString.UnresolvedSocket;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingException;
@@ -55,8 +53,6 @@ import static java.util.stream.Collectors.groupingBy;
  */
 @Stability.Internal
 public class ConnectionStringUtil {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionStringUtil.class);
-
   private ConnectionStringUtil() {
   }
 
@@ -154,7 +150,7 @@ public class ConnectionStringUtil {
         .filter(it -> it.port() != 0)
         .forEach(it -> {
           if (connectionString.scheme() == ConnectionString.Scheme.PROTOSTELLAR && (it.portType().isPresent() && it.portType().get() != PROTOSTELLAR)) {
-            LOGGER.warn("Using port type {} with connection scheme {}; this is probably an application error", it.portType().get(), connectionString.scheme());
+            throw InvalidArgumentException.fromMessage("Invalid connection string. Port type " + it.portType().get() + " is not compatible with scheme " + connectionString.scheme());
           }
 
           ports.put(it.portType().orElse(assumedPortType), it.port());

@@ -26,10 +26,8 @@ import com.couchbase.client.core.error.AmbiguousTimeoutException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.msg.CancellationReason;
-import com.couchbase.client.core.protostellar.ProtostellarRequest;
 import com.couchbase.client.core.protostellar.ProtostellarBaseRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.couchbase.client.core.protostellar.ProtostellarRequest;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -38,7 +36,6 @@ import static com.couchbase.client.core.retry.RetryOrchestrator.controlledBackof
 
 @Stability.Internal
 public class RetryOrchestratorProtostellar {
-  private final static Logger logger = LoggerFactory.getLogger(RetryOrchestratorProtostellar.class);
 
   public static ProtostellarRequestBehaviour shouldRetry(Core core, ProtostellarRequest<?> request, RetryReason reason) {
     CoreContext ctx = core.context();

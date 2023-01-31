@@ -16,16 +16,12 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Stability.Internal
 public class CouchbaseThreadFactory implements ThreadFactory {
-  private final Logger logger = LoggerFactory.getLogger(CouchbaseThreadFactory.class);
-
   private final String namePrefix;
   private final AtomicInteger threadNumber = new AtomicInteger();
 
@@ -38,7 +34,6 @@ public class CouchbaseThreadFactory implements ThreadFactory {
     Thread t = new Thread(r);
     t.setName(namePrefix + threadNumber.getAndIncrement());
     t.setDaemon(true);
-    // logger.info("Created thread {}", t.getName());
     return t;
   }
 }
