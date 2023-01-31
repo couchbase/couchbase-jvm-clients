@@ -16,8 +16,8 @@
 
 package com.couchbase.client.kotlin.kv
 
+import com.couchbase.client.core.api.kv.CoreSubdocGetCommand
 import com.couchbase.client.core.msg.kv.SubdocCommandType
-import com.couchbase.client.core.msg.kv.SubdocGetRequest
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.kv.internal.LookupInMacro
 
@@ -68,13 +68,13 @@ public class SubdocExists internal constructor(
  * @sample com.couchbase.client.kotlin.samples.subdocLookup
  */
 public abstract class LookupInSpec {
-    internal val commands = ArrayList<SubdocGetRequest.Command>()
+    internal val commands = ArrayList<CoreSubdocGetCommand>()
 
     protected fun get(path: String, xattr: Boolean = false): Subdoc {
-        val origIndex = commands.size
-        val subdoc = Subdoc(path, xattr, this, origIndex)
+        val index = commands.size
+        val subdoc = Subdoc(path, xattr, this, index)
         val type = if (path == "") SubdocCommandType.GET_DOC else SubdocCommandType.GET
-        commands.add(SubdocGetRequest.Command(type, path, xattr, origIndex))
+        commands.add(CoreSubdocGetCommand(type, path, xattr))
         return subdoc
     }
 
@@ -82,16 +82,16 @@ public abstract class LookupInSpec {
     protected fun get(macro: LookupInMacro): Subdoc = get(macro.value, xattr = true)
 
     protected fun count(path: String, xattr: Boolean = false): SubdocCount {
-        val origIndex = commands.size
-        val subdoc = SubdocCount(path, xattr, this, origIndex)
-        commands.add(SubdocGetRequest.Command(SubdocCommandType.COUNT, path, xattr, origIndex))
+        val index = commands.size
+        val subdoc = SubdocCount(path, xattr, this, index)
+        commands.add(CoreSubdocGetCommand(SubdocCommandType.COUNT, path, xattr))
         return subdoc
     }
 
     protected fun exists(path: String, xattr: Boolean = false): SubdocExists {
-        val origIndex = commands.size
-        val subdoc = SubdocExists(path, xattr, this, origIndex)
-        commands.add(SubdocGetRequest.Command(SubdocCommandType.EXISTS, path, xattr, origIndex))
+        val index = commands.size
+        val subdoc = SubdocExists(path, xattr, this, index)
+        commands.add(CoreSubdocGetCommand(SubdocCommandType.EXISTS, path, xattr))
         return subdoc
     }
 

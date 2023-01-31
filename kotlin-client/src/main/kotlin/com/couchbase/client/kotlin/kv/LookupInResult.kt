@@ -16,23 +16,26 @@
 
 package com.couchbase.client.kotlin.kv
 
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult
 import com.couchbase.client.core.error.subdoc.PathMismatchException
-import com.couchbase.client.core.error.subdoc.PathNotFoundException
 import com.couchbase.client.core.msg.kv.SubDocumentField
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.TypeRef
 import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.internal.toStringUtf8
 
-public class LookupInResult(
-    public val id: String,
-    public val size: Int,
-    public val cas: Long,
-    public val deleted: Boolean,
-    private val fields: List<SubDocumentField>,
+public class LookupInResult internal constructor(
+    private val core : CoreSubdocGetResult,
     private val defaultSerializer: JsonSerializer,
     private val spec: LookupInSpec,
 ) {
+    public val id: String = core.key()
+    public val cas: Long = core.cas()
+    public val deleted: Boolean = core.tombstone()
+
+    @Deprecated("This property is useless. Please do not use it.", level = DeprecationLevel.ERROR)
+    public val size: Int = spec.commands.size
+
     // When the LookupInResult is in scope as a receiver,
     // Subdoc instances have these addition properties / methods
     // for accessing field values.
@@ -50,23 +53,17 @@ public class LookupInResult(
 
     private fun exists(spec: LookupInSpec, index: Int): Boolean {
         checkSpec(spec)
-        checkIndex(index, 0 until size)
-        val field = fields[index]
-
-        if (!field.error().isPresent) return true
-
-        return when (val error = field.error().get()) {
-            is PathNotFoundException -> false
-            is PathMismatchException -> false
-            else -> throw error // because the request was somehow invalid, or we can't tell if the field exists
+        return try {
+            core.exists(index)
+        } catch (e: PathMismatchException) {
+            // Kotlin SDK diverges from spec.
+            // See https://issues.couchbase.com/browse/KCBC-119
+            false;
         }
     }
 
     internal operator fun get(index: Int): SubDocumentField {
-        checkIndex(index, 0 until size)
-        val field = fields[index]
-        field.error().ifPresent { throw it }
-        return field
+        return core.field(index).also { it.throwErrorIfPresent() }
     }
 
     internal fun content(subdoc: Subdoc): ByteArray {
@@ -82,9 +79,4 @@ public class LookupInResult(
     private fun checkSpec(spec: LookupInSpec) {
         require(spec == this.spec) { "Subdoc was not created from the same LookupInSpec as this result." }
     }
-}
-
-internal fun checkIndex(index: Int, range: IntRange): Int {
-    if (index !in range) throw IndexOutOfBoundsException("Index $index not in range $range")
-    return index
 }

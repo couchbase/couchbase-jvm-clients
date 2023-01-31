@@ -21,15 +21,10 @@ import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
-import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.msg.kv.SubdocGetRequest;
-import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
-import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.kv.ReplicaHelper;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
@@ -45,7 +40,6 @@ import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertOptions;
-import com.couchbase.client.java.kv.LookupInAccessor;
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
@@ -64,8 +58,6 @@ import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.java.manager.query.AsyncCollectionQueryIndexManager;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -591,46 +583,18 @@ public class AsyncCollection {
   public CompletableFuture<LookupInResult> lookupIn(final String id, final List<LookupInSpec> specs,
                                                     final LookupInOptions options) {
     notNull(options, "LookupInOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
+    notNull(specs, "LookupInSpecs", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
+
     LookupInOptions.Built opts = options.build();
     final JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
-    return LookupInAccessor.lookupInAccessor(core(), lookupInRequest(id, specs, opts), serializer);
-  }
 
-  /**
-   * Helper method to create the underlying lookup subdoc request.
-   *
-   * @param id the outer document ID.
-   * @param specs the spec which specifies the type of lookups to perform.
-   * @param opts custom options to modify the lookup options.
-   * @return the subdoc lookup request.
-   */
-  SubdocGetRequest lookupInRequest(final String id, final List<LookupInSpec> specs, final LookupInOptions.Built opts) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
-    notNullOrEmpty(specs, "LookupInSpecs", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
-
-    ArrayList<SubdocGetRequest.Command> commands = new ArrayList<>(specs.size());
-
-    for (int i = 0; i < specs.size(); i ++) {
-      LookupInSpec spec = specs.get(i);
-      commands.add(spec.export(i));
-    }
-
-    // xattrs come first
-    commands.sort(Comparator.comparing(v -> !v.xattr()));
-
-    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().kvTimeout());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-
-    byte flags = 0;
-    if (opts.accessDeleted()) {
-      flags |= SubdocMutateRequest.SUBDOC_DOC_FLAG_ACCESS_DELETED;
-    }
-
-    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, opts.parentSpan().orElse(null));
-    SubdocGetRequest request = new SubdocGetRequest(timeout, core().context(), collectionIdentifier(), retryStrategy, id,
-      flags, commands, span);
-    request.context().clientContext(opts.clientContext());
-    return request;
+    return kvOps.subdocGetAsync(
+        opts,
+        id,
+        transform(specs, LookupInSpec::toCore),
+        opts.accessDeleted()
+      )
+      .thenApply(it -> new LookupInResult(it, serializer));
   }
 
   /**
@@ -704,7 +668,7 @@ public class AsyncCollection {
     notNull(scanType, "ScanType", () -> ReducedKeyValueErrorContext.create(null, collectionIdentifier()));
     ScanOptions.Built opts = notNull(options, "ScanOptions",
         () -> ReducedKeyValueErrorContext.create(null, collectionIdentifier())).build();
-    return kvOps.scanRequestReactive(scanType.build(), opts).map(r -> 
+    return kvOps.scanRequestReactive(scanType.build(), opts).map(r ->
       new ScanResult(opts.idsOnly(), r.key(), r.value(), r.flags(), r.cas(), Optional.ofNullable(r.expiry()),
         opts.transcoder() != null ? opts.transcoder() : environment().transcoder())).collectList().toFuture();
   }

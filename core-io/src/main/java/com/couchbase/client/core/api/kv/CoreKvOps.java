@@ -299,6 +299,31 @@ public interface CoreKvOps {
     return Mono.defer(() -> unlockAsync(common, key, cas).toMono());
   }
 
+  CoreAsyncResponse<CoreSubdocGetResult> subdocGetAsync(
+      CoreCommonOptions common,
+      String key,
+      List<CoreSubdocGetCommand> commands,
+      boolean accessDeleted
+  );
+
+  default CoreSubdocGetResult subdocGetBlocking(
+      CoreCommonOptions common,
+      String key,
+      List<CoreSubdocGetCommand> commands,
+      boolean accessDeleted
+  ) {
+    return subdocGetAsync(common, key, commands, accessDeleted).toBlocking();
+  }
+
+  default Mono<CoreSubdocGetResult> subdocGetReactive(
+      CoreCommonOptions common,
+      String key,
+      List<CoreSubdocGetCommand> commands,
+      boolean accessDeleted
+  ) {
+    return Mono.defer(() -> subdocGetReactive(common, key, commands, accessDeleted));
+  }
+
   Flux<CoreGetResult> getAllReplicasReactive(
       CoreCommonOptions common,
       String key

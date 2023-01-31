@@ -17,8 +17,8 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
-import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 
 /**
  * Defines specs to lookup parts in a JSON document.
@@ -31,12 +31,9 @@ public abstract class LookupInSpec {
 
   /**
    * Internal operation called from the encoding side that encodes the spec into its internal representation.
-   *
-   * @param originalIndex the original index of the command.
-   * @return the encoded command.
    */
   @Stability.Internal
-  public abstract SubdocGetRequest.Command export(int originalIndex);
+  public abstract CoreSubdocGetCommand toCore();
 
   /**
    * Fetches the content from a field (if present) at the given path.

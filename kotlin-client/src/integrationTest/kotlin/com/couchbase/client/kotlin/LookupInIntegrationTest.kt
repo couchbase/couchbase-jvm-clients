@@ -1,6 +1,7 @@
 package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.error.DocumentNotFoundException
+import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException
 import com.couchbase.client.core.error.subdoc.PathInvalidException
@@ -31,7 +32,7 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
     fun `fails when spec is empty`(): Unit = runBlocking {
         val id = nextId()
         val emptySpec = object : LookupInSpec() {}
-        assertThrows<IllegalArgumentException> { collection.lookupIn(id, emptySpec) }
+        assertThrows<InvalidArgumentException> { collection.lookupIn(id, emptySpec) }
     }
 
     @Test
@@ -196,6 +197,7 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
                 val nope = get("magicWord[0].foo")
             }
             collection.lookupIn(id, spec) {
+                // Kotlin SDK diverges from spec; see https://issues.couchbase.com/browse/KCBC-119
                 assertFalse(spec.nopeExists.value)
                 assertFalse(spec.nopeExists.get(this))
                 assertFalse(spec.nope.exists)

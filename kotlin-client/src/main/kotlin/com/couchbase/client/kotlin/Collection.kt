@@ -21,7 +21,6 @@ import com.couchbase.client.core.CoreKeyspace
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.kv.CoreAsyncResponse
 import com.couchbase.client.core.api.shared.CoreMutationState
-import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.env.TimeoutConfig
 import com.couchbase.client.core.error.CasMismatchException
@@ -36,10 +35,7 @@ import com.couchbase.client.core.kv.*
 import com.couchbase.client.core.manager.CoreCollectionQueryIndexManager
 import com.couchbase.client.core.msg.Request
 import com.couchbase.client.core.msg.Response
-import com.couchbase.client.core.msg.ResponseStatus.SUBDOC_FAILURE
 import com.couchbase.client.core.msg.kv.KeyValueRequest
-import com.couchbase.client.core.msg.kv.SubdocGetRequest
-import com.couchbase.client.core.msg.kv.SubdocMutateRequest
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.JsonSerializer
@@ -585,39 +581,14 @@ public class Collection internal constructor(
         common: CommonOptions = CommonOptions.Default,
         accessDeleted: Boolean = false,
     ): LookupInResult {
-        require(spec.commands.isNotEmpty()) { "Must specify at least one lookup" }
-        require(spec.commands.size <= 16) { "Must specify no more than 16 lookups" }
-
-        val flags: Byte = if (accessDeleted) SubdocMutateRequest.SUBDOC_DOC_FLAG_ACCESS_DELETED else 0
-        val request = SubdocGetRequest(
-            common.actualKvTimeout(Durability.none()),
-            core.context(),
-            collectionId,
-            common.actualRetryStrategy(),
+        val coreResult = kvOps.subdocGetAsync(
+            common.toCore(),
             id,
-            flags,
-            spec.commands.sortedBy { !it.xattr() }, // xattr commands must come first
-            common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN)
-        )
+            spec.commands,
+            accessDeleted,
+        ).await()
 
-        try {
-            core.exec(request, common).let { response ->
-                if (response.status().success() || response.status() == SUBDOC_FAILURE) {
-                    return LookupInResult(
-                        id,
-                        spec.commands.size,
-                        response.cas(),
-                        response.isDeleted,
-                        response.values().toList(),
-                        defaultJsonSerializer,
-                        spec,
-                    )
-                }
-                throw DefaultErrorUtil.keyValueStatusToException(request, response)
-            }
-        } finally {
-            request.logicallyComplete()
-        }
+        return LookupInResult(coreResult, defaultJsonSerializer, spec)
     }
 
     public suspend fun mutateIn(

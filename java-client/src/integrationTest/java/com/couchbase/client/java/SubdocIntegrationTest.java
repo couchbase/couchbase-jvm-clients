@@ -22,10 +22,10 @@ import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.PathInvalidException;
+import com.couchbase.client.core.error.subdoc.PathMismatchException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownVirtualAttributeException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.core.util.CbThrowables;
 import com.couchbase.client.java.codec.RawStringTranscoder;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
@@ -51,12 +51,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
-import static com.couchbase.client.core.util.CbThrowables.findCause;
 import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static com.couchbase.client.java.kv.LookupInSpec.get;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -306,7 +304,9 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     LookupInResult result = collection.lookupIn(id, Collections.singletonList(LookupInSpec.exists("not_exist")));
 
     assertFalse(result.exists(0));
-    assertThrows(PathNotFoundException.class, () -> assertTrue(result.contentAs(0, Boolean.class)));
+
+    // Bug: https://issues.couchbase.com/browse/JCBC-2056
+    assertThrows(PathNotFoundException.class, () -> result.contentAs(0, Boolean.class));
   }
 
   @Test
@@ -328,26 +328,28 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     collection.upsert(id, JsonObject.create().put("foo", "bar"));
 
-
     LookupInResult result = collection.lookupIn(
       id,
-      Arrays.asList(LookupInSpec.exists("not_exist"), LookupInSpec.get("foo"), LookupInSpec.exists("foo"))
+      listOf(
+        LookupInSpec.exists("not_exist"),
+        LookupInSpec.get("foo"),
+        LookupInSpec.exists("foo")
+      )
     );
 
     assertFalse(result.exists(0));
-    assertThrows(
-      PathNotFoundException.class,
-      () -> assertTrue(result.contentAs(0, Boolean.class))
-    );
+
+    // Bug: https://issues.couchbase.com/browse/JCBC-2056
+    assertThrows(PathNotFoundException.class, () -> result.contentAs(0, Boolean.class));
+    assertThrows(PathNotFoundException.class, () -> result.contentAsBytes(0));
 
     assertTrue(result.exists(1));
     assertEquals("bar", result.contentAs(1, String.class));
 
     assertTrue(result.exists(2));
     assertTrue(result.contentAs(2, Boolean.class));
-    assertThrows(
-            IllegalArgumentException.class,
-            () -> result.contentAs(2, String.class));
+    assertEquals("true", result.contentAs(2, String.class));
+    assertArrayEquals("true".getBytes(UTF_8), result.contentAsBytes(2));
   }
 
   @Test
@@ -543,5 +545,38 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     assertThrows(XattrUnknownVirtualAttributeException.class, () ->
             collection.lookupIn(id, Arrays.asList(LookupInSpec.get("$vbucket").xattr())));
+  }
+
+  @Test
+  void existsAcceptsInvalidIndex() {
+    String id = UUID.randomUUID().toString();
+
+    collection.upsert(id, mapOf());
+
+    LookupInResult result = collection.lookupIn(id, listOf(
+      LookupInSpec.exists("doesNotExist")
+    ));
+
+    // This behavior is not according to spec, but it's what the
+    // Java SDK currently does.
+    assertFalse(result.exists(7));
+  }
+
+  @Test
+  void existsDoesNotPropagateExceptions() {
+    String id = UUID.randomUUID().toString();
+
+    collection.upsert(id, mapOf("foo", mapOf("bar", "zor")));
+
+    LookupInResult result = collection.lookupIn(id, listOf(
+      LookupInSpec.get("foo.bar[0]")
+    ));
+
+    assertThrows(PathMismatchException.class, () -> result.contentAsBytes(0));
+
+    // Spec says `exists` should propagate all exceptions except "PATH_NOT_FOUND",
+    // just like `get` or `count`.
+    // Java SDK diverges from spec; it treats all errors as "does not exit".
+    assertFalse(result.exists(0));
   }
 }

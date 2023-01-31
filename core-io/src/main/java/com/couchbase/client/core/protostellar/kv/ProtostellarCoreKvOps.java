@@ -28,6 +28,8 @@ import com.couchbase.client.core.api.kv.CoreGetResult;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.api.kv.CoreMutationResult;
 import com.couchbase.client.core.api.kv.CoreStoreSemantics;
+import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
@@ -272,6 +274,16 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
       request,
       (endpoint) -> endpoint.kvStub().withDeadline(request.deadline()).unlock(request.request()),
       (response) -> null);
+  }
+
+  @Override
+  public CoreAsyncResponse<CoreSubdocGetResult> subdocGetAsync(
+    CoreCommonOptions common,
+    String key,
+    List<CoreSubdocGetCommand> commands,
+    boolean accessDeleted
+  ) {
+    throw unsupported();
   }
 
   @Override

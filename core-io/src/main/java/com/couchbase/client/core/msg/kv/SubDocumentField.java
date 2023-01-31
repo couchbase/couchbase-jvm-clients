@@ -18,11 +18,13 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
+import reactor.util.annotation.Nullable;
 
 import java.io.Serializable;
 import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class SubDocumentField implements Serializable {
@@ -30,18 +32,18 @@ public class SubDocumentField implements Serializable {
   private static final long serialVersionUID = 227930811730226484L;
 
   private final SubDocumentOpResponseStatus status;
-  private final CouchbaseException error;
+  @Nullable private final CouchbaseException error;
   private final byte[] value;
   private final String path;
   private final SubdocCommandType type;
 
   public SubDocumentField(SubDocumentOpResponseStatus status, Optional<CouchbaseException> error, byte[] value,
                           String path, SubdocCommandType type) {
-    this.status = status;
+    this.status = requireNonNull(status);
     this.error = error.orElse(null);
-    this.value = value;
-    this.path = path;
-    this.type = type;
+    this.value = requireNonNull(value);
+    this.path = requireNonNull(path);
+    this.type = requireNonNull(type);
   }
 
   public SubDocumentOpResponseStatus status() {
@@ -50,6 +52,12 @@ public class SubDocumentField implements Serializable {
 
   public Optional<CouchbaseException> error() {
     return Optional.ofNullable(error);
+  }
+
+  public void throwErrorIfPresent() {
+    if (error != null) {
+      throw error;
+    }
   }
 
   public byte[] value() {

@@ -17,8 +17,8 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
-import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 
 public class LookupInSpecStandard extends LookupInSpec {
 
@@ -37,7 +37,7 @@ public class LookupInSpecStandard extends LookupInSpec {
   }
 
   @Stability.Internal
-  public SubdocGetRequest.Command export(int originalIndex) {
-    return new SubdocGetRequest.Command(type, path, xattr, originalIndex);
+  public CoreSubdocGetCommand toCore() {
+    return new CoreSubdocGetCommand(type, path, xattr);
   }
 }

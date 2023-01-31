@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvOps;
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -83,6 +84,7 @@ import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_LOCK_
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_TOUCH_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_INSERT_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_LOOKUP_IN_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_MUTATE_IN_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_REMOVE_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_REPLACE_OPTIONS;
@@ -644,7 +646,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public LookupInResult lookupIn(final String id, List<LookupInSpec> specs) {
-    return block(async().lookupIn(id, specs));
+    return lookupIn(id, specs, DEFAULT_LOOKUP_IN_OPTIONS);
   }
 
   /**
@@ -659,7 +661,19 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public LookupInResult lookupIn(final String id, List<LookupInSpec> specs, final LookupInOptions options) {
-    return block(async().lookupIn(id, specs, options));
+    notNull(options, "LookupInOptions", () -> ReducedKeyValueErrorContext.create(id, async().collectionIdentifier()));
+    notNull(specs, "LookupInSpecs", () -> ReducedKeyValueErrorContext.create(id, async().collectionIdentifier()));
+
+    LookupInOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+
+    CoreSubdocGetResult coreResult = kvOps.subdocGetBlocking(
+      opts,
+      id,
+      transform(specs, LookupInSpec::toCore),
+      opts.accessDeleted()
+    );
+    return new LookupInResult(coreResult, serializer);
   }
 
   /**

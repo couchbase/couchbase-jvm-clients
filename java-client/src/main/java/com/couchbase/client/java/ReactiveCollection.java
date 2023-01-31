@@ -17,14 +17,11 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
-import com.couchbase.client.core.kv.CoreScanOptions;
-import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -39,7 +36,6 @@ import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertOptions;
-import com.couchbase.client.java.kv.LookupInAccessor;
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
@@ -585,17 +581,19 @@ public class ReactiveCollection {
    * @return the {@link LookupInResult} once the lookup has been performed or failed.
    */
   public Mono<LookupInResult> lookupIn(final String id, List<LookupInSpec> specs, final LookupInOptions options) {
-    return Mono.defer(() -> {
-      notNull(options, "LookupInOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
-      LookupInOptions.Built opts = options.build();
-      JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-      SubdocGetRequest request = asyncCollection.lookupInRequest(id, specs, opts);
-      return Reactor.wrap(
-        request,
-        LookupInAccessor.lookupInAccessor(core(), request, serializer),
-        true
-      );
-    });
+    notNull(options, "LookupInOptions", () -> ReducedKeyValueErrorContext.create(id, async().collectionIdentifier()));
+    notNull(specs, "LookupInSpecs", () -> ReducedKeyValueErrorContext.create(id, async().collectionIdentifier()));
+
+    LookupInOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+
+    return kvOps.subdocGetReactive(
+        opts,
+        id,
+        transform(specs, LookupInSpec::toCore),
+        opts.accessDeleted()
+      )
+      .map(it -> new LookupInResult(it, serializer));
   }
 
   /**

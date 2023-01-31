@@ -31,6 +31,8 @@ import com.couchbase.client.core.api.kv.CoreKvResponseMetadata;
 import com.couchbase.client.core.api.kv.CoreLookupInMacro;
 import com.couchbase.client.core.api.kv.CoreMutationResult;
 import com.couchbase.client.core.api.kv.CoreStoreSemantics;
+import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
 import com.couchbase.client.core.classic.ClassicHelper;
@@ -100,6 +102,7 @@ import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGet
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateInsertParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateRemoveParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateReplaceParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateSubdocGetParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateSubdocMutateParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateTouchParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateUnlockParams;
@@ -650,6 +653,54 @@ public final class ClassicCoreKvOps implements CoreKvOps {
           throw keyValueStatusToException(req, res);
         },
         it -> null
+    );
+  }
+
+  @Override
+  public CoreAsyncResponse<CoreSubdocGetResult> subdocGetAsync(
+      CoreCommonOptions common,
+      String key,
+      List<CoreSubdocGetCommand> commands,
+      boolean accessDeleted
+  ) {
+    validateSubdocGetParams(common, key, commands);
+
+    Duration timeout = timeout(common);
+    RetryStrategy retryStrategy = retryStrategy(common);
+    RequestSpan span = span(common, TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN);
+
+    byte flags = accessDeleted ? SubdocMutateRequest.SUBDOC_DOC_FLAG_ACCESS_DELETED : 0;
+
+    SubdocGetRequest request = SubdocGetRequest.create(
+        timeout,
+        ctx,
+        collectionIdentifier,
+        retryStrategy,
+        key,
+        flags,
+        commands,
+        span
+    );
+    request.context()
+        .clientContext(common.clientContext());
+
+    return newAsyncResponse(
+        request,
+        (req, res) -> {
+          if (res.status() == SUBDOC_FAILURE) {
+            // Ignore. The failure of any one lookup command does not cause the whole request to fail.
+            return;
+          }
+          commonKvResponseCheck(req, res);
+        },
+        it -> new CoreSubdocGetResult(
+            keyspace,
+            key,
+            CoreKvResponseMetadata.from(it.flexibleExtras()),
+            Arrays.asList(it.values()),
+            it.cas(),
+            it.isDeleted()
+        )
     );
   }
 

@@ -83,6 +83,12 @@ public class CoreKvParamValidators {
     }
   }
 
+  public static void validateSubdocGetParams(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands) {
+    validateCommonOptions(common, key);
+    notNullOrEmpty(commands, "At least one lookup command is required.");
+    // Server validates command limit.
+  }
+
   public static void validateGetAllReplicasParams(CoreCommonOptions common, String key) {
     validateCommonOptions(common, key);
   }

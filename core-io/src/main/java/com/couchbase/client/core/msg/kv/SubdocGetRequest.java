@@ -17,42 +17,64 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
+import com.couchbase.client.core.error.context.SubDocumentErrorContext;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
 import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.FlexibleExtras;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Status;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeSubDocumentStatus;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mapSubDocumentError;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Comparator.comparing;
 
 public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
 
+  private static final Comparator<Command> xattrsFirst = comparing(it -> !it.xattr());
+
   private final byte flags;
   private final List<Command> commands;
   private final String origKey;
+
+  public static SubdocGetRequest create(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
+                                        final RetryStrategy retryStrategy, final String key,
+                                        final byte flags, final List<CoreSubdocGetCommand> commands, final RequestSpan span) {
+    return new SubdocGetRequest(timeout, ctx, collectionIdentifier, retryStrategy, key, flags, convertCommands(commands), span);
+  }
 
   public SubdocGetRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
                           final RetryStrategy retryStrategy, final String key,
@@ -65,6 +87,23 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     if (span != null) {
       span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN);
     }
+  }
+
+  private static List<Command> convertCommands(List<CoreSubdocGetCommand> commands) {
+    List<SubdocGetRequest.Command> result = new ArrayList<>(commands.size());
+    for (int i = 0, len = commands.size(); i < len; i++) {
+      CoreSubdocGetCommand core = commands.get(i);
+      result.add(new SubdocGetRequest.Command(
+        core.type(),
+        core.path(),
+        core.xattr(),
+        i
+      ));
+    }
+
+    // xattrs must come first. decode() puts the results back in original order.
+    result.sort(xattrsFirst);
+    return result;
   }
 
   @Override

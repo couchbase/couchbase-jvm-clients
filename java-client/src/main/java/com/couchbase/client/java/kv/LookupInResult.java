@@ -17,22 +17,18 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.error.CasMismatchException;
-import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.error.context.KeyValueErrorContext;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.kv.SubDocumentField;
-import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.Arrays;
-import java.util.Objects;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This result is returned from successful KeyValue subdocument lookup responses.
@@ -41,47 +37,17 @@ import java.util.Objects;
  */
 public class LookupInResult {
 
-  /**
-   * Holds the encoded subdoc responses.
-   */
-  private final SubDocumentField[] encoded;
-
-  /**
-   * Holds the cas of the response.
-   */
-  private final long cas;
+  private final CoreSubdocGetResult core;
 
   /**
    * The default JSON serializer that should be used.
    */
   private final JsonSerializer serializer;
 
-  /**
-   * The higher level kv error context if present.
-   */
-  private final KeyValueErrorContext ctx;
-
-  /**
-   * Whether this is a deleted document (tombstone).
-   */
-  private final boolean isDeleted;
-
-  /**
-   * Creates a new {@link LookupInResult}.
-   *
-   * @param encoded the encoded subdoc fields.
-   * @param cas the cas of the outer doc.
-   */
-  LookupInResult(final SubDocumentField[] encoded,
-                 final long cas,
-                 JsonSerializer serializer,
-                 final KeyValueErrorContext ctx,
-                 final boolean isDeleted) {
-    this.cas = cas;
-    this.encoded = encoded;
-    this.serializer = serializer;
-    this.ctx = ctx;
-    this.isDeleted = isDeleted;
+  @Stability.Internal
+  public LookupInResult(CoreSubdocGetResult core, JsonSerializer serializer) {
+    this.core = requireNonNull(core);
+    this.serializer = requireNonNull(serializer);
   }
 
   /**
@@ -95,7 +61,7 @@ public class LookupInResult {
    * SDK documentation for more information on CAS mismatches and subsequent retries.
    */
   public long cas() {
-    return cas;
+    return core.cas();
   }
 
   /**
@@ -106,16 +72,7 @@ public class LookupInResult {
    * @return the decoded content into the generic type requested.
    */
   public <T> T contentAs(int index, final Class<T> target) {
-    SubDocumentField field = getFieldAtIndex(index);
-    if (field.type() == SubdocCommandType.EXISTS) {
-      if (target.isAssignableFrom(Boolean.class)) {
-        return target.cast(field.status() == SubDocumentOpResponseStatus.SUCCESS);
-      }
-
-      throw new IllegalArgumentException("A Boolean is the only supported target class for an exists Sub-Document spec");
-    }
-
-    return serializer.deserialize(target, field.value());
+    return serializer.deserialize(target, contentAsBytes(index));
   }
 
   /**
@@ -126,32 +83,12 @@ public class LookupInResult {
    * @return the decoded content into the generic type requested.
    */
   public <T> T contentAs(int index, final TypeRef<T> target) {
-    SubDocumentField field = getFieldAtIndex(index);
-    if (field.type() == SubdocCommandType.EXISTS) {
-      String existsAsString = (field.status() == SubDocumentOpResponseStatus.SUCCESS) ? "true" : "false";
-      Type type = target.type();
-      if (((Class<T>) type).isAssignableFrom(Boolean.class)) {
-        // Borrowed from http://gafter.blogspot.com/2006/12/super-type-tokens.html
-        Class<?> rawType = type instanceof Class<?>
-                ? (Class<?>) type
-                : (Class<?>) ((ParameterizedType) type).getRawType();
-        try {
-          // Get the String-based constructor as the only other ctor takes a primitive boolean
-          return (T) rawType.getConstructor(String.class).newInstance(existsAsString);
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-          throw new RuntimeException("Unable to convert result in target", e);
-        }
-      }
-
-      throw new IllegalArgumentException("A Boolean is the only supported target class for an exists Sub-Document spec");
-    }
-
-    return serializer.deserialize(target, field.value());
+    return serializer.deserialize(target, contentAsBytes(index));
   }
 
   /**
    * Returns the raw JSON bytes of the content at the given index.
-   *
+   * <p>
    * Note that if the field is a string then it will be surrounded by quotation marks, as this is the raw response from
    * the server.  E.g. "foo" will return a 5-byte array.
    *
@@ -160,19 +97,22 @@ public class LookupInResult {
    */
   @Stability.Uncommitted
   public byte[] contentAsBytes(int index) {
-    return getFieldAtIndex(index).value();
-  }
+    SubDocumentField field = core.field(index);
 
-  private SubDocumentField getFieldAtIndex(int index) {
-    try {
-      SubDocumentField value = encoded[index];
-      value.error().ifPresent(it -> {
-        throw it;
-      });
-      return value;
-    } catch (IndexOutOfBoundsException e) {
-      throw InvalidArgumentException.fromMessage("Index " + index + " is out of bounds; must be >= 0 and < " + encoded.length);
+    if (field.type() == SubdocCommandType.EXISTS) {
+      boolean exists = core.exists(index);
+
+      // This `if` block is for bug-compatibility with JCBC-2056.
+      // Remove it when we're ready to change that behavior.
+      if (!exists) {
+        field.throwErrorIfPresent();
+      }
+
+      return String.valueOf(exists).getBytes(UTF_8);
     }
+
+    field.throwErrorIfPresent();
+    return field.value();
   }
 
   /**
@@ -200,10 +140,11 @@ public class LookupInResult {
    * @return true if a value is present at the index, false otherwise.
    */
   public boolean exists(int index) {
-    if (index >= 0 && index < encoded.length) {
-      SubDocumentField value = encoded[index];
-      return value != null && value.status().success();
-    } else {
+    try {
+      return core.exists(index);
+    } catch (CouchbaseException e) {
+      // For compatibility with previous behavior, treat "invalid index"
+      // and "indeterminate result" as "does not exist".
       return false;
     }
   }
@@ -219,30 +160,14 @@ public class LookupInResult {
    */
   @Stability.Internal
   public boolean isDeleted() {
-    return isDeleted;
+    return core.tombstone();
   }
 
   @Override
   public String toString() {
     return "LookupInResult{" +
-      "encoded=" + Arrays.asList(encoded) +
-      ", cas=0x" + Long.toHexString(cas) +
-      ", isDeleted=" + isDeleted +
+      "core=" + core +
+      ", serializer=" + serializer +
       '}';
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    LookupInResult that = (LookupInResult) o;
-    return cas == that.cas && Arrays.equals(encoded, that.encoded) && Objects.equals(serializer, that.serializer) && isDeleted == that.isDeleted;
-  }
-
-  @Override
-  public int hashCode() {
-    int result = Objects.hash(cas, serializer, isDeleted);
-    result = 31 * result + Arrays.hashCode(encoded);
-    return result;
   }
 }
