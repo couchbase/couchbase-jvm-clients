@@ -17,6 +17,9 @@
 package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.manager.CoreBuildQueryIndexOptions;
+import com.couchbase.client.core.api.manager.CoreScopeAndCollection;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.java.CommonOptions;
 
@@ -81,8 +84,10 @@ public class BuildQueryIndexOptions extends CommonOptions<BuildQueryIndexOptions
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
-    Built() { }
+  public class Built extends BuiltCommonOptions implements CoreBuildQueryIndexOptions {
+
+    Built() {
+    }
 
     public Optional<String> scopeName() {
       return Optional.ofNullable(scopeName);
@@ -90,6 +95,19 @@ public class BuildQueryIndexOptions extends CommonOptions<BuildQueryIndexOptions
 
     public Optional<String> collectionName() {
       return Optional.ofNullable(collectionName);
+    }
+
+    @Override
+    public CoreScopeAndCollection scopeAndCollection() {
+      if (scopeName != null && collectionName != null) {
+        return new CoreScopeAndCollection(scopeName, collectionName);
+      }
+      return null;
+    }
+
+    @Override
+    public CoreCommonOptions commonOptions() {
+      return this;
     }
   }
 }

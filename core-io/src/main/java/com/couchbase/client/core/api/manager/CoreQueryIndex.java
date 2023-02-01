@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Couchbase, Inc.
+ * Copyright 2023 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.java.manager.query;
+package com.couchbase.client.core.api.manager;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.api.manager.CoreQueryIndex;
-import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.msg.query.QueryChunkRow;
 
-import java.util.Objects;
+import java.io.IOException;
 import java.util.Optional;
 
-import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
 import static com.couchbase.client.core.util.CbStrings.emptyToNull;
 import static java.util.Objects.requireNonNull;
@@ -32,12 +33,41 @@ import static java.util.Objects.requireNonNull;
 /**
  * Contains the properties of a Query Index.
  */
-public class QueryIndex {
-  private final CoreQueryIndex internal;
+@Stability.Internal
+public class CoreQueryIndex {
 
-  @Stability.Internal
-  QueryIndex(final CoreQueryIndex internal) {
-    this.internal = requireNonNull(internal);
+  private final String name;
+  private final boolean primary;
+  private final String state;
+  private final String keyspace;
+  private final String namespace;
+  private final ArrayNode indexKey;
+  private final String type;
+  private final Optional<String> condition;
+  private final Optional<String> partition;
+  private final ObjectNode raw;
+  private final Optional<String> scopeName;
+  private final Optional<String> bucketName;
+
+  public CoreQueryIndex(final QueryChunkRow row) {
+    try {
+      this.raw = (ObjectNode) Mapper.reader().readTree(requireNonNull(row.data()));
+
+      this.name = raw.path("name").textValue();
+      this.state = raw.path("state").textValue();
+      this.keyspace = raw.path("keyspace_id").textValue();
+      this.namespace = raw.path("namespace_id").textValue();
+      this.indexKey = (ArrayNode) raw.path("index_key");
+      this.condition = Optional.ofNullable(emptyToNull(raw.path("condition").textValue()));
+      this.primary = Boolean.TRUE.equals(raw.path("is_primary").asBoolean());
+      this.type = defaultIfNull(raw.path("using").textValue(), "gsi");
+      this.partition = Optional.ofNullable(emptyToNull(raw.path("partition").textValue()));
+      this.scopeName = Optional.ofNullable(emptyToNull(raw.path("scope_id").textValue()));
+      this.bucketName = Optional.ofNullable(emptyToNull(raw.path("bucket_id").textValue()));
+    }
+    catch (IOException e) {
+      throw new DecodingFailureException(e);
+    }
   }
 
   /**
@@ -46,7 +76,7 @@ public class QueryIndex {
    * @return true if this index is a primary index.
    */
   public boolean primary() {
-    return internal.primary();
+    return this.primary;
   }
 
   /**
@@ -55,7 +85,7 @@ public class QueryIndex {
    * @return the name of the index.
    */
   public String name() {
-    return internal.name();
+    return this.name;
   }
 
   /**
@@ -64,7 +94,7 @@ public class QueryIndex {
    * @return the type of the index.
    */
   public String type() {
-    return internal.type();
+    return type;
   }
 
   /**
@@ -73,7 +103,7 @@ public class QueryIndex {
    * @return the state of the index.
    */
   public String state() {
-    return internal.state();
+    return state;
   }
 
   /**
@@ -85,8 +115,13 @@ public class QueryIndex {
    * @return the keyspace of this index.
    */
   public String keyspace() {
-    return internal.keyspace();
+    return keyspace;
   }
+
+  /**
+   * @return the namespace for the index. A namespace is a resource pool that contains multiple keyspaces.
+   * @see #keyspace()
+   */
 
   /**
    * Returns the namespace of this index.
@@ -96,11 +131,11 @@ public class QueryIndex {
    * @return the namespace of this index.
    */
   public String namespace() {
-    return internal.namespace();
+    return namespace;
   }
 
   /**
-   * Returns an {@link JsonArray array} of Strings that represent the index key(s).
+   * Returns an {@link ArrayNode array} of Strings that represent the index key(s).
    * <p>
    * The array is empty in the case of a PRIMARY INDEX.
    * <p>
@@ -109,8 +144,8 @@ public class QueryIndex {
    *
    * @return an array of Strings that represent the index key(s), or an empty array in the case of a PRIMARY index.
    */
-  public JsonArray indexKey() {
-    return JsonArray.fromJson(internal.indexKey().toString());
+  public ArrayNode indexKey() {
+    return this.indexKey;
   }
 
   /**
@@ -124,7 +159,7 @@ public class QueryIndex {
    * @return the condition/WHERE clause of the index or empty string if none.
    */
   public Optional<String> condition() {
-    return internal.condition();
+    return this.condition;
   }
 
   /**
@@ -133,7 +168,7 @@ public class QueryIndex {
    * @return the partition if set, empty if none.
    */
   public Optional<String> partition() {
-    return internal.partition();
+    return partition;
   }
 
   /**
@@ -142,7 +177,7 @@ public class QueryIndex {
    * @return the name of the scope, if present.
    */
   public Optional<String> scopeName() {
-    return internal.scopeName();
+    return scopeName;
   }
 
   /**
@@ -151,7 +186,7 @@ public class QueryIndex {
    * @return the name of the bucket, if present.
    */
   public String bucketName() {
-    return internal.bucketName();
+    return bucketName.orElse(keyspace);
   }
 
   /**
@@ -160,7 +195,7 @@ public class QueryIndex {
    * @return the name of the collection, if present.
    */
   public Optional<String> collectionName() {
-    return internal.collectionName();
+    return bucketName.isPresent() && scopeName.isPresent() ? Optional.of(keyspace) : Optional.empty();
   }
 
   /**
@@ -168,29 +203,7 @@ public class QueryIndex {
    *
    * @return the raw JSON representation of the index information, as returned by the query service.
    */
-  public JsonObject raw() {
-    return JsonObject.fromJson(internal.raw().toString());
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    QueryIndex that = (QueryIndex) o;
-    return raw().equals(that.raw());
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(raw());
-  }
-
-  @Override
-  public String toString() {
-    return redactMeta(raw()).toString();
+  public ObjectNode raw() {
+    return raw;
   }
 }

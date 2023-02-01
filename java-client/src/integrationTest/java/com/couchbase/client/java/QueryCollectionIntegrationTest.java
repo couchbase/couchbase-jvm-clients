@@ -195,7 +195,7 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
     CreatePrimaryQueryIndexOptions options = CreatePrimaryQueryIndexOptions.createPrimaryQueryIndexOptions();
     options.timeout(Duration.ofSeconds(300));
     final CreatePrimaryQueryIndexOptions.Built builtOpts = options.build();
-    final String indexName = builtOpts.indexName().orElse(null);
+    final String indexName = builtOpts.indexName();
 
     String keyspace = "`default`:`" + bucketName + "`.`" + scopeName + "`.`" + collectionName + "`";
     String statement = "CREATE PRIMARY INDEX ";

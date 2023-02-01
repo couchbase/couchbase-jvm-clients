@@ -17,6 +17,9 @@
 package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.manager.CoreCreateQueryIndexOptions;
+import com.couchbase.client.core.api.manager.CoreScopeAndCollection;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.java.CommonOptions;
 
@@ -139,26 +142,33 @@ public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptio
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltCommonOptions implements CoreCreateQueryIndexOptions {
 
-    Built() { }
 
+    Built() {
+    }
+
+    @Override
     public boolean ignoreIfExists() {
       return ignoreIfExists;
     }
 
+    @Override
     public Map<String, Object> with() {
       return with;
     }
 
-    public Optional<String> scopeName() {
-      return Optional.ofNullable(scopeName);
+    @Override
+    public CoreScopeAndCollection scopeAndCollection() {
+      if (scopeName != null && collectionName != null) {
+        return new CoreScopeAndCollection(scopeName, collectionName);
+      }
+      return null;
     }
 
-    public Optional<String> collectionName() {
-      return Optional.ofNullable(collectionName);
+    @Override
+    public CoreCommonOptions commonOptions() {
+      return this;
     }
-
   }
-
 }

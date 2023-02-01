@@ -17,8 +17,12 @@
 package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.manager.CoreScopeAndCollection;
+import com.couchbase.client.core.api.manager.CoreWatchQueryIndexesOptions;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.java.CommonOptions;
 
 import java.util.Optional;
 
@@ -27,7 +31,7 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 /**
  * Allows customizing how the query indexes are watched.
  */
-public class WatchQueryIndexesOptions {
+public class WatchQueryIndexesOptions extends CommonOptions<WatchQueryIndexesOptions> {
 
   private boolean watchPrimary;
   private String scopeName;
@@ -95,18 +99,27 @@ public class WatchQueryIndexesOptions {
     return new Built();
   }
 
-  public class Built {
-    Built() { }
+  public class Built extends BuiltCommonOptions implements CoreWatchQueryIndexesOptions {
+
+    Built() {
+    }
+
+    @Override
     public boolean watchPrimary() {
       return watchPrimary;
     }
 
-    public Optional<String> scopeName() {
-      return Optional.ofNullable(scopeName);
+    @Override
+    public CoreScopeAndCollection scopeAndCollection() {
+      if (scopeName != null && collectionName != null) {
+        return new CoreScopeAndCollection(scopeName, collectionName);
+      }
+      return null;
     }
 
-    public Optional<String> collectionName() {
-      return Optional.ofNullable(collectionName);
+    @Override
+    public CoreCommonOptions commonOptions() {
+      return this;
     }
   }
 }
