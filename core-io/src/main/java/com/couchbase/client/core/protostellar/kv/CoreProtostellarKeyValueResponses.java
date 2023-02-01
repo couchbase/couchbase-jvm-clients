@@ -79,7 +79,7 @@ public class CoreProtostellarKeyValueResponses {
     return new CoreExistsResult(null, keyspace, key, response.getCas(), response.getResult());
   }
 
-  private static CoreMutationResult convertMutationResult(CoreKeyspace keyspace, String key, long cas, @Nullable com.couchbase.client.protostellar.kv.v1.MutationToken mt) {
+  protected static CoreMutationResult convertMutationResult(CoreKeyspace keyspace, String key, long cas, @Nullable com.couchbase.client.protostellar.kv.v1.MutationToken mt) {
     Optional<MutationToken> mutationToken = convertMutationToken(mt);
     return new CoreMutationResult(null, keyspace, key, cas, mutationToken);
   }

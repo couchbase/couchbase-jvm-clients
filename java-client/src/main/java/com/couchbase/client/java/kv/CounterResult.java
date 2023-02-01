@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.api.kv.CoreCounterResult;
 import com.couchbase.client.core.msg.kv.MutationToken;
 
 import java.util.Optional;
@@ -35,15 +36,13 @@ public class CounterResult extends MutationResult {
   /**
    * Creates a new {@link CounterResult}.
    *
-   * @param cas the new CAS value for the document.
-   * @param content the new content after the counter operation.
-   * @param mutationToken the new mutation token for the document, if present.
+   * @param coreCounterResult counter result from core.
    */
-  CounterResult(final long cas, final long content, final Optional<MutationToken> mutationToken) {
-    super(cas, mutationToken);
-    this.content = content;
-  }
 
+  public CounterResult(final CoreCounterResult coreCounterResult){
+    super(coreCounterResult.cas(), coreCounterResult.mutationToken());
+    this.content =  coreCounterResult.content();
+  }
   /**
    * The new counter value after the mutation has been performed.
    *

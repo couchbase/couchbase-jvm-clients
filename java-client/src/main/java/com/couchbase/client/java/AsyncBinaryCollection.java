@@ -16,64 +16,47 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.error.CasMismatchException;
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.DocumentNotFoundException;
-import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
-import com.couchbase.client.core.error.TimeoutException;
-import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.msg.kv.AppendRequest;
-import com.couchbase.client.core.msg.kv.DecrementRequest;
-import com.couchbase.client.core.msg.kv.IncrementRequest;
-import com.couchbase.client.core.msg.kv.PrependRequest;
-import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.java.kv.AppendAccessor;
-import com.couchbase.client.java.kv.AppendOptions;
-import com.couchbase.client.java.kv.CounterAccessor;
-import com.couchbase.client.java.kv.CounterResult;
-import com.couchbase.client.java.kv.DecrementOptions;
-import com.couchbase.client.java.kv.IncrementOptions;
-import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.PrependAccessor;
-import com.couchbase.client.java.kv.PrependOptions;
-
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-
 import static com.couchbase.client.core.util.Validators.notNull;
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
-import static com.couchbase.client.java.AsyncCollection.decideKvTimeout;
+import static com.couchbase.client.java.BinaryCollection.DEFAULT_APPEND_OPTIONS;
+import static com.couchbase.client.java.BinaryCollection.DEFAULT_DECREMENT_OPTIONS;
+import static com.couchbase.client.java.BinaryCollection.DEFAULT_INCREMENT_OPTIONS;
+import static com.couchbase.client.java.BinaryCollection.DEFAULT_PREPEND_OPTIONS;
 import static com.couchbase.client.java.kv.AppendOptions.appendOptions;
 import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
 import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
 import static com.couchbase.client.java.kv.PrependOptions.prependOptions;
+
+import java.util.concurrent.CompletableFuture;
+
+import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
+import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.CasMismatchException;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.java.kv.AppendOptions;
+import com.couchbase.client.java.kv.CounterResult;
+import com.couchbase.client.java.kv.DecrementOptions;
+import com.couchbase.client.java.kv.IncrementOptions;
+import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.PrependOptions;
 
 /**
  * Allows to perform certain operations on non-JSON documents.
  */
 public class AsyncBinaryCollection {
 
-  static AppendOptions DEFAULT_APPEND_OPTIONS = appendOptions();
-  static PrependOptions DEFAULT_PREPEND_OPTIONS = prependOptions();
-  static IncrementOptions DEFAULT_INCREMENT_OPTIONS = incrementOptions();
-  static DecrementOptions DEFAULT_DECREMENT_OPTIONS = decrementOptions();
-
-  private final Core core;
-  private final CoreContext coreContext;
-  private final CoreEnvironment environment;
+  final CoreKvBinaryOps coreKvBinaryOps;
   private final CollectionIdentifier collectionIdentifier;
 
   AsyncBinaryCollection(final Core core, final CoreEnvironment environment,
-                        final CollectionIdentifier collectionIdentifier) {
-    this.core = core;
-    this.coreContext = core.context();
-    this.environment = environment;
+      final CollectionIdentifier collectionIdentifier) {
     this.collectionIdentifier = collectionIdentifier;
+    this.coreKvBinaryOps = core.kvBinaryOps(CoreKeyspace.from(collectionIdentifier));
   }
 
   /**
@@ -105,21 +88,9 @@ public class AsyncBinaryCollection {
    */
   public CompletableFuture<MutationResult> append(final String id, final byte[] content, final AppendOptions options) {
     notNull(options, "AppendOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    AppendOptions.Built opts = options.build();
-    return AppendAccessor.append(core, appendRequest(id, content, opts), id, opts.persistTo(), opts.replicateTo());
-  }
-
-  AppendRequest appendRequest(final String id, final byte[] content, final AppendOptions.Built opts) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-
-    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_APPEND, opts.parentSpan().orElse(null));
-    AppendRequest request = new AppendRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, content,
-      opts.cas(), opts.durabilityLevel(), span);
-    request.context().clientContext(opts.clientContext());
-    return request;
+    AppendOptions.Built opts = notNull(options, "options").build();
+    return coreKvBinaryOps.appendAsync(id, content, opts, opts.cas(), opts.toCoreDurability())
+        .thenApply(MutationResult::new);
   }
 
   /**
@@ -149,23 +120,12 @@ public class AsyncBinaryCollection {
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  public CompletableFuture<MutationResult> prepend(final String id, final byte[] content, final PrependOptions options) {
+  public CompletableFuture<MutationResult> prepend(final String id, final byte[] content,
+      final PrependOptions options) {
     notNull(options, "PrependOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     PrependOptions.Built opts = options.build();
-    return PrependAccessor.prepend(core, prependRequest(id, content, opts), id, opts.persistTo(), opts.replicateTo());
-  }
-
-  PrependRequest prependRequest(final String id, final byte[] content, final PrependOptions.Built opts) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-
-    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_PREPEND, opts.parentSpan().orElse(null));
-    PrependRequest request = new PrependRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id, content,
-      opts.cas(), opts.durabilityLevel(), span);
-    request.context().clientContext(opts.clientContext());
-    return request;
+    return coreKvBinaryOps.prependAsync(id, content, opts, opts.cas(), opts.toCoreDurability())
+        .thenApply(MutationResult::new);
   }
 
   /**
@@ -194,20 +154,9 @@ public class AsyncBinaryCollection {
   public CompletableFuture<CounterResult> increment(final String id, final IncrementOptions options) {
     notNull(options, "IncrementOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     IncrementOptions.Built opts = options.build();
-    return CounterAccessor.increment(core, incrementRequest(id, opts), id, opts.persistTo(), opts.replicateTo());
-  }
-
-  IncrementRequest incrementRequest(final String id, final IncrementOptions.Built opts) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_INCREMENT, opts.parentSpan().orElse(null));
-
-    long expiry = opts.expiry().encode();
-    IncrementRequest request = new IncrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
-      opts.delta(), opts.initial(), expiry, opts.durabilityLevel(), span);
-    request.context().clientContext(opts.clientContext());
-    return request;
+    return coreKvBinaryOps
+        .incrementAsync(id, opts, opts.expiry().encode(), opts.delta(), opts.initial(), opts.toCoreDurability())
+        .thenApply(CounterResult::new);
   }
 
   /**
@@ -236,20 +185,9 @@ public class AsyncBinaryCollection {
   public CompletableFuture<CounterResult> decrement(final String id, final DecrementOptions options) {
     notNull(options, "DecrementOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
     DecrementOptions.Built opts = options.build();
-    return CounterAccessor.decrement(core, decrementRequest(id, opts), id, opts.persistTo(), opts.replicateTo());
-  }
-
-  DecrementRequest decrementRequest(final String id, final DecrementOptions.Built opts) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    Duration timeout = decideKvTimeout(opts, environment.timeoutConfig());
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
-    RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_DECREMENT, opts.parentSpan().orElse(null));
-
-    long expiry = opts.expiry().encode();
-    DecrementRequest request = new DecrementRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
-      opts.delta(), opts.initial(), expiry, opts.durabilityLevel(), span);
-    request.context().clientContext(opts.clientContext());
-    return request;
+    return coreKvBinaryOps
+        .decrementAsync(id, opts, opts.expiry().encode(), opts.delta(), opts.initial(), opts.toCoreDurability())
+        .thenApply(CounterResult::new);
   }
 
   CollectionIdentifier collectionIdentifier() {

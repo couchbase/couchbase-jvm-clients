@@ -16,10 +16,14 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.kv.AppendOptions;
 import com.couchbase.client.java.kv.CounterResult;
 import com.couchbase.client.java.kv.DecrementOptions;
@@ -27,20 +31,32 @@ import com.couchbase.client.java.kv.IncrementOptions;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PrependOptions;
 
+import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.AsyncUtils.block;
+import static com.couchbase.client.java.kv.AppendOptions.appendOptions;
+import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
+import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
+import static com.couchbase.client.java.kv.PrependOptions.prependOptions;
 
 /**
  * Allows to perform certain operations on non-JSON documents.
  */
 public class BinaryCollection {
 
+  static final AppendOptions DEFAULT_APPEND_OPTIONS = appendOptions();
+  static final PrependOptions DEFAULT_PREPEND_OPTIONS = prependOptions();
+  static final IncrementOptions DEFAULT_INCREMENT_OPTIONS = incrementOptions();
+  static final DecrementOptions DEFAULT_DECREMENT_OPTIONS = decrementOptions();
+
   /**
    * Holds the underlying async binary collection.
    */
-  private final AsyncBinaryCollection async;
+  private final CollectionIdentifier collectionIdentifier;
+  private final CoreKvBinaryOps coreKvBinaryOps;
 
   BinaryCollection(final AsyncBinaryCollection asyncBinaryCollection) {
-    this.async = asyncBinaryCollection;
+    this.collectionIdentifier = asyncBinaryCollection.collectionIdentifier();
+    this.coreKvBinaryOps = asyncBinaryCollection.coreKvBinaryOps;
   }
 
   /**
@@ -55,7 +71,7 @@ public class BinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult append(final String id, final byte[] content) {
-    return block(async.append(id, content));
+    return append(id, content,DEFAULT_APPEND_OPTIONS);
   }
 
   /**
@@ -71,7 +87,8 @@ public class BinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult append(final String id, final byte[] content, final AppendOptions options) {
-    return block(async.append(id, content, options));
+    AppendOptions.Built opts = notNull(options, "AppendOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier)).build();
+    return new MutationResult( coreKvBinaryOps.appendBlocking(id,content, opts, opts.cas(), opts.toCoreDurability()));
   }
 
   /**
@@ -86,7 +103,7 @@ public class BinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult prepend(final String id, final byte[] content) {
-    return block(async.prepend(id, content));
+    return prepend(id, content, DEFAULT_PREPEND_OPTIONS);
   }
 
   /**
@@ -102,7 +119,8 @@ public class BinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult prepend(final String id, final byte[] content, final PrependOptions options) {
-    return block(async.prepend(id, content, options));
+    PrependOptions.Built opts = notNull(options, "PrependOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier)).build();
+    return new MutationResult( coreKvBinaryOps.prependBlocking(id,content, opts, opts.cas(), opts.toCoreDurability()));
   }
 
   /**
@@ -115,7 +133,7 @@ public class BinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public CounterResult increment(final String id) {
-    return block(async.increment(id));
+    return increment(id, DEFAULT_INCREMENT_OPTIONS);
   }
 
   /**
@@ -129,7 +147,8 @@ public class BinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public CounterResult increment(final String id, final IncrementOptions options) {
-    return block(async.increment(id, options));
+    IncrementOptions.Built opts = notNull(options, "IncrementOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier)).build();
+    return new CounterResult( coreKvBinaryOps.incrementBlocking(id, opts, opts.expiry().encode(),opts.delta(),opts.initial(), opts.toCoreDurability()));
   }
 
   /**
@@ -142,7 +161,7 @@ public class BinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public CounterResult decrement(final String id) {
-    return block(async.decrement(id));
+    return decrement(id, DEFAULT_DECREMENT_OPTIONS);
   }
 
   /**
@@ -156,7 +175,8 @@ public class BinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public CounterResult decrement(final String id, final DecrementOptions options) {
-    return block(async.decrement(id, options));
+    DecrementOptions.Built opts = notNull(options, "DecrementOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier)).build();
+    return new CounterResult( coreKvBinaryOps.decrementBlocking(id, opts, opts.expiry().encode(),opts.delta(),opts.initial(), opts.toCoreDurability()));
   }
 
 }

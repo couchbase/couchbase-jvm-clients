@@ -16,52 +16,41 @@
 
 package com.couchbase.client.java;
 
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.java.BinaryCollection.DEFAULT_APPEND_OPTIONS;
+import static com.couchbase.client.java.BinaryCollection.DEFAULT_DECREMENT_OPTIONS;
+import static com.couchbase.client.java.BinaryCollection.DEFAULT_INCREMENT_OPTIONS;
+import static com.couchbase.client.java.BinaryCollection.DEFAULT_PREPEND_OPTIONS;
+
+import com.couchbase.client.core.io.CollectionIdentifier;
+import reactor.core.publisher.Mono;
+
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
-import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.error.TimeoutException;
-import com.couchbase.client.core.msg.kv.AppendRequest;
-import com.couchbase.client.core.msg.kv.DecrementRequest;
-import com.couchbase.client.core.msg.kv.IncrementRequest;
-import com.couchbase.client.core.msg.kv.PrependRequest;
-import com.couchbase.client.java.kv.AppendAccessor;
+import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.java.kv.AppendOptions;
-import com.couchbase.client.java.kv.CounterAccessor;
 import com.couchbase.client.java.kv.CounterResult;
 import com.couchbase.client.java.kv.DecrementOptions;
 import com.couchbase.client.java.kv.IncrementOptions;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.PrependAccessor;
 import com.couchbase.client.java.kv.PrependOptions;
-import reactor.core.publisher.Mono;
-
-import static com.couchbase.client.core.util.Validators.notNull;
-import static com.couchbase.client.java.AsyncBinaryCollection.DEFAULT_APPEND_OPTIONS;
-import static com.couchbase.client.java.AsyncBinaryCollection.DEFAULT_DECREMENT_OPTIONS;
-import static com.couchbase.client.java.AsyncBinaryCollection.DEFAULT_INCREMENT_OPTIONS;
-import static com.couchbase.client.java.AsyncBinaryCollection.DEFAULT_PREPEND_OPTIONS;
 
 /**
  * Allows to perform certain operations on non-JSON documents.
  */
 public class ReactiveBinaryCollection {
 
-  /**
-   * Holds the underlying async binary collection.
-   */
-  private final AsyncBinaryCollection async;
 
-  /**
-   * Provides access to the core.
-   */
-  private final Core core;
+  private final CollectionIdentifier collectionIdentifier;
+  private final CoreKvBinaryOps coreKvBinaryOps;
 
   ReactiveBinaryCollection(final Core core, final AsyncBinaryCollection async) {
-    this.core = core;
-    this.async = async;
+    this.collectionIdentifier = async.collectionIdentifier();
+    this.coreKvBinaryOps = async.coreKvBinaryOps;
   }
 
   /**
@@ -92,16 +81,8 @@ public class ReactiveBinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public Mono<MutationResult> append(final String id, final byte[] content, final AppendOptions options) {
-    return Mono.defer(() -> {
-      notNull(options, "AppendOptions", () -> ReducedKeyValueErrorContext.create(id, async.collectionIdentifier()));
-      AppendOptions.Built opts = options.build();
-      AppendRequest request = async.appendRequest(id, content, opts);
-      return Reactor.wrap(
-        request,
-        AppendAccessor.append(core, request, id, opts.persistTo(), opts.replicateTo()),
-        true
-      );
-    });
+    AppendOptions.Built opts = notNull(options, "AppendOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier)).build();
+    return coreKvBinaryOps.appendReactive(id, content, opts, opts.cas(), opts.toCoreDurability()).map(MutationResult::new);
   }
 
   /**
@@ -132,16 +113,8 @@ public class ReactiveBinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public Mono<MutationResult> prepend(final String id, final byte[] content, final PrependOptions options) {
-    return Mono.defer(() -> {
-      notNull(options, "PrependOptions", () -> ReducedKeyValueErrorContext.create(id, async.collectionIdentifier()));
-      PrependOptions.Built opts = options.build();
-      PrependRequest request = async.prependRequest(id, content, opts);
-      return Reactor.wrap(
-        request,
-        PrependAccessor.prepend(core, request, id, opts.persistTo(), opts.replicateTo()),
-        true
-      );
-    });
+      PrependOptions.Built opts = notNull(options, "PrependOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier)).build();
+    return coreKvBinaryOps.prependReactive(id, content, opts, opts.cas(), opts.toCoreDurability()).map(MutationResult::new);
   }
 
   /**
@@ -168,16 +141,9 @@ public class ReactiveBinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public Mono<CounterResult> increment(final String id, final IncrementOptions options) {
-    return Mono.defer(() -> {
-      notNull(options, "IncrementOptions", () -> ReducedKeyValueErrorContext.create(id, async.collectionIdentifier()));
-      IncrementOptions.Built opts = options.build();
-      IncrementRequest request = async.incrementRequest(id, opts);
-      return Reactor.wrap(
-        request,
-        CounterAccessor.increment(core, request, id, opts.persistTo(), opts.replicateTo()),
-        true
-      );
-    });
+      IncrementOptions.Built opts = notNull(options, "IncrementOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier)).build();
+      return coreKvBinaryOps.incrementReactive(id, opts, opts.expiry().encode(), opts.delta(), opts.initial(),
+          opts.toCoreDurability()).map(CounterResult::new);
   }
 
   /**
@@ -204,16 +170,9 @@ public class ReactiveBinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public Mono<CounterResult> decrement(final String id, final DecrementOptions options) {
-    return Mono.defer(() -> {
-      notNull(options, "DecrementOptions", () -> ReducedKeyValueErrorContext.create(id, async.collectionIdentifier()));
-      DecrementOptions.Built opts = options.build();
-      DecrementRequest request = async.decrementRequest(id, opts);
-      return Reactor.wrap(
-        request,
-        CounterAccessor.decrement(core, request, id, opts.persistTo(), opts.replicateTo()),
-        true
-      );
-    });
+      DecrementOptions.Built opts = notNull(options, "DecrementOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier)).build();
+      return coreKvBinaryOps.decrementReactive(id, opts, opts.expiry().encode(), opts.delta(), opts.initial(),
+        opts.toCoreDurability()).map(CounterResult::new);
   }
 
 }

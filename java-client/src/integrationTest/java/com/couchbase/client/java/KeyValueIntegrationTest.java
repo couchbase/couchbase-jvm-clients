@@ -780,7 +780,6 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     );
   }
 
-  @IgnoreWhen(isProtostellarWillWorkLater = true)
   @Test
   void appendAsync() throws ExecutionException, InterruptedException {
     String id = UUID.randomUUID().toString();
@@ -789,10 +788,10 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     byte[] worldBytes = "World!".getBytes(UTF_8);
     byte[] helloWorldBytes = "Hello, World!".getBytes(UTF_8);
 
-    assertThrows(
+   assertThrows(
             ExecutionException.class,
             () -> collection.async().binary().append(id, helloBytes).get()
-    );
+   );
 
     MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().transcoder(RawBinaryTranscoder.INSTANCE));
     assertTrue(upsert.cas() != 0);
@@ -842,6 +841,69 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     );
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
+  @Test
+  void prependReactive() {
+    String id = UUID.randomUUID().toString();
+
+    byte[] helloBytes = "Hello, ".getBytes(UTF_8);
+    byte[] worldBytes = "World!".getBytes(UTF_8);
+    byte[] worldHelloBytes = "World!Hello, ".getBytes(UTF_8);
+
+    assertThrows(
+    DocumentNotFoundException.class,
+     () -> collection.reactive().binary().prepend(id, helloBytes).block()
+    );
+
+    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().transcoder(RawBinaryTranscoder.INSTANCE));
+    assertTrue(upsert.cas() != 0);
+    assertArrayEquals(
+      helloBytes,
+      collection.get(id, getOptions().transcoder(RawBinaryTranscoder.INSTANCE)).contentAs(byte[].class)
+    );
+
+    MutationResult append = collection.reactive().binary().prepend(id, worldBytes).block();
+    assertNotNull(append);
+    assertTrue(append.cas() != 0);
+    assertNotEquals(append.cas(), upsert.cas());
+
+    assertArrayEquals(
+      worldHelloBytes,
+      collection.get(id, getOptions().transcoder(RawBinaryTranscoder.INSTANCE)).contentAs(byte[].class)
+    );
+  }
+
+  @Test
+  void prependAsync() throws ExecutionException, InterruptedException {
+    String id = UUID.randomUUID().toString();
+
+    byte[] helloBytes = "Hello, ".getBytes(UTF_8);
+    byte[] worldBytes = "World!".getBytes(UTF_8);
+    byte[] worldHelloBytes = "World!Hello, ".getBytes(UTF_8);
+
+    assertThrows(
+      ExecutionException.class,
+      () -> collection.async().binary().append(id, helloBytes).get()
+    );
+
+    MutationResult upsert = collection.upsert(id, helloBytes, upsertOptions().transcoder(RawBinaryTranscoder.INSTANCE));
+    assertTrue(upsert.cas() != 0);
+    assertArrayEquals(
+      helloBytes,
+      collection.get(id, getOptions().transcoder(RawBinaryTranscoder.INSTANCE)).contentAs(byte[].class)
+    );
+
+    MutationResult append = collection.async().binary().prepend(id, worldBytes).get();
+    assertTrue(append.cas() != 0);
+    assertNotEquals(append.cas(), upsert.cas());
+
+    assertArrayEquals(
+      worldHelloBytes,
+      collection.get(id, getOptions().transcoder(RawBinaryTranscoder.INSTANCE)).contentAs(byte[].class)
+    );
+  }
+
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   @Test
   void increment() {
     String id = UUID.randomUUID().toString();
@@ -867,6 +929,57 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertEquals(8L, result.content());
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
+  @Test
+  void incrementAsync() throws ExecutionException, InterruptedException {
+    String id = UUID.randomUUID().toString();
+
+    assertThrows(DocumentNotFoundException.class, () -> collection.binary().increment(id));
+
+    CounterResult result = collection.async().binary().increment(
+      id,
+      incrementOptions().initial(5L)
+    ).get();
+
+    assertTrue(result.cas() != 0);
+    assertEquals(5L, result.content());
+
+    result = collection.async().binary().increment(id, incrementOptions().delta(2)).get();
+
+    assertTrue(result.cas() != 0);
+    assertEquals(7L, result.content());
+
+    result = collection.async().binary().increment(id, incrementOptions()).get();
+
+    assertTrue(result.cas() != 0);
+    assertEquals(8L, result.content());
+  }
+
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
+  @Test
+  void incrementReactive() {
+    String id = UUID.randomUUID().toString();
+
+    assertThrows(DocumentNotFoundException.class, () -> collection.binary().increment(id));
+
+    CounterResult result = collection.reactive().binary().increment(
+      id,
+      incrementOptions().initial(5L)
+    ).block();
+
+    assertTrue(result.cas() != 0);
+    assertEquals(5L, result.content());
+
+    result = collection.reactive().binary().increment(id, incrementOptions().delta(2)).block();
+
+    assertTrue(result.cas() != 0);
+    assertEquals(7L, result.content());
+
+    result = collection.reactive().binary().increment(id, incrementOptions()).block();
+
+    assertTrue(result.cas() != 0);
+    assertEquals(8L, result.content());
+  }
 
   /**
    * Right now the mock allows the value to be decremented below zero, which is against the server
@@ -874,7 +987,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
    * ignore annotation can be removed.
    */
   @Test
-  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true)
   void decrement() {
     String id = UUID.randomUUID().toString();
 
@@ -884,6 +997,80 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
       id,
       decrementOptions().initial(2L)
     );
+
+    assertTrue(result.cas() != 0);
+    assertEquals(2L, result.content());
+
+    result = collection.binary().decrement(id);
+
+    assertTrue(result.cas() != 0);
+    assertEquals(1L, result.content());
+
+    result = collection.binary().decrement(id);
+
+    assertTrue(result.cas() != 0);
+    assertEquals(0L, result.content());
+
+    result = collection.binary().decrement(id);
+
+    assertTrue(result.cas() != 0);
+    assertEquals(0L, result.content());
+  }
+
+  /**
+   * Right now the mock allows the value to be decremented below zero, which is against the server
+   * spec/protocol. Once https://github.com/couchbase/CouchbaseMock/issues/51 is fixed, this
+   * ignore annotation can be removed.
+   */
+
+  @Test
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true)
+  void decrementAsync() throws ExecutionException, InterruptedException {
+    String id = UUID.randomUUID().toString();
+
+    assertThrows(DocumentNotFoundException.class, () -> collection.binary().decrement(id));
+
+    CounterResult result = collection.async().binary().decrement(
+      id,
+      decrementOptions().initial(2L)
+    ).get();
+
+    assertTrue(result.cas() != 0);
+    assertEquals(2L, result.content());
+
+    result = collection.async().binary().decrement(id).get();
+
+    assertTrue(result.cas() != 0);
+    assertEquals(1L, result.content());
+
+    result = collection.async().binary().decrement(id).get();
+
+    assertTrue(result.cas() != 0);
+    assertEquals(0L, result.content());
+
+    result = collection.async().binary().decrement(id).get();
+
+    assertTrue(result.cas() != 0);
+    assertEquals(0L, result.content());
+  }
+
+  /**
+   * Right now the mock allows the value to be decremented below zero, which is against the server
+   * spec/protocol. Once https://github.com/couchbase/CouchbaseMock/issues/51 is fixed, this
+   * ignore annotation can be removed.
+   */
+
+  @Test
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true)
+  void decrementReactive() {
+    String id = UUID.randomUUID().toString();
+
+    assertThrows(DocumentNotFoundException.class, () -> collection.binary().decrement(id));
+
+    CounterResult result = collection.reactive().binary().decrement(
+      id,
+      decrementOptions().initial(2L)
+    ).block();
 
     assertTrue(result.cas() != 0);
     assertEquals(2L, result.content());
