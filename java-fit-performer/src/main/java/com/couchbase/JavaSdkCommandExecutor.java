@@ -456,7 +456,9 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
 
             idx.indexKey().forEach(k -> index.addIndexKey((String) k));
             if (idx.condition().isPresent()) index.setCondition(idx.condition().get());
+            // [start:3.1.1]
             if (idx.partition().isPresent()) index.setPartition(idx.partition().get());
+            // [end:3.1.1]
 
             builder.addIndexes(index);
         }
@@ -503,8 +505,10 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = GetAllQueryIndexesOptions.getAllQueryIndexesOptions();
+            // [start:3.2.5]
             if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
             if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+            // [end:3.2.5]
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
@@ -519,8 +523,10 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasDeferred()) out.deferred(opts.getDeferred());
             if (opts.hasIndexName()) out.indexName(opts.getIndexName());
             if (opts.hasNumReplicas()) out.numReplicas(opts.getNumReplicas());
+            // [start:3.2.5]
             if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
             if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+            // [end:3.2.5]
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
@@ -535,8 +541,10 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasIgnoreIfExists()) out.ignoreIfExists(opts.getIgnoreIfExists());
             if (opts.hasDeferred()) out.deferred(opts.getDeferred());
             if (opts.hasNumReplicas()) out.numReplicas(opts.getNumReplicas());
+            // [start:3.2.5]
             if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
             if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+            // [end:3.2.5]
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
@@ -549,8 +557,10 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             var opts = request.getOptions();
             var out = DropPrimaryQueryIndexOptions.dropPrimaryQueryIndexOptions();
             if (opts.hasIgnoreIfNotExists()) out.ignoreIfNotExists(opts.getIgnoreIfNotExists());
+            // [start:3.2.5]
             if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
             if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+            // [end:3.2.5]
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
@@ -562,8 +572,10 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             var opts = request.getOptions();
             var out = DropQueryIndexOptions.dropQueryIndexOptions();
             if (opts.hasIgnoreIfNotExists()) out.ignoreIfNotExists(opts.getIgnoreIfNotExists());
+            // [start:3.2.5]
             if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
             if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+            // [end:3.2.5]
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
@@ -575,8 +587,10 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             var opts = request.getOptions();
             var out = WatchQueryIndexesOptions.watchQueryIndexesOptions();
             if (opts.hasWatchPrimary()) out.watchPrimary(opts.getWatchPrimary());
+            // [start:3.2.5]
             if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
             if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+            // [end:3.2.5]
             return out;
         } else return null;
     }
@@ -585,8 +599,10 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = BuildQueryIndexOptions.buildDeferredQueryIndexesOptions();
+            // [start:3.2.5]
             if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
             if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+            // [end:3.2.5]
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
