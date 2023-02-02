@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/couchbase/stellar-nebula/genproto/transactions_v1;transactions_v1";
+option go_package = "github.com/couchbase/goprotostellar/genproto/transactions_v1;transactions_v1";
 option ruby_package = "Couchbase::StellarNebula::Generated::Transactions::V1";
 option java_package = "com.couchbase.client.protostellar.transactions.v1";
 option java_multiple_files = true;
