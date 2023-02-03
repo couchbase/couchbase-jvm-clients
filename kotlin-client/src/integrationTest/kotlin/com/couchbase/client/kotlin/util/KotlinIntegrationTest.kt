@@ -79,11 +79,12 @@ internal open class KotlinIntegrationTest : ClusterAwareIntegrationTest() {
     }
 
     val connectionString: String
-        get() = seedNodes.joinToString(",") {
-            var protocol = if (it.protostellarPort().isPresent) "protostellar://" else "couchbase://"
-            if (it.kvPort().isPresent) protocol + it.address() + ":" + it.kvPort().get()
-            else protocol + it.address() + ":" + it.protostellarPort().get()
+        get() = if (seedNodes.iterator().next().protostellarPort().isPresent) "protostellar://" else ""  +
+            seedNodes.joinToString(",") {
+            if (it.kvPort().isPresent) it.address() + ":" + it.kvPort().get()
+            else it.address() + ":" + it.protostellarPort().get()
         }
+
 
     private val seedNodes: Set<SeedNode>
         get() = config().nodes().map {
