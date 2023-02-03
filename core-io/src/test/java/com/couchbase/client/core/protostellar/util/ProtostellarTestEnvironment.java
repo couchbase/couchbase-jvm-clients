@@ -8,10 +8,12 @@ import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
 import com.couchbase.client.core.util.CbCollections;
+import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.test.TestClusterConfig;
 import com.couchbase.client.test.TestNodeConfig;
 
 import static com.couchbase.client.core.CoreProtostellar.DEFAULT_PROTOSTELLAR_TLS_PORT;
+import static com.couchbase.client.core.util.ConnectionString.Scheme.PROTOSTELLAR;
 
 public class ProtostellarTestEnvironment implements AutoCloseable {
   private final CoreEnvironment env;
@@ -52,7 +54,7 @@ public class ProtostellarTestEnvironment implements AutoCloseable {
     Core core = new CoreTest(env,
       PasswordAuthenticator.create(config.adminUsername(), config.adminPassword()),
       CbCollections.setOf(SeedNode.create(hostname).withProtostellarPort(port)),
-      String.format("protostellar://%s:%d", hostname, port));
+      ConnectionString.create(hostname + ":" + port).withScheme(PROTOSTELLAR));
 
     CoreKeyspace defaultKeyspace = new CoreKeyspace(config.bucketname(), CollectionIdentifier.DEFAULT_SCOPE, CollectionIdentifier.DEFAULT_COLLECTION);
 

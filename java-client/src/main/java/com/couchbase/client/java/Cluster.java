@@ -29,6 +29,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.msg.search.SearchRequest;
+import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -50,6 +51,7 @@ import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.transactions.Transactions;
+import reactor.util.annotation.Nullable;
 
 import java.io.Closeable;
 import java.time.Duration;
@@ -260,13 +262,14 @@ public class Cluster implements Closeable {
     notNullOrEmpty(connectionString, "ConnectionString");
     notNull(options, "ClusterOptions");
 
+    final ConnectionString connStr = ConnectionString.create(connectionString);
     final ClusterOptions.Built opts = options.build();
-    final Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
+    final Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connStr, opts);
     return new Cluster(
       environmentSupplier,
       opts.authenticator(),
-      seedNodesFromConnectionString(connectionString, environmentSupplier.get()),
-      connectionString
+      seedNodesFromConnectionString(connStr, environmentSupplier.get()),
+      connStr
     );
   }
 
@@ -325,7 +328,7 @@ public class Cluster implements Closeable {
    * @param seedNodes the seed nodes to bootstrap from.
    */
   private Cluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator,
-                  final Set<SeedNode> seedNodes, final String connectionString) {
+                  final Set<SeedNode> seedNodes, @Nullable final ConnectionString connectionString) {
     this.asyncCluster = new AsyncCluster(environment, authenticator, seedNodes, connectionString);
     this.reactiveCluster = new ReactiveCluster(asyncCluster);
     this.searchIndexManager = new SearchIndexManager(asyncCluster.searchIndexes());

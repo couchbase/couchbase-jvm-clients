@@ -19,11 +19,12 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.util.ConnectionString;
 
 import java.util.Set;
 
 public class CoreTest extends Core {
-  protected CoreTest(CoreEnvironment environment, Authenticator authenticator, Set<SeedNode> seedNodes, String connectionString) {
+  protected CoreTest(CoreEnvironment environment, Authenticator authenticator, Set<SeedNode> seedNodes, ConnectionString connectionString) {
     super(environment, authenticator, seedNodes, connectionString);
   }
 }

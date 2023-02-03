@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.util.ConnectionString;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
@@ -69,8 +71,11 @@ class DefaultConfigurationProviderDnsSrvTest {
     when(core.context()).thenReturn(ctx);
 
     final AtomicBoolean called = new AtomicBoolean();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core,
-      Collections.emptySet(), "couchbase://myConnectionString") {
+    ConfigurationProvider provider = new DefaultConfigurationProvider(
+      core,
+      emptySet(),
+      ConnectionString.create("couchbase://myConnectionString")
+    ) {
       @Override
       protected List<String> performDnsSrvLookup(boolean tlsEnabled) {
         called.set(true);
@@ -89,8 +94,11 @@ class DefaultConfigurationProviderDnsSrvTest {
     when(core.context()).thenReturn(ctx);
 
     final AtomicInteger numCalled = new AtomicInteger();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core,
-      Collections.emptySet(), "couchbase://myConnectionString") {
+    ConfigurationProvider provider = new DefaultConfigurationProvider(
+      core,
+      emptySet(),
+      ConnectionString.create("couchbase://myConnectionString")
+    ) {
       @Override
       protected List<String> performDnsSrvLookup(boolean tlsEnabled) {
         numCalled.incrementAndGet();
@@ -112,7 +120,7 @@ class DefaultConfigurationProviderDnsSrvTest {
     when(core.context()).thenReturn(ctx);
 
     final AtomicBoolean called = new AtomicBoolean();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core, Collections.emptySet()) {
+    ConfigurationProvider provider = new DefaultConfigurationProvider(core, emptySet()) {
       @Override
       protected List<String> performDnsSrvLookup(boolean tlsEnabled) {
         called.set(true);
@@ -136,8 +144,11 @@ class DefaultConfigurationProviderDnsSrvTest {
       when(core.context()).thenReturn(ctx);
 
       final AtomicBoolean called = new AtomicBoolean();
-      ConfigurationProvider provider = new DefaultConfigurationProvider(core,
-        Collections.emptySet(), "couchbase://foo") {
+      ConfigurationProvider provider = new DefaultConfigurationProvider(
+        core,
+        emptySet(),
+        ConnectionString.create("couchbase://foo")
+      ) {
         @Override
         protected List<String> performDnsSrvLookup(boolean tlsEnabled) {
           called.set(true);

@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.util.ConnectionString;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -38,13 +39,13 @@ public class CoreCreatedEvent extends AbstractEvent {
   private final CoreEnvironment environment;
 
   public CoreCreatedEvent(final CoreContext context, final CoreEnvironment environment, final Set<SeedNode> seedNodes,
-                          final int numCoreInstances, @Nullable final String connectionString) {
+                          final int numCoreInstances, @Nullable final ConnectionString connectionString) {
     super(Severity.INFO, Category.CORE, Duration.ZERO, enrichContext(context, seedNodes, numCoreInstances, connectionString));
     this.environment = environment;
   }
 
   private static Context enrichContext(final CoreContext context, final Set<SeedNode> seedNodes,
-                                       final int numCoreInstances, @Nullable final String connectionString) {
+                                       final int numCoreInstances, @Nullable final ConnectionString connectionString) {
     return new CoreContext(context.core(), context.id(), context.environment(), context.authenticator()) {
       @Override
       public void injectExportableParams(final Map<String, Object> input) {
@@ -60,7 +61,7 @@ public class CoreCreatedEvent extends AbstractEvent {
 
         input.put("numCoreInstances", numCoreInstances);
         if (connectionString != null) {
-          input.put("connectionString", connectionString);
+          input.put("connectionString", connectionString.original());
         }
       }
     };

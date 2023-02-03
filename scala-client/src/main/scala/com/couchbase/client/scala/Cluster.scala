@@ -20,6 +20,7 @@ import java.util.UUID
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.{Authenticator, PasswordAuthenticator}
+import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.scala.AsyncCluster.seedNodesFromConnectionString
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsParameters, AnalyticsResult}
 import com.couchbase.client.scala.diagnostics.{
@@ -60,7 +61,7 @@ class Cluster private[scala] (
     _env: => ClusterEnvironment,
     authenticator: Authenticator,
     seedNodes: Set[SeedNode],
-    connectionString: String
+    connectionString: ConnectionString
 ) {
   private[scala] implicit val ec: ExecutionContext = _env.ec
 
@@ -366,8 +367,9 @@ object Cluster {
     AsyncCluster
       .extractClusterEnvironment(connectionString, options)
       .map(ce => {
-        val seedNodes = seedNodesFromConnectionString(connectionString, ce)
-        val cluster   = new Cluster(ce, options.authenticator, seedNodes, connectionString)
+        val connStr   = ConnectionString.create(connectionString)
+        val seedNodes = seedNodesFromConnectionString(connStr, ce)
+        val cluster   = new Cluster(ce, options.authenticator, seedNodes, connStr)
         cluster.async.performGlobalConnect()
         cluster
       })

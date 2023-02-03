@@ -75,7 +75,7 @@ class AsyncCluster(
     environment: => ClusterEnvironment,
     private[scala] val authenticator: Authenticator,
     private[scala] val seedNodes: Set[SeedNode],
-    private[scala] val connectionString: String
+    private[scala] val connectionString: ConnectionString
 ) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
 
@@ -449,8 +449,9 @@ object AsyncCluster {
   def connect(connectionString: String, options: ClusterOptions): Try[AsyncCluster] = {
     extractClusterEnvironment(connectionString, options)
       .map(ce => {
-        val seedNodes = seedNodesFromConnectionString(connectionString, ce)
-        val cluster   = new AsyncCluster(ce, options.authenticator, seedNodes, connectionString)
+        val connStr   = ConnectionString.create(connectionString)
+        val seedNodes = seedNodesFromConnectionString(connStr, ce)
+        val cluster   = new AsyncCluster(ce, options.authenticator, seedNodes, connStr)
         cluster.performGlobalConnect()
         cluster
       })
@@ -538,7 +539,7 @@ object AsyncCluster {
   }
 
   private[client] def seedNodesFromConnectionString(
-      cs: String,
+      cs: ConnectionString,
       environment: ClusterEnvironment
   ): Set[SeedNode] = {
     ConnectionStringUtil

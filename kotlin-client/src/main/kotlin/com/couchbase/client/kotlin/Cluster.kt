@@ -128,7 +128,7 @@ public class Cluster internal constructor(
     private val ownsEnvironment: Boolean,
     private val authenticator: Authenticator,
     seedNodes: Set<SeedNode>,
-    connectionString: String,
+    connectionString: ConnectionString,
 ) {
     internal val core: Core = Core.create(environment, authenticator, seedNodes, connectionString)
 
@@ -694,15 +694,16 @@ public class Cluster internal constructor(
             env: ClusterEnvironment,
             ownsEnv: Boolean,
         ): Cluster {
-            checkConnectionString(env, ownsEnv, ConnectionString.create(connectionString))
+            val connStr = ConnectionString.create(connectionString);
+            checkConnectionString(env, ownsEnv, connStr)
 
             val seedNodes = ConnectionStringUtil.seedNodesFromConnectionString(
-                connectionString,
+                connStr,
                 env.ioConfig().dnsSrvEnabled(),
                 env.securityConfig().tlsEnabled(),
                 env.eventBus(),
             )
-            return Cluster(env, ownsEnv, authenticator, seedNodes, connectionString)
+            return Cluster(env, ownsEnv, authenticator, seedNodes, connStr)
         }
     }
 }

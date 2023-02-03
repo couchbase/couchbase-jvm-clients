@@ -66,6 +66,7 @@ import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -179,12 +180,13 @@ public class AsyncCluster {
     notNull(options, "ClusterOptions");
 
     final ClusterOptions.Built opts = options.build();
-    final Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
+    final ConnectionString connStr = ConnectionString.create(connectionString);
+    final Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connStr, opts);
     return new AsyncCluster(
       environmentSupplier,
       opts.authenticator(),
-      seedNodesFromConnectionString(connectionString, environmentSupplier.get()),
-      connectionString
+      seedNodesFromConnectionString(connStr, environmentSupplier.get()),
+      connStr
     );
   }
 
@@ -215,22 +217,21 @@ public class AsyncCluster {
    * @param opts the cluster options.
    * @return the cluster environment, created if not passed in or the one supplied from the user.
    */
-  static Supplier<ClusterEnvironment> extractClusterEnvironment(final String connectionString, final ClusterOptions.Built opts) {
-    ConnectionString connStr = ConnectionString.create(connectionString);
+  static Supplier<ClusterEnvironment> extractClusterEnvironment(final ConnectionString connectionString, final ClusterOptions.Built opts) {
     Supplier<ClusterEnvironment> envSupplier;
     if (opts.environment() == null) {
       ClusterEnvironment.Builder builder = ClusterEnvironment.builder();
       if (opts.environmentCustomizer() != null) {
         opts.environmentCustomizer().accept(builder);
       }
-      builder.load(new ConnectionStringPropertyLoader(connStr));
+      builder.load(new ConnectionStringPropertyLoader(connectionString));
       envSupplier = new OwnedSupplier<>(builder.build());
     } else {
       envSupplier = opts::environment;
     }
 
     boolean ownsEnvironment = envSupplier instanceof OwnedSupplier;
-    checkConnectionString(envSupplier.get(), ownsEnvironment, connStr);
+    checkConnectionString(envSupplier.get(), ownsEnvironment, connectionString);
 
     return envSupplier;
   }
@@ -242,7 +243,7 @@ public class AsyncCluster {
    * @param env the environment to load certain properties that influence how it is loaded.
    * @return a set of seed nodes once extracted.
    */
-  static Set<SeedNode> seedNodesFromConnectionString(final String cs, final ClusterEnvironment env) {
+  static Set<SeedNode> seedNodesFromConnectionString(final ConnectionString cs, final ClusterEnvironment env) {
     return ConnectionStringUtil.seedNodesFromConnectionString(
       cs,
       env.ioConfig().dnsSrvEnabled(),
@@ -257,7 +258,7 @@ public class AsyncCluster {
    * @param environment the environment to use for this cluster.
    */
   AsyncCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator,
-               final Set<SeedNode> seedNodes, final String connectionString) {
+               final Set<SeedNode> seedNodes, @Nullable final ConnectionString connectionString) {
     this.environment = environment;
     this.core = Core.create(environment.get(), authenticator, seedNodes, connectionString);
     this.searchIndexManager = new AsyncSearchIndexManager(core);

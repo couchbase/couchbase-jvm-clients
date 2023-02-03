@@ -28,6 +28,7 @@ import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
 import com.couchbase.client.core.msg.search.SearchRequest;
+import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
@@ -54,6 +55,7 @@ import com.couchbase.client.java.search.result.ReactiveSearchResult;
 import com.couchbase.client.java.transactions.ReactiveTransactions;
 import com.couchbase.client.java.transactions.Transactions;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
@@ -139,12 +141,13 @@ public class ReactiveCluster {
     notNullOrEmpty(connectionString, "ConnectionString");
     notNull(options, "ClusterOptions");
     final ClusterOptions.Built opts = options.build();
-    final Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connectionString, opts);
+    final ConnectionString connStr = ConnectionString.create(connectionString);
+    final Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connStr, opts);
     return new ReactiveCluster(
       environmentSupplier,
       opts.authenticator(),
-      seedNodesFromConnectionString(connectionString, environmentSupplier.get()),
-      connectionString
+      seedNodesFromConnectionString(connStr, environmentSupplier.get()),
+      connStr
     );
   }
 
@@ -175,7 +178,7 @@ public class ReactiveCluster {
    * @param environment the environment to use for this cluster.
    */
   private ReactiveCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator,
-                          final Set<SeedNode> seedNodes, final String connectionString) {
+                          final Set<SeedNode> seedNodes, @Nullable final ConnectionString connectionString) {
     this(new AsyncCluster(environment, authenticator, seedNodes, connectionString));
   }
 

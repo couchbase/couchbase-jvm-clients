@@ -69,6 +69,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.annotation.Nullable;
 import reactor.util.retry.Retry;
 
 import javax.naming.NamingException;
@@ -177,10 +178,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    *
    * @param core the core against which all ops are executed.
    */
-  public DefaultConfigurationProvider(final Core core, final Set<SeedNode> seedNodes, final String connectionString) {
+  public DefaultConfigurationProvider(final Core core, final Set<SeedNode> seedNodes, @Nullable final ConnectionString connectionString) {
     this.core = core;
     eventBus = core.context().environment().eventBus();
-    this.connectionString = connectionString != null ? ConnectionString.create(connectionString) : null;
+    this.connectionString = connectionString;
 
     // Don't publish the initial seed nodes, since they probably came from the user
     // and might not be KV nodes, or might have incomplete port information.

@@ -19,6 +19,7 @@ package com.couchbase.client.scala
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics.{DiagnosticsResult, PingResult}
 import com.couchbase.client.core.env.PasswordAuthenticator
+import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.scala.AsyncCluster.{
   extractClusterEnvironment,
   seedNodesFromConnectionString
@@ -410,9 +411,10 @@ object ReactiveCluster {
     extractClusterEnvironment(connectionString, options)
       .map(ce => {
         implicit val ec: ExecutionContextExecutor = ce.ec
-        val seedNodes                             = seedNodesFromConnectionString(connectionString, ce)
+        val connStr                               = ConnectionString.create(connectionString)
+        val seedNodes                             = seedNodesFromConnectionString(connStr, ce)
         val cluster = new ReactiveCluster(
-          new AsyncCluster(ce, options.authenticator, seedNodes, connectionString)
+          new AsyncCluster(ce, options.authenticator, seedNodes, connStr)
         )
         cluster.async.performGlobalConnect()
         cluster

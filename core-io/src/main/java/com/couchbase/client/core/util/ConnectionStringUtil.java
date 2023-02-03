@@ -61,15 +61,13 @@ public class ConnectionStringUtil {
    * <p>
    * Note that this method also performs DNS SRV lookups if the connection string qualifies!
    *
-   * @param cs the connection string in its encoded form.
+   * @param connectionString the connection string in its encoded form.
    * @param dnsSrvEnabled true if dns srv is enabled.
    * @param tlsEnabled true if tls is enabled.
    * @return a set of seed nodes populated.
    */
-  public static Set<SeedNode> seedNodesFromConnectionString(final String cs, final boolean dnsSrvEnabled,
+  public static Set<SeedNode> seedNodesFromConnectionString(final ConnectionString connectionString, final boolean dnsSrvEnabled,
                                                             final boolean tlsEnabled, final EventBus eventBus) {
-    final ConnectionString connectionString = ConnectionString.create(cs);
-
     if (dnsSrvEnabled && connectionString.isValidDnsSrv()) {
       String srvHostname = connectionString.hosts().get(0).host();
       NanoTimestamp start = NanoTimestamp.now();
@@ -198,10 +196,10 @@ public class ConnectionStringUtil {
   /**
    * Returns a synthetic connection string corresponding to the seed nodes.
    */
-  public static String asConnectionString(Collection<SeedNode> nodes) {
-    return nodes.stream()
+  public static ConnectionString asConnectionString(Collection<SeedNode> nodes) {
+    return ConnectionString.create(nodes.stream()
         .map(ConnectionStringUtil::asConnectionStringAddress)
-        .collect(Collectors.joining(","));
+        .collect(Collectors.joining(",")));
   }
 
   private static String asConnectionStringAddress(SeedNode node) {

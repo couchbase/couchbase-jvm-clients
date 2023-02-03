@@ -332,12 +332,12 @@ class ConnectionStringTest {
 
   @Test
   void canCreateFromSeedNodes() {
-    ConnectionString connectionString = ConnectionString.create(asConnectionString(listOf(
+    ConnectionString connectionString = asConnectionString(listOf(
         SeedNode.create("neither"),
         SeedNode.create("onlyKvPort", Optional.of(123), Optional.empty()),
         SeedNode.create("onlyManagerPort", Optional.empty(), Optional.of(456)),
         SeedNode.create("both", Optional.of(123), Optional.of(456))
-    )));
+    ));
 
     assertEquals(
         "couchbase://neither,onlyKvPort:123=kv,onlyManagerPort:456=manager,both:123=kv",

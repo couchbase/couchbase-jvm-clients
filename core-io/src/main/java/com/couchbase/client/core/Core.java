@@ -246,7 +246,7 @@ public class Core implements AutoCloseable {
    * Holds the user connection string if provided (null otherwise).
    */
   @Nullable
-  private final String connectionString;
+  private final ConnectionString connectionString;
 
   @Nullable private final CoreProtostellar protostellar;
 
@@ -273,7 +273,7 @@ public class Core implements AutoCloseable {
    * @return the created {@link Core}.
    */
   public static Core create(final CoreEnvironment environment, final Authenticator authenticator,
-                            final Set<SeedNode> seedNodes, @Nullable final String connectionString) {
+                            final Set<SeedNode> seedNodes, @Nullable final ConnectionString connectionString) {
     return new Core(environment, authenticator, seedNodes, connectionString);
   }
 
@@ -286,7 +286,7 @@ public class Core implements AutoCloseable {
    * @param connectionString if provided, the original connection string from the user.
    */
   protected Core(final CoreEnvironment environment, final Authenticator authenticator, final Set<SeedNode> seedNodes,
-                 @Nullable final String connectionString) {
+                 @Nullable final ConnectionString connectionString) {
     if (environment.securityConfig().tlsEnabled() && !authenticator.supportsTls()) {
       throw new InvalidArgumentException("TLS enabled but the Authenticator does not support TLS!", null, null);
     } else if (!environment.securityConfig().tlsEnabled() && !authenticator.supportsNonTls()) {
@@ -319,7 +319,7 @@ public class Core implements AutoCloseable {
       .collect(Collectors.toList());
 
     boolean isProtostellar = (!seedNodes.isEmpty() && seedNodes.stream().findFirst().get().protostellarPort().isPresent()) ||
-      (connectionString != null && ConnectionString.create(connectionString).scheme() == ConnectionString.Scheme.PROTOSTELLAR);
+      (connectionString != null && connectionString.scheme() == ConnectionString.Scheme.PROTOSTELLAR);
 
     if (isProtostellar) {
       this.protostellar = new CoreProtostellar(this, authenticator, seedNodes);
