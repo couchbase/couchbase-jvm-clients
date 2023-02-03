@@ -36,24 +36,23 @@ import reactor.test.StepVerifier;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 
 
 public class KeyValueReactiveCollectionIntegrationTest extends JavaIntegrationTest {
 
     private static Cluster cluster;
-    private static Collection collection;
     private static ReactiveCollection reactiveCollection;
-    private static int numDocs = 3;
+    private static final int NUM_DOCS = 3;
     private static Flux<String> docIds;
 
     @BeforeAll
     static void beforeAll() {
         cluster = createCluster();
         Bucket bucket = cluster.bucket(config().bucketname());
-        collection = bucket.defaultCollection();
 
         bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
-        reactiveCollection = collection.reactive();
+        reactiveCollection = bucket.defaultCollection().reactive();
     }
 
     @AfterAll
@@ -70,8 +69,8 @@ public class KeyValueReactiveCollectionIntegrationTest extends JavaIntegrationTe
      * Generate document keys flux
      */
     private static Flux<String> getDocsIds() {
-        int seed  = (int) System.currentTimeMillis();
-        return Flux.range(seed, numDocs).map(k -> "key" + k);
+        String batchId = UUID.randomUUID().toString();
+        return Flux.range(0, NUM_DOCS).map(k -> "key" + k + ":" + batchId );
     }
 
     @Test
@@ -247,7 +246,7 @@ public class KeyValueReactiveCollectionIntegrationTest extends JavaIntegrationTe
 
         // Assert cas of insert and touch results differ
         StepVerifier
-          .create(Flux.range(0, numDocs))
+          .create(Flux.range(0, NUM_DOCS))
           .thenConsumeWhile(i -> insertResults.get(i).cas() != touchResults.get(i).cas())
           .verifyComplete();
 
@@ -257,7 +256,7 @@ public class KeyValueReactiveCollectionIntegrationTest extends JavaIntegrationTe
           .block();
 
         StepVerifier
-          .create(Flux.range(0, numDocs))
+          .create(Flux.range(0, NUM_DOCS))
           .thenConsumeWhile(i -> getResults.get(i).cas() == touchResults.get(i).cas())
           .verifyComplete();
     }
