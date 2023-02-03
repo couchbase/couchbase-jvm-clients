@@ -64,6 +64,7 @@ import com.couchbase.client.java.kv.ScanType;
 import com.couchbase.client.java.kv.TouchOptions;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertOptions;
+import com.couchbase.client.java.manager.query.CollectionQueryIndexManager;
 
 import java.time.Duration;
 import java.util.List;
@@ -126,6 +127,11 @@ public class Collection {
   private final CoreKvOps kvOps;
 
   /**
+   * Allows managing query indexes at the Collection level.
+   */
+  private final CollectionQueryIndexManager queryIndexManager;
+
+  /**
    * Creates a new {@link Collection}.
    *
    * @param asyncCollection the underlying async collection.
@@ -135,6 +141,7 @@ public class Collection {
     reactiveCollection = new ReactiveCollection(asyncCollection);
     binaryCollection = new BinaryCollection(asyncCollection.binary());
     this.kvOps = asyncCollection.kvOps;
+    this.queryIndexManager = new CollectionQueryIndexManager(asyncCollection.queryIndexes());
   }
 
   /**
@@ -198,6 +205,14 @@ public class Collection {
    */
   public BinaryCollection binary() {
     return binaryCollection;
+  }
+
+  /**
+   * Provides access to query index management at the Collection level.
+   */
+  @Stability.Volatile
+  public CollectionQueryIndexManager queryIndexes() {
+    return queryIndexManager;
   }
 
   /**

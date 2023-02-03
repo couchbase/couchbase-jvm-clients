@@ -34,6 +34,10 @@ public class Capabilities {
 
         out.add(Caps.SDK_QUERY_INDEX_MANAGEMENT);
 
+        // [start:3.4.3]
+        out.add(Caps.SDK_QUERY_COLLECTION_INDEX_MANAGEMENT);
+        // [end:3.4.3]
+
         return out;
     }
 }

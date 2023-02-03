@@ -54,6 +54,7 @@ public class WatchQueryIndexesOptions extends CommonOptions<WatchQueryIndexesOpt
    * <p>
    * Note that if the bucket has no primary index, the watch operation will fail with a {@link IndexNotFoundException}.
    *
+   * @deprecated `collection.queryIndexes()` should now be used for collection-related query index operations.
    * @param watchPrimary if the primary index should be included in the watch.
    * @return this options class for chaining purposes.
    */
@@ -67,9 +68,11 @@ public class WatchQueryIndexesOptions extends CommonOptions<WatchQueryIndexesOpt
    * <p>
    * Please note that if the scope name is set, the {@link #collectionName(String)} (String)} must also be set.
    *
+   * @deprecated `collection.queryIndexes()` should now be used for collection-related query index operations.
    * @param scopeName the name of the scope.
    * @return this options class for chaining purposes.
    */
+  @Deprecated
   public WatchQueryIndexesOptions scopeName(final String scopeName) {
     this.scopeName = notNullOrEmpty(scopeName, "ScopeName");
     return this;
@@ -83,6 +86,7 @@ public class WatchQueryIndexesOptions extends CommonOptions<WatchQueryIndexesOpt
    * @param collectionName the name of the collection.
    * @return this options class for chaining purposes.
    */
+  @Deprecated
   public WatchQueryIndexesOptions collectionName(final String collectionName) {
     this.collectionName = notNullOrEmpty(collectionName, "CollectionName");
     return this;

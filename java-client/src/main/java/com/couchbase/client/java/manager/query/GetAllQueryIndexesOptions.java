@@ -52,9 +52,11 @@ public class GetAllQueryIndexesOptions extends CommonOptions<GetAllQueryIndexesO
    * If the scope name is set but the {@link #collectionName(String)} (String)} is not, then all indexes within
    * a scope (for all the collections inside) will be returned.
    *
+   * @deprecated `collection.queryIndexes()` should now be used for collection-related query index operations.
    * @param scopeName the name of the scope.
    * @return this options class for chaining purposes.
    */
+  @Deprecated
   public GetAllQueryIndexesOptions scopeName(final String scopeName) {
     this.scopeName = notNullOrEmpty(scopeName, "ScopeName");
     return this;
@@ -65,9 +67,11 @@ public class GetAllQueryIndexesOptions extends CommonOptions<GetAllQueryIndexesO
    * <p>
    * Please note that if the collection name is set, the {@link #scopeName(String)} must also be set.
    *
+   * @deprecated `collection.queryIndexes()` should now be used for collection-related query index operations.
    * @param collectionName the name of the collection.
    * @return this options class for chaining purposes.
    */
+  @Deprecated
   public GetAllQueryIndexesOptions collectionName(final String collectionName) {
     this.collectionName = notNullOrEmpty(collectionName, "CollectionName");
     return this;

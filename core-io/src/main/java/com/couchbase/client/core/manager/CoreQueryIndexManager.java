@@ -30,57 +30,45 @@ import com.couchbase.client.core.api.manager.CoreScopeAndCollection;
 import com.couchbase.client.core.api.manager.CoreWatchQueryIndexesOptions;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.query.CoreQueryOptions;
-import com.couchbase.client.core.api.query.CoreQueryProfile;
 import com.couchbase.client.core.api.query.CoreQueryResult;
-import com.couchbase.client.core.api.query.CoreQueryScanConsistency;
-import com.couchbase.client.core.api.shared.CoreMutationState;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.IndexesNotReadyException;
-import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.error.QueryException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
-import com.couchbase.client.core.transaction.config.CoreSingleQueryTransactionOptions;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION;
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE;
-import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.core.manager.CoreQueryIndexManager.QueryType.READ_ONLY;
-import static com.couchbase.client.core.manager.CoreQueryIndexManager.QueryType.WRITE;
-import static com.couchbase.client.core.util.CbThrowables.findCause;
+import static com.couchbase.client.core.manager.CoreCollectionQueryIndexManager.failIfIndexesOfflineHelper;
+import static com.couchbase.client.core.manager.CoreCollectionQueryIndexManager.formatIndexFields;
+import static com.couchbase.client.core.manager.CoreCollectionQueryIndexManager.quote;
+import static com.couchbase.client.core.manager.CoreCollectionQueryIndexManager.toWatchTimeoutException;
+import static com.couchbase.client.core.manager.CoreQueryType.READ_ONLY;
+import static com.couchbase.client.core.manager.CoreQueryType.WRITE;
 import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static com.couchbase.client.core.util.CbThrowables.throwIfUnchecked;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
 
 @Stability.Internal
 public class CoreQueryIndexManager {
@@ -92,12 +80,29 @@ public class CoreQueryIndexManager {
     queryOps = core.queryOps();
   }
 
-  public static ObjectNode getNamedParamsForGetAllIndexes(
+  public static ObjectNode getParamsForGetAllIndexes(
           String bucket,
           @Nullable String scope,
           @Nullable String collection
   ) {
     ObjectNode params = Mapper.createObjectNode();
+    params.put("bucketName", bucket);
+    params.put("scopeName", scope);
+    params.put("collectionName", collection);
+    return params;
+  }
+
+
+  /**
+   * Only here temporarily for Kotlin and Scala, will be removed.
+   */
+  @Deprecated
+  public static Map<String, String> getNamedParamsForGetAllIndexes(
+          @Nullable String bucket,
+          @Nullable String scope,
+          @Nullable String collection
+  ) {
+    Map<String, String> params = new HashMap<>();
     params.put("bucketName", bucket);
     params.put("scopeName", scope);
     params.put("collectionName", collection);
@@ -189,8 +194,8 @@ public class CoreQueryIndexManager {
     notNullOrEmpty(bucketName, "BucketName");
     notNull(options, "Options");
 
-    String statement = CoreQueryIndexManager.getStatementForGetAllIndexes(bucketName, options.scopeName(), options.collectionName());
-    ObjectNode params = CoreQueryIndexManager.getNamedParamsForGetAllIndexes(bucketName, options.scopeName(), options.collectionName());
+    String statement = getStatementForGetAllIndexes(bucketName, options.scopeName(), options.collectionName());
+    ObjectNode params = getParamsForGetAllIndexes(bucketName, options.scopeName(), options.collectionName());
 
     return exec(READ_ONLY, statement, options.commonOptions(), TracingIdentifiers.SPAN_REQUEST_MQ_GET_ALL_INDEXES, bucketName, params)
             .thenApply(result -> result.rows()
@@ -310,19 +315,6 @@ public class CoreQueryIndexManager {
             .whenComplete((r, t) -> parent.end());
   }
 
-  private static String formatIndexFields(Collection<String> fields) {
-    return "(" + String.join(",", fields) + ")";
-  }
-
-  private static TimeoutException toWatchTimeoutException(Throwable t, Duration timeout) {
-    final StringBuilder msg = new StringBuilder("A requested index is still not ready after " + timeout + ".");
-
-    findCause(t, IndexesNotReadyException.class).ifPresent(cause ->
-            msg.append(" Unready index name -> state: ").append(redactMeta(cause.indexNameToState())));
-
-    return new TimeoutException(msg.toString());
-  }
-
   private CompletableFuture<Void> failIfIndexesOffline(final String bucketName, final Set<String> indexNames,
                                                        final boolean includePrimary, final RequestSpan parentSpan,
                                                        final CoreScopeAndCollection scopeAndCollection)
@@ -349,49 +341,10 @@ public class CoreQueryIndexManager {
     };
 
     return getAllIndexes(bucketName, getAllQueryIndexesOptions)
-            .thenApply(allIndexes -> {
-              final List<CoreQueryIndex> matchingIndexes = allIndexes.stream()
-                      .filter(idx -> indexNames.contains(idx.name()) || (includePrimary && idx.primary()))
-                      .collect(toList());
-
-              final boolean primaryIndexPresent = matchingIndexes.stream()
-                      .anyMatch(CoreQueryIndex::primary);
-
-              if (includePrimary && !primaryIndexPresent) {
-                throw new IndexNotFoundException("#primary");
-              }
-
-              final Set<String> matchingIndexNames = matchingIndexes.stream()
-                      .map(CoreQueryIndex::name)
-                      .collect(toSet());
-
-              final Set<String> missingIndexNames = difference(indexNames, matchingIndexNames);
-              if (!missingIndexNames.isEmpty()) {
-                throw new IndexNotFoundException(missingIndexNames.toString());
-              }
-
-              final Map<String, String> offlineIndexNameToState = matchingIndexes.stream()
-                      .filter(idx -> !"online".equals(idx.state()))
-                      .collect(toMap(CoreQueryIndex::name, CoreQueryIndex::state));
-
-              if (!offlineIndexNameToState.isEmpty()) {
-                throw new IndexesNotReadyException(offlineIndexNameToState);
-              }
-
-              return null;
-            });
+            .thenApply(allIndexes -> failIfIndexesOfflineHelper(indexNames, includePrimary, allIndexes));
   }
 
-  /**
-   * Returns a set containing all items in {@code lhs} that are not also in {@code rhs}.
-   */
-  private static <T> Set<T> difference(Set<T> lhs, Set<T> rhs) {
-    Set<T> result = new HashSet<>(lhs);
-    result.removeAll(rhs);
-    return result;
-  }
-
-  private CompletableFuture<CoreQueryResult> exec(QueryType queryType, CharSequence statement, @Nullable Map<String, Object> with,
+  private CompletableFuture<CoreQueryResult> exec(CoreQueryType queryType, CharSequence statement, @Nullable Map<String, Object> with,
                                                   CoreCommonOptions options, String spanName, String bucketName,
                                                   ObjectNode parameters) {
     return (with == null || with.isEmpty())
@@ -399,7 +352,7 @@ public class CoreQueryIndexManager {
             : exec(queryType, statement + " WITH " + Mapper.encodeAsString(with), options, spanName, bucketName, parameters);
   }
 
-  private CompletableFuture<CoreQueryResult> exec(QueryType queryType, CharSequence statement,
+  private CompletableFuture<CoreQueryResult> exec(CoreQueryType queryType, CharSequence statement,
                                                   CoreCommonOptions options, String spanName, String bucketName,
                                                   ObjectNode parameters) {
     RequestSpan parent = core.context().environment().requestTracer().requestSpan(spanName, options.parentSpan().orElse(null));
@@ -407,7 +360,7 @@ public class CoreQueryIndexManager {
 
     CoreCommonOptions common = CoreCommonOptions.ofOptional(options.timeout(), options.retryStrategy(), Optional.of(parent));
 
-    CoreQueryOptions queryOpts = toQueryOptions(options, requireNonNull(queryType) == READ_ONLY, parameters);
+    CoreQueryOptions queryOpts = toQueryOptions(common, requireNonNull(queryType) == READ_ONLY, parameters);
 
     if (bucketName != null) {
       parent.attribute(TracingIdentifiers.ATTR_NAME, bucketName);
@@ -416,137 +369,11 @@ public class CoreQueryIndexManager {
     return queryOps
             .queryAsync(statement.toString(), queryOpts, null, null, null)
             .toFuture()
-            .exceptionally(t -> {
-              throw translateException(t);
-            })
             .whenComplete((r, t) -> parent.end());
   }
 
   private static CoreQueryOptions toQueryOptions(CoreCommonOptions options, boolean readonly, ObjectNode parameters) {
-    return new CoreQueryOptions() {
-      @Override
-      public boolean adhoc() {
-        return true;
-      }
-
-      @Override
-      public String clientContextId() {
-        return null;
-      }
-
-      @Override
-      public CoreMutationState consistentWith() {
-        return null;
-      }
-
-      @Override
-      public Integer maxParallelism() {
-        return null;
-      }
-
-      @Override
-      public boolean metrics() {
-        return false;
-      }
-
-      @Override
-      public ObjectNode namedParameters() {
-        return parameters;
-      }
-
-      @Override
-      public Integer pipelineBatch() {
-        return null;
-      }
-
-      @Override
-      public Integer pipelineCap() {
-        return null;
-      }
-
-      @Override
-      public ArrayNode positionalParameters() {
-        return null;
-      }
-
-      @Override
-      public CoreQueryProfile profile() {
-        return null;
-      }
-
-      @Override
-      public JsonNode raw() {
-        return null;
-      }
-
-      @Override
-      public boolean readonly() {
-        return readonly;
-      }
-
-      @Override
-      public Duration scanWait() {
-        return null;
-      }
-
-      @Override
-      public Integer scanCap() {
-        return null;
-      }
-
-      @Override
-      public CoreQueryScanConsistency scanConsistency() {
-        return null;
-      }
-
-      @Override
-      public boolean flexIndex() {
-        return false;
-      }
-
-      @Override
-      public Boolean preserveExpiry() {
-        return null;
-      }
-
-      @Override
-      public CoreSingleQueryTransactionOptions asTransactionOptions() {
-        return null;
-      }
-
-      @Override
-      public CoreCommonOptions commonOptions() {
-        return options;
-      }
-    };
-  }
-
-  private static final Map<Predicate<QueryException>, Function<QueryException, ? extends QueryException>> errorMessageMap = new LinkedHashMap<>();
-
-  private RuntimeException translateException(Throwable t) {
-    if (t instanceof QueryException) {
-      final QueryException e = ((QueryException) t);
-
-      for (Map.Entry<Predicate<QueryException>, Function<QueryException, ? extends QueryException>> entry : errorMessageMap.entrySet()) {
-        if (entry.getKey().test(e)) {
-          return entry.getValue().apply(e);
-        }
-      }
-    }
-    return (t instanceof RuntimeException) ? (RuntimeException) t : new RuntimeException(t);
-  }
-
-  private static String quote(String s) {
-    if (s.contains("`")) {
-      throw InvalidArgumentException.fromMessage("Value [" + redactMeta(s) + "] may not contain backticks.");
-    }
-    return "`" + s + "`";
-  }
-
-  private static String quote(String... components) {
-    return Arrays.stream(components)
-            .map(CoreQueryIndexManager::quote)
-            .collect(Collectors.joining("."));
+    return CoreCollectionQueryIndexManager.toQueryOptions(options, readonly, parameters);
   }
 
   private static String buildKeyspace(final String bucket, final @Nullable CoreScopeAndCollection scopeAndCollection) {
@@ -556,18 +383,4 @@ public class CoreQueryIndexManager {
       return quote(bucket);
     }
   }
-
-  private static String buildKeyspace(final String bucket, final @Nullable String scopeName, final @Nullable String collectionName) {
-    if (scopeName != null && collectionName != null) {
-      return quote(bucket, scopeName, collectionName);
-    } else {
-      return quote(bucket);
-    }
-  }
-
-  enum QueryType {
-    READ_ONLY,
-    WRITE
-  }
-
 }

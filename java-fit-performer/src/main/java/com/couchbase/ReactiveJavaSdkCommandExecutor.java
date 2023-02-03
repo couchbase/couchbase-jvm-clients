@@ -26,6 +26,7 @@ import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.perf.Counters;
 import com.couchbase.client.performer.core.perf.PerRun;
 import com.couchbase.client.protocol.run.Result;
+import com.couchbase.client.protocol.sdk.management.collection.query.Command;
 import com.couchbase.client.protocol.shared.Exception;
 import com.couchbase.stream.FluxStreamer;
 import com.couchbase.utils.ClusterConnection;
@@ -34,6 +35,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -244,12 +246,126 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                 result.setElapsedNanos(System.nanoTime() - start);
                 setSuccess(result);
                 return Mono.just(result.build());
+            // [start:3.4.3]
+            } else if (op.hasQueryCollectionIndexManager()) {
+                com.couchbase.client.protocol.sdk.management.collection.query.Command command = op.getQueryCollectionIndexManager();
+
+                return handleQueryCollectionIndexManagerCommand(op, result, command);
+            // [end:3.4.3]
             } else {
                 return Mono.error(new UnsupportedOperationException(new IllegalArgumentException("Unknown operation")));
             }
         });
     }
 
+    // [start:3.4.3]
+    private Mono<Result> handleQueryCollectionIndexManagerCommand(com.couchbase.client.protocol.sdk.Command op, Result.Builder result, Command command) {
+        if (command.hasCreatePrimaryIndex()) {
+            var request = command.getCreatePrimaryIndex();
+            var collection = connection.collection(request.getCollection()).reactive();
+            var options = createOptions(request, spans);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            Mono<Void> res;
+            if (options == null) res = collection.queryIndexes().createPrimaryIndex();
+            else res = collection.queryIndexes().createPrimaryIndex(options);
+            return res.then(Mono.fromCallable(() -> {
+                result.setElapsedNanos(System.nanoTime() - start);
+                setSuccess(result);
+                return result.build();
+            }));
+        } else if (command.hasCreateIndex()) {
+            var request = command.getCreateIndex();
+            var collection = connection.collection(request.getCollection()).reactive();
+            var options = createOptions(request, spans);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            var fields = new HashSet<>(request.getFieldsList());
+            Mono<Void> res;
+            if (options == null) res = collection.queryIndexes().createIndex(request.getIndexName(), fields);
+            else res = collection.queryIndexes().createIndex(request.getIndexName(), fields, options);
+            return res.then(Mono.fromCallable(() -> {
+                result.setElapsedNanos(System.nanoTime() - start);
+                setSuccess(result);
+                return result.build();
+            }));
+        } else if (command.hasGetAllIndexes()) {
+            var request = command.getGetAllIndexes();
+            var collection = connection.collection(request.getCollection()).reactive();
+            var options = createOptions(request, spans);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            Flux<QueryIndex> indexes;
+            if (options == null) indexes = collection.queryIndexes().getAllIndexes();
+            else indexes = collection.queryIndexes().getAllIndexes(options);
+            return indexes.collectList().map(i -> {
+                result.setElapsedNanos(System.nanoTime() - start);
+                if (op.getReturnResult()) populateResult(result, i);
+                else setSuccess(result);
+                return result.build();
+            });
+        } else if (command.hasDropPrimaryIndex()) {
+            var request = command.getDropPrimaryIndex();
+            var collection = connection.collection(request.getCollection()).reactive();
+            var options = createOptions(request, spans);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            Mono<Void> res;
+            if (options == null) res = collection.queryIndexes().dropPrimaryIndex();
+            else res = collection.queryIndexes().dropPrimaryIndex(options);
+            return res.then(Mono.fromCallable(() -> {
+                result.setElapsedNanos(System.nanoTime() - start);
+                setSuccess(result);
+                return result.build();
+            }));
+        } else if (command.hasDropIndex()) {
+            var request = command.getDropIndex();
+            var collection = connection.collection(request.getCollection()).reactive();
+            var options = createOptions(request, spans);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            Mono<Void> res;
+            if (options == null) res = collection.queryIndexes().dropIndex(request.getIndexName());
+            else res = collection.queryIndexes().dropIndex(request.getIndexName(), options);
+            return res.then(Mono.fromCallable(() -> {
+                result.setElapsedNanos(System.nanoTime() - start);
+                setSuccess(result);
+                return result.build();
+            }));
+        } else if (command.hasWatchIndexes()) {
+            var request = command.getWatchIndexes();
+            var collection = connection.collection(request.getCollection()).reactive();
+            var options = createOptions(request);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            Mono<Void> res;
+            if (options == null) res = collection.queryIndexes().watchIndexes(request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs()));
+            else res = collection.queryIndexes().watchIndexes(request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs()), options);
+            return res.then(Mono.fromCallable(() -> {
+                result.setElapsedNanos(System.nanoTime() - start);
+                setSuccess(result);
+                return result.build();
+            }));
+        } else if (command.hasBuildDeferredIndexes()) {
+            var request = command.getBuildDeferredIndexes();
+            var collection = connection.collection(request.getCollection()).reactive();
+            var options = createOptions(request, spans);
+            result.setInitiated(getTimeNow());
+            long start = System.nanoTime();
+            Mono<Void> res;
+            if (options == null) res = collection.queryIndexes().buildDeferredIndexes();
+            else res = collection.queryIndexes().buildDeferredIndexes(options);
+            return res.then(Mono.fromCallable(() -> {
+                result.setElapsedNanos(System.nanoTime() - start);
+                setSuccess(result);
+                return result.build();
+            }));
+        }
+        else {
+            return Mono.error(new UnsupportedOperationException());
+        }
+    }
+    // [end:3.4.3]
 
     @Override
     protected Exception convertException(Throwable raw) {

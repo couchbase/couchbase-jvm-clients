@@ -56,6 +56,7 @@ import com.couchbase.client.java.kv.ScanType;
 import com.couchbase.client.java.kv.TouchOptions;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertOptions;
+import com.couchbase.client.java.manager.query.ReactiveCollectionQueryIndexManager;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -133,12 +134,18 @@ public class ReactiveCollection {
    */
   private final ReactiveBinaryCollection reactiveBinaryCollection;
 
+  /**
+   * Allows managing query indexes at the Collection level.
+   */
+  private final ReactiveCollectionQueryIndexManager queryIndexManager;
+
   ReactiveCollection(final AsyncCollection asyncCollection) {
     this.asyncCollection = asyncCollection;
     this.coreContext = asyncCollection.core().context();
     this.core = asyncCollection.core();
     this.reactiveBinaryCollection = new ReactiveBinaryCollection(core, asyncCollection.binary());
     this.kvOps = asyncCollection.kvOps;
+    this.queryIndexManager = new ReactiveCollectionQueryIndexManager(asyncCollection.queryIndexes());
   }
 
   /**
@@ -192,6 +199,14 @@ public class ReactiveCollection {
    */
   public ReactiveBinaryCollection binary() {
     return reactiveBinaryCollection;
+  }
+
+  /**
+   * Provides access to query index management at the ReactiveCollection level.
+   */
+  @Stability.Volatile
+  public ReactiveCollectionQueryIndexManager queryIndexes() {
+    return queryIndexManager;
   }
 
   /**
