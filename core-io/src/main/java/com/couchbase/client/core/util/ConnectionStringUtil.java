@@ -71,7 +71,7 @@ public class ConnectionStringUtil {
     final ConnectionString connectionString = ConnectionString.create(cs);
 
     if (dnsSrvEnabled && connectionString.isValidDnsSrv()) {
-      String srvHostname = connectionString.hosts().get(0).hostname();
+      String srvHostname = connectionString.hosts().get(0).host();
       NanoTimestamp start = NanoTimestamp.now();
       try {
         // Technically a hostname with the _couchbase._tcp. (and the tls equivalent) does not qualify for
@@ -139,7 +139,7 @@ public class ConnectionStringUtil {
    */
   static Set<SeedNode> populateSeedsFromConnectionString(final ConnectionString connectionString) {
     Map<String, List<UnresolvedSocket>> groupedByHost = connectionString.hosts().stream()
-        .collect(groupingBy(UnresolvedSocket::hostname));
+        .collect(groupingBy(UnresolvedSocket::host));
 
     Set<SeedNode> seedNodes = new HashSet<>();
 
@@ -192,7 +192,7 @@ public class ConnectionStringUtil {
    */
   public static boolean isCapella(ConnectionString connectionString) {
     return connectionString.hosts().stream()
-        .allMatch(it -> it.hostname().endsWith(".cloud.couchbase.com"));
+        .allMatch(it -> it.host().endsWith(".cloud.couchbase.com"));
   }
 
   /**

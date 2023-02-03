@@ -908,7 +908,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    * @return the (potentially empty) DNS SRV records after the lookup.
    */
   protected List<String> performDnsSrvLookup(boolean tlsEnabled) throws NamingException {
-    return fromDnsSrvOrThrowIfTlsRequired(connectionString.hosts().get(0).hostname(), tlsEnabled);
+    return fromDnsSrvOrThrowIfTlsRequired(connectionString.hosts().get(0).host(), tlsEnabled);
   }
 
   private Mono<ProposedBucketConfigContext> fetchBucketConfigs(final String name, final Set<SeedNode> seedNodes,

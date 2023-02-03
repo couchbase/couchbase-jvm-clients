@@ -131,7 +131,7 @@ class ConnectionStringTest {
     assertEquals(COUCHBASE, parsed.scheme());
     assertTrue(parsed.params().isEmpty());
     assertEquals(1, parsed.hosts().size());
-    assertEquals("localhost", parsed.hosts().get(0).hostname());
+    assertEquals("localhost", parsed.hosts().get(0).host());
     assertEquals(0, parsed.hosts().get(0).port());
     assertNull(parsed.username());
 
@@ -139,7 +139,7 @@ class ConnectionStringTest {
     assertEquals(COUCHBASE, parsed.scheme());
     assertTrue(parsed.params().isEmpty());
     assertEquals(1, parsed.hosts().size());
-    assertEquals("localhost", parsed.hosts().get(0).hostname());
+    assertEquals("localhost", parsed.hosts().get(0).host());
     assertEquals(1234, parsed.hosts().get(0).port());
     assertNull(parsed.username());
 
@@ -147,9 +147,9 @@ class ConnectionStringTest {
     assertEquals(COUCHBASE, parsed.scheme());
     assertTrue(parsed.params().isEmpty());
     assertEquals(2, parsed.hosts().size());
-    assertEquals("foo", parsed.hosts().get(0).hostname());
+    assertEquals("foo", parsed.hosts().get(0).host());
     assertEquals(1234, parsed.hosts().get(0).port());
-    assertEquals("bar", parsed.hosts().get(1).hostname());
+    assertEquals("bar", parsed.hosts().get(1).host());
     assertEquals(5678, parsed.hosts().get(1).port());
     assertNull(parsed.username());
 
@@ -157,11 +157,11 @@ class ConnectionStringTest {
     assertEquals(COUCHBASE, parsed.scheme());
     assertTrue(parsed.params().isEmpty());
     assertEquals(3, parsed.hosts().size());
-    assertEquals("foo", parsed.hosts().get(0).hostname());
+    assertEquals("foo", parsed.hosts().get(0).host());
     assertEquals(0, parsed.hosts().get(0).port());
-    assertEquals("bar", parsed.hosts().get(1).hostname());
+    assertEquals("bar", parsed.hosts().get(1).host());
     assertEquals(5678, parsed.hosts().get(1).port());
-    assertEquals("baz", parsed.hosts().get(2).hostname());
+    assertEquals("baz", parsed.hosts().get(2).host());
     assertEquals(0, parsed.hosts().get(2).port());
     assertNull(parsed.username());
   }
@@ -198,7 +198,7 @@ class ConnectionStringTest {
     ConnectionString parsed = ConnectionString.create("couchbase://user@localhost?foo=bar");
     assertEquals(COUCHBASE, parsed.scheme());
     assertEquals("user", parsed.username());
-    assertEquals("localhost", parsed.hosts().get(0).hostname());
+    assertEquals("localhost", parsed.hosts().get(0).host());
     assertEquals(0, parsed.hosts().get(0).port());
     assertEquals(1, parsed.params().size());
     assertEquals("bar", parsed.params().get("foo"));
@@ -206,8 +206,8 @@ class ConnectionStringTest {
     parsed = ConnectionString.create("couchbase://user123@host1,host2?foo=bar&setting=true");
     assertEquals(COUCHBASE, parsed.scheme());
     assertEquals("user123", parsed.username());
-    assertEquals("host1", parsed.hosts().get(0).hostname());
-    assertEquals("host2", parsed.hosts().get(1).hostname());
+    assertEquals("host1", parsed.hosts().get(0).host());
+    assertEquals("host2", parsed.hosts().get(1).host());
     assertEquals(2, parsed.params().size());
     assertEquals("bar", parsed.params().get("foo"));
     assertEquals("true", parsed.params().get("setting"));
@@ -218,14 +218,14 @@ class ConnectionStringTest {
     ConnectionString parsed = ConnectionString.create("couchbase://[::1]");
     assertEquals(COUCHBASE, parsed.scheme());
     assertEquals(1, parsed.hosts().size());
-    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).hostname());
+    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).host());
     assertEquals(0, parsed.hosts().get(0).port());
     assertTrue(parsed.params().isEmpty());
 
     parsed = ConnectionString.create("couchbase://[::1/128]");
     assertEquals(COUCHBASE, parsed.scheme());
     assertEquals(1, parsed.hosts().size());
-    assertEquals("::1/128", parsed.hosts().get(0).hostname());
+    assertEquals("::1/128", parsed.hosts().get(0).host());
     assertEquals(0, parsed.hosts().get(0).port());
     assertTrue(parsed.params().isEmpty());
   }
@@ -235,16 +235,16 @@ class ConnectionStringTest {
     ConnectionString parsed = ConnectionString.create("couchbase://[::1], [::1]");
     assertEquals(COUCHBASE, parsed.scheme());
     assertEquals(2, parsed.hosts().size());
-    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).hostname());
-    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(1).hostname());
+    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).host());
+    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(1).host());
     assertTrue(parsed.params().isEmpty());
 
     parsed = ConnectionString.create("couchbase://[::1/128], [::1/128],[::1/128]");
     assertEquals(COUCHBASE, parsed.scheme());
     assertEquals(3, parsed.hosts().size());
-    assertEquals("::1/128", parsed.hosts().get(0).hostname());
-    assertEquals("::1/128", parsed.hosts().get(1).hostname());
-    assertEquals("::1/128", parsed.hosts().get(2).hostname());
+    assertEquals("::1/128", parsed.hosts().get(0).host());
+    assertEquals("::1/128", parsed.hosts().get(1).host());
+    assertEquals("::1/128", parsed.hosts().get(2).host());
     assertTrue(parsed.params().isEmpty());
   }
 
@@ -253,9 +253,9 @@ class ConnectionStringTest {
     ConnectionString parsed = ConnectionString.create("couchbases://[::1]:8091, [::1]:11210");
     assertEquals(COUCHBASES, parsed.scheme());
     assertEquals(2, parsed.hosts().size());
-    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).hostname());
+    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).host());
     assertEquals(8091, parsed.hosts().get(0).port());
-    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(1).hostname());
+    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(1).host());
     assertEquals(11210, parsed.hosts().get(1).port());
     assertTrue(parsed.params().isEmpty());
   }
@@ -265,11 +265,11 @@ class ConnectionStringTest {
     ConnectionString parsed = ConnectionString.create("couchbase://foo:1234=http,bar:5678=mcd");
     assertEquals(2, parsed.hosts().size());
 
-    assertEquals("foo", parsed.hosts().get(0).hostname());
+    assertEquals("foo", parsed.hosts().get(0).host());
     assertEquals(1234, parsed.hosts().get(0).port());
     assertEquals(ConnectionString.PortType.MANAGER, parsed.hosts().get(0).portType().get());
 
-    assertEquals("bar", parsed.hosts().get(1).hostname());
+    assertEquals("bar", parsed.hosts().get(1).host());
     assertEquals(5678, parsed.hosts().get(1).port());
     assertEquals(ConnectionString.PortType.KV, parsed.hosts().get(1).portType().get());
   }
@@ -279,11 +279,11 @@ class ConnectionStringTest {
     ConnectionString parsed = ConnectionString.create("couchbase://foo:1234=manager,bar:5678=kv");
     assertEquals(2, parsed.hosts().size());
 
-    assertEquals("foo", parsed.hosts().get(0).hostname());
+    assertEquals("foo", parsed.hosts().get(0).host());
     assertEquals(1234, parsed.hosts().get(0).port());
     assertEquals(ConnectionString.PortType.MANAGER, parsed.hosts().get(0).portType().get());
 
-    assertEquals("bar", parsed.hosts().get(1).hostname());
+    assertEquals("bar", parsed.hosts().get(1).host());
     assertEquals(5678, parsed.hosts().get(1).port());
     assertEquals(ConnectionString.PortType.KV, parsed.hosts().get(1).portType().get());
   }
@@ -294,11 +294,11 @@ class ConnectionStringTest {
     assertEquals(COUCHBASES, parsed.scheme());
     assertEquals(2, parsed.hosts().size());
 
-    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).hostname());
+    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(0).host());
     assertEquals(8091, parsed.hosts().get(0).port());
     assertEquals(ConnectionString.PortType.MANAGER, parsed.hosts().get(0).portType().get());
 
-    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(1).hostname());
+    assertEquals("0:0:0:0:0:0:0:1", parsed.hosts().get(1).host());
     assertEquals(11210, parsed.hosts().get(1).port());
     assertEquals(ConnectionString.PortType.KV, parsed.hosts().get(1).portType().get());
 

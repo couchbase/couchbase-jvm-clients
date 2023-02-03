@@ -155,9 +155,9 @@ public class ConnectionString {
   public Optional<String> dnsSrvCandidate() {
     boolean maybeDnsSrv = hosts.size() == 1
         && hosts.get(0).port() == 0
-        && !InetAddresses.isInetAddress(hosts.get(0).hostname());
+        && !InetAddresses.isInetAddress(hosts.get(0).host());
     return maybeDnsSrv
-        ? Optional.of(hosts.get(0).hostname())
+        ? Optional.of(hosts.get(0).host())
         : Optional.empty();
   }
 
