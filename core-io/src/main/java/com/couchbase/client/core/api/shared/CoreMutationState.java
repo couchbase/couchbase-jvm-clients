@@ -22,11 +22,9 @@ import com.couchbase.client.core.util.CbCollections;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 @Stability.Internal
-public class CoreMutationState {
+public class CoreMutationState implements Iterable<MutationToken> {
   private final List<MutationToken> tokens;
 
   public CoreMutationState(Iterable<MutationToken> tokens) {
@@ -35,5 +33,10 @@ public class CoreMutationState {
 
   public List<MutationToken> tokens() {
     return tokens;
+  }
+
+  @Override
+  public Iterator<MutationToken> iterator() {
+    return tokens.iterator();
   }
 }

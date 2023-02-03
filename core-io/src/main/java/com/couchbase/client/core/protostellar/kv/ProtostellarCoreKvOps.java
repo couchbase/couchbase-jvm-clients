@@ -30,6 +30,9 @@ import com.couchbase.client.core.api.kv.CoreStoreSemantics;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.kv.CoreRangeScanItem;
+import com.couchbase.client.core.kv.CoreScanOptions;
+import com.couchbase.client.core.kv.CoreScanType;
 import com.couchbase.client.core.protostellar.CoreProtostellarAccessors;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
 import reactor.core.publisher.Flux;
@@ -37,9 +40,10 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
-import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateSubdocMutateParams;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.existsRequest;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.getAndLockRequest;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.getAndTouchRequest;
@@ -309,6 +313,21 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
       request,
       (endpoint) -> endpoint.kvStub().withDeadline(request.deadline()).mutateIn(request.request()),
       (response) -> CoreProtostellarKeyValueResponses.convertResponse(keyspace, key, response, specs));
+  }
+
+  @Override
+  public Flux<CoreRangeScanItem> scanRequestReactive(CoreScanType scanType, CoreScanOptions options) {
+    throw unsupported();
+  }
+
+  @Override
+  public CompletableFuture<List<CoreRangeScanItem>> scanRequestAsync(CoreScanType scanType, CoreScanOptions options) {
+    throw unsupported();
+  }
+
+  @Override
+  public Stream<CoreRangeScanItem> scanRequestBlocking(CoreScanType scanType, CoreScanOptions options) {
+    throw unsupported();
   }
 
   private static RuntimeException unsupported() {

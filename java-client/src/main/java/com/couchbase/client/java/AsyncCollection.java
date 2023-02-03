@@ -20,20 +20,15 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.kv.CoreRangeScanItem;
+
 import com.couchbase.client.core.kv.RangeScanOrchestrator;
-import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -41,7 +36,6 @@ import com.couchbase.client.core.service.kv.ReplicaHelper;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.kv.CommonDurabilityOptions;
 import com.couchbase.client.java.kv.ExistsOptions;
 import com.couchbase.client.java.kv.ExistsResult;
 import com.couchbase.client.java.kv.Expiry;
@@ -61,26 +55,19 @@ import com.couchbase.client.java.kv.MutateInOptions;
 import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.MutationResult;
-import com.couchbase.client.java.kv.PersistTo;
-import com.couchbase.client.java.kv.RangeScan;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
-import com.couchbase.client.java.kv.SamplingScan;
 import com.couchbase.client.java.kv.ScanOptions;
 import com.couchbase.client.java.kv.ScanResult;
 import com.couchbase.client.java.kv.ScanType;
 import com.couchbase.client.java.kv.TouchOptions;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertOptions;
-import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -159,11 +146,6 @@ public class AsyncCollection {
   private final CollectionIdentifier collectionIdentifier;
 
   /**
-   * Holds the orchestrator for range scans.
-   */
-  private final RangeScanOrchestrator rangeScanOrchestrator;
-
-  /**
    * Strategy for performing KV operations.
    */
   final CoreKvOps kvOps;
@@ -186,7 +168,6 @@ public class AsyncCollection {
     this.bucket = bucket;
     this.collectionIdentifier = new CollectionIdentifier(bucket, Optional.of(scopeName), Optional.of(name));
     this.asyncBinaryCollection = new AsyncBinaryCollection(core, environment, collectionIdentifier);
-    this.rangeScanOrchestrator = new RangeScanOrchestrator(core, collectionIdentifier);
     this.kvOps = core.kvOps(CoreKeyspace.from(collectionIdentifier));
   }
 
@@ -196,11 +177,6 @@ public class AsyncCollection {
   @Stability.Volatile
   public Core core() {
     return core;
-  }
-
-  @Stability.Internal
-  RangeScanOrchestrator rangeScanOrchestrator() {
-    return rangeScanOrchestrator;
   }
 
   /**
@@ -750,80 +726,11 @@ public class AsyncCollection {
    */
   @Stability.Volatile
   public CompletableFuture<List<ScanResult>> scan(final ScanType scanType, final ScanOptions options) {
-    return scanRequest(scanType, options).collectList().toFuture();
-  }
-
-  /**
-   * Internal helper method to create and run the KV range scan request.
-   *
-   * @param scanType the type or range scan to perform.
-   * @param options a {@link ScanOptions} to customize the behavior of the scan operation.
-   * @return the flux stream of converted scan results.
-   */
-  @SuppressWarnings("resource")
-  Flux<ScanResult> scanRequest(final ScanType scanType, final ScanOptions options) {
-    notNull(scanType, "ScanType");
-    notNull(options, "Options");
-
-    ScanOptions.Built opts = options.build();
-    Duration timeout = opts.timeout().orElse(environment().timeoutConfig().kvScanTimeout());
-
-    Map<Short, MutationToken> consistencyTokens = opts.consistentWith().map(ms -> {
-      Map<Short, MutationToken> tokens = new HashMap<>();
-      for (MutationToken mt : ms) {
-        tokens.put(mt.partitionID(), mt);
-      }
-      return tokens;
-    }).orElse(Collections.emptyMap());
-
-    Flux<CoreRangeScanItem> coreScanStream;
-
-    if (scanType instanceof RangeScan) {
-      RangeScan rs = (RangeScan) scanType;
-      coreScanStream = rangeScanOrchestrator.rangeScan(rs.from().id(), rs.from().exclusive(), rs.to().id(),
-        rs.to().exclusive(), timeout, opts.batchItemLimit(), opts.batchByteLimit(), opts.idsOnly(),
-        opts.sort().intoCore(), opts.parentSpan(), consistencyTokens
-      );
-    } else if (scanType instanceof SamplingScan) {
-      SamplingScan ss = (SamplingScan) scanType;
-      coreScanStream = rangeScanOrchestrator.samplingScan(ss.limit(), ss.seed(), timeout, opts.batchItemLimit(),
-        opts.batchByteLimit(), opts.idsOnly(), opts.sort().intoCore(), opts.parentSpan(), consistencyTokens
-      );
-    } else {
-      return Flux.error(InvalidArgumentException.fromMessage("Unsupported ScanType: " + scanType));
-    }
-
-    final Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
-
-    return coreScanStream.map(item -> new ScanResult(opts.idsOnly(), item.key(), item.value(), item.flags(),
-      item.cas(), Optional.ofNullable(item.expiry()), transcoder)
-    );
-  }
-
-  /**
-   * Helper method to decide if the user timeout, the kv timeout or the durable kv timeout should be used.
-   *
-   * @param opts the built opts from the command.
-   * @param config the env timeout config to use if not overridden by the user.
-   * @return the timeout to use for the op.
-   */
-  @SuppressWarnings("unchecked")
-  static Duration decideKvTimeout(CommonDurabilityOptions.BuiltCommonDurabilityOptions opts, TimeoutConfig config) {
-    Optional<Duration> userTimeout = opts.timeout();
-    if (userTimeout.isPresent()) {
-      return userTimeout.get();
-    }
-
-    boolean syncDurability = opts.durabilityLevel().isPresent() && (
-      opts.durabilityLevel().get() == DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE
-      || opts.durabilityLevel().get() == DurabilityLevel.PERSIST_TO_MAJORITY);
-    boolean pollDurability = opts.persistTo() != PersistTo.NONE;
-
-    if (syncDurability || pollDurability) {
-      return config.kvDurableTimeout();
-    } else {
-      return config.kvTimeout();
-    }
+    notNull(scanType, "ScanType", () -> ReducedKeyValueErrorContext.create(null, collectionIdentifier()));
+    ScanOptions.Built opts = notNull(options, "ScanOptions",
+        () -> ReducedKeyValueErrorContext.create(null, collectionIdentifier())).build();
+    return kvOps.scanRequestReactive(scanType.build(), opts).map(r -> new ScanResult(opts.idsOnly(), r.key(),
+        r.value(), r.flags(), r.cas(), Optional.ofNullable(r.expiry()), opts.transcoder())).collectList().toFuture();
   }
 
   CollectionIdentifier collectionIdentifier() {

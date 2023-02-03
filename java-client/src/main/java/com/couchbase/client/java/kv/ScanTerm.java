@@ -17,6 +17,9 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.kv.CoreScanOptions;
+import com.couchbase.client.core.kv.CoreScanTerm;
+import com.couchbase.client.java.CommonOptions;
 
 import java.nio.charset.StandardCharsets;
 
@@ -129,6 +132,24 @@ public class ScanTerm {
    */
   public static ScanTerm maximum() {
     return MAXIMUM;
+  }
+
+  @Stability.Internal
+  public Built build() {
+    return new Built();
+  }
+
+  @Stability.Internal
+  public class Built  implements CoreScanTerm {
+    
+    public byte[] id(){
+      return id;
+    }
+
+    public boolean exclusive(){
+      return exclusive;
+    }
+
   }
 
 }

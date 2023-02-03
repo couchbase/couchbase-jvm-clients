@@ -24,6 +24,7 @@ import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
+import com.couchbase.client.core.kv.CoreScanOptions;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
@@ -660,7 +661,12 @@ public class ReactiveCollection {
    */
   @Stability.Volatile
   public Flux<ScanResult> scan(final ScanType scanType, final ScanOptions options) {
-    return asyncCollection.scanRequest(scanType, options);
+    notNull(scanType, "ScanType",
+        () -> ReducedKeyValueErrorContext.create(null, asyncCollection.collectionIdentifier()));
+    ScanOptions.Built opts = notNull(options, "ScanOptions",
+        () -> ReducedKeyValueErrorContext.create(null, asyncCollection.collectionIdentifier())).build();
+    return kvOps.scanRequestReactive(scanType.build(),  opts).map(r -> new ScanResult(opts.idsOnly(), r.key(),
+        r.value(), r.flags(), r.cas(), Optional.ofNullable(r.expiry()), opts.transcoder()));
   }
 
 }

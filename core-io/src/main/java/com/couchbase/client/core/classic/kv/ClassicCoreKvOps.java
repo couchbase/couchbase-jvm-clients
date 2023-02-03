@@ -42,9 +42,16 @@ import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.kv.CoreRangeScan;
+import com.couchbase.client.core.kv.CoreRangeScanItem;
+import com.couchbase.client.core.kv.CoreSamplingScan;
+import com.couchbase.client.core.kv.CoreScanOptions;
+import com.couchbase.client.core.kv.CoreScanType;
+import com.couchbase.client.core.kv.RangeScanOrchestrator;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.kv.CodecFlags;
@@ -54,6 +61,7 @@ import com.couchbase.client.core.msg.kv.GetMetaRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
+import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.core.msg.kv.ReplaceRequest;
 import com.couchbase.client.core.msg.kv.SubDocumentField;
@@ -75,7 +83,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -106,6 +117,7 @@ import static com.couchbase.client.core.msg.ResponseStatus.LOCKED;
 import static com.couchbase.client.core.msg.ResponseStatus.NOT_FOUND;
 import static com.couchbase.client.core.msg.ResponseStatus.NOT_STORED;
 import static com.couchbase.client.core.msg.ResponseStatus.SUBDOC_FAILURE;
+import static com.couchbase.client.core.util.Validators.notNull;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
@@ -119,6 +131,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
   private final CollectionIdentifier collectionIdentifier;
   private final CoreKeyspace keyspace;
   private final RequestTracer requestTracer;
+  private final RangeScanOrchestrator rangeScanOrchestrator;
 
   public ClassicCoreKvOps(Core core, CoreKeyspace keyspace) {
     this.core = requireNonNull(core);
@@ -129,6 +142,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
     this.requestTracer = ctx.environment().requestTracer();
     this.keyspace = requireNonNull(keyspace);
     this.collectionIdentifier = keyspace.toCollectionIdentifier();
+    this.rangeScanOrchestrator = new RangeScanOrchestrator(core, collectionIdentifier);
   }
 
   @Override
@@ -765,6 +779,44 @@ public final class ClassicCoreKvOps implements CoreKvOps {
         () -> Optional.ofNullable(requestHolder.get())
             .ifPresent(it -> it.cancel(CancellationReason.STOPPED_LISTENING))
     );
+  }
+
+  @Override
+  public Flux<CoreRangeScanItem> scanRequestReactive(final CoreScanType scanType, final CoreScanOptions options) {
+    notNull(scanType, "ScanType");
+    notNull(options, "Options");
+
+    Duration timeout = options.commonOptions().timeout().orElse(core.context().environment().timeoutConfig().kvScanTimeout());
+
+    Map<Short, MutationToken> consistencyTokens = options.consistentWith().map(ms -> {
+      Map<Short, MutationToken> tokens = new HashMap<>();
+      for (MutationToken mt : ms) {
+        tokens.put(mt.partitionID(), mt);
+      }
+      return tokens;
+    }).orElse(Collections.emptyMap());
+
+    Flux<CoreRangeScanItem> coreScanStream;
+
+    if (scanType instanceof CoreRangeScan) {
+      CoreRangeScan rs = (CoreRangeScan) scanType;
+      coreScanStream = rangeScanOrchestrator.rangeScan(rs.from().id(), rs.from().exclusive(), rs.to().id(),
+          rs.to().exclusive(), timeout, options.batchItemLimit(), options.batchByteLimit(), options.idsOnly(), options.sort(),
+          options.commonOptions().parentSpan(), consistencyTokens);
+    } else if (scanType instanceof CoreSamplingScan) {
+      CoreSamplingScan ss = (CoreSamplingScan) scanType;
+      coreScanStream = rangeScanOrchestrator.samplingScan(ss.limit(), ss.seed(), timeout, options.batchItemLimit(),
+          options.batchByteLimit(), options.idsOnly(), options.sort(), options.commonOptions().parentSpan(), consistencyTokens);
+    } else {
+      return Flux.error(InvalidArgumentException.fromMessage("Unsupported ScanType: " + scanType));
+    }
+
+    if (options.idsOnly()) {
+      return coreScanStream.map(item -> CoreRangeScanItem.keyOnly(item.keyBytes()));
+    } else {
+      return coreScanStream.map(item -> CoreRangeScanItem.keyAndBody(item.flags(), item.expiry(), item.seqno(),
+          item.cas(), item.keyBytes(), item.value()));
+    }
   }
 
   private <T extends BaseResponse, R> CompletableFuture<R> execute(

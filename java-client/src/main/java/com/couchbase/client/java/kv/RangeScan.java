@@ -16,9 +16,11 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.core.annotation.Stability;
-
 import static com.couchbase.client.core.util.Validators.notNull;
+
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.kv.CoreRangeScan;
+import com.couchbase.client.core.kv.CoreScanTerm;
 
 /**
  * Performs a KV range scan to scan between two {@link ScanTerm ScanTerms}.
@@ -54,5 +56,21 @@ public class RangeScan extends ScanType {
     return to;
   }
 
-}
+  @Stability.Internal
+  public Built build() {
+    return new Built();
+  }
 
+  @Stability.Internal
+  public class Built implements CoreRangeScan {
+
+    public CoreScanTerm from() {
+      return from.build();
+    }
+
+    public CoreScanTerm to() {
+      return to.build();
+    }
+
+  }
+}

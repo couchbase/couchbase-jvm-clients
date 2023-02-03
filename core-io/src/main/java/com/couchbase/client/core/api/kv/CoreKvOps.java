@@ -19,12 +19,18 @@ package com.couchbase.client.core.api.kv;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.kv.CoreRangeScan;
+import com.couchbase.client.core.kv.CoreRangeScanItem;
+import com.couchbase.client.core.kv.CoreScanOptions;
+import com.couchbase.client.core.kv.CoreScanType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 @Stability.Internal
 public interface CoreKvOps {
@@ -367,5 +373,21 @@ public interface CoreKvOps {
         accessDeleted,
         createAsDeleted
     ).toMono());
+  }
+
+  Flux<CoreRangeScanItem> scanRequestReactive(
+    CoreScanType scanType,
+    CoreScanOptions options);
+
+  default CompletableFuture<List<CoreRangeScanItem>> scanRequestAsync(
+    CoreScanType coreScanType,
+    CoreScanOptions coreScanOptions) {
+    return scanRequestReactive(coreScanType, coreScanOptions).collectList().toFuture();
+  }
+
+  default Stream<CoreRangeScanItem> scanRequestBlocking(
+    CoreScanType coreScanType,
+    CoreScanOptions coreScanOptions) {
+    return scanRequestReactive(coreScanType, coreScanOptions).toStream();
   }
 }

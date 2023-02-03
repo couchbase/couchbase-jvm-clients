@@ -16,10 +16,11 @@
 
 package com.couchbase.client.java.kv;
 
+import java.util.Optional;
+
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.InvalidArgumentException;
-
-import java.util.Optional;
+import com.couchbase.client.core.kv.CoreSamplingScan;
 
 /**
  * Performs a KV range scan using random sampling.
@@ -57,4 +58,23 @@ public class SamplingScan extends ScanType {
     return seed;
   }
 
+  @Stability.Internal
+  public Built build() {
+    return new Built();
+  }
+
+  @Stability.Internal
+  public class Built  implements CoreSamplingScan {
+
+    public long limit() {
+      return limit;
+    }
+
+    public Optional<Long> seed() {
+      return seed;
+    }
+
+  }
+  
+  
 }

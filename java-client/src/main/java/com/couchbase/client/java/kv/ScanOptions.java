@@ -16,16 +16,20 @@
 
 package com.couchbase.client.java.kv;
 
-import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.java.CommonOptions;
-import com.couchbase.client.java.codec.Transcoder;
-
-import java.util.Optional;
-
 import static com.couchbase.client.core.kv.RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT;
 import static com.couchbase.client.core.kv.RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_ITEM_LIMIT;
 import static com.couchbase.client.core.util.Validators.notNull;
+
+import java.util.Optional;
+
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.shared.CoreMutationState;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.kv.CoreRangeScanSort;
+import com.couchbase.client.core.kv.CoreScanOptions;
+import com.couchbase.client.java.CommonOptions;
+import com.couchbase.client.java.codec.Transcoder;
 
 /**
  * Allows to customize the various range and sampling scan options.
@@ -162,30 +166,46 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
   }
 
   @Stability.Internal
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltCommonOptions implements CoreScanOptions {
 
-    public boolean idsOnly() {
-      return idsOnly;
+    private CoreCommonOptions common;
+
+    Built() {
+      common = CoreCommonOptions.ofOptional(timeout(), retryStrategy(), parentSpan());
     }
 
-    public ScanSort sort() {
-      return sort;
+    @Override
+    public boolean idsOnly() {
+      return idsOnly;
     }
 
     public Transcoder transcoder() {
       return transcoder;
     }
 
+    @Override
+    public CoreRangeScanSort sort() {
+      return sort.intoCore();
+    }
+
+   @Override
     public int batchItemLimit() {
       return batchItemLimit;
     }
 
+    @Override
     public int batchByteLimit() {
       return batchByteLimit;
     }
 
-    public Optional<MutationState> consistentWith() {
-      return consistentWith;
+    @Override
+    public Optional<CoreMutationState> consistentWith(){
+      return Optional.ofNullable(consistentWith.isPresent() && consistentWith.get().iterator().hasNext() ?  new CoreMutationState(consistentWith.get()) : null);
+    }
+
+    @Override
+    public CoreCommonOptions commonOptions() {
+      return common;
     }
 
   }

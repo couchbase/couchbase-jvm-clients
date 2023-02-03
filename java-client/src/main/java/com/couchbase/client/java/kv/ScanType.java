@@ -17,6 +17,7 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.kv.CoreScanType;
 
 import java.util.Optional;
 
@@ -96,5 +97,7 @@ public abstract class ScanType {
   public static SamplingScan samplingScan(final long limit, final long seed) {
     return new SamplingScan(limit, Optional.of(seed));
   }
+
+  public abstract CoreScanType build();
 
 }

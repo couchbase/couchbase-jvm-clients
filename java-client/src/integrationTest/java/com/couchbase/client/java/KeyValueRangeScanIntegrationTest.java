@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
+import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
@@ -51,9 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(missesCapabilities = Capabilities.RANGE_SCAN,
-  isProtostellarWillWorkLater = true
-)
+@IgnoreWhen(missesCapabilities = Capabilities.RANGE_SCAN)
 class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
 
   private static final List<String> DOC_IDS = Arrays.asList(
@@ -88,7 +87,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
   static void loadSampleData(final Collection collection) {
     for (String id : DOC_IDS) {
       JsonObject payload = JsonObject.create().put("random", UUID.randomUUID().toString());
-      collection.upsert(id, payload, upsertOptions().durability(PersistTo.ACTIVE, ReplicateTo.NONE));
+      collection.upsert(id, payload, upsertOptions().durability(DurabilityLevel.MAJORITY));
     }
   }
 
@@ -115,7 +114,6 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
       assertTrue(item.idOnly());
       assertThrows(NoSuchElementException.class, item::contentAsBytes);
     });
-
     assertTrue(count.get() >= DOC_IDS.size());
   }
 

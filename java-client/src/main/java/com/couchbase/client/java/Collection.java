@@ -68,6 +68,7 @@ import com.couchbase.client.java.kv.UpsertOptions;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -837,7 +838,7 @@ public class Collection {
    */
   @Stability.Volatile
   public Stream<ScanResult> scan(final ScanType scanType, final ScanOptions options) {
-    return asyncCollection.scanRequest(scanType, options).toStream();
+    return reactive().scan(scanType, options).toStream();
   }
 
 }

@@ -18,6 +18,7 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.kv.CoreRangeScanSort;
+import com.couchbase.client.core.kv.CoreScanTerm;
 
 /**
  * The sorting used for the scan operation.
