@@ -33,6 +33,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.GenericManagerRequest;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.Deadline;
+import com.couchbase.client.core.util.NanoTimestamp;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -45,7 +46,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -241,16 +241,16 @@ public class WaitUntilReadyHelper {
     private final AtomicLong totalDuration = new AtomicLong();
 
     private volatile WaitUntilReadyStage currentStage = WaitUntilReadyStage.INITIAL;
-    private volatile long currentStart = System.nanoTime();
+    private volatile NanoTimestamp currentStart = NanoTimestamp.now();
 
     void transition(final WaitUntilReadyStage next) {
-      long timing = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - currentStart);
+      long timing = currentStart.elapsed().toMillis();
       if (currentStage != WaitUntilReadyStage.INITIAL) {
         timings.put(currentStage, timing);
       }
       totalDuration.addAndGet(timing);
       currentStage = next;
-      currentStart = System.nanoTime();
+      currentStart = NanoTimestamp.now();
     }
 
     public Map<String, Object> export() {
@@ -258,7 +258,7 @@ public class WaitUntilReadyHelper {
 
       toExport.put("current_stage", currentStage);
       if (currentStage != WaitUntilReadyStage.COMPLETE) {
-        long currentMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - currentStart);
+        long currentMs = currentStart.elapsed().toMillis();
         toExport.put("current_stage_since_ms", currentMs);
         toExport.put("total_ms", totalDuration.get() + currentMs);
       } else {
