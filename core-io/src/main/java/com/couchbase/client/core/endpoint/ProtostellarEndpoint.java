@@ -40,6 +40,7 @@ import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.protostellar.ProtostellarStatsCollector;
+import com.couchbase.client.core.util.Deadline;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.protostellar.admin.collection.v1.CollectionAdminGrpc;
 import com.couchbase.client.protostellar.analytics.v1.AnalyticsGrpc;
@@ -356,15 +357,15 @@ public class ProtostellarEndpoint {
    * @return a CompletableFuture as that's what WaitUntilReadyHelper uses.
    */
   @Stability.Internal
-  public CompletableFuture<Void> waitUntilReady(long absoluteTimeoutNanos, boolean waitingForReady) {
+  public CompletableFuture<Void> waitUntilReady(Deadline deadline, boolean waitingForReady) {
     CompletableFuture<Void> onDone = new CompletableFuture<>();
     ConnectivityState current = managedChannel.getState(true);
     logger.debug("WaitUntilReady: Endpoint {}:{} starts in state {}", hostname, port, current);
-    notify(current, onDone, absoluteTimeoutNanos, waitingForReady);
+    notify(current, onDone, deadline, waitingForReady);
     return onDone;
   }
 
-  private void notify(ConnectivityState current, CompletableFuture<Void> onDone, long absoluteTimeoutNanos, boolean waitingForReady) {
+  private void notify(ConnectivityState current, CompletableFuture<Void> onDone, Deadline deadline, boolean waitingForReady) {
     if (inDesiredState(current, waitingForReady)) {
       onDone.complete(null);
     }
@@ -375,10 +376,10 @@ public class ProtostellarEndpoint {
 
         if (inDesiredState(current, waitingForReady)) {
           onDone.complete(null);
-        } else if (System.nanoTime() >= absoluteTimeoutNanos) {
+        } else if (deadline.exceeded()) {
           onDone.completeExceptionally(new UnambiguousTimeoutException("Timed out while waiting for Protostellar endpoint " + hostname + ":" + port, new CancellationErrorContext(null)));
         } else {
-          notify(now, onDone, absoluteTimeoutNanos, waitingForReady);
+          notify(now, onDone, deadline, waitingForReady);
         }
       });
     }

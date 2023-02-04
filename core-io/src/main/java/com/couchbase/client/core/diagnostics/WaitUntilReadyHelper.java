@@ -32,6 +32,7 @@ import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.GenericManagerRequest;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.Deadline;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -60,10 +61,10 @@ public class WaitUntilReadyHelper {
   public static CompletableFuture<Void> waitUntilReadyProtostellar(final Core core,
                                                                    final Duration timeout,
                                                                    final ClusterState desiredState) {
-    long absoluteTimeoutNanos = System.nanoTime() + timeout.toNanos();
+    Deadline deadline = Deadline.of(timeout);
     List<CompletableFuture<Void>> cfs = new ArrayList<>();
     core.protostellar().pool().endpoints().forEach(endpoint -> {
-      cfs.add(endpoint.waitUntilReady(absoluteTimeoutNanos, desiredState != ClusterState.OFFLINE));
+      cfs.add(endpoint.waitUntilReady(deadline, desiredState != ClusterState.OFFLINE));
     });
     if (desiredState == ClusterState.DEGRADED) {
       return CompletableFuture.anyOf(cfs.toArray(new CompletableFuture[0])).thenRun(() -> {});
