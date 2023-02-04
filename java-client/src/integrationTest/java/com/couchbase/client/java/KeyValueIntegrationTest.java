@@ -1065,7 +1065,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   void decrementReactive() {
     String id = UUID.randomUUID().toString();
 
-    assertThrows(DocumentNotFoundException.class, () -> collection.binary().decrement(id));
+    assertThrows(DocumentNotFoundException.class, () -> collection.reactive().binary().decrement(id).block());
 
     CounterResult result = collection.reactive().binary().decrement(
       id,
@@ -1075,17 +1075,17 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertTrue(result.cas() != 0);
     assertEquals(2L, result.content());
 
-    result = collection.binary().decrement(id);
+    result = collection.reactive().binary().decrement(id).block();
 
     assertTrue(result.cas() != 0);
     assertEquals(1L, result.content());
 
-    result = collection.binary().decrement(id);
+    result = collection.reactive().binary().decrement(id).block();
 
     assertTrue(result.cas() != 0);
     assertEquals(0L, result.content());
 
-    result = collection.binary().decrement(id);
+    result = collection.reactive().binary().decrement(id).block();
 
     assertTrue(result.cas() != 0);
     assertEquals(0L, result.content());

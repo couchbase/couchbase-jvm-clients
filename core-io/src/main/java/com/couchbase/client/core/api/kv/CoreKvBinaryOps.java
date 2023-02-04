@@ -74,7 +74,7 @@ public interface CoreKvBinaryOps {
 
   default Mono<CoreCounterResult> decrementReactive(String id, CoreCommonOptions options, long expiry, long delta,
       Optional<Long> initial, CoreDurability durability) {
-    return Mono.defer(() -> incrementAsync(id, options, expiry, delta, initial, durability).toMono());
+    return Mono.defer(() -> decrementAsync(id, options, expiry, delta, initial, durability).toMono());
   }
 
 }
