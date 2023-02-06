@@ -26,7 +26,8 @@ import reactor.util.annotation.Nullable;
 @Stability.Internal
 public interface CoreGetAllQueryIndexesOptions {
   // Intentionally not using CoreScopeAndCollection here.  When getting indexes it's legal to ask for collections on a
-  // scope.
+  // scope.  (Though this is only supported at the Cluster-level CoreQueryIndexManager, not the Collection-level
+  // CoreCollectionQueryIndexManager).
   @Nullable
   String scopeName();
 

@@ -15,10 +15,8 @@
  */
 package com.couchbase.client.scala.manager.query
 
-import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.ReactiveCluster
-import com.couchbase.client.scala.query.{QueryOptions, QueryParameters}
 import com.couchbase.client.scala.util.DurationConversions._
 import reactor.core.scala.publisher.{SFlux, SMono}
 
@@ -70,20 +68,11 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       scopeName: Option[String] = None,
       collectionName: Option[String] = None
   ): SFlux[QueryIndex] = {
-    val (statement: String, options: QueryOptions) = AsyncQueryIndexManager.getStatementAndOptions(
-      bucketName,
-      timeout,
-      retryStrategy,
-      scopeName,
-      collectionName
-    )
-
-    cluster
-      .query(
-        statement,
-        options
+    SMono
+      .fromFuture(
+        async.getAllIndexes(bucketName, timeout, retryStrategy, scopeName, collectionName)
       )
-      .flatMapMany(_.rowsAs[QueryIndex])
+      .flatMapMany(v => SFlux.fromIterable(v))
   }
 
   /** Creates a new query index with the specified parameters.

@@ -57,6 +57,7 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION;
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE;
+import static com.couchbase.client.core.manager.CoreCollectionQueryIndexManager.createIndexWith;
 import static com.couchbase.client.core.manager.CoreCollectionQueryIndexManager.failIfIndexesOfflineHelper;
 import static com.couchbase.client.core.manager.CoreCollectionQueryIndexManager.formatIndexFields;
 import static com.couchbase.client.core.manager.CoreCollectionQueryIndexManager.quote;
@@ -153,8 +154,9 @@ public class CoreQueryIndexManager {
 
     final String keyspace = buildKeyspace(bucketName, options.scopeAndCollection());
     final String statement = "CREATE INDEX " + quote(indexName) + " ON " + keyspace + formatIndexFields(fields);
+    final Map<String, Object> with = createIndexWith(options);
 
-    return exec(WRITE, statement, options.with(), options.commonOptions(), TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_INDEX, bucketName, null)
+    return exec(WRITE, statement, with, options.commonOptions(), TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_INDEX, bucketName, null)
             .exceptionally(t -> {
               if (options.ignoreIfExists() && hasCause(t, IndexExistsException.class)) {
                 return null;

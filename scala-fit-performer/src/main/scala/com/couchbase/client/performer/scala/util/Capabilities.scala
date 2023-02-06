@@ -31,6 +31,8 @@ object Capabilities {
     out.add(Caps.SDK_KV_RANGE_SCAN);
     // [end:1.4.1]
 
+    out.add(Caps.SDK_QUERY_INDEX_MANAGEMENT)
+
     out
   }
 

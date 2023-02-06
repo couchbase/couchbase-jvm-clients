@@ -23,6 +23,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.manager.CoreBuildQueryIndexOptions;
 import com.couchbase.client.core.api.manager.CoreCreatePrimaryQueryIndexOptions;
 import com.couchbase.client.core.api.manager.CoreCreateQueryIndexOptions;
+import com.couchbase.client.core.api.manager.CoreCreateQueryIndexSharedOptions;
 import com.couchbase.client.core.api.manager.CoreDropPrimaryQueryIndexOptions;
 import com.couchbase.client.core.api.manager.CoreDropQueryIndexOptions;
 import com.couchbase.client.core.api.manager.CoreGetAllQueryIndexesOptions;
@@ -56,6 +57,7 @@ import reactor.util.annotation.Nullable;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -126,8 +128,9 @@ public class CoreCollectionQueryIndexManager {
 
     String keyspace = buildKeyspace();
     String statement = "CREATE INDEX " + quote(indexName) + " ON " + keyspace + formatIndexFields(fields);
+    Map<String, Object> with = createIndexWith(options);
 
-    return exec(WRITE, statement, options.with(), options.commonOptions(), TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_INDEX, null)
+    return exec(WRITE, statement, with, options.commonOptions(), TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_INDEX, null)
             .exceptionally(t -> {
               if (options.ignoreIfExists() && hasCause(t, IndexExistsException.class)) {
                 return null;
@@ -149,8 +152,9 @@ public class CoreCollectionQueryIndexManager {
       statement += quote(options.indexName()) + " ";
     }
     statement += "ON " + keyspace;
+    Map<String, Object> with = createIndexWith(options);
 
-    return exec(WRITE, statement, options.with(), options.commonOptions(), TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_PRIMARY_INDEX, null)
+    return exec(WRITE, statement, with, options.commonOptions(), TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_PRIMARY_INDEX, null)
             .exceptionally(t -> {
               if (options.ignoreIfExists() && hasCause(t, IndexExistsException.class)) {
                 return null;
@@ -506,5 +510,25 @@ public class CoreCollectionQueryIndexManager {
     if (scopeName != null || collectionName != null) {
       throw InvalidArgumentException.fromMessage("scopeName and collectionName should not be used together with CollectionQueryIndexManager, which is already acting on a particular Collection");
     }
+  }
+
+  public @Nullable static Map<String, Object> createIndexWith(CoreCreateQueryIndexSharedOptions options) {
+    Map<String, Object> with = new HashMap<>();
+    if (options.with() != null) {
+      with.putAll(options.with());
+    }
+    if (options.numReplicas() != null) {
+      if (options.numReplicas() < 0) {
+        throw InvalidArgumentException.fromMessage("numReplicas must be >= 0");
+      }
+      with.put("num_replica", options.numReplicas());
+    }
+    if (options.deferred() != null) {
+      with.put("defer_build", options.deferred());
+    }
+    if (with.isEmpty()) {
+      return null;
+    }
+    return with;
   }
 }

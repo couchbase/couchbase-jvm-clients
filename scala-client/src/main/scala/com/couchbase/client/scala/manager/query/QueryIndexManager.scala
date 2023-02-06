@@ -15,8 +15,6 @@
  */
 package com.couchbase.client.scala.manager.query
 
-import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.error.IndexNotFoundException
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.util.DurationConversions._
@@ -45,9 +43,9 @@ import scala.util.Try
   */
 class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: ExecutionContext) {
   private val core = async.cluster.core
-  private val DefaultTimeout: Duration =
+  private[client] val DefaultTimeout: Duration =
     core.context().environment().timeoutConfig().managementTimeout()
-  private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
+  private[client] val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
 
   /** Gets all indexes.
     *

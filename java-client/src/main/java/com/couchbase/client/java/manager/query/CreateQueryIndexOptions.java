@@ -40,6 +40,8 @@ public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptio
   private boolean ignoreIfExists;
   private String scopeName;
   private String collectionName;
+  private Integer numReplicas;
+  private Boolean deferred;
 
   private CreateQueryIndexOptions() {
   }
@@ -71,10 +73,9 @@ public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptio
    * @return this options builder for chaining purposes.
    */
   public CreateQueryIndexOptions numReplicas(final int numReplicas) {
-    if (numReplicas < 0) {
-      throw InvalidArgumentException.fromMessage("numReplicas must be >= 0");
-    }
-    return with("num_replica", numReplicas);
+    this.numReplicas = numReplicas;
+    return this;
+
   }
 
   /**
@@ -88,7 +89,8 @@ public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptio
    * @return this options builder for chaining purposes.
    */
   public CreateQueryIndexOptions deferred(final boolean deferred) {
-    return with("defer_build", deferred);
+    this.deferred = deferred;
+    return this;
   }
 
   /**
@@ -155,6 +157,16 @@ public class CreateQueryIndexOptions extends CommonOptions<CreateQueryIndexOptio
     @Override
     public boolean ignoreIfExists() {
       return ignoreIfExists;
+    }
+
+    @Override
+    public Integer numReplicas() {
+      return numReplicas;
+    }
+
+    @Override
+    public Boolean deferred() {
+      return deferred;
     }
 
     @Override

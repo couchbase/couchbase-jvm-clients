@@ -42,6 +42,8 @@ public class CreatePrimaryQueryIndexOptions extends CommonOptions<CreatePrimaryQ
   private boolean ignoreIfExists;
   private String scopeName;
   private String collectionName;
+  private Integer numReplicas;
+  private Boolean deferred;
 
   private CreatePrimaryQueryIndexOptions() {
   }
@@ -84,10 +86,8 @@ public class CreatePrimaryQueryIndexOptions extends CommonOptions<CreatePrimaryQ
    * @return this options builder for chaining purposes.
    */
   public CreatePrimaryQueryIndexOptions numReplicas(final int numReplicas) {
-    if (numReplicas < 0) {
-      throw InvalidArgumentException.fromMessage("numReplicas must be >= 0");
-    }
-    return with("num_replica", numReplicas);
+    this.numReplicas = numReplicas;
+    return this;
   }
 
   /**
@@ -101,7 +101,8 @@ public class CreatePrimaryQueryIndexOptions extends CommonOptions<CreatePrimaryQ
    * @return this options builder for chaining purposes.
    */
   public CreatePrimaryQueryIndexOptions deferred(final boolean deferred) {
-    return with("defer_build", deferred);
+    this.deferred = deferred;
+    return this;
   }
 
   /**
@@ -166,6 +167,16 @@ public class CreatePrimaryQueryIndexOptions extends CommonOptions<CreatePrimaryQ
     @Override
     public boolean ignoreIfExists() {
       return ignoreIfExists;
+    }
+
+    @Override
+    public Integer numReplicas() {
+      return numReplicas;
+    }
+
+    @Override
+    public Boolean deferred() {
+      return deferred;
     }
 
     @Override

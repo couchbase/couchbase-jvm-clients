@@ -17,24 +17,10 @@
 package com.couchbase.client.core.api.manager;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
-import reactor.util.annotation.Nullable;
-
-import java.util.Map;
 
 /**
  * Allows customizing how a query index is created.
  */
 @Stability.Internal
-public interface CoreCreateQueryIndexOptions {
-  boolean ignoreIfExists();
-
-  @Nullable
-  Map<String, Object> with();
-
-  @Nullable
-  CoreScopeAndCollection scopeAndCollection();
-
-  CoreCommonOptions commonOptions();
-
+public interface CoreCreateQueryIndexOptions extends CoreCreateQueryIndexSharedOptions {
 }
