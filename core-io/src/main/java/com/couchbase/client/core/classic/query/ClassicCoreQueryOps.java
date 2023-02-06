@@ -118,7 +118,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
                                                        @Nullable NodeIdentifier target,
                                                        @Nullable Function<Throwable, RuntimeException> errorConverter) {
     if (options.asTransaction()) {
-      CompletableFuture<CoreQueryResult> out = singleQueryTransactionBuffered(core, statement, options, queryContext).toFuture();
+      CompletableFuture<CoreQueryResult> out = singleQueryTransactionBuffered(core, statement, options, queryContext, errorConverter).toFuture();
       return new CoreAsyncResponse(out, () -> {
       });
     } else {
@@ -212,7 +212,8 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
   private static Mono<CoreQueryResult> singleQueryTransactionBuffered(Core core,
                                                                       String statement,
                                                                       CoreQueryOptions opts,
-                                                                      @Nullable CoreQueryContext queryContext) {
+                                                                      @Nullable CoreQueryContext queryContext,
+                                                                      @Nullable Function<Throwable, RuntimeException> errorConverter) {
     if (opts.commonOptions().retryStrategy().isPresent()) {
       // Transactions require control of the retry strategy
       throw new IllegalArgumentException("Cannot specify retryStrategy() if using asTransaction() on QueryOptions");
@@ -230,9 +231,12 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
 
     return tri.queryBlocking(statement, queryContext, shadowed, Optional.of(span.span()))
         .onErrorResume(ex -> {
-          // From a cluster.query() transaction the user will be expecting the traditional SDK errors
+          // From a cluster.query() transaction the user will be expecting the traditional SDK errors.
           if (ex instanceof CoreTransactionExpiredException) {
             return Mono.error(new UnambiguousTimeoutException(ex.getMessage(), null));
+          }
+          if (errorConverter != null) {
+            ex = errorConverter.apply(ex);
           }
           return Mono.error(ex);
         })
