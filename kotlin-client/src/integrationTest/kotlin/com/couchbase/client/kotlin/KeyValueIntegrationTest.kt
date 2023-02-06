@@ -762,6 +762,84 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         }
     }
 
+    @Nested
+    inner class Counter {
+        @Test
+        fun `kotlin sdk makes it look like absent counter is implicitly zero`(): Unit = runBlocking {
+            assertEquals(7UL, collection.binary.increment(nextId(), delta = 7U).content)
+
+            // floor is zero
+            assertEquals(0UL, collection.binary.decrement(nextId(), delta = 7U).content)
+        }
+
+        @Test
+        fun `if document is absent, initial value is returned regardless of delta`(): Unit = runBlocking {
+            // It's weird, but that's how it is!
+            assertEquals(37UL, collection.binary.increment(nextId(), delta = 7u, initialValue = 37u).content)
+            assertEquals(37UL, collection.binary.decrement(nextId(), delta = 7u, initialValue = 37u).content)
+        }
+
+        @Test
+        fun `can increment or decrement existing document`(): Unit = runBlocking {
+            val id = nextId()
+            assertEquals(7UL, collection.binary.increment(id, delta = 7u).content)
+            assertEquals(10UL, collection.binary.increment(id, delta = 3u).content)
+            assertEquals(6UL, collection.binary.decrement(id, delta = 4u).content)
+
+            // floor is zero
+            assertEquals(0UL, collection.binary.decrement(id, delta = 100U).content)
+        }
+
+        @Test
+        fun `counter is friendly`(): Unit = runBlocking {
+            val counter = collection.counter(nextId())
+
+            assertEquals(1UL, counter.incrementAndGet())
+            assertEquals(9UL, counter.addAndGet(8))
+            assertEquals(6UL, counter.addAndGet(-3))
+            assertEquals(5UL, counter.decrementAndGet())
+
+            // floor is zero
+            assertEquals(0UL, counter.addAndGet(-100))
+        }
+    }
+
+    @Nested
+    inner class BinaryAppendPrepend {
+        @Test
+        fun `can't append or prepend to absent document`(): Unit = runBlocking {
+            assertThrows<DocumentNotFoundException> { collection.binary.append(nextId(), "hello".toByteArray()) }
+            assertThrows<DocumentNotFoundException> { collection.binary.prepend(nextId(), "hello".toByteArray()) }
+        }
+
+        @Test
+        fun `can append and prepend`(): Unit = runBlocking {
+            val id = nextId()
+
+            collection.upsert(id, Content.binary(byteArrayOf()))
+            collection.binary.append(id, "hello".toByteArray())
+            collection.binary.append(id, " world".toByteArray())
+            assertEquals("hello world", collection.get(id).content.bytes.toStringUtf8())
+
+            collection.binary.prepend(id, "omg ".toByteArray())
+            assertEquals("omg hello world", collection.get(id).content.bytes.toStringUtf8())
+        }
+
+        @Test
+        fun `append and prepend honor cas`(): Unit = runBlocking {
+            val id = nextId()
+
+            var cas = collection.upsert(id, Content.binary(byteArrayOf())).cas
+            assertThrows<CasMismatchException> { collection.binary.append(id, "hello".toByteArray(), cas = cas + 1) }
+            assertThrows<CasMismatchException> { collection.binary.prepend(id, "hello".toByteArray(), cas = cas + 1) }
+
+            cas = collection.binary.append(id, "world".toByteArray(), cas = cas).cas
+            collection.binary.prepend(id, "hello ".toByteArray(), cas = cas)
+
+            assertEquals("hello world", collection.get(id).content.bytes.toStringUtf8())
+        }
+    }
+
     private suspend fun assertExpiry(expiry: Expiry, id: String) {
         assertEquals(expiry, collection.get(id, withExpiry = true).expiry)
     }

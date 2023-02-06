@@ -16,26 +16,19 @@
 
 package com.couchbase.client.kotlin
 
-import com.couchbase.client.core.cnc.TracingIdentifiers
+import com.couchbase.client.core.CoreKeyspace
 import com.couchbase.client.core.error.CasMismatchException
 import com.couchbase.client.core.error.DocumentNotFoundException
-import com.couchbase.client.core.msg.kv.AppendRequest
-import com.couchbase.client.core.msg.kv.DecrementRequest
-import com.couchbase.client.core.msg.kv.IncrementRequest
-import com.couchbase.client.core.msg.kv.PrependRequest
-import com.couchbase.client.kotlin.env.env
 import com.couchbase.client.kotlin.kv.CounterResult
 import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.MutationResult
-import com.couchbase.client.kotlin.kv.internal.levelIfSynchronous
-import com.couchbase.client.kotlin.kv.internal.observe
-import java.util.*
+import java.util.Optional
 
 public class BinaryCollection internal constructor(
-    private val collection: Collection
+    collection: Collection
 ) {
-    private val core = collection.core
+    private val ops = collection.core.kvBinaryOps(CoreKeyspace.from(collection.collectionId))
 
     /**
      * Appends binary content to a document.
@@ -51,26 +44,15 @@ public class BinaryCollection internal constructor(
         common: CommonOptions = CommonOptions.Default,
         durability: Durability = Durability.none(),
         cas: Long = 0,
-    ): MutationResult = with(core.env) {
-        val span = common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_APPEND)
-
-        val request = AppendRequest(
-            common.actualKvTimeout(durability),
-            core.context(),
-            collection.collectionId,
-            common.actualRetryStrategy(),
-            validateDocumentId(id),
+    ): MutationResult {
+        ops.appendAsync(
+            id,
             content,
+            common.toCore(),
             cas,
-            durability.levelIfSynchronous(),
-            span,
-        )
-
-        return collection.exec(request, common) {
-            if (durability is Durability.ClientVerified) {
-                collection.observe(request, id, durability, it.cas(), it.mutationToken())
-            }
-            MutationResult(it.cas(), it.mutationToken().orElse(null))
+            durability.toCore()
+        ).await().let {
+            return MutationResult(it.cas(), it.mutationToken().orElse(null))
         }
     }
 
@@ -88,26 +70,15 @@ public class BinaryCollection internal constructor(
         common: CommonOptions = CommonOptions.Default,
         durability: Durability = Durability.none(),
         cas: Long = 0,
-    ): MutationResult = with(core.env) {
-        val span = common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_PREPEND)
-
-        val request = PrependRequest(
-            common.actualKvTimeout(durability),
-            core.context(),
-            collection.collectionId,
-            common.actualRetryStrategy(),
-            validateDocumentId(id),
+    ): MutationResult {
+        ops.prependAsync(
+            id,
             content,
+            common.toCore(),
             cas,
-            durability.levelIfSynchronous(),
-            span,
-        )
-
-        return collection.exec(request, common) {
-            if (durability is Durability.ClientVerified) {
-                collection.observe(request, id, durability, it.cas(), it.mutationToken())
-            }
-            MutationResult(it.cas(), it.mutationToken().orElse(null))
+            durability.toCore()
+        ).await().let {
+            return MutationResult(it.cas(), it.mutationToken().orElse(null))
         }
     }
 
@@ -153,28 +124,16 @@ public class BinaryCollection internal constructor(
         expiry: Expiry = Expiry.none(),
         delta: ULong = 1u,
         initialValue: ULong? = delta,
-    ): CounterResult = with(core.env) {
-
-        val span = common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_INCREMENT)
-
-        val request = IncrementRequest(
-            common.actualKvTimeout(durability),
-            core.context(),
-            collection.collectionId,
-            common.actualRetryStrategy(),
-            validateDocumentId(id),
+    ): CounterResult {
+        ops.incrementAsync(
+            id,
+            common.toCore(),
+            expiry.encode(),
             delta.toLong(),
             Optional.ofNullable(initialValue?.toLong()),
-            expiry.encode(),
-            durability.levelIfSynchronous(),
-            span,
-        )
-
-        return collection.exec(request, common) {
-            if (durability is Durability.ClientVerified) {
-                collection.observe(request, id, durability, it.cas(), it.mutationToken())
-            }
-            CounterResult(it.cas(), it.mutationToken().orElse(null), it.value().toULong())
+            durability.toCore()
+        ).await().let {
+            return CounterResult(it.cas(), it.mutationToken().orElse(null), it.content().toULong())
         }
     }
 
@@ -220,28 +179,16 @@ public class BinaryCollection internal constructor(
         expiry: Expiry = Expiry.none(),
         delta: ULong = 1u,
         initialValue: ULong? = 0u,
-    ): CounterResult = with(core.env) {
-
-        val span = common.actualSpan(TracingIdentifiers.SPAN_REQUEST_KV_DECREMENT)
-
-        val request = DecrementRequest(
-            common.actualKvTimeout(durability),
-            core.context(),
-            collection.collectionId,
-            common.actualRetryStrategy(),
-            validateDocumentId(id),
+    ): CounterResult {
+        ops.decrementAsync(
+            id,
+            common.toCore(),
+            expiry.encode(),
             delta.toLong(),
             Optional.ofNullable(initialValue?.toLong()),
-            expiry.encode(),
-            durability.levelIfSynchronous(),
-            span,
-        )
-
-        return collection.exec(request, common) {
-            if (durability is Durability.ClientVerified) {
-                collection.observe(request, id, durability, it.cas(), it.mutationToken())
-            }
-            CounterResult(it.cas(), it.mutationToken().orElse(null), it.value().toULong())
+            durability.toCore()
+        ).await().let {
+            return CounterResult(it.cas(), it.mutationToken().orElse(null), it.content().toULong())
         }
     }
 }
