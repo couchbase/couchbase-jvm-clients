@@ -37,6 +37,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
+import static com.couchbase.client.core.util.CbThrowables.getStackTraceAsString;
+
 /**
  * The {@link DefaultEventBus} provides the default and very efficient implementation
  * of the {@link EventBus}.
@@ -261,7 +263,7 @@ public class DefaultEventBus implements EventBus {
         }
       }
     } catch (Exception ex) {
-      errorLogging.println("Encountered an error while processing the overflow queue - this is a bug: " + ex);
+      errorLogging.println("Encountered an error while processing the overflow queue - this is a bug: " + getStackTraceAsString(ex));
       overflowInfo.clear();
     }
   }

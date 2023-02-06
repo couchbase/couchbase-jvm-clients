@@ -19,6 +19,8 @@ package com.couchbase.client.core.util;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
@@ -83,5 +85,11 @@ public class CbThrowables {
   public static RuntimeException propagate(Throwable t) {
     throwIfUnchecked(t);
     throw new CouchbaseException(t.getMessage(), t);
+  }
+
+  public static String getStackTraceAsString(Throwable t) {
+    StringWriter w = new StringWriter();
+    t.printStackTrace(new PrintWriter(w));
+    return w.toString();
   }
 }
