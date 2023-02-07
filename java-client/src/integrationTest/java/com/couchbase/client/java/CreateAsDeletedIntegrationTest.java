@@ -218,31 +218,6 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
                     .accessDeleted(true));
   }
 
-  // See comment in replaceTombstoneWithTxnXattrWithCASWhichHasChanged_71Plus for why we split this test.
-  @Test
-  @IgnoreWhen(clusterTypes = ClusterType.CAVES, hasCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
-  void replaceTombstoneWithTxnXattrWithCASWhichHasChanged_pre71() {
-    String id = docId();
-    insertTombstoneWithTxnXattr(coll, id, JsonObject.create());
-
-    LookupInResult result = assertIsTombstone(coll, id);
-
-    upsertEmptyTombstone(coll, id);
-
-    LookupInResult result2 = assertIsTombstone(coll, id);
-
-    assertNotEquals(result.cas(), result2.cas());
-
-    assertThrows(CasMismatchException.class, () -> {
-      coll.mutateIn(id, Collections.singletonList(
-              MutateInSpec.insert("txn", JsonObject.create()).xattr()
-              ),
-              MutateInOptions.mutateInOptions()
-                      .cas(result.cas()) // note using the original CAS not the changed one
-                      .accessDeleted(true));
-    });
-  }
-
   @Test
   @IgnoreWhen(clusterTypes = ClusterType.CAVES, missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
   void replaceTombstoneWithTxnXattrWithCASWhichHasChanged_71Plus() {
@@ -251,7 +226,7 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
 
     assertIsTombstone(coll, id);
 
-    // Behaviour changed on 7.1: previously this would succeed.
+    // Behaviour changed on 7.1 (and now 6.6.6): previously this would succeed.
     // Checking with KV team if intentional.
     assertThrows(DocumentExistsException.class, () -> {
       upsertEmptyTombstone(coll, id);
