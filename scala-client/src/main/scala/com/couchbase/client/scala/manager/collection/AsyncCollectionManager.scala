@@ -57,6 +57,7 @@ class AsyncCollectionManager(private val bucket: AsyncBucket)(
         v =>
           v.scopes()
             .asScala
+            .toSeq // Required for 2.13
             .map(
               scope =>
                 ScopeSpec(

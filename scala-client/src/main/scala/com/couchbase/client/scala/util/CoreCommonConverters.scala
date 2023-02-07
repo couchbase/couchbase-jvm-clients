@@ -140,7 +140,10 @@ private[scala] object CoreCommonConverters {
   }
 
   def convert(in: CoreQueryResult): QueryResult = {
-    QueryResult(in.collectRows().asScala, convert(in.metaData))
+    QueryResult(
+      in.collectRows().asScala.toSeq, // toSeq for 2.13
+      convert(in.metaData)
+    )
   }
 
   def convert(in: CoreReactiveQueryResult): ReactiveQueryResult = {
