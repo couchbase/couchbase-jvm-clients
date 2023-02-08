@@ -16,24 +16,35 @@
 
 package com.couchbase.client.core.kv;
 
-import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.error.FeatureNotAvailableException;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import com.couchbase.client.core.Core;
 import reactor.core.publisher.Flux;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.api.shared.CoreMutationState;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.msg.kv.MutationToken;
+import com.couchbase.client.core.retry.RetryStrategy;
 
 /**
  * Unit tests for the range scan orchestrator to simulate errors and correct behavior from downstream components.
@@ -64,7 +75,7 @@ class RangeScanOrchestratorTest {
     data.put((short) 1, randomItemsSorted(3));
     orchestrator.prepare(data);
 
-    List<CoreRangeScanItem> result = orchestrator.runRangeScan(new OrchestratorProxy.RangeSpec());
+    List<CoreRangeScanItem> result = orchestrator.runRangeScan(new TestRangeScan(), new TestScanOptions());
     assertEquals(8, result.size());
   }
 
@@ -78,7 +89,7 @@ class RangeScanOrchestratorTest {
     data.put((short) 1, randomItemsSorted(4));
     orchestrator.prepare(data);
 
-    List<CoreRangeScanItem> result = orchestrator.runSamplingScan(new OrchestratorProxy.SamplingSpec(10));
+    List<CoreRangeScanItem> result = orchestrator.runSamplingScan(new TestSamplingScan(10), new TestScanOptions());
     assertEquals(7, result.size());
   }
 
@@ -94,7 +105,7 @@ class RangeScanOrchestratorTest {
     orchestrator.prepare(data);
 
     List<CoreRangeScanItem> result = orchestrator.runRangeScan(
-      new OrchestratorProxy.RangeSpec().sort(CoreRangeScanSort.ASCENDING)
+      new TestRangeScan(), new TestScanOptions(CoreRangeScanSort.ASCENDING)
     );
     assertEquals(185, result.size());
 
@@ -115,7 +126,7 @@ class RangeScanOrchestratorTest {
     orchestrator.prepare(data);
 
     List<CoreRangeScanItem> result = orchestrator.runSamplingScan(
-      new OrchestratorProxy.SamplingSpec(200).sort(CoreRangeScanSort.ASCENDING)
+      new TestSamplingScan(200), new TestScanOptions(CoreRangeScanSort.ASCENDING)
     );
     assertEquals(185, result.size());
 
@@ -134,7 +145,7 @@ class RangeScanOrchestratorTest {
     data.put((short) 1, randomItemsSorted(10));
     orchestrator.prepare(data);
 
-    List<CoreRangeScanItem> result = orchestrator.runSamplingScan(new OrchestratorProxy.SamplingSpec(10));
+    List<CoreRangeScanItem> result = orchestrator.runSamplingScan( new TestSamplingScan(10), new TestScanOptions());
     assertEquals(10, result.size());
   }
 
@@ -144,7 +155,7 @@ class RangeScanOrchestratorTest {
   @Test
   void failIfBucketCapabilityNotAvailable() {
     OrchestratorProxy orchestrator = new OrchestratorProxy(ENVIRONMENT, false);
-    assertThrows(FeatureNotAvailableException.class, () -> orchestrator.runRangeScan(new OrchestratorProxy.RangeSpec()));
+    assertThrows(FeatureNotAvailableException.class, () -> orchestrator.runRangeScan(new TestRangeScan(), new TestScanOptions()));
   }
 
   /**
@@ -192,4 +203,76 @@ class RangeScanOrchestratorTest {
       .toString();
   }
 
+  class TestRangeScan implements CoreRangeScan {
+
+    @Override
+    public CoreScanTerm from() {
+      return new CoreScanTerm(new byte[]{(byte) 0x00}, false);
+    }
+
+    @Override
+    public CoreScanTerm to() {
+      return new CoreScanTerm(new byte[]{(byte) 0xff}, false);
+    }
+  }
+
+  class TestSamplingScan implements CoreSamplingScan {
+    int limit;
+    Optional<Long> seed = Optional.empty();
+
+    public TestSamplingScan(int limit){
+      this.limit = limit;
+    }
+
+    @Override
+    public long limit() {
+      return limit;
+    }
+
+    @Override
+    public Optional<Long> seed() {
+      return seed;
+    }
+  }
+
+  class TestScanOptions implements CoreScanOptions{
+    CoreCommonOptions commons = CoreCommonOptions.DEFAULT;
+    CoreRangeScanSort sort;
+    public TestScanOptions(){
+    }
+    public TestScanOptions(CoreRangeScanSort sort){
+      this.sort = sort;
+    }
+
+    @Override
+    public CoreCommonOptions commonOptions() {
+      return commons;
+    }
+
+    @Override
+    public boolean idsOnly() {
+      return false;
+    }
+
+    @Override
+    public CoreRangeScanSort sort() {
+      return sort;
+    }
+
+    @Override
+    public CoreMutationState consistentWith() {
+      return null;
+    }
+
+    @Override
+    public int batchItemLimit() {
+      return 0;
+    }
+
+    @Override
+    public int batchByteLimit() {
+      return 0;
+    }
+
+  }
 }

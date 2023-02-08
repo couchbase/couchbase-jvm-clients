@@ -18,18 +18,25 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.kv.CoreRangeScan;
 import com.couchbase.client.core.kv.CoreRangeScanId;
+import com.couchbase.client.core.kv.CoreRangeScanSort;
+import com.couchbase.client.core.kv.CoreSamplingScan;
+import com.couchbase.client.core.kv.CoreScanOptions;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.UnsignedLEB128;
+import com.couchbase.client.protostellar.kv.v1.RangeScanRequest;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -59,26 +66,55 @@ public class RangeScanCreateRequest extends PredeterminedPartitionRequest<RangeS
   private final boolean endExclusive;
   private final long limit;
   private final long seed;
-
   private final boolean keyOnly;
 
   private final Optional<MutationToken> mutationToken;
 
-  public static RangeScanCreateRequest forRangeScan(byte[] startTerm, boolean startExclusive, byte[] endTerm,
-                                                    boolean endExclusive, boolean keyOnly, Duration timeout, CoreContext ctx,
-                                                    RetryStrategy retryStrategy,
-                                                    CollectionIdentifier collectionIdentifier, RequestSpan span,
-                                                    short partition, Optional<MutationToken> mutationToken) {
-    return new RangeScanCreateRequest(startTerm, startExclusive, endTerm, endExclusive, 0, Optional.empty(),
-      keyOnly, timeout, ctx, retryStrategy, collectionIdentifier, span, partition, mutationToken);
+  public static RangeScanCreateRequest forRangeScan(byte[] startTerm,
+                                                    CoreRangeScan rangeScan,
+                                                    CoreScanOptions options,
+                                                    short partition,
+                                                    CoreContext ctx,
+                                                    CollectionIdentifier collectionIdentifier,
+                                                    Map<Short, MutationToken> consistencyMap) {
+    return new RangeScanCreateRequest(
+      startTerm,
+      rangeScan.from().exclusive(),
+      rangeScan.to().id(),
+      rangeScan.to().exclusive(),
+      0,
+      Optional.empty(),
+      options.idsOnly(),
+      options.commonOptions().timeout().orElse(ctx.environment().timeoutConfig().kvScanTimeout()),
+      ctx,
+      options.commonOptions().retryStrategy().orElse(ctx.environment().retryStrategy()),
+      collectionIdentifier,
+      ctx.environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_RANGE_SCAN_CREATE, options.commonOptions().parentSpan().orElse(null)),
+      partition,
+      Optional.ofNullable(consistencyMap.get(partition)));
   }
 
-  public static RangeScanCreateRequest forSamplingScan(long limit, Optional<Long> seed, boolean keyOnly,
-                                                       Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                                                       CollectionIdentifier collectionIdentifier, RequestSpan span,
-                                                       short partition, Optional<MutationToken> mutationToken) {
-    return new RangeScanCreateRequest(null, false, null, false, limit, seed,
-      keyOnly, timeout, ctx, retryStrategy, collectionIdentifier, span, partition, mutationToken);
+  public static RangeScanCreateRequest forSamplingScan(CoreSamplingScan samplingScan,
+                                                       CoreScanOptions options,
+                                                       short partition,
+                                                       CoreContext ctx,
+                                                       CollectionIdentifier collectionIdentifier,
+                                                       Map<Short, MutationToken> consistencyMap) {
+    return new RangeScanCreateRequest(
+      null,
+      false,
+      null,
+      false,
+      samplingScan.limit(),
+      samplingScan.seed(),
+      options.idsOnly(),
+      options.commonOptions().timeout().orElse(ctx.environment().timeoutConfig().kvScanTimeout()),
+      ctx,
+      options.commonOptions().retryStrategy().orElse(ctx.environment().retryStrategy()),
+      collectionIdentifier,
+      ctx.environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_RANGE_SCAN_CREATE, options.commonOptions().parentSpan().orElse(null)),
+      partition,
+      Optional.ofNullable(consistencyMap.get(partition)));
   }
 
   private RangeScanCreateRequest(byte[] startTerm, boolean startExclusive, byte[] endTerm,

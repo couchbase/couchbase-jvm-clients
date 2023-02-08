@@ -17,11 +17,10 @@
 package com.couchbase.client.core.kv;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.shared.CoreMutationState;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.config.BucketCapabilities;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
@@ -43,6 +42,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanCreateRequest;
+import com.couchbase.client.core.retry.RetryStrategy;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -116,67 +116,40 @@ public class RangeScanOrchestrator {
   /**
    * Performs a range scan between a start and an end term (reactive).
    *
-   * @param startTerm the start term used for the range scan.
-   * @param startExclusive if the start term is exclusive or inclusive.
-   * @param endTerm the end term used for the range scan.
-   * @param endExclusive if the end term is exclusive or inclusive.
-   * @param timeout the timeout for the full operation.
-   * @param continueItemLimit the number of items to load (max) per continue operation.
-   * @param continueByteLimit the number of bytes to load (max) per continue operation.
-   * @param keysOnly if only keys should be loaded.
-   * @param sort the sorting to apply (could be none).
-   * @param parent the optional span parent to use.
+   * @param rangeScan
+   * @param options
    * @return a {@link Flux} of returned items, or a failed flux during errors.
    */
-  public Flux<CoreRangeScanItem> rangeScan(byte[] startTerm, boolean startExclusive, byte[] endTerm,
-                                           boolean endExclusive, Duration timeout, int continueItemLimit,
-                                           int continueByteLimit, boolean keysOnly, CoreRangeScanSort sort,
-                                           Optional<RequestSpan> parent, Map<Short, MutationToken> consistencyTokens) {
+
+    public Flux<CoreRangeScanItem> rangeScan(CoreRangeScan rangeScan, CoreScanOptions options) {
     return Flux.defer(() -> {
+
       if (currentBucketConfig == null) {
         // We might not have a config yet if bootstrap is still in progress, wait 100ms
         // and then try again. In a steady state this should not happen.
         return Mono
           .delay(Duration.ofMillis(100), core.context().environment().scheduler())
-          .flatMapMany(ign -> rangeScan(startTerm, startExclusive, endTerm, endExclusive, timeout,
-            continueItemLimit, continueByteLimit, keysOnly, sort, parent, consistencyTokens));
+          .flatMapMany(ign -> rangeScan(rangeScan, options));
       } else if (!(currentBucketConfig instanceof CouchbaseBucketConfig)) {
         return Flux.error(new IllegalStateException("Only Couchbase buckets are supported with KV Range Scan"));
       }
-
+      Map<Short, MutationToken> consistencyMap=options.consistencyMap();
       return streamForPartitions((partition, start) -> {
-        CoreContext ctx = core.context();
-        RequestSpan span = ctx
-          .environment()
-          .requestTracer()
-          .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_RANGE_SCAN_CREATE, parent.orElse(null));
-
-        Optional<MutationToken> mutationToken = Optional.ofNullable(consistencyTokens.get(partition));
-
-        byte[] actualStartTerm = start == null ? startTerm : start;
-        return RangeScanCreateRequest.forRangeScan(actualStartTerm, startExclusive, endTerm, endExclusive, keysOnly, timeout,
-          core.context(), core.context().environment().retryStrategy(), collectionIdentifier, span, partition,
-          mutationToken);
-      }, sort, timeout, continueItemLimit, continueByteLimit, parent, keysOnly);
+        byte[] actualStartTerm = start == null ? rangeScan.from().id() : start;
+        return RangeScanCreateRequest.forRangeScan(actualStartTerm, rangeScan, options, partition, core.context(),
+            collectionIdentifier, consistencyMap);
+      }, options);
     });
   }
 
   /**
    * Performs a sampling scan (reactive).
    *
-   * @param limit the number of items to load for the sampling scan.
-   * @param seed the seed number to be used.
-   * @param timeout the timeout for the full operation.
-   * @param continueItemLimit the number of items to load (max) per continue operation.
-   * @param continueByteLimit the number of bytes to load (max) per continue operation.
-   * @param keysOnly if only keys should be loaded.
-   * @param sort the sorting to apply (could be none).
-   * @param parent the optional span parent to use.
+   * @param samplingScan
+   * @param options
    * @return a {@link Flux} of returned items, or a failed flux during errors.
    */
-  public Flux<CoreRangeScanItem> samplingScan(long limit, Optional<Long> seed, Duration timeout, int continueItemLimit,
-                                              int continueByteLimit, boolean keysOnly, CoreRangeScanSort sort,
-                                              Optional<RequestSpan> parent, Map<Short, MutationToken> consistencyTokens) {
+  public Flux<CoreRangeScanItem> samplingScan(CoreSamplingScan samplingScan, CoreScanOptions options) {
     return Flux
       .defer(() -> {
         if (currentBucketConfig == null) {
@@ -184,35 +157,19 @@ public class RangeScanOrchestrator {
           // and then try again. In a steady state this should not happen.
           return Mono
             .delay(Duration.ofMillis(100), core.context().environment().scheduler())
-            .flatMapMany(ign -> samplingScan(limit, seed, timeout, continueItemLimit, continueByteLimit,
-              keysOnly, sort, parent, consistencyTokens));
+            .flatMapMany(ign -> samplingScan(samplingScan, options));
         } else if (!(currentBucketConfig instanceof CouchbaseBucketConfig)) {
           return Flux.error(new IllegalStateException("Only Couchbase buckets are supported with KV Range Scan"));
         }
-
-        return streamForPartitions((partition, ignored) -> {
-          CoreContext ctx = core.context();
-          RequestSpan span = ctx
-            .environment()
-            .requestTracer()
-            .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_RANGE_SCAN_CREATE, parent.orElse(null));
-
-          Optional<MutationToken> mutationToken = Optional.ofNullable(consistencyTokens.get(partition));
-
-          return RangeScanCreateRequest.forSamplingScan(limit, seed, keysOnly, timeout, ctx,
-            ctx.environment().retryStrategy(), collectionIdentifier, span, partition, mutationToken);
-        }, sort, timeout, continueItemLimit, continueByteLimit, parent, keysOnly);
-
-      })
-      .take(limit);
+        Map<Short, MutationToken> consistencyMap=options.consistencyMap();
+        return streamForPartitions((partition, ignored) -> RangeScanCreateRequest.forSamplingScan(samplingScan,
+              options, partition, core.context(), collectionIdentifier, consistencyMap), options);
+        }).take(samplingScan.limit());
   }
 
   @SuppressWarnings("unchecked")
   private Flux<CoreRangeScanItem> streamForPartitions(final BiFunction<Short, byte[], RangeScanCreateRequest> createSupplier,
-                                                      final CoreRangeScanSort sort,
-                                                      final Duration timeout, final int itemLimit,
-                                                      final int byteLimit, Optional<RequestSpan> parent,
-                                                      final boolean keysOnly) {
+                                                      final CoreScanOptions options) {
 
     if (!capabilityEnabled) {
       return Flux.error(FeatureNotAvailableException.rangeScan());
@@ -224,12 +181,12 @@ public class RangeScanOrchestrator {
 
     List<Flux<CoreRangeScanItem>> partitionStreams = new ArrayList<>(numPartitions);
     for (short i = 0; i < numPartitions; i++) {
-      partitionStreams.add(streamForPartition(i, createSupplier, timeout, itemLimit, byteLimit, parent, keysOnly));
+      partitionStreams.add(streamForPartition(i, createSupplier, options));
     }
 
     Flux<CoreRangeScanItem> stream;
 
-    if (CoreRangeScanSort.ASCENDING == sort) {
+    if (CoreRangeScanSort.ASCENDING == options.sort()) {
       stream = Flux.mergeComparing(
         Comparator.comparing(CoreRangeScanItem::key),
         partitionStreams.toArray(new Flux[0])
@@ -240,15 +197,14 @@ public class RangeScanOrchestrator {
 
     return stream
       .doOnNext(item -> itemsStreamed.incrementAndGet())
-      .timeout(timeout, Mono.defer(() -> Mono.error(
+      .timeout(options.commonOptions().timeout().orElse(core.context().environment().timeoutConfig().kvScanTimeout()), Mono.defer(() -> Mono.error(
         new UnambiguousTimeoutException("RangeScan timed out", new CancellationErrorContext(new RangeScanContext(itemsStreamed.get())))
       )));
   }
 
   private Flux<CoreRangeScanItem> streamForPartition(final short partition,
                                                      final BiFunction<Short, byte[], RangeScanCreateRequest> createSupplier,
-                                                     final Duration timeout, final int itemLimit, final int byteLimit,
-                                                     Optional<RequestSpan> parent, final boolean keysOnly) {
+                                                     final CoreScanOptions options) {
     final AtomicReference<byte[]> lastStreamed = new AtomicReference<>();
 
     return Flux
@@ -259,7 +215,7 @@ public class RangeScanOrchestrator {
           .wrap(request, request.response(), true)
           .flatMapMany(res -> {
             if (res.status().success()) {
-              return continueScan(timeout, partition, res.rangeScanId(), itemLimit, byteLimit, parent, keysOnly);
+              return continueScan( partition, res.rangeScanId(), options);
             }
 
             final KeyValueErrorContext errorContext = KeyValueErrorContext.completedRequest(request, res);
@@ -286,25 +242,15 @@ public class RangeScanOrchestrator {
       })));
   }
 
-  private Flux<CoreRangeScanItem> continueScan(final Duration timeout, final short partition, final CoreRangeScanId id,
-                                               final int itemLimit, final int byteLimit, Optional<RequestSpan> parent,
-                                               final boolean keysOnly) {
+  private Flux<CoreRangeScanItem> continueScan(final short partition, final CoreRangeScanId id,
+                                               final CoreScanOptions options) {
     final AtomicBoolean complete = new AtomicBoolean(false);
 
     return Flux
       .defer(() -> {
-        CoreContext ctx = core.context();
-
-        RequestSpan span = ctx
-          .environment()
-          .requestTracer()
-          .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_RANGE_SCAN_CONTINUE, parent.orElse(null));
-
-        RangeScanContinueRequest request = new RangeScanContinueRequest(id, itemLimit, byteLimit, timeout, ctx,
-          ctx.environment().retryStrategy(), null, collectionIdentifier, span,
-          Sinks.many().unicast().onBackpressureBuffer(), partition, keysOnly
-        );
-        core.send(request);
+          RangeScanContinueRequest request = new RangeScanContinueRequest(id,
+              Sinks.many().unicast().onBackpressureBuffer(), null, options, partition, core.context(), collectionIdentifier);
+          core.send(request);
         return Reactor
           .wrap(request, request.response(), true)
           .flatMapMany(res -> {

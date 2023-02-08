@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -25,11 +25,10 @@ import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.kv.CoreRangeScanId;
 import com.couchbase.client.core.kv.CoreRangeScanItem;
+import com.couchbase.client.core.kv.CoreScanOptions;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.retry.RetryStrategy;
 import reactor.core.publisher.Sinks;
 
-import java.time.Duration;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode.RANGE_SCAN_CONTINUE;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
@@ -48,17 +47,30 @@ public class RangeScanContinueRequest extends PredeterminedPartitionRequest<Rang
 
   private final boolean keysOnly;
 
-  public RangeScanContinueRequest(CoreRangeScanId id, int itemLimit, int byteLimit, Duration timeout, CoreContext ctx,
-                                  RetryStrategy retryStrategy, String key, CollectionIdentifier collectionIdentifier,
-                                  RequestSpan span, Sinks.Many<CoreRangeScanItem> sink, short partition, boolean keysOnly) {
-    super(partition, timeout, ctx, retryStrategy, key, collectionIdentifier, span);
+  public RangeScanContinueRequest(CoreRangeScanId id,
+                                  Sinks.Many<CoreRangeScanItem> sink,
+                                  String key,
+                                  CoreScanOptions options,
+                                  short partition,
+                                  CoreContext ctx,
+                                  CollectionIdentifier collectionIdentifier ) {
+
+    super(
+      partition,
+      options.commonOptions().timeout().orElse(ctx.environment().timeoutConfig().kvScanTimeout()),
+      ctx,
+      options.commonOptions().retryStrategy().orElse(ctx.environment().retryStrategy()),
+      key,
+      collectionIdentifier,
+      ctx.environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_RANGE_SCAN_CREATE, options.commonOptions().parentSpan().orElse(null)));
     this.id = id;
-    this.itemLimit = itemLimit;
-    this.byteLimit = byteLimit;
-    this.timeLimit = Math.toIntExact(timeout.toMillis());
+    this.itemLimit = options.batchItemLimit();
+    this.byteLimit = options.batchByteLimit();
+    this.timeLimit = Math.toIntExact(timeout().toMillis());
     this.sink = sink;
-    this.keysOnly = keysOnly;
+    this.keysOnly = options.idsOnly();
   }
+
 
   @Override
   public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final KeyValueChannelContext ctx) {

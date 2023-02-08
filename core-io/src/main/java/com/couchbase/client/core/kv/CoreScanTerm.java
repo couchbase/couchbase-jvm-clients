@@ -15,21 +15,31 @@
  */
 package com.couchbase.client.core.kv;
 
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
-
-import java.nio.charset.StandardCharsets;
-
 import com.couchbase.client.core.annotation.Stability;
+
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 /**
  * A single {@link CoreScanTerm} identifying either the point to scan from or to scan to.
  */
 @Stability.Internal
-public interface CoreScanTerm {
+public class CoreScanTerm {
 
-  byte[] id();
+  private final byte[] id;
+  private final boolean exclusive;
 
-  boolean exclusive();
+  public CoreScanTerm(byte[] id, boolean exclusive){
+    this.id = notNullOrEmpty(id, "ScanTerm ID").clone();
+    this.exclusive = exclusive;
+  }
+
+  public byte[] id(){
+    return id.clone();
+  }
+
+  public boolean exclusive(){
+    return exclusive;
+  }
 
 }
 

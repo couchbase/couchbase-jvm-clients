@@ -786,27 +786,12 @@ public final class ClassicCoreKvOps implements CoreKvOps {
     notNull(scanType, "ScanType");
     notNull(options, "Options");
 
-    Duration timeout = options.commonOptions().timeout().orElse(core.context().environment().timeoutConfig().kvScanTimeout());
-
-    Map<Short, MutationToken> consistencyTokens = options.consistentWith().map(ms -> {
-      Map<Short, MutationToken> tokens = new HashMap<>();
-      for (MutationToken mt : ms) {
-        tokens.put(mt.partitionID(), mt);
-      }
-      return tokens;
-    }).orElse(Collections.emptyMap());
-
     Flux<CoreRangeScanItem> coreScanStream;
 
     if (scanType instanceof CoreRangeScan) {
-      CoreRangeScan rs = (CoreRangeScan) scanType;
-      coreScanStream = rangeScanOrchestrator.rangeScan(rs.from().id(), rs.from().exclusive(), rs.to().id(),
-          rs.to().exclusive(), timeout, options.batchItemLimit(), options.batchByteLimit(), options.idsOnly(), options.sort(),
-          options.commonOptions().parentSpan(), consistencyTokens);
+      coreScanStream = rangeScanOrchestrator.rangeScan((CoreRangeScan) scanType, options);
     } else if (scanType instanceof CoreSamplingScan) {
-      CoreSamplingScan ss = (CoreSamplingScan) scanType;
-      coreScanStream = rangeScanOrchestrator.samplingScan(ss.limit(), ss.seed(), timeout, options.batchItemLimit(),
-          options.batchByteLimit(), options.idsOnly(), options.sort(), options.commonOptions().parentSpan(), consistencyTokens);
+      coreScanStream = rangeScanOrchestrator.samplingScan((CoreSamplingScan) scanType,options);
     } else {
       return Flux.error(InvalidArgumentException.fromMessage("Unsupported ScanType: " + scanType));
     }

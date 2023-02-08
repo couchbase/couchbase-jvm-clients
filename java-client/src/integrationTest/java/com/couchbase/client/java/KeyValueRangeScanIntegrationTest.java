@@ -216,7 +216,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
     AtomicBoolean idFound = new AtomicBoolean(false);
     collection.scan(
       ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.maximum()),
-      scanOptions().consistentWith(mutationState)
+      scanOptions().consistentWith(mutationState).timeout(Duration.ofSeconds(1))
     ).forEach(item -> {
       if (item.id().equals(id)) {
         idFound.set(true);

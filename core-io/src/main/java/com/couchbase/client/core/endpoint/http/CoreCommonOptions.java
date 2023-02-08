@@ -18,7 +18,6 @@ package com.couchbase.client.core.endpoint.http;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.retry.RetryStrategy;
 import reactor.util.annotation.Nullable;
 
@@ -103,4 +102,5 @@ public interface CoreCommonOptions {
   default CoreCommonOptions withParentSpan(RequestSpan span) {
     return CoreCommonOptions.of(timeout().orElse(null), retryStrategy().orElse(null), span);
   }
+
 }

@@ -31,8 +31,8 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 @Stability.Volatile
 public class ScanTerm {
 
-  private static final ScanTerm MINIMUM = inclusive(new byte[]{(byte) 0x00});
-  private static final ScanTerm MAXIMUM = inclusive(new byte[]{(byte) 0xFF});
+  static private final ScanTerm MINIMUM = inclusive(new byte[]{(byte) 0x00});
+  static private final ScanTerm MAXIMUM = inclusive(new byte[]{(byte) 0xff});
 
   /**
    * Contains the key pattern of this term.
@@ -135,21 +135,8 @@ public class ScanTerm {
   }
 
   @Stability.Internal
-  public Built build() {
-    return new Built();
-  }
-
-  @Stability.Internal
-  public class Built  implements CoreScanTerm {
-    
-    public byte[] id(){
-      return id;
-    }
-
-    public boolean exclusive(){
-      return exclusive;
-    }
-
+  public CoreScanTerm toCore() {
+    return new CoreScanTerm(id, exclusive);
   }
 
 }

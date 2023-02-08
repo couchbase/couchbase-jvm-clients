@@ -16,11 +16,20 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.cnc.RequestSpan
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.error._
 import com.couchbase.client.core.error.context.KeyValueErrorContext
 import com.couchbase.client.core.io.CollectionIdentifier
-import com.couchbase.client.core.kv.{CoreRangeScanSort, RangeScanOrchestrator}
+import com.couchbase.client.core.kv.{
+  CoreRangeScan,
+  CoreRangeScanSort,
+  CoreSamplingScan,
+  CoreScanOptions,
+  CoreScanTerm,
+  RangeScanOrchestrator
+}
 import com.couchbase.client.core.msg.Response
 import com.couchbase.client.core.msg.kv._
 import com.couchbase.client.core.retry.RetryStrategy
@@ -43,6 +52,7 @@ import com.couchbase.client.scala.util.CoreCommonConverters.{
 import com.couchbase.client.scala.util.{ExpiryUtil, FutureConversions, TimeoutUtil}
 import reactor.core.scala.publisher.SFlux
 
+import java.lang
 import java.util.Optional
 import scala.compat.java8.FutureConverters
 import scala.compat.java8.OptionConverters._
@@ -612,49 +622,66 @@ class AsyncCollection(
       case _                        => CoreRangeScanSort.NONE
     }
 
-    val consistencyTokens = new java.util.HashMap[java.lang.Short, MutationToken]()
+    val consistencyTokens = new java.util.LinkedList[MutationToken]()
 
     opts.consistentWith match {
-      case Some(cw) => cw.tokens.foreach(t => consistencyTokens.put(t.partitionID, t))
+      case Some(cw) => cw.tokens.foreach(t => consistencyTokens.add(t))
       case _        =>
     }
 
-    val idsOnly = opts.idsOnly.getOrElse(false)
+    val _idsOnly = opts.idsOnly.getOrElse(false)
+
+    val options = new CoreScanOptions() {
+      override def commonOptions(): CoreCommonOptions =
+        CoreCommonOptions.of(
+          timeoutActual,
+          opts.retryStrategy.getOrElse(null),
+          opts.parentSpan.getOrElse(null)
+        )
+
+      override def idsOnly(): Boolean = _idsOnly
+
+      override def sort(): CoreRangeScanSort = sortCore
+
+      override def consistentWith(): CoreMutationState =
+        new CoreMutationState(consistencyTokens)
+
+      override def batchItemLimit(): Int =
+        opts.batchItemLimit
+          .getOrElse(RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_ITEM_LIMIT)
+
+      override def batchByteLimit(): Int =
+        opts.batchByteLimit
+          .getOrElse(RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT)
+    }
 
     val flux = scanType match {
       case scan: ScanType.RangeScan =>
+        val rangeScan = new CoreRangeScan() {
+          override def from(): CoreScanTerm = new CoreScanTerm(scan.from.term, scan.from.exclusive)
+
+          override def to(): CoreScanTerm = new CoreScanTerm(scan.to.term, scan.to.exclusive)
+        }
+
         FutureConversions.javaFluxToScalaFlux(
           rangeScanOrchestrator.rangeScan(
-            scan.from.term,
-            scan.from.exclusive,
-            scan.to.term,
-            scan.to.exclusive,
-            timeoutActual,
-            opts.batchItemLimit
-              .getOrElse(RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_ITEM_LIMIT),
-            opts.batchByteLimit
-              .getOrElse(RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT),
-            opts.idsOnly.getOrElse(false),
-            sortCore,
-            opts.parentSpan.asJava,
-            consistencyTokens
+            rangeScan,
+            options
           )
         )
       case scan: ScanType.SamplingScan =>
+        val samplingScan = new CoreSamplingScan {
+          override def limit(): Long = scan.limit
+
+          override def seed(): Optional[lang.Long] = Optional.ofNullable(scan.seed)
+        }
         if (scan.limit <= 0) {
           SFlux.error(new InvalidArgumentException("Limit must be > 0", null, null))
         } else {
           FutureConversions.javaFluxToScalaFlux(
             rangeScanOrchestrator.samplingScan(
-              scan.limit,
-              Optional.of(scan.seed),
-              timeoutActual,
-              opts.batchItemLimit.getOrElse(0),
-              opts.batchByteLimit.getOrElse(0),
-              opts.idsOnly.getOrElse(false),
-              sortCore,
-              opts.parentSpan.asJava,
-              consistencyTokens
+              samplingScan,
+              options
             )
           )
         }
@@ -662,7 +689,7 @@ class AsyncCollection(
 
     flux.map(
       item =>
-        if (idsOnly) {
+        if (_idsOnly) {
           ScanResult(
             item.key(),
             idOnly = true,

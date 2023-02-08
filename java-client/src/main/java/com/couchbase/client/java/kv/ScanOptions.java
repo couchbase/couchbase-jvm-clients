@@ -20,14 +20,18 @@ import static com.couchbase.client.core.kv.RangeScanOrchestrator.RANGE_SCAN_DEFA
 import static com.couchbase.client.core.kv.RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_ITEM_LIMIT;
 import static com.couchbase.client.core.util.Validators.notNull;
 
+import java.time.Duration;
 import java.util.Optional;
 
+import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.shared.CoreMutationState;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.kv.CoreRangeScanSort;
 import com.couchbase.client.core.kv.CoreScanOptions;
+import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.Transcoder;
 
@@ -168,10 +172,9 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
   @Stability.Internal
   public class Built extends BuiltCommonOptions implements CoreScanOptions {
 
-    private CoreCommonOptions common;
-
-    Built() {
-      common = CoreCommonOptions.ofOptional(timeout(), retryStrategy(), parentSpan());
+    @Override
+    public CoreCommonOptions commonOptions(){
+      return this;
     }
 
     @Override
@@ -188,7 +191,12 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
       return sort.intoCore();
     }
 
-   @Override
+    @Override
+    public CoreMutationState consistentWith() {
+      return consistentWith.map(CoreMutationState::new).orElse(null);
+    }
+
+    @Override
     public int batchItemLimit() {
       return batchItemLimit;
     }
@@ -196,16 +204,6 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
     @Override
     public int batchByteLimit() {
       return batchByteLimit;
-    }
-
-    @Override
-    public Optional<CoreMutationState> consistentWith(){
-      return Optional.ofNullable(consistentWith.isPresent() && consistentWith.get().iterator().hasNext() ?  new CoreMutationState(consistentWith.get()) : null);
-    }
-
-    @Override
-    public CoreCommonOptions commonOptions() {
-      return common;
     }
 
   }

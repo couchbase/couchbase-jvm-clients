@@ -20,7 +20,10 @@ import com.couchbase.client.core.Core
 import com.couchbase.client.core.CoreKeyspace
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.kv.CoreAsyncResponse
+import com.couchbase.client.core.api.shared.CoreMutationState
+import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.cnc.TracingIdentifiers
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.env.TimeoutConfig
 import com.couchbase.client.core.error.CasMismatchException
 import com.couchbase.client.core.error.DefaultErrorUtil
@@ -30,8 +33,7 @@ import com.couchbase.client.core.error.DocumentUnretrievableException
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext
 import com.couchbase.client.core.io.CollectionIdentifier
-import com.couchbase.client.core.kv.CoreRangeScanItem
-import com.couchbase.client.core.kv.RangeScanOrchestrator
+import com.couchbase.client.core.kv.*
 import com.couchbase.client.core.msg.Request
 import com.couchbase.client.core.msg.Response
 import com.couchbase.client.core.msg.ResponseStatus.SUBDOC_FAILURE
@@ -39,6 +41,7 @@ import com.couchbase.client.core.msg.kv.KeyValueRequest
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.msg.kv.SubdocGetRequest
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest
+import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.JsonSerializer
@@ -68,12 +71,14 @@ import com.couchbase.client.kotlin.kv.ScanSort
 import com.couchbase.client.kotlin.kv.ScanType
 import com.couchbase.client.kotlin.kv.StoreSemantics
 import com.couchbase.client.kotlin.util.StorageSize
+import com.couchbase.client.kotlin.util.StorageSizeUnit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import reactor.core.publisher.Flux
+import java.util.*
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 import kotlin.time.toKotlinDuration
@@ -248,43 +253,40 @@ public class Collection internal constructor(
         sort: ScanSort = ScanSort.NONE,
         idsOnly: Boolean = false,
         consistency: KvScanConsistency = KvScanConsistency.notBounded(),
-        batchItemLimit: Int = DEFAULT_SCAN_BATCH_ITEM_LIMIT,
-        batchSizeLimit: StorageSize = DEFAULT_SCAN_BATCH_SIZE_LIMIT,
+        batchItemLimit: Int = RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_ITEM_LIMIT,
+        batchSizeLimit: StorageSize = StorageSize(
+            RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT.toLong(),
+            StorageSizeUnit.BYTES
+        )
     ): Flux<CoreRangeScanItem> {
 
-        val batchByteLimit = batchSizeLimit.inBytes.toSaturatedInt()
-
-        val timeout = with(core.env) { common.actualKvScanTimeout() }
-
-        val consistentWith = mutableMapOf<Short, MutationToken>()
-        consistency.mutationState?.forEach { token -> consistentWith[token.partitionID()] = token }
+        val options = object : CoreScanOptions {
+            override fun commonOptions(): CoreCommonOptions = common.toCore()
+            override fun idsOnly(): Boolean = idsOnly
+            override fun sort(): CoreRangeScanSort = sort.toCore()
+            override fun consistentWith(): CoreMutationState = CoreMutationState(consistency.mutationState)
+            override fun batchItemLimit(): Int = batchItemLimit
+            override fun batchByteLimit(): Int = batchSizeLimit.inBytes.toSaturatedInt()
+        }
 
         return when (type) {
-            is ScanType.Sample -> rangeScanOrchestrator.samplingScan(
-                type.limit,
-                type.seed.toOptional(),
-                timeout,
-                batchItemLimit,
-                batchByteLimit,
-                idsOnly,
-                sort.toCore(),
-                common.parentSpan.toOptional(),
-                consistentWith,
-            )
+            is ScanType.Sample -> {
 
-            is ScanType.Range -> rangeScanOrchestrator.rangeScan(
-                type.from.term,
-                type.from.exclusive,
-                type.to.term,
-                type.to.exclusive,
-                timeout,
-                batchItemLimit,
-                batchByteLimit,
-                idsOnly,
-                sort.toCore(),
-                common.parentSpan.toOptional(),
-                consistentWith,
-            )
+                val samplingScan = object : CoreSamplingScan {
+                    override fun limit(): Long = type.limit
+                    override fun seed(): Optional<Long> = type.seed.toOptional();
+                }
+
+                return rangeScanOrchestrator.samplingScan(samplingScan, options)
+            }
+
+            is ScanType.Range -> {
+                val rangeScan = object : CoreRangeScan {
+                    override fun from(): CoreScanTerm = CoreScanTerm(type.from.term, type.from.exclusive)
+                    override fun to(): CoreScanTerm  = CoreScanTerm(type.to.term, type.to.exclusive)
+                }
+                rangeScanOrchestrator.rangeScan(rangeScan, options)
+            }
         }
     }
 

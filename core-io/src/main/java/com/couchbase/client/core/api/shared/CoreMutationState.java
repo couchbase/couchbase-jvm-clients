@@ -20,23 +20,29 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.util.CbCollections;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Stability.Internal
-public class CoreMutationState implements Iterable<MutationToken> {
+public class CoreMutationState {
   private final List<MutationToken> tokens;
 
   public CoreMutationState(Iterable<MutationToken> tokens) {
     this.tokens = CbCollections.listCopyOf(tokens);
   }
 
+  public Map<Short, MutationToken> toMap() {
+    Map<Short, MutationToken> map = new HashMap<>();
+    tokens.forEach(mt -> map.put(mt.partitionID(), mt));
+    return map;
+  }
+
   public List<MutationToken> tokens() {
     return tokens;
   }
 
-  @Override
-  public Iterator<MutationToken> iterator() {
-    return tokens.iterator();
-  }
 }

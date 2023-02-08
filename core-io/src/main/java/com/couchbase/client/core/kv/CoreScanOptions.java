@@ -17,11 +17,19 @@
 package com.couchbase.client.core.kv;
 
 import java.time.Duration;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
+import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.shared.CoreMutationState;
+import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.msg.kv.MutationToken;
+import com.couchbase.client.core.retry.RetryStrategy;
+import reactor.util.annotation.Nullable;
 
 /**
  * Allows to customize the various range and sampling scan options.
@@ -29,16 +37,21 @@ import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 @Stability.Internal
 public interface CoreScanOptions {
 
+  CoreCommonOptions commonOptions();
+
   boolean idsOnly();
 
-  Optional<CoreMutationState> consistentWith();
-
+  @Nullable
   CoreRangeScanSort sort();
+
+  @Nullable
+  CoreMutationState consistentWith();
 
   int batchItemLimit();
 
   int batchByteLimit();
 
-  CoreCommonOptions commonOptions();
-
+  default Map<Short, MutationToken> consistencyMap(){
+    return consistentWith() == null ? new HashMap<>() : consistentWith().toMap();
+  }
 }

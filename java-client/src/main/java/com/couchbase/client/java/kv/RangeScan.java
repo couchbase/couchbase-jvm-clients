@@ -65,11 +65,11 @@ public class RangeScan extends ScanType {
   public class Built implements CoreRangeScan {
 
     public CoreScanTerm from() {
-      return from.build();
+      return from.toCore();
     }
 
     public CoreScanTerm to() {
-      return to.build();
+      return to.toCore();
     }
 
   }

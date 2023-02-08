@@ -122,57 +122,13 @@ class OrchestratorProxy {
     }).when(core).send(isA(RangeScanContinueRequest.class));
   }
 
-  List<CoreRangeScanItem> runRangeScan(final RangeSpec rs) {
-    return rangeScanOrchestrator.rangeScan(rs.startTerm, rs.startExclusive, rs.endTerm, rs.endExclusive, rs.timeout,
-        rs.continueItemLimit, rs.continueByteLimit, rs.keysOnly, rs.sort, rs.parent, rs.consistencyTokens)
+  List<CoreRangeScanItem> runRangeScan(final CoreRangeScan rangeScan, final CoreScanOptions scanOptions) {
+    return rangeScanOrchestrator.rangeScan(rangeScan, scanOptions)
       .collectList().block();
   }
 
-  List<CoreRangeScanItem> runSamplingScan(final SamplingSpec ss) {
-    return rangeScanOrchestrator.samplingScan(ss.limit, ss.seed, ss.timeout, ss.continueItemLimit,
-      ss.continueByteLimit, ss.keysOnly, ss.sort, ss.parent, ss.consistencyTokens).collectList().block();
-  }
-
-  static class SamplingSpec extends CommonSpec {
-
-    final long limit;
-
-    public SamplingSpec(long limit) {
-      this.limit = limit;
-    }
-
-    Optional<Long> seed = Optional.empty();
-
-    public SamplingSpec sort(final CoreRangeScanSort sort) {
-      this.sort = sort;
-      return this;
-    }
-
-  }
-
-  static class RangeSpec extends CommonSpec {
-
-    byte[] startTerm = new byte[]{ 0x00 };
-    boolean startExclusive = false;
-    byte[] endTerm = new byte[]{ (byte) 0xFF };
-    boolean endExclusive = false;
-
-    public RangeSpec sort(final CoreRangeScanSort sort) {
-      this.sort = sort;
-      return this;
-    }
-
-  }
-
-  static class CommonSpec {
-    Duration timeout = Duration.ofSeconds(2);
-    int continueItemLimit = 1;
-    int continueByteLimit = 0;
-    boolean keysOnly = false;
-    CoreRangeScanSort sort = CoreRangeScanSort.NONE;
-    java.util.Optional<RequestSpan> parent = Optional.empty();
-    Map<Short, MutationToken> consistencyTokens = Collections.emptyMap();
-
+  List<CoreRangeScanItem> runSamplingScan(final CoreSamplingScan sampleScan, final CoreScanOptions scanOptions) {
+    return rangeScanOrchestrator.samplingScan(sampleScan, scanOptions).collectList().block();
   }
 
 }
