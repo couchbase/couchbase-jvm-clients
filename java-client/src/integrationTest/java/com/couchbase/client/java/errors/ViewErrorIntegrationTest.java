@@ -18,6 +18,7 @@ package com.couchbase.client.java.errors;
 
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.ViewNotFoundException;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.manager.view.DesignDocument;
@@ -34,7 +35,7 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@IgnoreWhen(clusterTypes = ClusterType.CAPELLA,
+@IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA},
   missesCapabilities = {Capabilities.VIEWS},
   isProtostellar = true)
 class ViewErrorIntegrationTest extends JavaIntegrationTest {
@@ -49,6 +50,7 @@ class ViewErrorIntegrationTest extends JavaIntegrationTest {
     cluster = createCluster();
     bucket = cluster.bucket(config().bucketname());
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
+    waitForService(bucket, ServiceType.VIEWS);
     DesignDocument designDocument = new DesignDocument(designDocName);
     bucket.viewIndexes().upsertDesignDocument(designDocument, DesignDocumentNamespace.PRODUCTION);
   }

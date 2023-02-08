@@ -32,6 +32,7 @@ import scala.concurrent.duration.Duration._
 import scala.util.Failure
 import scala.concurrent.duration._
 
+@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED, ClusterType.CAVES))
 @TestInstance(Lifecycle.PER_CLASS)
 class ViewSpec extends ScalaIntegrationTest {
 
@@ -48,6 +49,7 @@ class ViewSpec extends ScalaIntegrationTest {
     bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
     bucket.waitUntilReady(WaitUntilReadyDefault)
+    waitForService(bucket, ServiceType.VIEWS)
 
     val designDoc = DesignDocument(
       DesignDocName,
@@ -61,8 +63,6 @@ class ViewSpec extends ScalaIntegrationTest {
         .getDesignDocument(DesignDocName, DesignDocumentNamespace.Production)
         .isSuccess
     })
-    // Extra wait for service for CI test stability
-    waitForService(bucket, ServiceType.VIEWS)
   }
 
   @AfterAll
