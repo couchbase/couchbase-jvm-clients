@@ -65,8 +65,12 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): SFlux[QueryIndex] = {
     SMono
       .fromFuture(
@@ -137,8 +141,12 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
       async.createPrimaryIndex(
@@ -171,8 +179,12 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
       async.dropIndex(
@@ -202,8 +214,12 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
       async.dropPrimaryIndex(
@@ -234,8 +250,12 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       timeout: Duration,
       watchPrimary: Boolean = false,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
       async.watchIndexes(
@@ -262,8 +282,12 @@ class ReactiveQueryIndexManager(async: AsyncQueryIndexManager, cluster: Reactive
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): SMono[Unit] = {
     SMono.fromFuture(
       async.buildDeferredIndexes(bucketName, timeout, retryStrategy, scopeName, collectionName)

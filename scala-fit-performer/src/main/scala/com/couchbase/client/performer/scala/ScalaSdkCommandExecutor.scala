@@ -35,6 +35,7 @@ import com.couchbase.client.protocol.shared.{
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.durability.{Durability, PersistTo, ReplicateTo}
 import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.manager.query
 import com.couchbase.client.scala.manager.query.QueryIndexType
 // [start:1.4.1]
 import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
@@ -273,35 +274,9 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
         com.couchbase.client.protocol.sdk.Result.newBuilder
           .setQueryIndexes(
             com.couchbase.client.protocol.sdk.management.query.QueryIndexes.newBuilder
-              .addAllIndexes(
-                indexes
-                  .map(i => {
-                    val builder = QueryIndex.newBuilder
-                      .setName(i.name)
-                      .setIsPrimary(i.isPrimary)
-                      .setType(i.typ match {
-                        case QueryIndexType.View =>
-                          com.couchbase.client.protocol.sdk.management.query.QueryIndexType.VIEW
-                        case QueryIndexType.GSI =>
-                          com.couchbase.client.protocol.sdk.management.query.QueryIndexType.GSI
-                      })
-                      .setState(i.state)
-                      .setKeyspace(i.keyspaceId)
-                      .addAllIndexKey(i.indexKey.asJava)
-                      .setBucketName(i.bucketName)
-
-                    i.condition.map(v => builder.setCondition(v))
-                    i.partition.map(v => builder.setPartition(v))
-                    i.scopeName.map(v => builder.setScopeName(v))
-                    i.collectionName.map(v => builder.setCollectionName(v))
-
-                    builder.build
-                  })
-                  .asJava
-              )
+              .addAllIndexes(mapQueryIndexes(indexes))
           )
       )
-
       result.setElapsedNanos(System.nanoTime - start)
     } else if (op.hasDropPrimaryIndex) {
       val req = op.getDropPrimaryIndex
@@ -423,6 +398,11 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
         .get
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
+      // [start:1.4.4]
+    } else if (op.hasCollectionQueryIndexManager) {
+      result =
+        handleCollectionQueryIndexManagerCommand(op, op.getCollectionQueryIndexManager, connection)
+      // [end:1.4.4]
     } else
       throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"))
 
@@ -793,5 +773,174 @@ object ScalaSdkCommandExecutor {
     else ret.setOther(ExceptionOther.newBuilder.setName(raw.getClass.getSimpleName).setSerialized(raw.toString))
 
     ret.build
+  }
+
+  def handleCollectionQueryIndexManagerCommand(
+      command: com.couchbase.client.protocol.sdk.Command,
+      op: com.couchbase.client.protocol.sdk.management.collection.query.Command,
+      connection: ClusterConnection
+  ): com.couchbase.client.protocol.run.Result.Builder = {
+    val result = com.couchbase.client.protocol.run.Result.newBuilder()
+
+    if (op.hasCreatePrimaryIndex) {
+      val req        = op.getCreatePrimaryIndex
+      val collection = connection.collection(req.getCollection)
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      collection.queryIndexes
+        .createPrimaryIndex(
+          if (req.hasOptions && req.getOptions.hasIndexName) Some(req.getOptions.getIndexName)
+          else None,
+          if (req.hasOptions && req.getOptions.hasIgnoreIfExists) req.getOptions.getIgnoreIfExists
+          else false,
+          if (req.hasOptions && req.getOptions.hasNumReplicas) Some(req.getOptions.getNumReplicas)
+          else None,
+          if (req.hasOptions && req.getOptions.hasDeferred) Some(req.getOptions.getDeferred)
+          else None,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else collection.queryIndexes.DefaultTimeout
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (op.hasCreateIndex) {
+      val req = op.getCreateIndex
+      result.setInitiated(getTimeNow)
+      val start      = System.nanoTime
+      val collection = connection.collection(req.getCollection)
+      collection.queryIndexes
+        .createIndex(
+          req.getIndexName,
+          req.getFieldsList.toSeq,
+          if (req.hasOptions && req.getOptions.hasIgnoreIfExists) req.getOptions.getIgnoreIfExists
+          else false,
+          if (req.hasOptions && req.getOptions.hasNumReplicas) Some(req.getOptions.getNumReplicas)
+          else None,
+          if (req.hasOptions && req.getOptions.hasDeferred) Some(req.getOptions.getDeferred)
+          else None,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else collection.queryIndexes.DefaultTimeout
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (op.hasGetAllIndexes) {
+      val req        = op.getGetAllIndexes
+      val collection = connection.collection(req.getCollection)
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      val indexes = collection.queryIndexes
+        .getAllIndexes(
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else collection.queryIndexes.DefaultTimeout
+        )
+        .get
+      result.setSdk(
+        com.couchbase.client.protocol.sdk.Result.newBuilder
+          .setQueryIndexes(
+            com.couchbase.client.protocol.sdk.management.query.QueryIndexes.newBuilder
+              .addAllIndexes(mapQueryIndexes(indexes))
+          )
+      )
+
+      result.setElapsedNanos(System.nanoTime - start)
+    } else if (op.hasDropPrimaryIndex) {
+      val req        = op.getDropPrimaryIndex
+      val collection = connection.collection(req.getCollection)
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      collection.queryIndexes
+        .dropPrimaryIndex(
+          if (req.hasOptions && req.getOptions.hasIgnoreIfNotExists)
+            req.getOptions.getIgnoreIfNotExists
+          else false,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else collection.queryIndexes.DefaultTimeout
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (op.hasDropIndex) {
+      val req        = op.getDropIndex
+      val collection = connection.collection(req.getCollection)
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      collection.queryIndexes
+        .dropIndex(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasIgnoreIfNotExists)
+            req.getOptions.getIgnoreIfNotExists
+          else false,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else collection.queryIndexes.DefaultTimeout
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (op.hasWatchIndexes) {
+      val req        = op.getWatchIndexes
+      val collection = connection.collection(req.getCollection)
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      collection.queryIndexes
+        .watchIndexes(
+          req.getIndexNamesList.toSeq,
+          Duration(req.getTimeoutMsecs, TimeUnit.MILLISECONDS),
+          if (req.hasOptions && req.getOptions.hasWatchPrimary) req.getOptions.getWatchPrimary
+          else false
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (op.hasBuildDeferredIndexes) {
+      val req        = op.getBuildDeferredIndexes
+      val collection = connection.collection(req.getCollection)
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      collection.queryIndexes
+        .buildDeferredIndexes(
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else collection.queryIndexes.DefaultTimeout
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+      // [start:1.4.4]
+    }
+
+    result
+  }
+
+  def mapQueryIndexes(indexes: Seq[query.QueryIndex]): java.util.List[QueryIndex] = {
+    indexes
+      .map(i => {
+        val builder = QueryIndex.newBuilder
+          .setName(i.name)
+          .setIsPrimary(i.isPrimary)
+          .setType(i.typ match {
+            case QueryIndexType.View =>
+              com.couchbase.client.protocol.sdk.management.query.QueryIndexType.VIEW
+            case QueryIndexType.GSI =>
+              com.couchbase.client.protocol.sdk.management.query.QueryIndexType.GSI
+          })
+          .setState(i.state)
+          .setKeyspace(i.keyspaceId)
+          .addAllIndexKey(i.indexKey.asJava)
+          .setBucketName(i.bucketName)
+
+        i.condition.map(v => builder.setCondition(v))
+        i.partition.map(v => builder.setPartition(v))
+        i.scopeName.map(v => builder.setScopeName(v))
+        i.collectionName.map(v => builder.setCollectionName(v))
+
+        builder.build
+      })
+      .asJava
   }
 }

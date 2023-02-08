@@ -73,8 +73,12 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): Future[collection.Seq[QueryIndex]] = {
     val sn = scopeName
     val cn = collectionName
@@ -135,8 +139,12 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): Future[Unit] = {
     if (collectionName.isDefined && scopeName.isEmpty) {
       Future.failed(
@@ -196,8 +204,12 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): Future[Unit] = {
     if (collectionName.isDefined && scopeName.isEmpty) {
       Future.failed(
@@ -253,8 +265,12 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): Future[Unit] = {
     if (collectionName.isDefined && scopeName.isEmpty) {
       Future.failed(
@@ -297,8 +313,12 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): Future[Unit] = {
     if (collectionName.isDefined && scopeName.isEmpty) {
       Future.failed(
@@ -343,8 +363,12 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       timeout: Duration,
       watchPrimary: Boolean = false,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): Future[Unit] = {
     if (collectionName.isDefined && scopeName.isEmpty) {
       Future.failed(
@@ -386,8 +410,12 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): Future[Unit] = {
     if (collectionName.isDefined && scopeName.isEmpty) {
       Future.failed(

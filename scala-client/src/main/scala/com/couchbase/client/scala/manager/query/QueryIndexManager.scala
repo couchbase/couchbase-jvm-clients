@@ -45,7 +45,8 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
   private val core = async.cluster.core
   private[client] val DefaultTimeout: Duration =
     core.context().environment().timeoutConfig().managementTimeout()
-  private[client] val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
+  private[client] val DefaultRetryStrategy: RetryStrategy =
+    core.context().environment().retryStrategy()
 
   /** Gets all indexes.
     *
@@ -63,8 +64,12 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): Try[collection.Seq[QueryIndex]] = {
     Collection.block(
       async.getAllIndexes(bucketName, timeout, retryStrategy, scopeName, collectionName)
@@ -93,8 +98,12 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): Try[Unit] = {
     Collection.block(
       async.createIndex(
@@ -133,8 +142,12 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       deferred: Option[Boolean] = None,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): Try[Unit] = {
     Collection.block(
       async.createPrimaryIndex(
@@ -166,8 +179,12 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): Try[Unit] = {
     Collection.block(
       async.dropIndex(
@@ -197,8 +214,12 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       ignoreIfNotExists: Boolean = false,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): Try[Unit] = {
     Collection.block(
       async.dropPrimaryIndex(
@@ -229,8 +250,12 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       timeout: Duration,
       watchPrimary: Boolean = false,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): Try[Unit] = {
     Collection.block(
       async.watchIndexes(
@@ -257,8 +282,12 @@ class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: Executio
       bucketName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
+      @deprecated("Users should use `collection.queryIndexes()` instead") scopeName: Option[
+        String
+      ] = None,
+      @deprecated("Users should use `collection.queryIndexes()` instead") collectionName: Option[
+        String
+      ] = None
   ): Try[Unit] = {
     Collection.block(
       async.buildDeferredIndexes(bucketName, timeout, retryStrategy, scopeName, collectionName)

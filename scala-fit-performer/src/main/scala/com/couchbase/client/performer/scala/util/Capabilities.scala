@@ -33,6 +33,10 @@ object Capabilities {
 
     out.add(Caps.SDK_QUERY_INDEX_MANAGEMENT)
 
+    // [start:1.4.4]
+    out.add(Caps.SDK_COLLECTION_QUERY_INDEX_MANAGEMENT)
+    // [end:1.4.4]
+
     out
   }
 

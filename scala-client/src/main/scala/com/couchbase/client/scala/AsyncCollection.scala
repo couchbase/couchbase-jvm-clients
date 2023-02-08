@@ -32,6 +32,7 @@ import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.kv.handlers._
+import com.couchbase.client.scala.manager.query.AsyncCollectionQueryIndexManager
 import com.couchbase.client.scala.util.CoreCommonConverters.{
   convert,
   convertExpiry,
@@ -94,7 +95,12 @@ class AsyncCollection(
   private[scala] val getSubDocHandler      = new GetSubDocumentHandler(hp)
   private[scala] val getFromReplicaHandler = new GetFromReplicaHandler(hp)
   private[scala] val rangeScanOrchestrator = new RangeScanOrchestrator(core, collectionIdentifier)
-  private[scala] val kvOps                 = core.kvOps(CoreKeyspace.from(collectionIdentifier))
+  private val keyspace                     = CoreKeyspace.from(collectionIdentifier)
+  private[scala] val kvOps                 = core.kvOps(keyspace)
+
+  /** Manage query indexes for this collection */
+  @Volatile
+  lazy val queryIndexes = new AsyncCollectionQueryIndexManager(this, keyspace)
 
   val binary = new AsyncBinaryCollection(this)
 

@@ -22,12 +22,8 @@ import com.couchbase.client.scala.datastructures._
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv._
-import com.couchbase.client.scala.util.CoreCommonConverters.{
-  convert,
-  convertExpiry,
-  encoder,
-  makeCommonOptions
-}
+import com.couchbase.client.scala.manager.query.CollectionQueryIndexManager
+import com.couchbase.client.scala.util.CoreCommonConverters.{convert, convertExpiry, encoder, makeCommonOptions}
 import com.couchbase.client.scala.util.{ExpiryUtil, TimeoutUtil}
 
 import scala.concurrent.duration._
@@ -111,6 +107,10 @@ class Collection(
 
   /** Provides access to less-commonly used methods. */
   val binary = new BinaryCollection(async.binary)
+
+  /** Manage query indexes for this collection */
+  @Volatile
+  lazy val queryIndexes = new CollectionQueryIndexManager(async.queryIndexes)
 
   private[scala] val kvTimeout: Durability => Duration = TimeoutUtil.kvTimeout(async.environment)
   private[scala] val kvReadTimeout: Duration           = async.kvReadTimeout

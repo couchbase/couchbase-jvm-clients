@@ -21,6 +21,10 @@ import com.couchbase.client.scala.codec.JsonSerializer
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv._
+import com.couchbase.client.scala.manager.query.{
+  ReactiveCollectionQueryIndexManager,
+  ReactiveQueryIndexManager
+}
 import com.couchbase.client.scala.util.CoreCommonConverters.{
   convert,
   convertExpiry,
@@ -54,6 +58,10 @@ class ReactiveCollection(async: AsyncCollection) {
   private val environment                              = async.environment
   private implicit val ec: ExecutionContext            = async.ec
   private[scala] val kvOps                             = async.kvOps
+
+  /** Manage query indexes for this collection */
+  @Volatile
+  lazy val queryIndexes = new ReactiveCollectionQueryIndexManager(async.queryIndexes)
 
   def name: String       = async.name
   def bucketName: String = async.bucketName
