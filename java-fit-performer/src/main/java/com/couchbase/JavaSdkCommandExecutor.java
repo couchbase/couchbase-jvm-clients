@@ -257,10 +257,10 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             result.setElapsedNanos(System.nanoTime() - start);
             setSuccess(result);
         // [start:3.4.3]
-        } else if (op.hasQueryCollectionIndexManager()) {
-            com.couchbase.client.protocol.sdk.management.collection.query.Command command = op.getQueryCollectionIndexManager();
+        } else if (op.hasCollectionQueryIndexManager()) {
+            com.couchbase.client.protocol.sdk.management.collection.query.Command command = op.getCollectionQueryIndexManager();
 
-            handleQueryCollectionIndexManagerCommand(op, result, command);
+            handleCollectionQueryIndexManagerCommand(op, result, command);
         // [end:3.4.3]
         } else {
             throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"));
@@ -270,7 +270,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     }
 
     // [start:3.4.3]
-    private void handleQueryCollectionIndexManagerCommand(com.couchbase.client.protocol.sdk.Command op, Result.Builder result, Command command) {
+    private void handleCollectionQueryIndexManagerCommand(com.couchbase.client.protocol.sdk.Command op, Result.Builder result, Command command) {
         if (command.hasCreatePrimaryIndex()) {
             var request = command.getCreatePrimaryIndex();
             var collection = connection.collection(request.getCollection());

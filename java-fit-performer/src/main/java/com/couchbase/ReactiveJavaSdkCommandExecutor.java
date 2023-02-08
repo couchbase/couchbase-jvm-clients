@@ -247,10 +247,10 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                 setSuccess(result);
                 return Mono.just(result.build());
             // [start:3.4.3]
-            } else if (op.hasQueryCollectionIndexManager()) {
-                com.couchbase.client.protocol.sdk.management.collection.query.Command command = op.getQueryCollectionIndexManager();
+            } else if (op.hasCollectionQueryIndexManager()) {
+                com.couchbase.client.protocol.sdk.management.collection.query.Command command = op.getCollectionQueryIndexManager();
 
-                return handleQueryCollectionIndexManagerCommand(op, result, command);
+                return handleCollectionQueryIndexManagerCommand(op, result, command);
             // [end:3.4.3]
             } else {
                 return Mono.error(new UnsupportedOperationException(new IllegalArgumentException("Unknown operation")));
@@ -259,7 +259,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
     }
 
     // [start:3.4.3]
-    private Mono<Result> handleQueryCollectionIndexManagerCommand(com.couchbase.client.protocol.sdk.Command op, Result.Builder result, Command command) {
+    private Mono<Result> handleCollectionQueryIndexManagerCommand(com.couchbase.client.protocol.sdk.Command op, Result.Builder result, Command command) {
         if (command.hasCreatePrimaryIndex()) {
             var request = command.getCreatePrimaryIndex();
             var collection = connection.collection(request.getCollection()).reactive();
