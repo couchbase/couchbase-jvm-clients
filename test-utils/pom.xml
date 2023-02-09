@@ -6,12 +6,12 @@
     <parent>
         <groupId>com.couchbase.client</groupId>
         <artifactId>couchbase-jvm-clients</artifactId>
-        <version>1.13.3-SNAPSHOT</version>
+        <version>1.13.3</version>
     </parent>
 
     <name>Couchbase (Integration) Test Utilities</name>
     <artifactId>test-utils</artifactId>
-    <version>1.4.3-SNAPSHOT</version>
+    <version>1.4.3</version>
 
     <dependencies>
         <dependency>
