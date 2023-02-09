@@ -124,7 +124,7 @@ According to the Maven standard, the file is named artifact-version-javadoc.jar 
 This file can be extracted (jars are like zip files) with the following command:
 
 ```
-jar xvf java-client-3.4.2-javadoc.jar
+jar xvf java-client-3.4.3-javadoc.jar
 ```
 
 This will extract the contents of the javadoc file into the current directory. After the original jar is removed it can be uploaded to s3.
