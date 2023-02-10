@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
+import static com.couchbase.client.java.ViewIntegrationTest.upsertDesignDocWithRetries;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA},
@@ -52,7 +53,7 @@ class ViewErrorIntegrationTest extends JavaIntegrationTest {
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
     waitForService(bucket, ServiceType.VIEWS);
     DesignDocument designDocument = new DesignDocument(designDocName);
-    bucket.viewIndexes().upsertDesignDocument(designDocument, DesignDocumentNamespace.PRODUCTION);
+    upsertDesignDocWithRetries(bucket, designDocument);
   }
 
   @AfterAll

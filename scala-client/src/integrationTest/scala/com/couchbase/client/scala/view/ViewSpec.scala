@@ -29,7 +29,7 @@ import org.junit.jupiter.api.{AfterAll, BeforeAll, Disabled, Test, TestInstance}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 
 import scala.concurrent.duration.Duration._
-import scala.util.Failure
+import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 
 @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED, ClusterType.CAVES))
@@ -57,7 +57,14 @@ class ViewSpec extends ScalaIntegrationTest {
         ViewName -> View("function(doc,meta) { emit(meta.id, doc) }")
       )
     )
-    bucket.viewIndexes.upsertDesignDocument(designDoc, DesignDocumentNamespace.Production).get
+    // Trying to workaround these CI errors with retry logic:
+    // `View Query Failed: {"error":"noproc","reason":"{gen_server`
+    Util.waitUntilCondition(() => {
+      bucket.viewIndexes.upsertDesignDocument(designDoc, DesignDocumentNamespace.Production) match {
+        case Failure(_) => false
+        case Success(_) => true
+      }
+    })
     Util.waitUntilCondition(() => {
       bucket.viewIndexes
         .getDesignDocument(DesignDocName, DesignDocumentNamespace.Production)

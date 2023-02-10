@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.error.ViewServiceException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -30,10 +31,13 @@ import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.Flaky;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -49,7 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES},
   missesCapabilities = {Capabilities.VIEWS},
   isProtostellar = true)
-class ViewIntegrationTest extends JavaIntegrationTest {
+public class ViewIntegrationTest extends JavaIntegrationTest {
 
   private static final String DDOC_NAME = "everything";
   private static final String VIEW_NAME = "all";
@@ -89,13 +93,30 @@ class ViewIntegrationTest extends JavaIntegrationTest {
     cluster.disconnect();
   }
 
+  public static void upsertDesignDocWithRetries(Bucket bucket, DesignDocument designDocument) {
+    Logger logger = LoggerFactory.getLogger(ViewIntegrationTest.class);
+
+    // Trying to workaround these CI errors with retry logic:
+    // `View Query Failed: {"error":"noproc","reason":"{gen_server`
+    Util.waitUntilCondition(() -> {
+      try {
+        bucket.viewIndexes().upsertDesignDocument(designDocument, DesignDocumentNamespace.PRODUCTION);
+        return true;
+      }
+      catch (ViewServiceException err) {
+        logger.warn("Got view error: {}", err.toString());
+        return false;
+      }
+    });
+  }
+
   private static void createDesignDocument() {
     Map<String, View> views = new HashMap<>();
     views.put(VIEW_NAME, new View("function(doc,meta) { emit(meta.id, doc) }"));
     views.put(VIEW_WITH_REDUCE_NAME, new View("function(doc,meta) { emit(meta.id, doc) }", "_count"));
 
     DesignDocument designDocument = new DesignDocument(DDOC_NAME, views);
-    bucket.viewIndexes().upsertDesignDocument(designDocument, DesignDocumentNamespace.PRODUCTION);
+    upsertDesignDocWithRetries(bucket, designDocument);
   }
 
   @Disabled
