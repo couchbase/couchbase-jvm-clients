@@ -12,6 +12,7 @@ WORKDIR /app/transactions-fit-performer
 RUN mvn -T6 -q --projects gRPC/jvm --also-make install -Dcheckstyle.skip -Dmaven.test.skip -Dmaven.javadoc.skip
 
 WORKDIR /app/couchbase-jvm-clients
+RUN mvn -T6 -q -f protostellar/pom.xml clean install -Dcheckstyle.skip -Dmaven.test.skip -Dmaven.javadoc.skip
 RUN mvn -T6 -q -f core-io-deps/pom.xml clean install -Dcheckstyle.skip -Dmaven.test.skip -Dmaven.javadoc.skip
 RUN mvn -T6 package -q -pl kotlin-fit-performer -am -Dcheckstyle.skip -Dmaven.test.skip -Dmaven.javadoc.skip
 

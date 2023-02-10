@@ -86,7 +86,10 @@ object OptionsUtil {
       if (timeoutConfig == null) {
         timeoutConfig = TimeoutConfig()
       }
-      timeoutConfig = timeoutConfig.kvScanTimeout(Duration(cc.getKvScanTimeoutSecs, TimeUnit.SECONDS))
+      // [start:1.4.1]
+      timeoutConfig =
+        timeoutConfig.kvScanTimeout(Duration(cc.getKvScanTimeoutSecs, TimeUnit.SECONDS))
+      // [end:1.4.1]
     }
     if (cc.hasTranscoder) {
       clusterEnvironment.transcoder(convertTranscoder(cc.getTranscoder))

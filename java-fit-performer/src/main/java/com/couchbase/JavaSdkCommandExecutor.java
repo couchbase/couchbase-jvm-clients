@@ -539,8 +539,11 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                     .setIsPrimary(idx.primary())
                     .setState(idx.state())
                     .setKeyspace(idx.keyspace())
-                    .setType(QueryIndexType.valueOf(idx.type().toUpperCase()))
-                    .setBucketName(idx.bucketName());
+                    .setType(QueryIndexType.valueOf(idx.type().toUpperCase()));
+
+            // [start:3.2.5]
+            // bucketName also only added in 3.2.5
+            index.setBucketName(idx.bucketName());
 
             if (idx.scopeName().isPresent()) {
                 index.setScopeName(idx.scopeName().get());
@@ -549,6 +552,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (idx.collectionName().isPresent()) {
                 index.setCollectionName(idx.collectionName().get());
             }
+            // [end:3.2.5]
 
             idx.indexKey().forEach(k -> index.addIndexKey((String) k));
             if (idx.condition().isPresent()) index.setCondition(idx.condition().get());

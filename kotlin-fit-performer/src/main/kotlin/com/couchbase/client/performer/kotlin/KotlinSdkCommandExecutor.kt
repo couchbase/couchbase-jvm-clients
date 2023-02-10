@@ -23,17 +23,19 @@ import com.couchbase.client.kotlin.codec.JsonTranscoder
 import com.couchbase.client.kotlin.codec.RawBinaryTranscoder
 import com.couchbase.client.kotlin.codec.RawJsonTranscoder
 import com.couchbase.client.kotlin.codec.RawStringTranscoder
-import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_ITEM_LIMIT
-import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_SIZE_LIMIT
 import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.GetResult
-import com.couchbase.client.kotlin.kv.KvScanConsistency
 import com.couchbase.client.kotlin.kv.MutationResult
 import com.couchbase.client.kotlin.kv.PersistTo
 import com.couchbase.client.kotlin.kv.ReplicateTo
-import com.couchbase.client.kotlin.kv.ScanSort
 import com.couchbase.client.kotlin.util.StorageSize.Companion.bytes
+// [start:1.1.1]
+import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_ITEM_LIMIT
+import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_SIZE_LIMIT
+import com.couchbase.client.kotlin.kv.KvScanConsistency
+import com.couchbase.client.kotlin.kv.ScanSort
+// [end:1.1.1]
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.perf.Counters
 import com.couchbase.client.performer.core.perf.PerRun
@@ -237,6 +239,7 @@ class KotlinSdkCommandExecutor(
                 result.elapsedNanos = System.nanoTime() - start
                 if (op.returnResult) populateResult(result, r)
                 else setSuccess(result)
+            // [start:1.1.1]
             } else if (op.hasRangeScan()) {
                 val request = op.rangeScan
                 val collection = connection.collection(request.collection)
@@ -304,6 +307,7 @@ class KotlinSdkCommandExecutor(
                                 .setStreamId(streamer.streamId())
                         )
                 )
+            // [end:1.1.1]
             } else {
                 throw UnsupportedOperationException(IllegalArgumentException("Unknown operation"))
             }
