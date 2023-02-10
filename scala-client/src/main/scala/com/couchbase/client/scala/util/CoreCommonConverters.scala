@@ -43,10 +43,11 @@ import com.couchbase.client.scala.query.{
 import com.couchbase.client.scala.util.DurationConversions._
 import reactor.core.publisher.{Flux, Mono}
 import reactor.core.scala.publisher.{SFlux, SMono}
+import reactor.util.annotation.Nullable
 
 import java.util.function.Supplier
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 
@@ -139,6 +140,10 @@ private[scala] object CoreCommonConverters {
     ExistsResult(in.exists(), in.cas())
   }
 
+  def convert(in: CoreCounterResult): CounterResult = {
+    CounterResult(in.cas, in.mutationToken.asScala, in.content)
+  }
+
   def convert(in: CoreQueryResult): QueryResult = {
     QueryResult(
       in.collectRows().asScala.toSeq, // toSeq for 2.13
@@ -195,8 +200,8 @@ private[scala] object CoreCommonConverters {
     }
   }
 
-  def convert[T](in: CoreAsyncResponse[T]): Future[T] = {
-    FutureConversions.javaCFToScalaFuture(in.toFuture)
+  def convert[T](in: CoreAsyncResponse[T])(implicit ec: ExecutionContext): Future[T] = {
+    FutureConversions.javaCFToScalaFutureMappingExceptions(in.toFuture)
   }
 
   def convert[T](in: Mono[T]): SMono[T] = {
@@ -232,8 +237,11 @@ private[scala] object CoreCommonConverters {
     }
   }
 
-  def convertExpiry(in: Duration): Long = {
-    in.toSeconds
+  /** @Nullable is not very Scala, but is required for backwards compatibility in e.g. IncrementOptions
+    */
+  def convertExpiry(@Nullable in: Duration): Long = {
+    if (in == null) 0
+    else in.toSeconds
   }
 
   def convert(in: Duration): java.time.Duration = {

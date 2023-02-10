@@ -28,9 +28,6 @@ import scala.concurrent.duration.Duration
   *
   * This is a reactive version of the [[BinaryCollection]] API.  See also [[AsyncBinaryCollection]].
   *
-  * @param ec    an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
-  *              opened in the normal way, starting from functions in [[Cluster]]
-  *
   * @define Same             This reactive version performs the same functionality and takes the same parameters,
   *                          but returns the same result object asynchronously in a `SMono`.  See the equivalent
   *                          method in [[BinaryCollection]] for details.

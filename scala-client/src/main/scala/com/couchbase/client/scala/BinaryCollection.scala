@@ -27,8 +27,6 @@ import scala.util.Try
 /** Operations on non-JSON Couchbase documents.
   *
   * @param async an asynchronous version of this API
-  * @param ec    an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
-  *              opened in the normal way, starting from functions in [[Cluster]]
   *
   * @define CounterDoc      though it is common to use Couchbase to store exclusively JSON, Couchbase is actually
   *                         agnostic to what is stored.  It is possible to use a document as a 'counter' - e.g. it
@@ -69,7 +67,6 @@ import scala.util.Try
 class BinaryCollection(val async: AsyncBinaryCollection) {
   private[scala] implicit val ec: ExecutionContext     = async.ec
   private[scala] val kvTimeout: Durability => Duration = TimeoutUtil.kvTimeout(async.environment)
-  private val environment                              = async.environment
 
   /** A reactive version of this API. */
   lazy val reactive = new ReactiveBinaryCollection(async)

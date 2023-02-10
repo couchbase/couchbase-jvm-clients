@@ -105,7 +105,7 @@ class AsyncCollection(
   private[scala] val getSubDocHandler      = new GetSubDocumentHandler(hp)
   private[scala] val getFromReplicaHandler = new GetFromReplicaHandler(hp)
   private[scala] val rangeScanOrchestrator = new RangeScanOrchestrator(core, collectionIdentifier)
-  private val keyspace                     = CoreKeyspace.from(collectionIdentifier)
+  private[scala] val keyspace              = CoreKeyspace.from(collectionIdentifier)
   private[scala] val kvOps                 = core.kvOps(keyspace)
 
   /** Manage query indexes for this collection */

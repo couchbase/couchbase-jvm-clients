@@ -17,24 +17,16 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
-import com.couchbase.client.scala.kv.handlers.{
-  BinaryAppendHandler,
-  BinaryDecrementHandler,
-  BinaryIncrementHandler,
-  BinaryPrependHandler
-}
 import com.couchbase.client.scala.kv._
-import com.couchbase.client.scala.util.ExpiryUtil
+import com.couchbase.client.scala.util.CoreCommonConverters.{convert, convertExpiry}
 
+import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 /** Operations on non-JSON Couchbase documents.
   *
   * This is an asynchronous version of the [[BinaryCollection]] API.  See also [[ReactiveBinaryCollection]].
-  *
-  * @param ec    an ExecutionContext to use for any Future.  Will be supplied automatically as long as resources are
-  *              opened in the normal way, starting from functions in [[Cluster]]
   *
   * @define Same             This asynchronous version performs the same functionality and takes the same parameters,
   *                          but returns the same result object asynchronously in a `Future`.  See the equivalent
@@ -45,14 +37,9 @@ import scala.concurrent.{ExecutionContext, Future}
 class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
   private[scala] implicit val ec: ExecutionContext = async.ec
 
-  import com.couchbase.client.scala.util.DurationConversions._
-
   private[scala] val environment                       = async.environment
   private[scala] val kvTimeout: Durability => Duration = async.kvTimeout
-  private[scala] val binaryAppendHandler               = new BinaryAppendHandler(async.hp)
-  private[scala] val binaryPrependHandler              = new BinaryPrependHandler(async.hp)
-  private[scala] val binaryIncrementHandler            = new BinaryIncrementHandler(async.hp)
-  private[scala] val binaryDecrementHandler            = new BinaryDecrementHandler(async.hp)
+  private[scala] val kvBinaryOps                              = async.core.kvBinaryOps(async.keyspace)
 
   /** Add bytes to the end of a Couchbase binary document.
     *
@@ -84,19 +71,15 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       content: Array[Byte],
       options: AppendOptions
   ): Future[MutationResult] = {
-    val timeoutActual =
-      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
-    val req =
-      binaryAppendHandler.request(
+    convert(
+      kvBinaryOps.appendAsync(
         id,
         content,
+        convert(options),
         options.cas,
-        options.durability,
-        timeoutActual,
-        options.retryStrategy.getOrElse(environment.retryStrategy),
-        options.parentSpan
+        convert(options.durability)
       )
-    async.wrapWithDurability(req, id, binaryAppendHandler, options.durability, false, timeoutActual)
+    ).map(result => convert(result))
   }
 
   /** Add bytes to the beginning of a Couchbase binary document.
@@ -129,26 +112,15 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       content: Array[Byte],
       options: PrependOptions
   ): Future[MutationResult] = {
-    val timeoutActual =
-      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
-    val req =
-      binaryPrependHandler.request(
+    convert(
+      kvBinaryOps.prependAsync(
         id,
         content,
+        convert(options),
         options.cas,
-        options.durability,
-        timeoutActual,
-        options.retryStrategy.getOrElse(environment.retryStrategy),
-        options.parentSpan
+        convert(options.durability)
       )
-    async.wrapWithDurability(
-      req,
-      id,
-      binaryPrependHandler,
-      options.durability,
-      false,
-      timeoutActual
-    )
+    ).map(result => convert(result))
   }
 
   /** Increment a Couchbase 'counter' document.
@@ -178,26 +150,16 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       delta: Long,
       options: IncrementOptions
   ): Future[CounterResult] = {
-    val timeoutActual =
-      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
-    val req = binaryIncrementHandler.request(
-      id,
-      delta,
-      options.initial,
-      options.durability,
-      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-      timeoutActual,
-      options.retryStrategy.getOrElse(environment.retryStrategy),
-      options.parentSpan
-    )
-    async.wrapWithDurability(
-      req,
-      id,
-      binaryIncrementHandler,
-      options.durability,
-      false,
-      timeoutActual
-    )
+    convert(
+      kvBinaryOps.incrementAsync(
+        id,
+        convert(options),
+        convertExpiry(options.expiry),
+        delta,
+        options.initial.map(v => Long.box(v)).asJava,
+        convert(options.durability)
+      )
+    ).map(result => convert(result))
   }
 
   /** Decrement a Couchbase 'counter' document.
@@ -227,25 +189,15 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       delta: Long,
       options: DecrementOptions
   ): Future[CounterResult] = {
-    val timeoutActual =
-      if (options.timeout == Duration.MinusInf) kvTimeout(options.durability) else options.timeout
-    val req = binaryDecrementHandler.request(
-      id,
-      delta,
-      options.initial,
-      options.durability,
-      ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-      timeoutActual,
-      options.retryStrategy.getOrElse(environment.retryStrategy),
-      options.parentSpan
-    )
-    async.wrapWithDurability(
-      req,
-      id,
-      binaryDecrementHandler,
-      options.durability,
-      false,
-      timeoutActual
-    )
+    convert(
+      kvBinaryOps.decrementAsync(
+        id,
+        convert(options),
+        convertExpiry(options.expiry),
+        delta,
+        options.initial.map(v => Long.box(v)).asJava,
+        convert(options.durability)
+      )
+    ).map(result => convert(result))
   }
 }
