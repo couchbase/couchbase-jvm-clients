@@ -1,0 +1,60 @@
+= Absent Value Guidelines for Java
+
+[abstract]
+Tips for dealing with absent values in a consistent way.
+
+== @Nullable annotation
+
+All fields, parameters, and return values that allow null should be annotated with `@reactor.util.annotation.Nullable`.
+
+Fields, parameters, and return values are assumed non-nullable by default.
+
+== Container Types
+
+Follow Joshua Bloch's advice from Effective Java, Item 43: "Return empty arrays or collections, not nulls."
+
+For List, Set, Map, etc. use an empty container to represent an absent value.
+In the rare case you must distinguish between an empty container and an absent value, follow the guideline for "other" types.
+
+== User-Defined Types
+
+Consider using the https://en.wikipedia.org/wiki/Null_object_pattern[Null Object Pattern], where a special instance represents an absent value.
+Otherwise, follow the guidelines for "other" types.
+
+NOTE: The Null Object Pattern reduces the https://en.wikipedia.org/wiki/Cyclomatic_complexity[cyclomatic complexity] of your code.
+In other words, your code needs fewer branches.
+
+== Other Types
+
+=== As a parameter
+
+Annotate with `@Nullable`.
+
+Using `Optional` as a parameter type is discouraged because it forces the caller to write verbose code, and does not prevent callers from accidentally passing null.
+
+=== As a return value
+
+In the public API, prefer Optional.
+
+The public API is how we communicate with users.
+Optional is a clear, impossible-to-ignore signal that the return value might be absent.
+When used as a return value, Optional is primarily a tool for communication.
+
+In the internal API, use Optional or @Nullable at your discretion.
+
+Methods at component boundaries might use Optional to more clearly advertise their behavior to other components.
+
+Optional can be overkill when communicating with yourself, as when calling private methods.
+Nulls are less dangerous when confined to a small scope, like the internals of a component or a single class.
+
+=== As a field
+
+Prefer @Nullable, unless Optional offers a clear advantage.
+
+For example, if a field is used exclusively by an accessor that returns Optional, it's reasonable for the field to be an Optional, so the accessor doesn't need to create a new Optional on every call.
+
+== Constructors
+
+Constructors should verify that parameters not annotated as @Nullable are actually non-null.
+A simple `requireNonNull(foo)` is sufficient.
+This is a "comment with teeth", not something we expect to happen; a fancy message is not required.
