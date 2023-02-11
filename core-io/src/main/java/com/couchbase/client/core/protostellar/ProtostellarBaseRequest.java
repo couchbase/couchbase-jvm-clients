@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.core.protostellar;
 
-import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.io.netty.util.Timeout;
@@ -39,16 +39,16 @@ import java.util.function.Function;
 @Stability.Volatile
 public class ProtostellarBaseRequest implements Request<ProtostellarBaseRequest.ProtostellarResponse> {
   private final ProtostellarRequest<?> request;
-  private final Core core;
+  private final CoreProtostellar core;
 
   @Stability.Internal
-  public ProtostellarBaseRequest(Core core, ProtostellarRequest<?> request) {
+  public ProtostellarBaseRequest(CoreProtostellar core, ProtostellarRequest<?> request) {
     this.request = request;
     this.core = core;
   }
 
   /**
-   * Because the underlying {@link ProtostellarRequest> does not implement the {@link Request} interface, it cannot support all operations.
+   * Because the underlying {@link ProtostellarRequest} does not implement the {@link Request} interface, it cannot support all operations.
    * <p>
    * Ideally the Request interface, part of the public API, would be much smaller and would only contain getters; it contains the methods it does for legacy reasons.
    * <p>
@@ -90,7 +90,7 @@ public class ProtostellarBaseRequest implements Request<ProtostellarBaseRequest.
 
   @Override
   public RequestContext context() {
-    return new RequestContext(core.context(), this);
+    return new RequestContext(null, core.context().id(), core.context().environment(), core.context().authenticator(), this);
   }
 
   @Override

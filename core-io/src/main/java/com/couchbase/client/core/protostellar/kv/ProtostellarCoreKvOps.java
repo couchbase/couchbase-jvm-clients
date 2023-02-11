@@ -16,8 +16,8 @@
 
 package com.couchbase.client.core.protostellar.kv;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.kv.CoreDurability;
@@ -60,10 +60,10 @@ import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public final class ProtostellarCoreKvOps implements CoreKvOps {
-  private final Core core;
+  private final CoreProtostellar core;
   private final CoreKeyspace keyspace;
 
-  public ProtostellarCoreKvOps(Core core, CoreKeyspace keyspace) {
+  public ProtostellarCoreKvOps(CoreProtostellar core, CoreKeyspace keyspace) {
     this.core = requireNonNull(core);
     this.keyspace = requireNonNull(keyspace);
   }

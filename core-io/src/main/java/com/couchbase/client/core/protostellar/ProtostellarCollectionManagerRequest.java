@@ -15,35 +15,40 @@
  */
 package com.couchbase.client.core.protostellar;
 
-import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.core.util.Validators.notNull;
-
+import com.couchbase.client.core.CoreProtostellar;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.service.ServiceType;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.couchbase.client.core.Core;
-import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.service.ServiceType;
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.util.Validators.notNull;
 
 @Stability.Internal
 public class ProtostellarCollectionManagerRequest<TGrpcRequest> extends ProtostellarRequest<TGrpcRequest> {
-  /**
-   * Protstellar Collection Manager Request
-   */
   private final String bucketName;
   private final @Nullable String scopeName;
   private final @Nullable String collectionName;
 
-  public ProtostellarCollectionManagerRequest(Core core, String bucketName, @Nullable String scopeName,
-      @Nullable String collectionName, String requestName, RequestSpan span, Duration timeout, boolean idempotent,
-      RetryStrategy retryStrategy, Map<String, Object> clientContext) {
+  public ProtostellarCollectionManagerRequest(
+    CoreProtostellar core,
+    String bucketName,
+    @Nullable String scopeName,
+    @Nullable String collectionName,
+    String requestName,
+    RequestSpan span,
+    Duration timeout,
+    boolean idempotent,
+    RetryStrategy retryStrategy,
+    Map<String, Object> clientContext
+  ) {
     super(core, ServiceType.KV, requestName, span, timeout, idempotent, retryStrategy, clientContext);
-    this.bucketName =  notNull(bucketName, "Bucket name must not be null");
+    this.bucketName = notNull(bucketName, "bucket name");
     this.scopeName = scopeName;
     this.collectionName = collectionName;
   }

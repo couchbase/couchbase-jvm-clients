@@ -16,8 +16,9 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.AbstractContext;
+import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointStateChangedEvent;
 import com.couchbase.client.core.deps.io.grpc.Attributes;
 import com.couchbase.client.core.deps.io.grpc.CallCredentials;
@@ -37,8 +38,10 @@ import com.couchbase.client.core.deps.io.grpc.Status;
 import com.couchbase.client.core.deps.io.grpc.netty.NettyChannelBuilder;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelOption;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
+import com.couchbase.client.core.protostellar.ProtostellarContext;
 import com.couchbase.client.core.protostellar.ProtostellarStatsCollector;
 import com.couchbase.client.core.util.Deadline;
 import com.couchbase.client.core.util.HostAndPort;
@@ -55,11 +58,14 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Wraps a GRPC ManagedChannel.
@@ -79,24 +85,24 @@ public class ProtostellarEndpoint {
   private final QueryGrpc.QueryStub queryStub;
   private final HooksGrpc.HooksBlockingStub hooksBlockingStub;
   private final CollectionAdminGrpc.CollectionAdminFutureStub collectionAdminStub;
-  private final String hostname;
-  private final int port;
-  private final Core core;
+  private final HostAndPort remote;
+  private final CoreEnvironment env;
+  private final ProtostellarContext ctx;
 
-  public ProtostellarEndpoint(Core core, String hostname, final int port) {
+  public ProtostellarEndpoint(ProtostellarContext ctx, HostAndPort remote) {
     // JVMCBC-1187: This is a temporary solution to get performance testing working, which will be removed pre-GA.
     // The issue is that we send in protostellar://cbs as a connection string because the Couchbase cluster is running in a Docker container named "cbs", and the performer is also running in a Docker container.
     // However, Stellar Nebula is running normally, not in a container, so must be accessed with "localhost" instead.
     // So we pass a connection string of "protostellar://cbs" and "com.couchbase.protostellar.overrideHostname"="localhost".
     String override = System.getProperty("com.couchbase.protostellar.overrideHostname");
     // JVMCBC-1187: all Protostellar logging will be tidied up or removed pre-GA.
-    logger.info("creating {} {}, override={}", hostname, port, override);
-    if (override != null) {
-      hostname = override;
-    }
-    this.hostname = hostname;
-    this.port = port;
-    this.core = core;
+    logger.info("creating {}, override={}", remote, override);
+    this.remote = override != null
+      ? new HostAndPort(override, remote.port())
+      : remote;
+
+    this.ctx = requireNonNull(ctx);
+    this.env = ctx.environment();
     this.managedChannel = channel();
 
 
@@ -111,7 +117,7 @@ public class ProtostellarEndpoint {
         executor.execute(() -> {
           try {
             Metadata headers = new Metadata();
-            core.context().authenticator().authProtostellarRequest(headers);
+            ctx.authenticator().authProtostellarRequest(headers);
             applier.apply(headers);
           } catch (Throwable e) {
             applier.fail(Status.UNAUTHENTICATED.withCause(e));
@@ -202,14 +208,14 @@ public class ProtostellarEndpoint {
   }
 
   private ManagedChannel channel() {
-    logger.info("making channel {} {}", hostname, port);
+    logger.info("making channel {}", remote);
 
     // JVMCBC-1187: we're using unverified TLS for now - once STG has it we can use the same Capella cert bundling approach and use TLS properly.
-    ManagedChannelBuilder builder = NettyChannelBuilder.forAddress(hostname, port, InsecureChannelCredentials.create())
+    ManagedChannelBuilder builder = NettyChannelBuilder.forAddress(remote.host(), remote.port(), InsecureChannelCredentials.create())
       // 20MB is the (current) maximum document size supported by the server.  Specifying 21MB to give wiggle room for the rest of the GRPC message.
-      .maxInboundMessageSize(22020096)
-      .executor(core.context().environment().executor())
-      .withOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) core.context().environment().timeoutConfig().connectTimeout().toMillis())
+      .maxInboundMessageSize(21 * 1024 * 1024) // Max Couchbase document size (20 MiB) plus some slack
+      .executor(env.executor())
+      .withOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) env.timeoutConfig().connectTimeout().toMillis())
       // Retry strategies to be determined, but presumably we will need something custom rather than what GRPC provides
       .disableRetry();
 
@@ -229,13 +235,13 @@ public class ProtostellarEndpoint {
       if (single) {
         List<SocketAddress> adds = new ArrayList<>();
         for (int i = 0; i < count; i ++) {
-          adds.add(new InetSocketAddress(hostname, port));
+          adds.add(newInetSocketAddress(remote));
         }
         addresses.add(new EquivalentAddressGroup(adds));
       }
       else {
         for (int i = 0; i < count; i ++) {
-          addresses.add(new EquivalentAddressGroup(new InetSocketAddress(hostname, port)));
+          addresses.add(new EquivalentAddressGroup(newInetSocketAddress(remote)));
         }
       }
 
@@ -249,23 +255,36 @@ public class ProtostellarEndpoint {
     return builder.build();
   }
 
+  private static InetSocketAddress newInetSocketAddress(HostAndPort hostAndPort) {
+    return new InetSocketAddress(hostAndPort.host(), hostAndPort.port());
+  }
+
   private void notifyOnChannelStateChange(ConnectivityState current) {
     this.managedChannel.notifyWhenStateChanged(current, () -> {
       ConnectivityState now = this.managedChannel.getState(false);
       logger.info("channel has changed state from {}/{} to {}/{}", current, convert(current), now, convert(now));
 
-      EndpointContext ec = new EndpointContext(core.context(),
-        new HostAndPort(hostname, port),
-        null,
-        null,
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty());
-
-      core.context().environment().eventBus().publish(new EndpointStateChangedEvent(ec, convert(current), convert(now)));
+      Context ec = new ProtostellarEndpointContext(ctx, remote);
+      env.eventBus().publish(new EndpointStateChangedEvent(ec, convert(current), convert(now)));
 
       notifyOnChannelStateChange(now);
     });
+  }
+
+  private static class ProtostellarEndpointContext extends AbstractContext {
+    private final ProtostellarContext ctx;
+    private final HostAndPort remote;
+
+    public ProtostellarEndpointContext(ProtostellarContext ctx, HostAndPort remote) {
+      this.ctx = requireNonNull(ctx);
+      this.remote = requireNonNull(remote);
+    }
+
+    @Override
+    public void injectExportableParams(final Map<String, Object> input) {
+      ctx.injectExportableParams(input);
+      input.put("remote", remote.toString());
+    }
   }
 
   private static EndpointState convert(ConnectivityState state) {
@@ -291,7 +310,7 @@ public class ProtostellarEndpoint {
       CircuitBreaker.State.CLOSED,
       // Don't have easy access to the local hostname - try to resolve under JVMCBC-1189
       null,
-      hostname,
+      remote.format(),
       Optional.empty(),
       Optional.empty(),
       Optional.empty(),
@@ -343,12 +362,8 @@ public class ProtostellarEndpoint {
     return shutdown.get();
   }
 
-  public String hostname() {
-    return hostname;
-  }
-
-  public int port() {
-    return port;
+  public HostAndPort hostAndPort() {
+    return remote;
   }
 
   /**
@@ -360,7 +375,7 @@ public class ProtostellarEndpoint {
   public CompletableFuture<Void> waitUntilReady(Deadline deadline, boolean waitingForReady) {
     CompletableFuture<Void> onDone = new CompletableFuture<>();
     ConnectivityState current = managedChannel.getState(true);
-    logger.debug("WaitUntilReady: Endpoint {}:{} starts in state {}", hostname, port, current);
+    logger.debug("WaitUntilReady: Endpoint {} starts in state {}", remote, current);
     notify(current, onDone, deadline, waitingForReady);
     return onDone;
   }
@@ -372,12 +387,12 @@ public class ProtostellarEndpoint {
     else {
       this.managedChannel.notifyWhenStateChanged(current, () -> {
         ConnectivityState now = this.managedChannel.getState(true);
-        logger.debug("WaitUntilReady: Endpoint {}:{} is now in state {}", hostname, port, now);
+        logger.debug("WaitUntilReady: Endpoint {} is now in state {}", remote, now);
 
         if (inDesiredState(current, waitingForReady)) {
           onDone.complete(null);
         } else if (deadline.exceeded()) {
-          onDone.completeExceptionally(new UnambiguousTimeoutException("Timed out while waiting for Protostellar endpoint " + hostname + ":" + port, new CancellationErrorContext(null)));
+          onDone.completeExceptionally(new UnambiguousTimeoutException("Timed out while waiting for Protostellar endpoint " + remote, new CancellationErrorContext(null)));
         } else {
           notify(now, onDone, deadline, waitingForReady);
         }

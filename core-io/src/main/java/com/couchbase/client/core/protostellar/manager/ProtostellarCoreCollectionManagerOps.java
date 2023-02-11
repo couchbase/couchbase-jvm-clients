@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.core.protostellar.manager;
 
-import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.config.CollectionsManifest;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
@@ -41,10 +41,10 @@ import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public final class ProtostellarCoreCollectionManagerOps implements CoreCollectionManager {
-  private final Core core;
+  private final CoreProtostellar core;
   private final String bucketName;
 
-  public ProtostellarCoreCollectionManagerOps(Core core, String bucketName) {
+  public ProtostellarCoreCollectionManagerOps(CoreProtostellar core, String bucketName) {
     this.core = requireNonNull(core);
     this.bucketName = requireNonNull(bucketName);
   }

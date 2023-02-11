@@ -16,12 +16,15 @@
 
 package com.couchbase.client.core.msg;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
+import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.util.HostAndPort;
@@ -40,6 +43,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.Validators.notNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Additional context which might be attached to an individual {@link Request}.
@@ -123,16 +127,21 @@ public class RequestContext extends CoreContext {
    */
   private volatile Duration lastRetryDuration;
 
-  /**
-   * Creates a new {@link RequestContext}.
-   *
-   * @param ctx the core context.
-   * @param request the linked request.
-   */
   @Stability.Internal
   public RequestContext(CoreContext ctx, final Request<? extends Response> request) {
-    super(ctx.core(), ctx.id(), ctx.environment(), ctx.authenticator());
-    this.request = request;
+    this(ctx.core(), ctx.id(), ctx.environment(), ctx.authenticator(), request);
+  }
+
+  @Stability.Internal
+  public RequestContext(
+    @Nullable Core core, // Protostellar doesn't have this kind of core :-/
+    long contextId,
+    CoreEnvironment environment,
+    Authenticator authenticator,
+    Request<? extends Response> request
+  ) {
+    super(core, contextId, environment, authenticator);
+    this.request = requireNonNull(request);
     this.retryAttempts = new AtomicInteger(0);
   }
 

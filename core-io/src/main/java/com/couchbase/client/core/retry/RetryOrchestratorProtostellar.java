@@ -16,8 +16,7 @@
 
 package com.couchbase.client.core.retry;
 
-import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.request.RequestNotRetriedEvent;
@@ -27,6 +26,7 @@ import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.protostellar.ProtostellarBaseRequest;
+import com.couchbase.client.core.protostellar.ProtostellarContext;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
 
 import java.time.Duration;
@@ -37,8 +37,8 @@ import static com.couchbase.client.core.retry.RetryOrchestrator.controlledBackof
 @Stability.Internal
 public class RetryOrchestratorProtostellar {
 
-  public static ProtostellarRequestBehaviour shouldRetry(Core core, ProtostellarRequest<?> request, RetryReason reason) {
-    CoreContext ctx = core.context();
+  public static ProtostellarRequestBehaviour shouldRetry(CoreProtostellar core, ProtostellarRequest<?> request, RetryReason reason) {
+    ProtostellarContext ctx = core.context();
 
     if (request.timeoutElapsed()) {
       CancellationErrorContext cancelContext = new CancellationErrorContext(request.context());
@@ -85,7 +85,7 @@ public class RetryOrchestratorProtostellar {
     throw new IllegalStateException("Internal bug - should not reach here");
   }
 
-  private static ProtostellarRequestBehaviour retryWithDuration(final CoreContext ctx, final ProtostellarRequest<?> request,
+  private static ProtostellarRequestBehaviour retryWithDuration(final ProtostellarContext ctx, final ProtostellarRequest<?> request,
                                         final Duration duration, final RetryReason reason) {
     Duration cappedDuration = capDuration(duration, request);
     ctx.environment().eventBus().publish(

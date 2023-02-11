@@ -74,10 +74,11 @@ import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.node.ViewLocator;
+import com.couchbase.client.core.protostellar.ProtostellarContext;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvBinaryOps;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
-import com.couchbase.client.core.protostellar.query.ProtostellarCoreQueryOps;
 import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
+import com.couchbase.client.core.protostellar.query.ProtostellarCoreQueryOps;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
@@ -85,13 +86,13 @@ import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
 import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.transaction.context.CoreTransactionsContext;
 import com.couchbase.client.core.util.ConnectionString;
+import com.couchbase.client.core.util.CoreIdGenerator;
 import com.couchbase.client.core.util.NanoTimestamp;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -105,7 +106,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -121,16 +121,6 @@ import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
  */
 @Stability.Volatile
 public class Core implements AutoCloseable {
-
-  /**
-   * A reasonably unique instance ID.
-   */
-  private static final int GLOBAL_ID = new SecureRandom().nextInt();
-
-  /**
-   * Counts up core ids for each new instance.
-   */
-  private static final AtomicInteger CORE_IDS = new AtomicInteger();
 
   /**
    * Locates the right node for the KV service.
@@ -297,7 +287,7 @@ public class Core implements AutoCloseable {
 
     this.connectionString = connectionString;
     this.seedNodes = seedNodes;
-    this.coreContext = new CoreContext(this, createInstanceId(), environment, authenticator);
+    this.coreContext = new CoreContext(this, CoreIdGenerator.nextId(), environment, authenticator);
     this.configurationProvider = createConfigurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
     this.eventBus = environment.eventBus();
@@ -321,12 +311,9 @@ public class Core implements AutoCloseable {
     boolean isProtostellar = (!seedNodes.isEmpty() && seedNodes.stream().findFirst().get().protostellarPort().isPresent()) ||
       (connectionString != null && connectionString.scheme() == ConnectionString.Scheme.PROTOSTELLAR);
 
-    if (isProtostellar) {
-      this.protostellar = new CoreProtostellar(this, authenticator, seedNodes);
-    }
-    else {
-      this.protostellar = null;
-    }
+    this.protostellar = isProtostellar
+      ? new CoreProtostellar(new ProtostellarContext(environment, authenticator), seedNodes)
+      : null;
 
     eventBus.publish(new CoreCreatedEvent(coreContext, environment, seedNodes, CoreLimiter.numInstances(), connectionString));
 
@@ -348,21 +335,6 @@ public class Core implements AutoCloseable {
   @Stability.Internal
   public CoreProtostellar protostellar() {
     return protostellar;
-  }
-
-  /**
-   * Creates a (somewhat) globally unique ID for this instance.
-   * <p>
-   * The 64 bit long is split up into an upper and lower 32 bit halves. The upper half
-   * is reusing the same global ID for all instances while the lower half is always
-   * incrementing for each instance. So it has a global and a local component which can
-   * be used to correlate instances across logs but also help distinguish multiple
-   * instances in the same JVM.
-   *
-   * @return the created instance ID.
-   */
-  private long createInstanceId() {
-    return (((long) GLOBAL_ID) << 32) | (CORE_IDS.incrementAndGet() & 0xffffffffL);
   }
 
   /**
@@ -1040,28 +1012,28 @@ public class Core implements AutoCloseable {
   @Stability.Internal
   public CoreKvOps kvOps(CoreKeyspace keyspace) {
     return isProtostellar()
-      ? new ProtostellarCoreKvOps(this, keyspace)
+      ? new ProtostellarCoreKvOps(protostellar, keyspace)
       : new ClassicCoreKvOps(this, keyspace);
   }
 
   @Stability.Internal
   public CoreQueryOps queryOps() {
     return isProtostellar()
-      ? new ProtostellarCoreQueryOps(this)
+      ? new ProtostellarCoreQueryOps(protostellar)
       : new ClassicCoreQueryOps(this);
   }
 
   @Stability.Internal
   public CoreKvBinaryOps kvBinaryOps(CoreKeyspace keyspace) {
     return isProtostellar()
-      ? new ProtostellarCoreKvBinaryOps(this, keyspace)
+      ? new ProtostellarCoreKvBinaryOps(protostellar, keyspace)
       : new ClassicCoreKvBinaryOps(this, keyspace);
   }
 
   @Stability.Internal
   public CoreCollectionManager collectionManager(String bucketName) {
     return isProtostellar()
-      ? new ProtostellarCoreCollectionManagerOps(this, bucketName)
+      ? new ProtostellarCoreCollectionManagerOps(protostellar, bucketName)
       : new ClassicCoreCollectionManagerOps(this, bucketName);
   }
 
@@ -1090,6 +1062,14 @@ public class Core implements AutoCloseable {
     public ResponseMetricIdentifier(final String serviceType, final String requestName) {
       this.serviceType = serviceType;
       this.requestName = requestName;
+    }
+
+    public String serviceType() {
+      return serviceType;
+    }
+
+    public String requestName() {
+      return requestName;
     }
 
     @Override

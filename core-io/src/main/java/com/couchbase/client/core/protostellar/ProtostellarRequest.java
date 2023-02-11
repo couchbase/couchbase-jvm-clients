@@ -16,6 +16,7 @@
 package com.couchbase.client.core.protostellar;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
@@ -48,7 +49,7 @@ import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.conver
  */
 @Stability.Internal
 public class ProtostellarRequest<TGrpcRequest> {
-  private final Core core;
+  private final CoreProtostellar core;
   private final @Nullable RequestSpan span;
   private final long absoluteTimeout;
 
@@ -82,7 +83,7 @@ public class ProtostellarRequest<TGrpcRequest> {
    */
   private volatile State state = State.INCOMPLETE;
 
-  public ProtostellarRequest(Core core,
+  public ProtostellarRequest(CoreProtostellar core,
                              ServiceType serviceType,
                              String requestName,
                              RequestSpan span,

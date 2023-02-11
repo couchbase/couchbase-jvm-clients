@@ -15,15 +15,8 @@
  */
 package com.couchbase.client.core.protostellar.kv;
 
-import static com.couchbase.client.core.api.kv.CoreKvBinaryParamValidators.validateAppendPrependArgs;
-import static com.couchbase.client.core.api.kv.CoreKvBinaryParamValidators.validateIncrementDecrementArgs;
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
-
-import java.time.Duration;
-import java.util.Optional;
-
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -37,6 +30,13 @@ import com.couchbase.client.protostellar.kv.v1.DecrementRequest;
 import com.couchbase.client.protostellar.kv.v1.IncrementRequest;
 import com.couchbase.client.protostellar.kv.v1.PrependRequest;
 
+import java.time.Duration;
+import java.util.Optional;
+
+import static com.couchbase.client.core.api.kv.CoreKvBinaryParamValidators.validateAppendPrependArgs;
+import static com.couchbase.client.core.api.kv.CoreKvBinaryParamValidators.validateIncrementDecrementArgs;
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
+
 @Stability.Internal
 public class CoreProtoStellarKvBinaryRequests {
 
@@ -44,10 +44,10 @@ public class CoreProtoStellarKvBinaryRequests {
    * For creating Protostellar GRPC requests.
    */
 
-  public static ProtostellarRequest<AppendRequest> appendRequest(Core core, String key, CoreKeyspace keyspace,
-      CoreCommonOptions opts, byte[] content, long cas, CoreDurability durability) {
-    validateAppendPrependArgs(core, key, keyspace, opts, content, cas, durability);
-    Duration timeout =  CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
+  public static ProtostellarRequest<AppendRequest> appendRequest(CoreProtostellar core, String key, CoreKeyspace keyspace,
+                                                                 CoreCommonOptions opts, byte[] content, long cas, CoreDurability durability) {
+    validateAppendPrependArgs(key, keyspace, opts, content, cas, durability);
+    Duration timeout = CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
 
     ProtostellarRequest<AppendRequest> out = new ProtostellarKeyValueRequest<>(core,
       keyspace,
@@ -75,11 +75,11 @@ public class CoreProtoStellarKvBinaryRequests {
     return out.request(request.build());
   }
 
-  public static ProtostellarRequest<PrependRequest> prependRequest(Core core, String key, CoreKeyspace keyspace,
-      CoreCommonOptions opts, byte[] content, long cas, CoreDurability durability) {
+  public static ProtostellarRequest<PrependRequest> prependRequest(CoreProtostellar core, String key, CoreKeyspace keyspace,
+                                                                   CoreCommonOptions opts, byte[] content, long cas, CoreDurability durability) {
 
-    validateAppendPrependArgs(core, key, keyspace, opts, content, cas, durability);
-    Duration timeout =  CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
+    validateAppendPrependArgs(key, keyspace, opts, content, cas, durability);
+    Duration timeout = CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
 
     ProtostellarRequest<PrependRequest> out = new ProtostellarKeyValueRequest<>(core,
       keyspace,
@@ -107,10 +107,10 @@ public class CoreProtoStellarKvBinaryRequests {
     return out.request(request.build());
   }
 
-  public static ProtostellarRequest<IncrementRequest> incrementRequest(Core core, String key, CoreKeyspace keyspace,
-      CoreCommonOptions opts, long expiry, long delta, Optional<Long> initial, CoreDurability durability) {
+  public static ProtostellarRequest<IncrementRequest> incrementRequest(CoreProtostellar core, String key, CoreKeyspace keyspace,
+                                                                       CoreCommonOptions opts, long expiry, long delta, Optional<Long> initial, CoreDurability durability) {
 
-    validateIncrementDecrementArgs(core, key, keyspace, opts, expiry,delta,initial , durability);
+    validateIncrementDecrementArgs(key, keyspace, opts, expiry, delta, initial, durability);
     Duration timeout = CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
 
     ProtostellarRequest<IncrementRequest> out = new ProtostellarKeyValueRequest<>(core,
@@ -125,8 +125,8 @@ public class CoreProtoStellarKvBinaryRequests {
       opts.clientContext());
 
     IncrementRequest.Builder request = com.couchbase.client.protostellar.kv.v1.IncrementRequest.newBuilder()
-        .setBucketName(keyspace.bucket()).setScopeName(keyspace.scope()).setCollectionName(keyspace.collection())
-        .setKey(key).setDelta(delta).setInitial(initial.orElse(0L));
+      .setBucketName(keyspace.bucket()).setScopeName(keyspace.scope()).setCollectionName(keyspace.collection())
+      .setKey(key).setDelta(delta).setInitial(initial.orElse(0L));
 
     if (expiry != 0) {
       request.setExpiry(CoreProtostellarUtil.convertExpiry(expiry));
@@ -138,11 +138,11 @@ public class CoreProtoStellarKvBinaryRequests {
     return out.request(request.build());
   }
 
-  public static ProtostellarRequest<DecrementRequest> decrementRequest(Core core, String key, CoreKeyspace keyspace,
-      CoreCommonOptions opts, long expiry, long delta, Optional<Long> initial, CoreDurability durability) {
+  public static ProtostellarRequest<DecrementRequest> decrementRequest(CoreProtostellar core, String key, CoreKeyspace keyspace,
+                                                                       CoreCommonOptions opts, long expiry, long delta, Optional<Long> initial, CoreDurability durability) {
 
-    validateIncrementDecrementArgs(core, key, keyspace, opts, expiry,delta,initial , durability);
-    Duration timeout =  CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
+    validateIncrementDecrementArgs(key, keyspace, opts, expiry, delta, initial, durability);
+    Duration timeout = CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
 
     ProtostellarRequest<DecrementRequest> out = new ProtostellarKeyValueRequest<>(core,
       keyspace,

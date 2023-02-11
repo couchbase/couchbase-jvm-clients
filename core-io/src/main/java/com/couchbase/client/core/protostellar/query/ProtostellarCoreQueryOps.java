@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.core.protostellar.query;
 
-import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.kv.CoreDurability;
@@ -61,14 +61,15 @@ import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handle
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownReactive;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.unsupportedInProtostellar;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static java.util.Objects.requireNonNull;
 
 
 @Stability.Internal
 public class ProtostellarCoreQueryOps implements CoreQueryOps {
-  private final Core core;
+  private final CoreProtostellar core;
 
-  public ProtostellarCoreQueryOps(Core core) {
-    this.core = core;
+  public ProtostellarCoreQueryOps(CoreProtostellar core) {
+    this.core = requireNonNull(core);
   }
 
   @Override
@@ -110,7 +111,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
       }
     };
 
-    core.protostellar().endpoint().queryStub()
+    core.endpoint().queryStub()
       .withDeadline(request.deadline())
       .query(request.request(), response);
 
@@ -168,7 +169,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
       }
     };
 
-    core.protostellar().endpoint().queryStub()
+    core.endpoint().queryStub()
       .withDeadline(request.deadline())
       .query(request.request(), response);
 
@@ -215,7 +216,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
         }
       };
 
-      core.protostellar().endpoint().queryStub()
+      core.endpoint().queryStub()
               .withDeadline(request.deadline())
               .query(request.request(), response);
 
@@ -234,7 +235,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
     return new RuntimeException(throwable);
   }
 
-  private static ProtostellarRequest<QueryRequest> request(Core core,
+  private static ProtostellarRequest<QueryRequest> request(CoreProtostellar core,
                                                            String statement,
                                                            CoreQueryOptions opts,
                                                            @Nullable CoreQueryContext queryContext) {

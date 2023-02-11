@@ -17,6 +17,7 @@
 package com.couchbase.client.core.cnc.events.endpoint;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
+import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.EndpointState;
 
@@ -31,6 +32,10 @@ public class EndpointStateChangedEvent extends AbstractEvent {
   private final EndpointState newState;
 
   public EndpointStateChangedEvent(EndpointContext context, EndpointState oldState, EndpointState newState) {
+    this((Context) context, oldState, newState);
+  }
+
+  public EndpointStateChangedEvent(Context context, EndpointState oldState, EndpointState newState) {
     super(Severity.DEBUG, Category.ENDPOINT, Duration.ZERO, context);
     this.oldState = oldState;
     this.newState = newState;

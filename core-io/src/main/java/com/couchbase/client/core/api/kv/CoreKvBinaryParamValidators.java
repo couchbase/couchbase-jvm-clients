@@ -15,9 +15,9 @@
  */
 package com.couchbase.client.core.api.kv;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 
 import java.util.Optional;
@@ -28,10 +28,9 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 public class CoreKvBinaryParamValidators {
 
-  public static void validateAppendPrependArgs(Core core, String key, CoreKeyspace keyspace, CoreCommonOptions options,
+  public static void validateAppendPrependArgs(String key, CoreKeyspace keyspace, CoreCommonOptions options,
                                                byte[] content, long cas, CoreDurability durability) {
-    Supplier supplier = () -> ReducedKeyValueErrorContext.create(key, keyspace.toCollectionIdentifier());
-    notNull(core, "core", supplier);
+    Supplier<ErrorContext> supplier = () -> ReducedKeyValueErrorContext.create(key, keyspace.toCollectionIdentifier());
     notNullOrEmpty(key, "Id", supplier);
     notNull(keyspace, "Keyspace", supplier);
     notNull(options, "Options", supplier);
@@ -39,10 +38,9 @@ public class CoreKvBinaryParamValidators {
     notNull(durability, "Durability", supplier);
   }
 
-  public static void validateIncrementDecrementArgs(Core core, String key, CoreKeyspace keyspace,
+  public static void validateIncrementDecrementArgs(String key, CoreKeyspace keyspace,
                                                     CoreCommonOptions options, long expiry, long delta, Optional<Long> initial, CoreDurability durability) {
-    Supplier supplier = () -> ReducedKeyValueErrorContext.create(key, keyspace.toCollectionIdentifier());
-    notNull(core, "core", supplier);
+    Supplier<ErrorContext> supplier = () -> ReducedKeyValueErrorContext.create(key, keyspace.toCollectionIdentifier());
     notNullOrEmpty(key, "Id", supplier);
     notNull(keyspace, "Keyspace", supplier);
     notNull(options, "Options", supplier);
@@ -50,11 +48,4 @@ public class CoreKvBinaryParamValidators {
     notNull(durability, "Durability", supplier);
   }
 
-  public static void validateCore(Core core) {
-    notNull(core, "Core");
-  }
-
-  public static void validateKeyspace(CoreKeyspace keyspace) {
-    notNull(keyspace, "Keyspace");
-  }
 }

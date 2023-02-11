@@ -46,10 +46,10 @@ public class ProtostellarOrphanReporterTest extends ClusterAwareIntegrationTest 
       String hooksContextId = UUID.randomUUID().toString();
       String barrierId = UUID.randomUUID().toString();
 
-      env.core().protostellar().endpoint().hooksBlockingStub().createHooksContext(CreateHooksContextRequest.newBuilder().setId(hooksContextId).build());
+      env.core().endpoint().hooksBlockingStub().createHooksContext(CreateHooksContextRequest.newBuilder().setId(hooksContextId).build());
 
       try {
-        env.core().protostellar().endpoint().hooksBlockingStub().addHooks(AddHooksRequest.newBuilder()
+        env.core().endpoint().hooksBlockingStub().addHooks(AddHooksRequest.newBuilder()
           .setHooksContextId(hooksContextId)
           .addHooks(Hook.newBuilder()
             .setTargetMethod("") // todo what here?
@@ -65,14 +65,14 @@ public class ProtostellarOrphanReporterTest extends ClusterAwareIntegrationTest 
         try {
           result.block();
         } catch (TimeoutException err) {
-          env.core().protostellar().endpoint().hooksBlockingStub().signalBarrier(SignalBarrierRequest.newBuilder()
+          env.core().endpoint().hooksBlockingStub().signalBarrier(SignalBarrierRequest.newBuilder()
             .setBarrierId(barrierId)
             .build());
 
           // todo wait for and validate orphan response
         }
       } finally {
-        env.core().protostellar().endpoint().hooksBlockingStub().destroyHooksContext(DestroyHooksContextRequest.newBuilder().setId(hooksContextId).build());
+        env.core().endpoint().hooksBlockingStub().destroyHooksContext(DestroyHooksContextRequest.newBuilder().setId(hooksContextId).build());
       }
     }
   }

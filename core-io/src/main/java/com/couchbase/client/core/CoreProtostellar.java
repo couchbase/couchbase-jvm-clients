@@ -17,42 +17,43 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.endpoint.ProtostellarEndpoint;
 import com.couchbase.client.core.endpoint.ProtostellarPool;
-import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.SeedNode;
-import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.protostellar.ProtostellarContext;
+import com.couchbase.client.core.util.HostAndPort;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class CoreProtostellar {
-  /**
-   * The default port used for Protostellar.
-   */
   public static final int DEFAULT_PROTOSTELLAR_TLS_PORT = 18098;
 
-
   private final ProtostellarPool pool;
-  private final Set<SeedNode> seedNodes;
-  private final Core core;
+  private final ProtostellarContext ctx;
 
-  public CoreProtostellar(final Core core, final Authenticator authenticator, final Set<SeedNode> seedNodes) {
-    if (core.context().environment().securityConfig().tlsEnabled() && !authenticator.supportsTls()) {
-      throw new InvalidArgumentException("TLS enabled but the Authenticator does not support TLS!", null, null);
-    } else if (!core.context().environment().securityConfig().tlsEnabled() && !authenticator.supportsNonTls()) {
-      throw new InvalidArgumentException("TLS not enabled but the Authenticator does only support TLS!", null, null);
-    }
+  public CoreProtostellar(ProtostellarContext ctx, final Set<SeedNode> seedNodes) {
+    this.ctx = requireNonNull(ctx);
+    notNullOrEmpty(seedNodes, "seed nodes");
 
-    if (seedNodes.isEmpty()) {
-      throw new IllegalStateException("Have no seed nodes");
-    }
+    SeedNode first = seedNodes.iterator().next();
+    int port = first.protostellarPort().orElse(DEFAULT_PROTOSTELLAR_TLS_PORT);
+    HostAndPort remote = new HostAndPort(first.address(), port);
 
-    this.seedNodes = seedNodes;
-    this.core = core;
-    SeedNode first = seedNodes.stream().findFirst().get();
-    this.pool = new ProtostellarPool(core, first.address(), first.protostellarPort().orElse(DEFAULT_PROTOSTELLAR_TLS_PORT));
+    this.pool = new ProtostellarPool(ctx, remote);
+  }
+
+  public ProtostellarContext context() {
+    return ctx;
   }
 
   public void shutdown(final Duration timeout) {
@@ -65,5 +66,17 @@ public class CoreProtostellar {
 
   public ProtostellarPool pool() {
     return pool;
+  }
+
+  private final Map<Core.ResponseMetricIdentifier, ValueRecorder> responseMetrics = new ConcurrentHashMap<>();
+
+  @Stability.Internal
+  public ValueRecorder responseMetric(final Core.ResponseMetricIdentifier rmi) {
+    return responseMetrics.computeIfAbsent(rmi, key -> {
+      Map<String, String> tags = new HashMap<>(4);
+      tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceType());
+      tags.put(TracingIdentifiers.ATTR_OPERATION, key.requestName());
+      return ctx.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, tags);
+    });
   }
 }

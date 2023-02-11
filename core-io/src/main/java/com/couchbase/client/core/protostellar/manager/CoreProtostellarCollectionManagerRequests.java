@@ -15,11 +15,7 @@
  */
 package com.couchbase.client.core.protostellar.manager;
 
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
-
-import java.time.Duration;
-
-import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -33,6 +29,10 @@ import com.couchbase.client.protostellar.admin.collection.v1.DeleteCollectionReq
 import com.couchbase.client.protostellar.admin.collection.v1.DeleteScopeRequest;
 import com.couchbase.client.protostellar.admin.collection.v1.ListCollectionsRequest;
 
+import java.time.Duration;
+
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
+
 /**
  * For creating Protostellar GRPC requests.
  */
@@ -40,7 +40,7 @@ import com.couchbase.client.protostellar.admin.collection.v1.ListCollectionsRequ
 public class CoreProtostellarCollectionManagerRequests {
   private CoreProtostellarCollectionManagerRequests() {}
 
-  public static ProtostellarRequest<CreateCollectionRequest> createCollectionRequest(Core core,
+  public static ProtostellarRequest<CreateCollectionRequest> createCollectionRequest(CoreProtostellar core,
                                                                                      String bucketName,
                                                                                      String scopeName,
                                                                                      String collectionName,
@@ -66,7 +66,7 @@ public class CoreProtostellarCollectionManagerRequests {
     return out;
   }
 
-  public static ProtostellarRequest<DeleteCollectionRequest> deleteCollectionRequest(Core core,
+  public static ProtostellarRequest<DeleteCollectionRequest> deleteCollectionRequest(CoreProtostellar core,
                                                                                      String bucketName,
                                                                                      String scopeName,
                                                                                      String collectionName,
@@ -90,7 +90,7 @@ public class CoreProtostellarCollectionManagerRequests {
     return out;
   }
 
-  public static ProtostellarRequest<CreateScopeRequest> createScopeRequest(Core core,
+  public static ProtostellarRequest<CreateScopeRequest> createScopeRequest(CoreProtostellar core,
                                                                            String bucketName,
                                                                            String scopeName,
                                                                            CoreCommonOptions opts) {
@@ -111,7 +111,7 @@ public class CoreProtostellarCollectionManagerRequests {
     return out;
   }
 
-  public static ProtostellarRequest<DeleteScopeRequest> deleteScopeRequest(Core core,
+  public static ProtostellarRequest<DeleteScopeRequest> deleteScopeRequest(CoreProtostellar core,
                                                                            String bucketName,
                                                                            String scopeName,
                                                                            CoreCommonOptions opts) {
@@ -132,7 +132,7 @@ public class CoreProtostellarCollectionManagerRequests {
     return out;
   }
 
-  public static ProtostellarRequest<ListCollectionsRequest> listCollectionsRequest(Core core,
+  public static ProtostellarRequest<ListCollectionsRequest> listCollectionsRequest(CoreProtostellar core,
                                                                                    String bucketName,
                                                                                    CoreCommonOptions opts) {
     Duration timeout = CoreProtostellarUtil.managementTimeout(opts.timeout(), core);

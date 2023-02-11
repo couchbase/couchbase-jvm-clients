@@ -16,37 +16,38 @@
 
 package com.couchbase.client.core.endpoint;
 
-import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.protostellar.ProtostellarContext;
+import com.couchbase.client.core.util.HostAndPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static java.util.Collections.unmodifiableList;
 
 /**
  * Maintains a pool of ProtostellarEndpoints.
  */
 @Stability.Internal
 public class ProtostellarPool {
-  private final Logger logger = LoggerFactory.getLogger(ProtostellarPool.class);
+  private static final Logger logger = LoggerFactory.getLogger(ProtostellarPool.class);
 
   private final List<ProtostellarEndpoint> endpoints;
   private final AtomicLong lastUsed = new AtomicLong(0);
 
-  public ProtostellarPool(Core core, String hostname, final int port) {
+  public ProtostellarPool(ProtostellarContext ctx, HostAndPort remote) {
     // JVMCBC-1196: assuming ProtostellarPool is kept, add configuration options for it.
     int numEndpoints = Integer.parseInt(System.getProperty("com.couchbase.protostellar.numEndpoints", "3"));
     logger.info("creating with endpoints {}", numEndpoints);
-    endpoints = new ArrayList<>(numEndpoints);
-    for(int i = 0; i < numEndpoints; i ++) {
-      endpoints.add(new ProtostellarEndpoint(core, hostname, port));
+    List<ProtostellarEndpoint> endpoints = new ArrayList<>(numEndpoints);
+    for (int i = 0; i < numEndpoints; i++) {
+      endpoints.add(new ProtostellarEndpoint(ctx, remote));
     }
+    this.endpoints = unmodifiableList(endpoints);
   }
 
   public void shutdown(Duration timeout) {
@@ -54,13 +55,13 @@ public class ProtostellarPool {
   }
 
   public ProtostellarEndpoint endpoint() {
-    // Just using a basic roundrobin strategy for now
+    // Just using a basic round-robin strategy for now
     int index = (int) ((lastUsed.getAndIncrement() & 0x7fffffffffffffffL) % endpoints.size());
     // logger.info("Using endpoint {}", index);
     return endpoints.get(index);
   }
 
   public List<ProtostellarEndpoint> endpoints() {
-    return Collections.unmodifiableList(endpoints);
+    return endpoints;
   }
 }

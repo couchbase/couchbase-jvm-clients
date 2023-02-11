@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.core.protostellar;
 
-import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.cnc.CbTracing;
@@ -43,13 +43,13 @@ import java.util.concurrent.TimeUnit;
 public class CoreProtostellarUtil {
   private CoreProtostellarUtil() {}
 
-  public static Duration kvTimeout(Optional<Duration> customTimeout, Core core) {
+  public static Duration kvTimeout(Optional<Duration> customTimeout, CoreProtostellar core) {
     return customTimeout.orElse(core.context().environment().timeoutConfig().kvTimeout());
   }
 
   public static Duration kvDurableTimeout(Optional<Duration> customTimeout,
                                           CoreDurability dl,
-                                          Core core) {
+                                          CoreProtostellar core) {
     if (customTimeout.isPresent()) {
       return customTimeout.get();
     } else if (dl.isLegacy()) {
@@ -63,7 +63,7 @@ public class CoreProtostellarUtil {
 
   public static Duration kvDurableTimeout(Optional<Duration> customTimeout,
                                           Optional<com.couchbase.client.core.msg.kv.DurabilityLevel> dl,
-                                          Core core) {
+                                          CoreProtostellar core) {
     if (customTimeout.isPresent()) {
       return customTimeout.get();
     } else if (dl.isPresent()) {
@@ -85,7 +85,7 @@ public class CoreProtostellarUtil {
     return Deadline.after(timeout.toMillis(), TimeUnit.MILLISECONDS);
   }
 
-  public static Duration managementTimeout(Optional<Duration> customTimeout, Core core) {
+  public static Duration managementTimeout(Optional<Duration> customTimeout, CoreProtostellar core) {
     return customTimeout.orElse(core.context().environment().timeoutConfig().managementTimeout());
   }
 
@@ -112,30 +112,30 @@ public class CoreProtostellarUtil {
     return DocumentContentType.UNKNOWN;
   }
 
-  public static void handleShutdownBlocking(Core core, ProtostellarRequest<?> request) {
-    if (core.protostellar().endpoint().isShutdown()) {
+  public static void handleShutdownBlocking(CoreProtostellar core, ProtostellarRequest<?> request) {
+    if (core.endpoint().isShutdown()) {
       throw RequestCanceledException.shuttingDown(request.context());
     }
   }
 
-  public static <T> boolean handleShutdownAsync(Core core, CompletableFuture<T> ret, ProtostellarRequest<?> request) {
-    if (core.protostellar().endpoint().isShutdown()) {
+  public static <T> boolean handleShutdownAsync(CoreProtostellar core, CompletableFuture<T> ret, ProtostellarRequest<?> request) {
+    if (core.endpoint().isShutdown()) {
       ret.completeExceptionally(RequestCanceledException.shuttingDown(request.context()));
       return true;
     }
     return false;
   }
 
-  public static <TSdkResult> boolean handleShutdownReactive(Sinks.One<TSdkResult> ret, Core core, ProtostellarRequest<?> request) {
-    if (core.protostellar().endpoint().isShutdown()) {
+  public static <TSdkResult> boolean handleShutdownReactive(Sinks.One<TSdkResult> ret, CoreProtostellar core, ProtostellarRequest<?> request) {
+    if (core.endpoint().isShutdown()) {
       ret.tryEmitError(RequestCanceledException.shuttingDown(request.context())).orThrow();
       return true;
     }
     return false;
   }
 
-  public static <T> @Nullable Mono<T> handleShutdownReactive(Core core, ProtostellarRequest<?> request) {
-    if (core.protostellar().endpoint().isShutdown()) {
+  public static <T> @Nullable Mono<T> handleShutdownReactive(CoreProtostellar core, ProtostellarRequest<?> request) {
+    if (core.endpoint().isShutdown()) {
       return Mono.error(RequestCanceledException.shuttingDown(request.context()));
     }
     return null;
@@ -187,13 +187,13 @@ public class CoreProtostellarUtil {
     return Timestamp.newBuilder().setSeconds(expiry).build();
   }
 
-  public static <TResponse> ProtostellarRequestBehaviour convertKeyValueException(Core core,
+  public static <TResponse> ProtostellarRequestBehaviour convertKeyValueException(CoreProtostellar core,
                                                                                   ProtostellarRequest<TResponse> request,
                                                                                   Throwable t) {
     return CoreProtostellarErrorHandlingUtil.convertKeyValueException(core, request, t);
   }
 
-  public static RequestSpan createSpan(Core core,
+  public static RequestSpan createSpan(CoreProtostellar core,
                                        String spanName,
                                        CoreDurability durability,
                                        @Nullable RequestSpan parent) {

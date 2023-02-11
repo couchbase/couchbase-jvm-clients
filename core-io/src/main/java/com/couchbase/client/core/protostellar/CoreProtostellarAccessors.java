@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.core.protostellar;
 
-import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
@@ -28,6 +28,7 @@ import com.couchbase.client.core.endpoint.ProtostellarEndpoint;
 import com.couchbase.client.core.io.netty.TracingUtils;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.retry.ProtostellarRequestBehaviour;
+import com.couchbase.client.core.util.HostAndPort;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.util.annotation.Nullable;
@@ -52,7 +53,7 @@ public class CoreProtostellarAccessors {
    * Convenience overload that uses the default exception handling.
    */
   public static <TSdkResult, TGrpcRequest, TGrpcResponse>
-  TSdkResult blocking(Core core,
+  TSdkResult blocking(CoreProtostellar core,
                       ProtostellarRequest<TGrpcRequest>     request,
                       Function<ProtostellarEndpoint, TGrpcResponse> executeBlockingGrpcCall,
                       Function<TGrpcResponse, TSdkResult>   convertResponse) {
@@ -64,14 +65,14 @@ public class CoreProtostellarAccessors {
    * @param <TGrpcResponse> e.g. com.couchbase.client.protostellar.kv.v1.InsertResponse
    */
   public static <TSdkResult, TGrpcRequest, TGrpcResponse>
-  TSdkResult blocking(Core core,
+  TSdkResult blocking(CoreProtostellar core,
                       ProtostellarRequest<TGrpcRequest>     request,
                       Function<ProtostellarEndpoint, TGrpcResponse> executeBlockingGrpcCall,
                       Function<TGrpcResponse, TSdkResult>   convertResponse,
                       Function<Throwable, ProtostellarRequestBehaviour> convertException) {
     while (true) {
       handleShutdownBlocking(core, request);
-      ProtostellarEndpoint endpoint = core.protostellar().endpoint();
+      ProtostellarEndpoint endpoint = core.endpoint();
       long start = System.nanoTime();
       RequestSpan dispatchSpan = createDispatchSpan(core, request, endpoint);
       try {
@@ -108,7 +109,7 @@ public class CoreProtostellarAccessors {
    * Convenience overload that uses the default exception handling.
    */
   public static <TSdkResult, TGrpcRequest, TGrpcResponse>
-  CoreAsyncResponse<TSdkResult> async(Core core,
+  CoreAsyncResponse<TSdkResult> async(CoreProtostellar core,
                                       ProtostellarRequest<TGrpcRequest>         request,
                                       Function<ProtostellarEndpoint, ListenableFuture<TGrpcResponse>> executeFutureGrpcCall,
                                       Function<TGrpcResponse, TSdkResult>       convertResponse) {
@@ -116,7 +117,7 @@ public class CoreProtostellarAccessors {
   }
 
   public static <TSdkResult, TGrpcRequest, TGrpcResponse>
-  CoreAsyncResponse<TSdkResult> async(Core core,
+  CoreAsyncResponse<TSdkResult> async(CoreProtostellar core,
                                       ProtostellarRequest<TGrpcRequest>         request,
                                       Function<ProtostellarEndpoint, ListenableFuture<TGrpcResponse>> executeFutureGrpcCall,
                                       Function<TGrpcResponse, TSdkResult>       convertResponse,
@@ -130,7 +131,7 @@ public class CoreProtostellarAccessors {
 
   public static <TSdkResult, TGrpcRequest, TGrpcResponse>
   void asyncInternal(CompletableFuture<TSdkResult> ret,
-                    Core core,
+                     CoreProtostellar core,
                     ProtostellarRequest<TGrpcRequest>         request,
                     Function<ProtostellarEndpoint, ListenableFuture<TGrpcResponse>> executeFutureGrpcCall,
                     Function<TGrpcResponse, TSdkResult>       convertResponse,
@@ -138,7 +139,7 @@ public class CoreProtostellarAccessors {
     if (handleShutdownAsync(core, ret, request)) {
       return;
     }
-    ProtostellarEndpoint endpoint = core.protostellar().endpoint();
+    ProtostellarEndpoint endpoint = core.endpoint();
     RequestSpan dispatchSpan = createDispatchSpan(core, request, endpoint);
     long start = System.nanoTime();
 
@@ -198,7 +199,7 @@ public class CoreProtostellarAccessors {
    * Convenience overload that uses the default exception handling.
    */
   public static <TSdkResult, TGrpcRequest, TGrpcResponse>
-  Mono<TSdkResult> reactive(Core core,
+  Mono<TSdkResult> reactive(CoreProtostellar core,
                             ProtostellarRequest<TGrpcRequest>         request,
                             Function<ProtostellarEndpoint, ListenableFuture<TGrpcResponse>> executeFutureGrpcCall,
                             Function<TGrpcResponse, TSdkResult>       convertResponse) {
@@ -210,7 +211,7 @@ public class CoreProtostellarAccessors {
   }
 
   public static <TSdkResult, TGrpcRequest, TGrpcResponse>
-  Mono<TSdkResult> reactive(Core core,
+  Mono<TSdkResult> reactive(CoreProtostellar core,
                             ProtostellarRequest<TGrpcRequest>         request,
                             Function<ProtostellarEndpoint, ListenableFuture<TGrpcResponse>> executeFutureGrpcCall,
                             Function<TGrpcResponse, TSdkResult>       convertResponse,
@@ -224,7 +225,7 @@ public class CoreProtostellarAccessors {
 
   public static <TSdkResult, TGrpcRequest, TGrpcResponse>
   void reactiveInternal(Sinks.One<TSdkResult> ret,
-                        Core core,
+                        CoreProtostellar core,
                         ProtostellarRequest<TGrpcRequest>         request,
                         Function<ProtostellarEndpoint, ListenableFuture<TGrpcResponse>> executeFutureGrpcCall,
                         Function<TGrpcResponse, TSdkResult>       convertResponse,
@@ -233,7 +234,7 @@ public class CoreProtostellarAccessors {
       return;
     }
 
-    ProtostellarEndpoint endpoint = core.protostellar().endpoint();
+    ProtostellarEndpoint endpoint = core.endpoint();
     RequestSpan dispatchSpan = createDispatchSpan(core, request, endpoint);
     long start = System.nanoTime();
 
@@ -297,14 +298,15 @@ public class CoreProtostellarAccessors {
     }
   }
 
-  private static <TGrpcRequest> @Nullable RequestSpan createDispatchSpan(Core core,
+  private static <TGrpcRequest> @Nullable RequestSpan createDispatchSpan(CoreProtostellar core,
                                                                          ProtostellarRequest<TGrpcRequest> request,
                                                                          ProtostellarEndpoint endpoint) {
     RequestTracer tracer = core.context().environment().requestTracer();
     RequestSpan dispatchSpan;
     if (!CbTracing.isInternalTracer(tracer)) {
       dispatchSpan = tracer.requestSpan(TracingIdentifiers.SPAN_DISPATCH, request.span());
-      TracingUtils.setCommonDispatchSpanAttributes(dispatchSpan, null, null, 0, endpoint.hostname(), endpoint.port(), null);
+      HostAndPort remote = endpoint.hostAndPort();
+      TracingUtils.setCommonDispatchSpanAttributes(dispatchSpan, null, null, 0, remote.host(), remote.port(), null);
     } else {
       dispatchSpan = null;
     }

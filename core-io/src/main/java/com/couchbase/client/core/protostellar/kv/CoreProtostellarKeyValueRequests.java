@@ -15,8 +15,8 @@
  */
 package com.couchbase.client.core.protostellar.kv;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.api.kv.CoreEncodedContent;
@@ -64,7 +64,7 @@ public class CoreProtostellarKeyValueRequests {
   private CoreProtostellarKeyValueRequests() {
   }
 
-  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetRequest> getRequest(Core core,
+  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetRequest> getRequest(CoreProtostellar core,
                                                                                                    CoreCommonOptions opts,
                                                                                                    CoreKeyspace keyspace,
                                                                                                    String key,
@@ -99,7 +99,7 @@ public class CoreProtostellarKeyValueRequests {
     return out;
   }
 
-  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetAndLockRequest> getAndLockRequest(Core core,
+  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetAndLockRequest> getAndLockRequest(CoreProtostellar core,
                                                                                                                  CoreCommonOptions opts,
                                                                                                                  CoreKeyspace keyspace,
                                                                                                                  String key,
@@ -129,7 +129,7 @@ public class CoreProtostellarKeyValueRequests {
     return out;
   }
 
-  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest> getAndTouchRequest(Core core,
+  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest> getAndTouchRequest(CoreProtostellar core,
                                                                                                                    CoreCommonOptions opts,
                                                                                                                    CoreKeyspace keyspace,
                                                                                                                    String key,
@@ -159,7 +159,7 @@ public class CoreProtostellarKeyValueRequests {
     return out;
   }
 
-  public static ProtostellarRequest<InsertRequest> insertRequest(Core core,
+  public static ProtostellarRequest<InsertRequest> insertRequest(CoreProtostellar core,
                                                                  CoreKeyspace keyspace,
                                                                  CoreCommonOptions opts,
                                                                  String key,
@@ -202,7 +202,7 @@ public class CoreProtostellarKeyValueRequests {
     return out;
   }
 
-  public static ProtostellarRequest<ReplaceRequest> replaceRequest(Core core,
+  public static ProtostellarRequest<ReplaceRequest> replaceRequest(CoreProtostellar core,
                                                                    CoreKeyspace keyspace,
                                                                    CoreCommonOptions opts,
                                                                    String key,
@@ -248,7 +248,7 @@ public class CoreProtostellarKeyValueRequests {
     return out;
   }
 
-  public static ProtostellarRequest<UpsertRequest> upsertRequest(Core core,
+  public static ProtostellarRequest<UpsertRequest> upsertRequest(CoreProtostellar core,
                                                                  CoreKeyspace keyspace,
                                                                  CoreCommonOptions opts,
                                                                  String key,
@@ -292,8 +292,8 @@ public class CoreProtostellarKeyValueRequests {
     return out;
   }
 
-  private static CoreEncodedContent encodedContent(Core core, Supplier<CoreEncodedContent> content, ProtostellarRequest<?> out) {
-    RequestSpan encodeSpan = CbTracing.newSpan(core.context(), TracingIdentifiers.SPAN_REQUEST_ENCODING, out.span());
+  private static CoreEncodedContent encodedContent(CoreProtostellar core, Supplier<CoreEncodedContent> content, ProtostellarRequest<?> out) {
+    RequestSpan encodeSpan = CbTracing.newSpan(core.context().environment().requestTracer(), TracingIdentifiers.SPAN_REQUEST_ENCODING, out.span());
     long start = System.nanoTime();
     CoreEncodedContent encoded;
     try {
@@ -306,7 +306,7 @@ public class CoreProtostellarKeyValueRequests {
     return encoded;
   }
 
-  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.RemoveRequest> removeRequest(Core core,
+  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.RemoveRequest> removeRequest(CoreProtostellar core,
                                                                                                          CoreKeyspace keyspace,
                                                                                                          CoreCommonOptions opts,
                                                                                                          String key,
@@ -340,7 +340,7 @@ public class CoreProtostellarKeyValueRequests {
     return out;
   }
 
-  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.ExistsRequest> existsRequest(Core core,
+  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.ExistsRequest> existsRequest(CoreProtostellar core,
                                                                                                          CoreKeyspace keyspace,
                                                                                                          CoreCommonOptions opts,
                                                                                                          String key) {
@@ -368,7 +368,7 @@ public class CoreProtostellarKeyValueRequests {
     return out;
   }
 
-  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.TouchRequest> touchRequest(Core core,
+  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.TouchRequest> touchRequest(CoreProtostellar core,
                                                                                                        CoreKeyspace keyspace,
                                                                                                        CoreCommonOptions opts,
                                                                                                        String key,
@@ -398,7 +398,7 @@ public class CoreProtostellarKeyValueRequests {
     return out;
   }
 
-  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.UnlockRequest> unlockRequest(Core core,
+  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.UnlockRequest> unlockRequest(CoreProtostellar core,
                                                                                                          CoreKeyspace keyspace,
                                                                                                          CoreCommonOptions opts,
                                                                                                          String key,
@@ -428,7 +428,7 @@ public class CoreProtostellarKeyValueRequests {
     return out;
   }
 
-  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.MutateInRequest> mutateInRequest(Core core,
+  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.MutateInRequest> mutateInRequest(CoreProtostellar core,
                                                                                                              CoreKeyspace keyspace,
                                                                                                              CoreCommonOptions opts,
                                                                                                              String key,

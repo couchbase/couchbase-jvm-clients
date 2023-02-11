@@ -15,13 +15,6 @@
  */
 package com.couchbase.client.core.classic.kv;
 
-import static com.couchbase.client.core.util.Validators.notNull;
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
-
-import java.time.Duration;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.CoreKeyspace;
@@ -47,8 +40,15 @@ import com.couchbase.client.core.msg.kv.AppendRequest;
 import com.couchbase.client.core.msg.kv.DecrementRequest;
 import com.couchbase.client.core.msg.kv.IncrementRequest;
 import com.couchbase.client.core.msg.kv.PrependRequest;
-import com.couchbase.client.core.protostellar.kv.CoreProtoStellarKvBinaryRequests;
 import com.couchbase.client.core.retry.RetryStrategy;
+
+import java.time.Duration;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
@@ -59,10 +59,10 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
   private final Duration defaultKvDurableTimeout;
 
   public ClassicCoreKvBinaryOps(Core core, CoreKeyspace keyspace) {
-    this.core = core;
+    this.core = requireNonNull(core);
     this.defaultKvTimeout = core.context().environment().timeoutConfig().kvTimeout();
     this.defaultKvDurableTimeout = core.context().environment().timeoutConfig().kvDurableTimeout();
-    this.keyspace = keyspace;
+    this.keyspace = requireNonNull(keyspace);
   }
 
   /**
@@ -87,7 +87,7 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
 
   private AppendRequest appendRequestClassic(final String id, final byte[] content, final CoreCommonOptions options, long cas,
                                              final CoreDurability durability) {
-    CoreKvBinaryParamValidators.validateAppendPrependArgs(core,id, keyspace, options, content, cas, durability);
+    CoreKvBinaryParamValidators.validateAppendPrependArgs(id, keyspace, options, content, cas, durability);
     Duration timeout = timeout(options, durability);
     RetryStrategy retryStrategy = options.retryStrategy().orElse(environment().retryStrategy());
     RequestSpan span = environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_APPEND,
@@ -121,7 +121,7 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
 
   private PrependRequest prependRequestClassic(final String id, final byte[] content, final CoreCommonOptions options,
                                                long cas, final CoreDurability durability) {
-    CoreKvBinaryParamValidators.validateAppendPrependArgs(core,id, keyspace, options, content,  cas, durability);
+    CoreKvBinaryParamValidators.validateAppendPrependArgs(id, keyspace, options, content,  cas, durability);
     Duration timeout = timeout(options, durability);
     RetryStrategy retryStrategy = options.retryStrategy().orElse(environment().retryStrategy());
     RequestSpan span = environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_PREPEND,
@@ -153,7 +153,7 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
 
   private IncrementRequest incrementRequestClassic(final String id, final CoreCommonOptions options, final long expiry,
                                                 final long delta, final Optional<Long> initial, final CoreDurability durability) {
-    CoreKvBinaryParamValidators.validateIncrementDecrementArgs(core, id, keyspace, options, expiry, delta, initial,
+    CoreKvBinaryParamValidators.validateIncrementDecrementArgs(id, keyspace, options, expiry, delta, initial,
         durability);
     Duration timeout = timeout(options, durability);
     RetryStrategy retryStrategy = options.retryStrategy().orElse(environment().retryStrategy());

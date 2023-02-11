@@ -15,19 +15,9 @@
  */
 package com.couchbase.client.core.protostellar.kv;
 
-import static com.couchbase.client.core.protostellar.kv.CoreProtoStellarKvBinaryRequests.appendRequest;
-import static com.couchbase.client.core.protostellar.kv.CoreProtoStellarKvBinaryRequests.decrementRequest;
-import static com.couchbase.client.core.protostellar.kv.CoreProtoStellarKvBinaryRequests.incrementRequest;
-import static com.couchbase.client.core.protostellar.kv.CoreProtoStellarKvBinaryRequests.prependRequest;
-
-import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.api.kv.CoreKvBinaryParamValidators;
-import reactor.core.publisher.Mono;
-
-import java.util.Optional;
-
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.CoreProtostellar;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.kv.CoreCounterResult;
 import com.couchbase.client.core.api.kv.CoreDurability;
@@ -36,18 +26,25 @@ import com.couchbase.client.core.api.kv.CoreMutationResult;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.protostellar.CoreProtostellarAccessors;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
+import reactor.core.publisher.Mono;
+
+import java.util.Optional;
+
+import static com.couchbase.client.core.protostellar.kv.CoreProtoStellarKvBinaryRequests.appendRequest;
+import static com.couchbase.client.core.protostellar.kv.CoreProtoStellarKvBinaryRequests.decrementRequest;
+import static com.couchbase.client.core.protostellar.kv.CoreProtoStellarKvBinaryRequests.incrementRequest;
+import static com.couchbase.client.core.protostellar.kv.CoreProtoStellarKvBinaryRequests.prependRequest;
+import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class ProtostellarCoreKvBinaryOps implements CoreKvBinaryOps {
 
-  private final Core core;
+  private final CoreProtostellar core;
   private final CoreKeyspace keyspace;
 
-  public ProtostellarCoreKvBinaryOps(Core core, CoreKeyspace keyspace) {
-    CoreKvBinaryParamValidators.validateCore(core);
-    CoreKvBinaryParamValidators.validateKeyspace(keyspace);
-    this.core = core;
-    this.keyspace = keyspace;
+  public ProtostellarCoreKvBinaryOps(CoreProtostellar core, CoreKeyspace keyspace) {
+    this.core = requireNonNull(core);
+    this.keyspace = requireNonNull(keyspace);
   }
 
   @Override

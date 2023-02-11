@@ -1,28 +1,29 @@
 package com.couchbase.client.core.protostellar.util;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.protostellar.ProtostellarContext;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
-import com.couchbase.client.core.util.CbCollections;
-import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.test.TestClusterConfig;
 import com.couchbase.client.test.TestNodeConfig;
 
+import java.time.Duration;
+import java.util.Set;
+
 import static com.couchbase.client.core.CoreProtostellar.DEFAULT_PROTOSTELLAR_TLS_PORT;
-import static com.couchbase.client.core.util.ConnectionString.Scheme.PROTOSTELLAR;
+import static com.couchbase.client.core.util.CbCollections.setOf;
+import static java.util.Objects.requireNonNull;
 
 public class ProtostellarTestEnvironment implements AutoCloseable {
-  private final CoreEnvironment env;
-  private final Core core;
+  private final CoreProtostellar core;
   private final ProtostellarCoreKvOps ops;
 
-  public ProtostellarTestEnvironment(CoreEnvironment env, Core core, CoreKeyspace defaultKeyspace, ProtostellarCoreKvOps ops) {
-    this.env = env;
-    this.core = core;
+  private ProtostellarTestEnvironment(CoreProtostellar core, CoreKeyspace defaultKeyspace, ProtostellarCoreKvOps ops) {
+    this.core = requireNonNull(core);
     this.defaultKeyspace = defaultKeyspace;
     this.ops = ops;
   }
@@ -30,10 +31,10 @@ public class ProtostellarTestEnvironment implements AutoCloseable {
   private final CoreKeyspace defaultKeyspace;
 
   public CoreEnvironment env() {
-    return env;
+    return core.context().environment();
   }
 
-  public Core core() {
+  public CoreProtostellar core() {
     return core;
   }
 
@@ -51,21 +52,21 @@ public class ProtostellarTestEnvironment implements AutoCloseable {
     String hostname = node.hostname();
     int port = node.protostellarPort().orElse(DEFAULT_PROTOSTELLAR_TLS_PORT);
 
-    Core core = new CoreTest(env,
-      PasswordAuthenticator.create(config.adminUsername(), config.adminPassword()),
-      CbCollections.setOf(SeedNode.create(hostname).withProtostellarPort(port)),
-      ConnectionString.create(hostname + ":" + port).withScheme(PROTOSTELLAR));
+    Set<SeedNode> seedNodes = setOf(SeedNode.create(hostname).withProtostellarPort(port));
+
+    ProtostellarContext ctx = new ProtostellarContext(env, PasswordAuthenticator.create(config.adminUsername(), config.adminPassword()));
+    CoreProtostellar core = new CoreProtostellar(ctx, seedNodes);
 
     CoreKeyspace defaultKeyspace = new CoreKeyspace(config.bucketname(), CollectionIdentifier.DEFAULT_SCOPE, CollectionIdentifier.DEFAULT_COLLECTION);
 
     ProtostellarCoreKvOps ops = new ProtostellarCoreKvOps(core, defaultKeyspace);
 
-    return new ProtostellarTestEnvironment(env, core, defaultKeyspace, ops);
+    return new ProtostellarTestEnvironment(core, defaultKeyspace, ops);
   }
 
   @Override
   public void close() {
-    env.close();
-    core.close();
+    core.context().environment().close();
+    core.shutdown(Duration.ofSeconds(30));
   }
 }

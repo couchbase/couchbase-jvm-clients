@@ -15,8 +15,8 @@
  */
 package com.couchbase.client.core.protostellar;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.cnc.RequestSpan;
@@ -40,7 +40,7 @@ public class ProtostellarKeyValueRequest<TGrpcRequest> extends ProtostellarReque
   private final String key;
   private final CoreDurability durability;
 
-  public ProtostellarKeyValueRequest(Core core,
+  public ProtostellarKeyValueRequest(CoreProtostellar core,
                                      CoreKeyspace keyspace,
                                      String key,
                                      CoreDurability durability,

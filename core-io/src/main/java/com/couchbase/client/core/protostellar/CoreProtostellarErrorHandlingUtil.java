@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.core.protostellar;
 
-import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.google.protobuf.Any;
 import com.couchbase.client.core.deps.com.google.protobuf.InvalidProtocolBufferException;
@@ -52,7 +52,7 @@ public class CoreProtostellarErrorHandlingUtil {
   private static final String TYPE_URL_PRECONDITION_FAILURE = "type.googleapis.com/google.rpc.PreconditionFailure";
   private static final String TYPE_URL_RESOURCE_INFO = "type.googleapis.com/google.rpc.ResourceInfo";
 
-  public static ProtostellarRequestBehaviour convertKeyValueException(Core core,
+  public static ProtostellarRequestBehaviour convertKeyValueException(CoreProtostellar core,
                                                                       ProtostellarRequest<?> request,
                                                                       Throwable t) {
     // Handle wrapped CompletableFuture failures.
