@@ -775,6 +775,7 @@ object ScalaSdkCommandExecutor {
     ret.build
   }
 
+  // [start:1.4.4]
   def handleCollectionQueryIndexManagerCommand(
       command: com.couchbase.client.protocol.sdk.Command,
       op: com.couchbase.client.protocol.sdk.management.collection.query.Command,
@@ -911,11 +912,11 @@ object ScalaSdkCommandExecutor {
         .get
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
-      // [start:1.4.4]
     }
 
     result
   }
+  // [end:1.4.4]
 
   def mapQueryIndexes(indexes: Seq[query.QueryIndex]): java.util.List[QueryIndex] = {
     indexes

@@ -24,7 +24,7 @@ import com.couchbase.client.protocol.shared.Collection as FitCollection
 
 class ClusterConnection(req: ClusterConnectionCreateRequest) {
     val cluster = Cluster.connect(
-        connectionString = "couchbase://" + req.clusterHostname,
+        connectionString = req.clusterHostname,
         username = req.clusterUsername,
         password = req.clusterPassword,
     )

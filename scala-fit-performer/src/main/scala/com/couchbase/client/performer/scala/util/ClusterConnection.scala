@@ -23,7 +23,7 @@ import scala.concurrent.duration._
 
 class ClusterConnection(req: ClusterConnectionCreateRequest) {
   private val logger = LoggerFactory.getLogger(classOf[ClusterConnection])
-  private val hostname = "couchbase://" + req.getClusterHostname
+  private val hostname = req.getClusterHostname
   logger.info("Attempting connection to cluster " + hostname)
 
   val cluster: Cluster = OptionsUtil.convertClusterConfig(req) match {
