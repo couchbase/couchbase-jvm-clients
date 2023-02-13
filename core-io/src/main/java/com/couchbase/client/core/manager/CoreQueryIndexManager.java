@@ -179,8 +179,9 @@ public class CoreQueryIndexManager {
       statement += quote(options.indexName()) + " ";
     }
     statement += "ON " + keyspace;
+    Map<String, Object> with = createIndexWith(options);
 
-    return exec(WRITE, statement, options.with(), options.commonOptions(), TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_PRIMARY_INDEX, bucketName, null)
+    return exec(WRITE, statement, with, options.commonOptions(), TracingIdentifiers.SPAN_REQUEST_MQ_CREATE_PRIMARY_INDEX, bucketName, null)
             .exceptionally(t -> {
               if (options.ignoreIfExists() && hasCause(t, IndexExistsException.class)) {
                 return null;
