@@ -17,6 +17,8 @@
 package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.context.ErrorContext;
+import reactor.util.annotation.Nullable;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
@@ -25,13 +27,14 @@ import static java.util.Objects.requireNonNull;
 public class ScopeExistsException extends CouchbaseException {
   private final String scopeName;
 
-  public ScopeExistsException(String scopeName) {
-    super("Scope [" + redactMeta(scopeName) + "] already exists.");
+  @Stability.Internal
+  public ScopeExistsException(String scopeName, @Nullable ErrorContext context) {
+    super("Scope [" + redactMeta(scopeName) + "] already exists.", context);
     this.scopeName = requireNonNull(scopeName);
   }
 
   public static ScopeExistsException forScope(String scopeName) {
-    return new ScopeExistsException(scopeName);
+    return new ScopeExistsException(scopeName, null);
   }
 
   public String scopeName() {

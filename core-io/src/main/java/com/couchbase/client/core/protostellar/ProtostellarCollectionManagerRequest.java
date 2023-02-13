@@ -23,18 +23,12 @@ import com.couchbase.client.core.service.ServiceType;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.core.util.Validators.notNull;
 
 @Stability.Internal
 public class ProtostellarCollectionManagerRequest<TGrpcRequest> extends ProtostellarRequest<TGrpcRequest> {
-  private final String bucketName;
-  private final @Nullable String scopeName;
-  private final @Nullable String collectionName;
-
   public ProtostellarCollectionManagerRequest(
     TGrpcRequest request,
     CoreProtostellar core,
@@ -46,28 +40,17 @@ public class ProtostellarCollectionManagerRequest<TGrpcRequest> extends Protoste
     Duration timeout,
     boolean readonly,
     RetryStrategy retryStrategy,
-    Map<String, Object> clientContext
-  ) {
-    super(request, core, ServiceType.MANAGER, requestName, span, timeout, readonly, retryStrategy, clientContext, 0);
-    this.bucketName = notNull(bucketName, "bucket name");
-    this.scopeName = scopeName;
-    this.collectionName = collectionName;
-  }
+    Map<String, Object> clientContext) {
+    super(request, core, ServiceType.MANAGER, requestName, span, timeout, readonly, retryStrategy, clientContext, 0, (ctx) -> {
+      ctx.put("type", ServiceType.MANAGER.ident());
+      ctx.put("bucket", redactMeta(bucketName));
 
-  @Override
-  protected Map<String, Object> serviceContext() {
-    Map<String, Object> ctx = new HashMap<>();
-
-    ctx.put("type", serviceType.ident());
-    ctx.put("bucket", redactMeta(bucketName));
-
-    if (scopeName != null) {
-      ctx.put("scope", redactMeta(scopeName));
-    }
-    if (collectionName != null) {
-      ctx.put("collection", redactMeta(collectionName));
-    }
-
-    return ctx;
+      if (scopeName != null) {
+        ctx.put("scope", redactMeta(scopeName));
+      }
+      if (collectionName != null) {
+        ctx.put("collection", redactMeta(collectionName));
+      }
+    });
   }
 }

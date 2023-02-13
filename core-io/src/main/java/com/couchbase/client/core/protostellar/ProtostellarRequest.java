@@ -25,7 +25,7 @@ import com.couchbase.client.core.cnc.metrics.NoopMeter;
 import com.couchbase.client.core.deps.io.grpc.Deadline;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
-import com.couchbase.client.core.error.context.ProtostellarErrorContext;
+import com.couchbase.client.core.error.context.GenericErrorContext;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.retry.ProtostellarRequestBehaviour;
 import com.couchbase.client.core.retry.RetryReason;
@@ -34,11 +34,13 @@ import com.couchbase.client.core.service.ServiceType;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.convertTimeout;
 
@@ -88,6 +90,12 @@ public class ProtostellarRequest<TGrpcRequest> {
    * that it actually was sent. */
   private volatile boolean maybeSent;
 
+  /**
+   * Allows more specialised requests with more context, to fill in extra information to the
+   * ErrorContext.
+   */
+  private @Nullable Consumer<Map<String, Object>> contextSupplier;
+
   public ProtostellarRequest(TGrpcRequest request,
                              CoreProtostellar core,
                              ServiceType serviceType,
@@ -97,7 +105,8 @@ public class ProtostellarRequest<TGrpcRequest> {
                              boolean readonly,
                              RetryStrategy retryStrategy,
                              Map<String, Object> clientContext,
-                             long encodeDurationNanos) {
+                             long encodeDurationNanos,
+                             @Nullable Consumer<Map<String, Object>> contextSupplier) {
     this.request = request;
     this.core = core;
     this.serviceType = serviceType;
@@ -110,6 +119,7 @@ public class ProtostellarRequest<TGrpcRequest> {
     this.deadline = convertTimeout(timeout);
     this.clientContext = clientContext;
     this.encodeDurationNanos = encodeDurationNanos;
+    this.contextSupplier = contextSupplier;
   }
 
   public TGrpcRequest request() {
@@ -199,10 +209,6 @@ public class ProtostellarRequest<TGrpcRequest> {
     retryReasons.add(reason);
   }
 
-  protected Map<String, Object> serviceContext() {
-    return null;
-  }
-
   public void markAsSent() {
     maybeSent = true;
   }
@@ -211,8 +217,12 @@ public class ProtostellarRequest<TGrpcRequest> {
     return maybeSent;
   }
 
-  public ProtostellarErrorContext context() {
+  public GenericErrorContext context() {
     Map<String, Object> input = new HashMap<>();
+
+    if (contextSupplier != null) {
+      contextSupplier.accept(input);
+    }
 
     input.put("readonly", readonly);
     input.put("requestName", requestName);
@@ -226,10 +236,6 @@ public class ProtostellarRequest<TGrpcRequest> {
     }
     if (clientContext != null) {
       input.put("clientContext", clientContext);
-    }
-    Map<String, Object> serviceContext = serviceContext();
-    if (serviceContext != null) {
-      input.put("service", serviceContext);
     }
     if (retryReasons != null) {
       input.put("retryReasons", retryReasons);
@@ -252,7 +258,7 @@ public class ProtostellarRequest<TGrpcRequest> {
       input.put("timings", timings);
     }
 
-    return new ProtostellarErrorContext(input, null);
+    return new GenericErrorContext(input, null);
   }
 
   public int retryAttempts() {

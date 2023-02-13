@@ -17,6 +17,8 @@
 package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.context.ErrorContext;
+import reactor.util.annotation.Nullable;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
@@ -25,13 +27,14 @@ import static java.util.Objects.requireNonNull;
 public class CollectionExistsException extends CouchbaseException {
   private final String collectionName;
 
-  public CollectionExistsException(String collectionName) {
-    super("Collection [" + redactMeta(collectionName) + "] already exists.");
+  @Stability.Internal
+  public CollectionExistsException(String collectionName, @Nullable ErrorContext context) {
+    super("Collection [" + redactMeta(collectionName) + "] already exists.", context);
     this.collectionName = requireNonNull(collectionName);
   }
 
   public static CollectionExistsException forCollection(String collectionName) {
-    return new CollectionExistsException(collectionName);
+    return new CollectionExistsException(collectionName, null);
   }
 
   public String collectionName() {

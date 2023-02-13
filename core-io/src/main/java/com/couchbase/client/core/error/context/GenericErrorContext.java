@@ -18,19 +18,18 @@ package com.couchbase.client.core.error.context;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.AbstractContext;
-import com.couchbase.client.core.msg.ResponseStatus;
 import reactor.util.annotation.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Stability.Volatile
-public class ProtostellarErrorContext extends ErrorContext {
+public class GenericErrorContext extends ErrorContext {
   private Map<String, Object> fields;
   private @Nullable final AbstractContext ctx;
 
-  public ProtostellarErrorContext(Map<String, Object> input, @Nullable AbstractContext ctx) {
-    super(ResponseStatus.UNKNOWN);
+  public GenericErrorContext(Map<String, Object> input, @Nullable AbstractContext ctx) {
+    super(null);
     this.fields = input;
     this.ctx = ctx;
   }

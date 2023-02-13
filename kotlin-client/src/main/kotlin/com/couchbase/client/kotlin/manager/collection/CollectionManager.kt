@@ -172,7 +172,7 @@ public class CollectionManager internal constructor(bucket: Bucket) {
     public suspend fun getScope(
         scopeName: String,
         common: CommonOptions = CommonOptions.Default,
-    ): ScopeSpec = getAllScopes(common).find { it.name == scopeName } ?: throw ScopeNotFoundException(scopeName)
+    ): ScopeSpec = getAllScopes(common).find { it.name == scopeName } ?: throw ScopeNotFoundException(scopeName, null)
 
     /**
      * Returns information about all scopes (and their collections) in the bucket.

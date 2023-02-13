@@ -26,18 +26,26 @@ import com.couchbase.client.core.deps.io.grpc.StatusRuntimeException;
 import com.couchbase.client.core.deps.io.grpc.protobuf.StatusProto;
 import com.couchbase.client.core.error.AmbiguousTimeoutException;
 import com.couchbase.client.core.error.AuthenticationFailureException;
+import com.couchbase.client.core.error.BucketExistsException;
+import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CasMismatchException;
+import com.couchbase.client.core.error.CollectionExistsException;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.IndexExistsException;
+import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.InternalServerFailureException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
+import com.couchbase.client.core.error.ScopeExistsException;
+import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
-import com.couchbase.client.core.error.context.ProtostellarErrorContext;
+import com.couchbase.client.core.error.context.GenericErrorContext;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.retry.ProtostellarRequestBehaviour;
 import com.couchbase.client.core.retry.RetryOrchestratorProtostellar;
@@ -45,14 +53,23 @@ import com.couchbase.client.core.retry.RetryReason;
 
 import java.util.concurrent.ExecutionException;
 
+import static com.couchbase.client.core.deps.io.grpc.Status.*;
+
 @Stability.Internal
 public class CoreProtostellarErrorHandlingUtil {
-  private CoreProtostellarErrorHandlingUtil() {}
+  private CoreProtostellarErrorHandlingUtil() {
+  }
 
   private static final String PRECONDITION_CAS = "CAS";
   private static final String PRECONDITION_LOCKED = "LOCKED";
   private static final String TYPE_URL_PRECONDITION_FAILURE = "type.googleapis.com/google.rpc.PreconditionFailure";
   private static final String TYPE_URL_RESOURCE_INFO = "type.googleapis.com/google.rpc.ResourceInfo";
+
+  private static final String RESOURCE_TYPE_DOCUMENT = "document";
+  private static final String RESOURCE_TYPE_INDEX = "index";
+  private static final String RESOURCE_TYPE_BUCKET = "bucket";
+  private static final String RESOURCE_TYPE_SCOPE = "scope";
+  private static final String RESOURCE_TYPE_COLLECTION = "collection";
 
   public static ProtostellarRequestBehaviour convertException(CoreProtostellar core,
                                                               ProtostellarRequest<?> request,
@@ -62,11 +79,12 @@ public class CoreProtostellarErrorHandlingUtil {
       return convertException(core, request, t.getCause());
     }
 
-    ProtostellarErrorContext context = request.context();
+    GenericErrorContext context = request.context();
 
     if (t instanceof StatusRuntimeException) {
       // https://github.com/googleapis/googleapis/blob/master/google/rpc/status.proto
       StatusRuntimeException sre = (StatusRuntimeException) t;
+      Code code = sre.getStatus().getCode();
 
       Status status = StatusProto.fromThrowable(sre);
       context.put("server", status.getMessage());
@@ -87,8 +105,7 @@ public class CoreProtostellarErrorHandlingUtil {
 
               if (type.equals(PRECONDITION_CAS)) {
                 return ProtostellarRequestBehaviour.fail(new CasMismatchException(context));
-              }
-              else if (type.equals(PRECONDITION_LOCKED)) {
+              } else if (type.equals(PRECONDITION_LOCKED)) {
                 return RetryOrchestratorProtostellar.shouldRetry(core, request, RetryReason.KV_LOCKED);
               }
             }
@@ -97,13 +114,38 @@ public class CoreProtostellarErrorHandlingUtil {
 
             context.put("resourceName", info.getResourceName());
             context.put("resourceType", info.getResourceType());
+
+            if (code == Code.NOT_FOUND) {
+              if (info.getResourceType().equals(RESOURCE_TYPE_DOCUMENT)) {
+                return ProtostellarRequestBehaviour.fail(new DocumentNotFoundException(context));
+              } else if (info.getResourceType().equals(RESOURCE_TYPE_INDEX)) {
+                return ProtostellarRequestBehaviour.fail(new IndexNotFoundException(context));
+              } else if (info.getResourceType().equals(RESOURCE_TYPE_BUCKET)) {
+                return ProtostellarRequestBehaviour.fail(new BucketNotFoundException(info.getResourceName(), context));
+              } else if (info.getResourceType().equals(RESOURCE_TYPE_SCOPE)) {
+                return ProtostellarRequestBehaviour.fail(new ScopeNotFoundException(info.getResourceName(), context));
+              } else if (info.getResourceType().equals(RESOURCE_TYPE_COLLECTION)) {
+                return ProtostellarRequestBehaviour.fail(new BucketNotFoundException(info.getResourceName(), context));
+              }
+            } else if (code == Code.ALREADY_EXISTS) {
+              if (info.getResourceType().equals(RESOURCE_TYPE_DOCUMENT)) {
+                return ProtostellarRequestBehaviour.fail(new DocumentExistsException(context));
+              } else if (info.getResourceType().equals(RESOURCE_TYPE_INDEX)) {
+                return ProtostellarRequestBehaviour.fail(new IndexExistsException(context));
+              } else if (info.getResourceType().equals(RESOURCE_TYPE_BUCKET)) {
+                return ProtostellarRequestBehaviour.fail(new BucketExistsException(info.getResourceName(), context));
+              } else if (info.getResourceType().equals(RESOURCE_TYPE_SCOPE)) {
+                return ProtostellarRequestBehaviour.fail(new ScopeExistsException(info.getResourceName(), context));
+              } else if (info.getResourceType().equals(RESOURCE_TYPE_COLLECTION)) {
+                return ProtostellarRequestBehaviour.fail(new CollectionExistsException(info.getResourceName(), context));
+              }
+            }
+            // If the code or resourceType are not understood, will intentionally fallback to a CouchbaseException.
           }
         } catch (InvalidProtocolBufferException e) {
           return ProtostellarRequestBehaviour.fail(new DecodingFailureException("Failed to decode GRPC response", e));
         }
       }
-
-      com.couchbase.client.core.deps.io.grpc.Status.Code code = sre.getStatus().getCode();
 
       switch (code) {
         case CANCELLED:
@@ -134,12 +176,11 @@ public class CoreProtostellarErrorHandlingUtil {
         case PERMISSION_DENIED:
           return ProtostellarRequestBehaviour.fail(new AuthenticationFailureException("Server reported that permission to the resource was denied", context, t));
         case UNIMPLEMENTED:
-          return ProtostellarRequestBehaviour.fail(new FeatureNotAvailableException(t));
+          return ProtostellarRequestBehaviour.fail(new FeatureNotAvailableException(status.getMessage(), t));
         case UNAVAILABLE:
           return RetryOrchestratorProtostellar.shouldRetry(core, request, RetryReason.ENDPOINT_NOT_AVAILABLE);
         default:
-          // There are several codes left to handle, to be fixed under JVMCBC-1188.
-          return ProtostellarRequestBehaviour.fail(new UnsupportedOperationException("Unhandled error code " + code, t));
+          return ProtostellarRequestBehaviour.fail(new CouchbaseException(status.getMessage(), t, context));
       }
     } else if (t instanceof RuntimeException) {
       return ProtostellarRequestBehaviour.fail((RuntimeException) t);

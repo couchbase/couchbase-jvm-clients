@@ -17,6 +17,8 @@
 package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.context.ErrorContext;
+import reactor.util.annotation.Nullable;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
@@ -26,13 +28,14 @@ public class BucketExistsException extends CouchbaseException {
 
   private final String bucketName;
 
-  BucketExistsException(final String bucketName) {
-    super("Bucket [" + redactMeta(bucketName) + "] already exists.");
+  @Stability.Internal
+  public BucketExistsException(final String bucketName, @Nullable ErrorContext context) {
+    super("Bucket [" + redactMeta(bucketName) + "] already exists.", context);
     this.bucketName = requireNonNull(bucketName);
   }
 
   public static BucketExistsException forBucket(final String bucketName) {
-    return new BucketExistsException(bucketName);
+    return new BucketExistsException(bucketName, null);
   }
 
   public String bucketName() {

@@ -33,13 +33,6 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
 @Stability.Internal
 public class ProtostellarKeyValueRequest<TGrpcRequest> extends ProtostellarRequest<TGrpcRequest> {
-  /**
-   * Not all requests have keyspaces and/or keys.
-   */
-  private final CoreKeyspace keyspace;
-  private final String key;
-  private final CoreDurability durability;
-
   public ProtostellarKeyValueRequest(TGrpcRequest request,
                                      CoreProtostellar core,
                                      CoreKeyspace keyspace,
@@ -52,32 +45,24 @@ public class ProtostellarKeyValueRequest<TGrpcRequest> extends ProtostellarReque
                                      RetryStrategy retryStrategy,
                                      Map<String, Object> clientContext,
                                      long encodeDurationNanos) {
-    super(request, core, ServiceType.KV, requestName, span, timeout, readonly, retryStrategy, clientContext, encodeDurationNanos);
-    this.keyspace = keyspace;
-    this.key = key;
-    this.durability = durability;
-  }
+    super(request, core, ServiceType.KV, requestName, span, timeout, readonly, retryStrategy, clientContext, encodeDurationNanos, (ctx) -> {
+      Map<String, Object> service = new HashMap<>();
+      service.put("type", ServiceType.KV.ident());
+      ctx.put("service", service);
 
-  @Override
-  protected Map<String, Object> serviceContext() {
-    Map<String, Object> ctx = new HashMap<>();
+      if (keyspace != null) {
+        ctx.put("bucket", redactMeta(keyspace.bucket()));
+        ctx.put("scope", redactMeta(keyspace.scope()));
+        ctx.put("collection", redactMeta(keyspace.collection()));
+      }
 
-    ctx.put("type", serviceType.ident());
+      if (key != null) {
+        ctx.put("documentId", redactUser(key));
+      }
 
-    if (keyspace != null) {
-      ctx.put("bucket", redactMeta(keyspace.bucket()));
-      ctx.put("scope", redactMeta(keyspace.scope()));
-      ctx.put("collection", redactMeta(keyspace.collection()));
-    }
-
-    if (key != null) {
-      ctx.put("documentId", redactUser(key));
-    }
-
-    if (!durability.isLegacy() && !durability.isNone()) {
-      ctx.put("syncDurability", durability.levelIfSynchronous().orElse(DurabilityLevel.NONE).encodeForManagementApi());
-    }
-
-    return ctx;
+      if (!durability.isLegacy() && !durability.isNone()) {
+        ctx.put("syncDurability", durability.levelIfSynchronous().orElse(DurabilityLevel.NONE).encodeForManagementApi());
+      }
+    });
   }
 }

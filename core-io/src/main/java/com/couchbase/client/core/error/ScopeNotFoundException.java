@@ -17,6 +17,8 @@
 package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.error.context.ErrorContext;
+import reactor.util.annotation.Nullable;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
@@ -25,13 +27,14 @@ import static java.util.Objects.requireNonNull;
 public class ScopeNotFoundException extends CouchbaseException {
   private final String scopeName;
 
-  public ScopeNotFoundException(String scopeName) {
-    super("Scope [" + redactMeta(scopeName) + "] not found.");
+  @Stability.Internal
+  public ScopeNotFoundException(String scopeName, @Nullable ErrorContext context) {
+    super("Scope [" + redactMeta(scopeName) + "] not found.", context);
     this.scopeName = requireNonNull(scopeName);
   }
 
   public static ScopeNotFoundException forScope(String scopeName) {
-    return new ScopeNotFoundException(scopeName);
+    return new ScopeNotFoundException(scopeName, null);
   }
 
   public String scopeName() {

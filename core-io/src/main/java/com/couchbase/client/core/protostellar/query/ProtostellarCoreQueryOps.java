@@ -35,7 +35,9 @@ import com.couchbase.client.core.deps.io.grpc.stub.StreamObserver;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
+import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.logging.RedactableArgument;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.protostellar.CoreProtostellarErrorHandlingUtil;
@@ -255,7 +257,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
                                                            String statement,
                                                            CoreQueryOptions opts,
                                                            @Nullable CoreQueryContext queryContext) {
-    notNullOrEmpty(statement, "Statement", () -> new ReducedAnalyticsErrorContext(statement));
+    notNullOrEmpty(statement, "Statement", () -> new ReducedQueryErrorContext(statement));
 
     QueryRequest.Builder request = convertOptions(opts);
 
@@ -278,7 +280,10 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
       opts.readonly(),
       opts.commonOptions().retryStrategy().orElse(core.context().environment().retryStrategy()),
       opts.commonOptions().clientContext(),
-      0
+      0,
+      (ctx) -> {
+        ctx.put("statement", RedactableArgument.redactMeta(statement));
+      }
     );
   }
 
