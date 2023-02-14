@@ -17,6 +17,7 @@ package com.couchbase.client.performer.scala
 
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.msg.kv.MutationToken
+import com.couchbase.client.core.retry.BestEffortRetryStrategy
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.perf.{Counters, PerRun}
 import com.couchbase.client.performer.core.util.ErrorUtil
@@ -57,13 +58,17 @@ case class ContentString(value: String) extends Content
 case class ContentJson(value: JsonObject) extends Content
 
 class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: Counters) extends SdkCommandExecutor(counters) {
+  // Have to hardcode these.  The earliest versions of the Scala SDK do not give access to the environment.
+  private val DefaultManagementTimeout = Duration(75, TimeUnit.SECONDS)
+  private val DefaultRetryStrategy = BestEffortRetryStrategy.INSTANCE
+
   override protected def convertException(raw: Throwable): com.couchbase.client.protocol.shared.Exception = {
     ScalaSdkCommandExecutor.convertException(raw)
   }
 
   override protected def performOperation(op: com.couchbase.client.protocol.sdk.Command, perRun: PerRun): com.couchbase.client.protocol.run.Result = {
     val result = com.couchbase.client.protocol.run.Result.newBuilder()
-
+    
     if (op.hasInsert) {
       val request = op.getInsert
       val collection = connection.collection(request.getLocation)
@@ -189,8 +194,8 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
           else None,
           if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
             Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else connection.cluster.queryIndexes.DefaultTimeout,
-          connection.cluster.queryIndexes.DefaultRetryStrategy,
+           else DefaultManagementTimeout,
+          DefaultRetryStrategy,
           // [start:1.2.5]
           if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
           else None,
@@ -198,12 +203,6 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             Some(req.getOptions.getCollectionName)
           else None
           // [end:1.2.5]
-          // [start:<1.2.5]
-          /*
-          None,
-          None,
-          // [end:<1.2.5]
-         */
         )
         .get
       result.setElapsedNanos(System.nanoTime - start)
@@ -225,8 +224,8 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
           else None,
           if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
             Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else connection.cluster.queryIndexes.DefaultTimeout,
-          connection.cluster.queryIndexes.DefaultRetryStrategy,
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy,
           // [start:1.2.5]
           if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
           else None,
@@ -234,12 +233,6 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             Some(req.getOptions.getCollectionName)
           else None
           // [end:1.2.5]
-          // [start:<1.2.5]
-          /*
-          None,
-          None,
-          // [end:<1.2.5]
-         */
         )
         .get
       result.setElapsedNanos(System.nanoTime - start)
@@ -253,8 +246,8 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
           req.getBucketName,
           if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
             Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else connection.cluster.queryIndexes.DefaultTimeout,
-          connection.cluster.queryIndexes.DefaultRetryStrategy,
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy,
           // [start:1.2.5]
           if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
           else None,
@@ -262,12 +255,6 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             Some(req.getOptions.getCollectionName)
           else None
           // [end:1.2.5]
-          // [start:<1.2.5]
-          /*
-          None,
-          None,
-          // [end:<1.2.5]
-         */
         )
         .get
       result.setSdk(
@@ -290,8 +277,8 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
           else false,
           if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
             Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else connection.cluster.queryIndexes.DefaultTimeout,
-          connection.cluster.queryIndexes.DefaultRetryStrategy,
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy,
           // [start:1.2.5]
           if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
           else None,
@@ -299,12 +286,6 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             Some(req.getOptions.getCollectionName)
           else None
           // [end:1.2.5]
-          // [start:<1.2.5]
-          /*
-          None,
-          None,
-          // [end:<1.2.5]
-         */
         )
         .get
       result.setElapsedNanos(System.nanoTime - start)
@@ -322,8 +303,8 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
           else false,
           if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
             Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else connection.cluster.queryIndexes.DefaultTimeout,
-          connection.cluster.queryIndexes.DefaultRetryStrategy,
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy,
           // [start:1.2.5]
           if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
           else None,
@@ -331,12 +312,6 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             Some(req.getOptions.getCollectionName)
           else None
           // [end:1.2.5]
-          // [start:<1.2.5]
-          /*
-          None,
-          None,
-          // [end:<1.2.5]
-         */
         )
         .get
       result.setElapsedNanos(System.nanoTime - start)
@@ -352,7 +327,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
           Duration(req.getTimeoutMsecs, TimeUnit.MILLISECONDS),
           if (req.hasOptions && req.getOptions.hasWatchPrimary) req.getOptions.getWatchPrimary
           else false,
-          connection.cluster.queryIndexes.DefaultRetryStrategy,
+          DefaultRetryStrategy,
           // [start:1.2.5]
           if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
           else None,
@@ -360,12 +335,6 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             Some(req.getOptions.getCollectionName)
           else None
           // [end:1.2.5]
-          // [start:<1.2.5]
-          /*
-          None,
-          None,
-          // [end:<1.2.5]
-         */
         )
         .get
       result.setElapsedNanos(System.nanoTime - start)
@@ -379,8 +348,8 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
           req.getBucketName,
           if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
             Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else connection.cluster.queryIndexes.DefaultTimeout,
-          connection.cluster.queryIndexes.DefaultRetryStrategy,
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy,
           // [start:1.2.5]
           if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
           else None,
@@ -388,12 +357,6 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             Some(req.getOptions.getCollectionName)
           else None
           // [end:1.2.5]
-          // [start:<1.2.5]
-          /*
-          None,
-          None,
-          // [end:<1.2.5]
-         */
         )
         .get
       result.setElapsedNanos(System.nanoTime - start)
@@ -933,12 +896,16 @@ object ScalaSdkCommandExecutor {
           .setState(i.state)
           .setKeyspace(i.keyspaceId)
           .addAllIndexKey(i.indexKey.asJava)
+          // [start:1.2.5]
           .setBucketName(i.bucketName)
+          // [end:1.2.5]
 
         i.condition.map(v => builder.setCondition(v))
+        // [start:1.2.5]
         i.partition.map(v => builder.setPartition(v))
         i.scopeName.map(v => builder.setScopeName(v))
         i.collectionName.map(v => builder.setCollectionName(v))
+        // [end:1.2.5]
 
         builder.build
       })
