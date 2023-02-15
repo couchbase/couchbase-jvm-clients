@@ -21,6 +21,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.scala-lang.modules</groupId>
+            <artifactId>scala-collection-compat_${scala.compat.version}</artifactId>
+            <version>${scala.collection-compat.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>fit-performer-core</artifactId>
             <version>1.0</version>

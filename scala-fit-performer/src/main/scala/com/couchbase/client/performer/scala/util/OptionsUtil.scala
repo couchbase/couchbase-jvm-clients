@@ -1,7 +1,5 @@
 package com.couchbase.client.performer.scala.util
 
-import com.couchbase.client.core.msg.kv.DurabilityLevel
-import com.couchbase.client.core.transaction.support.OptionsUtil
 import com.couchbase.client.protocol.shared.{ClusterConfig, ClusterConnectionCreateRequest, Durability}
 import com.couchbase.client.scala.codec.{JsonTranscoder, LegacyTranscoder, RawBinaryTranscoder, RawJsonTranscoder, RawStringTranscoder, Transcoder}
 import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig, TimeoutConfig}
