@@ -56,7 +56,10 @@ public class AsyncQueryIndexManager {
    */
   @Stability.Internal
   public AsyncQueryIndexManager(final AsyncCluster cluster) {
-    this.internal = new CoreQueryIndexManager(requireNonNull(cluster).core());
+    this.internal = new CoreQueryIndexManager(
+      cluster.core().queryOps(),
+      cluster.core().context().environment().requestTracer()
+    );
   }
 
   /**

@@ -52,7 +52,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
     implicit val ec: ExecutionContext
 ) {
   private val core            = cluster.core
-  private[scala] val internal = new CoreQueryIndexManager(core)
+  private[scala] val internal = new CoreQueryIndexManager(core.queryOps(), core.context().environment().requestTracer())
   private val DefaultTimeout: Duration =
     core.context().environment().timeoutConfig().managementTimeout()
   private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()

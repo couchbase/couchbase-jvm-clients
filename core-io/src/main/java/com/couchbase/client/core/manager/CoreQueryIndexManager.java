@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.manager;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.manager.CoreBuildQueryIndexOptions;
@@ -32,6 +31,7 @@ import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.query.CoreQueryOptions;
 import com.couchbase.client.core.api.query.CoreQueryResult;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
@@ -73,12 +73,12 @@ import static java.util.stream.Collectors.toList;
 
 @Stability.Internal
 public class CoreQueryIndexManager {
-  private final Core core;
+  private final RequestTracer requestTracer;
   private final CoreQueryOps queryOps;
 
-  public CoreQueryIndexManager(Core core) {
-    this.core = core;
-    queryOps = core.queryOps();
+  public CoreQueryIndexManager(CoreQueryOps queryOps, RequestTracer requestTracer) {
+    this.requestTracer = requireNonNull(requestTracer);
+    this.queryOps = requireNonNull(queryOps);
   }
 
   public static ObjectNode getParamsForGetAllIndexes(
@@ -305,7 +305,7 @@ public class CoreQueryIndexManager {
 
     Set<String> indexNameSet = new HashSet<>(indexNames);
 
-    RequestSpan parent = core.context().environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, null);
+    RequestSpan parent = requestTracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, null);
     parent.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     return Mono.fromFuture(() -> failIfIndexesOffline(bucketName, indexNameSet, options.watchPrimary(), parent, options.scopeAndCollection()))
@@ -358,7 +358,7 @@ public class CoreQueryIndexManager {
   private CompletableFuture<CoreQueryResult> exec(CoreQueryType queryType, CharSequence statement,
                                                   CoreCommonOptions options, String spanName, String bucketName,
                                                   ObjectNode parameters) {
-    RequestSpan parent = core.context().environment().requestTracer().requestSpan(spanName, options.parentSpan().orElse(null));
+    RequestSpan parent = requestTracer.requestSpan(spanName, options.parentSpan().orElse(null));
     parent.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     CoreCommonOptions common = CoreCommonOptions.ofOptional(options.timeout(), options.retryStrategy(), Optional.of(parent));
