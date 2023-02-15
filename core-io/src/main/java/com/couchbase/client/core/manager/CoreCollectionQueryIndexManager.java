@@ -47,6 +47,7 @@ import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.IndexesNotReadyException;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
@@ -265,7 +266,7 @@ public class CoreCollectionQueryIndexManager {
                     .exponentialBackoff(Duration.ofMillis(50), Duration.ofSeconds(1))
                     .timeout(timeout)
                     .toReactorRetry())
-            .onErrorMap(t -> t instanceof RetryExhaustedException ? toWatchTimeoutException(t, timeout) : t)
+            .onErrorMap(t -> toWatchTimeoutException(t, timeout))
             .toFuture()
             .whenComplete((r, t) -> parent.end());
   }
@@ -274,13 +275,16 @@ public class CoreCollectionQueryIndexManager {
     return "(" + String.join(",", fields) + ")";
   }
 
-  public static TimeoutException toWatchTimeoutException(Throwable t, Duration timeout) {
-    StringBuilder msg = new StringBuilder("A requested index is still not ready after " + timeout + ".");
+  public static Throwable toWatchTimeoutException(Throwable t, Duration timeout) {
+    if (t instanceof RetryExhaustedException || t instanceof java.util.concurrent.TimeoutException) {
+      StringBuilder msg = new StringBuilder("A requested index is still not ready after " + timeout + ".");
 
-    findCause(t, IndexesNotReadyException.class).ifPresent(cause ->
-            msg.append(" Unready index name -> state: ").append(redactMeta(cause.indexNameToState())));
+      findCause(t, IndexesNotReadyException.class).ifPresent(cause ->
+              msg.append(" Unready index name -> state: ").append(redactMeta(cause.indexNameToState())));
 
-    return new TimeoutException(msg.toString());
+      return new UnambiguousTimeoutException(msg.toString(), null);
+    }
+    return t;
   }
 
   private CompletableFuture<Void> failIfIndexesOffline(Set<String> indexNames, boolean includePrimary, RequestSpan parentSpan)

@@ -17,12 +17,7 @@ package com.couchbase.client.scala.manager
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.SECONDS
-import com.couchbase.client.core.error.{
-  IndexExistsException,
-  IndexFailureException,
-  IndexNotFoundException,
-  TimeoutException
-}
+import com.couchbase.client.core.error.{IndexExistsException, IndexFailureException, IndexNotFoundException, TimeoutException, UnambiguousTimeoutException}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.manager.bucket.CreateBucketSettings
 import com.couchbase.client.scala.manager.collection.CollectionSpec
@@ -423,7 +418,7 @@ class QueryIndexManagerSpec extends ScalaIntegrationTest {
     createDeferredIndex("indexTwo")
     indexes.watchIndexes(bucketName, Seq("indexOne", "indexTwo"), 0.seconds) match {
       case Success(value)                 => assert(false)
-      case Failure(err: TimeoutException) =>
+      case Failure(err: UnambiguousTimeoutException) =>
       case Failure(err) =>
         logger.warn(err.toString)
         assert(false)

@@ -18,6 +18,7 @@ package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Bucket;
@@ -338,7 +339,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
 
     createDeferredIndex("indexTwo");
 
-    TimeoutException e = assertThrowsCause(TimeoutException.class, () ->
+    UnambiguousTimeoutException e = assertThrowsCause(UnambiguousTimeoutException.class, () ->
       indexes.watchIndexes(bucketName, listOf("indexOne", "indexTwo"), Duration.ZERO, enrich(watchQueryIndexesOptions())));
     assertTrue(e.getMessage().contains("indexTwo=deferred"));
   }
@@ -404,7 +405,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
         .block());
 
     createDeferredPrimaryIndex("myIndex");
-    assertThrowsCause(TimeoutException.class, () ->
+    assertThrowsCause(UnambiguousTimeoutException.class, () ->
       indexes.reactive()
         .watchIndexes(bucketName, setOf("myIndex"), Duration.ZERO, enrich(watchQueryIndexesOptions()))
         .block());

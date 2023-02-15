@@ -313,7 +313,7 @@ public class CoreQueryIndexManager {
                     .exponentialBackoff(Duration.ofMillis(50), Duration.ofSeconds(1))
                     .timeout(timeout)
                     .toReactorRetry())
-            .onErrorMap(t -> t instanceof RetryExhaustedException ? toWatchTimeoutException(t, timeout) : t)
+            .onErrorMap(t -> toWatchTimeoutException(t, timeout))
             .toFuture()
             .whenComplete((r, t) -> parent.end());
   }
