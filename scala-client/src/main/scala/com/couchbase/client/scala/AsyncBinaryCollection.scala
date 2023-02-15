@@ -18,7 +18,8 @@ package com.couchbase.client.scala
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv._
-import com.couchbase.client.scala.util.CoreCommonConverters.{convert, convertExpiry}
+import com.couchbase.client.scala.util.CoreCommonConverters.convert
+import com.couchbase.client.scala.util.ExpiryUtil
 
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
@@ -154,7 +155,7 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       kvBinaryOps.incrementAsync(
         id,
         convert(options),
-        convertExpiry(options.expiry),
+        ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
         delta,
         options.initial.map(v => Long.box(v)).asJava,
         convert(options.durability)
@@ -193,7 +194,7 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       kvBinaryOps.decrementAsync(
         id,
         convert(options),
-        convertExpiry(options.expiry),
+        ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
         delta,
         options.initial.map(v => Long.box(v)).asJava,
         convert(options.durability)
