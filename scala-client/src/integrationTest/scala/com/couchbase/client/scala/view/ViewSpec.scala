@@ -27,12 +27,16 @@ import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{ClusterType, Flaky, IgnoreWhen, Util}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Disabled, Test, TestInstance}
 import org.junit.jupiter.api.TestInstance.Lifecycle
+import com.couchbase.client.test.ServerVersions.AVOID_MB_55617
 
 import scala.concurrent.duration.Duration._
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 
-@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED, ClusterType.CAVES))
+@IgnoreWhen(
+  clusterTypes = Array(ClusterType.MOCKED, ClusterType.CAVES),
+  clusterVersionEquals = AVOID_MB_55617
+)
 @TestInstance(Lifecycle.PER_CLASS)
 class ViewSpec extends ScalaIntegrationTest {
 

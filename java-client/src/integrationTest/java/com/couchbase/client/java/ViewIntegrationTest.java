@@ -45,12 +45,14 @@ import java.util.List;
 import java.util.Map;
 
 import static com.couchbase.client.java.view.ViewOptions.viewOptions;
+import static com.couchbase.client.test.ServerVersions.AVOID_MB_55617;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES},
+  clusterVersionEquals = AVOID_MB_55617,
   missesCapabilities = {Capabilities.VIEWS},
   isProtostellar = true)
 public class ViewIntegrationTest extends JavaIntegrationTest {

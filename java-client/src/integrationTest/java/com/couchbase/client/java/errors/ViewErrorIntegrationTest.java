@@ -34,9 +34,11 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 
 import static com.couchbase.client.java.ViewIntegrationTest.upsertDesignDocWithRetries;
+import static com.couchbase.client.test.ServerVersions.AVOID_MB_55617;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA},
+  clusterVersionEquals = AVOID_MB_55617,
   missesCapabilities = {Capabilities.VIEWS},
   isProtostellar = true)
 class ViewErrorIntegrationTest extends JavaIntegrationTest {
