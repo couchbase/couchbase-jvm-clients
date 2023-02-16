@@ -329,19 +329,55 @@ class ConnectionStringTest {
     assertEquals(COUCHBASES, ConnectionString.create("cOuChBaSeS://").scheme());
   }
 
-
   @Test
   void canCreateFromSeedNodes() {
     ConnectionString connectionString = asConnectionString(listOf(
-        SeedNode.create("neither"),
-        SeedNode.create("onlyKvPort", Optional.of(123), Optional.empty()),
-        SeedNode.create("onlyManagerPort", Optional.empty(), Optional.of(456)),
-        SeedNode.create("both", Optional.of(123), Optional.of(456))
+      SeedNode.create("neither"),
+      SeedNode.create("onlyKvPort").withKvPort(123),
+      SeedNode.create("onlyManagerPort").withManagerPort(456),
+      SeedNode.create("both").withKvPort(123).withManagerPort(456)
     ));
 
     assertEquals(
-        "couchbase://neither,onlyKvPort:123=kv,onlyManagerPort:456=manager,both:123=kv",
-        connectionString.original()
+      "couchbase://neither,onlyKvPort:123=kv,onlyManagerPort:456=manager,both:123=kv,both:456=manager",
+      connectionString.original()
+    );
+  }
+
+  @Test
+  void rejectsIncompatiblePortTypes() {
+    assertThrows(InvalidArgumentException.class, () ->
+      ConnectionString.create("foo:123=kv,bar:456=protostellar")
+    );
+  }
+
+  @Test
+  void rejectsIncompatibleSeedNodePortTypes() {
+    assertThrows(InvalidArgumentException.class, () ->
+      asConnectionString(listOf(
+        SeedNode.create("onlyKvPort").withKvPort(123),
+        SeedNode.create("protostellar").withProtostellarPort(456)
+      ))
+    );
+  }
+
+  @Test
+  void infersProtostellarScheme() {
+    assertEquals(
+      "protostellar://example.com:123",
+      asConnectionString(listOf(
+        SeedNode.create("example.com").withProtostellarPort(123)
+      )).original()
+    );
+  }
+
+  @Test
+  void canBuildFromIpv6SeedNode() {
+    assertEquals(
+      "couchbase://[0:0:0:0:0:0:0:1]:123=kv",
+      asConnectionString(listOf(
+        SeedNode.create("::1").withKvPort(123)
+      )).original()
     );
   }
 

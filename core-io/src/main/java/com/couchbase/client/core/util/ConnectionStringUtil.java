@@ -33,6 +33,7 @@ import javax.naming.NameNotFoundException;
 import javax.naming.NamingException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashSet;
@@ -45,6 +46,7 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.ConnectionString.PortType.KV;
 import static com.couchbase.client.core.util.ConnectionString.PortType.MANAGER;
 import static com.couchbase.client.core.util.ConnectionString.PortType.PROTOSTELLAR;
+import static com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASE;
 import static com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASES;
 import static java.util.stream.Collectors.groupingBy;
 
@@ -197,24 +199,34 @@ public class ConnectionStringUtil {
    * Returns a synthetic connection string corresponding to the seed nodes.
    */
   public static ConnectionString asConnectionString(Collection<SeedNode> nodes) {
-    return ConnectionString.create(nodes.stream()
-        .map(ConnectionStringUtil::asConnectionStringAddress)
-        .collect(Collectors.joining(",")));
-  }
-
-  private static String asConnectionStringAddress(SeedNode node) {
-    StringBuilder sb = new StringBuilder(node.address());
-    // Connection string can have only one port per address.
-    // If both KV and manager ports are present, prefer the KV port.
-    if (node.kvPort().isPresent()) {
-      // "=kv" is the default, but it doesn't hurt to be explicit
-      sb.append(":").append(node.kvPort().get()).append("=kv");
-    } else {
-      node.clusterManagerPort().ifPresent(it ->
-          sb.append(":").append(it).append("=manager")
-      );
+    boolean hasProtostellarPort = nodes.stream().anyMatch(it -> it.protostellarPort().isPresent());
+    boolean hasClassicPort = nodes.stream().anyMatch(it -> !it.protostellarPort().isPresent());
+    if (hasClassicPort && hasProtostellarPort) {
+      throw InvalidArgumentException.fromMessage("The seed nodes have an invalid combination of port types. Must be all Protostellar or all KV/Manager.");
     }
-    return sb.toString();
+
+    List<String> addresses = new ArrayList<>();
+
+    for (SeedNode node : nodes) {
+      if (node.protostellarPort().isPresent()) {
+        addresses.add(new HostAndPort(node.address(), node.protostellarPort().get()).format());
+        continue;
+      }
+
+      if (!node.kvPort().isPresent() && !node.clusterManagerPort().isPresent()) {
+        // Seed node did not specify any port.
+        addresses.add(new HostAndPort(node.address(), 0).format());
+        continue;
+      }
+
+      // Node has one or both of KV and Manager ports. If both, repeat the host
+      // and let populateSeedsFromConnectionString reunify the "split" seed node later.
+      node.kvPort().ifPresent(port -> addresses.add(new HostAndPort(node.address(), port).format() + "=kv"));
+      node.clusterManagerPort().ifPresent(port -> addresses.add(new HostAndPort(node.address(), port).format() + "=manager"));
+    }
+
+    return ConnectionString.create(String.join(",", addresses))
+      .withScheme(hasProtostellarPort ? ConnectionString.Scheme.PROTOSTELLAR : COUCHBASE);
   }
 
   public static final String INCOMPATIBLE_CONNECTION_STRING_SCHEME =
