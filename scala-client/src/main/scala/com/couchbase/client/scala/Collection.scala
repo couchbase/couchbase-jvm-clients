@@ -23,7 +23,12 @@ import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.manager.query.CollectionQueryIndexManager
-import com.couchbase.client.scala.util.CoreCommonConverters.{convert, convertExpiry, encoder, makeCommonOptions}
+import com.couchbase.client.scala.util.CoreCommonConverters.{
+  convert,
+  convertExpiry,
+  encoder,
+  makeCommonOptions
+}
 import com.couchbase.client.scala.util.{ExpiryUtil, TimeoutUtil}
 
 import scala.concurrent.duration._

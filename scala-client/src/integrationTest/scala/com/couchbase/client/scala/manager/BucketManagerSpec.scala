@@ -44,9 +44,11 @@ import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
-@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED),
+@IgnoreWhen(
+  clusterTypes = Array(ClusterType.MOCKED),
   // Bucket manager not implemented for Protostellar currently
-  isProtostellarWillWorkLater = true)
+  isProtostellarWillWorkLater = true
+)
 class BucketManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster       = _
   private var buckets: BucketManager = _

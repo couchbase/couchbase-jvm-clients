@@ -65,7 +65,12 @@ class ScopeLevelAnalyticsSpec extends ScalaIntegrationTest {
 
     val collSpec = CollectionSpec(collectionName, scopeName)
     bucket.collections.createCollection(collSpec).get
-    ConsistencyUtil.waitUntilCollectionPresent(cluster.async.core, bucket.name, scopeName, collectionName)
+    ConsistencyUtil.waitUntilCollectionPresent(
+      cluster.async.core,
+      bucket.name,
+      scopeName,
+      collectionName
+    )
 
     scope = bucket.scope(scopeName)
     coll = scope.collection(collectionName)
