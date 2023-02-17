@@ -36,9 +36,7 @@ public class HorizontalScalingThread extends Thread {
     private final @Nullable SdkCommandExecutor sdkCommandExecutorReactive;
     private final @Nullable TransactionCommandExecutor transactionsCommandExecutor;
     private final PerHorizontalScaling per;
-    AtomicInteger operationsSuccessful = new AtomicInteger(0);
-    AtomicInteger operationsFailed = new AtomicInteger(0);
-    AtomicInteger operationsUnknown = new AtomicInteger(0);
+    AtomicInteger executed = new AtomicInteger(0);
 
     public HorizontalScalingThread(PerHorizontalScaling per,
                                    @Nullable SdkCommandExecutor sdkCommandExecutor,
@@ -72,48 +70,30 @@ public class HorizontalScalingThread extends Thread {
     private void executeSdkWorkload(com.couchbase.client.protocol.sdk.Workload workload) {
         var bounds = getBounds(workload.hasBounds(), workload.getBounds(), workload.getCommandCount());
 
-        long executed = 0;
         while (bounds.canExecute()) {
-            var nextCommand = workload.getCommand((int) (executed % workload.getCommandCount()));
-            ++ executed;
-            var result = nextCommand.getApi() == API.DEFAULT
-                    // It's safe to call .run() here on the @Nullable, as the executor will only be called if it's previously declared itself
-                    // to support this mode of execution (e.g. API)
-                    ? sdkCommandExecutor.run(nextCommand, per.perRun())
-                    : sdkCommandExecutorReactive.run(nextCommand, per.perRun());
-
-            per.resultsStream().enqueue(result);
-            if (result.hasSdk()) {
-                if (result.getSdk().hasSuccess() && result.getSdk().getSuccess()) {
-                    operationsSuccessful.incrementAndGet();
-                } else if (result.getSdk().hasException()) {
-                    operationsFailed.incrementAndGet();
-                } else{
-                    operationsUnknown.incrementAndGet();
-                }
+            var nextCommand = workload.getCommand((int) (executed.get() % workload.getCommandCount()));
+            if (nextCommand.getApi() == API.DEFAULT) {
+                // It's safe to call .run() here on the @Nullable, as the executor will only be called if it's previously declared itself
+                // to support this mode of execution (e.g. API)
+                sdkCommandExecutor.run(nextCommand, per.perRun());
+            } else {
+                sdkCommandExecutorReactive.run(nextCommand, per.perRun());
             }
+            executed.incrementAndGet();
         }
     }
 
     private void executeTransactionWorkload(com.couchbase.client.protocol.transactions.Workload workload) {
         var bounds = getBounds(workload.hasBounds(), workload.getBounds(), workload.getCommandCount());
 
-        long executed = 0;
         while (bounds.canExecute()) {
-            var nextCommand = workload.getCommand((int) (executed % workload.getCommandCount()));
-            ++ executed;
+            var nextCommand = workload.getCommand((int) (executed.get() % workload.getCommandCount()));
             if (nextCommand.getApi() != API.DEFAULT) {
                 throw new UnsupportedOperationException();
             }
             var result = transactionsCommandExecutor.run(nextCommand, workload.getPerformanceMode());
             per.resultsStream().enqueue(result);
-            if (result.hasTransaction()) {
-                if (result.getTransaction().getException() == TransactionException.NO_EXCEPTION_THROWN) {
-                    operationsSuccessful.incrementAndGet();
-                } else {
-                    operationsFailed.incrementAndGet();
-                }
-            }
+            executed.incrementAndGet();
         }
     }
 
@@ -129,7 +109,7 @@ public class HorizontalScalingThread extends Thread {
                     .setGrpc(com.couchbase.client.protocol.meta.Result.getDefaultInstance())
                     .build());
 
-            operationsSuccessful.incrementAndGet();
+            executed.incrementAndGet();
         }
     }
 
@@ -157,7 +137,6 @@ public class HorizontalScalingThread extends Thread {
             System.exit(-1);
         }
 
-        logger.info("Finished after {} successful operations, {} failed, and {} unknown",
-                operationsSuccessful, operationsFailed, operationsUnknown);
+        logger.info("Finished after {} operations", executed.get());
     }
 }

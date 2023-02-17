@@ -35,14 +35,13 @@ public abstract class SdkCommandExecutor extends Executor {
         super(counters);
     }
 
-    abstract protected com.couchbase.client.protocol.run.Result performOperation(com.couchbase.client.protocol.sdk.Command op, PerRun perRun);
+    abstract protected void performOperation(com.couchbase.client.protocol.sdk.Command op, PerRun perRun);
 
     abstract protected com.couchbase.client.protocol.shared.Exception convertException(Throwable raw);
 
-    // Returns a com.couchbase.client.protocol.run.Result so it can also return the timing info.
-    public com.couchbase.client.protocol.run.Result run(com.couchbase.client.protocol.sdk.Command command, PerRun perRun) {
+    public void run(com.couchbase.client.protocol.sdk.Command command, PerRun perRun) {
         try {
-            return performOperation(command, perRun);
+            performOperation(command, perRun);
         } catch (RuntimeException err) {
             if (err instanceof UnsupportedOperationException) {
                 // The perf test can easily create hundreds of thousands of these errors per second, creating gigabytes of logging very quickly.
@@ -54,10 +53,10 @@ public abstract class SdkCommandExecutor extends Executor {
                 }
             }
 
-            return com.couchbase.client.protocol.run.Result.newBuilder()
+            perRun.resultsStream().enqueue(com.couchbase.client.protocol.run.Result.newBuilder()
                     .setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
                             .setException(convertException(err)))
-                    .build();
+                    .build());
         }
     }
 }

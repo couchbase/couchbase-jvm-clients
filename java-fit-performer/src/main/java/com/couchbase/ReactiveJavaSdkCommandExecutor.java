@@ -60,8 +60,12 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
     }
 
     @Override
-    protected com.couchbase.client.protocol.run.Result performOperation(com.couchbase.client.protocol.sdk.Command op, PerRun perRun) {
-        return performOperationReactive(op, perRun).block();
+    protected void performOperation(com.couchbase.client.protocol.sdk.Command op, PerRun perRun) {
+        performOperationReactive(op, perRun)
+                // A few operations (such as streaming) will intentionally not return a result, so they guarantee
+                // the stream.Created is sent first.
+                .doOnNext(result -> perRun.resultsStream().enqueue(result))
+                .block();
     }
 
     private Mono<Result> performOperationReactive(com.couchbase.client.protocol.sdk.Command op, PerRun perRun) {

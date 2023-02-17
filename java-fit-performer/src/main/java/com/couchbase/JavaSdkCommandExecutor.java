@@ -98,7 +98,12 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     }
 
     @Override
-    protected com.couchbase.client.protocol.run.Result performOperation(com.couchbase.client.protocol.sdk.Command op, PerRun perRun) {
+    protected void performOperation(com.couchbase.client.protocol.sdk.Command op, PerRun perRun) {
+        var result = performOperationInternal(op, perRun);
+        perRun.resultsStream().enqueue(result);
+    }
+
+    protected com.couchbase.client.protocol.run.Result performOperationInternal(com.couchbase.client.protocol.sdk.Command op, PerRun perRun) {
         var result = com.couchbase.client.protocol.run.Result.newBuilder();
 
         if (op.hasInsert()){
