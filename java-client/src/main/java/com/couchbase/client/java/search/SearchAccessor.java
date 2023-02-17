@@ -131,7 +131,7 @@ public class SearchAccessor {
           status.successCount(),
           status.errorCount()
         );
-        return new SearchMetaData(status.errors(), metrics);
+        return new SearchMetaData(status.errors() == null ? Collections.emptyMap() : status.errors(), metrics);
     }
 
     private static void checkIfProtostellar(Core core) {

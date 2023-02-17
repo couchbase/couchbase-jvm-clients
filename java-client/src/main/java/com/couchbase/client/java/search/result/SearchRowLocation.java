@@ -17,6 +17,7 @@ package com.couchbase.client.java.search.result;
 
 
 import com.couchbase.client.core.annotation.Stability;
+import reactor.util.annotation.Nullable;
 
 import java.util.Arrays;
 
@@ -86,7 +87,7 @@ public class SearchRowLocation {
      *
      * @return the array positions, or null if not applicable.
      */
-    public long[] arrayPositions() {
+    @Nullable public long[] arrayPositions() {
         return arrayPositions;
     }
 

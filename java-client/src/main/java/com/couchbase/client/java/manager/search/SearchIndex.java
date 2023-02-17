@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonPrope
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -120,7 +121,7 @@ public class SearchIndex {
   }
 
   public Map<String, Object> params() {
-    return params;
+    return params == null ? Collections.emptyMap() : params;
   }
 
   public SearchIndex params(Map<String, Object> params) {
@@ -138,7 +139,7 @@ public class SearchIndex {
   }
 
   public Map<String, Object> sourceParams() {
-    return sourceParams;
+    return sourceParams == null ? Collections.emptyMap() : sourceParams;
   }
 
   public SearchIndex sourceParams(Map<String, Object> sourceParams) {
@@ -156,7 +157,7 @@ public class SearchIndex {
   }
 
   public Map<String, Object> planParams() {
-    return planParams;
+    return planParams == null ? Collections.emptyMap() : planParams;
   }
 
   public SearchIndex planParams(Map<String, Object> planParams) {
