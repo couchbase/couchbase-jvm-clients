@@ -66,6 +66,7 @@ class CouchbaseSet[T](
 
     result match {
       case Success(values: Seq[T]) =>
+        // This .toSeq required for 2.13
         val zipped: Seq[(T, Int)] = values.toSeq.zipWithIndex
 
         for (eAndIndex <- zipped) {

@@ -50,6 +50,7 @@ import scala.compat.java8.OptionConverters._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
+import scala.language.reflectiveCalls
 
 private[scala] object CoreCommonConverters {
   type HasCommonOptions = {
