@@ -18,7 +18,9 @@ package com.couchbase;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
+// [start:3.4.1]
 import com.couchbase.client.java.kv.ScanResult;
+// [end:3.4.1]
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.perf.Counters;
 import com.couchbase.client.performer.core.perf.PerRun;
@@ -41,6 +43,8 @@ import static com.couchbase.JavaSdkCommandExecutor.processScanResult;
 import static com.couchbase.JavaSdkCommandExecutor.setSuccess;
 import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
 import static com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN;
+import static com.couchbase.search.SearchHelper.handleSearchIndexManagerBlocking;
+import static com.couchbase.search.SearchHelper.handleSearchReactive;
 
 
 /**
@@ -177,6 +181,12 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
             } else if (op.hasClusterCommand()) {
                 var clc = op.getClusterCommand();
                 var cluster = connection.cluster().reactive();
+
+                // Streaming, so intentionally does not return a result.
+
+                // Skipping testing the reactive API as this is tertiary functionality, and the reactive API wraps the
+                // same underlying logic as the blocking API.
+
 
                 if (clc.hasQueryIndexManager()) {
                     return QueryIndexManagerHelper.handleClusterQueryIndexManagerReactive(cluster, spans, op, result);

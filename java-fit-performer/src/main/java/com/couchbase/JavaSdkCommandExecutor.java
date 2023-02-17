@@ -36,10 +36,12 @@ import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.ReplicateTo;
+// [start:3.4.1]
 import com.couchbase.client.java.kv.ScanOptions;
 import com.couchbase.client.java.kv.ScanResult;
 import com.couchbase.client.java.kv.ScanSort;
 import com.couchbase.client.java.kv.ScanTerm;
+// [end:3.4.1]
 import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.perf.Counters;
@@ -67,6 +69,8 @@ import java.util.stream.Stream;
 
 import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
 import static com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN;
+import static com.couchbase.search.SearchHelper.handleSearchBlocking;
+import static com.couchbase.search.SearchHelper.handleSearchIndexManagerBlocking;
 
 
 /**
