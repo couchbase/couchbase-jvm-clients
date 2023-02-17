@@ -50,8 +50,6 @@ import com.couchbase.client.protostellar.analytics.v1.AnalyticsGrpc;
 import com.couchbase.client.protostellar.internal.hooks.v1.HooksGrpc;
 import com.couchbase.client.protostellar.kv.v1.KvGrpc;
 import com.couchbase.client.protostellar.query.v1.QueryGrpc;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -71,7 +69,6 @@ import static java.util.Objects.requireNonNull;
  * Wraps a GRPC ManagedChannel.
  */
 public class ProtostellarEndpoint {
-  private final Logger logger = LoggerFactory.getLogger(ProtostellarEndpoint.class);
 
   // JVMCBC-1187: Temporary performance-related code that will be removed pre-GA.  (It's useful, but GRPC doesn't expose internals well, and
   // this has to use hacky methods to get them). Plus of course it's a hack to have a public static setter.
@@ -95,8 +92,6 @@ public class ProtostellarEndpoint {
     // However, Stellar Nebula is running normally, not in a container, so must be accessed with "localhost" instead.
     // So we pass a connection string of "protostellar://cbs" and "com.couchbase.protostellar.overrideHostname"="localhost".
     String override = System.getProperty("com.couchbase.protostellar.overrideHostname");
-    // JVMCBC-1187: all Protostellar logging will be tidied up or removed pre-GA.
-    logger.info("creating {}, override={}", remote, override);
     this.remote = override != null
       ? new HostAndPort(override, remote.port())
       : remote;
@@ -108,7 +103,6 @@ public class ProtostellarEndpoint {
 
     // This getState is inherently non-atomic.  However, nothing should be able to use this channel or endpoint yet, so it should be guaranteed to be IDLE.
     ConnectivityState now = this.managedChannel.getState(false);
-    logger.info("channel starts in state {}/{}", now, convert(now));
     notifyOnChannelStateChange(now);
 
     CallCredentials creds = new CallCredentials() {
@@ -208,8 +202,6 @@ public class ProtostellarEndpoint {
   }
 
   private ManagedChannel channel() {
-    logger.info("making channel {}", remote);
-
     // JVMCBC-1187: we're using unverified TLS for now - once STG has it we can use the same Capella cert bundling approach and use TLS properly.
     ManagedChannelBuilder builder = NettyChannelBuilder.forAddress(remote.host(), remote.port(), InsecureChannelCredentials.create())
       // 20MB is the (current) maximum document size supported by the server.  Specifying 21MB to give wiggle room for the rest of the GRPC message.
@@ -224,7 +216,6 @@ public class ProtostellarEndpoint {
     String loadBalancingCount = System.getProperty("com.couchbase.protostellar.loadBalancing");
     String loadBalancingStrategy = System.getProperty("com.couchbase.protostellar.loadBalancingStrategy", "round_robin");
     String loadBalancingSingle = System.getProperty("com.couchbase.protostellar.loadBalancingSingle", "true");
-    logger.info("loadBalancing={} loadBalancingStrategy={} loadBalancingSingle={}", loadBalancingCount, loadBalancingStrategy, loadBalancingSingle);
 
     if (loadBalancingCount != null) {
       List<EquivalentAddressGroup> addresses = new ArrayList<>();
@@ -262,7 +253,6 @@ public class ProtostellarEndpoint {
   private void notifyOnChannelStateChange(ConnectivityState current) {
     this.managedChannel.notifyWhenStateChanged(current, () -> {
       ConnectivityState now = this.managedChannel.getState(false);
-      logger.info("channel has changed state from {}/{} to {}/{}", current, convert(current), now, convert(now));
 
       Context ec = new ProtostellarEndpointContext(ctx, remote);
       env.eventBus().publish(new EndpointStateChangedEvent(ec, convert(current), convert(now)));
@@ -319,13 +309,11 @@ public class ProtostellarEndpoint {
 
   public synchronized void shutdown(Duration timeout) {
     if (shutdown.compareAndSet(false, true)) {
-      logger.info("waiting for channel to shutdown");
       managedChannel.shutdown();
       try {
         managedChannel.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
       }
-      logger.info("channel has shutdown");
     }
   }
 
@@ -375,7 +363,6 @@ public class ProtostellarEndpoint {
   public CompletableFuture<Void> waitUntilReady(Deadline deadline, boolean waitingForReady) {
     CompletableFuture<Void> onDone = new CompletableFuture<>();
     ConnectivityState current = managedChannel.getState(true);
-    logger.debug("WaitUntilReady: Endpoint {} starts in state {}", remote, current);
     notify(current, onDone, deadline, waitingForReady);
     return onDone;
   }
@@ -387,7 +374,6 @@ public class ProtostellarEndpoint {
     else {
       this.managedChannel.notifyWhenStateChanged(current, () -> {
         ConnectivityState now = this.managedChannel.getState(true);
-        logger.debug("WaitUntilReady: Endpoint {} is now in state {}", remote, now);
 
         if (inDesiredState(current, waitingForReady)) {
           onDone.complete(null);

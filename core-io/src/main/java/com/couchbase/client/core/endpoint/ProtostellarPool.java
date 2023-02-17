@@ -19,8 +19,6 @@ package com.couchbase.client.core.endpoint;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.protostellar.ProtostellarContext;
 import com.couchbase.client.core.util.HostAndPort;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -34,15 +32,12 @@ import static java.util.Collections.unmodifiableList;
  */
 @Stability.Internal
 public class ProtostellarPool {
-  private static final Logger logger = LoggerFactory.getLogger(ProtostellarPool.class);
-
   private final List<ProtostellarEndpoint> endpoints;
   private final AtomicLong lastUsed = new AtomicLong(0);
 
   public ProtostellarPool(ProtostellarContext ctx, HostAndPort remote) {
     // JVMCBC-1196: assuming ProtostellarPool is kept, add configuration options for it.
     int numEndpoints = Integer.parseInt(System.getProperty("com.couchbase.protostellar.numEndpoints", "3"));
-    logger.info("creating with endpoints {}", numEndpoints);
     List<ProtostellarEndpoint> endpoints = new ArrayList<>(numEndpoints);
     for (int i = 0; i < numEndpoints; i++) {
       endpoints.add(new ProtostellarEndpoint(ctx, remote));
