@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
+import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
@@ -29,6 +30,10 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
+import com.couchbase.client.java.search.SearchAccessor;
+import com.couchbase.client.java.search.SearchOptions;
+import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.search.result.ReactiveSearchResult;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
@@ -37,6 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
 
 /**
  * The scope identifies a group of collections and allows high application
@@ -182,6 +188,33 @@ public class ReactiveScope {
           asyncScope.analyticsRequest(statement, opts),
           serializer
       );
+    });
+  }
+
+  /**
+   * Performs a Full Text Search (FTS) query with default {@link SearchOptions}.
+   *
+   * @param query the query, in the form of a {@link SearchQuery}
+   * @return the {@link ReactiveSearchResult} once the response arrives successfully, inside a {@link Mono}
+   */
+  public Mono<ReactiveSearchResult> searchQuery(final String indexName, SearchQuery query) {
+    return searchQuery(indexName, query, DEFAULT_SEARCH_OPTIONS);
+  }
+
+  /**
+   * Performs a Full Text Search (FTS) query with custom {@link SearchOptions}.
+   *
+   * @param query the query, in the form of a {@link SearchQuery}
+   * @param options the custom options for this query.
+   * @return the {@link ReactiveSearchResult} once the response arrives successfully, inside a {@link Mono}
+   */
+  public Mono<ReactiveSearchResult> searchQuery(final String indexName, final SearchQuery query, final SearchOptions options) {
+    notNull(query, "SearchQuery", () -> new ReducedSearchErrorContext(indexName, null));
+    notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, query.export().toMap()));
+    SearchOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+    return Mono.defer(() -> {
+      return SearchAccessor.searchQueryReactive(asyncScope.core(), asyncScope.searchRequest(indexName, query, opts), serializer);
     });
   }
 

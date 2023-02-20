@@ -89,7 +89,8 @@ private[scala] class SearchHandler(hp: HandlerBasicParams) {
           core.context().authenticator(),
           indexName,
           queryBytes,
-          hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH, options.parentSpan.orNull)
+          hp.tracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH, options.parentSpan.orNull),
+          null
         )
       )
     }

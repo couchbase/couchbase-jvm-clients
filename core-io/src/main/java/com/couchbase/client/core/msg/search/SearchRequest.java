@@ -17,12 +17,14 @@
 package com.couchbase.client.core.msg.search;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.*;
+import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.HttpRequest;
@@ -31,6 +33,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
@@ -44,13 +47,15 @@ public class SearchRequest extends BaseRequest<SearchResponse>
     private final String indexName;
     private final byte[] content;
     private final Authenticator authenticator;
+    private final CoreBucketAndScope scope;
 
     public SearchRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy, Authenticator authenticator,
-                         String indexName, byte[] content, final RequestSpan span) {
+                         String indexName, byte[] content, final RequestSpan span, @Nullable CoreBucketAndScope scope) {
         super(timeout, ctx, retryStrategy, span);
         this.indexName = indexName;
         this.content = content;
         this.authenticator = authenticator;
+        this.scope = scope;
 
         if (span != null && !CbTracing.isInternalSpan(span)) {
             span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_SEARCH);
@@ -61,7 +66,18 @@ public class SearchRequest extends BaseRequest<SearchResponse>
     @Override
     public FullHttpRequest encode() {
         ByteBuf c = Unpooled.wrappedBuffer(content);
-        String uri = "/api/index/" + indexName + "/query";
+        String uri;
+        if (scope == null) {
+            uri = CoreHttpPath.formatPath("/api/index/{}/query", indexName);
+        }
+        else {
+            uri = CoreHttpPath.formatPath(
+                    "/api/bucket/{}/scope/{}/index/{}/query",
+                    scope.bucketName(),
+                    scope.scopeName(),
+                    indexName
+            );
+        }
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uri, c);
         request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
         request.headers().set(HttpHeaderNames.CONTENT_LENGTH, c.readableBytes());

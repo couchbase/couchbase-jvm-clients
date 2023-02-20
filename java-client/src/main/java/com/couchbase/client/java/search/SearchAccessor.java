@@ -58,7 +58,8 @@ public class SearchAccessor {
 
     private static final byte[] NULL = new byte[] { 'n', 'u', 'l', 'l' };
 
-    public static CompletableFuture<SearchResult> searchQueryAsync(final Core core, final SearchRequest request,
+    public static CompletableFuture<SearchResult> searchQueryAsync(final Core core,
+                                                                   final SearchRequest request,
                                                                    final JsonSerializer serializer) {
         checkIfProtostellar(core);
         core.send(request);

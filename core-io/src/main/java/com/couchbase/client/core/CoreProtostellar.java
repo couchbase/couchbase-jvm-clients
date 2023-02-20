@@ -20,6 +20,9 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
+import com.couchbase.client.core.api.manager.CoreBucketAndScope;
+import com.couchbase.client.core.api.manager.search.ClassicCoreScopeSearchIndexManager;
+import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
@@ -129,6 +132,11 @@ public class CoreProtostellar implements CoreCouchbaseOps {
   @Override
   public CoreCollectionManager collectionManager(String bucketName) {
     return new ProtostellarCoreCollectionManagerOps(this, bucketName);
+  }
+
+  @Override
+  public CoreSearchIndexManager scopeSearchIndexManager(CoreBucketAndScope scope) {
+    throw new UnsupportedOperationException("Scope-level search index management is not yet supported in Protostellar");
   }
 
   @Override

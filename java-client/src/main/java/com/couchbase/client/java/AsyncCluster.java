@@ -386,7 +386,7 @@ public class AsyncCluster {
    * Performs a Full Text Search (FTS) query with default {@link SearchOptions}.
    *
    * @param query the query, in the form of a {@link SearchQuery}
-   * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link CompletableFuture}
+   * @return the {@link SearchResult} once the response arrives successfully, inside a {@link CompletableFuture}
    */
   public CompletableFuture<SearchResult> searchQuery(final String indexName, final SearchQuery query) {
     return searchQuery(indexName, query, DEFAULT_SEARCH_OPTIONS);
@@ -397,7 +397,7 @@ public class AsyncCluster {
    *
    * @param query the query, in the form of a {@link SearchQuery}
    * @param options the custom options for this query.
-   * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link CompletableFuture}
+   * @return the {@link SearchResult} once the response arrives successfully, inside a {@link CompletableFuture}
    */
   public CompletableFuture<SearchResult> searchQuery(final String indexName, final SearchQuery query, final SearchOptions options) {
     notNull(query, "SearchQuery", () -> new ReducedSearchErrorContext(indexName, null));
@@ -420,7 +420,7 @@ public class AsyncCluster {
     final RequestSpan span = environment()
       .requestTracer()
       .requestSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH, opts.parentSpan().orElse(null));
-    SearchRequest request = new SearchRequest(timeout, core().context(), retryStrategy, authenticator, indexName, bytes, span);
+    SearchRequest request = new SearchRequest(timeout, core().context(), retryStrategy, authenticator, indexName, bytes, span, null);
     request.context().clientContext(opts.clientContext());
     return request;
   }

@@ -26,9 +26,13 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.manager.search.ScopeSearchIndexManager;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.search.SearchOptions;
+import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.search.result.SearchResult;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +41,7 @@ import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
 import static com.couchbase.client.java.query.QueryAccessor.convertCoreQueryError;
 
 /**
@@ -65,6 +70,11 @@ public class Scope {
   private final Map<String, Collection> collectionCache = new ConcurrentHashMap<>();
 
   /**
+   * Manages search indexes.
+   */
+  private final ScopeSearchIndexManager searchIndexManager;
+
+  /**
    * Creates a new {@link Scope}.
    *
    * @param asyncScope the underlying async scope.
@@ -72,6 +82,7 @@ public class Scope {
   Scope(final AsyncScope asyncScope) {
     this.asyncScope = asyncScope;
     this.reactiveScope = new ReactiveScope(asyncScope);
+    this.searchIndexManager = new ScopeSearchIndexManager(asyncScope.searchIndexes());
   }
 
   /**
@@ -195,5 +206,38 @@ public class Scope {
    */
   public AnalyticsResult analyticsQuery(final String statement, final AnalyticsOptions options) {
     return block(async().analyticsQuery(statement, options));
+  }
+
+  /**
+   * Performs a Full Text Search (FTS) query with default {@link SearchOptions}.
+   *
+   * @param query the query, in the form of a {@link SearchQuery}
+   * @return the {@link SearchResult} once the response arrives successfully.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  public SearchResult searchQuery(final String indexName, final SearchQuery query) {
+    return searchQuery(indexName, query, DEFAULT_SEARCH_OPTIONS);
+  }
+
+  /**
+   * Performs a Full Text Search (FTS) query with custom {@link SearchOptions}.
+   *
+   * @param query the query, in the form of a {@link SearchQuery}
+   * @param options the custom options for this query.
+   * @return the {@link SearchResult} once the response arrives successfully.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  public SearchResult searchQuery(final String indexName, final SearchQuery query, final SearchOptions options) {
+    return block(async().searchQuery(indexName, query, options));
+  }
+
+  /**
+   * Allows management of scope FTS indexes.
+   */
+  @Stability.Volatile
+  public ScopeSearchIndexManager searchIndexes() {
+    return searchIndexManager;
   }
 }

@@ -41,6 +41,11 @@ public class Capabilities {
         out.add(Caps.SDK_SEARCH);
         out.add(Caps.SDK_SEARCH_INDEX_MANAGEMENT);
 
+        // [start:3.4.4]
+        out.add(Caps.SDK_SCOPE_SEARCH);
+        out.add(Caps.SDK_SCOPE_SEARCH_INDEX_MANAGEMENT);
+        // [end:3.4.4]
+
         return out;
     }
 }

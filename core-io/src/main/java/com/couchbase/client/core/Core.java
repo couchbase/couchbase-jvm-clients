@@ -20,6 +20,9 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
+import com.couchbase.client.core.api.manager.CoreBucketAndScope;
+import com.couchbase.client.core.api.manager.search.ClassicCoreScopeSearchIndexManager;
+import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.callbacks.BeforeSendRequestCallback;
 import com.couchbase.client.core.classic.kv.ClassicCoreKvBinaryOps;
@@ -60,6 +63,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.ConfigException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
@@ -1027,6 +1031,11 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     return isProtostellar()
       ? new ProtostellarCoreCollectionManagerOps(protostellar, bucketName)
       : new ClassicCoreCollectionManagerOps(this, bucketName);
+  }
+
+  @Override
+  public CoreSearchIndexManager scopeSearchIndexManager(CoreBucketAndScope scope) {
+    return new ClassicCoreScopeSearchIndexManager(this, scope);
   }
 
   @Override

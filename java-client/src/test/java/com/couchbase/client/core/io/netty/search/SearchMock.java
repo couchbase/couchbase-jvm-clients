@@ -113,7 +113,7 @@ public class SearchMock {
         // Our ChunkedSearchMessageHandler needs to be initialised by pretending we've sent an outbound SearchRequest
         // through it
         SearchRequest req = new SearchRequest(Duration.ofSeconds(10), ctx, BestEffortRetryStrategy.INSTANCE, null,
-                null, null, null);
+                null, null, null, null);
 
         // ChunkedSearchMessageHandler will try to encode() the SearchRequest.  Rather than mocking everything required
         // to get that working, just mock the encode method.

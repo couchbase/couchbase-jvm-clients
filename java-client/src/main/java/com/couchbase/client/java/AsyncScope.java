@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.CoreCouchbaseOps;
+import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.api.query.CoreQueryContext;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.cnc.RequestSpan;
@@ -28,8 +29,10 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
+import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
+import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
@@ -37,9 +40,14 @@ import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.manager.search.AsyncScopeSearchIndexManager;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.search.SearchAccessor;
+import com.couchbase.client.java.search.SearchOptions;
+import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.search.result.SearchResult;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -52,6 +60,7 @@ import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
+import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -92,6 +101,11 @@ public class AsyncScope {
    */
   private final Map<String, AsyncCollection> collectionCache = new ConcurrentHashMap<>();
 
+  /**
+   * Manages search indexes.
+   */
+  private final AsyncScopeSearchIndexManager searchIndexManager;
+
   AsyncScope(final String scopeName, final String bucketName, final CoreCouchbaseOps couchbaseOps,
              final ClusterEnvironment environment) {
     this.scopeName = requireNonNull(scopeName);
@@ -100,6 +114,7 @@ public class AsyncScope {
     this.environment = requireNonNull(environment);
     this.queryOps = couchbaseOps.queryOps();
     queryContext = CoreQueryContext.of(bucketName, scopeName);
+    this.searchIndexManager = new AsyncScopeSearchIndexManager(couchbaseOps, this);
   }
 
   /**
@@ -117,6 +132,7 @@ public class AsyncScope {
   }
 
   /**
+   *
    * Provides access to the underlying {@link Core}.
    *
    * <p>This is advanced API, use with care!</p>
@@ -262,4 +278,56 @@ public class AsyncScope {
     return request;
   }
 
+  /**
+   * Performs a Full Text Search (FTS) query with default {@link SearchOptions}.
+   *
+   * @param query the query, in the form of a {@link SearchQuery}
+   * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link CompletableFuture}
+   */
+  public CompletableFuture<SearchResult> searchQuery(final String indexName, final SearchQuery query) {
+    return searchQuery(indexName, query, DEFAULT_SEARCH_OPTIONS);
+  }
+
+  /**
+   * Performs a Full Text Search (FTS) query with custom {@link SearchOptions}.
+   *
+   * @param query the query, in the form of a {@link SearchQuery}
+   * @param options the custom options for this query.
+   * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link CompletableFuture}
+   */
+  @Stability.Volatile
+  public CompletableFuture<SearchResult> searchQuery(final String indexName, final SearchQuery query, final SearchOptions options) {
+    notNull(query, "SearchQuery", () -> new ReducedSearchErrorContext(indexName, null));
+    notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, query.export().toMap()));
+    SearchOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
+    return SearchAccessor.searchQueryAsync(couchbaseOps.asCore(), searchRequest(indexName, query, opts), serializer);
+  }
+
+  SearchRequest searchRequest(final String indexName, final SearchQuery query, final SearchOptions.Built opts) {
+    notNullOrEmpty(indexName, "IndexName", () -> new ReducedSearchErrorContext(indexName, query.export().toMap()));
+    Duration timeout = opts.timeout().orElse(environment.timeoutConfig().searchTimeout());
+
+    JsonObject params = query.export();
+    opts.injectParams(indexName, params, timeout);
+    byte[] bytes = params.toString().getBytes(StandardCharsets.UTF_8);
+
+    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
+
+    final RequestSpan span = environment()
+            .requestTracer()
+            .requestSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH, opts.parentSpan().orElse(null));
+    SearchRequest request = new SearchRequest(timeout, couchbaseOps.asCore().context(), retryStrategy, couchbaseOps.asCore().context().authenticator(), indexName, bytes, span,
+            new CoreBucketAndScope(bucketName, scopeName));
+    request.context().clientContext(opts.clientContext());
+    return request;
+  }
+
+  /**
+   * Allows managed scope FTS indexes.
+   */
+  @Stability.Volatile
+  public AsyncScopeSearchIndexManager searchIndexes() {
+    return searchIndexManager;
+  }
 }

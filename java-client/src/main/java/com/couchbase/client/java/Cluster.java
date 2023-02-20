@@ -436,7 +436,7 @@ public class Cluster implements Closeable {
    * Performs a Full Text Search (FTS) query with default {@link SearchOptions}.
    *
    * @param query the query, in the form of a {@link SearchQuery}
-   * @return the {@link SearchRequest} once the response arrives successfully.
+   * @return the {@link SearchResult} once the response arrives successfully.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
@@ -449,7 +449,7 @@ public class Cluster implements Closeable {
    *
    * @param query the query, in the form of a {@link SearchQuery}
    * @param options the custom options for this query.
-   * @return the {@link SearchRequest} once the response arrives successfully.
+   * @return the {@link SearchResult} once the response arrives successfully.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */

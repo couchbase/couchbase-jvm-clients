@@ -92,6 +92,7 @@ object SearchMock {
       null,
       null,
       null,
+      null,
       null
     )
 

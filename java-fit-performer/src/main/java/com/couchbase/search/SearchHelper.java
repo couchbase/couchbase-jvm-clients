@@ -19,6 +19,7 @@ package com.couchbase.search;
 import com.couchbase.JavaSdkCommandExecutor;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.Scope;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.manager.search.AllowQueryingSearchIndexOptions;
 import com.couchbase.client.java.manager.search.AnalyzeDocumentOptions;
@@ -52,20 +53,20 @@ import com.couchbase.client.java.search.sort.SearchSort;
 import com.couchbase.client.java.util.Coordinate;
 import com.couchbase.client.performer.core.perf.PerRun;
 import com.couchbase.client.protocol.run.Result;
-import com.couchbase.client.protocol.sdk.management.search.AllowQuerying;
-import com.couchbase.client.protocol.sdk.management.search.AnalyzeDocument;
-import com.couchbase.client.protocol.sdk.management.search.AnalyzeDocumentResult;
-import com.couchbase.client.protocol.sdk.management.search.DisallowQuerying;
-import com.couchbase.client.protocol.sdk.management.search.DropIndex;
-import com.couchbase.client.protocol.sdk.management.search.FreezePlan;
-import com.couchbase.client.protocol.sdk.management.search.GetAllIndexes;
-import com.couchbase.client.protocol.sdk.management.search.GetIndex;
-import com.couchbase.client.protocol.sdk.management.search.GetIndexedDocumentsCount;
-import com.couchbase.client.protocol.sdk.management.search.PauseIngest;
-import com.couchbase.client.protocol.sdk.management.search.ResumeIngest;
-import com.couchbase.client.protocol.sdk.management.search.SearchIndexes;
-import com.couchbase.client.protocol.sdk.management.search.UnfreezePlan;
-import com.couchbase.client.protocol.sdk.management.search.UpsertIndex;
+import com.couchbase.client.protocol.sdk.search.indexmanager.AllowQuerying;
+import com.couchbase.client.protocol.sdk.search.indexmanager.AnalyzeDocument;
+import com.couchbase.client.protocol.sdk.search.indexmanager.AnalyzeDocumentResult;
+import com.couchbase.client.protocol.sdk.search.indexmanager.DisallowQuerying;
+import com.couchbase.client.protocol.sdk.search.indexmanager.DropIndex;
+import com.couchbase.client.protocol.sdk.search.indexmanager.FreezePlan;
+import com.couchbase.client.protocol.sdk.search.indexmanager.GetAllIndexes;
+import com.couchbase.client.protocol.sdk.search.indexmanager.GetIndex;
+import com.couchbase.client.protocol.sdk.search.indexmanager.GetIndexedDocumentsCount;
+import com.couchbase.client.protocol.sdk.search.indexmanager.PauseIngest;
+import com.couchbase.client.protocol.sdk.search.indexmanager.ResumeIngest;
+import com.couchbase.client.protocol.sdk.search.indexmanager.SearchIndexes;
+import com.couchbase.client.protocol.sdk.search.indexmanager.UnfreezePlan;
+import com.couchbase.client.protocol.sdk.search.indexmanager.UpsertIndex;
 import com.couchbase.client.protocol.sdk.search.BlockingSearchResult;
 import com.couchbase.client.protocol.sdk.search.Location;
 import com.couchbase.client.protocol.sdk.search.Search;
@@ -603,6 +604,7 @@ public class SearchHelper {
   }
 
   public static Result handleSearchBlocking(Cluster cluster,
+                                            @Nullable Scope scope,
                                             ConcurrentHashMap<String, RequestSpan> spans,
                                             com.couchbase.client.protocol.sdk.search.Search command) {
     var q = command.getQuery();
@@ -615,10 +617,19 @@ public class SearchHelper {
     long start = System.nanoTime();
 
     SearchResult r;
-    if (options != null) {
-      r = cluster.searchQuery(command.getIndexName(), query, options);
-    } else {
-      r = cluster.searchQuery(command.getIndexName(), query);
+    if (scope == null) {
+      if (options != null) {
+        r = cluster.searchQuery(command.getIndexName(), query, options);
+      } else {
+        r = cluster.searchQuery(command.getIndexName(), query);
+      }
+    }
+    else {
+      if (options != null) {
+        r = scope.searchQuery(command.getIndexName(), query, options);
+      } else {
+        r = scope.searchQuery(command.getIndexName(), query);
+      }
     }
 
     result.setElapsedNanos(System.nanoTime() - start);
@@ -630,6 +641,7 @@ public class SearchHelper {
   }
 
   public static Mono<Void> handleSearchReactive(Cluster cluster,
+                                                @Nullable Scope scope,
                                                 ConcurrentHashMap<String, RequestSpan> spans,
                                                 com.couchbase.client.protocol.sdk.search.Search command,
                                                 PerRun perRun) {
@@ -644,10 +656,19 @@ public class SearchHelper {
       long start = System.nanoTime();
 
       Mono<ReactiveSearchResult> r;
-      if (options != null) {
-        r = cluster.reactive().searchQuery(command.getIndexName(), query, options);
-      } else {
-        r = cluster.reactive().searchQuery(command.getIndexName(), query);
+      if (scope == null) {
+        if (options != null) {
+          r = cluster.reactive().searchQuery(command.getIndexName(), query, options);
+        } else {
+          r = cluster.reactive().searchQuery(command.getIndexName(), query);
+        }
+      }
+      else {
+        if (options != null) {
+          r = scope.reactive().searchQuery(command.getIndexName(), query, options);
+        } else {
+          r = scope.reactive().searchQuery(command.getIndexName(), query);
+        }
       }
 
       return r.doOnNext(re -> {
@@ -760,11 +781,48 @@ public class SearchHelper {
     return builder.build();
   }
 
-  public static Result handleSearchIndexManagerBlocking(Cluster cluster,
-                                                        ConcurrentHashMap<String, RequestSpan> spans,
-                                                        com.couchbase.client.protocol.sdk.Command op) {
+  public static Result handleClusterSearchIndexManager(Cluster cluster,
+                                                       ConcurrentHashMap<String, RequestSpan> spans,
+                                                       com.couchbase.client.protocol.sdk.Command command) {
+    var sim = command.getClusterCommand().getSearchIndexManager();
+
+    if (!sim.hasShared()) {
+      throw new UnsupportedOperationException();
+    }
+
+    return handleSearchIndexManagerBlockingShared(cluster, null, spans, command, sim.getShared());
+  }
+
+  public static Result handleScopeSearchIndexManager(Scope scope,
+                                                     ConcurrentHashMap<String, RequestSpan> spans,
+                                                     com.couchbase.client.protocol.sdk.Command command) {
+    var sim = command.getScopeCommand().getSearchIndexManager();
+
+    if (!sim.hasShared()) {
+      throw new UnsupportedOperationException();
+    }
+
+    // [start:3.4.4]
+    return handleSearchIndexManagerBlockingShared(null, scope, spans, command, sim.getShared());
+    // [end:3.4.4]
+
+    // [start:<3.4.4]
+    /*
+    throw new UnsupportedOperationException();
+    // [end:<3.4.4]
+    */
+  }
+
+  /*
+   * If used for testing cluster.searchIndexes(), cluster will be non-null.
+   * If used for testing scope.searchIndexes(), scope will be non-null.
+   */
+  private static Result handleSearchIndexManagerBlockingShared(@Nullable Cluster cluster,
+                                                               @Nullable Scope scope,
+                                                               ConcurrentHashMap<String, RequestSpan> spans,
+                                                               com.couchbase.client.protocol.sdk.Command op,
+                                                               com.couchbase.client.protocol.sdk.search.indexmanager.Command command) {
     var result = Result.newBuilder();
-    com.couchbase.client.protocol.sdk.management.search.Command command = op.getSearchIndexManager();
 
     if (command.hasGetIndex()) {
       var request = command.getGetIndex();
@@ -772,8 +830,13 @@ public class SearchHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       SearchIndex index;
-      if (options == null) index = cluster.searchIndexes().getIndex(request.getIndexName());
-      else index = cluster.searchIndexes().getIndex(request.getIndexName(), options);
+      if (scope == null) {
+        if (options == null) index = cluster.searchIndexes().getIndex(request.getIndexName());
+        else index = cluster.searchIndexes().getIndex(request.getIndexName(), options);
+      } else {
+        if (options == null) index = scope.searchIndexes().getIndex(request.getIndexName());
+        else index = scope.searchIndexes().getIndex(request.getIndexName(), options);
+      }
       result.setElapsedNanos(System.nanoTime() - start);
       if (op.getReturnResult()) populateResult(result, index);
       else setSuccess(result);
@@ -783,8 +846,13 @@ public class SearchHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       List<SearchIndex> indexes;
-      if (options == null) indexes = cluster.searchIndexes().getAllIndexes();
-      else indexes = cluster.searchIndexes().getAllIndexes(options);
+      if (scope == null) {
+        if (options == null) indexes = cluster.searchIndexes().getAllIndexes();
+        else indexes = cluster.searchIndexes().getAllIndexes(options);
+      } else {
+        if (options == null) indexes = scope.searchIndexes().getAllIndexes();
+        else indexes = scope.searchIndexes().getAllIndexes(options);
+      }
       result.setElapsedNanos(System.nanoTime() - start);
       if (op.getReturnResult()) populateResult(result, indexes);
       else setSuccess(result);
@@ -794,8 +862,13 @@ public class SearchHelper {
       var converted = SearchIndex.fromJson(request.getIndexDefinition().toStringUtf8());
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
-      if (options == null) cluster.searchIndexes().upsertIndex(converted);
-      else cluster.searchIndexes().upsertIndex(converted, options);
+      if (scope == null) {
+        if (options == null) cluster.searchIndexes().upsertIndex(converted);
+        else cluster.searchIndexes().upsertIndex(converted, options);
+      } else {
+        if (options == null) scope.searchIndexes().upsertIndex(converted);
+        else scope.searchIndexes().upsertIndex(converted, options);
+      }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
     } else if (command.hasDropIndex()) {
@@ -803,8 +876,13 @@ public class SearchHelper {
       var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
-      if (options == null) cluster.searchIndexes().dropIndex(request.getIndexName());
-      else cluster.searchIndexes().dropIndex(request.getIndexName(), options);
+      if (scope == null) {
+        if (options == null) cluster.searchIndexes().dropIndex(request.getIndexName());
+        else cluster.searchIndexes().dropIndex(request.getIndexName(), options);
+      } else {
+        if (options == null) scope.searchIndexes().dropIndex(request.getIndexName());
+        else scope.searchIndexes().dropIndex(request.getIndexName(), options);
+      }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
     } else if (command.hasPauseIngest()) {
@@ -812,8 +890,13 @@ public class SearchHelper {
       var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
-      if (options == null) cluster.searchIndexes().pauseIngest(request.getIndexName());
-      else cluster.searchIndexes().pauseIngest(request.getIndexName(), options);
+      if (scope == null) {
+        if (options == null) cluster.searchIndexes().pauseIngest(request.getIndexName());
+        else cluster.searchIndexes().pauseIngest(request.getIndexName(), options);
+      } else {
+        if (options == null) scope.searchIndexes().pauseIngest(request.getIndexName());
+        else scope.searchIndexes().pauseIngest(request.getIndexName(), options);
+      }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
     } else if (command.hasResumeIngest()) {
@@ -821,8 +904,13 @@ public class SearchHelper {
       var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
-      if (options == null) cluster.searchIndexes().resumeIngest(request.getIndexName());
-      else cluster.searchIndexes().resumeIngest(request.getIndexName(), options);
+      if (scope == null) {
+        if (options == null) cluster.searchIndexes().resumeIngest(request.getIndexName());
+        else cluster.searchIndexes().resumeIngest(request.getIndexName(), options);
+      } else {
+        if (options == null) scope.searchIndexes().resumeIngest(request.getIndexName());
+        else scope.searchIndexes().resumeIngest(request.getIndexName(), options);
+      }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
     } else if (command.hasAllowQuerying()) {
@@ -830,8 +918,13 @@ public class SearchHelper {
       var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
-      if (options == null) cluster.searchIndexes().allowQuerying(request.getIndexName());
-      else cluster.searchIndexes().allowQuerying(request.getIndexName(), options);
+      if (scope == null) {
+        if (options == null) cluster.searchIndexes().allowQuerying(request.getIndexName());
+        else cluster.searchIndexes().allowQuerying(request.getIndexName(), options);
+      } else {
+        if (options == null) scope.searchIndexes().allowQuerying(request.getIndexName());
+        else scope.searchIndexes().allowQuerying(request.getIndexName(), options);
+      }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
     } else if (command.hasDisallowQuerying()) {
@@ -839,8 +932,13 @@ public class SearchHelper {
       var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
-      if (options == null) cluster.searchIndexes().disallowQuerying(request.getIndexName());
-      else cluster.searchIndexes().disallowQuerying(request.getIndexName(), options);
+      if (scope == null) {
+        if (options == null) cluster.searchIndexes().disallowQuerying(request.getIndexName());
+        else cluster.searchIndexes().disallowQuerying(request.getIndexName(), options);
+      } else {
+        if (options == null) scope.searchIndexes().disallowQuerying(request.getIndexName());
+        else scope.searchIndexes().disallowQuerying(request.getIndexName(), options);
+      }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
     } else if (command.hasFreezePlan()) {
@@ -848,8 +946,13 @@ public class SearchHelper {
       var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
-      if (options == null) cluster.searchIndexes().freezePlan(request.getIndexName());
-      else cluster.searchIndexes().freezePlan(request.getIndexName(), options);
+      if (scope == null) {
+        if (options == null) cluster.searchIndexes().freezePlan(request.getIndexName());
+        else cluster.searchIndexes().freezePlan(request.getIndexName(), options);
+      } else {
+        if (options == null) scope.searchIndexes().freezePlan(request.getIndexName());
+        else scope.searchIndexes().freezePlan(request.getIndexName(), options);
+      }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
     } else if (command.hasUnfreezePlan()) {
@@ -857,8 +960,13 @@ public class SearchHelper {
       var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
-      if (options == null) cluster.searchIndexes().unfreezePlan(request.getIndexName());
-      else cluster.searchIndexes().unfreezePlan(request.getIndexName(), options);
+      if (scope == null) {
+        if (options == null) cluster.searchIndexes().unfreezePlan(request.getIndexName());
+        else cluster.searchIndexes().unfreezePlan(request.getIndexName(), options);
+      } else {
+        if (options == null) scope.searchIndexes().unfreezePlan(request.getIndexName());
+        else scope.searchIndexes().unfreezePlan(request.getIndexName(), options);
+      }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
     } else if (command.hasGetIndexedDocumentsCount()) {
@@ -867,11 +975,16 @@ public class SearchHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       long count;
-      if (options == null) count = cluster.searchIndexes().getIndexedDocumentsCount(request.getIndexName());
-      else count = cluster.searchIndexes().getIndexedDocumentsCount(request.getIndexName(), options);
+      if (scope == null) {
+        if (options == null) count = cluster.searchIndexes().getIndexedDocumentsCount(request.getIndexName());
+        else count = cluster.searchIndexes().getIndexedDocumentsCount(request.getIndexName(), options);
+      } else {
+        if (options == null) count = scope.searchIndexes().getIndexedDocumentsCount(request.getIndexName());
+        else count = scope.searchIndexes().getIndexedDocumentsCount(request.getIndexName(), options);
+      }
       result.setElapsedNanos(System.nanoTime() - start);
       if (op.getReturnResult()) result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
-              .setSearchIndexManagerResult(com.couchbase.client.protocol.sdk.management.search.Result.newBuilder()
+              .setSearchIndexManagerResult(com.couchbase.client.protocol.sdk.search.indexmanager.Result.newBuilder()
                       .setIndexedDocumentCounts((int) count)));
       else setSuccess(result);
     } else if (command.hasAnalyzeDocument()) {
@@ -881,8 +994,13 @@ public class SearchHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       List<JsonObject> results;
-      if (options == null) results = cluster.searchIndexes().analyzeDocument(request.getIndexName(), document);
-      else results = cluster.searchIndexes().analyzeDocument(request.getIndexName(), document, options);
+      if (scope == null) {
+        if (options == null) results = cluster.searchIndexes().analyzeDocument(request.getIndexName(), document);
+        else results = cluster.searchIndexes().analyzeDocument(request.getIndexName(), document, options);
+      } else {
+        if (options == null) results = scope.searchIndexes().analyzeDocument(request.getIndexName(), document);
+        else results = scope.searchIndexes().analyzeDocument(request.getIndexName(), document, options);
+      }
       result.setElapsedNanos(System.nanoTime() - start);
       if (op.getReturnResult()) populateAnalyzeDocumentResult(result, results);
       else setSuccess(result);
@@ -893,7 +1011,7 @@ public class SearchHelper {
 
   private static void populateAnalyzeDocumentResult(Result.Builder result, List<JsonObject> results) {
     result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
-            .setSearchIndexManagerResult(com.couchbase.client.protocol.sdk.management.search.Result.newBuilder()
+            .setSearchIndexManagerResult(com.couchbase.client.protocol.sdk.search.indexmanager.Result.newBuilder()
                     .setAnalyzeDocument(AnalyzeDocumentResult.newBuilder()
                             .addAllResults(results.stream().map(v -> ByteString.copyFrom(v.toBytes())).toList())
                             .build())));
@@ -901,7 +1019,7 @@ public class SearchHelper {
 
   private static void populateResult(Result.Builder result, List<SearchIndex> indexes) {
     result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
-            .setSearchIndexManagerResult(com.couchbase.client.protocol.sdk.management.search.Result.newBuilder()
+            .setSearchIndexManagerResult(com.couchbase.client.protocol.sdk.search.indexmanager.Result.newBuilder()
                     .setIndexes(SearchIndexes.newBuilder()
                             .addAllIndexes(indexes.stream().map(SearchHelper::convertSearchIndex).toList())
                             .build())));
@@ -909,12 +1027,12 @@ public class SearchHelper {
 
   private static void populateResult(Result.Builder result, SearchIndex index) {
     result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
-            .setSearchIndexManagerResult(com.couchbase.client.protocol.sdk.management.search.Result.newBuilder()
+            .setSearchIndexManagerResult(com.couchbase.client.protocol.sdk.search.indexmanager.Result.newBuilder()
                     .setIndex(convertSearchIndex(index))));
   }
 
-  private static com.couchbase.client.protocol.sdk.management.search.SearchIndex convertSearchIndex(SearchIndex i) {
-    return com.couchbase.client.protocol.sdk.management.search.SearchIndex.newBuilder()
+  private static com.couchbase.client.protocol.sdk.search.indexmanager.SearchIndex convertSearchIndex(SearchIndex i) {
+    return com.couchbase.client.protocol.sdk.search.indexmanager.SearchIndex.newBuilder()
             .setUuid(i.uuid())
             .setName(i.name())
             .setType(i.type())

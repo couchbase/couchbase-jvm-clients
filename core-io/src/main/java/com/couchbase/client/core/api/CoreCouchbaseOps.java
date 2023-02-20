@@ -22,6 +22,9 @@ import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
+import com.couchbase.client.core.api.manager.CoreBucketAndScope;
+import com.couchbase.client.core.api.manager.search.ClassicCoreScopeSearchIndexManager;
+import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.env.Authenticator;
@@ -50,6 +53,8 @@ public interface CoreCouchbaseOps {
   CoreQueryOps queryOps();
 
   CoreCollectionManager collectionManager(String bucketName);
+
+  CoreSearchIndexManager scopeSearchIndexManager(CoreBucketAndScope scope);
 
   CoreEnvironment environment();
 

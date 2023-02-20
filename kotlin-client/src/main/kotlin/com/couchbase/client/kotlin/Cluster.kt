@@ -389,6 +389,7 @@ public class Cluster internal constructor(
                     indexName,
                     queryBytes,
                     common.actualSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH),
+                    null
                 )
             }
             request.context().clientContext(common.clientContext)

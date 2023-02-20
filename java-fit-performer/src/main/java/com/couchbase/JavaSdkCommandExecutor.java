@@ -58,6 +58,7 @@ import com.couchbase.client.protocol.shared.ExceptionOther;
 import com.couchbase.query.QueryIndexManagerHelper;
 import com.couchbase.utils.ClusterConnection;
 import com.google.protobuf.ByteString;
+import com.couchbase.search.SearchHelper;
 
 import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
@@ -70,7 +71,6 @@ import java.util.stream.Stream;
 import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
 import static com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN;
 import static com.couchbase.search.SearchHelper.handleSearchBlocking;
-import static com.couchbase.search.SearchHelper.handleSearchIndexManagerBlocking;
 
 
 /**
@@ -192,6 +192,21 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
 
             if (clc.hasQueryIndexManager()) {
                 QueryIndexManagerHelper.handleClusterQueryIndexManager(connection.cluster(), spans, op, result);
+            } else if (clc.hasSearch()) {
+                com.couchbase.client.protocol.sdk.search.Search command = clc.getSearch();
+                return handleSearchBlocking(connection.cluster(), null, spans, command);
+            } else if (clc.hasSearchIndexManager()) {
+                return SearchHelper.handleClusterSearchIndexManager(connection.cluster(), spans, op);
+            } else throw new UnsupportedOperationException();
+        } else if (op.hasScopeCommand()) {
+          var slc = op.getScopeCommand();
+          var scope = connection.cluster().bucket(slc.getScope().getBucketName()).scope(slc.getScope().getScopeName());
+
+            if (slc.hasSearch()) {
+                com.couchbase.client.protocol.sdk.search.Search command = slc.getSearch();
+                return handleSearchBlocking(connection.cluster(), scope, spans, command);
+            } else if (slc.hasSearchIndexManager()) {
+                return SearchHelper.handleScopeSearchIndexManager(scope, spans, op);
             } else throw new UnsupportedOperationException();
         } else if (op.hasCollectionCommand()) {
             var clc = op.getCollectionCommand();

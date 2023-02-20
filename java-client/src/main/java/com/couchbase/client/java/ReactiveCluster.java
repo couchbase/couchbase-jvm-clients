@@ -315,7 +315,7 @@ public class ReactiveCluster {
    * Performs a Full Text Search (FTS) query with default {@link SearchOptions}.
    *
    * @param query the query, in the form of a {@link SearchQuery}
-   * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link Mono}
+   * @return the {@link ReactiveSearchResult} once the response arrives successfully, inside a {@link Mono}
    */
   public Mono<ReactiveSearchResult> searchQuery(final String indexName, SearchQuery query) {
     return searchQuery(indexName, query, DEFAULT_SEARCH_OPTIONS);
@@ -326,7 +326,7 @@ public class ReactiveCluster {
    *
    * @param query the query, in the form of a {@link SearchQuery}
    * @param options the custom options for this query.
-   * @return the {@link SearchRequest} once the response arrives successfully, inside a {@link Mono}
+   * @return the {@link ReactiveSearchResult} once the response arrives successfully, inside a {@link Mono}
    */
   public Mono<ReactiveSearchResult> searchQuery(final String indexName, final SearchQuery query, final SearchOptions options) {
     notNull(query, "SearchQuery", () -> new ReducedSearchErrorContext(indexName, null));
