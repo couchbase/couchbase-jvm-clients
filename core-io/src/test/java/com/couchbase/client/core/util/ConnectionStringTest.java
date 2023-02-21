@@ -41,12 +41,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ConnectionStringTest {
 
   @Test
-  void canParseEmptyConnectionString() {
-    ConnectionString parsed = ConnectionString.create("");
-    assertEquals(COUCHBASE, parsed.scheme());
-    assertNull(parsed.username());
-    assertTrue(parsed.hosts().isEmpty());
-    assertTrue(parsed.params().isEmpty());
+  void throwsIfNoAddress() {
+    assertThrows(NullPointerException.class, () -> ConnectionString.create(null));
+    assertComplainsAboutMissingAddress("");
+    assertComplainsAboutMissingAddress("couchbase://");
+  }
+
+  private static void assertComplainsAboutMissingAddress(String connectionString) {
+    String expected = "Expected at least one address";
+    InvalidArgumentException e = assertThrows(InvalidArgumentException.class, () -> ConnectionString.create(connectionString));
+    assertTrue(e.getMessage().contains(expected), "Expected exception message to contain [" + expected + "] but got: " + e.getMessage());
   }
 
   @Test
@@ -109,14 +113,12 @@ class ConnectionStringTest {
 
   @Test
   void shouldParseValidSchemes() {
-    ConnectionString parsed = ConnectionString.create("couchbase://");
+    ConnectionString parsed = ConnectionString.create("couchbase://example.com");
     assertEquals(COUCHBASE, parsed.scheme());
-    assertTrue(parsed.hosts().isEmpty());
     assertTrue(parsed.params().isEmpty());
 
-    parsed = ConnectionString.create("couchbases://");
+    parsed = ConnectionString.create("couchbases://example.com");
     assertEquals(COUCHBASES, parsed.scheme());
-    assertTrue(parsed.hosts().isEmpty());
     assertTrue(parsed.params().isEmpty());
   }
 
@@ -308,10 +310,8 @@ class ConnectionStringTest {
   @Test
   void isValidDnsSrv() {
     assertFalse(ConnectionString.create("couchbase://foo,bar").isValidDnsSrv());
-    assertFalse(ConnectionString.create("couchbase://").isValidDnsSrv());
     assertFalse(ConnectionString.create("couchbase://127.0.0.1").isValidDnsSrv());
     assertFalse(ConnectionString.create("couchbase://[::1]").isValidDnsSrv());
-    assertFalse(ConnectionString.create("").isValidDnsSrv());
     assertTrue(ConnectionString.create("foo").isValidDnsSrv());
     assertTrue(ConnectionString.create("couchbase://foo").isValidDnsSrv());
   }
@@ -324,9 +324,9 @@ class ConnectionStringTest {
 
   @Test
   void acceptsMixedCaseSchemes() {
-    assertEquals(COUCHBASE, ConnectionString.create("COUCHBASE://").scheme());
-    assertEquals(COUCHBASE, ConnectionString.create("cOuChBaSe://").scheme());
-    assertEquals(COUCHBASES, ConnectionString.create("cOuChBaSeS://").scheme());
+    assertEquals(COUCHBASE, ConnectionString.create("COUCHBASE://example.com").scheme());
+    assertEquals(COUCHBASE, ConnectionString.create("cOuChBaSe://example.com").scheme());
+    assertEquals(COUCHBASES, ConnectionString.create("cOuChBaSeS://example.com").scheme());
   }
 
   @Test

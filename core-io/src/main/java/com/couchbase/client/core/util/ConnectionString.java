@@ -80,6 +80,10 @@ public class ConnectionString {
       this.hosts = unmodifiableList(parseHosts(m.group("hosts")));
       this.params = unmodifiableMap(parseParams(m.group("params")));
 
+      if (hosts.isEmpty()) {
+        throw InvalidArgumentException.fromMessage("Expected at least one address, but found none.");
+      }
+
     } catch (Exception e) {
       throw InvalidArgumentException.fromMessage("Failed to parse connection string \"" + connectionString + "\" ; " + e.getMessage(), e);
     }
