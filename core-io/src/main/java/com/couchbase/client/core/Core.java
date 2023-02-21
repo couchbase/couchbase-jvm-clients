@@ -86,6 +86,7 @@ import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
 import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.transaction.context.CoreTransactionsContext;
 import com.couchbase.client.core.util.ConnectionString;
+import com.couchbase.client.core.util.ConnectionStringUtil;
 import com.couchbase.client.core.util.CoreIdGenerator;
 import com.couchbase.client.core.util.NanoTimestamp;
 import reactor.core.Disposable;
@@ -110,6 +111,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
+import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The main entry point into the core layer.
@@ -232,51 +235,35 @@ public class Core implements AutoCloseable {
 
   private final CoreTransactionsContext transactionsContext;
 
-  /**
-   * Holds the user connection string if provided (null otherwise).
-   */
-  @Nullable
   private final ConnectionString connectionString;
 
   @Nullable private final CoreProtostellar protostellar;
 
   /**
-   * Creates a new {@link Core} with the given environment with no connection string.
-   *
-   * @param environment the environment for this core.
-   * @param authenticator the authenticator used for kv and http authentication.
-   * @param seedNodes the seed nodes to initially connect to.
-   * @return the created {@link Core}.
+   * @deprecated Please use {@link #create(CoreEnvironment, Authenticator, ConnectionString)} instead.
    */
-  public static Core create(final CoreEnvironment environment, final Authenticator authenticator,
-                            final Set<SeedNode> seedNodes) {
-    return new Core(environment, authenticator, seedNodes, null);
+  @Deprecated
+  public static Core create(
+    final CoreEnvironment environment,
+    final Authenticator authenticator,
+    final Set<SeedNode> seedNodes
+  ) {
+    return create(environment, authenticator, asConnectionString(seedNodes));
   }
 
-  /**
-   * Creates a new {@link Core} with the given environment with no connection string.
-   *
-   * @param environment the environment for this core.
-   * @param authenticator the authenticator used for kv and http authentication.
-   * @param seedNodes the seed nodes to initially connect to.
-   * @param connectionString if provided, the original connection string from the user.
-   * @return the created {@link Core}.
-   */
-  public static Core create(final CoreEnvironment environment, final Authenticator authenticator,
-                            final Set<SeedNode> seedNodes, @Nullable final ConnectionString connectionString) {
-    return new Core(environment, authenticator, seedNodes, connectionString);
+  public static Core create(
+    final CoreEnvironment environment,
+    final Authenticator authenticator,
+    final ConnectionString connectionString
+  ) {
+    return new Core(environment, authenticator, connectionString);
   }
 
-  /**
-   * Creates a new Core.
-   *
-   * @param environment the environment used.
-   * @param authenticator the authenticator used for kv and http authentication.
-   * @param seedNodes the seed nodes to initially connect to.
-   * @param connectionString if provided, the original connection string from the user.
-   */
-  protected Core(final CoreEnvironment environment, final Authenticator authenticator, final Set<SeedNode> seedNodes,
-                 @Nullable final ConnectionString connectionString) {
+  protected Core(
+    final CoreEnvironment environment,
+    final Authenticator authenticator,
+    final ConnectionString connectionString
+  ) {
     if (environment.securityConfig().tlsEnabled() && !authenticator.supportsTls()) {
       throw new InvalidArgumentException("TLS enabled but the Authenticator does not support TLS!", null, null);
     } else if (!environment.securityConfig().tlsEnabled() && !authenticator.supportsNonTls()) {
@@ -285,8 +272,8 @@ public class Core implements AutoCloseable {
 
     CoreLimiter.incrementAndVerifyNumInstances(environment.eventBus());
 
-    this.connectionString = connectionString;
-    this.seedNodes = seedNodes;
+    this.connectionString = requireNonNull(connectionString);
+    this.seedNodes = seedNodesFromConnectionString(connectionString, environment);
     this.coreContext = new CoreContext(this, CoreIdGenerator.nextId(), environment, authenticator);
     this.configurationProvider = createConfigurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
@@ -308,8 +295,7 @@ public class Core implements AutoCloseable {
       .map(c -> (BeforeSendRequestCallback) c)
       .collect(Collectors.toList());
 
-    boolean isProtostellar = (!seedNodes.isEmpty() && seedNodes.stream().findFirst().get().protostellarPort().isPresent()) ||
-      (connectionString != null && connectionString.scheme() == ConnectionString.Scheme.PROTOSTELLAR);
+    boolean isProtostellar = connectionString.scheme() == ConnectionString.Scheme.PROTOSTELLAR;
 
     this.protostellar = isProtostellar
       ? new CoreProtostellar(new ProtostellarContext(environment, authenticator), seedNodes)
@@ -330,6 +316,15 @@ public class Core implements AutoCloseable {
     this.transactionsContext = new CoreTransactionsContext(environment.meter());
     context().environment().eventBus().publish(new TransactionsStartedEvent(environment.transactionsConfig().cleanupConfig().runLostAttemptsCleanupThread(),
             environment.transactionsConfig().cleanupConfig().runRegularAttemptsCleanupThread()));
+  }
+
+  private static Set<SeedNode> seedNodesFromConnectionString(final ConnectionString cs, final CoreEnvironment env) {
+    return ConnectionStringUtil.seedNodesFromConnectionString(
+      cs,
+      env.ioConfig().dnsSrvEnabled(),
+      env.securityConfig().tlsEnabled(),
+      env.eventBus()
+    );
   }
 
   @Stability.Internal

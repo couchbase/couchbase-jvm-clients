@@ -51,7 +51,6 @@ import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.transactions.Transactions;
-import reactor.util.annotation.Nullable;
 
 import java.io.Closeable;
 import java.time.Duration;
@@ -64,7 +63,6 @@ import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionSt
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.AsyncCluster.extractClusterEnvironment;
-import static com.couchbase.client.java.AsyncCluster.seedNodesFromConnectionString;
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
@@ -267,7 +265,6 @@ public class Cluster implements Closeable {
     return new Cluster(
       environmentSupplier,
       opts.authenticator(),
-      seedNodesFromConnectionString(connStr, environmentSupplier.get()),
       connStr
     );
   }
@@ -294,12 +291,7 @@ public class Cluster implements Closeable {
    * @return the instantiated {@link Cluster}.
    */
   public static Cluster connect(final Set<SeedNode> seedNodes, final ClusterOptions options) {
-    notNullOrEmpty(seedNodes, "SeedNodes");
-    notNull(options, "ClusterOptions");
-
-    final ClusterOptions.Built opts = options.build();
-    return new Cluster(extractClusterEnvironment(asConnectionString(seedNodes), opts), opts.authenticator(),
-      seedNodes, null);
+    return connect(asConnectionString(seedNodes).original(), options);
   }
 
   /**
@@ -322,16 +314,12 @@ public class Cluster implements Closeable {
     CoreLimiter.setFailIfInstanceLimitReached(failIfInstanceLimitReached);
   }
 
-  /**
-   * Creates a new cluster from a {@link ClusterEnvironment}.
-   *
-   * @param environment the environment to use.
-   * @param authenticator the authenticator to use.
-   * @param seedNodes the seed nodes to bootstrap from.
-   */
-  private Cluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator,
-                  final Set<SeedNode> seedNodes, @Nullable final ConnectionString connectionString) {
-    this.asyncCluster = new AsyncCluster(environment, authenticator, seedNodes, connectionString);
+  private Cluster(
+    final Supplier<ClusterEnvironment> environment,
+    final Authenticator authenticator,
+    final ConnectionString connectionString
+  ) {
+    this.asyncCluster = new AsyncCluster(environment, authenticator, connectionString);
     this.reactiveCluster = new ReactiveCluster(asyncCluster);
     this.searchIndexManager = new SearchIndexManager(asyncCluster.searchIndexes());
     this.userManager = new UserManager(asyncCluster.users());

@@ -21,8 +21,11 @@ import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.service.ServiceType
-import com.couchbase.client.core.util.ConnectionStringUtil.checkConnectionString
-import com.couchbase.client.core.util.{ConnectionString, ConnectionStringUtil}
+import com.couchbase.client.core.util.ConnectionStringUtil.{
+  asConnectionString,
+  checkConnectionString
+}
+import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.scala.analytics._
 import com.couchbase.client.scala.diagnostics.{
   DiagnosticsOptions,
@@ -74,7 +77,6 @@ import scala.util.{Failure, Success, Try}
 class AsyncCluster(
     environment: => ClusterEnvironment,
     private[scala] val authenticator: Authenticator,
-    private[scala] val seedNodes: Set[SeedNode],
     private[scala] val connectionString: ConnectionString
 ) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
@@ -86,7 +88,6 @@ class AsyncCluster(
     Core.create(
       environment.coreEnv,
       authenticator,
-      seedNodes.map(_.toCore).asJava,
       connectionString
     )
   private[scala] val hp                         = HandlerBasicParams(core, env)
@@ -449,9 +450,8 @@ object AsyncCluster {
   def connect(connectionString: String, options: ClusterOptions): Try[AsyncCluster] = {
     extractClusterEnvironment(connectionString, options)
       .map(ce => {
-        val connStr   = ConnectionString.create(connectionString)
-        val seedNodes = seedNodesFromConnectionString(connStr, ce)
-        val cluster   = new AsyncCluster(ce, options.authenticator, seedNodes, connStr)
+        val connStr = ConnectionString.create(connectionString)
+        val cluster = new AsyncCluster(ce, options.authenticator, connStr)
         cluster.performGlobalConnect()
         cluster
       })
@@ -467,13 +467,7 @@ object AsyncCluster {
     * @return an [[AsyncCluster]] representing a connection to the cluster
     */
   def connect(seedNodes: Set[SeedNode], options: ClusterOptions): Try[AsyncCluster] = {
-    AsyncCluster
-      .extractClusterEnvironment(options)
-      .map(ce => {
-        val cluster = new AsyncCluster(ce, options.authenticator, seedNodes, null)
-        cluster.performGlobalConnect()
-        cluster
-      })
+    connect(asConnectionString(seedNodes.map(_.toCore).asJava).original(), options)
   }
 
   private[client] def searchQuery(request: SearchRequest, core: Core)(
@@ -536,21 +530,5 @@ object AsyncCluster {
       case Some(env) => Success(env)
       case _         => ClusterEnvironment.Builder(owned = true).build
     }
-  }
-
-  private[client] def seedNodesFromConnectionString(
-      cs: ConnectionString,
-      environment: ClusterEnvironment
-  ): Set[SeedNode] = {
-    ConnectionStringUtil
-      .seedNodesFromConnectionString(
-        cs,
-        environment.coreEnv.ioConfig.dnsSrvEnabled,
-        environment.coreEnv.securityConfig.tlsEnabled,
-        environment.coreEnv.eventBus
-      )
-      .asScala
-      .map(sn => SeedNode.fromCore(sn))
-      .toSet
   }
 }

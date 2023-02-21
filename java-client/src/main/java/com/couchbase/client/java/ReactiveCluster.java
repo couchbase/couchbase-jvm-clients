@@ -55,7 +55,6 @@ import com.couchbase.client.java.search.result.ReactiveSearchResult;
 import com.couchbase.client.java.transactions.ReactiveTransactions;
 import com.couchbase.client.java.transactions.Transactions;
 import reactor.core.publisher.Mono;
-import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
@@ -67,7 +66,6 @@ import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionSt
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.AsyncCluster.extractClusterEnvironment;
-import static com.couchbase.client.java.AsyncCluster.seedNodesFromConnectionString;
 import static com.couchbase.client.java.ClusterOptions.clusterOptions;
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
 import static com.couchbase.client.java.diagnostics.DiagnosticsOptions.diagnosticsOptions;
@@ -146,7 +144,6 @@ public class ReactiveCluster {
     return new ReactiveCluster(
       environmentSupplier,
       opts.authenticator(),
-      seedNodesFromConnectionString(connStr, environmentSupplier.get()),
       connStr
     );
   }
@@ -163,23 +160,15 @@ public class ReactiveCluster {
    * @return the instantiated {@link ReactiveCluster}.
    */
   public static ReactiveCluster connect(final Set<SeedNode> seedNodes, final ClusterOptions options) {
-    notNullOrEmpty(seedNodes, "SeedNodes");
-    notNull(options, "ClusterOptions");
-
-    final ClusterOptions.Built opts = options.build();
-    return new ReactiveCluster(extractClusterEnvironment(asConnectionString(seedNodes), opts), opts.authenticator(),
-      seedNodes, null);
+    return connect(asConnectionString(seedNodes).original(), options);
   }
 
-
-  /**
-   * Creates a new cluster from a {@link ClusterEnvironment}.
-   *
-   * @param environment the environment to use for this cluster.
-   */
-  private ReactiveCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator,
-                          final Set<SeedNode> seedNodes, @Nullable final ConnectionString connectionString) {
-    this(new AsyncCluster(environment, authenticator, seedNodes, connectionString));
+  private ReactiveCluster(
+    final Supplier<ClusterEnvironment> environment,
+    final Authenticator authenticator,
+    final ConnectionString connectionString
+  ) {
+    this(new AsyncCluster(environment, authenticator, connectionString));
   }
 
   /**

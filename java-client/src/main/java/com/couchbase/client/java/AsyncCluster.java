@@ -17,12 +17,12 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.DiagnosticsResult;
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.diagnostics.HealthPinger;
 import com.couchbase.client.core.diagnostics.PingResult;
@@ -36,12 +36,10 @@ import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
-import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.ConnectionString;
-import com.couchbase.client.core.util.ConnectionStringUtil;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
@@ -66,7 +64,6 @@ import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
 import reactor.core.publisher.Mono;
-import reactor.util.annotation.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -79,8 +76,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static com.couchbase.client.core.util.ConnectionStringUtil.checkConnectionString;
 import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
+import static com.couchbase.client.core.util.ConnectionStringUtil.checkConnectionString;
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -91,7 +88,6 @@ import static com.couchbase.client.java.ReactiveCluster.DEFAULT_PING_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_WAIT_UNTIL_READY_OPTIONS;
-import static com.couchbase.client.java.query.QueryAccessor.convertCoreQueryError;
 
 /**
  * The {@link AsyncCluster} is the main entry point when connecting to a Couchbase cluster using the async API.
@@ -185,7 +181,6 @@ public class AsyncCluster {
     return new AsyncCluster(
       environmentSupplier,
       opts.authenticator(),
-      seedNodesFromConnectionString(connStr, environmentSupplier.get()),
       connStr
     );
   }
@@ -202,12 +197,7 @@ public class AsyncCluster {
    * @return the instantiated {@link AsyncCluster}.
    */
   public static AsyncCluster connect(final Set<SeedNode> seedNodes, final ClusterOptions options) {
-    notNullOrEmpty(seedNodes, "SeedNodes");
-    notNull(options, "ClusterOptions");
-
-    final ClusterOptions.Built opts = options.build();
-    return new AsyncCluster(extractClusterEnvironment(asConnectionString(seedNodes), opts), opts.authenticator(),
-      seedNodes, null);
+    return connect(asConnectionString(seedNodes).original(), options);
   }
 
   /**
@@ -237,30 +227,17 @@ public class AsyncCluster {
   }
 
   /**
-   * Extracts the relevant seed nodes from the connection string.
-   *
-   * @param cs the connection string where it should be extracted from.
-   * @param env the environment to load certain properties that influence how it is loaded.
-   * @return a set of seed nodes once extracted.
-   */
-  static Set<SeedNode> seedNodesFromConnectionString(final ConnectionString cs, final ClusterEnvironment env) {
-    return ConnectionStringUtil.seedNodesFromConnectionString(
-      cs,
-      env.ioConfig().dnsSrvEnabled(),
-      env.securityConfig().tlsEnabled(),
-      env.eventBus()
-    );
-  }
-
-  /**
    * Creates a new cluster from a {@link ClusterEnvironment}.
    *
    * @param environment the environment to use for this cluster.
    */
-  AsyncCluster(final Supplier<ClusterEnvironment> environment, final Authenticator authenticator,
-               final Set<SeedNode> seedNodes, @Nullable final ConnectionString connectionString) {
+  AsyncCluster(
+    final Supplier<ClusterEnvironment> environment,
+    final Authenticator authenticator,
+    final ConnectionString connectionString
+  ) {
     this.environment = environment;
-    this.core = Core.create(environment.get(), authenticator, seedNodes, connectionString);
+    this.core = Core.create(environment.get(), authenticator, connectionString);
     this.searchIndexManager = new AsyncSearchIndexManager(core);
     this.userManager = new AsyncUserManager(core);
     this.bucketManager = new AsyncBucketManager(core);

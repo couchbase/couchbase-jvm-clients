@@ -22,6 +22,7 @@ import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoConfig;
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.util.ConnectionString;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -30,11 +31,15 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.util.Collections.emptySet;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
@@ -114,13 +119,14 @@ class DefaultConfigurationProviderDnsSrvTest {
   }
 
   @Test
-  void ignoresSignalWithNullConnectionString() {
+  void ignoresSignalWithIneligibleConnectionString() throws Exception {
     Core core = mock(Core.class);
     CoreContext ctx = new CoreContext(core, 1, environment, mock(Authenticator.class));
     when(core.context()).thenReturn(ctx);
 
     final AtomicBoolean called = new AtomicBoolean();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core, emptySet()) {
+    Set<SeedNode> seedNodes = setOf(SeedNode.create("1.2.3.4")); // DNS SRV requires hostname, not IP literal
+    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seedNodes) {
       @Override
       protected List<String> performDnsSrvLookup(boolean tlsEnabled) {
         called.set(true);
@@ -129,11 +135,12 @@ class DefaultConfigurationProviderDnsSrvTest {
     };
 
     provider.signalConfigRefreshFailed(ConfigRefreshFailure.ALL_NODES_TRIED_ONCE_WITHOUT_SUCCESS);
+    MILLISECONDS.sleep(250); // performDnsSrvLookup is called asynchronously; give it a chance to complete.
     assertFalse(called.get());
   }
 
   @Test
-  void ignoresSignalIfDnsSrvDisabled() {
+  void ignoresSignalIfDnsSrvDisabled() throws Exception {
     final CoreEnvironment environment = CoreEnvironment.builder().ioConfig(
       IoConfig.builder().enableDnsSrv(false)
     ).build();
@@ -157,6 +164,7 @@ class DefaultConfigurationProviderDnsSrvTest {
       };
 
       provider.signalConfigRefreshFailed(ConfigRefreshFailure.ALL_NODES_TRIED_ONCE_WITHOUT_SUCCESS);
+      MILLISECONDS.sleep(250); // performDnsSrvLookup is called asynchronously; give it a chance to complete.
       assertFalse(called.get());
     } finally {
       environment.shutdown();

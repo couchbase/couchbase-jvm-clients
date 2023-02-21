@@ -29,13 +29,11 @@ import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.env.CertificateAuthenticator
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader
 import com.couchbase.client.core.env.PasswordAuthenticator
-import com.couchbase.client.core.env.SeedNode
 import com.couchbase.client.core.error.UnambiguousTimeoutException
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionString
-import com.couchbase.client.core.util.ConnectionStringUtil
 import com.couchbase.client.core.util.ConnectionStringUtil.checkConnectionString
 import com.couchbase.client.kotlin.Cluster.Companion.connect
 import com.couchbase.client.kotlin.analytics.AnalyticsFlowItem
@@ -127,10 +125,9 @@ public class Cluster internal constructor(
     environment: ClusterEnvironment,
     private val ownsEnvironment: Boolean,
     private val authenticator: Authenticator,
-    seedNodes: Set<SeedNode>,
     connectionString: ConnectionString,
 ) {
-    internal val core: Core = Core.create(environment, authenticator, seedNodes, connectionString)
+    internal val core: Core = Core.create(environment, authenticator, connectionString)
 
     internal val env: ClusterEnvironment
         get() = core.env
@@ -697,13 +694,7 @@ public class Cluster internal constructor(
             val connStr = ConnectionString.create(connectionString);
             checkConnectionString(env, ownsEnv, connStr)
 
-            val seedNodes = ConnectionStringUtil.seedNodesFromConnectionString(
-                connStr,
-                env.ioConfig().dnsSrvEnabled(),
-                env.securityConfig().tlsEnabled(),
-                env.eventBus(),
-            )
-            return Cluster(env, ownsEnv, authenticator, seedNodes, connStr)
+            return Cluster(env, ownsEnv, authenticator, connStr)
         }
     }
 }

@@ -88,8 +88,10 @@ import java.util.stream.Stream;
 
 import static com.couchbase.client.core.Reactor.emitFailureHandler;
 import static com.couchbase.client.core.util.CbCollections.copyToUnmodifiableSet;
+import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static com.couchbase.client.core.util.ConnectionStringUtil.fromDnsSrvOrThrowIfTlsRequired;
 import static java.util.Collections.unmodifiableSet;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The standard {@link ConfigurationProvider} that is used by default.
@@ -170,7 +172,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private volatile NanoTimestamp lastDnsSrvLookup = NanoTimestamp.never();
 
   public DefaultConfigurationProvider(final Core core, final Set<SeedNode> seedNodes) {
-    this(core, seedNodes, null);
+    this(core, seedNodes, asConnectionString(seedNodes));
   }
 
   /**
@@ -178,10 +180,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    *
    * @param core the core against which all ops are executed.
    */
-  public DefaultConfigurationProvider(final Core core, final Set<SeedNode> seedNodes, @Nullable final ConnectionString connectionString) {
+  public DefaultConfigurationProvider(final Core core, final Set<SeedNode> seedNodes, final ConnectionString connectionString) {
     this.core = core;
     eventBus = core.context().environment().eventBus();
-    this.connectionString = connectionString;
+    this.connectionString = requireNonNull(connectionString);
 
     // Don't publish the initial seed nodes, since they probably came from the user
     // and might not be KV nodes, or might have incomplete port information.
@@ -858,8 +860,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private synchronized void handlePotentialDnsSrvRefresh() {
     final CoreContext ctx = core.context();
     final CoreEnvironment env = ctx.environment();
-    boolean isValidDnsSrv = connectionString != null
-      && connectionString.isValidDnsSrv()
+    boolean isValidDnsSrv = connectionString.isValidDnsSrv()
       && env.ioConfig().dnsSrvEnabled();
     boolean tlsEnabled = env.securityConfig().tlsEnabled();
     boolean enoughTimeElapsed = lastDnsSrvLookup.hasElapsed(MIN_TIME_BETWEEN_DNS_LOOKUPS);

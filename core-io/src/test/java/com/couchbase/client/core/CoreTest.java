@@ -17,6 +17,7 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.core.InitGlobalConfigFailedEvent;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.BucketConfigParser;
@@ -25,13 +26,12 @@ import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
-import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.cnc.SimpleEventBus;
+import com.couchbase.client.core.util.ConnectionString;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -52,7 +52,13 @@ import static com.couchbase.client.test.Util.readResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Verifies the various functionality of the {@link Core}.
@@ -64,11 +70,12 @@ class CoreTest {
   private static CoreEnvironment ENV;
 
   private static final String LOCALHOST = "127.0.0.1";
+  private static final ConnectionString CONNECTION_STRING = ConnectionString.create("127.0.0.1");
 
   private static SimpleEventBus EVENT_BUS;
 
   private static final Authenticator AUTHENTICATOR = PasswordAuthenticator.create("foo", "bar");
-  
+
   private static final int TIMEOUT = 1000;
 
   @BeforeAll
@@ -105,7 +112,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    try ( Core core = new Core(ENV, AUTHENTICATOR, SeedNode.LOCALHOST, null) {
+    try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -115,7 +122,7 @@ class CoreTest {
       protected Node createNode(final NodeIdentifier target, final Optional<String> alternate) {
         return mocks.get(target.address());
       }
-    } ) {
+    }) {
       logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
       configs.tryEmitNext(clusterConfig).orThrow();
       addMagicSleep();
@@ -221,7 +228,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    try ( Core core = new Core(ENV, AUTHENTICATOR, SeedNode.LOCALHOST, null) {
+    try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -231,7 +238,7 @@ class CoreTest {
       protected Node createNode(final NodeIdentifier target, final Optional<String> alternate) {
         return mocks.get(target.address());
       }
-    } ) {
+    }) {
       logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
       configs.tryEmitNext(clusterConfig).orThrow();
       addMagicSleep();
@@ -322,7 +329,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    try ( Core core = new Core(ENV, AUTHENTICATOR, SeedNode.LOCALHOST, null) {
+    try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -408,7 +415,7 @@ class CoreTest {
     final Map<String, Node> mocks = new HashMap<>();
     mocks.put("10.143.190.101", mock101);
     mocks.put("10.143.190.102", mock102);
-    try ( Core core = new Core(ENV, AUTHENTICATOR, SeedNode.LOCALHOST, null) {
+    try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -418,7 +425,7 @@ class CoreTest {
       protected Node createNode(final NodeIdentifier target, final Optional<String> alternate) {
         return mocks.get(target.address());
       }
-    } ){
+    }) {
       logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
       configs.tryEmitNext(clusterConfig).orThrow();
       addMagicSleep();
@@ -499,7 +506,7 @@ class CoreTest {
 
     mocks.put("127.0.0.1:9000", mock101);
     mocks.put("127.0.0.1:9001", mock102);
-    try ( Core core = new Core(ENV, AUTHENTICATOR, SeedNode.LOCALHOST, null) {
+    try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
@@ -509,7 +516,7 @@ class CoreTest {
       protected Node createNode(final NodeIdentifier target, final Optional<String> alternate) {
         return mocks.get(target.address() + ":" + target.managerPort());
       }
-    } ) {
+    }) {
       logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
       configs.tryEmitNext(clusterConfig).orThrow();
       addMagicSleep();
@@ -554,12 +561,12 @@ class CoreTest {
     when(configProvider.shutdown()).thenReturn(Mono.empty());
     when(configProvider.closeBucket(eq("travel-sample"), anyBoolean())).thenReturn(Mono.empty());
 
-    try ( Core core = new Core(ENV, AUTHENTICATOR, SeedNode.LOCALHOST, null) {
+    try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
         return configProvider;
       }
-    } ) {
+    }) {
 
       when(configProvider.loadAndRefreshGlobalConfig()).thenReturn(Mono.error(new GlobalConfigNotFoundException()));
       core.initGlobalConfig();
