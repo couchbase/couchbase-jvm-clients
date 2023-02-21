@@ -77,7 +77,8 @@ class AsyncCollectionQueryIndexManager(
       )
       .map(
         result =>
-          result.asScala.map(
+          // toSeq required for Scala 2.13
+          result.asScala.toSeq.map(
             i =>
               QueryIndex(
                 i.name,
