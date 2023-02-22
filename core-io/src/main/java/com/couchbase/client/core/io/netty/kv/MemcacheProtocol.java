@@ -803,7 +803,8 @@ public enum MemcacheProtocol {
       || status == Status.RATE_LIMITED_MAX_CONNECTIONS.status
       || status == Status.RATE_LIMITED_MAX_COMMANDS.status) {
       return ResponseStatus.RATE_LIMITED;
-    } else if (status == Status.SCOPE_SIZE_LIMIT_EXCEEDED.status) {
+    } else if (status == Status.SCOPE_SIZE_LIMIT_EXCEEDED.status
+      || status == Status.BUCKET_SIZE_LIMIT_EXCEEDED.status) {
       return ResponseStatus.QUOTA_LIMITED;
     } else if (status == Status.RANGE_SCAN_MORE.status) {
       return ResponseStatus.CONTINUE;
@@ -1559,6 +1560,11 @@ public enum MemcacheProtocol {
      * The scope contains too much data.
      */
     SCOPE_SIZE_LIMIT_EXCEEDED((short) 0x34),
+
+    /**
+     * There is too much data in the bucket.
+     */
+    BUCKET_SIZE_LIMIT_EXCEEDED((short) 0x35),
     ;
 
     private final short status;
@@ -1698,6 +1704,8 @@ public enum MemcacheProtocol {
           return RATE_LIMITED_MAX_COMMANDS;
         case 0x34:
           return SCOPE_SIZE_LIMIT_EXCEEDED;
+        case 0x35:
+          return BUCKET_SIZE_LIMIT_EXCEEDED;
       }
       return null;
     }
