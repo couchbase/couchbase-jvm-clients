@@ -605,7 +605,7 @@ public class IoConfig {
      * For example, if you're using Log4j2 with XML configuration, add this as a child of the {@code <Loggers>}
      * element:
      * <pre>
-     * &lt;Logger name="com.couchbase.io" level="trace"&#47;>
+     * &lt;Logger name="com.couchbase.io" level="trace"/&gt;
      * </pre>
      * <p>
      * Traffic capture should only be enabled during development and for debugging purposes. When enabled

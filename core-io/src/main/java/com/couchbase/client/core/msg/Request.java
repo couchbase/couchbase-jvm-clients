@@ -227,7 +227,7 @@ public interface Request<R extends Response> {
   /**
    * The unique name of the request, usually related to the type but not necessarily.
    * <p>
-   * The default implementation is derived from the class name (i.e. FooRequest => foo), but if that does
+   * The default implementation is derived from the class name (i.e. FooRequest returns foo), but if that does
    * not match up it should be overridden in the actual class.
    *
    * @return the name of the request type.

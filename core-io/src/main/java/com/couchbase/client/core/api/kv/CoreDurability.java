@@ -29,7 +29,7 @@ import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Either a synchronous {@link DurabilityLevel}, or "persist to & replicate to" for legacy durability.
+ * Either a synchronous {@link DurabilityLevel}, or "persist to and replicate to" for legacy durability.
  */
 @Stability.Internal
 public final class CoreDurability {

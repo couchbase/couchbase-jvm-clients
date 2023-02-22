@@ -122,9 +122,9 @@ public interface ConfigurationProvider  {
 
   /**
    * Helper method to refresh the collection map for the given collection.
+   * Returns after refreshed completes the mono (or fails if error).
    *
    * @param identifier the identifier to refresh.
-   * @return once refreshed completes the mono (or fails if error).
    */
   void refreshCollectionId(CollectionIdentifier identifier);
 

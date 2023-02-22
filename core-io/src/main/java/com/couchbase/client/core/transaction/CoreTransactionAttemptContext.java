@@ -313,18 +313,18 @@ public class CoreTransactionAttemptContext {
 
     /**
      * Bear in mind, in this code with the blocking API:
-     *
-     * cluster.transactions().run((ctx) -> {
+     * <pre>
+     * cluster.transactions().run((ctx) -&gt; {
      *     Thread ct = Thread.currentThread();
      *
      *     ctx.insert(collection, docId, content);
      *
      *     Thread ct2 = Thread.currentThread();
      * });
-     *
+     * </pre>
      * ct will _always_ equal ct2 (which is what we want), regardless of what we do with schedulers.  As there's no way
      * to change the current thread of execution in that way.
-     *
+     * <p>
      * We put things onto our scheduler for the benefit of reactive users.  Because we don't want to pass control back
      * to user space (the lambda) while still on a limited internal SDK thread.
      */

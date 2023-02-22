@@ -380,7 +380,7 @@ public class SecurityConfig {
      * "cert1.pem" and "cert2.pem"), and you want to create a single PEM file
      * containing all the certificates, concatenate the PEM files using this shell command:
      * <pre>
-     * $ cat cert1.pem cert2.pem > both-certs.pem
+     * $ cat cert1.pem cert2.pem &gt; both-certs.pem
      * </pre>
      * Then, when configuring the SDK, call this method with the path to `both-certs.pem`
      * as the argument.

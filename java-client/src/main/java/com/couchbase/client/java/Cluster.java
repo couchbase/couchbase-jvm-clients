@@ -71,7 +71,6 @@ import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTION
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_DIAGNOSTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
-import static com.couchbase.client.java.query.QueryAccessor.convertCoreQueryError;
 
 /**
  * The {@link Cluster} is the main entry point when connecting to a Couchbase cluster.
@@ -282,11 +281,14 @@ public class Cluster implements Closeable {
    * <p>
    * The following example shows how to bootstrap against a node with custom KV and management ports:
    * <pre>
-   * Set<SeedNode> seedNodes = new HashSet<>(Collections.singletonList(
-   *   SeedNode.create("127.0.0.1", Optional.of(12000), Optional.of(9000))
-   * ));
+   * var seedNodes = Set.of(
+   *   SeedNode.create("127.0.0.1")
+   *     .withKvPort(12000)
+   *     .withManagerPort(9000)
+   * );
    * Cluster cluster Cluster.connect(seedNodes, clusterOptions("user", "password"));
    * </pre>
+   *
    * @param seedNodes the seed nodes used to connect to the cluster.
    * @param options custom options when creating the cluster.
    * @return the instantiated {@link Cluster}.
