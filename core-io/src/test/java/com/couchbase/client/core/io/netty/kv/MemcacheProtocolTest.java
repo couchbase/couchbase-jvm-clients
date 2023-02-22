@@ -143,4 +143,16 @@ class MemcacheProtocolTest {
     }
   }
 
+  /**
+   * A reminder to update {@link MemcacheProtocol.Status#of} when adding a new status code.
+   */
+  @Test
+  void canFindStatusByCode() {
+    for (MemcacheProtocol.Status status : MemcacheProtocol.Status.values()) {
+      assertEquals(
+        status,
+        MemcacheProtocol.Status.of(status.status()),
+        "Unexpected result for Status.of(0x" + Integer.toHexString(status.status()) + ")");
+    }
+  }
 }

@@ -1558,7 +1558,8 @@ public enum MemcacheProtocol {
     /**
      * The scope contains too much data.
      */
-    SCOPE_SIZE_LIMIT_EXCEEDED((short) 0x34);
+    SCOPE_SIZE_LIMIT_EXCEEDED((short) 0x34),
+    ;
 
     private final short status;
 
@@ -1597,6 +1598,8 @@ public enum MemcacheProtocol {
           return LOCKED;
         case 0x20:
           return AUTH_ERROR;
+        case 0x22:
+          return RANGE_ERROR;
         case 0x24:
           return ACCESS_ERROR;
         case 0x25:
@@ -1667,6 +1670,14 @@ public enum MemcacheProtocol {
           return SYNC_WRITE_RE_COMMIT_IN_PROGRESS;
         case 0xa3:
           return SYNC_WRITE_AMBIGUOUS;
+        case 0xa5:
+          return RANGE_SCAN_CANCELLED;
+        case 0xa6:
+          return RANGE_SCAN_MORE;
+        case 0xa7:
+          return RANGE_SCAN_COMPLETE;
+        case 0xa8:
+          return VBUUID_NOT_EQUAL;
         case 0x88:
           return UNKNOWN_COLLECTION;
         case 0x89:
