@@ -46,8 +46,12 @@ class AsyncCollectionQueryIndexManager(
 )(
     implicit val ec: ExecutionContext
 ) {
-  private val core            = collection.core
-  private[scala] val internal = new CoreCollectionQueryIndexManager(core, keyspace)
+  private val core = collection.core
+  private[scala] val internal = new CoreCollectionQueryIndexManager(
+    core.queryOps(),
+    core.context().environment().requestTracer(),
+    keyspace
+  )
   private[scala] val DefaultTimeout: Duration =
     core.context().environment().timeoutConfig().managementTimeout()
   private[scala] val DefaultRetryStrategy: RetryStrategy =

@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.manager;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
@@ -38,6 +37,7 @@ import com.couchbase.client.core.api.query.CoreQueryResult;
 import com.couchbase.client.core.api.query.CoreQueryScanConsistency;
 import com.couchbase.client.core.api.shared.CoreMutationState;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
@@ -65,7 +65,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
@@ -83,16 +82,16 @@ import static java.util.stream.Collectors.toSet;
 
 @Stability.Internal
 public class CoreCollectionQueryIndexManager {
-  private final Core core;
   private final CoreQueryOps queryOps;
+  private final RequestTracer requestTracer;
 
   private final CoreKeyspace collection;
   private final CoreQueryContext queryContext;
 
-  public CoreCollectionQueryIndexManager(Core core, CoreKeyspace collection) {
-    this.core = core;
-    this.queryOps = core.queryOps();
-    this.collection = collection;
+  public CoreCollectionQueryIndexManager(CoreQueryOps queryOps, RequestTracer requestTracer, CoreKeyspace collection) {
+    this.queryOps = requireNonNull(queryOps);
+    this.requestTracer = requireNonNull(requestTracer);
+    this.collection = requireNonNull(collection);
     this.queryContext = CoreQueryContext.of(collection.bucket(), collection.scope());
   }
 
@@ -258,7 +257,7 @@ public class CoreCollectionQueryIndexManager {
 
     Set<String> indexNameSet = new HashSet<>(indexNames);
 
-    RequestSpan parent = core.context().environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, null);
+    RequestSpan parent = requestTracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, null);
     parent.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     return Mono.fromFuture(() -> failIfIndexesOffline(indexNameSet, options.watchPrimary(), parent))
@@ -367,7 +366,7 @@ public class CoreCollectionQueryIndexManager {
 
   private CompletableFuture<CoreQueryResult> exec(CoreQueryType queryType, CharSequence statement,
                                                   CoreCommonOptions options, String spanName, ObjectNode parameters) {
-    RequestSpan parent = core.context().environment().requestTracer().requestSpan(spanName, options.parentSpan().orElse(null));
+    RequestSpan parent = requestTracer.requestSpan(spanName, options.parentSpan().orElse(null));
     parent.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     CoreCommonOptions common = CoreCommonOptions.ofOptional(options.timeout(), options.retryStrategy(), Optional.of(parent));

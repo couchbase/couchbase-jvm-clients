@@ -177,7 +177,7 @@ public class AsyncCollection {
     this.asyncBinaryCollection = new AsyncBinaryCollection(core, environment, collectionIdentifier);
     CoreKeyspace keyspace = CoreKeyspace.from(collectionIdentifier);
     this.kvOps = core.kvOps(keyspace);
-    this.queryIndexManager = new AsyncCollectionQueryIndexManager(core, keyspace);
+    this.queryIndexManager = new AsyncCollectionQueryIndexManager(core.queryOps(), core.context().environment().requestTracer(), keyspace);
   }
 
   /**
