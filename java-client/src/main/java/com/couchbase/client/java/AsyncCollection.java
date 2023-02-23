@@ -17,9 +17,9 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -27,8 +27,6 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
-
-import com.couchbase.client.core.kv.RangeScanOrchestrator;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -64,7 +62,6 @@ import com.couchbase.client.java.kv.TouchOptions;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.java.manager.query.AsyncCollectionQueryIndexManager;
-import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -90,6 +87,7 @@ import static com.couchbase.client.java.ReactiveCollection.DEFAULT_REPLACE_OPTIO
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_TOUCH_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_UNLOCK_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_UPSERT_OPTIONS;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The {@link AsyncCollection} provides basic asynchronous access to all collection APIs.
@@ -107,45 +105,19 @@ import static com.couchbase.client.java.ReactiveCollection.DEFAULT_UPSERT_OPTION
  */
 public class AsyncCollection {
 
-  /**
-   * Holds the underlying core which is used to dispatch operations.
-   */
-  private final Core core;
-
-  /**
-   * Holds the core context of the attached core.
-   */
-  private final CoreContext coreContext;
+  private final CoreCouchbaseOps couchbaseOps;
 
   /**
    * Holds the environment for this collection.
    */
   private final ClusterEnvironment environment;
 
-  /**
-   * The name of the collection.
-   */
-  private final String name;
-
-  /**
-   * The name of the bucket.
-   */
-  private final String bucket;
-
-  /**
-   * The name of the associated scope.
-   */
-  private final String scopeName;
+  private final CoreKeyspace keyspace;
 
   /**
    * Holds the async binary collection object.
    */
   private final AsyncBinaryCollection asyncBinaryCollection;
-
-  /**
-   * Stores information about the collection.
-   */
-  private final CollectionIdentifier collectionIdentifier;
 
   /**
    * Strategy for performing KV operations.
@@ -157,27 +129,16 @@ public class AsyncCollection {
    */
   private final AsyncCollectionQueryIndexManager queryIndexManager;
 
-  /**
-   * Creates a new {@link AsyncCollection}.
-   *
-   * @param name the name of the collection.
-   * @param scopeName the name of the scope associated.
-   * @param core the core into which ops are dispatched.
-   * @param environment the surrounding environment for config options.
-   */
-  AsyncCollection(final String name, final String scopeName, final String bucket,
-                  final Core core, final ClusterEnvironment environment) {
-    this.name = name;
-    this.scopeName = scopeName;
-    this.core = core;
-    this.coreContext = core.context();
-    this.environment = environment;
-    this.bucket = bucket;
-    this.collectionIdentifier = new CollectionIdentifier(bucket, Optional.of(scopeName), Optional.of(name));
-    this.asyncBinaryCollection = new AsyncBinaryCollection(core, environment, collectionIdentifier);
-    CoreKeyspace keyspace = CoreKeyspace.from(collectionIdentifier);
-    this.kvOps = core.kvOps(keyspace);
-    this.queryIndexManager = new AsyncCollectionQueryIndexManager(core.queryOps(), core.context().environment().requestTracer(), keyspace);
+  AsyncCollection(final CoreKeyspace keyspace,
+                  final CoreCouchbaseOps couchbaseOps,
+                  final ClusterEnvironment environment) {
+    this.keyspace = requireNonNull(keyspace);
+    this.couchbaseOps = requireNonNull(couchbaseOps);
+    this.environment = requireNonNull(environment);
+    this.asyncBinaryCollection = new AsyncBinaryCollection(keyspace, couchbaseOps);
+
+    this.kvOps = couchbaseOps.kvOps(keyspace);
+    this.queryIndexManager = new AsyncCollectionQueryIndexManager(couchbaseOps.queryOps(), couchbaseOps.environment().requestTracer(), keyspace);
   }
 
   /**
@@ -185,7 +146,7 @@ public class AsyncCollection {
    */
   @Stability.Volatile
   public Core core() {
-    return core;
+    return couchbaseOps.asCore();
   }
 
   @Stability.Volatile
@@ -206,21 +167,21 @@ public class AsyncCollection {
    * @return the name of the collection.
    */
   public String name() {
-    return name;
+    return keyspace.collection();
   }
 
   /**
    * Returns the name of the bucket associated with this collection.
    */
   public String bucketName() {
-    return bucket;
+    return keyspace.bucket();
   }
 
   /**
    * Returns the name of the scope associated with this collection.
    */
   public String scopeName() {
-    return scopeName;
+    return keyspace.scope();
   }
 
   /**
@@ -250,7 +211,7 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once loaded or failed.
    */
   public CompletableFuture<GetResult> get(final String id, final GetOptions options) {
-    notNull(options, "GetOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "GetOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     final GetOptions.Built opts = options.build();
 
     final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
@@ -287,7 +248,7 @@ public class AsyncCollection {
    */
   public CompletableFuture<GetResult> getAndLock(final String id, final Duration lockTime,
                                                  final GetAndLockOptions options) {
-    notNull(options, "GetAndLockOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "GetAndLockOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     GetAndLockOptions.Built opts = options.build();
     final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
     return kvOps.getAndLockAsync(opts, id, lockTime)
@@ -317,8 +278,8 @@ public class AsyncCollection {
    */
   public CompletableFuture<GetResult> getAndTouch(final String id, final Duration expiry,
                                                   final GetAndTouchOptions options) {
-    notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNull(options, "GetAndTouchOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
+    notNull(options, "GetAndTouchOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     GetAndTouchOptions.Built opts = options.build();
     final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
     return kvOps.getAndTouchAsync(opts, id, Expiry.relative(expiry).encode())
@@ -350,8 +311,8 @@ public class AsyncCollection {
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
     return ReplicaHelper.getAllReplicasAsync(
-        core,
-        collectionIdentifier,
+        core(),
+        keyspace.toCollectionIdentifier(),
         id,
         opts.timeout().orElse(environment.timeoutConfig().kvTimeout()),
         opts.retryStrategy().orElse(environment().retryStrategy()),
@@ -378,14 +339,14 @@ public class AsyncCollection {
    * @return a future containing the first available replica.
    */
   public CompletableFuture<GetReplicaResult> getAnyReplica(final String id, final GetAnyReplicaOptions options) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNull(options, "GetAnyReplicaOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
+    notNull(options, "GetAnyReplicaOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     GetAnyReplicaOptions.Built opts = options.build();
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
 
     return ReplicaHelper.getAnyReplicaAsync(
-        core,
-        collectionIdentifier,
+        core(),
+        keyspace.toCollectionIdentifier(),
         id,
         opts.timeout().orElse(environment.timeoutConfig().kvTimeout()),
         opts.retryStrategy().orElse(environment().retryStrategy()),
@@ -435,7 +396,7 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once removed or failed.
    */
   public CompletableFuture<MutationResult> remove(final String id, final RemoveOptions options) {
-    notNull(options, "RemoveOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "RemoveOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     RemoveOptions.Built opts = options.build();
 
     return kvOps.removeAsync(
@@ -467,8 +428,8 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once inserted or failed.
    */
   public CompletableFuture<MutationResult> insert(final String id, Object content, final InsertOptions options) {
-    notNull(options, "InsertOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "InsertOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
+    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
 
     InsertOptions.Built opts = options.build();
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
@@ -502,8 +463,8 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once upserted or failed.
    */
   public CompletableFuture<MutationResult> upsert(final String id, Object content, final UpsertOptions options) {
-    notNull(options, "UpsertOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "UpsertOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
+    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
 
     UpsertOptions.Built opts = options.build();
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
@@ -538,8 +499,8 @@ public class AsyncCollection {
    * @return a {@link CompletableFuture} completing once replaced or failed.
    */
   public CompletableFuture<MutationResult> replace(final String id, Object content, final ReplaceOptions options) {
-    notNull(options, "ReplaceOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "ReplaceOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
+    notNull(content, "Content", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
 
     ReplaceOptions.Built opts = options.build();
     Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
@@ -575,8 +536,8 @@ public class AsyncCollection {
    * @return a {@link MutationResult} once the operation completes.
    */
   public CompletableFuture<MutationResult> touch(final String id, final Duration expiry, final TouchOptions options) {
-    notNull(options, "TouchOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "TouchOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
+    notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
 
     TouchOptions.Built opts = options.build();
     return kvOps.touchAsync(opts, id, Expiry.relative(expiry).encode())
@@ -629,10 +590,10 @@ public class AsyncCollection {
    */
   public CompletableFuture<LookupInResult> lookupIn(final String id, final List<LookupInSpec> specs,
                                                     final LookupInOptions options) {
-    notNull(options, "LookupInOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "LookupInOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     LookupInOptions.Built opts = options.build();
     final JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
-    return LookupInAccessor.lookupInAccessor(core, lookupInRequest(id, specs, opts), serializer);
+    return LookupInAccessor.lookupInAccessor(core(), lookupInRequest(id, specs, opts), serializer);
   }
 
   /**
@@ -644,8 +605,8 @@ public class AsyncCollection {
    * @return the subdoc lookup request.
    */
   SubdocGetRequest lookupInRequest(final String id, final List<LookupInSpec> specs, final LookupInOptions.Built opts) {
-    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNullOrEmpty(specs, "LookupInSpecs", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
+    notNullOrEmpty(specs, "LookupInSpecs", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
 
     ArrayList<SubdocGetRequest.Command> commands = new ArrayList<>(specs.size());
 
@@ -666,7 +627,7 @@ public class AsyncCollection {
     }
 
     RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, opts.parentSpan().orElse(null));
-    SubdocGetRequest request = new SubdocGetRequest(timeout, coreContext, collectionIdentifier, retryStrategy, id,
+    SubdocGetRequest request = new SubdocGetRequest(timeout, core().context(), collectionIdentifier(), retryStrategy, id,
       flags, commands, span);
     request.context().clientContext(opts.clientContext());
     return request;
@@ -695,8 +656,8 @@ public class AsyncCollection {
   public CompletableFuture<MutateInResult> mutateIn(final String id,
                                                     final List<MutateInSpec> specs,
                                                     final MutateInOptions options) {
-    notNull(options, "MutateInOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
-    notNull(specs, "MutationSpecs", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "MutateInOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
+    notNull(specs, "MutationSpecs", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
 
     MutateInOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
@@ -748,7 +709,7 @@ public class AsyncCollection {
   }
 
   CollectionIdentifier collectionIdentifier() {
-    return collectionIdentifier;
+    return keyspace.toCollectionIdentifier();
   }
 
 }

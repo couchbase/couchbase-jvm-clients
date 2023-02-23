@@ -17,7 +17,9 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.query.CoreQueryContext;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.cnc.RequestSpan;
@@ -42,7 +44,6 @@ import com.couchbase.client.java.query.QueryResult;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -51,7 +52,7 @@ import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
-import static com.couchbase.client.java.query.QueryAccessor.convertCoreQueryError;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The scope identifies a group of collections and allows high application
@@ -63,10 +64,7 @@ import static com.couchbase.client.java.query.QueryAccessor.convertCoreQueryErro
  */
 public class AsyncScope {
 
-  /**
-   * Holds the inner core reference to pass on.
-   */
-  private final Core core;
+  private final CoreCouchbaseOps couchbaseOps;
 
   /**
    * The name of the bucket at which this scope belongs.
@@ -94,21 +92,13 @@ public class AsyncScope {
    */
   private final Map<String, AsyncCollection> collectionCache = new ConcurrentHashMap<>();
 
-  /**
-   * Creates a new {@link AsyncScope}.
-   *
-   * @param scopeName the name of the scope.
-   * @param bucketName the name of the bucket.
-   * @param core the attached core.
-   * @param environment the attached environment.
-   */
-  AsyncScope(final String scopeName, final String bucketName, final Core core,
+  AsyncScope(final String scopeName, final String bucketName, final CoreCouchbaseOps couchbaseOps,
              final ClusterEnvironment environment) {
-    this.scopeName = scopeName;
-    this.bucketName = bucketName;
-    this.core = core;
-    this.environment = environment;
-    this.queryOps = core.queryOps();
+    this.scopeName = requireNonNull(scopeName);
+    this.bucketName = requireNonNull(bucketName);
+    this.couchbaseOps = requireNonNull(couchbaseOps);
+    this.environment = requireNonNull(environment);
+    this.queryOps = couchbaseOps.queryOps();
     queryContext = CoreQueryContext.of(bucketName, scopeName);
   }
 
@@ -133,7 +123,7 @@ public class AsyncScope {
    */
   @Stability.Volatile
   public Core core() {
-    return core;
+    return couchbaseOps.asCore();
   }
 
   /**
@@ -179,12 +169,15 @@ public class AsyncScope {
    */
   private AsyncCollection maybeCreateAsyncCollection(final String collectionName, final boolean refreshMap) {
     return collectionCache.computeIfAbsent(collectionName, name -> {
+      CoreKeyspace keyspace = new CoreKeyspace(bucketName, scopeName, collectionName);
       if (refreshMap) {
-        core
-          .configurationProvider()
-          .refreshCollectionId(new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(name)));
+        if (couchbaseOps instanceof Core) {
+          ((Core) couchbaseOps)
+            .configurationProvider()
+            .refreshCollectionId(keyspace.toCollectionIdentifier());
+        }
       }
-      return new AsyncCollection(name, scopeName, bucketName, core, environment);
+      return new AsyncCollection(keyspace, couchbaseOps, environment);
     });
   }
 
@@ -236,7 +229,7 @@ public class AsyncScope {
     notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
     AnalyticsOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
-    return AnalyticsAccessor.analyticsQueryAsync(core, analyticsRequest(statement, opts), serializer);
+    return AnalyticsAccessor.analyticsQueryAsync(core(), analyticsRequest(statement, opts), serializer);
   }
 
   /**
@@ -262,7 +255,7 @@ public class AsyncScope {
     final RequestSpan span = environment()
         .requestTracer()
         .requestSpan(TracingIdentifiers.SPAN_REQUEST_ANALYTICS, opts.parentSpan().orElse(null));
-    AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, core.context().authenticator(),
+    AnalyticsRequest request = new AnalyticsRequest(timeout, core().context(), retryStrategy, core().context().authenticator(),
         queryBytes, opts.priority(), opts.readonly(), clientContextId, statement, span, bucketName, scopeName
     );
     request.context().clientContext(opts.clientContext());

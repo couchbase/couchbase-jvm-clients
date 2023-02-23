@@ -16,16 +16,13 @@
 
 package com.couchbase.client.java.manager.collection;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.classic.manager.ClassicCoreCollectionManagerOps;
 import com.couchbase.client.core.error.CollectionExistsException;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.manager.CoreCollectionManager;
-import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
 import com.couchbase.client.java.AsyncBucket;
 
 import java.time.Duration;
@@ -42,6 +39,7 @@ import static com.couchbase.client.java.manager.collection.DropCollectionOptions
 import static com.couchbase.client.java.manager.collection.DropScopeOptions.dropScopeOptions;
 import static com.couchbase.client.java.manager.collection.GetAllScopesOptions.getAllScopesOptions;
 import static com.couchbase.client.java.manager.collection.GetScopeOptions.getScopeOptions;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The {@link AsyncCollectionManager} provides APIs to manage collections and scopes within a bucket.
@@ -59,13 +57,10 @@ public class AsyncCollectionManager {
    * <p>
    * This API is not intended to be called by the user directly, use {@link AsyncBucket#collections()}
    * instead.
-   *
-   * @param core the internal core reference.
-   * @param bucketName the name of the bucket.
    */
   @Stability.Internal
-  public AsyncCollectionManager(final Core core, final String bucketName) {
-      this.coreCollectionManager = core.collectionManager(bucketName);
+  public AsyncCollectionManager(final CoreCollectionManager coreCollectionManager) {
+      this.coreCollectionManager = requireNonNull(coreCollectionManager);
    }
 
   /**

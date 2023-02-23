@@ -17,6 +17,8 @@
 package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreQueryOps;
+import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexFailureException;
@@ -37,7 +39,6 @@ import static com.couchbase.client.java.manager.query.DropPrimaryQueryIndexOptio
 import static com.couchbase.client.java.manager.query.DropQueryIndexOptions.dropQueryIndexOptions;
 import static com.couchbase.client.java.manager.query.GetAllQueryIndexesOptions.getAllQueryIndexesOptions;
 import static com.couchbase.client.java.manager.query.WatchQueryIndexesOptions.watchQueryIndexesOptions;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Performs management operations on query indexes.
@@ -51,15 +52,13 @@ public class AsyncQueryIndexManager {
    * <p>
    * This API is not intended to be called by the user directly, use {@link AsyncCluster#queryIndexes()}
    * instead.
-   *
-   * @param cluster the async cluster to perform the queries on.
    */
   @Stability.Internal
-  public AsyncQueryIndexManager(final AsyncCluster cluster) {
-    this.internal = new CoreQueryIndexManager(
-      cluster.core().queryOps(),
-      cluster.core().context().environment().requestTracer()
-    );
+  public AsyncQueryIndexManager(
+    final CoreQueryOps queryOps,
+    final RequestTracer requestTracer
+  ) {
+    this.internal = new CoreQueryIndexManager(queryOps, requestTracer);
   }
 
   /**

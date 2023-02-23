@@ -123,36 +123,6 @@ public class Cluster implements Closeable {
   private final ReactiveCluster reactiveCluster;
 
   /**
-   * The search index manager manages search indexes.
-   */
-  private final SearchIndexManager searchIndexManager;
-
-  /**
-   * The user manager manages users and groups.
-   */
-  private final UserManager userManager;
-
-  /**
-   * The bucket manager manages buckets and allows to flush them.
-   */
-  private final BucketManager bucketManager;
-
-  /**
-   * Allows to manage query indexes.
-   */
-  private final QueryIndexManager queryIndexManager;
-
-  /**
-   * Allows to manage analytics indexes.
-   */
-  private final AnalyticsIndexManager analyticsIndexManager;
-
-  /**
-   * Allows to manage eventing functions.
-   */
-  private final EventingFunctionManager eventingFunctionManager;
-
-  /**
    * Stores already opened buckets for reuse.
    */
   private final Map<String, Bucket> bucketCache = new ConcurrentHashMap<>();
@@ -321,12 +291,6 @@ public class Cluster implements Closeable {
   ) {
     this.asyncCluster = new AsyncCluster(environment, authenticator, connectionString);
     this.reactiveCluster = new ReactiveCluster(asyncCluster);
-    this.searchIndexManager = new SearchIndexManager(asyncCluster.searchIndexes());
-    this.userManager = new UserManager(asyncCluster.users());
-    this.bucketManager = new BucketManager(asyncCluster.buckets());
-    this.queryIndexManager = new QueryIndexManager(asyncCluster.queryIndexes());
-    this.analyticsIndexManager = new AnalyticsIndexManager(this);
-    this.eventingFunctionManager = new EventingFunctionManager(asyncCluster.eventingFunctions());
   }
 
   /**
@@ -369,35 +333,35 @@ public class Cluster implements Closeable {
    * The user manager allows to manage users and groups.
    */
   public UserManager users() {
-    return userManager;
+    return new UserManager(asyncCluster.users());
   }
 
   /**
    * The bucket manager allows to perform administrative tasks on buckets and their resources.
    */
   public BucketManager buckets() {
-    return bucketManager;
+    return new BucketManager(asyncCluster.buckets());
   }
 
   /**
    * The analytics index manager allows to modify and create indexes for the analytics service.
    */
   public AnalyticsIndexManager analyticsIndexes() {
-    return analyticsIndexManager;
+    return new AnalyticsIndexManager(this);
   }
 
   /**
    * The query index manager allows to modify and create indexes for the query service.
    */
   public QueryIndexManager queryIndexes() {
-    return queryIndexManager;
+    return new QueryIndexManager(asyncCluster.queryIndexes());
   }
 
   /**
    * The search index manager allows to modify and create indexes for the search service.
    */
   public SearchIndexManager searchIndexes() {
-    return searchIndexManager;
+    return new SearchIndexManager(asyncCluster.searchIndexes());
   }
 
   /**
@@ -405,7 +369,7 @@ public class Cluster implements Closeable {
    */
   @Stability.Uncommitted
   public EventingFunctionManager eventingFunctions() {
-    return eventingFunctionManager;
+    return new EventingFunctionManager(asyncCluster.eventingFunctions());
   }
 
   /**

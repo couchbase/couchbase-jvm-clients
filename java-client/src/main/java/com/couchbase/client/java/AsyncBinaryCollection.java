@@ -16,22 +16,9 @@
 
 package com.couchbase.client.java;
 
-import static com.couchbase.client.core.util.Validators.notNull;
-import static com.couchbase.client.java.BinaryCollection.DEFAULT_APPEND_OPTIONS;
-import static com.couchbase.client.java.BinaryCollection.DEFAULT_DECREMENT_OPTIONS;
-import static com.couchbase.client.java.BinaryCollection.DEFAULT_INCREMENT_OPTIONS;
-import static com.couchbase.client.java.BinaryCollection.DEFAULT_PREPEND_OPTIONS;
-import static com.couchbase.client.java.kv.AppendOptions.appendOptions;
-import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
-import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
-import static com.couchbase.client.java.kv.PrependOptions.prependOptions;
-
-import java.util.concurrent.CompletableFuture;
-
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
-import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
@@ -45,18 +32,29 @@ import com.couchbase.client.java.kv.IncrementOptions;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PrependOptions;
 
+import java.util.concurrent.CompletableFuture;
+
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.java.BinaryCollection.DEFAULT_APPEND_OPTIONS;
+import static com.couchbase.client.java.BinaryCollection.DEFAULT_DECREMENT_OPTIONS;
+import static com.couchbase.client.java.BinaryCollection.DEFAULT_INCREMENT_OPTIONS;
+import static com.couchbase.client.java.BinaryCollection.DEFAULT_PREPEND_OPTIONS;
+import static java.util.Objects.requireNonNull;
+
 /**
  * Allows to perform certain operations on non-JSON documents.
  */
 public class AsyncBinaryCollection {
 
   final CoreKvBinaryOps coreKvBinaryOps;
-  private final CollectionIdentifier collectionIdentifier;
+  private final CoreKeyspace keyspace;
 
-  AsyncBinaryCollection(final Core core, final CoreEnvironment environment,
-      final CollectionIdentifier collectionIdentifier) {
-    this.collectionIdentifier = collectionIdentifier;
-    this.coreKvBinaryOps = core.kvBinaryOps(CoreKeyspace.from(collectionIdentifier));
+  AsyncBinaryCollection(
+    final CoreKeyspace keyspace,
+    final CoreCouchbaseOps couchbaseOps
+  ) {
+    this.keyspace = requireNonNull(keyspace);
+    this.coreKvBinaryOps = couchbaseOps.kvBinaryOps(keyspace);
   }
 
   /**
@@ -87,7 +85,7 @@ public class AsyncBinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public CompletableFuture<MutationResult> append(final String id, final byte[] content, final AppendOptions options) {
-    notNull(options, "AppendOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "AppendOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     AppendOptions.Built opts = notNull(options, "options").build();
     return coreKvBinaryOps.appendAsync(id, content, opts, opts.cas(), opts.toCoreDurability())
         .thenApply(MutationResult::new);
@@ -122,7 +120,7 @@ public class AsyncBinaryCollection {
    */
   public CompletableFuture<MutationResult> prepend(final String id, final byte[] content,
       final PrependOptions options) {
-    notNull(options, "PrependOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "PrependOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     PrependOptions.Built opts = options.build();
     return coreKvBinaryOps.prependAsync(id, content, opts, opts.cas(), opts.toCoreDurability())
         .thenApply(MutationResult::new);
@@ -152,7 +150,7 @@ public class AsyncBinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public CompletableFuture<CounterResult> increment(final String id, final IncrementOptions options) {
-    notNull(options, "IncrementOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "IncrementOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     IncrementOptions.Built opts = options.build();
     return coreKvBinaryOps
         .incrementAsync(id, opts, opts.expiry().encode(), opts.delta(), opts.initial(), opts.toCoreDurability())
@@ -183,7 +181,7 @@ public class AsyncBinaryCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public CompletableFuture<CounterResult> decrement(final String id, final DecrementOptions options) {
-    notNull(options, "DecrementOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier));
+    notNull(options, "DecrementOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     DecrementOptions.Built opts = options.build();
     return coreKvBinaryOps
         .decrementAsync(id, opts, opts.expiry().encode(), opts.delta(), opts.initial(), opts.toCoreDurability())
@@ -191,6 +189,6 @@ public class AsyncBinaryCollection {
   }
 
   CollectionIdentifier collectionIdentifier() {
-    return collectionIdentifier;
+    return keyspace.toCollectionIdentifier();
   }
 }

@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -36,7 +37,6 @@ import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
-import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
@@ -122,22 +122,7 @@ public class AsyncCluster {
    */
   private final Supplier<ClusterEnvironment> environment;
 
-  /**
-   * Holds the internal core reference.
-   */
-  private final Core core;
-
-  private final AsyncSearchIndexManager searchIndexManager;
-
-  private final AsyncUserManager userManager;
-
-  private final AsyncBucketManager bucketManager;
-
-  private final AsyncQueryIndexManager queryIndexManager;
-
-  private final AsyncAnalyticsIndexManager analyticsIndexManager;
-
-  private final AsyncEventingFunctionManager eventingFunctionManager;
+  private final CoreCouchbaseOps couchbaseOps;
 
   private final Authenticator authenticator;
 
@@ -236,17 +221,13 @@ public class AsyncCluster {
     final ConnectionString connectionString
   ) {
     this.environment = environment;
-    this.core = Core.create(environment.get(), authenticator, connectionString);
-    this.searchIndexManager = new AsyncSearchIndexManager(core);
-    this.userManager = new AsyncUserManager(core);
-    this.bucketManager = new AsyncBucketManager(core);
-    this.queryIndexManager = new AsyncQueryIndexManager(this);
-    this.analyticsIndexManager = new AsyncAnalyticsIndexManager(this);
-    this.eventingFunctionManager = new AsyncEventingFunctionManager(core);
+    this.couchbaseOps = CoreCouchbaseOps.create(environment.get(), authenticator, connectionString);
     this.authenticator = authenticator;
-    this.queryOps = core.queryOps();
+    this.queryOps = couchbaseOps.queryOps();
 
-    core.initGlobalConfig();
+    if (couchbaseOps instanceof Core) {
+      ((Core) couchbaseOps).initGlobalConfig();
+    }
   }
 
   /**
@@ -263,7 +244,12 @@ public class AsyncCluster {
    */
   @Stability.Volatile
   public Core core() {
-    return core;
+    return couchbaseOps.asCore();
+  }
+
+  @Stability.Internal
+  public CoreCouchbaseOps couchbaseOps() {
+    return couchbaseOps;
   }
 
   /**
@@ -278,35 +264,35 @@ public class AsyncCluster {
    * Provides access to the user management services.
    */
   public AsyncUserManager users() {
-    return userManager;
+    return new AsyncUserManager(core());
   }
 
   /**
    * Provides access to the bucket management services.
    */
   public AsyncBucketManager buckets() {
-    return bucketManager;
+    return new AsyncBucketManager(core());
   }
 
   /**
    * Provides access to the Analytics index management services.
    */
   public AsyncAnalyticsIndexManager analyticsIndexes() {
-    return analyticsIndexManager;
+    return new AsyncAnalyticsIndexManager(this);
   }
 
   /**
    * Provides access to the N1QL index management services.
    */
   public AsyncQueryIndexManager queryIndexes() {
-    return queryIndexManager;
+    return new AsyncQueryIndexManager(couchbaseOps().queryOps(), couchbaseOps().environment().requestTracer());
   }
 
   /**
    * Provides access to the Full Text Search index management services.
    */
   public AsyncSearchIndexManager searchIndexes() {
-    return searchIndexManager;
+    return new AsyncSearchIndexManager(core());
   }
 
   /**
@@ -314,7 +300,7 @@ public class AsyncCluster {
    */
   @Stability.Uncommitted
   public AsyncEventingFunctionManager eventingFunctions() {
-    return eventingFunctionManager;
+    return new AsyncEventingFunctionManager(core());
   }
 
   /**
@@ -361,14 +347,10 @@ public class AsyncCluster {
    * @return the {@link AnalyticsResult} once the response arrives successfully.
    */
   public CompletableFuture<AnalyticsResult> analyticsQuery(final String statement, final AnalyticsOptions options) {
-    if (core.isProtostellar()) {
-      throw CoreProtostellarUtil.unsupportedInProtostellar("analytics");
-    }
-
     notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
     AnalyticsOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
-    return AnalyticsAccessor.analyticsQueryAsync(core, analyticsRequest(statement, opts), serializer);
+    return AnalyticsAccessor.analyticsQueryAsync(core(), analyticsRequest(statement, opts), serializer);
   }
 
   /**
@@ -393,7 +375,7 @@ public class AsyncCluster {
     final RequestSpan span = environment()
       .requestTracer()
       .requestSpan(TracingIdentifiers.SPAN_REQUEST_ANALYTICS, opts.parentSpan().orElse(null));
-    AnalyticsRequest request = new AnalyticsRequest(timeout, core.context(), retryStrategy, authenticator,
+    AnalyticsRequest request = new AnalyticsRequest(timeout, core().context(), retryStrategy, authenticator,
       queryBytes, opts.priority(), opts.readonly(), clientContextId, statement, span, null, null
     );
     request.context().clientContext(opts.clientContext());
@@ -422,7 +404,7 @@ public class AsyncCluster {
     notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, query.export().toMap()));
     SearchOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
-    return SearchAccessor.searchQueryAsync(core, searchRequest(indexName, query, opts), serializer);
+    return SearchAccessor.searchQueryAsync(core(), searchRequest(indexName, query, opts), serializer);
   }
 
   SearchRequest searchRequest(final String indexName, final SearchQuery query, final SearchOptions.Built opts) {
@@ -438,7 +420,7 @@ public class AsyncCluster {
     final RequestSpan span = environment()
       .requestTracer()
       .requestSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH, opts.parentSpan().orElse(null));
-    SearchRequest request = new SearchRequest(timeout, core.context(), retryStrategy, authenticator, indexName, bytes, span);
+    SearchRequest request = new SearchRequest(timeout, core().context(), retryStrategy, authenticator, indexName, bytes, span);
     request.context().clientContext(opts.clientContext());
     return request;
   }
@@ -452,8 +434,10 @@ public class AsyncCluster {
   public AsyncBucket bucket(final String bucketName) {
     notNullOrEmpty(bucketName, "Name");
     return bucketCache.computeIfAbsent(bucketName, n -> {
-      core.openBucket(n);
-      return new AsyncBucket(n, core, environment.get());
+      if (couchbaseOps instanceof Core) {
+        ((Core) couchbaseOps).openBucket(n);
+      }
+      return new AsyncBucket(n, couchbaseOps, environment.get());
     });
   }
 
@@ -489,7 +473,7 @@ public class AsyncCluster {
    * @return a mono once complete.
    */
   Mono<Void> disconnectInternal(final Duration timeout) {
-    return core.shutdown(timeout).then(Mono.defer(() -> {
+    return couchbaseOps.shutdown(timeout).then(Mono.defer(() -> {
       if (environment instanceof OwnedSupplier) {
         return environment.get().shutdownReactive(timeout);
       } else {
@@ -522,16 +506,12 @@ public class AsyncCluster {
    * @return the {@link DiagnosticsResult} once complete.
    */
   public CompletableFuture<DiagnosticsResult> diagnostics(final DiagnosticsOptions options) {
-    if (core.isProtostellar()) {
-      throw CoreProtostellarUtil.unsupportedCurrentlyInProtostellar();
-    }
-
     notNull(options, "DiagnosticsOptions");
     final DiagnosticsOptions.Built opts = options.build();
 
     return Mono.defer(() -> Mono.just(new DiagnosticsResult(
-      core.diagnostics().collect(Collectors.groupingBy(EndpointDiagnostics::type)),
-      core.context().environment().userAgent().formattedShort(),
+      core().diagnostics().collect(Collectors.groupingBy(EndpointDiagnostics::type)),
+      core().context().environment().userAgent().formattedShort(),
       opts.reportId().orElse(UUID.randomUUID().toString())
     ))).toFuture();
   }
@@ -563,7 +543,7 @@ public class AsyncCluster {
     notNull(options, "PingOptions");
     final PingOptions.Built opts = options.build();
     return HealthPinger.ping(
-      core,
+      core(),
       opts.timeout(),
       opts.retryStrategy().orElse(environment.get().retryStrategy()),
       opts.serviceTypes(),
@@ -600,7 +580,7 @@ public class AsyncCluster {
   public CompletableFuture<Void> waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
     notNull(options, "WaitUntilReadyOptions");
     final WaitUntilReadyOptions.Built opts = options.build();
-    return core.waitUntilReady(opts.serviceTypes(), timeout, opts.desiredState(), null);
+    return couchbaseOps.waitUntilReady(opts.serviceTypes(), timeout, opts.desiredState(), null);
   }
 
 }

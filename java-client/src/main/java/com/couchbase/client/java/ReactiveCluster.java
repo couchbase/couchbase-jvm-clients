@@ -41,7 +41,6 @@ import com.couchbase.client.java.http.ReactiveCouchbaseHttpClient;
 import com.couchbase.client.java.manager.analytics.ReactiveAnalyticsIndexManager;
 import com.couchbase.client.java.manager.bucket.ReactiveBucketManager;
 import com.couchbase.client.java.manager.eventing.ReactiveEventingFunctionManager;
-import com.couchbase.client.java.manager.query.AsyncQueryIndexManager;
 import com.couchbase.client.java.manager.query.ReactiveQueryIndexManager;
 import com.couchbase.client.java.manager.search.ReactiveSearchIndexManager;
 import com.couchbase.client.java.manager.user.ReactiveUserManager;
@@ -231,7 +230,7 @@ public class ReactiveCluster {
    * Provides access to the N1QL index management services.
    */
   public ReactiveQueryIndexManager queryIndexes() {
-    return new ReactiveQueryIndexManager(new AsyncQueryIndexManager(async()));
+    return new ReactiveQueryIndexManager(async().queryIndexes());
   }
 
   /**

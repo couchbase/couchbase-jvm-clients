@@ -54,10 +54,6 @@ public class Bucket {
    */
   private final ReactiveBucket reactiveBucket;
 
-  private final CollectionManager collectionManager;
-
-  private final ViewIndexManager viewManager;
-
   /**
    * Stores already opened scopes for reuse.
    */
@@ -71,8 +67,6 @@ public class Bucket {
   Bucket(final AsyncBucket asyncBucket) {
     this.asyncBucket = asyncBucket;
     this.reactiveBucket = new ReactiveBucket(asyncBucket);
-    this.collectionManager = new CollectionManager(asyncBucket.collections());
-    this.viewManager = new ViewIndexManager(asyncBucket.viewIndexes());
   }
 
   /**
@@ -104,11 +98,11 @@ public class Bucket {
   }
 
   public CollectionManager collections() {
-    return collectionManager;
+    return new CollectionManager(asyncBucket.collections());
   }
 
   public ViewIndexManager viewIndexes() {
-    return viewManager;
+    return new ViewIndexManager(asyncBucket.viewIndexes());
   }
 
   /**

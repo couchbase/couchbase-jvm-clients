@@ -54,10 +54,6 @@ public class ReactiveBucket {
    */
   private final AsyncBucket asyncBucket;
 
-  private final ReactiveCollectionManager collectionManager;
-
-  private final ReactiveViewIndexManager viewIndexManager;
-
   /**
    * Stores already opened scopes for reuse.
    */
@@ -70,8 +66,6 @@ public class ReactiveBucket {
    */
   ReactiveBucket(final AsyncBucket asyncBucket) {
     this.asyncBucket = asyncBucket;
-    this.collectionManager = new ReactiveCollectionManager(asyncBucket.collections());
-    this.viewIndexManager = new ReactiveViewIndexManager(asyncBucket.viewIndexes());
   }
 
   /**
@@ -99,11 +93,11 @@ public class ReactiveBucket {
   }
 
   public ReactiveCollectionManager collections() {
-    return collectionManager;
+    return new ReactiveCollectionManager(asyncBucket.collections());
   }
 
   public ReactiveViewIndexManager viewIndexes() {
-    return viewIndexManager;
+    return new ReactiveViewIndexManager(asyncBucket.viewIndexes());
   }
 
   /**

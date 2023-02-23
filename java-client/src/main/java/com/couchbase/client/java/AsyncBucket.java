@@ -18,12 +18,12 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.HealthPinger;
 import com.couchbase.client.core.diagnostics.PingResult;
-import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.error.context.ReducedViewErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.view.ViewRequest;
@@ -50,6 +50,7 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.ReactiveBucket.DEFAULT_VIEW_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_PING_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_WAIT_UNTIL_READY_OPTIONS;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Provides access to a Couchbase bucket in an async fashion.
@@ -66,36 +67,17 @@ public class AsyncBucket {
    */
   private final ClusterEnvironment environment;
 
-  /**
-   * The core reference used.
-   */
-  private final Core core;
-
-  private final AsyncCollectionManager collectionManager;
-
-  private final AsyncViewIndexManager viewManager;
-
-  private final Authenticator authenticator;
+  private final CoreCouchbaseOps couchbaseOps;
 
   /**
    * Stores already opened scopes for reuse.
    */
   private final Map<String, AsyncScope> scopeCache = new ConcurrentHashMap<>();
 
-  /**
-   * Creates a new {@link AsyncBucket}.
-   *
-   * @param name the name of the bucket.
-   * @param core the underlying core.
-   * @param environment the attached environment.
-   */
-  AsyncBucket(final String name, final Core core, final ClusterEnvironment environment) {
-    this.core = core;
-    this.environment = environment;
-    this.name = name;
-    this.collectionManager = new AsyncCollectionManager(core, name);
-    this.viewManager = new AsyncViewIndexManager(core, name);
-    this.authenticator = core.context().authenticator();
+  AsyncBucket(final String name, final CoreCouchbaseOps couchbaseOps, final ClusterEnvironment environment) {
+    this.couchbaseOps = requireNonNull(couchbaseOps);
+    this.environment = requireNonNull(environment);
+    this.name = requireNonNull(name);
   }
 
   /**
@@ -119,15 +101,15 @@ public class AsyncBucket {
    */
   @Stability.Volatile
   public Core core() {
-    return core;
+    return couchbaseOps.asCore();
   }
 
   public AsyncCollectionManager collections() {
-    return collectionManager;
+    return new AsyncCollectionManager(couchbaseOps.collectionManager(name));
   }
 
   public AsyncViewIndexManager viewIndexes() {
-    return viewManager;
+    return new AsyncViewIndexManager(core(), name);
   }
 
   /**
@@ -156,7 +138,7 @@ public class AsyncBucket {
    * @return the created or cached scope.
    */
   private AsyncScope maybeCreateAsyncScope(final String scopeName) {
-    return scopeCache.computeIfAbsent(scopeName, ignored -> new AsyncScope(scopeName, name, core, environment));
+    return scopeCache.computeIfAbsent(scopeName, ignored -> new AsyncScope(scopeName, name, couchbaseOps, environment));
   }
 
   /**
@@ -193,7 +175,7 @@ public class AsyncBucket {
     notNull(options, "ViewOptions", () -> new ReducedViewErrorContext(designDoc, viewName, name));
     ViewOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
-    return ViewAccessor.viewQueryAsync(core, viewRequest(designDoc, viewName, opts), serializer);
+    return ViewAccessor.viewQueryAsync(core(), viewRequest(designDoc, viewName, opts), serializer);
   }
 
   ViewRequest viewRequest(final String designDoc, final String viewName, final ViewOptions.Built opts) {
@@ -210,7 +192,7 @@ public class AsyncBucket {
     final RequestSpan span = environment()
       .requestTracer()
       .requestSpan(TracingIdentifiers.SPAN_REQUEST_VIEWS, opts.parentSpan().orElse(null));
-    ViewRequest request = new ViewRequest(timeout, core.context(), retryStrategy, authenticator, name, designDoc,
+    ViewRequest request = new ViewRequest(timeout, core().context(), retryStrategy, core().context().authenticator(), name, designDoc,
       viewName, query, keysJson, development, span);
     request.context().clientContext(opts.clientContext());
     return request;
@@ -235,7 +217,7 @@ public class AsyncBucket {
     notNull(options, "PingOptions");
     final PingOptions.Built opts = options.build();
     return HealthPinger.ping(
-      core,
+      core(),
       opts.timeout(),
       opts.retryStrategy().orElse(environment.retryStrategy()),
       opts.serviceTypes(),
@@ -272,7 +254,7 @@ public class AsyncBucket {
   public CompletableFuture<Void> waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
     notNull(options, "WaitUntilReadyOptions");
     final WaitUntilReadyOptions.Built opts = options.build();
-    return core.waitUntilReady(opts.serviceTypes(), timeout, opts.desiredState(), name);
+    return couchbaseOps.waitUntilReady(opts.serviceTypes(), timeout, opts.desiredState(), name);
   }
 
 }
