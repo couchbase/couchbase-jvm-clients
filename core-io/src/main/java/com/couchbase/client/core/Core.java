@@ -298,7 +298,7 @@ public class Core implements AutoCloseable {
     boolean isProtostellar = connectionString.scheme() == ConnectionString.Scheme.PROTOSTELLAR;
 
     this.protostellar = isProtostellar
-      ? new CoreProtostellar(new ProtostellarContext(environment, authenticator), seedNodes)
+      ? new CoreProtostellar(environment, authenticator, connectionString)
       : null;
 
     eventBus.publish(new CoreCreatedEvent(coreContext, environment, seedNodes, CoreLimiter.numInstances(), connectionString));

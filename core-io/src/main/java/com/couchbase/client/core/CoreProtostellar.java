@@ -21,18 +21,19 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.endpoint.ProtostellarEndpoint;
 import com.couchbase.client.core.endpoint.ProtostellarPool;
-import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.protostellar.ProtostellarContext;
+import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.HostAndPort;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
-import static java.util.Objects.requireNonNull;
+import static com.couchbase.client.core.util.Validators.notNull;
 
 @Stability.Internal
 public class CoreProtostellar {
@@ -41,13 +42,23 @@ public class CoreProtostellar {
   private final ProtostellarPool pool;
   private final ProtostellarContext ctx;
 
-  public CoreProtostellar(ProtostellarContext ctx, final Set<SeedNode> seedNodes) {
-    this.ctx = requireNonNull(ctx);
-    notNullOrEmpty(seedNodes, "seed nodes");
+  public CoreProtostellar(
+    final CoreEnvironment env,
+    final Authenticator authenticator,
+    ConnectionString connectionString
+  ) {
+    this.ctx = new ProtostellarContext(env, authenticator);
+    notNull(connectionString, "connectionString");
 
-    SeedNode first = seedNodes.iterator().next();
-    int port = first.protostellarPort().orElse(DEFAULT_PROTOSTELLAR_TLS_PORT);
-    HostAndPort remote = new HostAndPort(first.address(), port);
+    ConnectionString.UnresolvedSocket first = connectionString.hosts().get(0);
+    first.portType().ifPresent(type -> {
+      throw InvalidArgumentException.fromMessage(
+        "Invalid port type for scheme " + connectionString.scheme() + ": " + type + " ; " + connectionString.original()
+      );
+    });
+
+    int port = first.port() == 0 ? DEFAULT_PROTOSTELLAR_TLS_PORT : first.port();
+    HostAndPort remote = new HostAndPort(first.host(), port);
 
     this.pool = new ProtostellarPool(ctx, remote);
   }

@@ -16,6 +16,7 @@ import java.util.Set;
 
 import static com.couchbase.client.core.CoreProtostellar.DEFAULT_PROTOSTELLAR_TLS_PORT;
 import static com.couchbase.client.core.util.CbCollections.setOf;
+import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static java.util.Objects.requireNonNull;
 
 public class ProtostellarTestEnvironment implements AutoCloseable {
@@ -54,8 +55,11 @@ public class ProtostellarTestEnvironment implements AutoCloseable {
 
     Set<SeedNode> seedNodes = setOf(SeedNode.create(hostname).withProtostellarPort(port));
 
-    ProtostellarContext ctx = new ProtostellarContext(env, PasswordAuthenticator.create(config.adminUsername(), config.adminPassword()));
-    CoreProtostellar core = new CoreProtostellar(ctx, seedNodes);
+    CoreProtostellar core = new CoreProtostellar(
+      env,
+      PasswordAuthenticator.create(config.adminUsername(), config.adminPassword()),
+      asConnectionString(seedNodes)
+    );
 
     CoreKeyspace defaultKeyspace = new CoreKeyspace(config.bucketname(), CollectionIdentifier.DEFAULT_SCOPE, CollectionIdentifier.DEFAULT_COLLECTION);
 
