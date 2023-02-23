@@ -17,6 +17,7 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.api.query.CoreQueryOps;
@@ -123,7 +124,7 @@ import static java.util.Objects.requireNonNull;
  * @since 2.0.0
  */
 @Stability.Volatile
-public class Core implements AutoCloseable {
+public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   /**
    * Locates the right node for the KV service.
@@ -684,17 +685,7 @@ public class Core implements AutoCloseable {
               currentConfig = new ClusterConfig();
               reconfigure();
             }))
-            .then(Mono.defer(() -> {
-              if (isProtostellar()) {
-                return Mono.fromRunnable(() -> {
-                  // This will block, locking up a scheduler thread - but since all we're interested in doing is shutting down, that doesn't matter.
-                  protostellar.shutdown(timeout);
-                });
-              }
-              else {
-                return Mono.empty();
-              }
-            }))
+            .then(protostellar != null ? protostellar.shutdown(timeout) : Mono.empty())
             // every 10ms check if all nodes have been cleared, and then move on.
             // this links the config provider shutdown with our core reconfig logic
             // Nb this check is probably redundant with the empty config now pushed for JVMCBC-1161.
@@ -1005,6 +996,7 @@ public class Core implements AutoCloseable {
   }
 
   @Stability.Internal
+  @Override
   public CoreKvOps kvOps(CoreKeyspace keyspace) {
     return isProtostellar()
       ? new ProtostellarCoreKvOps(protostellar, keyspace)
@@ -1012,6 +1004,7 @@ public class Core implements AutoCloseable {
   }
 
   @Stability.Internal
+  @Override
   public CoreQueryOps queryOps() {
     return isProtostellar()
       ? new ProtostellarCoreQueryOps(protostellar)
@@ -1019,6 +1012,7 @@ public class Core implements AutoCloseable {
   }
 
   @Stability.Internal
+  @Override
   public CoreKvBinaryOps kvBinaryOps(CoreKeyspace keyspace) {
     return isProtostellar()
       ? new ProtostellarCoreKvBinaryOps(protostellar, keyspace)
@@ -1026,10 +1020,16 @@ public class Core implements AutoCloseable {
   }
 
   @Stability.Internal
+  @Override
   public CoreCollectionManager collectionManager(String bucketName) {
     return isProtostellar()
       ? new ProtostellarCoreCollectionManagerOps(protostellar, bucketName)
       : new ClassicCoreCollectionManagerOps(this, bucketName);
+  }
+
+  @Override
+  public CoreEnvironment environment() {
+    return context().environment();
   }
 
   @Stability.Internal

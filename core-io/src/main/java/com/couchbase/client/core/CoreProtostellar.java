@@ -17,26 +17,44 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.CoreCouchbaseOps;
+import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
+import com.couchbase.client.core.api.kv.CoreKvOps;
+import com.couchbase.client.core.api.query.CoreQueryOps;
+import com.couchbase.client.core.classic.kv.ClassicCoreKvBinaryOps;
+import com.couchbase.client.core.classic.kv.ClassicCoreKvOps;
+import com.couchbase.client.core.classic.manager.ClassicCoreCollectionManagerOps;
+import com.couchbase.client.core.classic.query.ClassicCoreQueryOps;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.endpoint.ProtostellarEndpoint;
 import com.couchbase.client.core.endpoint.ProtostellarPool;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.manager.CoreCollectionManager;
 import com.couchbase.client.core.protostellar.ProtostellarContext;
+import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvBinaryOps;
+import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
+import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
+import com.couchbase.client.core.protostellar.query.ProtostellarCoreQueryOps;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.HostAndPort;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
-public class CoreProtostellar {
+public class CoreProtostellar implements CoreCouchbaseOps {
   public static final int DEFAULT_PROTOSTELLAR_TLS_PORT = 18098;
 
   private final ProtostellarPool pool;
@@ -67,8 +85,10 @@ public class CoreProtostellar {
     return ctx;
   }
 
-  public void shutdown(final Duration timeout) {
-    pool.shutdown(timeout);
+  @Override
+  public Mono<Void> shutdown(final Duration timeout) {
+    // This will block, locking up a scheduler thread - but since all we're interested in doing is shutting down, that doesn't matter.
+    return Mono.fromRunnable(() -> pool.shutdown(timeout));
   }
 
   public ProtostellarEndpoint endpoint() {
@@ -89,5 +109,30 @@ public class CoreProtostellar {
       tags.put(TracingIdentifiers.ATTR_OPERATION, key.requestName());
       return ctx.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, tags);
     });
+  }
+
+  @Override
+  public CoreKvOps kvOps(CoreKeyspace keyspace) {
+    return new ProtostellarCoreKvOps(this, keyspace);
+  }
+
+  @Override
+  public CoreQueryOps queryOps() {
+    return new ProtostellarCoreQueryOps(this);
+  }
+
+  @Override
+  public CoreKvBinaryOps kvBinaryOps(CoreKeyspace keyspace) {
+    return new ProtostellarCoreKvBinaryOps(this, keyspace);
+  }
+
+  @Override
+  public CoreCollectionManager collectionManager(String bucketName) {
+    return new ProtostellarCoreCollectionManagerOps(this, bucketName);
+  }
+
+  @Override
+  public CoreEnvironment environment() {
+    return context().environment();
   }
 }

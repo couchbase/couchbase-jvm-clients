@@ -1,0 +1,81 @@
+/*
+ * Copyright 2023 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.couchbase.client.core.api;
+
+import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.CoreProtostellar;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
+import com.couchbase.client.core.api.kv.CoreKvOps;
+import com.couchbase.client.core.api.query.CoreQueryOps;
+import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.manager.CoreCollectionManager;
+import com.couchbase.client.core.util.ConnectionString;
+import reactor.core.publisher.Mono;
+
+import java.time.Duration;
+
+/**
+ * Provides access to the various {@code Core*Ops} instances.
+ */
+@Stability.Internal
+public interface CoreCouchbaseOps {
+  CoreKvOps kvOps(CoreKeyspace keyspace);
+
+  CoreKvBinaryOps kvBinaryOps(CoreKeyspace keyspace);
+
+  CoreQueryOps queryOps();
+
+  CoreCollectionManager collectionManager(String bucketName);
+
+  CoreEnvironment environment();
+
+  Mono<Void> shutdown(final Duration timeout);
+
+  static CoreCouchbaseOps create(
+      CoreEnvironment env,
+      Authenticator authenticator,
+      ConnectionString connectionString
+  ) {
+    switch (connectionString.scheme()) {
+      case PROTOSTELLAR:
+        return new CoreProtostellar(env, authenticator, connectionString);
+      case COUCHBASE:
+      case COUCHBASES:
+        return Core.create(env, authenticator, connectionString);
+      default:
+        throw InvalidArgumentException.fromMessage("Unrecognized connection string scheme: " + connectionString.scheme());
+    }
+  }
+
+  /**
+   * @deprecated This method goes away after the Core / Protostellar refactor.
+   * For now, it helps components that depend on Core fail with
+   * `FeatureNotAvailableException` when Protostellar is used.
+   */
+  @Deprecated
+  default Core asCore() {
+    if (!(this instanceof Core)) {
+      throw new FeatureNotAvailableException("Not yet supported in Protostellar.");
+    }
+    return (Core) this;
+  }
+}
