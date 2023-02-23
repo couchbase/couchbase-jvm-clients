@@ -25,120 +25,144 @@ import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
 // [end:1.4.1]
 import com.couchbase.client.scala.kv._
 
-class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: Counters) extends SdkCommandExecutor(counters) {
-  override protected def convertException(raw: Throwable): com.couchbase.client.protocol.shared.Exception = {
+class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: Counters)
+    extends SdkCommandExecutor(counters) {
+  override protected def convertException(
+      raw: Throwable
+  ): com.couchbase.client.protocol.shared.Exception = {
     ScalaSdkCommandExecutor.convertException(raw)
   }
 
-  override protected def performOperation(op: com.couchbase.client.protocol.sdk.Command, perRun: PerRun): com.couchbase.client.protocol.run.Result = {
+  override protected def performOperation(
+      op: com.couchbase.client.protocol.sdk.Command,
+      perRun: PerRun
+  ) = {
+    val result = performOperationInternal(op, perRun)
+    perRun.resultsStream.enqueue(result)
+  }
+
+  protected def performOperationInternal(
+      op: com.couchbase.client.protocol.sdk.Command,
+      perRun: PerRun
+  ): com.couchbase.client.protocol.run.Result = {
     val result = com.couchbase.client.protocol.run.Result.newBuilder()
 
     if (op.hasInsert) {
-      val request = op.getInsert
+      val request    = op.getInsert
       val collection = connection.collection(request.getLocation)
-      val content = convertContent(request.getContent)
-      val docId = getDocId(request.getLocation)
-      val options = createOptions(request)
+      val content    = convertContent(request.getContent)
+      val docId      = getDocId(request.getLocation)
+      val options    = createOptions(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
       val r = if (options == null) content match {
-          case ContentString(value) => collection.insert(docId, value).get
-          case ContentJson(value) => collection.insert(docId, value).get
+        case ContentString(value) => collection.insert(docId, value).get
+        case ContentJson(value)   => collection.insert(docId, value).get
       }
-      else content match {
+      else
+        content match {
           case ContentString(value) => collection.insert(docId, value, options).get
-          case ContentJson(value) => collection.insert(docId, value, options).get
-      }
+          case ContentJson(value)   => collection.insert(docId, value, options).get
+        }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
-    }
-    else if (op.hasGet) {
-      val request = op.getGet
+    } else if (op.hasGet) {
+      val request    = op.getGet
       val collection = connection.collection(request.getLocation)
-      val docId = getDocId(request.getLocation)
-      val options = createOptions(request)
+      val docId      = getDocId(request.getLocation)
+      val options    = createOptions(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r = if (options == null) collection.get(docId).get
-      else collection.get(docId, options).get
+      val r =
+        if (options == null) collection.get(docId).get
+        else collection.get(docId, options).get
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
-    }
-    else if (op.hasRemove) {
-      val request = op.getRemove
+    } else if (op.hasRemove) {
+      val request    = op.getRemove
       val collection = connection.collection(request.getLocation)
-      val docId = getDocId(request.getLocation)
-      val options = createOptions(request)
+      val docId      = getDocId(request.getLocation)
+      val options    = createOptions(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r = if (options == null) collection.remove(docId).get
-      else collection.remove(docId, options).get
+      val r =
+        if (options == null) collection.remove(docId).get
+        else collection.remove(docId, options).get
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
-    }
-    else if (op.hasReplace) {
-      val request = op.getReplace
+    } else if (op.hasReplace) {
+      val request    = op.getReplace
       val collection = connection.collection(request.getLocation)
-      val docId = getDocId(request.getLocation)
-      val options = createOptions(request)
-      val content = convertContent(request.getContent)
+      val docId      = getDocId(request.getLocation)
+      val options    = createOptions(request)
+      val content    = convertContent(request.getContent)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
       val r = if (options == null) content match {
         case ContentString(value) => collection.replace(docId, value).get
-        case ContentJson(value) => collection.replace(docId, value).get
+        case ContentJson(value)   => collection.replace(docId, value).get
       }
-      else content match {
-        case ContentString(value) => collection.replace(docId, value, options).get
-        case ContentJson(value) => collection.replace(docId, value, options).get
-      }
+      else
+        content match {
+          case ContentString(value) => collection.replace(docId, value, options).get
+          case ContentJson(value)   => collection.replace(docId, value, options).get
+        }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
-    }
-    else if (op.hasUpsert) {
-      val request = op.getUpsert
+    } else if (op.hasUpsert) {
+      val request    = op.getUpsert
       val collection = connection.collection(request.getLocation)
-      val docId = getDocId(request.getLocation)
-      val options = createOptions(request)
-      val content = convertContent(request.getContent)
+      val docId      = getDocId(request.getLocation)
+      val options    = createOptions(request)
+      val content    = convertContent(request.getContent)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
       val r = if (options == null) content match {
         case ContentString(value) => collection.upsert(docId, value).get
-        case ContentJson(value) => collection.upsert(docId, value).get
+        case ContentJson(value)   => collection.upsert(docId, value).get
       }
-      else content match {
-        case ContentString(value) => collection.upsert(docId, value, options).get
-        case ContentJson(value) => collection.upsert(docId, value, options).get
-      }
+      else
+        content match {
+          case ContentString(value) => collection.upsert(docId, value, options).get
+          case ContentJson(value)   => collection.upsert(docId, value, options).get
+        }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
     }
     // [start:1.4.1]
     else if (op.hasRangeScan) {
-      val request = op.getRangeScan
+      val request    = op.getRangeScan
       val collection = connection.collection(request.getCollection)
-      val options = createOptions(request)
-      val scanType = convertScanType(request)
+      val options    = createOptions(request)
+      val scanType   = convertScanType(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val iterator = if (options == null) collection.scan(scanType)
-      else collection.scan(scanType, options)
+      val iterator =
+        if (options == null) collection.scan(scanType)
+        else collection.scan(scanType, options)
       result.setElapsedNanos(System.nanoTime - start)
-      val streamer = new ScalaIteratorStreamer[ScanResult](iterator, perRun, request.getStreamConfig.getStreamId, request.getStreamConfig,
+      val streamer = new ScalaIteratorStreamer[ScanResult](
+        iterator,
+        perRun,
+        request.getStreamConfig.getStreamId,
+        request.getStreamConfig,
         (r: AnyRef) => processScanResult(request, r.asInstanceOf[ScanResult]),
-        (err: Throwable) => convertException(err))
+        (err: Throwable) => convertException(err)
+      )
       perRun.streamerOwner.addAndStart(streamer)
-      result.setStream(com.couchbase.client.protocol.streams.Signal
-        .newBuilder
-        .setCreated(com.couchbase.client.protocol.streams.Created.newBuilder
-          .setType(com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN)
-          .setStreamId(streamer.streamId)))
+      result.setStream(
+        com.couchbase.client.protocol.streams.Signal.newBuilder
+          .setCreated(
+            com.couchbase.client.protocol.streams.Created.newBuilder
+              .setType(com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN)
+              .setStreamId(streamer.streamId)
+          )
+      )
     }
     // [end:1.4.1]
     else throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"))

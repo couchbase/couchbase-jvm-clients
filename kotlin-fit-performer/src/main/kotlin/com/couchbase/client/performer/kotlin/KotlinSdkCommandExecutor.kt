@@ -132,7 +132,12 @@ class KotlinSdkCommandExecutor(
         else -> throw UnsupportedOperationException("Unknown expiry: $expiry")
     }
 
-    override fun performOperation(op: FitSdkCommand, perRun: PerRun): FitRunResult {
+    override fun performOperation(op: FitSdkCommand, perRun: PerRun) {
+        val result = performOperationInternal(op, perRun)
+        perRun.resultsStream().enqueue(result)
+    }
+
+    fun performOperationInternal(op: FitSdkCommand, perRun: PerRun): FitRunResult {
         val result = FitRunResult.newBuilder()
 
         runBlocking {

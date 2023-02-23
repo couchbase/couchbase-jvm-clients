@@ -22,13 +22,15 @@ import com.couchbase.client.protocol.shared._
 import com.couchbase.client.performer.scala.util.{Capabilities, ClusterConnection}
 import com.couchbase.client.protocol.performer.PerformerCapsFetchResponse
 import com.couchbase.client.protocol.run.Workloads
-import com.couchbase.client.protocol.shared.{ClusterConnectionCreateRequest, ClusterConnectionCreateResponse}
+import com.couchbase.client.protocol.shared.{
+  ClusterConnectionCreateRequest,
+  ClusterConnectionCreateResponse
+}
 import io.grpc.stub.StreamObserver
 import io.grpc.{ServerBuilder, Status}
 import org.slf4j.LoggerFactory
 
 import java.lang
-
 
 object ScalaPerformer {
   private val logger = LoggerFactory.getLogger(classOf[ScalaPerformer])
@@ -55,23 +57,36 @@ object ScalaPerformer {
 }
 
 class ScalaPerformer extends CorePerformer {
-  private val logger = LoggerFactory.getLogger(classOf[ScalaPerformer])
+  private val logger             = LoggerFactory.getLogger(classOf[ScalaPerformer])
   private val clusterConnections = collection.mutable.Map.empty[String, ClusterConnection]
 
-  override protected def customisePerformerCaps(response: PerformerCapsFetchResponse.Builder): Unit = {
-    response.setPerformerUserAgent("scala")
+  override protected def customisePerformerCaps(
+      response: PerformerCapsFetchResponse.Builder
+  ): Unit = {
+    response
+      .setPerformerUserAgent("scala")
       .addAllSdkImplementationCaps(Capabilities.sdkImplementationCaps)
   }
 
-  override def clusterConnectionCreate(request: ClusterConnectionCreateRequest, responseObserver: StreamObserver[ClusterConnectionCreateResponse]): Unit = {
+  override def clusterConnectionCreate(
+      request: ClusterConnectionCreateRequest,
+      responseObserver: StreamObserver[ClusterConnectionCreateResponse]
+  ): Unit = {
     try {
       val connection = new ClusterConnection(request)
       clusterConnections.put(request.getClusterConnectionId, connection)
       ClusterConnectionCreateRequest.getDefaultInstance.newBuilderForType
-      logger.info("Established connection to cluster at IP: {} with user {} and id {}", request.getClusterHostname, request.getClusterUsername, request.getClusterConnectionId)
-      responseObserver.onNext(ClusterConnectionCreateResponse.newBuilder
-        .setClusterConnectionCount(clusterConnections.size)
-        .build)
+      logger.info(
+        "Established connection to cluster at IP: {} with user {} and id {}",
+        request.getClusterHostname,
+        request.getClusterUsername,
+        request.getClusterConnectionId
+      )
+      responseObserver.onNext(
+        ClusterConnectionCreateResponse.newBuilder
+          .setClusterConnectionCount(clusterConnections.size)
+          .build
+      )
       responseObserver.onCompleted()
     } catch {
       case err: Throwable =>
@@ -80,14 +95,19 @@ class ScalaPerformer extends CorePerformer {
     }
   }
 
-  override def clusterConnectionClose(request: ClusterConnectionCloseRequest, responseObserver: StreamObserver[ClusterConnectionCloseResponse]): Unit = {
+  override def clusterConnectionClose(
+      request: ClusterConnectionCloseRequest,
+      responseObserver: StreamObserver[ClusterConnectionCloseResponse]
+  ): Unit = {
     try {
       clusterConnections(request.getClusterConnectionId).cluster.disconnect()
       clusterConnections.remove(request.getClusterConnectionId)
       ClusterConnectionCreateRequest.getDefaultInstance.newBuilderForType
-      responseObserver.onNext(ClusterConnectionCloseResponse.newBuilder
-        .setClusterConnectionCount(clusterConnections.size)
-        .build)
+      responseObserver.onNext(
+        ClusterConnectionCloseResponse.newBuilder
+          .setClusterConnectionCount(clusterConnections.size)
+          .build
+      )
       responseObserver.onCompleted()
     } catch {
       case err: Throwable =>
@@ -96,22 +116,33 @@ class ScalaPerformer extends CorePerformer {
     }
   }
 
-  override def disconnectConnections(request: DisconnectConnectionsRequest, responseObserver: StreamObserver[DisconnectConnectionsResponse]): Unit = {
+  override def disconnectConnections(
+      request: DisconnectConnectionsRequest,
+      responseObserver: StreamObserver[DisconnectConnectionsResponse]
+  ): Unit = {
     clusterConnections.foreach(cc => cc._2.cluster.disconnect())
     clusterConnections.clear()
     responseObserver.onNext(DisconnectConnectionsResponse.newBuilder.build)
     responseObserver.onCompleted()
   }
 
-  override protected def executor(workloads: com.couchbase.client.protocol.run.Workloads, counters: Counters, api: API): SdkCommandExecutor = {
+  override protected def executor(
+      workloads: com.couchbase.client.protocol.run.Workloads,
+      counters: Counters,
+      api: API
+  ): SdkCommandExecutor = {
     if (api == API.DEFAULT) {
       new ScalaSdkCommandExecutor(clusterConnections(workloads.getClusterConnectionId), counters)
-    }
-    else if (api == API.ASYNC) {
-      new ReactiveScalaSdkCommandExecutor(clusterConnections(workloads.getClusterConnectionId), counters)
-    }
-    else throw new UnsupportedOperationException("Unknown API")
+    } else if (api == API.ASYNC) {
+      new ReactiveScalaSdkCommandExecutor(
+        clusterConnections(workloads.getClusterConnectionId),
+        counters
+      )
+    } else throw new UnsupportedOperationException("Unknown API")
   }
 
-  override protected def transactionsExecutor(workloads: Workloads, counters: Counters): TransactionCommandExecutor = null
+  override protected def transactionsExecutor(
+      workloads: Workloads,
+      counters: Counters
+  ): TransactionCommandExecutor = null
 }

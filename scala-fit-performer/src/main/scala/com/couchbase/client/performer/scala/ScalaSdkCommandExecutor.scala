@@ -17,16 +17,15 @@ package com.couchbase.client.performer.scala
 
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.msg.kv.MutationToken
-import com.couchbase.client.core.retry.BestEffortRetryStrategy
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.perf.{Counters, PerRun}
 import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
+import com.couchbase.client.performer.scala.query.QueryIndexManagerHelper
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaIteratorStreamer}
 import com.couchbase.client.protocol
 import com.couchbase.client.protocol.sdk.kv.rangescan.{Scan, ScanTermChoice}
-import com.couchbase.client.protocol.sdk.management.query.QueryIndex
 import com.couchbase.client.protocol.shared
 import com.couchbase.client.protocol.shared.{
   CouchbaseExceptionEx,
@@ -36,8 +35,6 @@ import com.couchbase.client.protocol.shared.{
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.durability.{Durability, PersistTo, ReplicateTo}
 import com.couchbase.client.scala.json.JsonObject
-import com.couchbase.client.scala.manager.query
-import com.couchbase.client.scala.manager.query.QueryIndexType
 // [start:1.4.1]
 import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
 // [end:1.4.1]
@@ -48,360 +45,208 @@ import com.google.protobuf.ByteString
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
+import scala.collection.convert.ImplicitConversions._
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
-import scala.jdk.CollectionConverters._
 
 sealed trait Content
-case class ContentString(value: String) extends Content
+case class ContentString(value: String)   extends Content
 case class ContentJson(value: JsonObject) extends Content
 
-class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: Counters) extends SdkCommandExecutor(counters) {
-  // Have to hardcode these.  The earliest versions of the Scala SDK do not give access to the environment.
-  private val DefaultManagementTimeout = Duration(75, TimeUnit.SECONDS)
-  private val DefaultRetryStrategy = BestEffortRetryStrategy.INSTANCE
+class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: Counters)
+    extends SdkCommandExecutor(counters) {
 
-  override protected def convertException(raw: Throwable): com.couchbase.client.protocol.shared.Exception = {
+  override protected def convertException(
+      raw: Throwable
+  ): com.couchbase.client.protocol.shared.Exception = {
     ScalaSdkCommandExecutor.convertException(raw)
   }
 
-  override protected def performOperation(op: com.couchbase.client.protocol.sdk.Command, perRun: PerRun): com.couchbase.client.protocol.run.Result = {
-    val result = com.couchbase.client.protocol.run.Result.newBuilder()
-    
+  override protected def performOperation(
+      op: com.couchbase.client.protocol.sdk.Command,
+      perRun: PerRun
+  ) = {
+    val result = performOperationInternal(op, perRun)
+    perRun.resultsStream.enqueue(result)
+  }
+
+  protected def performOperationInternal(
+      op: com.couchbase.client.protocol.sdk.Command,
+      perRun: PerRun
+  ): com.couchbase.client.protocol.run.Result = {
+    var result = com.couchbase.client.protocol.run.Result.newBuilder()
+
     if (op.hasInsert) {
-      val request = op.getInsert
+      val request    = op.getInsert
       val collection = connection.collection(request.getLocation)
-      val content = convertContent(request.getContent)
-      val docId = getDocId(request.getLocation)
-      val options = createOptions(request)
+      val content    = convertContent(request.getContent)
+      val docId      = getDocId(request.getLocation)
+      val options    = createOptions(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
       val r = if (options == null) content match {
-          case ContentString(value) => collection.insert(docId, value).get
-          case ContentJson(value) => collection.insert(docId, value).get
+        case ContentString(value) => collection.insert(docId, value).get
+        case ContentJson(value)   => collection.insert(docId, value).get
       }
-      else content match {
+      else
+        content match {
           case ContentString(value) => collection.insert(docId, value, options).get
-          case ContentJson(value) => collection.insert(docId, value, options).get
-      }
+          case ContentJson(value)   => collection.insert(docId, value, options).get
+        }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
-    }
-    else if (op.hasGet) {
-      val request = op.getGet
+    } else if (op.hasGet) {
+      val request    = op.getGet
       val collection = connection.collection(request.getLocation)
-      val docId = getDocId(request.getLocation)
-      val options = createOptions(request)
+      val docId      = getDocId(request.getLocation)
+      val options    = createOptions(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r = if (options == null) collection.get(docId).get
-      else collection.get(docId, options).get
+      val r =
+        if (options == null) collection.get(docId).get
+        else collection.get(docId, options).get
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
-    }
-    else if (op.hasRemove) {
-      val request = op.getRemove
+    } else if (op.hasRemove) {
+      val request    = op.getRemove
       val collection = connection.collection(request.getLocation)
-      val docId = getDocId(request.getLocation)
-      val options = createOptions(request)
+      val docId      = getDocId(request.getLocation)
+      val options    = createOptions(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r = if (options == null) collection.remove(docId).get
-      else collection.remove(docId, options).get
+      val r =
+        if (options == null) collection.remove(docId).get
+        else collection.remove(docId, options).get
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
-    }
-    else if (op.hasReplace) {
-      val request = op.getReplace
+    } else if (op.hasReplace) {
+      val request    = op.getReplace
       val collection = connection.collection(request.getLocation)
-      val docId = getDocId(request.getLocation)
-      val options = createOptions(request)
-      val content = convertContent(request.getContent)
+      val docId      = getDocId(request.getLocation)
+      val options    = createOptions(request)
+      val content    = convertContent(request.getContent)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
       val r = if (options == null) content match {
-          case ContentString(value) => collection.replace(docId, value).get
-          case ContentJson(value) => collection.replace(docId, value).get
+        case ContentString(value) => collection.replace(docId, value).get
+        case ContentJson(value)   => collection.replace(docId, value).get
       }
-      else content match {
+      else
+        content match {
           case ContentString(value) => collection.replace(docId, value, options).get
-          case ContentJson(value) => collection.replace(docId, value, options).get
-      }
+          case ContentJson(value)   => collection.replace(docId, value, options).get
+        }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
-    }
-    else if (op.hasUpsert) {
-      val request = op.getUpsert
+    } else if (op.hasUpsert) {
+      val request    = op.getUpsert
       val collection = connection.collection(request.getLocation)
-      val docId = getDocId(request.getLocation)
-      val options = createOptions(request)
-      val content = convertContent(request.getContent)
+      val docId      = getDocId(request.getLocation)
+      val options    = createOptions(request)
+      val content    = convertContent(request.getContent)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
       val r = if (options == null) content match {
-          case ContentString(value) => collection.upsert(docId, value).get
-          case ContentJson(value) => collection.upsert(docId, value).get
+        case ContentString(value) => collection.upsert(docId, value).get
+        case ContentJson(value)   => collection.upsert(docId, value).get
       }
-      else content match {
+      else
+        content match {
           case ContentString(value) => collection.upsert(docId, value, options).get
-          case ContentJson(value) => collection.upsert(docId, value, options).get
-      }
+          case ContentJson(value)   => collection.upsert(docId, value, options).get
+        }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
     }
     // [start:1.4.1]
     else if (op.hasRangeScan) {
-      val request = op.getRangeScan
+      val request    = op.getRangeScan
       val collection = connection.collection(request.getCollection)
-      val options = createOptions(request)
-      val scanType = convertScanType(request)
+      val options    = createOptions(request)
+      val scanType   = convertScanType(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val iterator = if (options == null) collection.scan(scanType)
-      else collection.scan(scanType, options)
+      val iterator =
+        if (options == null) collection.scan(scanType)
+        else collection.scan(scanType, options)
       result.setElapsedNanos(System.nanoTime - start)
-      val streamer = new ScalaIteratorStreamer[ScanResult](iterator, perRun, request.getStreamConfig.getStreamId, request.getStreamConfig,
+      val streamer = new ScalaIteratorStreamer[ScanResult](
+        iterator,
+        perRun,
+        request.getStreamConfig.getStreamId,
+        request.getStreamConfig,
         (r: AnyRef) => processScanResult(request, r.asInstanceOf[ScanResult]),
-        (err: Throwable) => convertException(err))
+        (err: Throwable) => convertException(err)
+      )
       perRun.streamerOwner.addAndStart(streamer)
-      result.setStream(com.couchbase.client.protocol.streams.Signal
-        .newBuilder
-        .setCreated(com.couchbase.client.protocol.streams.Created.newBuilder
-          .setType(com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN)
-          .setStreamId(streamer.streamId)))
-    }
-    // [end:1.4.1]
-    else if (op.hasCreatePrimaryIndex) {
-      val req = op.getCreatePrimaryIndex
-      result.setInitiated(getTimeNow)
-      val start = System.nanoTime
-      connection.cluster.queryIndexes
-        .createPrimaryIndex(
-          req.getBucketName,
-          if (req.hasOptions && req.getOptions.hasIndexName) Some(req.getOptions.getIndexName)
-          else None,
-          if (req.hasOptions && req.getOptions.hasIgnoreIfExists) req.getOptions.getIgnoreIfExists
-          else false,
-          if (req.hasOptions && req.getOptions.hasNumReplicas) Some(req.getOptions.getNumReplicas)
-          else None,
-          if (req.hasOptions && req.getOptions.hasDeferred) Some(req.getOptions.getDeferred)
-          else None,
-          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
-            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-           else DefaultManagementTimeout,
-          DefaultRetryStrategy,
-          // [start:1.2.5]
-          if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
-          else None,
-          if (req.hasOptions && req.getOptions.hasCollectionName)
-            Some(req.getOptions.getCollectionName)
-          else None
-          // [end:1.2.5]
-        )
-        .get
-      result.setElapsedNanos(System.nanoTime - start)
-      setSuccess(result)
-    } else if (op.hasCreateIndex) {
-      val req = op.getCreateIndex
-      result.setInitiated(getTimeNow)
-      val start = System.nanoTime
-      connection.cluster.queryIndexes
-        .createIndex(
-          req.getBucketName,
-          req.getIndexName,
-          req.getFieldsList.toSeq,
-          if (req.hasOptions && req.getOptions.hasIgnoreIfExists) req.getOptions.getIgnoreIfExists
-          else false,
-          if (req.hasOptions && req.getOptions.hasNumReplicas) Some(req.getOptions.getNumReplicas)
-          else None,
-          if (req.hasOptions && req.getOptions.hasDeferred) Some(req.getOptions.getDeferred)
-          else None,
-          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
-            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else DefaultManagementTimeout,
-          DefaultRetryStrategy,
-          // [start:1.2.5]
-          if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
-          else None,
-          if (req.hasOptions && req.getOptions.hasCollectionName)
-            Some(req.getOptions.getCollectionName)
-          else None
-          // [end:1.2.5]
-        )
-        .get
-      result.setElapsedNanos(System.nanoTime - start)
-      setSuccess(result)
-    } else if (op.hasGetAllIndexes) {
-      val req = op.getGetAllIndexes
-      result.setInitiated(getTimeNow)
-      val start = System.nanoTime
-      val indexes = connection.cluster.queryIndexes
-        .getAllIndexes(
-          req.getBucketName,
-          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
-            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else DefaultManagementTimeout,
-          DefaultRetryStrategy,
-          // [start:1.2.5]
-          if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
-          else None,
-          if (req.hasOptions && req.getOptions.hasCollectionName)
-            Some(req.getOptions.getCollectionName)
-          else None
-          // [end:1.2.5]
-        )
-        .get
-      result.setSdk(
-        com.couchbase.client.protocol.sdk.Result.newBuilder
-          .setQueryIndexes(
-            com.couchbase.client.protocol.sdk.management.query.QueryIndexes.newBuilder
-              .addAllIndexes(mapQueryIndexes(indexes))
+      result.setStream(
+        com.couchbase.client.protocol.streams.Signal.newBuilder
+          .setCreated(
+            com.couchbase.client.protocol.streams.Created.newBuilder
+              .setType(com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN)
+              .setStreamId(streamer.streamId)
           )
       )
-      result.setElapsedNanos(System.nanoTime - start)
-    } else if (op.hasDropPrimaryIndex) {
-      val req = op.getDropPrimaryIndex
-      result.setInitiated(getTimeNow)
-      val start = System.nanoTime
-      connection.cluster.queryIndexes
-        .dropPrimaryIndex(
-          req.getBucketName,
-          if (req.hasOptions && req.getOptions.hasIgnoreIfNotExists)
-            req.getOptions.getIgnoreIfNotExists
-          else false,
-          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
-            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else DefaultManagementTimeout,
-          DefaultRetryStrategy,
-          // [start:1.2.5]
-          if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
-          else None,
-          if (req.hasOptions && req.getOptions.hasCollectionName)
-            Some(req.getOptions.getCollectionName)
-          else None
-          // [end:1.2.5]
-        )
-        .get
-      result.setElapsedNanos(System.nanoTime - start)
-      setSuccess(result)
-    } else if (op.hasDropIndex) {
-      val req = op.getDropIndex
-      result.setInitiated(getTimeNow)
-      val start = System.nanoTime
-      connection.cluster.queryIndexes
-        .dropIndex(
-          req.getBucketName,
-          req.getIndexName,
-          if (req.hasOptions && req.getOptions.hasIgnoreIfNotExists)
-            req.getOptions.getIgnoreIfNotExists
-          else false,
-          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
-            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else DefaultManagementTimeout,
-          DefaultRetryStrategy,
-          // [start:1.2.5]
-          if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
-          else None,
-          if (req.hasOptions && req.getOptions.hasCollectionName)
-            Some(req.getOptions.getCollectionName)
-          else None
-          // [end:1.2.5]
-        )
-        .get
-      result.setElapsedNanos(System.nanoTime - start)
-      setSuccess(result)
-    } else if (op.hasWatchIndexes) {
-      val req = op.getWatchIndexes
-      result.setInitiated(getTimeNow)
-      val start = System.nanoTime
-      connection.cluster.queryIndexes
-        .watchIndexes(
-          req.getBucketName,
-          req.getIndexNamesList.toSeq,
-          Duration(req.getTimeoutMsecs, TimeUnit.MILLISECONDS),
-          if (req.hasOptions && req.getOptions.hasWatchPrimary) req.getOptions.getWatchPrimary
-          else false,
-          DefaultRetryStrategy,
-          // [start:1.2.5]
-          if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
-          else None,
-          if (req.hasOptions && req.getOptions.hasCollectionName)
-            Some(req.getOptions.getCollectionName)
-          else None
-          // [end:1.2.5]
-        )
-        .get
-      result.setElapsedNanos(System.nanoTime - start)
-      setSuccess(result)
-    } else if (op.hasBuildDeferredIndexes) {
-      val req = op.getBuildDeferredIndexes
-      result.setInitiated(getTimeNow)
-      val start = System.nanoTime
-      connection.cluster.queryIndexes
-        .buildDeferredIndexes(
-          req.getBucketName,
-          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
-            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else DefaultManagementTimeout,
-          DefaultRetryStrategy,
-          // [start:1.2.5]
-          if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
-          else None,
-          if (req.hasOptions && req.getOptions.hasCollectionName)
-            Some(req.getOptions.getCollectionName)
-          else None
-          // [end:1.2.5]
-        )
-        .get
-      result.setElapsedNanos(System.nanoTime - start)
-      setSuccess(result)
-      // [start:1.4.4]
-    } else if (op.hasCollectionQueryIndexManager) {
-      result =
-        handleCollectionQueryIndexManagerCommand(op, op.getCollectionQueryIndexManager, connection)
-      // [end:1.4.4]
+    } else if (op.hasClusterCommand) {
+      val clc = op.getClusterCommand
+
+      if (clc.hasQueryIndexManager) {
+        result = QueryIndexManagerHelper.handleClusterQueryIndexManager(connection.cluster, op)
+      } else throw new UnsupportedOperationException()
+    } else if (op.hasCollectionCommand) {
+      val clc  = op.getCollectionCommand
+      val coll = clc.getCollection
+      val collection = connection.cluster
+        .bucket(coll.getBucketName)
+        .scope(coll.getScopeName)
+        .collection(coll.getCollectionName)
+
+      if (clc.hasQueryIndexManager) {
+        result = QueryIndexManagerHelper.handleCollectionQueryIndexManager(collection, op)
+      } else throw new UnsupportedOperationException()
     } else
       throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"))
 
     result.build
   }
 }
-  
+
 object ScalaSdkCommandExecutor {
   def convertDurability(durability: protocol.shared.DurabilityType): Durability = {
     if (durability.hasDurabilityLevel()) {
       durability.getDurabilityLevel() match {
-        case shared.Durability.NONE => Durability.Disabled
+        case shared.Durability.NONE     => Durability.Disabled
         case shared.Durability.MAJORITY => Durability.Majority
-        case shared.Durability.MAJORITY_AND_PERSIST_TO_ACTIVE => Durability.MajorityAndPersistToActive
+        case shared.Durability.MAJORITY_AND_PERSIST_TO_ACTIVE =>
+          Durability.MajorityAndPersistToActive
         case shared.Durability.PERSIST_TO_MAJORITY => Durability.PersistToMajority
-        case _ => throw new UnsupportedOperationException("Unknown durability level")
+        case _                                     => throw new UnsupportedOperationException("Unknown durability level")
       }
-    }
-    else if (durability.hasObserve) {
-      Durability.ClientVerified(durability.getObserve.getReplicateTo match {
-        case shared.ReplicateTo.REPLICATE_TO_NONE => ReplicateTo.None
-        case shared.ReplicateTo.REPLICATE_TO_ONE => ReplicateTo.One
-        case shared.ReplicateTo.REPLICATE_TO_TWO => ReplicateTo.Two
-        case shared.ReplicateTo.REPLICATE_TO_THREE => ReplicateTo.Three
-        case _ => throw new UnsupportedOperationException("Unknown replicateTo level")
-      }, durability.getObserve.getPersistTo match {
-        case shared.PersistTo.PERSIST_TO_NONE => PersistTo.None
-        case shared.PersistTo.PERSIST_TO_ACTIVE => PersistTo.Active
-        case shared.PersistTo.PERSIST_TO_ONE => PersistTo.One
-        case shared.PersistTo.PERSIST_TO_TWO => PersistTo.Two
-        case shared.PersistTo.PERSIST_TO_THREE => PersistTo.Three
-        case shared.PersistTo.PERSIST_TO_FOUR => PersistTo.Four
-        case _ => throw new UnsupportedOperationException("Unknown persistTo level")
-      })
-    }
-    else {
+    } else if (durability.hasObserve) {
+      Durability.ClientVerified(
+        durability.getObserve.getReplicateTo match {
+          case shared.ReplicateTo.REPLICATE_TO_NONE  => ReplicateTo.None
+          case shared.ReplicateTo.REPLICATE_TO_ONE   => ReplicateTo.One
+          case shared.ReplicateTo.REPLICATE_TO_TWO   => ReplicateTo.Two
+          case shared.ReplicateTo.REPLICATE_TO_THREE => ReplicateTo.Three
+          case _                                     => throw new UnsupportedOperationException("Unknown replicateTo level")
+        },
+        durability.getObserve.getPersistTo match {
+          case shared.PersistTo.PERSIST_TO_NONE   => PersistTo.None
+          case shared.PersistTo.PERSIST_TO_ACTIVE => PersistTo.Active
+          case shared.PersistTo.PERSIST_TO_ONE    => PersistTo.One
+          case shared.PersistTo.PERSIST_TO_TWO    => PersistTo.Two
+          case shared.PersistTo.PERSIST_TO_THREE  => PersistTo.Three
+          case shared.PersistTo.PERSIST_TO_FOUR   => PersistTo.Four
+          case _                                  => throw new UnsupportedOperationException("Unknown persistTo level")
+        }
+      )
+    } else {
       throw new UnsupportedOperationException("Unknown durability")
     }
   }
@@ -409,19 +254,16 @@ object ScalaSdkCommandExecutor {
   def convertExpiry(expiry: shared.Expiry): Either[Instant, Duration] = {
     if (expiry.hasAbsoluteEpochSecs) {
       Left(Instant.ofEpochSecond(expiry.getAbsoluteEpochSecs))
-    }
-    else if (expiry.hasRelativeSecs) {
+    } else if (expiry.hasRelativeSecs) {
       Right(Duration.create(expiry.getRelativeSecs, TimeUnit.SECONDS))
-    }
-    else {
+    } else {
       throw new UnsupportedOperationException("Unknown expiry")
     }
   }
 
   // [start:1.4.1]
   def processScanResult(request: Scan, r: ScanResult): com.couchbase.client.protocol.run.Result = {
-    val builder = com.couchbase.client.protocol.sdk.kv.rangescan.ScanResult
-      .newBuilder
+    val builder = com.couchbase.client.protocol.sdk.kv.rangescan.ScanResult.newBuilder
       .setId(r.id)
       .setIdOnly(r.idOnly)
       .setStreamId(request.getStreamConfig.getStreamId)
@@ -432,40 +274,44 @@ object ScalaSdkCommandExecutor {
     if (request.hasContentAs) {
       val bytes: Try[Array[Byte]] = if (request.getContentAs.hasAsString) {
         r.contentAs[String].map(_.getBytes(StandardCharsets.UTF_8))
-      }
-      else if (request.getContentAs.hasAsByteArray) {
+      } else if (request.getContentAs.hasAsByteArray) {
         r.contentAs[Array[Byte]]
-      }
-      else if (request.getContentAs.hasAsJson) {
-        r.contentAs[JsonObject].map(v => {
-          JacksonTransformers.MAPPER.writeValueAsBytes(v)
-        })
-      }
-      else throw new UnsupportedOperationException("Unknown contentAs")
+      } else if (request.getContentAs.hasAsJson) {
+        r.contentAs[JsonObject]
+          .map(v => {
+            JacksonTransformers.MAPPER.writeValueAsBytes(v)
+          })
+      } else throw new UnsupportedOperationException("Unknown contentAs")
 
       bytes match {
         case Success(b) =>
           builder.setContent(ByteString.copyFrom(b))
 
           com.couchbase.client.protocol.run.Result.newBuilder
-            .setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder
-              .setRangeScanResult(builder.build))
+            .setSdk(
+              com.couchbase.client.protocol.sdk.Result.newBuilder
+                .setRangeScanResult(builder.build)
+            )
             .build
 
         case Failure(err) =>
           com.couchbase.client.protocol.run.Result.newBuilder
-            .setStream(com.couchbase.client.protocol.streams.Signal.newBuilder
-              .setError(com.couchbase.client.protocol.streams.Error.newBuilder
-                .setStreamId(request.getStreamConfig.getStreamId)
-                .setException(convertException(err))
-              ))
+            .setStream(
+              com.couchbase.client.protocol.streams.Signal.newBuilder
+                .setError(
+                  com.couchbase.client.protocol.streams.Error.newBuilder
+                    .setStreamId(request.getStreamConfig.getStreamId)
+                    .setException(convertException(err))
+                )
+            )
             .build
       }
-    }
-    else {
+    } else {
       com.couchbase.client.protocol.run.Result.newBuilder
-        .setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder
-          .setRangeScanResult(builder.build))
+        .setSdk(
+          com.couchbase.client.protocol.sdk.Result.newBuilder
+            .setRangeScanResult(builder.build)
+        )
         .build
     }
   }
@@ -473,33 +319,25 @@ object ScalaSdkCommandExecutor {
   def convertScanTerm(st: ScanTermChoice): Option[ScanTerm] = {
     if (st.hasDefault) {
       None
-    }
-    else if (st.hasMaximum) {
+    } else if (st.hasMaximum) {
       Some(ScanTerm.maximum())
-    }
-    else if (st.hasMinimum) {
+    } else if (st.hasMinimum) {
       Some(ScanTerm.minimum())
-    }
-    else if (st.hasTerm) {
+    } else if (st.hasTerm) {
       val stt = st.getTerm
-        if (stt.hasExclusive && stt.getExclusive) {
-            if (stt.hasAsString) {
-                Some(com.couchbase.client.scala.kv.ScanTerm.exclusive(stt.getAsString))
-            }
-            else if (stt.hasAsBytes) {
-                Some(com.couchbase.client.scala.kv.ScanTerm.exclusive(stt.getAsBytes.toByteArray))
-            }
-            else throw new UnsupportedOperationException();
-        }
+      if (stt.hasExclusive && stt.getExclusive) {
         if (stt.hasAsString) {
-            Some(com.couchbase.client.scala.kv.ScanTerm.inclusive(stt.getAsString))
-        }
-        else if (stt.hasAsBytes) {
-            Some(com.couchbase.client.scala.kv.ScanTerm.inclusive(stt.getAsBytes.toByteArray))
-        }
-        else throw new UnsupportedOperationException();
-    }
-    else throw new UnsupportedOperationException("Unknown scan term")
+          Some(com.couchbase.client.scala.kv.ScanTerm.exclusive(stt.getAsString))
+        } else if (stt.hasAsBytes) {
+          Some(com.couchbase.client.scala.kv.ScanTerm.exclusive(stt.getAsBytes.toByteArray))
+        } else throw new UnsupportedOperationException();
+      }
+      if (stt.hasAsString) {
+        Some(com.couchbase.client.scala.kv.ScanTerm.inclusive(stt.getAsString))
+      } else if (stt.hasAsBytes) {
+        Some(com.couchbase.client.scala.kv.ScanTerm.inclusive(stt.getAsBytes.toByteArray))
+      } else throw new UnsupportedOperationException();
+    } else throw new UnsupportedOperationException("Unknown scan term")
   }
 
   def convertScanType(request: Scan): ScanType = {
@@ -507,47 +345,44 @@ object ScalaSdkCommandExecutor {
       val scan = request.getScanType.getRange
       if (scan.hasFromTo) {
         val from = convertScanTerm(scan.getFromTo.getFrom)
-        val to = convertScanTerm(scan.getFromTo.getTo)
+        val to   = convertScanTerm(scan.getFromTo.getTo)
         if (from.isDefined && to.isDefined) {
           RangeScan(from.get, to.get)
-        }
-        else if (from.isDefined) {
+        } else if (from.isDefined) {
           RangeScan(from.get)
-        }
-        else if (to.isDefined) {
+        } else if (to.isDefined) {
           RangeScan(to = to.get)
-        }
-        else RangeScan()
-      }
-      else if (scan.hasDocIdPrefix) {
+        } else RangeScan()
+      } else if (scan.hasDocIdPrefix) {
         com.couchbase.client.scala.kv.ScanType.prefixScan(scan.getDocIdPrefix)
-      }
-      else throw new UnsupportedOperationException()
-    }
-    else if (request.getScanType.hasSampling) {
+      } else throw new UnsupportedOperationException()
+    } else if (request.getScanType.hasSampling) {
       val scan = request.getScanType.getSampling
       if (scan.hasSeed) {
         SamplingScan(scan.getLimit, scan.getSeed)
-      }
-      else {
+      } else {
         SamplingScan(scan.getLimit)
       }
-    }
-    else throw new UnsupportedOperationException("Unknown scan type")
+    } else throw new UnsupportedOperationException("Unknown scan type")
   }
   // [end:1.4.1]
 
   def convertContent(content: shared.Content): Content = {
     if (content.hasPassthroughString) ContentString(content.getPassthroughString)
-    else if (content.hasConvertToJson) ContentJson(JsonObject.fromJson(new String(content.getConvertToJson.toByteArray, StandardCharsets.UTF_8)))
+    else if (content.hasConvertToJson)
+      ContentJson(
+        JsonObject
+          .fromJson(new String(content.getConvertToJson.toByteArray, StandardCharsets.UTF_8))
+      )
     else throw new UnsupportedOperationException("Unknown content")
   }
 
   def createOptions(request: com.couchbase.client.protocol.sdk.kv.Insert) = {
     if (request.hasOptions) {
       val opts = request.getOptions
-      var out = InsertOptions()
-      if (opts.hasTimeoutMsecs) out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
+      var out  = InsertOptions()
+      if (opts.hasTimeoutMsecs)
+        out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasDurability) out = out.durability(convertDurability(opts.getDurability))
       if (opts.hasExpiry) out = convertExpiry(opts.getExpiry) match {
         case Left(expiry) =>
@@ -555,46 +390,49 @@ object ScalaSdkCommandExecutor {
           out.expiry(expiry)
           // [end:1.1.0]
           // [start:<1.1.0]
-          throw new UnsupportedOperationException("This SDK version does not support this form of expiry");
+          throw new UnsupportedOperationException(
+            "This SDK version does not support this form of expiry"
+          );
         // [end:<1.1.0]
         case Right(expiry) => out.expiry(expiry)
       }
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
       out
-    }
-    else null
+    } else null
   }
 
   def createOptions(request: com.couchbase.client.protocol.sdk.kv.Remove) = {
     if (request.hasOptions) {
       val opts = request.getOptions
-      var out = RemoveOptions()
-      if (opts.hasTimeoutMsecs) out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
+      var out  = RemoveOptions()
+      if (opts.hasTimeoutMsecs)
+        out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasDurability) out = out.durability(convertDurability(opts.getDurability))
       if (opts.hasCas) out = out.cas(opts.getCas)
       out
-    }
-    else null
+    } else null
   }
 
   def createOptions(request: com.couchbase.client.protocol.sdk.kv.Get) = {
     if (request.hasOptions) {
       val opts = request.getOptions
-      var out = GetOptions()
-      if (opts.hasTimeoutMsecs) out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
+      var out  = GetOptions()
+      if (opts.hasTimeoutMsecs)
+        out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasWithExpiry) out = out.withExpiry(opts.getWithExpiry)
-      if (opts.getProjectionCount > 0) out = out.project(opts.getProjectionList.asByteStringList().toSeq.map(v => v.toString))
+      if (opts.getProjectionCount > 0)
+        out = out.project(opts.getProjectionList.asByteStringList().toSeq.map(v => v.toString))
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
       out
-    }
-    else null
+    } else null
   }
 
   def createOptions(request: com.couchbase.client.protocol.sdk.kv.Replace) = {
     if (request.hasOptions) {
       val opts = request.getOptions
-      var out = ReplaceOptions()
-      if (opts.hasTimeoutMsecs) out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
+      var out  = ReplaceOptions()
+      if (opts.hasTimeoutMsecs)
+        out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasDurability) out = out.durability(convertDurability(opts.getDurability))
       if (opts.hasExpiry) out = convertExpiry(opts.getExpiry) match {
         case Left(expiry) =>
@@ -602,8 +440,10 @@ object ScalaSdkCommandExecutor {
           out.expiry(expiry)
           // [end:1.1.0]
           // [start:<1.1.0]
-          throw new UnsupportedOperationException("This SDK version does not support this form of expiry");
-          // [end:<1.1.0]
+          throw new UnsupportedOperationException(
+            "This SDK version does not support this form of expiry"
+          );
+        // [end:<1.1.0]
         case Right(expiry) => out.expiry(expiry)
       }
       if (opts.hasPreserveExpiry) {
@@ -617,15 +457,15 @@ object ScalaSdkCommandExecutor {
       if (opts.hasCas) out = out.cas(opts.getCas)
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
       out
-    }
-    else null
+    } else null
   }
 
   def createOptions(request: com.couchbase.client.protocol.sdk.kv.Upsert) = {
     if (request.hasOptions) {
       val opts = request.getOptions
-      var out = UpsertOptions()
-      if (opts.hasTimeoutMsecs) out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
+      var out  = UpsertOptions()
+      if (opts.hasTimeoutMsecs)
+        out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasDurability) out = out.durability(convertDurability(opts.getDurability))
       if (opts.hasExpiry) out = convertExpiry(opts.getExpiry) match {
         case Left(expiry) =>
@@ -649,31 +489,36 @@ object ScalaSdkCommandExecutor {
       }
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
       out
-    }
-    else null
+    } else null
   }
 
   // [start:1.4.1]
   def createOptions(request: com.couchbase.client.protocol.sdk.kv.rangescan.Scan) = {
     if (request.hasOptions) {
       val opts = request.getOptions
-      var out = ScanOptions()
+      var out  = ScanOptions()
 
       if (opts.hasIdsOnly) out = out.idsOnly(opts.getIdsOnly)
-      if (opts.hasConsistentWith) out = out.consistentWith(convertMutationState(opts.getConsistentWith))
-      if (opts.hasSort) out = out.scanSort(if (opts.getSort == com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_NONE) ScanSort.None
-      else if (opts.getSort == com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_ASCENDING) ScanSort.Ascending
-      else throw new UnsupportedOperationException("Unknown scan sort"))
+      if (opts.hasConsistentWith)
+        out = out.consistentWith(convertMutationState(opts.getConsistentWith))
+      if (opts.hasSort)
+        out = out.scanSort(
+          if (opts.getSort == com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_NONE)
+            ScanSort.None
+          else if (opts.getSort == com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_ASCENDING)
+            ScanSort.Ascending
+          else throw new UnsupportedOperationException("Unknown scan sort")
+        )
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
-      if (opts.hasTimeoutMsecs) out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
+      if (opts.hasTimeoutMsecs)
+        out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasBatchByteLimit) out = out.batchByteLimit(opts.getBatchByteLimit)
       if (opts.hasBatchItemLimit) out = out.batchItemLimit(opts.getBatchItemLimit)
       if (opts.hasBatchTimeLimit) throw new UnsupportedOperationException();
       // Will add when adding support for Caps.OBSERVABILITY_1.
       // if (opts.hasParentSpanId) out = out.parentSpan(spans.get(opts.getParentSpanId))
       out
-    }
-    else null
+    } else null
   }
   // [end:1.4.1]
 
@@ -690,17 +535,28 @@ object ScalaSdkCommandExecutor {
     result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder.setSuccess(true))
   }
 
-  def populateResult(result: com.couchbase.client.protocol.run.Result.Builder, value: MutationResult): Unit = {
+  def populateResult(
+      result: com.couchbase.client.protocol.run.Result.Builder,
+      value: MutationResult
+  ): Unit = {
     val builder = com.couchbase.client.protocol.sdk.kv.MutationResult.newBuilder.setCas(value.cas)
-    value.mutationToken.foreach(mt => builder.setMutationToken(com.couchbase.client.protocol.shared.MutationToken.newBuilder
-      .setPartitionId(mt.partitionID)
-      .setPartitionUuid(mt.partitionUUID)
-      .setSequenceNumber(mt.sequenceNumber)
-      .setBucketName(mt.bucketName)))
+    value.mutationToken.foreach(
+      mt =>
+        builder.setMutationToken(
+          com.couchbase.client.protocol.shared.MutationToken.newBuilder
+            .setPartitionId(mt.partitionID)
+            .setPartitionUuid(mt.partitionUUID)
+            .setSequenceNumber(mt.sequenceNumber)
+            .setBucketName(mt.bucketName)
+        )
+    )
     result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder.setMutationResult(builder))
   }
 
-  def populateResult(result: com.couchbase.client.protocol.run.Result.Builder, value: GetResult): Unit = {
+  def populateResult(
+      result: com.couchbase.client.protocol.run.Result.Builder,
+      value: GetResult
+  ): Unit = {
     val builder = com.couchbase.client.protocol.sdk.kv.GetResult.newBuilder
       .setCas(value.cas)
       .setContent(ByteString.copyFrom(value.contentAs[JsonObject].toString.getBytes))
@@ -710,9 +566,19 @@ object ScalaSdkCommandExecutor {
     result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder.setGetResult(builder))
   }
 
-  def convertMutationState(consistentWith: com.couchbase.client.protocol.shared.MutationState): MutationState = {
+  def convertMutationState(
+      consistentWith: com.couchbase.client.protocol.shared.MutationState
+  ): MutationState = {
     val tokens = consistentWith.getTokensList.toSeq
-      .map(mt => new MutationToken(mt.getPartitionId.asInstanceOf[Short], mt.getPartitionUuid, mt.getSequenceNumber, mt.getBucketName))
+      .map(
+        mt =>
+          new MutationToken(
+            mt.getPartitionId.asInstanceOf[Short],
+            mt.getPartitionUuid,
+            mt.getSequenceNumber,
+            mt.getBucketName
+          )
+      )
 
     MutationState(tokens)
   }
@@ -721,8 +587,10 @@ object ScalaSdkCommandExecutor {
     val ret = com.couchbase.client.protocol.shared.Exception.newBuilder
 
     if (raw.isInstanceOf[CouchbaseException] || raw.isInstanceOf[UnsupportedOperationException]) {
-      val typ = if (raw.isInstanceOf[UnsupportedOperationException]) CouchbaseExceptionType.SDK_UNSUPPORTED_OPERATION_EXCEPTION
-      else ErrorUtil.convertException(raw.asInstanceOf[CouchbaseException])
+      val typ =
+        if (raw.isInstanceOf[UnsupportedOperationException])
+          CouchbaseExceptionType.SDK_UNSUPPORTED_OPERATION_EXCEPTION
+        else ErrorUtil.convertException(raw.asInstanceOf[CouchbaseException])
 
       val out = CouchbaseExceptionEx.newBuilder
         .setName(raw.getClass.getSimpleName)
@@ -732,183 +600,11 @@ object ScalaSdkCommandExecutor {
         out.setCause(convertException(raw.getCause))
       }
       ret.setCouchbase(out)
-    }
-    else ret.setOther(ExceptionOther.newBuilder.setName(raw.getClass.getSimpleName).setSerialized(raw.toString))
-
-    ret.build
-  }
-
-  // [start:1.4.4]
-  def handleCollectionQueryIndexManagerCommand(
-      command: com.couchbase.client.protocol.sdk.Command,
-      op: com.couchbase.client.protocol.sdk.management.collection.query.Command,
-      connection: ClusterConnection
-  ): com.couchbase.client.protocol.run.Result.Builder = {
-    val result = com.couchbase.client.protocol.run.Result.newBuilder()
-
-    if (op.hasCreatePrimaryIndex) {
-      val req        = op.getCreatePrimaryIndex
-      val collection = connection.collection(req.getCollection)
-      result.setInitiated(getTimeNow)
-      val start = System.nanoTime
-      collection.queryIndexes
-        .createPrimaryIndex(
-          if (req.hasOptions && req.getOptions.hasIndexName) Some(req.getOptions.getIndexName)
-          else None,
-          if (req.hasOptions && req.getOptions.hasIgnoreIfExists) req.getOptions.getIgnoreIfExists
-          else false,
-          if (req.hasOptions && req.getOptions.hasNumReplicas) Some(req.getOptions.getNumReplicas)
-          else None,
-          if (req.hasOptions && req.getOptions.hasDeferred) Some(req.getOptions.getDeferred)
-          else None,
-          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
-            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else collection.queryIndexes.DefaultTimeout
-        )
-        .get
-      result.setElapsedNanos(System.nanoTime - start)
-      setSuccess(result)
-    } else if (op.hasCreateIndex) {
-      val req = op.getCreateIndex
-      result.setInitiated(getTimeNow)
-      val start      = System.nanoTime
-      val collection = connection.collection(req.getCollection)
-      collection.queryIndexes
-        .createIndex(
-          req.getIndexName,
-          req.getFieldsList.toSeq,
-          if (req.hasOptions && req.getOptions.hasIgnoreIfExists) req.getOptions.getIgnoreIfExists
-          else false,
-          if (req.hasOptions && req.getOptions.hasNumReplicas) Some(req.getOptions.getNumReplicas)
-          else None,
-          if (req.hasOptions && req.getOptions.hasDeferred) Some(req.getOptions.getDeferred)
-          else None,
-          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
-            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else collection.queryIndexes.DefaultTimeout
-        )
-        .get
-      result.setElapsedNanos(System.nanoTime - start)
-      setSuccess(result)
-    } else if (op.hasGetAllIndexes) {
-      val req        = op.getGetAllIndexes
-      val collection = connection.collection(req.getCollection)
-      result.setInitiated(getTimeNow)
-      val start = System.nanoTime
-      val indexes = collection.queryIndexes
-        .getAllIndexes(
-          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
-            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else collection.queryIndexes.DefaultTimeout
-        )
-        .get
-      result.setSdk(
-        com.couchbase.client.protocol.sdk.Result.newBuilder
-          .setQueryIndexes(
-            com.couchbase.client.protocol.sdk.management.query.QueryIndexes.newBuilder
-              .addAllIndexes(mapQueryIndexes(indexes))
-          )
+    } else
+      ret.setOther(
+        ExceptionOther.newBuilder.setName(raw.getClass.getSimpleName).setSerialized(raw.toString)
       )
 
-      result.setElapsedNanos(System.nanoTime - start)
-    } else if (op.hasDropPrimaryIndex) {
-      val req        = op.getDropPrimaryIndex
-      val collection = connection.collection(req.getCollection)
-      result.setInitiated(getTimeNow)
-      val start = System.nanoTime
-      collection.queryIndexes
-        .dropPrimaryIndex(
-          if (req.hasOptions && req.getOptions.hasIgnoreIfNotExists)
-            req.getOptions.getIgnoreIfNotExists
-          else false,
-          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
-            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else collection.queryIndexes.DefaultTimeout
-        )
-        .get
-      result.setElapsedNanos(System.nanoTime - start)
-      setSuccess(result)
-    } else if (op.hasDropIndex) {
-      val req        = op.getDropIndex
-      val collection = connection.collection(req.getCollection)
-      result.setInitiated(getTimeNow)
-      val start = System.nanoTime
-      collection.queryIndexes
-        .dropIndex(
-          req.getIndexName,
-          if (req.hasOptions && req.getOptions.hasIgnoreIfNotExists)
-            req.getOptions.getIgnoreIfNotExists
-          else false,
-          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
-            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else collection.queryIndexes.DefaultTimeout
-        )
-        .get
-      result.setElapsedNanos(System.nanoTime - start)
-      setSuccess(result)
-    } else if (op.hasWatchIndexes) {
-      val req        = op.getWatchIndexes
-      val collection = connection.collection(req.getCollection)
-      result.setInitiated(getTimeNow)
-      val start = System.nanoTime
-      collection.queryIndexes
-        .watchIndexes(
-          req.getIndexNamesList.toSeq,
-          Duration(req.getTimeoutMsecs, TimeUnit.MILLISECONDS),
-          if (req.hasOptions && req.getOptions.hasWatchPrimary) req.getOptions.getWatchPrimary
-          else false
-        )
-        .get
-      result.setElapsedNanos(System.nanoTime - start)
-      setSuccess(result)
-    } else if (op.hasBuildDeferredIndexes) {
-      val req        = op.getBuildDeferredIndexes
-      val collection = connection.collection(req.getCollection)
-      result.setInitiated(getTimeNow)
-      val start = System.nanoTime
-      collection.queryIndexes
-        .buildDeferredIndexes(
-          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
-            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
-          else collection.queryIndexes.DefaultTimeout
-        )
-        .get
-      result.setElapsedNanos(System.nanoTime - start)
-      setSuccess(result)
-    }
-
-    result
-  }
-  // [end:1.4.4]
-
-  def mapQueryIndexes(indexes: Seq[query.QueryIndex]): java.util.List[QueryIndex] = {
-    indexes
-      .map(i => {
-        val builder = QueryIndex.newBuilder
-          .setName(i.name)
-          .setIsPrimary(i.isPrimary)
-          .setType(i.typ match {
-            case QueryIndexType.View =>
-              com.couchbase.client.protocol.sdk.management.query.QueryIndexType.VIEW
-            case QueryIndexType.GSI =>
-              com.couchbase.client.protocol.sdk.management.query.QueryIndexType.GSI
-          })
-          .setState(i.state)
-          .setKeyspace(i.keyspaceId)
-          .addAllIndexKey(i.indexKey.asJava)
-          // [start:1.2.5]
-          .setBucketName(i.bucketName)
-          // [end:1.2.5]
-
-        i.condition.map(v => builder.setCondition(v))
-        // [start:1.2.5]
-        i.partition.map(v => builder.setPartition(v))
-        i.scopeName.map(v => builder.setScopeName(v))
-        i.collectionName.map(v => builder.setCollectionName(v))
-        // [end:1.2.5]
-
-        builder.build
-      })
-      .asJava
+    ret.build
   }
 }
