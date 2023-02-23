@@ -32,14 +32,11 @@ import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.GenericManagerRequest;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.util.Deadline;
 import com.couchbase.client.core.util.NanoTimestamp;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -58,26 +55,12 @@ import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 @Stability.Internal
 public class WaitUntilReadyHelper {
   @Stability.Internal
-  public static CompletableFuture<Void> waitUntilReadyProtostellar(final Core core,
-                                                                   final Duration timeout,
-                                                                   final ClusterState desiredState) {
-    Deadline deadline = Deadline.of(timeout);
-    List<CompletableFuture<Void>> cfs = new ArrayList<>();
-    core.protostellar().pool().endpoints().forEach(endpoint -> {
-      cfs.add(endpoint.waitUntilReady(deadline, desiredState != ClusterState.OFFLINE));
-    });
-    if (desiredState == ClusterState.DEGRADED) {
-      return CompletableFuture.anyOf(cfs.toArray(new CompletableFuture[0])).thenRun(() -> {});
-    }
-    return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0]));
-  }
-
-  @Stability.Internal
   public static CompletableFuture<Void> waitUntilReady(final Core core, final Set<ServiceType> serviceTypes,
                                                        final Duration timeout, final ClusterState desiredState,
                                                        final Optional<String> bucketName) {
+    // Some temporary glue until Core and CoreProtostellar are separated
     if (core.isProtostellar()) {
-      return waitUntilReadyProtostellar(core, timeout, desiredState);
+      return core.protostellar().waitUntilReady(serviceTypes, timeout, desiredState, bucketName.orElse(null));
     }
 
     final WaitUntilReadyState state = new WaitUntilReadyState();

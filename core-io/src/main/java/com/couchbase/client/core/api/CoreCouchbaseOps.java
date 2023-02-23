@@ -23,15 +23,20 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.api.query.CoreQueryOps;
+import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.manager.CoreCollectionManager;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConnectionString;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Provides access to the various {@code Core*Ops} instances.
@@ -47,6 +52,13 @@ public interface CoreCouchbaseOps {
   CoreCollectionManager collectionManager(String bucketName);
 
   CoreEnvironment environment();
+
+  CompletableFuture<Void> waitUntilReady(
+      Set<ServiceType> serviceTypes,
+      Duration timeout,
+      ClusterState desiredState,
+      @Nullable String bucketName
+  );
 
   Mono<Void> shutdown(final Duration timeout);
 

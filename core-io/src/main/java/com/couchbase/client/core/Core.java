@@ -51,7 +51,9 @@ import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
 import com.couchbase.client.core.config.GlobalConfig;
+import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
+import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -75,7 +77,6 @@ import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.node.ViewLocator;
-import com.couchbase.client.core.protostellar.ProtostellarContext;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvBinaryOps;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
 import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
@@ -104,6 +105,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
@@ -1030,6 +1032,16 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   @Override
   public CoreEnvironment environment() {
     return context().environment();
+  }
+
+  @Override
+  public CompletableFuture<Void> waitUntilReady(
+    Set<ServiceType> serviceTypes,
+    Duration timeout,
+    ClusterState desiredState,
+    @Nullable String bucketName
+  ) {
+    return WaitUntilReadyHelper.waitUntilReady(this, serviceTypes, timeout, desiredState, Optional.ofNullable(bucketName));
   }
 
   @Stability.Internal

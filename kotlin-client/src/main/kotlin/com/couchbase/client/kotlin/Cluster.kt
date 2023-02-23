@@ -24,7 +24,6 @@ import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.diagnostics.ClusterState
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics
 import com.couchbase.client.core.diagnostics.HealthPinger
-import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.env.CertificateAuthenticator
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader
@@ -158,7 +157,7 @@ public class Cluster internal constructor(
         services: Set<ServiceType> = emptySet(),
         desiredState: ClusterState = ClusterState.ONLINE,
     ): Cluster {
-        WaitUntilReadyHelper.waitUntilReady(core, services, timeout.toJavaDuration(), desiredState, Optional.empty())
+        core.waitUntilReady(services, timeout.toJavaDuration(), desiredState, null)
             .await()
         return this
     }

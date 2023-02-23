@@ -18,8 +18,7 @@ package com.couchbase.client.scala
 import java.util.Optional
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diagnostics.{HealthPinger, PingResult, WaitUntilReadyHelper}
+import com.couchbase.client.core.diagnostics.{HealthPinger, PingResult}
 import com.couchbase.client.scala.diagnostics.{PingOptions, WaitUntilReadyOptions}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.manager.collection.AsyncCollectionManager
@@ -206,12 +205,11 @@ class AsyncBucket private[scala] (
   def waitUntilReady(timeout: Duration, options: WaitUntilReadyOptions): Future[Unit] = {
     FutureConversions
       .javaCFToScalaFuture(
-        WaitUntilReadyHelper.waitUntilReady(
-          core,
+        core.waitUntilReady(
           if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
           timeout,
           options.desiredState,
-          Optional.of(name)
+          name
         )
       )
       .map(_ => ())

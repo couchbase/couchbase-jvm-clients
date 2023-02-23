@@ -397,12 +397,11 @@ class AsyncCluster(
   def waitUntilReady(timeout: Duration, options: WaitUntilReadyOptions): Future[Unit] = {
     FutureConversions
       .javaCFToScalaFuture(
-        WaitUntilReadyHelper.waitUntilReady(
-          core,
+        core.waitUntilReady(
           if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
           timeout,
           options.desiredState,
-          Optional.empty()
+          null
         )
       )
       .map(_ => ())

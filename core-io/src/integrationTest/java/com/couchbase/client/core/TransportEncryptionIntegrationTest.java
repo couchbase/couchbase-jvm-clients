@@ -23,7 +23,6 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEve
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.diagnostics.ClusterState;
-import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SecurityConfig;
@@ -45,11 +44,9 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.security.KeyStore;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -251,9 +248,8 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   private Core createCore(CoreEnvironment env, Authenticator auth, Set<SeedNode> seedNodes) throws ExecutionException, InterruptedException, TimeoutException {
     Core core = Core.create(env, auth, seedNodes);
     core.openBucket(config().bucketname());
-    WaitUntilReadyHelper.waitUntilReady(core, serviceTypes, Duration.ofSeconds(10),  ClusterState.ONLINE,
-        Optional.of(config().bucketname())).get(10,
-        TimeUnit.SECONDS);
+    core.waitUntilReady(serviceTypes, Duration.ofSeconds(10), ClusterState.ONLINE, config().bucketname())
+      .get(10, TimeUnit.SECONDS);
     return core;
   }
 }

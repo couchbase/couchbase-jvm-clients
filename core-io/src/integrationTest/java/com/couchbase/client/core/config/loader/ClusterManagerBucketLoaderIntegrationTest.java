@@ -21,7 +21,6 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.BucketConfigParser;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.diagnostics.ClusterState;
-import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
@@ -69,12 +68,11 @@ class ClusterManagerBucketLoaderIntegrationTest extends CoreIntegrationTest {
     assertNotNull(config);
 
     Core core = Core.create(env, authenticator(), seedNodes());
-    WaitUntilReadyHelper.waitUntilReady(
-      core,
+    core.waitUntilReady(
       setOf(ServiceType.MANAGER, ServiceType.KV),
       Duration.ofSeconds(10),
       ClusterState.ONLINE,
-      Optional.empty()
+      null
     ).get();
     configWaitHelper.await();
     ClusterManagerBucketLoader loader = new ClusterManagerBucketLoader(core);

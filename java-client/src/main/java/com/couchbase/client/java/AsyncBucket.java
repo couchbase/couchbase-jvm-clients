@@ -23,7 +23,6 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.HealthPinger;
 import com.couchbase.client.core.diagnostics.PingResult;
-import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.error.context.ReducedViewErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -273,7 +272,7 @@ public class AsyncBucket {
   public CompletableFuture<Void> waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
     notNull(options, "WaitUntilReadyOptions");
     final WaitUntilReadyOptions.Built opts = options.build();
-    return WaitUntilReadyHelper.waitUntilReady(core, opts.serviceTypes(), timeout, opts.desiredState(), Optional.of(name));
+    return core.waitUntilReady(opts.serviceTypes(), timeout, opts.desiredState(), name);
   }
 
 }

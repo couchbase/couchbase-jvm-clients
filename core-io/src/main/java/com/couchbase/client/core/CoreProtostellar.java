@@ -21,17 +21,13 @@ import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.api.query.CoreQueryOps;
-import com.couchbase.client.core.classic.kv.ClassicCoreKvBinaryOps;
-import com.couchbase.client.core.classic.kv.ClassicCoreKvOps;
-import com.couchbase.client.core.classic.manager.ClassicCoreCollectionManagerOps;
-import com.couchbase.client.core.classic.query.ClassicCoreQueryOps;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
+import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.endpoint.ProtostellarEndpoint;
 import com.couchbase.client.core.endpoint.ProtostellarPool;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.manager.CoreCollectionManager;
 import com.couchbase.client.core.protostellar.ProtostellarContext;
@@ -39,19 +35,23 @@ import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvBinaryOps;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
 import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
 import com.couchbase.client.core.protostellar.query.ProtostellarCoreQueryOps;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConnectionString;
+import com.couchbase.client.core.util.Deadline;
 import com.couchbase.client.core.util.HostAndPort;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.client.core.util.Validators.notNull;
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
-import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class CoreProtostellar implements CoreCouchbaseOps {
@@ -134,5 +134,22 @@ public class CoreProtostellar implements CoreCouchbaseOps {
   @Override
   public CoreEnvironment environment() {
     return context().environment();
+  }
+
+  @Override
+  public CompletableFuture<Void> waitUntilReady(
+    Set<ServiceType> serviceTypes,
+    Duration timeout,
+    ClusterState desiredState,
+    @Nullable String bucketName
+  ) {
+    Deadline deadline = Deadline.of(timeout);
+    List<CompletableFuture<Void>> cfs = new ArrayList<>();
+    pool().endpoints().forEach(endpoint -> cfs.add(endpoint.waitUntilReady(deadline, desiredState != ClusterState.OFFLINE)));
+    if (desiredState == ClusterState.DEGRADED) {
+      return CompletableFuture.anyOf(cfs.toArray(new CompletableFuture[0])).thenRun(() -> {
+      });
+    }
+    return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0]));
   }
 }

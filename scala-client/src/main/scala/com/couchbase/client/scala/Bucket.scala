@@ -22,8 +22,7 @@ import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics.{
   ClusterState,
   HealthPinger,
-  PingResult,
-  WaitUntilReadyHelper
+  PingResult
 }
 import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.service.ServiceType

@@ -21,7 +21,6 @@ import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.config.BucketConfig
 import com.couchbase.client.core.diagnostics.ClusterState
 import com.couchbase.client.core.diagnostics.HealthPinger
-import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper
 import com.couchbase.client.core.error.UnambiguousTimeoutException
 import com.couchbase.client.core.error.ViewNotFoundException
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION
@@ -58,7 +57,8 @@ import kotlinx.coroutines.flow.single
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitSingle
-import java.util.*
+import java.util.Optional
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.DeprecationLevel.WARNING
 import kotlin.time.Duration
@@ -212,7 +212,7 @@ public class Bucket internal constructor(
         services: Set<ServiceType> = emptySet(),
         desiredState: ClusterState = ClusterState.ONLINE,
     ): Bucket {
-        WaitUntilReadyHelper.waitUntilReady(core, services, timeout.toJavaDuration(), desiredState, name.toOptional())
+        core.waitUntilReady(services, timeout.toJavaDuration(), desiredState, name)
             .await()
         return this
     }

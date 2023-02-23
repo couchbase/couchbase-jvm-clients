@@ -17,6 +17,7 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.cnc.AbstractContext;
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointStateChangedEvent;
@@ -37,6 +38,7 @@ import com.couchbase.client.core.deps.io.grpc.MethodDescriptor;
 import com.couchbase.client.core.deps.io.grpc.Status;
 import com.couchbase.client.core.deps.io.grpc.netty.NettyChannelBuilder;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelOption;
+import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
@@ -58,6 +60,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -357,7 +360,7 @@ public class ProtostellarEndpoint {
   /**
    * Waits until the ManagedChannel is in READY state.  Will also initialise trying to make that connection if it's not already.
    *
-   * @return a CompletableFuture as that's what WaitUntilReadyHelper uses.
+   * @return a CompletableFuture, as that's what {@link CoreCouchbaseOps#waitUntilReady(Set, Duration, ClusterState, String)}  uses.
    */
   @Stability.Internal
   public CompletableFuture<Void> waitUntilReady(Deadline deadline, boolean waitingForReady) {

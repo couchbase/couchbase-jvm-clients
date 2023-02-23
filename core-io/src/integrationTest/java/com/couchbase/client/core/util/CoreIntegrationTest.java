@@ -19,7 +19,6 @@ package com.couchbase.client.core.util;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import com.couchbase.client.core.diagnostics.ClusterState;
-import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
@@ -54,12 +53,11 @@ public class CoreIntegrationTest extends ClusterAwareIntegrationTest {
 
   protected static void waitUntilReady(Core core) {
     try {
-      WaitUntilReadyHelper.waitUntilReady(
-              core,
+      core.waitUntilReady(
               Collections.emptySet(),
               Duration.ofSeconds(15),
               ClusterState.ONLINE,
-              Optional.of(config().bucketname()))
+              config().bucketname())
           .get();
     } catch (InterruptedException | ExecutionException e) {
       throw new RuntimeException(e);
