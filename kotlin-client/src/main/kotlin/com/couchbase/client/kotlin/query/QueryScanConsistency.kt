@@ -16,6 +16,7 @@
 
 package com.couchbase.client.kotlin.query
 
+import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.util.Golang
 import com.couchbase.client.kotlin.internal.isEmpty
 import com.couchbase.client.kotlin.kv.MutationState
@@ -31,7 +32,7 @@ import kotlin.time.toJavaDuration
  */
 public sealed class QueryScanConsistency(
     private val wireName: String?,
-    private val scanWait: Duration?,
+    internal val scanWait: Duration?,
 ) {
 
     internal open fun inject(queryJson: MutableMap<String, Any?>): Unit {
@@ -69,12 +70,12 @@ public sealed class QueryScanConsistency(
             if (tokens.isEmpty()) NotBounded else ConsistentWith(tokens, scanWait)
     }
 
-    private object NotBounded : QueryScanConsistency(null, null)
+    internal object NotBounded : QueryScanConsistency(null, null)
 
-    private class RequestPlus internal constructor(scanWait: Duration? = null) :
+    internal class RequestPlus internal constructor(scanWait: Duration? = null) :
         QueryScanConsistency("request_plus", scanWait)
 
-    private class ConsistentWith internal constructor(
+    internal class ConsistentWith internal constructor(
         private val tokens: MutationState,
         scanWait: Duration? = null,
     ) : QueryScanConsistency("at_plus", scanWait) {
@@ -82,5 +83,7 @@ public sealed class QueryScanConsistency(
             super.inject(queryJson)
             queryJson["scan_vectors"] = tokens.export()
         }
+
+        fun toCore(): CoreMutationState = CoreMutationState(tokens)
     }
 }

@@ -16,15 +16,16 @@
 
 package com.couchbase.client.kotlin.query
 
+import com.couchbase.client.core.api.query.CoreQueryMetaData
+import com.couchbase.client.core.classic.query.ClassicCoreQueryMetaData
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference
-import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.msg.query.QueryChunkHeader
 import com.couchbase.client.core.msg.query.QueryChunkTrailer
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.internal.toStringUtf8
-import java.util.*
+import java.util.Optional
 
 public sealed class QueryFlowItem
 
@@ -48,34 +49,37 @@ public class QueryRow(
 /**
  * Metadata about query execution. Always the last item in the flow.
  */
-public class QueryMetadata(
-    private val header: QueryChunkHeader,
-    private val trailer: QueryChunkTrailer,
+public class QueryMetadata internal constructor(
+    private val core: CoreQueryMetaData,
 ) : QueryFlowItem() {
 
+    // Oops, this constructor is part of the public API :-(
+    @Deprecated(message = "QueryMetadata constructor will be private in a future version.")
+    public constructor(
+        header: QueryChunkHeader,
+        trailer: QueryChunkTrailer,
+    ) : this(ClassicCoreQueryMetaData(header, trailer))
+
     public val requestId: String
-        get() = header.requestId()
+        get() = core.requestId()
 
     public val clientContextId: String
-        get() = header.clientContextId().orElse("")
+        get() = core.clientContextId()
 
     public val status: QueryStatus
-        get() = QueryStatus.from(trailer.status())
+        get() = QueryStatus.from(core.status().name)
 
     public val signature: Map<String, Any?>?
-        get() = header.signature().parseAsMap().orElse(null)
+        get() = core.signature().parseAsMap().orElse(null)
 
     public val profile: Map<String, Any?>?
-        get() = trailer.profile().parseAsMap().orElse(null)
+        get() = core.profile().parseAsMap().orElse(null)
 
     public val metrics: QueryMetrics?
-        get() = trailer.metrics().parseAsMap().map { QueryMetrics(it) }.orElse(null)
+        get() = core.metrics().map { QueryMetrics(it) }.orElse(null)
 
     public val warnings: List<QueryWarning>
-        get() = trailer.warnings().map { warnings ->
-            ErrorCodeAndMessage.fromJsonArray(warnings)
-                .map { QueryWarning(it.code(), it.message()) }
-        }.orElse(emptyList())
+        get() = core.warnings().map { QueryWarning(it) }
 
     override fun toString(): String {
         return "QueryMetadata(requestId='$requestId', clientContextId='$clientContextId', status=$status, signature=$signature, profile=$profile, metrics=$metrics, warnings=$warnings)"

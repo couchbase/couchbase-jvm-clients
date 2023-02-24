@@ -16,10 +16,14 @@
 
 package com.couchbase.client.kotlin.query
 
+import com.couchbase.client.core.api.query.CoreQueryWarning
+
 public class QueryWarning(
     public val code: Int,
     public val message: String,
 ) {
+    internal constructor(core: CoreQueryWarning) : this(core.code(), core.message())
+
     override fun toString(): String {
         return "QueryWarning(code=$code, message='$message')"
     }

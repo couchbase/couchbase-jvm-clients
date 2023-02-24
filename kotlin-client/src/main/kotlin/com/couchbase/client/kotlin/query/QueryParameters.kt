@@ -28,7 +28,7 @@ public sealed class QueryParameters {
         }
     }
 
-    private class Named internal constructor(
+    internal class Named internal constructor(
         private val values: Map<String, Any?>,
     ) : QueryParameters() {
         override fun inject(queryJson: MutableMap<String, Any?>): Unit =
@@ -40,7 +40,7 @@ public sealed class QueryParameters {
             if (startsWith(prefix)) this else prefix + this
     }
 
-    private class Positional internal constructor(
+    internal class Positional internal constructor(
         private val values: List<Any?>,
     ) : QueryParameters() {
         override fun inject(queryJson: MutableMap<String, Any?>): Unit {

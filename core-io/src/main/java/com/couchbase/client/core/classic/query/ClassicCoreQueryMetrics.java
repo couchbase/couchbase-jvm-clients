@@ -41,7 +41,7 @@ public class ClassicCoreQueryMetrics implements CoreQueryMetrics {
   private final long errorCount;
   private final long warningCount;
 
-  ClassicCoreQueryMetrics(final byte[] raw) {
+  public ClassicCoreQueryMetrics(final byte[] raw) {
     notNull(raw, "raw");
     try {
       JsonNode rootNode = Mapper.reader().readTree(raw);

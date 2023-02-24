@@ -16,6 +16,7 @@
 
 package com.couchbase.client.kotlin.query
 
+import com.couchbase.client.core.api.query.CoreQueryProfile
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 
 
@@ -26,14 +27,12 @@ import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
  * Access the returned info via [QueryMetadata.profile].
  */
 @VolatileCouchbaseApi
-public enum class QueryProfile {
+public enum class QueryProfile(internal val core: CoreQueryProfile) {
 
     /**
      * No profiling information is added to the query response.
      */
-    OFF {
-        override fun toString(): String = "off"
-    },
+    OFF(CoreQueryProfile.OFF),
 
     /**
      * The query response includes a profile section with stats and details
@@ -42,9 +41,7 @@ public enum class QueryProfile {
      * Three phase times will be included in the system:active_requests and
      * system:completed_requests monitoring keyspaces.
      */
-    PHASES {
-        override fun toString(): String = "phases"
-    },
+    PHASES(CoreQueryProfile.PHASES),
 
     /**
      * Besides the phase times, the profile section of the query response
@@ -54,7 +51,8 @@ public enum class QueryProfile {
      * This information will be included in the system:active_requests and
      * system:completed_requests keyspaces.
      */
-    TIMINGS {
-        override fun toString(): String = "timings"
-    },
+    TIMINGS(CoreQueryProfile.TIMINGS),
+    ;
+
+    override fun toString(): String = core.toString()
 }

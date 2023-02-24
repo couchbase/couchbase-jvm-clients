@@ -18,6 +18,7 @@ package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.SinceCouchbase
+import com.couchbase.client.core.api.query.CoreQueryContext
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE
@@ -27,6 +28,7 @@ import com.couchbase.client.kotlin.analytics.AnalyticsPriority
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
 import com.couchbase.client.kotlin.codec.JsonSerializer
+import com.couchbase.client.kotlin.env.env
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.query.QueryFlowItem
 import com.couchbase.client.kotlin.query.QueryMetadata
@@ -48,7 +50,12 @@ public class Scope(
 
     private val collectionCache = ConcurrentHashMap<String, Collection>()
 
-    private val queryExecutor = QueryExecutor(core, this)
+    private val queryExecutor = QueryExecutor(
+        core.queryOps(),
+        CoreQueryContext.of(bucket.name, name),
+        core.env.jsonSerializer,
+    )
+
     private val analyticsExecutor = AnalyticsExecutor(core, this)
 
     /**

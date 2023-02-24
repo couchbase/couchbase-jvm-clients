@@ -37,7 +37,7 @@ public class ClassicCoreQueryMetaData extends CoreQueryMetaData {
   private final QueryChunkTrailer trailer;
 
   @Stability.Internal
-  private ClassicCoreQueryMetaData(QueryChunkHeader header, QueryChunkTrailer trailer) {
+  public ClassicCoreQueryMetaData(QueryChunkHeader header, QueryChunkTrailer trailer) {
     this.header = header;
     this.trailer = trailer;
   }

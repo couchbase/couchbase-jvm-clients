@@ -133,7 +133,12 @@ public class Cluster internal constructor(
 
     private val bucketCache = ConcurrentHashMap<String, Bucket>()
 
-    private val queryExecutor = QueryExecutor(core)
+    private val queryExecutor = QueryExecutor(
+        core.queryOps(),
+        queryContext = null,
+        core.env.jsonSerializer,
+    )
+
     private val analyticsExecutor = AnalyticsExecutor(core)
 
     init {

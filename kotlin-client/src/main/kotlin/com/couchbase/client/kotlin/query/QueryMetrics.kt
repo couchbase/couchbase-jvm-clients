@@ -16,48 +16,71 @@
 
 package com.couchbase.client.kotlin.query
 
-import com.couchbase.client.core.util.Golang
+import com.couchbase.client.core.api.query.CoreQueryMetrics
+import com.couchbase.client.core.classic.query.ClassicCoreQueryMetrics
+import com.couchbase.client.core.json.Mapper
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 import kotlin.time.toKotlinDuration
 
-public class QueryMetrics(
-    public val map: Map<String, Any?>,
+public class QueryMetrics internal constructor(
+    internal val core: CoreQueryMetrics,
 ) {
+    // Oops, this constructor is part of the public API :-(
+    @Deprecated(message = "QueryMetrics constructor will be private in a future version.")
+    public constructor(map: Map<String, Any?>) : this(ClassicCoreQueryMetrics(Mapper.encodeAsBytes(map)))
+
+    @Deprecated(message = "QueryMetrics.map property will be removed in a future version.")
+    public val map: Map<String, Any?>
+        get() = mapOf(
+            "elapsedTime" to core.elapsedTime().toGolangMicros(),
+            "executionTime" to core.executionTime().toGolangMicros(),
+            "sortCount" to core.sortCount(),
+            "resultCount" to core.resultCount(),
+            "resultSize" to core.resultSize(),
+            "mutationCount" to core.mutationCount(),
+            "errorCount" to core.errorCount(),
+            "warningCount" to core.warningCount(),
+        )
+
     public val elapsedTime: Duration
-        get() = getDuration("elapsedTime")
+        get() = core.elapsedTime().toKotlinDuration()
 
     public val executionTime: Duration
-        get() = getDuration("executionTime")
+        get() = core.executionTime().toKotlinDuration()
 
     public val sortCount: Long
-        get() = getLong("sortCount")
+        get() = core.sortCount()
 
     public val resultCount: Long
-        get() = getLong("resultCount")
+        get() = core.resultCount()
 
     public val resultSize: Long
-        get() = getLong("resultSize")
+        get() = core.resultSize()
 
+    @Deprecated("This metric is no longer exposed.")
     public val usedMemory: Long
-        get() = getLong("usedMemory")
+        get() = 0L
 
+    @Deprecated("This metric is no longer exposed.")
     public val serviceLoad: Long
-        get() = getLong("serviceLoad")
+        get() = 0L
 
     public val mutationCount: Long
-        get() = getLong("mutationCount")
+        get() = core.mutationCount()
 
     public val errorCount: Long
-        get() = getLong("errorCount")
+        get() = core.errorCount()
 
     public val warningCount: Long
-        get() = getLong("warningCount")
-
-    private fun getDuration(key: String): Duration = Golang.parseDuration(map[key] as String? ?: "0").toKotlinDuration()
-
-    private fun getLong(key: String): Long = (map[key] as Number? ?: 0).toLong()
+        get() = core.warningCount()
 
     override fun toString(): String {
-        return "QueryMetrics(map=$map)"
+        return "QueryMetrics(elapsedTime=$elapsedTime, executionTime=$executionTime, sortCount=$sortCount, resultCount=$resultCount, resultSize=$resultSize, mutationCount=$mutationCount, errorCount=$errorCount, warningCount=$warningCount)"
     }
+}
+
+private fun java.time.Duration.toGolangMicros(): String {
+    val micros = TimeUnit.NANOSECONDS.toMicros(toNanos());
+    return "${micros}us"
 }

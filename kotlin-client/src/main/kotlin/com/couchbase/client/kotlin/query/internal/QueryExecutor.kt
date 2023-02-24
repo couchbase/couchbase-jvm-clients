@@ -16,18 +16,21 @@
 
 package com.couchbase.client.kotlin.query.internal
 
-import com.couchbase.client.core.Core
-import com.couchbase.client.core.cnc.TracingIdentifiers
-import com.couchbase.client.core.msg.query.CoreQueryAccessor
-import com.couchbase.client.core.msg.query.QueryRequest
-import com.couchbase.client.core.msg.query.QueryRequest.queryContext
-import com.couchbase.client.core.util.Golang
+import com.couchbase.client.core.api.query.CoreQueryContext
+import com.couchbase.client.core.api.query.CoreQueryOps
+import com.couchbase.client.core.api.query.CoreQueryOptions
+import com.couchbase.client.core.api.query.CoreQueryProfile
+import com.couchbase.client.core.api.query.CoreQueryScanConsistency
+import com.couchbase.client.core.api.shared.CoreMutationState
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions
+import com.couchbase.client.core.json.Mapper
+import com.couchbase.client.core.transaction.config.CoreSingleQueryTransactionOptions
 import com.couchbase.client.kotlin.CommonOptions
-import com.couchbase.client.kotlin.Scope
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.typeRef
-import com.couchbase.client.kotlin.env.env
-import com.couchbase.client.kotlin.logicallyComplete
 import com.couchbase.client.kotlin.query.QueryFlowItem
 import com.couchbase.client.kotlin.query.QueryMetadata
 import com.couchbase.client.kotlin.query.QueryParameters
@@ -40,16 +43,13 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitSingle
+import kotlin.time.toJavaDuration
 
 internal class QueryExecutor(
-    private val core: Core,
-    private val scope: Scope? = null,
+    private val queryOps: CoreQueryOps,
+    private val queryContext: CoreQueryContext?,
+    private val defaultSerializer: JsonSerializer,
 ) {
-    private val coreQueryAccessor = CoreQueryAccessor(core)
-    private val bucketName = scope?.bucket?.name
-    private val scopeName = scope?.name
-    private val queryContext = scope?.let { queryContext(scope.bucket.name, scope.name) }
-
     fun query(
         statement: String,
         common: CommonOptions,
@@ -74,69 +74,74 @@ internal class QueryExecutor(
         clientContextId: String?,
         raw: Map<String, Any?>,
     ): Flow<QueryFlowItem> {
+        val actualSerializer = serializer ?: defaultSerializer
 
-        val timeout = with(core.env) { common.actualQueryTimeout() }
+        val coreQueryOpts = object : CoreQueryOptions {
+            override fun adhoc(): Boolean = adhoc
+            override fun clientContextId(): String? = clientContextId
+            override fun consistentWith(): CoreMutationState? = (consistency as? QueryScanConsistency.ConsistentWith)?.toCore()
+            override fun maxParallelism(): Int? = maxParallelism
+            override fun metrics(): Boolean = metrics
 
-        // use interface type so less capable serializers don't freak out
-        val queryJson: MutableMap<String, Any?> = HashMap()
+            override fun namedParameters(): ObjectNode? = (parameters as? QueryParameters.Named)?.let { params ->
+                // Let the user's serializer serialize arguments
+                val map = mutableMapOf<String, Any?>()
+                params.inject(map)
+                val queryBytes = actualSerializer.serialize(map, typeRef())
+                Mapper.decodeIntoTree(queryBytes) as ObjectNode
+            }
 
-        queryJson["statement"] = statement
-        queryJson["timeout"] = Golang.encodeDurationToMs(timeout)
+            override fun pipelineBatch(): Int? = pipelineBatch
+            override fun pipelineCap(): Int? = pipelineCap
 
-        if (preserveExpiry) queryJson["preserve_expiry"] = true
-        if (readonly) queryJson["readonly"] = true
-        if (flexIndex) queryJson["use_fts"] = true
-        if (!metrics) queryJson["metrics"] = false
+            override fun positionalParameters(): ArrayNode? = (parameters as? QueryParameters.Positional)?.let { params ->
+                // Let the user's serializer serialize arguments
+                val map = mutableMapOf<String, Any?>()
+                params.inject(map)
+                val queryBytes = actualSerializer.serialize(map, typeRef())
+                Mapper.decodeIntoTree(queryBytes).get("args") as? ArrayNode
+            }
 
-        if (profile !== QueryProfile.OFF) queryJson["profile"] = profile.toString()
+            override fun profile(): CoreQueryProfile = profile.core
 
-        clientContextId?.let { queryJson["client_context_id"] = it }
-        maxParallelism?.let { queryJson["max_parallelism"] = it.toString() }
-        pipelineCap?.let { queryJson["pipeline_cap"] = it.toString() }
-        pipelineBatch?.let { queryJson["pipeline_batch"] = it.toString() }
-        scanCap?.let { queryJson["scan_cap"] = it.toString() }
+            override fun raw(): JsonNode? {
+                if (raw.isEmpty()) return null
+                val rawBytes = actualSerializer.serialize(raw, typeRef())
+                return Mapper.decodeIntoTree(rawBytes)
+            }
 
-        consistency.inject(queryJson)
-        parameters.inject(queryJson)
+            override fun readonly(): Boolean = readonly
+            override fun scanWait(): java.time.Duration? = consistency.scanWait?.toJavaDuration()
+            override fun scanCap(): Int? = scanCap
 
-        queryContext?.let { queryJson["query_context"] = it }
+            override fun scanConsistency(): CoreQueryScanConsistency? = when (consistency) {
+                is QueryScanConsistency.NotBounded -> CoreQueryScanConsistency.NOT_BOUNDED
+                is QueryScanConsistency.RequestPlus -> CoreQueryScanConsistency.REQUEST_PLUS
+                else -> null // ConsistentWith is handled by separate consistentWith() accessor
+            }
 
-        queryJson.putAll(raw)
-
-        val actualSerializer = serializer ?: core.env.jsonSerializer
-        val queryBytes = actualSerializer.serialize(queryJson, typeRef())
+            override fun flexIndex(): Boolean = flexIndex
+            override fun preserveExpiry(): Boolean? = if (preserveExpiry) true else null
+            override fun asTransactionOptions(): CoreSingleQueryTransactionOptions? = null
+            override fun commonOptions(): CoreCommonOptions = common.toCore()
+        }
 
         return flow {
-            val request = with(core.env) {
-                QueryRequest(
-                    timeout,
-                    core.context(),
-                    common.actualRetryStrategy(),
-                    core.context().authenticator(),
-                    statement,
-                    queryBytes,
-                    readonly,
-                    clientContextId,
-                    common.actualSpan(TracingIdentifiers.SPAN_REQUEST_QUERY),
-                    bucketName,
-                    scopeName,
-                    null,
-                )
-            }
-            request.context().clientContext(common.clientContext)
+            val response = queryOps.queryReactive(
+                statement,
+                coreQueryOpts,
+                queryContext,
+                null,
+                null,
+            ).awaitSingle()
 
-            try {
-                val response = coreQueryAccessor.query(request, adhoc).awaitSingle()
+            emitAll(
+                response.rows().asFlow().map {
+                    QueryRow(it.data(), actualSerializer)
+                }
+            )
 
-                emitAll(response.rows().asFlow()
-                    .map { QueryRow(it.data(), actualSerializer) })
-
-                emitAll(response.trailer().asFlow()
-                    .map { QueryMetadata(response.header(), it) })
-
-            } finally {
-                request.logicallyComplete()
-            }
+            emit(QueryMetadata(response.metaData().awaitSingle()))
         }
     }
 }
