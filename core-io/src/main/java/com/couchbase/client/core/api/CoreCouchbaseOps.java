@@ -26,6 +26,8 @@ import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.api.manager.search.ClassicCoreScopeSearchIndexManager;
 import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
 import com.couchbase.client.core.api.query.CoreQueryOps;
+import com.couchbase.client.core.api.search.ClassicCoreSearchOps;
+import com.couchbase.client.core.api.search.CoreSearchOps;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -51,6 +53,8 @@ public interface CoreCouchbaseOps {
   CoreKvBinaryOps kvBinaryOps(CoreKeyspace keyspace);
 
   CoreQueryOps queryOps();
+
+  CoreSearchOps searchOps(@Nullable CoreBucketAndScope scope);
 
   CoreCollectionManager collectionManager(String bucketName);
 

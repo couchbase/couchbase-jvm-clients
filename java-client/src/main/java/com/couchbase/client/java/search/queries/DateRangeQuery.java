@@ -15,7 +15,8 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreDateRangeQuery;
 import com.couchbase.client.java.search.SearchQuery;
 
 import java.time.Instant;
@@ -141,28 +142,7 @@ public class DateRangeQuery extends SearchQuery {
     }
 
     @Override
-    protected void injectParams(JsonObject input) {
-        if (start == null && end == null) {
-            throw new NullPointerException("DateRangeQuery needs at least one of start or end");
-        }
-
-        if (start != null) {
-            input.put("start", start);
-            if (inclusiveStart != null) {
-                input.put("inclusive_start", inclusiveStart);
-            }
-        }
-        if (end != null) {
-            input.put("end", end);
-            if (inclusiveEnd != null) {
-                input.put("inclusive_end", inclusiveEnd);
-            }
-        }
-        if (dateTimeParser != null) {
-            input.put("datetime_parser", dateTimeParser);
-        }
-        if (field != null) {
-            input.put("field", field);
-        }
+    public CoreSearchQuery toCore() {
+        return new CoreDateRangeQuery(start, end, inclusiveStart, inclusiveEnd, dateTimeParser, field, boost);
     }
 }

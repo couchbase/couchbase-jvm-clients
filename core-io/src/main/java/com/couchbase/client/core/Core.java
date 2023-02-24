@@ -24,6 +24,8 @@ import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.api.manager.search.ClassicCoreScopeSearchIndexManager;
 import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
 import com.couchbase.client.core.api.query.CoreQueryOps;
+import com.couchbase.client.core.api.search.ClassicCoreSearchOps;
+import com.couchbase.client.core.api.search.CoreSearchOps;
 import com.couchbase.client.core.callbacks.BeforeSendRequestCallback;
 import com.couchbase.client.core.classic.kv.ClassicCoreKvBinaryOps;
 import com.couchbase.client.core.classic.kv.ClassicCoreKvOps;
@@ -1015,6 +1017,12 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     return isProtostellar()
       ? new ProtostellarCoreQueryOps(protostellar)
       : new ClassicCoreQueryOps(this);
+  }
+
+  @Stability.Internal
+  @Override
+  public CoreSearchOps searchOps(@Nullable CoreBucketAndScope scope) {
+    return new ClassicCoreSearchOps(this, scope);
   }
 
   @Stability.Internal

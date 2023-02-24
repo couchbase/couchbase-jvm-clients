@@ -16,22 +16,26 @@
 
 package com.couchbase.client.java.search.result;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.result.CoreReactiveSearchResult;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.search.SearchMetaData;
+import com.couchbase.client.java.search.util.SearchFacetUtil;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class ReactiveSearchResult {
 
-    private final Flux<SearchRow> rows;
-    private final Mono<Map<String, SearchFacetResult>> facets;
-    private final Mono<SearchMetaData> meta;
+    private final CoreReactiveSearchResult internal;
+    private final JsonSerializer serializer;
 
-    public ReactiveSearchResult(Flux<SearchRow> rows, Mono<Map<String, SearchFacetResult>> facets, Mono<SearchMetaData> meta) {
-        this.rows = rows;
-        this.facets = facets;
-        this.meta = meta;
+    @Stability.Internal
+    public ReactiveSearchResult(CoreReactiveSearchResult internal, JsonSerializer serializer) {
+        this.internal = internal;
+        this.serializer = serializer;
     }
 
     /**
@@ -40,17 +44,21 @@ public class ReactiveSearchResult {
      * Any errors will be raised as onError on this.
      */
     public Flux<SearchRow> rows() {
-        return rows;
+        return internal.rows().map(row -> new SearchRow(row, serializer));
     }
 
     /**
      * Any additional meta information associated with the FTS query, in the form of a reactive {@link Mono} publisher.
      */
     public Mono<SearchMetaData> metaData() {
-        return meta;
+        return internal.metaData().map(SearchMetaData::new);
     }
 
     public Mono<Map<String, SearchFacetResult>> facets() {
-        return facets;
+        return internal.facets().map(result -> {
+            Map<String, SearchFacetResult> out = new HashMap<>();
+            result.forEach((k, v) -> out.put(k, SearchFacetUtil.convert(v)));
+            return out;
+        });
     }
 }

@@ -15,7 +15,8 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreBooleanFieldQuery;
 import com.couchbase.client.java.search.SearchQuery;
 
 /**
@@ -47,11 +48,7 @@ public class BooleanFieldQuery extends SearchQuery {
     }
 
     @Override
-    protected void injectParams(JsonObject input) {
-        if (field != null) {
-            input.put("field", field);
-        }
-
-        input.put("bool", value);
+    public CoreSearchQuery toCore() {
+        return new CoreBooleanFieldQuery(value, field, boost);
     }
 }

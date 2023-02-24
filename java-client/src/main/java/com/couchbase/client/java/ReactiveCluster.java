@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.DiagnosticsResult;
 import com.couchbase.client.core.diagnostics.PingResult;
@@ -47,7 +48,6 @@ import com.couchbase.client.java.manager.user.ReactiveUserManager;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
-import com.couchbase.client.java.search.SearchAccessor;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.ReactiveSearchResult;
@@ -330,12 +330,12 @@ public class ReactiveCluster {
    */
   public Mono<ReactiveSearchResult> searchQuery(final String indexName, final SearchQuery query, final SearchOptions options) {
     notNull(query, "SearchQuery", () -> new ReducedSearchErrorContext(indexName, null));
-    notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, query.export().toMap()));
+    CoreSearchQuery coreQuery = query.toCore();
+    notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, coreQuery));
     SearchOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-    return Mono.defer(() -> {
-      return SearchAccessor.searchQueryReactive(asyncCluster.core(), asyncCluster.searchRequest(indexName, query, opts), serializer);
-    });
+    return asyncCluster.searchOps.searchQueryReactive(indexName, coreQuery, opts)
+            .map(result -> new ReactiveSearchResult(result, serializer));
   }
 
   /**

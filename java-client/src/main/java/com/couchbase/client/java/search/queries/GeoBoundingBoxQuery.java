@@ -15,8 +15,8 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreGeoBoundingBoxQuery;
 import com.couchbase.client.java.search.SearchQuery;
 
 /**
@@ -52,11 +52,7 @@ public class GeoBoundingBoxQuery extends SearchQuery {
     }
 
     @Override
-    protected void injectParams(JsonObject input) {
-        input.put("top_left", JsonArray.from(topLeftLon, topLeftLat));
-        input.put("bottom_right", JsonArray.from(bottomRightLon, bottomRightLat));
-        if (field != null) {
-            input.put("field", field);
-        }
+    public CoreSearchQuery toCore() {
+        return new CoreGeoBoundingBoxQuery(topLeftLon, topLeftLat, bottomRightLon, bottomRightLat, field, boost);
     }
 }

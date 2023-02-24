@@ -15,9 +15,8 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CorePhraseQuery;
 import com.couchbase.client.java.search.SearchQuery;
 
 import java.util.ArrayList;
@@ -56,15 +55,7 @@ public class PhraseQuery extends SearchQuery {
     }
 
     @Override
-    protected void injectParams(JsonObject input) {
-        if (terms.isEmpty()) {
-            throw InvalidArgumentException.fromMessage("Phrase query must at least have one term");
-        }
-        JsonArray terms = JsonArray.from(this.terms);
-        input.put("terms", terms);
-
-        if (field != null) {
-            input.put("field", this.field);
-        }
+    public CoreSearchQuery toCore() {
+        return new CorePhraseQuery(terms, field, boost);
     }
 }

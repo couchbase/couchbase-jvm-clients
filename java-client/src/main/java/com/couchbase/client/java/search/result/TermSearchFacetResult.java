@@ -15,11 +15,14 @@
  */
 package com.couchbase.client.java.search.result;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.result.CoreTermSearchFacetResult;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of a {@link TermSearchFacetResult}.
@@ -29,33 +32,23 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TermSearchFacetResult extends AbstractSearchFacetResult {
 
-  private final List<SearchTermRange> terms;
+  private final CoreTermSearchFacetResult internal;
 
-  @JsonCreator
-  public TermSearchFacetResult(
-      @JsonProperty("$name") String name,
-      @JsonProperty("field") String field,
-      @JsonProperty("total") long total,
-      @JsonProperty("missing") long missing,
-      @JsonProperty("other") long other,
-      @JsonProperty("terms") List<SearchTermRange> terms) {
-    super(name, field, total, missing, other);
-    this.terms = terms;
+  @Stability.Internal
+  public TermSearchFacetResult(CoreTermSearchFacetResult internal) {
+    super(internal);
+    this.internal = internal;
   }
 
   public List<SearchTermRange> terms() {
-    return this.terms;
+    return internal.terms()
+            .stream()
+            .map(SearchTermRange::new)
+            .collect(Collectors.toList());
   }
 
   @Override
   public String toString() {
-    return "TermSearchFacetResult{" +
-        "name='" + name + '\'' +
-        ", field='" + field + '\'' +
-        ", total=" + total +
-        ", missing=" + missing +
-        ", other=" + other +
-        ", terms=" + terms +
-        '}';
+    return internal.toString();
   }
 }

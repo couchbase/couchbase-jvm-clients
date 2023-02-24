@@ -15,10 +15,10 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreDisjunctionQuery;
 import com.couchbase.client.java.search.SearchQuery;
+import reactor.util.annotation.Nullable;
 
 /**
  * A compound FTS query that performs a logical OR between all its sub-queries (disjunction).
@@ -30,7 +30,7 @@ import com.couchbase.client.java.search.SearchQuery;
  */
 public class DisjunctionQuery extends AbstractCompoundQuery {
 
-    private int min = -1;
+    private @Nullable Integer min;
 
     public DisjunctionQuery(SearchQuery... queries) {
         super(queries);
@@ -53,24 +53,7 @@ public class DisjunctionQuery extends AbstractCompoundQuery {
     }
 
     @Override
-    protected void injectParams(JsonObject input) {
-        if (childQueries.isEmpty()) {
-            throw InvalidArgumentException.fromMessage("Compound query has no child query");
-        }
-        if (childQueries.size() < min) {
-            throw InvalidArgumentException.fromMessage("Disjunction query as fewer children than the configured minimum " + min);
-        }
-
-        if (min > 0) {
-            input.put("min", min);
-        }
-
-        JsonArray disjuncts = JsonArray.create();
-        for (SearchQuery childQuery : childQueries) {
-            JsonObject childJson = JsonObject.create();
-            childQuery.injectParamsAndBoost(childJson);
-            disjuncts.add(childJson);
-        }
-        input.put("disjuncts", disjuncts);
+    public CoreDisjunctionQuery toCore() {
+        return new CoreDisjunctionQuery(childQueriesAsCore(), min, boost);
     }
 }

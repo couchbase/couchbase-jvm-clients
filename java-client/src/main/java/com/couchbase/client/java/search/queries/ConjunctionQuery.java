@@ -15,9 +15,8 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreConjunctionQuery;
 import com.couchbase.client.java.search.SearchQuery;
 
 /**
@@ -45,17 +44,7 @@ public class ConjunctionQuery extends AbstractCompoundQuery {
     }
 
     @Override
-    protected void injectParams(JsonObject input) {
-        if (childQueries.isEmpty()) {
-            throw InvalidArgumentException.fromMessage("Compound query has no child query");
-        }
-
-        JsonArray conjuncts = JsonArray.create();
-        for (SearchQuery childQuery : childQueries) {
-            JsonObject childJson = JsonObject.create();
-            childQuery.injectParamsAndBoost(childJson);
-            conjuncts.add(childJson);
-        }
-        input.put("conjuncts", conjuncts);
+    public CoreConjunctionQuery toCore() {
+        return new CoreConjunctionQuery(childQueriesAsCore(), boost);
     }
 }

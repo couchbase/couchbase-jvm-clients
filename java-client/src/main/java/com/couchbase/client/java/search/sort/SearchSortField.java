@@ -15,6 +15,11 @@
  */
 package com.couchbase.client.java.search.sort;
 
+import com.couchbase.client.core.api.search.sort.CoreSearchFieldMissing;
+import com.couchbase.client.core.api.search.sort.CoreSearchFieldMode;
+import com.couchbase.client.core.api.search.sort.CoreSearchFieldType;
+import com.couchbase.client.core.api.search.sort.CoreSearchSort;
+import com.couchbase.client.core.api.search.sort.CoreSearchSortField;
 import com.couchbase.client.java.json.JsonObject;
 
 /**
@@ -27,9 +32,9 @@ public class SearchSortField extends SearchSort {
 
     private final String field;
 
-    private SearchFieldType type;
-    private SearchFieldMode mode;
-    private SearchFieldMissing missing;
+    private CoreSearchFieldType type;
+    private CoreSearchFieldMode mode;
+    private CoreSearchFieldMissing missing;
 
     SearchSortField(String field) {
         this.field = field;
@@ -42,39 +47,22 @@ public class SearchSortField extends SearchSort {
     }
 
     public SearchSortField type(SearchFieldType type) {
-        this.type = type;
+        this.type = type.toCore();
         return this;
     }
 
     public SearchSortField mode(SearchFieldMode mode) {
-        this.mode = mode;
+        this.mode = mode.toCore();
         return this;
     }
 
     public SearchSortField missing(SearchFieldMissing missing) {
-        this.missing = missing;
+        this.missing = missing.toCore();
         return this;
     }
 
     @Override
-    protected String identifier() {
-        return "field";
-    }
-
-    @Override
-    public void injectParams(JsonObject queryJson) {
-        super.injectParams(queryJson);
-
-        queryJson.put("field", field);
-
-        if (type != null) {
-            queryJson.put("type", type.value());
-        }
-        if (mode != null) {
-            queryJson.put("mode", mode.value());
-        }
-        if (missing != null) {
-            queryJson.put("missing", missing.value());
-        }
+    public CoreSearchSort toCore() {
+        return new CoreSearchSortField(field, type, mode, missing, descending);
     }
 }

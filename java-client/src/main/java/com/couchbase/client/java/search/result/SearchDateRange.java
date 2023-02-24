@@ -15,9 +15,9 @@
  */
 package com.couchbase.client.java.search.result;
 
-import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.result.CoreSearchDateRange;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -33,63 +33,44 @@ import java.util.Objects;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SearchDateRange {
 
-    private final String name;
-    private final Instant start;
-    private final Instant end;
-    private final long count;
+    private final CoreSearchDateRange internal;
 
-    @JsonCreator
-    public SearchDateRange(
-      @JsonProperty("name") String name,
-      @JsonProperty("start") String start,
-      @JsonProperty("end") String end,
-      @JsonProperty("count") long count) {
-        this.name = name;
-        this.count = count;
-
-        this.start = start == null ? null : Instant.parse(start);
-        this.end = end == null ? null : Instant.parse(end);
+    @Stability.Internal
+    public SearchDateRange(CoreSearchDateRange internal) {
+        this.internal = internal;
     }
 
     public String name() {
-        return name;
+        return internal.name();
     }
 
     public Instant start() {
-        return start;
+        return internal.start();
     }
 
     public Instant end() {
-        return end;
+        return internal.end();
     }
 
     public long count() {
-        return count;
+        return internal.count();
     }
 
     @Override
     public String toString() {
-        return "SearchDateRange{" +
-          "name='" + name + '\'' +
-          ", start=" + start +
-          ", end=" + end +
-          ", count=" + count +
-          '}';
+        return internal.toString();
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        SearchDateRange that = (SearchDateRange) o;
-        return count == that.count &&
-          Objects.equals(name, that.name) &&
-          Objects.equals(start, that.start) &&
-          Objects.equals(end, that.end);
+        SearchDateRange searchRow = (SearchDateRange) o;
+        return Objects.equals(internal, searchRow.internal);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, start, end, count);
+        return internal.hashCode();
     }
 }

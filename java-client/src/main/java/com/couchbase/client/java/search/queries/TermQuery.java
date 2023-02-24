@@ -15,8 +15,10 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreTermQuery;
 import com.couchbase.client.java.search.SearchQuery;
+import reactor.util.annotation.Nullable;
 
 /**
  * A FTS query that matches terms (without further analysis). Usually for debugging purposes,
@@ -29,9 +31,9 @@ import com.couchbase.client.java.search.SearchQuery;
 public class TermQuery extends SearchQuery {
 
     private final String term;
-    private String field;
-    private int fuzziness;
-    private int prefixLength;
+    private @Nullable String field;
+    private @Nullable Integer fuzziness;
+    private @Nullable Integer prefixLength;
 
     public TermQuery(String term) {
         super();
@@ -60,16 +62,7 @@ public class TermQuery extends SearchQuery {
     }
 
     @Override
-    protected void injectParams(JsonObject input) {
-        input.put("term", term);
-        if (field != null) {
-            input.put("field", field);
-        }
-        if (fuzziness > 0) {
-            input.put("fuzziness", fuzziness);
-            if (prefixLength > 0) {
-                input.put("prefix_length", prefixLength);
-            }
-        }
+    public CoreSearchQuery toCore() {
+        return new CoreTermQuery(term, field, fuzziness, prefixLength, boost);
     }
 }

@@ -15,8 +15,10 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreBooleanQuery;
+import com.couchbase.client.core.api.search.queries.CoreConjunctionQuery;
+import com.couchbase.client.core.api.search.queries.CoreDisjunctionQuery;
 import com.couchbase.client.java.search.SearchQuery;
 
 /**
@@ -65,31 +67,7 @@ public class BooleanQuery extends SearchQuery {
     }
 
     @Override
-    protected void injectParams(JsonObject input) {
-        boolean mustIsEmpty = must == null || must.childQueries().isEmpty();
-        boolean mustNotIsEmpty = mustNot == null || mustNot.childQueries().isEmpty();
-        boolean shouldIsEmpty = should == null || should.childQueries().isEmpty();
-
-        if (mustIsEmpty && mustNotIsEmpty && shouldIsEmpty) {
-            throw InvalidArgumentException.fromMessage("Boolean query needs at least one of must, mustNot and should");
-        }
-
-        if (!mustIsEmpty) {
-            JsonObject jsonMust = JsonObject.create();
-            must.injectParamsAndBoost(jsonMust);
-            input.put("must", jsonMust);
-        }
-
-        if (!mustNotIsEmpty) {
-            JsonObject jsonMustNot = JsonObject.create();
-            mustNot.injectParamsAndBoost(jsonMustNot);
-            input.put("must_not", jsonMustNot);
-        }
-
-        if (!shouldIsEmpty) {
-            JsonObject jsonShould = JsonObject.create();
-            should.injectParamsAndBoost(jsonShould);
-            input.put("should", jsonShould);
-        }
+    public CoreSearchQuery toCore() {
+        return new CoreBooleanQuery(must.toCore(), mustNot.toCore(), should.toCore(), boost);
     }
 }

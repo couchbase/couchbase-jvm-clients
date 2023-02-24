@@ -16,25 +16,32 @@
 
 package com.couchbase.client.java.search.sort;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.sort.CoreSearchGeoDistanceUnits;
+
 public enum SearchGeoDistanceUnits {
-  Meters("meters"),
-  Miles("miles"),
-  Centimeters("centimeters"),
-  Millimeters("millimeters"),
-  NauticalMiles("nauticalmiles"),
-  Kilometers("kilometers"),
-  Feet("feet"),
-  Yards("yards"),
-  Inch("inch");
+  Meters(CoreSearchGeoDistanceUnits.METERS),
+  Miles(CoreSearchGeoDistanceUnits.MILES),
+  Centimeters(CoreSearchGeoDistanceUnits.CENTIMETERS),
+  Millimeters(CoreSearchGeoDistanceUnits.MILLIMETERS),
+  NauticalMiles(CoreSearchGeoDistanceUnits.NAUTICAL_MILES),
+  Kilometers(CoreSearchGeoDistanceUnits.KILOMETERS),
+  Feet(CoreSearchGeoDistanceUnits.FEET),
+  Yards(CoreSearchGeoDistanceUnits.YARDS),
+  Inch(CoreSearchGeoDistanceUnits.INCH);
 
-  private final String identifier;
+  private final CoreSearchGeoDistanceUnits internal;
 
-  SearchGeoDistanceUnits(final String identifier) {
-    this.identifier = identifier;
+  SearchGeoDistanceUnits(final CoreSearchGeoDistanceUnits identifier) {
+    this.internal = identifier;
   }
 
   public String identifier() {
-    return identifier;
+    return internal.identifier();
   }
 
+  @Stability.Internal
+  public CoreSearchGeoDistanceUnits toCore() {
+    return internal;
+  }
 }

@@ -15,7 +15,8 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreMatchAllQuery;
 import com.couchbase.client.java.search.SearchQuery;
 
 /**
@@ -38,7 +39,7 @@ public class MatchAllQuery extends SearchQuery {
     }
 
     @Override
-    protected void injectParams(JsonObject input) {
-        input.put("match_all", (String) null);
+    public CoreSearchQuery toCore() {
+        return new CoreMatchAllQuery(boost);
     }
 }

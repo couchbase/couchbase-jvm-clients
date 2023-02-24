@@ -24,6 +24,8 @@ import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.api.manager.search.ClassicCoreScopeSearchIndexManager;
 import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
 import com.couchbase.client.core.api.query.CoreQueryOps;
+import com.couchbase.client.core.api.search.ClassicCoreSearchOps;
+import com.couchbase.client.core.api.search.CoreSearchOps;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.diagnostics.ClusterState;
@@ -122,6 +124,11 @@ public class CoreProtostellar implements CoreCouchbaseOps {
   @Override
   public CoreQueryOps queryOps() {
     return new ProtostellarCoreQueryOps(this);
+  }
+
+  @Override
+  public CoreSearchOps searchOps(@Nullable CoreBucketAndScope scope) {
+    throw new UnsupportedOperationException("Search is not yet supported in Protostellar");
   }
 
   @Override

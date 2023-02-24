@@ -15,19 +15,27 @@
  */
 package com.couchbase.client.java.search.sort;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.sort.CoreSearchFieldType;
+
 public enum SearchFieldType {
-    AUTO("auto"),
-    STRING("string"),
-    NUMBER("number"),
-    DATE("date");
+    AUTO(CoreSearchFieldType.AUTO),
+    STRING(CoreSearchFieldType.STRING),
+    NUMBER(CoreSearchFieldType.NUMBER),
+    DATE(CoreSearchFieldType.DATE);
 
-    private final String value;
+    private final CoreSearchFieldType internal;
 
-    SearchFieldType(String value) {
-        this.value = value;
+    SearchFieldType(CoreSearchFieldType value) {
+        this.internal = value;
     }
 
     public String value() {
-        return value;
+        return internal.value();
+    }
+
+    @Stability.Internal
+    public CoreSearchFieldType toCore() {
+        return internal;
     }
 }

@@ -15,57 +15,46 @@
  */
 package com.couchbase.client.java.search.result;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.result.CoreSearchMetrics;
+
 import java.time.Duration;
 
 public class SearchMetrics {
 
-    private final long took;
-    private final long totalRows;
-    private final double maxScore;
-    private final long successPartitionCount;
-    private final long errorPartitionCount;
+    private final CoreSearchMetrics internal;
 
-    public SearchMetrics(long took, long totalRows, double maxScore, final long successPartitionCount,
-                         final long errorPartitionCount) {
-        this.took = took;
-        this.totalRows = totalRows;
-        this.maxScore = maxScore;
-        this.successPartitionCount = successPartitionCount;
-        this.errorPartitionCount = errorPartitionCount;
+    @Stability.Internal
+    public SearchMetrics(CoreSearchMetrics internal) {
+        this.internal = internal;
     }
 
     public Duration took() {
-        return Duration.ofNanos(this.took);
+        return internal.took();
     }
 
     public long totalRows() {
-        return this.totalRows;
+        return internal.totalRows();
     }
 
     public double maxScore() {
-        return this.maxScore;
+        return internal.maxScore();
     }
 
     public long successPartitionCount() {
-        return successPartitionCount;
+        return internal.successPartitionCount();
     }
 
     public long errorPartitionCount() {
-        return errorPartitionCount;
+        return internal.errorPartitionCount();
     }
 
     public long totalPartitionCount() {
-        return successPartitionCount + errorPartitionCount;
+        return internal.totalPartitionCount();
     }
 
     @Override
     public String toString() {
-        return "SearchMetrics{" +
-          "took=" + took +
-          ", totalRows=" + totalRows +
-          ", maxScore=" + maxScore +
-          ", successPartitionCount=" + successPartitionCount +
-          ", errorPartitionCount=" + errorPartitionCount +
-          '}';
+        return internal.toString();
     }
 }

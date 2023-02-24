@@ -15,7 +15,8 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreWildcardQuery;
 import com.couchbase.client.java.search.SearchQuery;
 
 /**
@@ -47,10 +48,7 @@ public class WildcardQuery extends SearchQuery {
     }
 
     @Override
-    protected void injectParams(JsonObject input) {
-        if (field != null) {
-            input.put("field", field);
-        }
-        input.put("wildcard", wildcard);
+    public CoreSearchQuery toCore() {
+        return new CoreWildcardQuery(wildcard, field, boost);
     }
 }

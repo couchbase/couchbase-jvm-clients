@@ -16,7 +16,8 @@
 package com.couchbase.client.java.search.facet;
 
 
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.facet.CoreSearchFacet;
 
 import java.util.List;
 
@@ -29,8 +30,8 @@ import java.util.List;
  */
 public abstract class SearchFacet {
 
-    private final String field;
-    private final int size;
+    protected final String field;
+    protected final int size;
 
     SearchFacet(String field, int size) {
         this.field = field;
@@ -49,9 +50,6 @@ public abstract class SearchFacet {
         return new DateRangeFacet(field, size, ranges);
     }
 
-    public void injectParams(final JsonObject queryJson) {
-        queryJson.put("size", size);
-        queryJson.put("field", field);
-    }
-
+    @Stability.Internal
+    public abstract CoreSearchFacet toCore();
 }

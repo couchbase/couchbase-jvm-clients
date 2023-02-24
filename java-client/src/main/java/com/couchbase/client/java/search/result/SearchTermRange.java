@@ -15,9 +15,11 @@
  */
 package com.couchbase.client.java.search.result;
 
-import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.result.CoreSearchTermRange;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.Objects;
 
 /**
  * A range (or bucket) for a {@link TermSearchFacetResult}.
@@ -30,54 +32,37 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonPrope
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SearchTermRange {
 
-    private final String name;
-    private final long count;
+    private final CoreSearchTermRange internal;
 
-    @JsonCreator
-    public SearchTermRange(
-      @JsonProperty("term") String name,
-      @JsonProperty("count") long count) {
-        this.name = name;
-        this.count = count;
+    @Stability.Internal
+    public SearchTermRange(CoreSearchTermRange internal) {
+        this.internal = internal;
     }
 
     public String name() {
-        return name;
+        return internal.name();
     }
 
     public long count() {
-        return count;
+        return internal.count();
     }
 
     @Override
     public String toString() {
-        return "{" + "name='" + name + '\'' +
-          ", count=" + count +
-          '}';
+        return internal.toString();
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        SearchTermRange termRange = (SearchTermRange) o;
-
-        if (count != termRange.count) {
-            return false;
-        }
-        return name.equals(termRange.name);
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        SearchTermRange searchRow = (SearchTermRange) o;
+        return Objects.equals(internal, searchRow.internal);
 
     }
 
     @Override
     public int hashCode() {
-        int result = name.hashCode();
-        result = 31 * result + (int) (count ^ (count >>> 32));
-        return result;
+        return internal.hashCode();
     }
 }

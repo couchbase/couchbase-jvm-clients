@@ -15,6 +15,9 @@
  */
 package com.couchbase.client.java.search.facet;
 
+import com.couchbase.client.core.api.search.facet.CoreSearchFacet;
+import com.couchbase.client.core.api.search.facet.CoreTermFacet;
+
 /**
  * A facet that gives the number of occurrences of the most recurring terms in all rows.
  *
@@ -26,6 +29,11 @@ public class TermFacet extends SearchFacet {
 
     TermFacet(String field, int limit) {
         super(field, limit);
+    }
+
+    @Override
+    public CoreSearchFacet toCore() {
+        return new CoreTermFacet(field, size);
     }
 
 }

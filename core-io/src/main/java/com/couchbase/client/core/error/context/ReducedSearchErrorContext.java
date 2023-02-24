@@ -17,6 +17,8 @@
 package com.couchbase.client.core.error.context;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import reactor.util.annotation.Nullable;
 
 import java.util.Map;
 
@@ -26,10 +28,10 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 @Stability.Uncommitted
 public class ReducedSearchErrorContext extends ErrorContext {
 
-  private final String indexName;
-  private final Map<String, Object>  searchQuery;
+  private final @Nullable String indexName;
+  private final @Nullable CoreSearchQuery searchQuery;
 
-  public ReducedSearchErrorContext(String indexName, Map<String, Object> searchQuery) {
+  public ReducedSearchErrorContext(@Nullable String indexName, @Nullable CoreSearchQuery searchQuery) {
     super(null);
     this.indexName = indexName;
     this.searchQuery = searchQuery;
@@ -42,7 +44,7 @@ public class ReducedSearchErrorContext extends ErrorContext {
       input.put("indexName", redactMeta(indexName));
     }
     if (searchQuery != null) {
-      input.put("query", redactUser(searchQuery));
+      input.put("query", redactUser(searchQuery.export()));
     }
   }
 

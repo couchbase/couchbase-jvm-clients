@@ -15,7 +15,8 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreMatchNoneQuery;
 import com.couchbase.client.java.search.SearchQuery;
 
 /**
@@ -37,8 +38,7 @@ public class MatchNoneQuery extends SearchQuery {
         return this;
     }
 
-    @Override
-    protected void injectParams(JsonObject input) {
-        input.put("match_none", (String) null);
+    public CoreSearchQuery toCore() {
+        return new CoreMatchNoneQuery(boost);
     }
 }

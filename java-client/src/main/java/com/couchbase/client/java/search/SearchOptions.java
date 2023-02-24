@@ -17,41 +17,57 @@
 package com.couchbase.client.java.search;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.CoreHighlightStyle;
+import com.couchbase.client.core.api.search.CoreSearchOptions;
+import com.couchbase.client.core.api.search.CoreSearchScanConsistency;
+import com.couchbase.client.core.api.search.facet.CoreSearchFacet;
+import com.couchbase.client.core.api.search.sort.CoreSearchSort;
+import com.couchbase.client.core.api.shared.CoreMutationState;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.util.CbCollections;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.query.QueryOptions;
+import com.couchbase.client.java.query.QueryOptionsUtil;
 import com.couchbase.client.java.search.facet.SearchFacet;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.search.sort.SearchSort;
+import reactor.util.annotation.Nullable;
 
-import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static java.util.Objects.requireNonNull;
 
 public class SearchOptions extends CommonOptions<SearchOptions> {
-
-  private String[] collections;
+  private @Nullable List<String> collections;
   private SearchScanConsistency consistency;
   private MutationState consistentWith;
   private boolean disableScoring = false;
   private Boolean explain;
   private Map<String, SearchFacet> facets;
-  private String[] fields;
-  private String[] highlightFields;
+  private @Nullable List<String> fields;
+  private @Nullable List<String> highlightFields;
   private HighlightStyle highlightStyle;
   private Integer limit;
   private Map<String, Object> raw;
   private JsonSerializer serializer;
   private Integer skip;
-  private JsonArray sort;
-  private boolean includeLocations = false;
+  private @Nullable List<CoreSearchSort> sort;
+  private @Nullable List<String> sortString;
+  private Boolean includeLocations;
 
   public static SearchOptions searchOptions() {
     return new SearchOptions();
@@ -129,9 +145,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
    */
   public SearchOptions highlight(HighlightStyle style, String... fields) {
     this.highlightStyle = style;
-    if (fields != null && fields.length > 0) {
-      highlightFields = fields;
-    }
+    this.highlightFields = new ArrayList<>(Arrays.asList(requireNonNull(fields)));
     return this;
   }
 
@@ -176,9 +190,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
    * @return this SearchQuery for chaining.
    */
   public SearchOptions fields(String... fields) {
-    if (fields != null) {
-      this.fields = fields;
-    }
+    this.fields = new ArrayList<>(Arrays.asList(requireNonNull(fields)));
     return this;
   }
 
@@ -191,9 +203,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
    * @return this SearchQuery for chaining.
    */
   public SearchOptions collections(String... collectionNames) {
-    if (collectionNames != null) {
-      this.collections = collectionNames;
-    }
+    this.collections = new ArrayList<>(Arrays.asList(requireNonNull(collectionNames)));
     return this;
   }
 
@@ -239,18 +249,18 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
    * @return this SearchQuery for chaining.
    */
   public SearchOptions sort(Object... sort) {
-    if (this.sort == null) {
-      this.sort = JsonArray.create();
-    }
-
     if (sort != null) {
       for (Object o : sort) {
         if (o instanceof String) {
-          this.sort.add((String) o);
+          if (this.sortString == null) {
+            this.sortString = new ArrayList<>();
+          }
+          this.sortString.add((String) o);
         } else if (o instanceof SearchSort) {
-          JsonObject params = JsonObject.create();
-          ((SearchSort) o).injectParams(params);
-          this.sort.add(params);
+          if (this.sort == null) {
+            this.sort = new ArrayList<>();
+          }
+          this.sort.add(((SearchSort) o).toCore());
         } else {
           throw InvalidArgumentException.fromMessage("Only String or SearchSort " +
             "instances are allowed as sort arguments!");
@@ -296,7 +306,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   /**
    * If set to true, will include the {@link SearchRow#locations()}.
    *
-   * @param includeLocations set to true to inclue the locations.
+   * @param includeLocations set to true to include the locations.
    * @return these {@link SearchOptions} for chaining purposes.
    */
   public SearchOptions includeLocations(final boolean includeLocations) {
@@ -309,7 +319,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
     return new Built();
   }
 
-  public class Built extends BuiltCommonOptions {
+  public class Built extends BuiltCommonOptions implements CoreSearchOptions {
 
     Built() {
     }
@@ -318,91 +328,113 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
       return serializer;
     }
 
-    /**
-     * Inject the top level parameters of a query into a prepared {@link JsonObject}
-     * that represents the root of the query.
-     *
-     * @param indexName the name of the index to inject.
-     * @param queryJson the prepared {@link JsonObject} for the whole query.
-     * @param timeout the timeout of the request to send to the server.
-     */
-    @Stability.Internal
-    public void injectParams(final String indexName, JsonObject queryJson, Duration timeout) {
-      if (limit != null && limit >= 0) {
-        queryJson.put("size", limit);
+    @Override
+    public List<String> collections() {
+      return collections == null ? Collections.emptyList() : collections;
+    }
+
+    @Override
+    public CoreSearchScanConsistency consistency() {
+      if (consistency == SearchScanConsistency.NOT_BOUNDED) {
+        return CoreSearchScanConsistency.NOT_BOUNDED;
       }
-      if (skip != null && skip >= 0) {
-        queryJson.put("from", skip);
+      return null;
+    }
+
+    @Override
+    public CoreMutationState consistentWith() {
+      if (consistentWith == null) {
+        return null;
       }
-      if (explain != null) {
-        queryJson.put("explain", explain);
-      }
-      if (highlightStyle != null) {
-        JsonObject highlight = JsonObject.create();
-        if (highlightStyle != HighlightStyle.SERVER_DEFAULT) {
-          highlight.put("style", highlightStyle.name().toLowerCase());
-        }
-        if (highlightFields != null && highlightFields.length > 0) {
-          highlight.put("fields", JsonArray.from((Object[]) highlightFields));
-        }
-        queryJson.put("highlight", highlight);
-      }
-      if (fields != null && fields.length > 0) {
-        queryJson.put("fields", JsonArray.from((Object[]) fields));
-      }
-      if (sort != null && !sort.isEmpty()) {
-        queryJson.put("sort", sort);
-      }
-      if (disableScoring) {
-        queryJson.put("score", "none");
+      return new CoreMutationState(consistentWith);
+    }
+
+    @Override
+    public Boolean disableScoring() {
+      return disableScoring;
+    }
+
+    @Override
+    public Boolean explain() {
+      return explain;
+    }
+
+    @Override
+    public Map<String, CoreSearchFacet> facets() {
+      if (facets == null) {
+        return Collections.emptyMap();
       }
 
-      if (facets != null && !facets.isEmpty()) {
-        JsonObject f = JsonObject.create();
-        for (Map.Entry<String, SearchFacet> entry : facets.entrySet()) {
-          JsonObject facetJson = JsonObject.create();
-          entry.getValue().injectParams(facetJson);
-          f.put(entry.getKey(), facetJson);
-        }
-        queryJson.put("facets", f);
+      Map<String, CoreSearchFacet> out = new HashMap<>();
+      facets.forEach((k, v) -> out.put(k, v.toCore()));
+      return out;
+    }
+
+    @Override
+    public List<String> fields() {
+      return fields == null ? Collections.emptyList() : fields;
+    }
+
+    @Override
+    public List<String> highlightFields() {
+      return highlightFields == null ? Collections.emptyList() : highlightFields;
+    }
+
+    @Override
+    public CoreHighlightStyle highlightStyle() {
+      if (highlightStyle == null) {
+        return null;
       }
-
-      JsonObject control = JsonObject.create();
-      control.put("timeout", timeout.toMillis());
-
-      if (consistency != null && consistency != SearchScanConsistency.NOT_BOUNDED) {
-        JsonObject consistencyJson = JsonObject.create();
-        consistencyJson.put("level", consistency.toString());
-        control.put("consistency", consistencyJson);
-      }
-
-      if (consistentWith != null) {
-        JsonObject consistencyJson = JsonObject.create();
-        consistencyJson.put("level", "at_plus");
-        consistencyJson.put("vectors", JsonObject.create().put(indexName, consistentWith.exportForSearch()));
-        control.put("consistency", consistencyJson);
-      }
-
-      //if any control was set, inject it
-      if (!control.isEmpty()) {
-        queryJson.put("ctl", control);
-      }
-
-      if (collections != null && collections.length > 0) {
-        queryJson.put("collections", JsonArray.from((Object[]) collections));
-      }
-
-      if (includeLocations) {
-        queryJson.put("includeLocations", true);
-      }
-
-      if (raw != null) {
-        for (Map.Entry<String, Object> entry : raw.entrySet()) {
-          queryJson.put(entry.getKey(), entry.getValue());
-        }
+      switch (highlightStyle) {
+        case HTML:
+          return CoreHighlightStyle.HTML;
+        case ANSI:
+          return CoreHighlightStyle.ANSI;
+        case SERVER_DEFAULT:
+          return CoreHighlightStyle.SERVER_DEFAULT;
+        default:
+          throw new IllegalStateException("Internal bug - unknown highlight style");
       }
     }
 
+    @Override
+    public Integer limit() {
+      return limit;
+    }
+
+    @Override
+    public JsonNode raw() {
+      if (raw == null) {
+        return null;
+      }
+
+      return QueryOptionsUtil.convert(raw);
+    }
+
+    @Override
+    public Integer skip() {
+      return skip;
+    }
+
+    @Override
+    public List<CoreSearchSort> sort() {
+      return sort == null ? Collections.emptyList() : sort;
+    }
+
+    @Override
+    public List<String> sortString() {
+      return sortString == null ? Collections.emptyList() : sortString;
+    }
+
+    @Override
+    public Boolean includeLocations() {
+      return includeLocations;
+    }
+
+    @Override
+    public CoreCommonOptions commonOptions() {
+      return this;
+    }
   }
 
 }

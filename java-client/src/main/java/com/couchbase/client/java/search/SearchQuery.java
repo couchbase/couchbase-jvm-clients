@@ -17,6 +17,9 @@ package com.couchbase.client.java.search;
 
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.queries.BooleanFieldQuery;
 import com.couchbase.client.java.search.queries.BooleanQuery;
@@ -41,6 +44,7 @@ import com.couchbase.client.java.search.queries.TermRangeQuery;
 import com.couchbase.client.java.search.queries.WildcardQuery;
 import com.couchbase.client.java.util.Coordinate;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -55,7 +59,7 @@ import java.util.List;
 @Stability.Internal
 public abstract class SearchQuery {
 
-    private Double boost;
+    protected Double boost;
 
     protected SearchQuery() { }
 
@@ -64,29 +68,14 @@ public abstract class SearchQuery {
         return this;
     }
 
-
-    public void injectParamsAndBoost(JsonObject input) {
-        if (boost != null) {
-            input.put("boost", boost);
-        }
-        injectParams(input);
-    }
-
-
-    protected abstract void injectParams(JsonObject input);
+    @Stability.Internal
+    public abstract CoreSearchQuery toCore();
 
     /**
      * Exports the whole query as a {@link JsonObject}.
-     *
-     * @see #injectParams(JsonObject) for the part that deals with global parameters
      */
     public JsonObject export() {
-        JsonObject result = JsonObject.create();
-        injectParams(result);
-
-        JsonObject queryJson = JsonObject.create();
-        injectParamsAndBoost(queryJson);
-        return result.put("query", queryJson);
+        return JsonObject.fromJson(toCore().export().toString());
     }
 
     /**
@@ -94,9 +83,7 @@ public abstract class SearchQuery {
      */
     @Override
     public String toString() {
-        JsonObject json = JsonObject.create();
-        injectParamsAndBoost(json);
-        return json.toString();
+        return export().toString();
     }
 
     /** Prepare a {@link QueryStringQuery} body. */

@@ -15,18 +15,26 @@
  */
 package com.couchbase.client.java.search.sort;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.sort.CoreSearchFieldMode;
+
 public enum SearchFieldMode {
-    DEFAULT("default"),
-    MIN("min"),
-    MAX("max");
+    DEFAULT(CoreSearchFieldMode.DEFAULT),
+    MIN(CoreSearchFieldMode.MIN),
+    MAX(CoreSearchFieldMode.MAX);
 
-    private final String value;
+    private final CoreSearchFieldMode internal;
 
-    SearchFieldMode(String value) {
-        this.value = value;
+    SearchFieldMode(CoreSearchFieldMode value) {
+        this.internal = value;
     }
 
     public String value() {
-        return value;
+        return internal.value();
+    }
+
+    @Stability.Internal
+    public CoreSearchFieldMode toCore() {
+        return internal;
     }
 }

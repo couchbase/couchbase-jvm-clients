@@ -17,12 +17,14 @@
 package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.core.annotation.SinceCouchbase;
-import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.json.JsonObject;
-import com.couchbase.client.java.util.Coordinate;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreCoordinate;
+import com.couchbase.client.core.api.search.queries.CoreGeoPolygonQuery;
 import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.util.Coordinate;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
@@ -58,16 +60,9 @@ public class GeoPolygonQuery extends SearchQuery {
     }
 
     @Override
-    protected void injectParams(final JsonObject input) {
-        final JsonArray points = JsonArray.create();
-
-        for (Coordinate coordinate : coordinates) {
-            points.add(JsonArray.from(coordinate.lon(), coordinate.lat()));
-        }
-        input.put("polygon_points", points);
-
-        if (field != null) {
-            input.put("field", field);
-        }
+    public CoreSearchQuery toCore() {
+        return new CoreGeoPolygonQuery(coordinates.stream().map(v -> new CoreCoordinate(v.lon(), v.lat())).collect(Collectors.toList()),
+                field,
+                boost);
     }
 }

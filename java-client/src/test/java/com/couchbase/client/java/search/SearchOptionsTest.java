@@ -16,6 +16,9 @@
 
 package com.couchbase.client.java.search;
 
+import com.couchbase.client.core.api.search.ClassicCoreSearchOps;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import org.junit.jupiter.api.Test;
@@ -31,21 +34,24 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  */
 class SearchOptionsTest {
 
+  private JsonObject test(SearchOptions opts) {
+    ObjectNode out = Mapper.createObjectNode();
+    ClassicCoreSearchOps.injectOptions("indexName", out, Duration.ofSeconds(1), opts.build());
+    return JsonObject.fromJson(out.toString());
+  }
+
   /**
    * Makes sure that (only) when scoring is disabled, it shows up in the resulting query.
    */
   @Test
   void allowToDisableScoring() {
-    JsonObject output = JsonObject.create();
-    searchOptions().disableScoring(true).build().injectParams("idx", output, Duration.ofSeconds(1));
+    JsonObject output = test(searchOptions().disableScoring(true));
     assertEquals(output.getString("score"), "none");
 
-    output = JsonObject.create();
-    searchOptions().disableScoring(false).build().injectParams("idx", output, Duration.ofSeconds(1));
+    output = test(searchOptions().disableScoring(false));
     assertFalse(output.containsKey("score"));
 
-    output = JsonObject.create();
-    searchOptions().build().injectParams("idx", output, Duration.ofSeconds(1));
+    output = test(searchOptions());
     assertFalse(output.containsKey("score"));
   }
 
@@ -55,15 +61,13 @@ class SearchOptionsTest {
    */
   @Test
   void canProvideCollections() {
-    JsonObject output = JsonObject.create();
-    searchOptions().collections("a", "b").build().injectParams("idx", output, Duration.ofSeconds(1));
+    JsonObject output = test(searchOptions().collections("a", "b"));
     assertEquals(output.getArray("collections"), JsonArray.from("a", "b"));
   }
 
   @Test
   void injectsTimeout() {
-    JsonObject output = JsonObject.create();
-    searchOptions().build().injectParams("idx", output, Duration.ofSeconds(1));
+    JsonObject output = test(searchOptions());
     assertEquals(1000, output.getObject("ctl").getLong("timeout"));
   }
 

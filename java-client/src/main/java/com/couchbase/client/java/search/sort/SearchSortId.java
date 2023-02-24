@@ -15,6 +15,9 @@
  */
 package com.couchbase.client.java.search.sort;
 
+import com.couchbase.client.core.api.search.sort.CoreSearchSort;
+import com.couchbase.client.core.api.search.sort.CoreSearchSortId;
+
 /**
  * Sort by the document ID.
  *
@@ -22,16 +25,8 @@ package com.couchbase.client.java.search.sort;
  * @since 2.4.5
  */
 public class SearchSortId extends SearchSort {
-
     @Override
-    protected String identifier() {
-        return "id";
+    public CoreSearchSort toCore() {
+        return new CoreSearchSortId(descending);
     }
-
-    @Override
-    public SearchSortId desc(boolean descending) {
-        super.desc(descending);
-        return this;
-    }
-
 }

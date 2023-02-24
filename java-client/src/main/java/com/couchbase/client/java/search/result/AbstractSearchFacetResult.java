@@ -15,44 +15,38 @@
  */
 package com.couchbase.client.java.search.result;
 
+import com.couchbase.client.core.api.search.result.CoreAbstractSearchFacetResult;
+
 public abstract class AbstractSearchFacetResult implements SearchFacetResult {
 
-  protected final String name;
-  protected final String field;
-  protected final long total;
-  protected final long missing;
-  protected final long other;
+  protected final CoreAbstractSearchFacetResult internal;
 
-  protected AbstractSearchFacetResult(String facetName, String field, long total, long missing, long other) {
-    this.name = facetName;
-    this.field = field;
-    this.total = total;
-    this.missing = missing;
-    this.other = other;
+  protected AbstractSearchFacetResult(CoreAbstractSearchFacetResult internal) {
+    this.internal = internal;
   }
 
   @Override
   public String name() {
-    return this.name;
+    return internal.name();
   }
 
   @Override
   public String field() {
-    return this.field;
+    return internal.field();
   }
 
   @Override
   public long missing() {
-    return this.missing;
+    return internal.missing();
   }
 
   @Override
   public long other() {
-    return this.other;
+    return internal.other();
   }
 
   @Override
   public long total() {
-    return this.total;
+    return internal.total();
   }
 }

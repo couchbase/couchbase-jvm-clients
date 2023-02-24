@@ -16,13 +16,15 @@
 
 package com.couchbase.client.java.search.result;
 
+import com.couchbase.client.core.api.search.result.CoreSearchResult;
+import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.search.SearchMetaData;
+import com.couchbase.client.java.search.util.SearchFacetUtil;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
-import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+import java.util.stream.Collectors;
 
 /**
  * The result of an search query, including hits and associated metadata.
@@ -31,31 +33,15 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
  */
 public class SearchResult {
 
-    /**
-     * Stores the encoded rows from the search response.
-     */
-    private final List<SearchRow> rows;
-
-    /**
-     * The metadata for this search result.
-     */
-    private final SearchMetaData meta;
-
-    /**
-     * Holds the facets if any returned.
-     */
-    private final Map<String, SearchFacetResult> facets;
+    private final CoreSearchResult internal;
+    private final JsonSerializer serializer;
 
     /**
      * Creates a new SearchResult.
-     *
-     * @param rows the rows/hits for this result.
-     * @param meta the search metadata.
      */
-    public SearchResult(final List<SearchRow> rows, final Map<String, SearchFacetResult> facets, final SearchMetaData meta) {
-        this.rows = rows;
-        this.facets = facets;
-        this.meta = meta;
+    public SearchResult(final CoreSearchResult internal, final JsonSerializer serializer) {
+        this.internal = internal;
+        this.serializer = serializer;
     }
 
     /**
@@ -63,29 +49,30 @@ public class SearchResult {
      * query.
      */
     public SearchMetaData metaData() {
-        return meta;
+        return new SearchMetaData(internal.metaData());
     }
 
     /**
      * Returns all search hits.
      */
     public List<SearchRow> rows() {
-        return rows;
+        return internal.rows()
+                .stream()
+                .map(row -> new SearchRow(row, serializer))
+                .collect(Collectors.toList());
     }
 
     /**
      * Returns the facets if present in this query.
      */
     public Map<String, SearchFacetResult> facets() {
-        return facets;
+        Map<String, SearchFacetResult> out = new HashMap<>();
+        internal.facets().forEach((k, v) -> out.put(k, SearchFacetUtil.convert(v)));
+        return out;
     }
 
     @Override
     public String toString() {
-        return "SearchResult{" +
-          "rows=" + redactUser(rows) +
-          ", meta=" + redactMeta(meta) +
-          ", facets=" + redactUser(facets) +
-          '}';
+        return internal.toString();
     }
 }

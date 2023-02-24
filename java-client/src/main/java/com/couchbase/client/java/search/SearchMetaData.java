@@ -16,35 +16,33 @@
 
 package com.couchbase.client.java.search;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.CoreSearchMetaData;
 import com.couchbase.client.java.search.result.SearchMetrics;
 
 import java.util.Map;
 
 public class SearchMetaData {
-    private final Map<String, String> errors;
-    private final SearchMetrics metrics;
+    private final CoreSearchMetaData internal;
 
-    SearchMetaData(final Map<String, String> errors, final SearchMetrics metrics) {
-        this.errors = errors;
-        this.metrics = metrics;
+    @Stability.Internal
+    public SearchMetaData(final CoreSearchMetaData internal) {
+        this.internal = internal;
     }
 
     /**
      * Provides a {@link SearchMetrics} object giving statistics on the request like number of rows, total time taken...
      */
     public SearchMetrics metrics() {
-        return metrics;
+        return new SearchMetrics(internal.metrics());
     }
 
     public Map<String, String> errors() {
-        return errors;
+        return internal.errors();
     }
 
     @Override
     public String toString() {
-        return "SearchMeta{" +
-          "metrics=" + metrics +
-          ", errors=" + errors +
-          '}';
+        return internal.toString();
     }
 }

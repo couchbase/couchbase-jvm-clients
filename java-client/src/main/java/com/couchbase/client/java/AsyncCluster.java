@@ -20,6 +20,8 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.query.CoreQueryOps;
+import com.couchbase.client.core.api.search.CoreSearchOps;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.diagnostics.ClusterState;
@@ -58,7 +60,6 @@ import com.couchbase.client.java.manager.user.AsyncUserManager;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
-import com.couchbase.client.java.search.SearchAccessor;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.result.SearchResult;
@@ -135,6 +136,11 @@ public class AsyncCluster {
    * Strategy for performing query operations.
    */
   final CoreQueryOps queryOps;
+
+  /**
+   * Strategy for performing search operations.
+   */
+  final CoreSearchOps searchOps;
 
   /**
    * Connect to a Couchbase cluster with a username and a password as authentication credentials.
@@ -224,6 +230,7 @@ public class AsyncCluster {
     this.couchbaseOps = CoreCouchbaseOps.create(environment.get(), authenticator, connectionString);
     this.authenticator = authenticator;
     this.queryOps = couchbaseOps.queryOps();
+    this.searchOps = couchbaseOps.searchOps(null);
 
     if (couchbaseOps instanceof Core) {
       ((Core) couchbaseOps).initGlobalConfig();
@@ -401,28 +408,12 @@ public class AsyncCluster {
    */
   public CompletableFuture<SearchResult> searchQuery(final String indexName, final SearchQuery query, final SearchOptions options) {
     notNull(query, "SearchQuery", () -> new ReducedSearchErrorContext(indexName, null));
-    notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, query.export().toMap()));
+    CoreSearchQuery coreQuery = query.toCore();
+    notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, coreQuery));
     SearchOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment.get().jsonSerializer() : opts.serializer();
-    return SearchAccessor.searchQueryAsync(core(), searchRequest(indexName, query, opts), serializer);
-  }
-
-  SearchRequest searchRequest(final String indexName, final SearchQuery query, final SearchOptions.Built opts) {
-    notNullOrEmpty(indexName, "IndexName", () -> new ReducedSearchErrorContext(indexName, query.export().toMap()));
-    Duration timeout = opts.timeout().orElse(environment.get().timeoutConfig().searchTimeout());
-
-    JsonObject params = query.export();
-    opts.injectParams(indexName, params, timeout);
-    byte[] bytes = params.toString().getBytes(StandardCharsets.UTF_8);
-
-    RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.get().retryStrategy());
-
-    final RequestSpan span = environment()
-      .requestTracer()
-      .requestSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH, opts.parentSpan().orElse(null));
-    SearchRequest request = new SearchRequest(timeout, core().context(), retryStrategy, authenticator, indexName, bytes, span, null);
-    request.context().clientContext(opts.clientContext());
-    return request;
+    return searchOps.searchQueryAsync(indexName, coreQuery, opts)
+            .thenApply(r -> new SearchResult(r, serializer));
   }
 
   /**

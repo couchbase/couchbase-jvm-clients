@@ -15,7 +15,8 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreMatchPhraseQuery;
 import com.couchbase.client.java.search.SearchQuery;
 
 /**
@@ -43,6 +44,11 @@ public class MatchPhraseQuery extends SearchQuery {
         return this;
     }
 
+    @Override
+    public CoreSearchQuery toCore() {
+        return new CoreMatchPhraseQuery(matchPhrase, field, analyzer, boost);
+    }
+
     public MatchPhraseQuery field(String field) {
         this.field = field;
         return this;
@@ -51,16 +57,5 @@ public class MatchPhraseQuery extends SearchQuery {
     public MatchPhraseQuery analyzer(String analyzer) {
         this.analyzer = analyzer;
         return this;
-    }
-
-    @Override
-    protected void injectParams(JsonObject input) {
-        input.put("match_phrase", matchPhrase);
-        if (field != null) {
-            input.put("field", field);
-        }
-        if (analyzer != null) {
-            input.put("analyzer", analyzer);
-        }
     }
 }

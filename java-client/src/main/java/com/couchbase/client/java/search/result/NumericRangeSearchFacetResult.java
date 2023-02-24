@@ -15,10 +15,12 @@
  */
 package com.couchbase.client.java.search.result;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.result.CoreNumericRangeSearchFacetResult;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of a {@link NumericRangeSearchFacetResult}.
@@ -28,32 +30,23 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class NumericRangeSearchFacetResult extends AbstractSearchFacetResult {
 
-  private final List<SearchNumericRange> numericRanges;
+  private final CoreNumericRangeSearchFacetResult internal;
 
-  public NumericRangeSearchFacetResult(
-      @JsonProperty("$name") String name,
-      @JsonProperty("field") String field,
-      @JsonProperty("total") long total,
-      @JsonProperty("missing") long missing,
-      @JsonProperty("other") long other,
-      @JsonProperty("numeric_ranges") List<SearchNumericRange> numericRanges) {
-    super(name, field, total, missing, other);
-    this.numericRanges = numericRanges;
+  @Stability.Internal
+  public NumericRangeSearchFacetResult(CoreNumericRangeSearchFacetResult internal) {
+    super(internal);
+    this.internal = internal;
   }
 
   public List<SearchNumericRange> numericRanges() {
-    return this.numericRanges;
+    return internal.numericRanges()
+            .stream()
+            .map(SearchNumericRange::new)
+            .collect(Collectors.toList());
   }
 
   @Override
   public String toString() {
-    return "NumericRangeSearchFacetResult{" +
-        "name='" + name + '\'' +
-        ", field='" + field + '\'' +
-        ", total=" + total +
-        ", missing=" + missing +
-        ", other=" + other +
-        ", ranges=" + numericRanges +
-        '}';
+    return internal.toString();
   }
 }

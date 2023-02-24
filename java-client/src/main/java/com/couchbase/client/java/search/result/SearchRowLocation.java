@@ -17,9 +17,10 @@ package com.couchbase.client.java.search.result;
 
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.result.CoreSearchRowLocation;
 import reactor.util.annotation.Nullable;
 
-import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * A FTS result row location indicates at which position a given term occurs inside a given field.
@@ -33,53 +34,39 @@ import java.util.Arrays;
 @Stability.Volatile
 public class SearchRowLocation {
 
-    private final String field;
-    private final String term;
-    private final long pos;
-    private final long start;
-    private final long end;
+    private final CoreSearchRowLocation internal;
 
-    /**
-     * can be null
-     */
-    private final long[] arrayPositions;
-
-    SearchRowLocation(String field, String term, long pos, long start, long end, long[] arrayPositions) {
-        this.field = field;
-        this.term = term;
-        this.pos = pos;
-        this.start = start;
-        this.end = end;
-        this.arrayPositions = arrayPositions;
+    SearchRowLocation(CoreSearchRowLocation internal) {
+        this.internal = internal;
     }
 
     public String field() {
-        return field;
+        return internal.field();
     }
 
     public String term() {
-        return term;
+        return internal.term();
     }
 
     /**
      * @return the position of the term within the field, starting at 1
      */
     public long pos() {
-        return pos;
+        return internal.pos();
     }
 
     /**
      * @return the start offset (in bytes) of the term in the the field
      */
     public long start() {
-        return start;
+        return internal.start();
     }
 
     /**
      * @return the end offset (in bytes) of the term in the the field
      */
     public long end() {
-        return end;
+        return internal.end();
     }
 
     /**
@@ -88,65 +75,24 @@ public class SearchRowLocation {
      * @return the array positions, or null if not applicable.
      */
     @Nullable public long[] arrayPositions() {
-        return arrayPositions;
+        return internal.arrayPositions();
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        SearchRowLocation that = (SearchRowLocation) o;
-
-        if (pos != that.pos) {
-            return false;
-        }
-        if (start != that.start) {
-            return false;
-        }
-        if (end != that.end) {
-            return false;
-        }
-        if (!field.equals(that.field)) {
-            return false;
-        }
-        if (!term.equals(that.term)) {
-            return false;
-        }
-        return Arrays.equals(arrayPositions, that.arrayPositions);
-
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        SearchRowLocation searchRow = (SearchRowLocation) o;
+        return Objects.equals(internal, searchRow.internal);
     }
 
     @Override
     public int hashCode() {
-        int result = field.hashCode();
-        result = 31 * result + term.hashCode();
-        result = 31 * result + (int) (pos ^ (pos >>> 32));
-        result = 31 * result + (int) (start ^ (start >>> 32));
-        result = 31 * result + (int) (end ^ (end >>> 32));
-        result = 31 * result + Arrays.hashCode(arrayPositions);
-        return result;
+        return internal.hashCode();
     }
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder()
-                .append("RowLocation{")
-                .append("field='").append(field).append('\'')
-                .append(", term='").append(term).append('\'')
-                .append(", pos=").append(pos)
-                .append(", start=").append(start)
-                .append(", end=").append(end);
-
-        if (arrayPositions != null) {
-            sb.append(", arrayPositions=").append(Arrays.toString(arrayPositions));
-        }
-
-        sb.append('}');
-        return sb.toString();
+        return internal.toString();
     }
 }

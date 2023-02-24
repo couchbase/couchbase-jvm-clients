@@ -15,6 +15,8 @@
  */
 package com.couchbase.client.java.search.sort;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.sort.CoreSearchSort;
 import com.couchbase.client.java.json.JsonObject;
 
 /**
@@ -25,23 +27,14 @@ import com.couchbase.client.java.json.JsonObject;
  */
 public abstract class SearchSort {
 
-    private boolean descending;
+    protected boolean descending;
 
     protected SearchSort() {
         this.descending = false;
     }
 
-    /**
-     * The identifier for the sort type, used in the "by" field.
-     */
-    protected abstract String identifier();
-
-    public void injectParams(final JsonObject queryJson) {
-        queryJson.put("by", identifier());
-        if (descending) {
-            queryJson.put("desc", true);
-        }
-    }
+    @Stability.Internal
+    public abstract CoreSearchSort toCore();
 
     public SearchSort desc(boolean descending) {
         this.descending = descending;

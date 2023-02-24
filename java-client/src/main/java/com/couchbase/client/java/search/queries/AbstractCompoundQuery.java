@@ -16,11 +16,13 @@
 package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.java.search.SearchQuery;
 
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Base class for FTS queries that are composite, compounding several other {@link SearchQuery}.
@@ -45,5 +47,9 @@ public abstract class AbstractCompoundQuery extends SearchQuery {
 
     public List<SearchQuery> childQueries() {
         return this.childQueries;
+    }
+
+    protected List<CoreSearchQuery> childQueriesAsCore() {
+        return childQueries.stream().map(SearchQuery::toCore).collect(Collectors.toList());
     }
 }

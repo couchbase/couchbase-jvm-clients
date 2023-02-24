@@ -15,8 +15,8 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreGeoDistanceQuery;
 import com.couchbase.client.java.search.SearchQuery;
 
 /**
@@ -51,11 +51,7 @@ public class GeoDistanceQuery extends SearchQuery {
     }
 
     @Override
-    protected void injectParams(JsonObject input) {
-        input.put("location", JsonArray.from(locationLon, locationLat));
-        input.put("distance", distance);
-        if (field != null) {
-            input.put("field", field);
-        }
+    public CoreSearchQuery toCore() {
+        return new CoreGeoDistanceQuery(locationLon, locationLat, distance, field, boost);
     }
 }

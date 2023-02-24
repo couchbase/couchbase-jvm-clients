@@ -15,10 +15,12 @@
  */
 package com.couchbase.client.java.search.facet;
 
-import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.facet.CoreDateRange;
+import com.couchbase.client.core.api.search.facet.CoreDateRangeFacet;
+import com.couchbase.client.core.api.search.facet.CoreSearchFacet;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * A facet that categorizes rows inside date ranges (or buckets) provided by the user.
@@ -37,24 +39,9 @@ public class DateRangeFacet extends SearchFacet {
     }
 
     @Override
-    public void injectParams(JsonObject queryJson) {
-        super.injectParams(queryJson);
-
-        JsonArray dateRange = JsonArray.create();
-        for (DateRange dr : dateRanges) {
-            JsonObject drJson = JsonObject.create();
-            drJson.put("name", dr.name());
-
-            if (dr.start() != null) {
-                drJson.put("start", dr.start());
-            }
-            if (dr.end() != null) {
-                drJson.put("end", dr.end());
-            }
-
-            dateRange.add(drJson);
-        }
-        queryJson.put("date_ranges", dateRange);
+    public CoreSearchFacet toCore() {
+        return new CoreDateRangeFacet(field, size, dateRanges.stream()
+                .map(v -> new CoreDateRange(v.name(), v.start, v.end))
+                .collect(Collectors.toList()));
     }
-
 }

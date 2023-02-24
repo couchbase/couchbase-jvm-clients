@@ -15,7 +15,8 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreTermRangeQuery;
 import com.couchbase.client.java.search.SearchQuery;
 
 /**
@@ -89,24 +90,7 @@ public class TermRangeQuery extends SearchQuery {
     }
 
     @Override
-    protected void injectParams(JsonObject input) {
-        if (min == null && max == null) {
-            throw new NullPointerException("TermRangeQuery needs at least one of min or max");
-        }
-        if (min != null) {
-            input.put("min", min);
-            if (inclusiveMin != null) {
-                input.put("inclusive_min", inclusiveMin);
-            }
-        }
-        if (max != null) {
-            input.put("max", max);
-            if (inclusiveMax != null) {
-                input.put("inclusive_max", inclusiveMax);
-            }
-        }
-        if (field != null) {
-            input.put("field", field);
-        }
+    public CoreSearchQuery toCore() {
+        return new CoreTermRangeQuery(min, max, inclusiveMin, inclusiveMax, field, boost);
     }
 }

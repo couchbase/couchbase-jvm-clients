@@ -15,10 +15,12 @@
  */
 package com.couchbase.client.java.search.facet;
 
-import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.facet.CoreNumericRange;
+import com.couchbase.client.core.api.search.facet.CoreNumericRangeFacet;
+import com.couchbase.client.core.api.search.facet.CoreSearchFacet;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * A facet that categorizes rows into numerical ranges (or buckets) provided by the user.
@@ -37,23 +39,9 @@ public class NumericRangeFacet extends SearchFacet {
     }
 
     @Override
-    public void injectParams(JsonObject queryJson) {
-        super.injectParams(queryJson);
-
-        JsonArray numericRange = JsonArray.create();
-        for (NumericRange nr : ranges) {
-            JsonObject nrJson = JsonObject.create();
-            nrJson.put("name", nr.name());
-
-            if (nr.min() != null) {
-                nrJson.put("min", nr.min());
-            }
-            if (nr.max() != null) {
-                nrJson.put("max", nr.max());
-            }
-
-            numericRange.add(nrJson);
-        }
-        queryJson.put("numeric_ranges", numericRange);
+    public CoreSearchFacet toCore() {
+        return new CoreNumericRangeFacet(field, size, ranges.stream()
+                .map(v -> new CoreNumericRange(v.name(), v.min(), v.max()))
+                .collect(Collectors.toList()));
     }
 }

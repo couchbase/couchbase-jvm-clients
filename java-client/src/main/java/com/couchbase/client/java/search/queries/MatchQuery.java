@@ -15,7 +15,9 @@
  */
 package com.couchbase.client.java.search.queries;
 
-import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreMatchOperator;
+import com.couchbase.client.core.api.search.queries.CoreMatchQuery;
 import com.couchbase.client.java.search.SearchQuery;
 
 /**
@@ -33,7 +35,7 @@ public class MatchQuery extends SearchQuery {
     private String analyzer;
     private Integer prefixLength;
     private Integer fuzziness;
-    private MatchOperator operator;
+    private CoreMatchOperator operator;
 
     public MatchQuery(String match) {
         super();
@@ -67,27 +69,12 @@ public class MatchQuery extends SearchQuery {
     }
 
     public MatchQuery operator(final MatchOperator operator) {
-        this.operator = operator;
+        this.operator = operator == MatchOperator.OR ? CoreMatchOperator.OR : CoreMatchOperator.AND;
         return this;
     }
 
     @Override
-    protected void injectParams(JsonObject input) {
-        input.put("match", match);
-        if (field != null) {
-            input.put("field", field);
-        }
-        if (analyzer != null) {
-            input.put("analyzer", analyzer);
-        }
-        if (prefixLength != null) {
-            input.put("prefix_length", prefixLength);
-        }
-        if (fuzziness != null) {
-            input.put("fuzziness", fuzziness);
-        }
-        if (operator != null) {
-            input.put("operator", operator.toString());
-        }
+    public CoreSearchQuery toCore() {
+        return new CoreMatchQuery(match, field, analyzer, prefixLength, fuzziness, operator, boost);
     }
 }

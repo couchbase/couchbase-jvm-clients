@@ -15,6 +15,9 @@
  */
 package com.couchbase.client.java.search.sort;
 
+import com.couchbase.client.core.api.search.sort.CoreSearchSort;
+import com.couchbase.client.core.api.search.sort.CoreSearchSortScore;
+
 /**
  * Sort by the hit score.
  *
@@ -22,10 +25,9 @@ package com.couchbase.client.java.search.sort;
  * @since 2.4.5
  */
 public class SearchSortScore extends SearchSort {
-
     @Override
-    protected String identifier() {
-        return "score";
+    public CoreSearchSort toCore() {
+        return new CoreSearchSortScore(descending);
     }
 
     @Override

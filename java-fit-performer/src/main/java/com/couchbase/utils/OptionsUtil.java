@@ -98,6 +98,10 @@ public class OptionsUtil {
             }
             // [end:3.3.0]
 
+            if (cc.getUseTls()) {
+                clusterEnvironment.securityConfig(env -> env.enableTls(cc.getUseTls()));
+            }
+
             applyClusterConfig(clusterEnvironment, cc);
 
             if (cc.hasObservabilityConfig()) {
