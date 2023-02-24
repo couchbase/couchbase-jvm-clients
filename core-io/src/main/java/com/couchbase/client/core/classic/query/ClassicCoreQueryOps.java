@@ -351,8 +351,8 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
       json.put("scan_cap", opts.scanCap().toString());
     }
 
-    if (opts.metrics()) {
-      json.put("metrics", true);
+    if (!opts.metrics()) {
+      json.put("metrics", false);
     }
 
     if (opts.readonly()) {

@@ -460,6 +460,15 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertTrue(ex.getMessage().contains("Preserving expiry for the query service is not supported"));
     }
 
+    @Test
+    void metricsAreAbsentUnlessRequested() {
+        QueryResult result = cluster.query("select 'hello world' as Greeting", queryOptions().metrics(false));
+        assertFalse(result.metaData().metrics().isPresent());
+
+        result = cluster.query("select 'hello world' as Greeting");
+        assertFalse(result.metaData().metrics().isPresent());
+    }
+
     /**
      * Inserts a document into the collection and returns the ID of it.
      *
