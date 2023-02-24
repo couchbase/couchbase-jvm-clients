@@ -52,6 +52,7 @@ import com.couchbase.client.protostellar.analytics.v1.AnalyticsGrpc;
 import com.couchbase.client.protostellar.internal.hooks.v1.HooksGrpc;
 import com.couchbase.client.protostellar.kv.v1.KvGrpc;
 import com.couchbase.client.protostellar.query.v1.QueryGrpc;
+import com.couchbase.client.protostellar.search.v1.SearchGrpc;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -83,6 +84,7 @@ public class ProtostellarEndpoint {
   private final KvGrpc.KvBlockingStub kvBlockingStub;
   private final AnalyticsGrpc.AnalyticsStub analyticsStub;
   private final QueryGrpc.QueryStub queryStub;
+  private final SearchGrpc.SearchStub searchStub;
   private final HooksGrpc.HooksBlockingStub hooksBlockingStub;
   private final CollectionAdminGrpc.CollectionAdminFutureStub collectionAdminStub;
   private final HostAndPort remote;
@@ -200,6 +202,7 @@ public class ProtostellarEndpoint {
     kvBlockingStub = KvGrpc.newBlockingStub(managedChannel).withInterceptors(ci);
     analyticsStub = AnalyticsGrpc.newStub(managedChannel).withCallCredentials(creds);
     queryStub = QueryGrpc.newStub(managedChannel).withCallCredentials(creds);
+    searchStub = SearchGrpc.newStub(managedChannel).withCallCredentials(creds);
     hooksBlockingStub = HooksGrpc.newBlockingStub(managedChannel).withCallCredentials(creds);
     collectionAdminStub = CollectionAdminGrpc.newFutureStub(managedChannel).withCallCredentials(creds);
   }
@@ -334,6 +337,10 @@ public class ProtostellarEndpoint {
 
   public QueryGrpc.QueryStub queryStub() {
     return queryStub;
+  }
+
+  public SearchGrpc.SearchStub searchStub() {
+    return searchStub;
   }
 
   public HooksGrpc.HooksBlockingStub hooksBlockingStub() {

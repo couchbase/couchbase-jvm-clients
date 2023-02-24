@@ -17,11 +17,12 @@ package com.couchbase.client.core.api.search.sort;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.protostellar.search.v1.Sorting;
 
 @Stability.Internal
 public abstract class CoreSearchSort {
 
-  private boolean descending;
+  protected boolean descending;
 
   protected CoreSearchSort(boolean descending) {
     this.descending = descending;
@@ -35,4 +36,6 @@ public abstract class CoreSearchSort {
       queryJson.put("desc", true);
     }
   }
+
+  public abstract Sorting asProtostellar();
 }

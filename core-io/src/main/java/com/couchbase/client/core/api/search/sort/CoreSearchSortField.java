@@ -17,6 +17,8 @@ package com.couchbase.client.core.api.search.sort;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.protostellar.search.v1.FieldSorting;
+import com.couchbase.client.protostellar.search.v1.Sorting;
 import reactor.util.annotation.Nullable;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -62,5 +64,26 @@ public class CoreSearchSortField extends CoreSearchSort {
         if (missing != null) {
             queryJson.put("missing", missing.value());
         }
+    }
+
+    @Override
+    public Sorting asProtostellar() {
+        FieldSorting.Builder builder = FieldSorting.newBuilder()
+                .setField(field)
+                .setDescending(descending);
+
+        if (missing != null) {
+            builder.setMissing(missing.value());
+        }
+
+        if (mode != null) {
+            builder.setMode(mode.value());
+        }
+
+        if (type != null) {
+            builder.setType(type.value());
+        }
+
+        return Sorting.newBuilder().setFieldSorting(builder).build();
     }
 }

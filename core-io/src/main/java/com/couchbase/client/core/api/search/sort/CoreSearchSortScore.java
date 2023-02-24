@@ -16,6 +16,8 @@
 package com.couchbase.client.core.api.search.sort;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.protostellar.search.v1.ScoreSorting;
+import com.couchbase.client.protostellar.search.v1.Sorting;
 
 @Stability.Internal
 public class CoreSearchSortScore extends CoreSearchSort {
@@ -27,5 +29,12 @@ public class CoreSearchSortScore extends CoreSearchSort {
     @Override
     protected String identifier() {
         return "score";
+    }
+
+    @Override
+    public Sorting asProtostellar() {
+        return Sorting.newBuilder()
+                .setScoreSorting(ScoreSorting.newBuilder().setDescending(descending))
+                .build();
     }
 }

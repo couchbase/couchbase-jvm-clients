@@ -26,7 +26,7 @@ public class CoreSearchMetaData {
     private final Map<String, String> errors;
     private final CoreSearchMetrics metrics;
 
-    CoreSearchMetaData(final Map<String, String> errors, final CoreSearchMetrics metrics) {
+    public CoreSearchMetaData(final Map<String, String> errors, final CoreSearchMetrics metrics) {
         this.errors = errors;
         this.metrics = metrics;
     }

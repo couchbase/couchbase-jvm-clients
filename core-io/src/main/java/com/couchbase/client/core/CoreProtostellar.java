@@ -40,6 +40,7 @@ import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvBinaryOps;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
 import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
 import com.couchbase.client.core.protostellar.query.ProtostellarCoreQueryOps;
+import com.couchbase.client.core.protostellar.search.ProtostellarCoreSearchOps;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.Deadline;
@@ -128,7 +129,7 @@ public class CoreProtostellar implements CoreCouchbaseOps {
 
   @Override
   public CoreSearchOps searchOps(@Nullable CoreBucketAndScope scope) {
-    throw new UnsupportedOperationException("Search is not yet supported in Protostellar");
+    return new ProtostellarCoreSearchOps(this, scope);
   }
 
   @Override

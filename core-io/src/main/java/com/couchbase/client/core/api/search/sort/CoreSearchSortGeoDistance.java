@@ -19,6 +19,9 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.protostellar.search.v1.GeoDistanceSorting;
+import com.couchbase.client.protostellar.search.v1.LatLng;
+import com.couchbase.client.protostellar.search.v1.Sorting;
 import reactor.util.annotation.Nullable;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -59,5 +62,19 @@ public class CoreSearchSortGeoDistance extends CoreSearchSort {
         if (unit != null) {
             queryJson.put("unit", unit.identifier());
         }
+    }
+
+    @Override
+    public Sorting asProtostellar() {
+        GeoDistanceSorting.Builder builder = GeoDistanceSorting.newBuilder()
+                .setField(field)
+                .setDescending(descending)
+                .setCenter(LatLng.newBuilder().setLongitude(locationLon).setLatitude(locationLat));
+
+        if (unit != null) {
+            builder.setUnit(unit.identifier());
+        }
+
+        return Sorting.newBuilder().setGeoDistanceSorting(builder).build();
     }
 }

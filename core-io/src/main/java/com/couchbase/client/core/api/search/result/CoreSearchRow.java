@@ -107,7 +107,10 @@ public class CoreSearchRow {
 
   public static CoreSearchRow fromResponse(final SearchChunkRow row) {
     ObjectNode hit = (ObjectNode) Mapper.decodeIntoTree(row.data());
+    return fromResponse(hit);
+  }
 
+  public static CoreSearchRow fromResponse(ObjectNode hit) {
     String index = hit.get("index").textValue();
     String id = hit.get("id").textValue();
     double score = hit.get("score").doubleValue();
