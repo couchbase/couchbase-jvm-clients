@@ -782,7 +782,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
 
     CoreHttpClient client = adminCluster.core().httpClient(RequestTarget.manager());
     CoreHttpResponse result = client
-      .post(path("/pools/default/buckets/" + bucket + "/scopes"), CoreCommonOptions.DEFAULT)
+      .post(path("/pools/default/buckets/{bucketName}/scopes", mapOf("bucketName", bucket)), CoreCommonOptions.DEFAULT)
       .form(formParams)
       .exec(adminCluster.core())
       .get();

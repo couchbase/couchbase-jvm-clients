@@ -25,6 +25,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.Object
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.json.Mapper;
@@ -54,6 +55,7 @@ import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
  */
 @Stability.Internal
 public class WaitUntilReadyHelper {
+
   @Stability.Internal
   public static CompletableFuture<Void> waitUntilReady(final Core core, final Set<ServiceType> serviceTypes,
                                                        final Duration timeout, final ClusterState desiredState,
@@ -86,7 +88,7 @@ public class WaitUntilReadyHelper {
           // the terse one doesn't have that status in it.
           GenericManagerRequest request = new GenericManagerRequest(
             core.context(),
-            () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/pools/default/buckets/" + bucketName.get()),
+            () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, CoreHttpPath.formatPath("/pools/default/buckets/{}", bucketName.get())),
             true,
             null
           );

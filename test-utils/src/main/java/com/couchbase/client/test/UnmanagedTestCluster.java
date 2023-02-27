@@ -31,6 +31,9 @@ import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
@@ -39,7 +42,6 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -123,7 +125,7 @@ public class UnmanagedTestCluster extends TestCluster {
 
     Response getResponse = httpClient.newCall(new Request.Builder()
       .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-      .url(baseUrl + "/pools/default/b/" + bucketname)
+      .url(baseUrl + "/pools/default/b/" + urlEncode(bucketname))
       .build())
       .execute();
 
@@ -247,7 +249,7 @@ public class UnmanagedTestCluster extends TestCluster {
     try {
       httpClient.newCall(new Request.Builder()
         .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-        .url(baseUrl + "/pools/default/buckets/" + bucketname)
+        .url(baseUrl + "/pools/default/buckets/" + urlEncode(bucketname))
         .delete()
         .build()).execute();
     } catch (Exception ex) {
@@ -311,5 +313,15 @@ public class UnmanagedTestCluster extends TestCluster {
   @Override
   public boolean isProtostellar() {
     return isProtostellar;
+  }
+
+  private static String urlEncode(String s) {
+    try {
+      return URLEncoder.encode(s, StandardCharsets.UTF_8.name())
+        .replace("+", "%20"); // Make sure spaces are encoded as "%20"
+      // so the result can be used in path components and with "application/x-www-form-urlencoded"
+    } catch (UnsupportedEncodingException inconceivable) {
+      throw new AssertionError("UTF-8 not supported", inconceivable);
+    }
   }
 }

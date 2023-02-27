@@ -28,6 +28,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderName
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValues;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.HttpRequest;
@@ -84,12 +85,8 @@ public class ViewRequest extends BaseRequest<ViewResponse>
 
   @Override
   public FullHttpRequest encode() {
-    StringBuilder path = new StringBuilder();
-    path.append("/").append(bucket).append("/_design/");
-    path.append(development ? "dev_" + design : design);
-    path.append("/_view/");
-    path.append(view);
-    path.append("?").append(query);
+
+    String path = CoreHttpPath.formatPath("/{}/_design/{}/_view/{}?"+query, bucket, development ? "dev_" + design : design, view);
 
     ByteBuf content = keysJson.isPresent()
       ? Unpooled.copiedBuffer(keysJson.get())
@@ -99,7 +96,7 @@ public class ViewRequest extends BaseRequest<ViewResponse>
       : HttpMethod.GET;
 
     FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method,
-      path.toString(), content);
+      path, content);
 
     request.headers()
       .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
