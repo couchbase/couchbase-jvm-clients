@@ -202,7 +202,9 @@ public class Cluster internal constructor(
     public val users: UserManager = UserManager(core, httpClient)
 
     /**
-     * A manager for administering N1QL indexes
+     * A manager for administering N1QL indexes.
+     *
+     * For Couchbase Server 7 and later, please use [Collection.queryIndexes] instead.
      */
     public val queryIndexes: QueryIndexManager = QueryIndexManager(this)
 

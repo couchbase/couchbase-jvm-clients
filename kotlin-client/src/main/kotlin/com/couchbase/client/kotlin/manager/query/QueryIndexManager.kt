@@ -32,7 +32,6 @@ import com.couchbase.client.core.manager.CoreQueryIndexManager
 import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.Keyspace
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.internal.RetryTimeoutException
 import com.couchbase.client.kotlin.internal.findCause
 import com.couchbase.client.kotlin.internal.hasCause
@@ -44,10 +43,10 @@ import com.couchbase.client.kotlin.query.execute
 import kotlin.time.Duration
 
 /**
- * @sample com.couchbase.client.kotlin.samples.createPrimaryIndexOnDefaultCollection
- * @sample com.couchbase.client.kotlin.samples.createPrimaryIndex
- * @sample com.couchbase.client.kotlin.samples.getAllIndexesInBucket
- * @sample com.couchbase.client.kotlin.samples.createDeferredIndexes
+ * @sample com.couchbase.client.kotlin.samples.createPrimaryIndexOnDefaultCollectionPreCouchbase7
+ * @sample com.couchbase.client.kotlin.samples.createPrimaryIndexPreCouchbase7
+ * @sample com.couchbase.client.kotlin.samples.getAllIndexesInBucketPreCouchbase7
+ * @sample com.couchbase.client.kotlin.samples.createDeferredIndexesPreCouchbase7
  */
 public class QueryIndexManager internal constructor(
     private val cluster: Cluster,

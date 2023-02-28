@@ -21,7 +21,6 @@ import com.couchbase.client.core.CoreKeyspace
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.kv.CoreAsyncResponse
 import com.couchbase.client.core.api.shared.CoreMutationState
-import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.env.TimeoutConfig
@@ -34,14 +33,13 @@ import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.kv.*
+import com.couchbase.client.core.manager.CoreCollectionQueryIndexManager
 import com.couchbase.client.core.msg.Request
 import com.couchbase.client.core.msg.Response
 import com.couchbase.client.core.msg.ResponseStatus.SUBDOC_FAILURE
 import com.couchbase.client.core.msg.kv.KeyValueRequest
-import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.msg.kv.SubdocGetRequest
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest
-import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.JsonSerializer
@@ -49,7 +47,6 @@ import com.couchbase.client.kotlin.codec.Transcoder
 import com.couchbase.client.kotlin.codec.TypeRef
 import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.env.ClusterEnvironment
-import com.couchbase.client.kotlin.env.env
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.internal.toSaturatedInt
 import com.couchbase.client.kotlin.internal.toStringUtf8
@@ -70,6 +67,7 @@ import com.couchbase.client.kotlin.kv.MutationResult
 import com.couchbase.client.kotlin.kv.ScanSort
 import com.couchbase.client.kotlin.kv.ScanType
 import com.couchbase.client.kotlin.kv.StoreSemantics
+import com.couchbase.client.kotlin.manager.query.CollectionQueryIndexManager
 import com.couchbase.client.kotlin.util.StorageSize
 import com.couchbase.client.kotlin.util.StorageSizeUnit
 import kotlinx.coroutines.flow.Flow
@@ -109,6 +107,22 @@ public class Collection internal constructor(
      * This is also where the counter increment and decrement operations live.
      */
     public val binary: BinaryCollection = BinaryCollection(this)
+
+    /**
+     * A manager for administering this collection's N1QL indexes.
+     *
+     * Requires Couchbase Server 7.0 or later. For earlier versions,
+     * please use [Cluster.queryIndexes].
+     */
+    @SinceCouchbase("7.0")
+    @VolatileCouchbaseApi
+    public val queryIndexes: CollectionQueryIndexManager = CollectionQueryIndexManager(
+        CoreCollectionQueryIndexManager(
+            core.queryOps(),
+            core.environment().requestTracer(),
+            CoreKeyspace.from(collectionId),
+        )
+    )
 
     private fun TimeoutConfig.kvTimeout(durability: Durability): Duration =
         (if (durability.isPersistent()) kvDurableTimeout() else kvTimeout()).toKotlinDuration()

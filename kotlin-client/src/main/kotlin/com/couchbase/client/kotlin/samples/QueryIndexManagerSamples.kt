@@ -16,49 +16,41 @@
 
 package com.couchbase.client.kotlin.samples
 
-import com.couchbase.client.kotlin.Cluster
-import com.couchbase.client.kotlin.Keyspace
+import com.couchbase.client.kotlin.Bucket
+import com.couchbase.client.kotlin.Collection
 import kotlin.time.Duration.Companion.minutes
 
-@Suppress("UNUSED_VARIABLE")
-internal suspend fun createPrimaryIndexOnDefaultCollection(cluster: Cluster) {
-    // Create a new primary index on the default collection
-    cluster.queryIndexes.createPrimaryIndex(
-        keyspace = Keyspace("bucketName")
-    )
+internal suspend fun createPrimaryIndex(collection: Collection) {
+    // Create a new primary index on a collection
+
+    collection.queryIndexes.createPrimaryIndex()
 }
 
-@Suppress("UNUSED_VARIABLE")
-internal suspend fun createPrimaryIndex(cluster: Cluster) {
-    // Create a new primary index on a collection other than the default
-    cluster.queryIndexes.createPrimaryIndex(
-        keyspace = Keyspace("bucketName", "scopeName", "collectionName")
-    )
-}
-
-
-@Suppress("UNUSED_VARIABLE")
-internal suspend fun getAllIndexesInBucket(cluster: Cluster) {
+internal suspend fun getAllIndexesInBucket(bucket: Bucket) {
     // Get all indexes in bucket
-    val indexes = cluster.queryIndexes.getAllIndexes(
-        keyspace = Keyspace("bucketName")
-    )
+
+    val allCollections = bucket.collections.getAllScopes()
+        .flatMap { it.collections }
+        .map { bucket.scope(it.scopeName).collection(it.name) }
+
+    val allIndexesInBucket = allCollections
+        .flatMap { it.queryIndexes.getAllIndexes() }
+
+    allIndexesInBucket.forEach { println(it) }
 }
 
-@Suppress("UNUSED_VARIABLE")
-internal suspend fun createDeferredIndexes(cluster: Cluster) {
+internal suspend fun createDeferredIndexes(collection: Collection) {
     // Create deferred indexes, build them, and wait for them to come online
-    val keyspace = Keyspace("bucketName")
-    with(cluster.queryIndexes) {
-        // create a deferred index
-        createPrimaryIndex(keyspace, deferred = true)
 
-        // build all deferred indexes in a keyspace
-        buildDeferredIndexes(keyspace)
+    with(collection.queryIndexes) {
+        // create a deferred index
+        createPrimaryIndex(deferred = true)
+
+        // build all deferred indexes in a collection
+        buildDeferredIndexes()
 
         // wait for build to complete
         watchIndexes(
-            keyspace = keyspace,
             timeout = 1.minutes,
             indexNames = emptySet(),
             includePrimary = true,

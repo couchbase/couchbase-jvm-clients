@@ -1,6 +1,10 @@
 package com.couchbase.client.kotlin.manager.query
 
+import com.couchbase.client.core.api.manager.CoreQueryIndex
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode
+import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION
+import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.kotlin.Keyspace
 import com.couchbase.client.kotlin.internal.toStringUtf8
@@ -16,6 +20,22 @@ public class QueryIndex(
     public val partition: String?,
     public val raw: ByteArray,
 ) {
+    internal constructor(core: CoreQueryIndex) : this(
+        keyspace = Keyspace(
+            bucket = core.bucketName(),
+            scope = core.scopeName().orElse(DEFAULT_SCOPE),
+            collection = core.collectionName().orElse(DEFAULT_COLLECTION)
+        ),
+        name = core.name(),
+        primary = core.primary(),
+        state = core.state(),
+        type = core.type(),
+        indexKey = Mapper.convertValue(core.indexKey(), object : TypeReference<List<String>>() {}),
+        condition = core.condition().orElse(null),
+        partition = core.partition().orElse(null),
+        raw = Mapper.encodeAsBytes(core.raw()),
+    )
+
     public companion object {
         internal fun parse(jsonBytes: ByteArray): QueryIndex {
             val json = Mapper.decodeIntoTree(jsonBytes)
