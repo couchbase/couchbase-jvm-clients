@@ -355,7 +355,7 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         }
 
         @Test
-        fun `lock expires`(): Unit = runBlocking {
+        fun `getAndLock waits for existing lock to expire`(): Unit = runBlocking {
             val id = nextId()
             collection.upsert(id, "foo")
 
@@ -368,7 +368,14 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
                 )
             }
 
-            assertThat(lockWaitNanos).isGreaterThanOrEqualTo(lockTime.inWholeNanoseconds)
+            // Server might release lock up to 1 second early.
+            // Trond explains: "The granularity of the clock on the server is seconds...
+            // we read the current clock (in seconds) and add the timeout (in seconds).
+            // So you could end up with up to a second less in your lock than you expect
+            // (depending on where in the second you're at)"
+            val expectedMinimumLockWaitNanos = (lockTime - 1.seconds).inWholeNanoseconds;
+
+            assertThat(lockWaitNanos).isGreaterThanOrEqualTo(expectedMinimumLockWaitNanos)
         }
     }
 
