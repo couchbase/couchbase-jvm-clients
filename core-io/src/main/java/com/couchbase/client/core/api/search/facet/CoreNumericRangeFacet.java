@@ -19,6 +19,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.json.Mapper;
+import reactor.util.annotation.Nullable;
 
 import java.util.List;
 
@@ -26,7 +27,7 @@ import java.util.List;
 public class CoreNumericRangeFacet extends CoreSearchFacet {
   private final List<CoreNumericRange> ranges;
 
-  public CoreNumericRangeFacet(String field, int limit, List<CoreNumericRange> ranges) {
+  public CoreNumericRangeFacet(String field, @Nullable Integer limit, List<CoreNumericRange> ranges) {
     super(field, limit);
     this.ranges = ranges;
   }
@@ -49,6 +50,6 @@ public class CoreNumericRangeFacet extends CoreSearchFacet {
 
       numericRange.add(nrJson);
     }
-    queryJson.put("numeric_ranges", numericRange);
+    queryJson.set("numeric_ranges", numericRange);
   }
 }

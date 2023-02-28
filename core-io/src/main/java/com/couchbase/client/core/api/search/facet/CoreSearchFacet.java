@@ -18,25 +18,24 @@ package com.couchbase.client.core.api.search.facet;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import reactor.util.annotation.Nullable;
 
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 @Stability.Internal
 public abstract class CoreSearchFacet {
   private final String field;
-  private final int size;
+  private final @Nullable Integer size;
 
-  CoreSearchFacet(String field, int size) {
+  CoreSearchFacet(String field, @Nullable Integer size) {
     this.field = notNullOrEmpty(field, "Field");
     this.size = size;
   }
 
-  public static CoreTermFacet term(String field, int size) {
-    return new CoreTermFacet(field, size);
-  }
-
   public void injectParams(final ObjectNode queryJson) {
-    queryJson.put("size", size);
+    if (size != null) {
+      queryJson.put("size", size);
+    }
     queryJson.put("field", field);
   }
 

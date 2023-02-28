@@ -17,14 +17,15 @@
 package com.couchbase.client.core.api.search.facet;
 
 import com.couchbase.client.core.annotation.Stability;
+import reactor.util.annotation.Nullable;
 
 @Stability.Internal
 public class CoreNumericRange {
   private final String name;
-  private final Double min;
-  private final Double max;
+  private final @Nullable Double min;
+  private final @Nullable Double max;
 
-  public CoreNumericRange(String name, Double min, Double max) {
+  public CoreNumericRange(String name, @Nullable Double min, @Nullable Double max) {
     this.name = name;
     this.min = min;
     this.max = max;
@@ -34,11 +35,11 @@ public class CoreNumericRange {
     return name;
   }
 
-  public Double min() {
+  public @Nullable Double min() {
     return min;
   }
 
-  public Double max() {
+  public @Nullable Double max() {
     return max;
   }
 }

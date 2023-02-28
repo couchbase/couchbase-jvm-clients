@@ -18,11 +18,12 @@ package com.couchbase.client.core.api.search.sort;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.protostellar.search.v1.ScoreSorting;
 import com.couchbase.client.protostellar.search.v1.Sorting;
+import reactor.util.annotation.Nullable;
 
 @Stability.Internal
 public class CoreSearchSortScore extends CoreSearchSort {
 
-    public CoreSearchSortScore(boolean descending) {
+    public CoreSearchSortScore(@Nullable Boolean descending) {
         super(descending);
     }
 
@@ -33,8 +34,12 @@ public class CoreSearchSortScore extends CoreSearchSort {
 
     @Override
     public Sorting asProtostellar() {
-        return Sorting.newBuilder()
-                .setScoreSorting(ScoreSorting.newBuilder().setDescending(descending))
-                .build();
+        Sorting.Builder builder = Sorting.newBuilder();
+
+        if (descending != null) {
+            builder.setScoreSorting(ScoreSorting.newBuilder().setDescending(descending));
+        }
+
+        return builder.build();
     }
 }

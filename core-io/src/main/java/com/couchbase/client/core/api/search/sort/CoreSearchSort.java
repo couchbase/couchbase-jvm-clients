@@ -18,13 +18,14 @@ package com.couchbase.client.core.api.search.sort;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.protostellar.search.v1.Sorting;
+import reactor.util.annotation.Nullable;
 
 @Stability.Internal
 public abstract class CoreSearchSort {
 
-  protected boolean descending;
+  protected @Nullable Boolean descending;
 
-  protected CoreSearchSort(boolean descending) {
+  protected CoreSearchSort(@Nullable Boolean descending) {
     this.descending = descending;
   }
 
@@ -32,8 +33,8 @@ public abstract class CoreSearchSort {
 
   public void injectParams(final ObjectNode queryJson) {
     queryJson.put("by", identifier());
-    if (descending) {
-      queryJson.put("desc", true);
+    if (descending != null) {
+      queryJson.put("desc", descending);
     }
   }
 

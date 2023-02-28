@@ -16,11 +16,12 @@
 package com.couchbase.client.core.api.search.facet;
 
 import com.couchbase.client.core.annotation.Stability;
+import reactor.util.annotation.Nullable;
 
 @Stability.Internal
 public class CoreTermFacet extends CoreSearchFacet {
 
-  public CoreTermFacet(String field, int limit) {
+  public CoreTermFacet(String field, @Nullable Integer limit) {
     super(field, limit);
   }
 }

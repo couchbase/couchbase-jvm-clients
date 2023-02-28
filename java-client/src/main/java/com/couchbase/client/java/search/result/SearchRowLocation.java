@@ -56,14 +56,14 @@ public class SearchRowLocation {
     }
 
     /**
-     * @return the start offset (in bytes) of the term in the the field
+     * @return the start offset (in bytes) of the term in the field
      */
     public long start() {
         return internal.start();
     }
 
     /**
-     * @return the end offset (in bytes) of the term in the the field
+     * @return the end offset (in bytes) of the term in the field
      */
     public long end() {
         return internal.end();

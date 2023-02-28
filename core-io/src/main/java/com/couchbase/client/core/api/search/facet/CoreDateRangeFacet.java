@@ -19,6 +19,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.json.Mapper;
+import reactor.util.annotation.Nullable;
 
 import java.util.List;
 
@@ -28,7 +29,7 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 public class CoreDateRangeFacet extends CoreSearchFacet {
   private final List<CoreDateRange> dateRanges;
 
-  public CoreDateRangeFacet(String field, int limit, List<CoreDateRange> dateRanges) {
+  public CoreDateRangeFacet(String field, @Nullable Integer limit, List<CoreDateRange> dateRanges) {
     super(field, limit);
     this.dateRanges = notNullOrEmpty(dateRanges, "Date Ranges");
   }
