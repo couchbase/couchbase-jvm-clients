@@ -15,27 +15,29 @@
  */
 
 package com.couchbase.client.scala.search.result
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.msg.search.{SearchChunkTrailer, SearchResponse}
-import com.couchbase.client.scala.json.JsonObjectSafe
+import com.couchbase.client.core.api.search.result.CoreSearchMetrics
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
 
-/** Metrics and status of a given FTS request.
-  *
-  * @param took        how long a request took executing on the server side
-  * @param totalRows   number of rows returned
-  * @param maxScore    the largest score amongst the rows.
-  * @param totalPartitionCount   the total number of FTS pindexes that were queried.
-  * @param successPartitionCount the number of FTS pindexes queried that successfully answered.
-  * @param errorPartitionCount   the number of FTS pindexes queried that gave an error. If &gt; 0,
-  */
-case class SearchMetrics(
-    took: Duration,
-    totalRows: Long,
-    maxScore: Double,
-    totalPartitionCount: Long,
-    successPartitionCount: Long,
-    errorPartitionCount: Long
-)
+/** Metrics and status of a given FTS request. */
+case class SearchMetrics private (private val internal: CoreSearchMetrics) {
+
+  /** How long a request took executing on the server side. */
+  def took: Duration = Duration(internal.took.toNanos, TimeUnit.NANOSECONDS)
+
+  /** Number of rows returned. */
+  def totalRows: Long = internal.totalRows
+
+  /** The largest score amongst the rows. */
+  def maxScore: Double = internal.maxScore
+
+  /** The total number of FTS indexes that were queried. */
+  def totalPartitionCount: Long = internal.totalPartitionCount
+
+  /** The number of FTS indexes queried that successfully answered. */
+  def successPartitionCount: Long = internal.successPartitionCount
+
+  /** The number of FTS indexes queried that gave an error. */
+  def errorPartitionCount: Long = internal.errorPartitionCount
+}

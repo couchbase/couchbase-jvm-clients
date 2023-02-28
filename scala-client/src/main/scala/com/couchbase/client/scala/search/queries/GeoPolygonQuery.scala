@@ -17,8 +17,10 @@
 package com.couchbase.client.scala.search.queries
 
 import com.couchbase.client.core.annotation.{SinceCouchbase, Stability}
-import com.couchbase.client.scala.json.{JsonArray, JsonObject}
+import com.couchbase.client.core.api.search.queries.CoreGeoPolygonQuery
 import com.couchbase.client.scala.util.Coordinate
+
+import scala.jdk.CollectionConverters._
 
 /**
   * An FTS query that finds all matches inside a given search polygon.
@@ -50,9 +52,9 @@ case class GeoPolygonQuery(
     copy(boost = Some(boost))
   }
 
-  override protected def injectParams(input: JsonObject): Unit = {
-    input.put("polygon_points", JsonArray(coordinates.map(co => JsonArray(co.lon, co.lat))))
-    boost.foreach(v => input.put("boost", v))
-    field.foreach(v => input.put("field", v))
-  }
+  override private[scala] def toCore =
+    new CoreGeoPolygonQuery(
+      coordinates.map(_.toCore).asJava,
+      field.orNull,
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
 }

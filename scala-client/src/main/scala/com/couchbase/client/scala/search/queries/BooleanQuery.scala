@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.search.queries
 
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.core.api.search.queries.CoreBooleanQuery
 
 /** A compound FTS query that allows various combinations of sub-queries.
   *
@@ -74,22 +74,11 @@ case class BooleanQuery(
     copy(boost = Some(boost))
   }
 
-  override protected def injectParams(input: JsonObject): Unit = {
-    if (must.queries.nonEmpty) {
-      val jsonMust = JsonObject.create
-      must.injectParamsAndBoost(jsonMust)
-      input.put("must", jsonMust)
-    }
-    if (mustNot.queries.nonEmpty) {
-      val jsonMustNot = JsonObject.create
-      mustNot.injectParamsAndBoost(jsonMustNot)
-      input.put("must_not", jsonMustNot)
-    }
-    if (should.queries.nonEmpty) {
-      val jsonShould = JsonObject.create
-      should.injectParamsAndBoost(jsonShould)
-      input.put("should", jsonShould)
-    }
-    boost.foreach(v => input.put("boost", v))
-  }
+  override private[scala] def toCore =
+    new CoreBooleanQuery(
+      must.toCore,
+      mustNot.toCore,
+      should.toCore,
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull
+    )
 }

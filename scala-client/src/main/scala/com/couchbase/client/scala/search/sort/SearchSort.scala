@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.search.sort
 
-import com.couchbase.client.scala.json.{JsonArray, JsonObject}
+import com.couchbase.client.core.api.search.sort._
 
 /** Base class for all FTS sort options in querying.
   *
@@ -29,10 +29,7 @@ sealed trait SearchSort {
 
   protected def descending: Option[Boolean]
 
-  private[scala] def injectParams(queryJson: JsonObject): Unit = {
-    queryJson.put("by", identifier)
-    descending.foreach(desc => queryJson.put("desc", desc))
-  }
+  private[scala] def toCore: CoreSearchSort
 }
 
 /**
@@ -51,6 +48,9 @@ object SearchSort {
     */
   case class ScoreSort(descending: Option[Boolean] = None) extends SearchSort {
     override protected def identifier = "score"
+
+    override private[scala] def toCore =
+      new CoreSearchSortScore(descending.map(_.asInstanceOf[java.lang.Boolean]).orNull)
   }
 
   /** Sort by the document ID.
@@ -62,6 +62,9 @@ object SearchSort {
     */
   case class IdSort(descending: Option[Boolean] = None) extends SearchSort {
     override protected def identifier = "id"
+
+    override private[scala] def toCore =
+      new CoreSearchSortId(descending.map(_.asInstanceOf[java.lang.Boolean]).orNull)
   }
 
   /** Sort by a field in the rows.
@@ -82,13 +85,20 @@ object SearchSort {
   ) extends SearchSort {
     override protected def identifier = "field"
 
-    override def injectParams(queryJson: JsonObject): Unit = {
-      super.injectParams(queryJson)
-      queryJson.put("field", field)
-      typ.foreach(v => queryJson.put("type", v.toString.toLowerCase))
-      mode.foreach(v => queryJson.put("mode", v.toString.toLowerCase))
-      missing.foreach(v => queryJson.put("missing", v.toString.toLowerCase))
-    }
+    override private[scala] def toCore =
+      new CoreSearchSortField(field, typ.map {
+        case FieldSortType.Auto   => CoreSearchFieldType.AUTO
+        case FieldSortType.String => CoreSearchFieldType.STRING
+        case FieldSortType.Number => CoreSearchFieldType.NUMBER
+        case FieldSortType.Date   => CoreSearchFieldType.DATE
+      }.orNull, mode.map {
+        case FieldSortMode.Default => CoreSearchFieldMode.DEFAULT
+        case FieldSortMode.Min     => CoreSearchFieldMode.MIN
+        case FieldSortMode.Max     => CoreSearchFieldMode.MAX
+      }.orNull, missing.map {
+        case FieldSortMissing.Last  => CoreSearchFieldMissing.LAST
+        case FieldSortMissing.First => CoreSearchFieldMissing.FIRST
+      }.orNull, descending.map(_.asInstanceOf[java.lang.Boolean]).orNull)
   }
 
   /** Sort by a geo location distance.
@@ -118,12 +128,29 @@ object SearchSort {
       copy(unit = Some(unit))
     }
 
-    override def injectParams(queryJson: JsonObject): Unit = {
-      super.injectParams(queryJson)
-      queryJson.put("location", JsonArray(location))
-      queryJson.put("field", field)
-      unit.foreach(v => queryJson.put("unit", v))
-    }
+    override private[scala] def toCore =
+      new CoreSearchSortGeoDistance(
+        location.head,
+        location(1),
+        field,
+        unit
+          .map(
+            v =>
+              v.toLowerCase match {
+                case "inch" | "in" | "inches"             => CoreSearchGeoDistanceUnits.INCH
+                case "yards"                              => CoreSearchGeoDistanceUnits.YARDS
+                case "feet" | "ft"                        => CoreSearchGeoDistanceUnits.FEET
+                case "kilometers" | "km" | "kilometres"   => CoreSearchGeoDistanceUnits.KILOMETERS
+                case "nauticalmiles"                      => CoreSearchGeoDistanceUnits.NAUTICAL_MILES
+                case "millimeters" | "mm" | "millimetres" => CoreSearchGeoDistanceUnits.MILLIMETERS
+                case "centimeters" | "cm" | "centimetres" => CoreSearchGeoDistanceUnits.CENTIMETERS
+                case "miles" | "mi"                       => CoreSearchGeoDistanceUnits.MILES
+                case "meters" | "m" | "metres"            => CoreSearchGeoDistanceUnits.METERS
+              }
+          )
+          .orNull,
+        descending.map(_.asInstanceOf[java.lang.Boolean]).orNull
+      )
   }
 
 }

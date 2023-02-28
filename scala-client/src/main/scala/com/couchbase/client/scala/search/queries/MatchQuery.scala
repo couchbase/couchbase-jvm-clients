@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala.search.queries
 
+import com.couchbase.client.core.api.search.queries.{CoreMatchOperator, CoreMatchQuery}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.search.queries.MatchOperator.{And, Or}
 
@@ -93,16 +94,15 @@ case class MatchQuery(
     copy(operator = Some(operator))
   }
 
-  override protected def injectParams(input: JsonObject): Unit = {
-    input.put("match", matchStr)
-    boost.foreach(v => input.put("boost", v))
-    field.foreach(v => input.put("field", v))
-    analyzer.foreach(v => input.put("analyzer", v))
-    prefixLength.foreach(v => input.put("prefix_length", v))
-    fuzziness.foreach(v => input.put("fuzziness", v))
-    operator match {
-      case Some(And) => input.put("operator", "and")
-      case Some(Or)  => input.put("operator", "or")
-    }
-  }
+  override private[scala] def toCore =
+    new CoreMatchQuery(matchStr,
+      field.orNull,
+      analyzer.orNull,
+      prefixLength.map(_.asInstanceOf[Integer]).orNull,
+      fuzziness.map(_.asInstanceOf[Integer]).orNull,
+      operator.map {
+        case MatchOperator.And => CoreMatchOperator.AND
+        case MatchOperator.Or => CoreMatchOperator.OR
+      }.orNull,
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
 }

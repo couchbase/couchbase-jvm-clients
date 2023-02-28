@@ -15,8 +15,9 @@
  */
 package com.couchbase.client.scala.manager.search
 
-import java.nio.charset.StandardCharsets
+import com.couchbase.client.core.annotation.Stability
 
+import java.nio.charset.StandardCharsets
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.scala.codec.JsonDeserializer
 import com.couchbase.client.scala.json.JsonObject
@@ -58,8 +59,8 @@ case class SearchIndex(
     private[scala] val planParams: Option[ujson.Obj] = None,
     private[scala] val numPlanPIndexes: Int = 0
 ) {
-  private val DefaultSouceType = "couchbase"
-  private val DefaultType      = "fulltext-index"
+  private val DefaultSourceType = "couchbase"
+  private val DefaultType       = "fulltext-index"
 
   private[scala] def toJson: String = {
     val output = JsonObject.create
@@ -67,7 +68,7 @@ case class SearchIndex(
     output.put("name", name)
     output.put("sourceName", sourceName)
     output.put("type", typ.getOrElse(DefaultType))
-    output.put("sourceType", sourceType.getOrElse(DefaultSouceType))
+    output.put("sourceType", sourceType.getOrElse(DefaultSourceType))
     output.toString
   }
 

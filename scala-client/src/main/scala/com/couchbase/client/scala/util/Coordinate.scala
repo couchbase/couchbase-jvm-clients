@@ -15,6 +15,8 @@
  */
 package com.couchbase.client.scala.util
 
+import com.couchbase.client.core.api.search.queries.CoreCoordinate
+
 /** A coordinate is a tuple of a latitude and a longitude. */
 object Coordinate {
 
@@ -37,4 +39,6 @@ case class Coordinate private (
       * The latitude of this coordinate.
       */
     lat: Double
-)
+) {
+  private[scala] def toCore = new CoreCoordinate(lon, lat)
+}

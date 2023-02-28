@@ -15,10 +15,17 @@
  */
 package com.couchbase.client.scala.search.result
 
-/** Additional information returned by the FTS service after any rows and errors.
-  *
-  * @param metrics         metrics related to the FTS request, if they are available
-  * @param errors         any errors returned by the request.  Note that FTS can return partial success: e.g. some
-  *                       rows in the presence of some errors
-  */
-case class SearchMetaData(metrics: SearchMetrics, errors: collection.Map[String, String])
+import com.couchbase.client.core.api.search.CoreSearchMetaData
+
+import scala.jdk.CollectionConverters._
+
+/** Additional information returned by the FTS service after any rows and errors. */
+case class SearchMetaData private (private val internal: CoreSearchMetaData) {
+  /** Metrics related to the FTS request. */
+  def metrics: SearchMetrics = SearchMetrics(internal.metrics)
+
+  /** Any errors returned by the request.  Note that FTS can return partial success: e.g. some
+    * rows in the presence of some errors.
+    */
+  def errors: collection.Map[String, String] = internal.errors.asScala
+}

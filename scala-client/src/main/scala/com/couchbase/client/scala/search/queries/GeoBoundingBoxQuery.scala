@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.search.queries
 
-import com.couchbase.client.scala.json.{JsonArray, JsonObject}
+import com.couchbase.client.core.api.search.queries.CoreGeoBoundingBoxQuery
 
 /** An FTS query which finds all matches within a given box (identified by the upper left and lower right corner
   * coordinates).
@@ -55,10 +55,11 @@ case class GeoBoundingBoxQuery(
     copy(boost = Some(boost))
   }
 
-  override protected def injectParams(input: JsonObject): Unit = {
-    input.put("top_left", JsonArray(topLeftLon, topLeftLat))
-    input.put("bottom_right", JsonArray(bottomRightLon, bottomRightLat))
-    boost.foreach(v => input.put("boost", v))
-    field.foreach(v => input.put("field", v))
-  }
+  override private[scala] def toCore =
+    new CoreGeoBoundingBoxQuery(topLeftLon,
+      topLeftLat,
+      bottomRightLon,
+      bottomRightLat,
+      field.orNull,
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
 }

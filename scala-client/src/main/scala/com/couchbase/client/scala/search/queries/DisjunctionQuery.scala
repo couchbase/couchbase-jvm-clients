@@ -15,7 +15,9 @@
  */
 package com.couchbase.client.scala.search.queries
 
-import com.couchbase.client.scala.json.{JsonArray, JsonObject}
+import com.couchbase.client.core.api.search.queries.CoreDisjunctionQuery
+
+import scala.jdk.CollectionConverters._
 
 /** A compound FTS query that performs a logical OR between all its sub-queries (disjunction).
   * It requires that a configurable minimum of the queries match (the default is 1).
@@ -54,15 +56,10 @@ case class DisjunctionQuery(
     copy(queries ++ queries.toSeq)
   }
 
-  override protected def injectParams(input: JsonObject): Unit = {
-    min.foreach(v => if (v > 0) input.put("min", v))
-    val disjuncts = JsonArray.create
-    for (childQuery <- queries) {
-      val childJson = JsonObject.create
-      childQuery.injectParamsAndBoost(childJson)
-      disjuncts.add(childJson)
-    }
-    input.put("disjuncts", disjuncts)
-    boost.foreach(v => input.put("boost", v))
-  }
+  override private[scala] def toCore =
+    new CoreDisjunctionQuery(
+      queries.map(_.toCore).asJava,
+      min.map(_.asInstanceOf[Integer]).orNull,
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull
+    )
 }

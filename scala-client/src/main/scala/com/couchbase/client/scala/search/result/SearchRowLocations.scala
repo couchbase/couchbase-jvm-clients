@@ -15,10 +15,9 @@
  */
 package com.couchbase.client.scala.search.result
 
-import com.couchbase.client.scala.json.JsonObject
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
-import scala.util.{Success, Try}
+import com.couchbase.client.core.api.search.result.{CoreSearchRowLocation, CoreSearchRowLocations}
+
+import scala.jdk.CollectionConverters._
 
 /**
   * Represents the locations of a search result row. Locations show
@@ -26,96 +25,37 @@ import scala.util.{Success, Try}
   *
   * @since 1.0.0
   */
-case class SearchRowLocations(
-    private val locations: collection.Map[String, collection.Map[String, collection.Seq[
-      SearchRowLocation
-    ]]]
-) {
+case class SearchRowLocations private (private val internal: CoreSearchRowLocations) {
 
   /** Gets all locations, for any field and term. */
   def getAll: Seq[SearchRowLocation] = {
-    locations.flatMap(_._2).flatMap(_._2).toSeq
+    internal.getAll.asScala.map(l => SearchRowLocation(l))
   }
 
   /** Gets all locations for a given field (any term). */
   def get(field: String): Seq[SearchRowLocation] = {
-    locations
-      .get(field)
-      .map(_.flatMap(_._2).toSeq)
-      .getOrElse(Seq.empty)
+    internal.get(field).asScala.map(l => SearchRowLocation(l))
   }
 
   /** Gets all locations for a given field and term. */
   def get(field: String, term: String): Seq[SearchRowLocation] = {
-    locations
-      .get(field)
-      .flatMap(_.get(term))
-      .getOrElse(Seq.empty)
-      .toSeq
+    internal.get(field, term).asScala.map(l => SearchRowLocation(l))
   }
 
   /** Gets all fields in these locations. */
   def fields: Seq[String] = {
-    locations.keys.toSeq
+    internal.fields.asScala
   }
 
   /** Gets all terms in these locations. */
   def terms: collection.Set[String] = {
-    locations.flatMap(_._2).keySet
+    internal.terms.asScala
   }
 
   /** Gets all terms for a given field. */
   def termsFor(field: String): Seq[String] = {
-    locations
-      .get(field)
-      .map(_.keys.toSeq)
-      .getOrElse(Seq.empty)
+    internal.termsFor(field).asScala
   }
-}
-
-object SearchRowLocations {
-  private[scala] def from(locationsJson: JsonObject): Try[SearchRowLocations] = {
-    Try({
-      val hitLocations =
-        mutable.Map.empty[String, mutable.Map[String, ArrayBuffer[SearchRowLocation]]]
-
-      for (field <- locationsJson.names) {
-        val termsJson = locationsJson.obj(field)
-
-        for (term <- termsJson.names) {
-          val locsJson = termsJson.arr(term)
-          for (i <- 0 until locsJson.size) {
-            val loc   = locsJson.obj(i)
-            val pos   = loc.num("pos")
-            val start = loc.num("start")
-            val end   = loc.num("end")
-            val arrayPositions: Option[Seq[Int]] = loc.safe.arr("array_positions") match {
-              case Success(arrayPositionsJson) =>
-                Some(
-                  Range(0, arrayPositionsJson.size)
-                    .map(j => arrayPositionsJson.num(j).get)
-                )
-              case _ => None
-            }
-
-            val byTerm: mutable.Map[String, ArrayBuffer[SearchRowLocation]] =
-              hitLocations.getOrElseUpdate(
-                field,
-                mutable.Map.empty[String, ArrayBuffer[SearchRowLocation]]
-              )
-
-            val list: ArrayBuffer[SearchRowLocation] =
-              byTerm.getOrElseUpdate(term, ArrayBuffer.empty)
-
-            list += SearchRowLocation(field, term, pos, start, end, arrayPositions)
-          }
-        }
-      }
-
-      SearchRowLocations(hitLocations)
-    })
-  }
-
 }
 
 /** An FTS result row location indicates at which position a given term occurs inside a given field.
@@ -124,11 +64,21 @@ object SearchRowLocations {
   *
   * @since 1.0.0
   */
-case class SearchRowLocation(
-    field: String,
-    term: String,
-    pos: Int,
-    start: Int,
-    end: Int,
-    arrayPositions: Option[Seq[Int]]
-)
+case class SearchRowLocation private (private val internal: CoreSearchRowLocation) {
+  def field: String = internal.field
+
+  def term: String  = internal.term
+
+  /** The position of the term within the field, starting at 1. */
+  def pos: Int = internal.pos.intValue
+
+  /** The start offset (in bytes) of the term in the field. */
+  def start: Int = internal.start.intValue
+
+  /** The end offset (in bytes) of the term in the field. */
+  def end: Int = internal.end.intValue
+
+  /** Contains the positions of the term within any elements, if applicable. */
+  def arrayPositions: Option[Seq[Int]] =
+    Option(internal.arrayPositions).map(l => l.map(v => v.intValue).toSeq)
+}

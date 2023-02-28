@@ -23,6 +23,13 @@ import com.couchbase.client.core.api.query.{
   CoreQueryStatus,
   CoreReactiveQueryResult
 }
+import com.couchbase.client.core.api.search.result.{
+  CoreDateRangeSearchFacetResult,
+  CoreNumericRangeSearchFacetResult,
+  CoreSearchFacetResult,
+  CoreSearchRowLocations,
+  CoreTermSearchFacetResult
+}
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.msg.kv.{DurabilityLevel, MutationToken}
@@ -40,6 +47,7 @@ import com.couchbase.client.scala.query.{
   QueryWarning,
   ReactiveQueryResult
 }
+import com.couchbase.client.scala.search.result.{SearchFacetResult, SearchRowLocations}
 import com.couchbase.client.scala.util.DurationConversions._
 import reactor.core.publisher.{Flux, Mono}
 import reactor.core.scala.publisher.{SFlux, SMono}
@@ -198,6 +206,17 @@ private[scala] object CoreCommonConverters {
       case CoreQueryStatus.FATAL     => QueryStatus.Fatal
       case CoreQueryStatus.ABORTED   => QueryStatus.Aborted
       case CoreQueryStatus.UNKNOWN   => QueryStatus.Unknown
+    }
+  }
+
+  def convert(in: CoreSearchRowLocations): SearchRowLocations = SearchRowLocations(in)
+
+  def convert(in: CoreSearchFacetResult): SearchFacetResult = {
+    in match {
+      case v: CoreTermSearchFacetResult      => SearchFacetResult.TermSearchFacetResult(v)
+      case v: CoreDateRangeSearchFacetResult => SearchFacetResult.DateRangeSearchFacetResult(v)
+      case v: CoreNumericRangeSearchFacetResult =>
+        SearchFacetResult.NumericRangeSearchFacetResult(v)
     }
   }
 

@@ -16,7 +16,9 @@
 
 package com.couchbase.client.scala.search.queries
 
-import com.couchbase.client.scala.json.{JsonArray, JsonObject}
+import com.couchbase.client.core.api.search.queries.CoreConjunctionQuery
+
+import scala.jdk.CollectionConverters._
 
 /** A compound FTS query that performs a logical AND between all its sub-queries (conjunction).
   *
@@ -47,14 +49,8 @@ case class ConjunctionQuery(
     copy(this.queries ++ queries.toSeq)
   }
 
-  override protected def injectParams(input: JsonObject): Unit = {
-    val conjuncts = JsonArray.create
-    for (childQuery <- queries) {
-      val childJson = JsonObject.create
-      childQuery.injectParamsAndBoost(childJson)
-      conjuncts.add(childJson)
-    }
-    input.put("conjuncts", conjuncts)
-    boost.foreach(v => input.put("boost", v))
-  }
+  override private[scala] def toCore =
+    new CoreConjunctionQuery(
+      queries.map(_.toCore).asJava,
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
 }

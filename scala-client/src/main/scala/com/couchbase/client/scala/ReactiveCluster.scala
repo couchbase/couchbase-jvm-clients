@@ -23,11 +23,7 @@ import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString
 import com.couchbase.client.scala.AsyncCluster.extractClusterEnvironment
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.diagnostics.{
-  DiagnosticsOptions,
-  PingOptions,
-  WaitUntilReadyOptions
-}
+import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.manager.analytics.ReactiveAnalyticsIndexManager
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
@@ -36,10 +32,9 @@ import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
 import com.couchbase.client.scala.manager.search.ReactiveSearchIndexManager
 import com.couchbase.client.scala.manager.user.ReactiveUserManager
 import com.couchbase.client.scala.query._
-import com.couchbase.client.scala.query.handlers.SearchHandler
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
-import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchMetaData, SearchRow}
+import com.couchbase.client.scala.search.result.ReactiveSearchResult
 import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
@@ -205,39 +200,8 @@ class ReactiveCluster(val async: AsyncCluster) {
       query: SearchQuery,
       options: SearchOptions
   ): SMono[ReactiveSearchResult] = {
-    async.searchHandler.request(indexName, query, options, async.core, async.env) match {
-      case Success(request) =>
-        SMono.defer(() => {
-          async.core.send(request)
-
-          FutureConversions
-            .javaCFToScalaMono(request, request.response(), false)
-            .map(response => {
-              val meta: SMono[SearchMetaData] = FutureConversions
-                .javaMonoToScalaMono(response.trailer())
-                .map(trailer => SearchHandler.parseSearchMeta(response, trailer))
-
-              val facets = FutureConversions
-                .javaMonoToScalaMono(response.trailer())
-                .map(trailer => SearchHandler.parseSearchFacets(trailer))
-
-              val rows = FutureConversions
-                .javaFluxToScalaFlux(response.rows())
-                .map(row => SearchRow.fromResponse(row))
-
-              ReactiveSearchResult(
-                rows,
-                facets,
-                meta
-              )
-            })
-            .doOnNext(_ => request.context.logicallyComplete)
-            .doOnError(err => request.context().logicallyComplete(err))
-        })
-
-      case Failure(err) =>
-        SMono.error(err)
-    }
+    SMono(async.searchOps.searchQueryReactive(indexName, query.toCore, options.toCore))
+      .map(result => ReactiveSearchResult(result))
   }
 
   /** Performs a Full Text Search (FTS) query against the cluster.

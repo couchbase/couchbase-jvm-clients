@@ -16,45 +16,41 @@
 
 package com.couchbase.client.scala.search.result
 
-import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
-import com.couchbase.client.core.msg.search.SearchChunkRow
-import com.couchbase.client.scala.codec.{Conversions, JsonDeserializer}
-import com.couchbase.client.scala.json.JsonObjectSafe
+import com.couchbase.client.core.api.search.result.{CoreReactiveSearchResult, CoreSearchResult}
+import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import reactor.core.scala.publisher.{SFlux, SMono}
 
-import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
+import scala.jdk.CollectionConverters._
 
 /** The results of an FTS query.
-  *
-  * @param facets          any search facets returned
-  * @param metaData            any additional information related to the FTS query
   *
   * @author Graham Pople
   * @since 1.0.0
   */
-case class SearchResult(
-    private[scala] val _rows: Seq[SearchRow],
-    facets: Map[String, SearchFacetResult],
-    metaData: SearchMetaData
-) {
+case class SearchResult private (private val internal: CoreSearchResult) {
 
   /** All returned rows.  All rows are buffered from the FTS service first.
     *
     * @return either `Success` if all rows could be decoded successfully, or a Failure containing the first error
     */
-  def rows: Seq[SearchRow] = _rows
+  def rows: Seq[SearchRow] = internal.rows.asScala.map(row => SearchRow(row))
+
+  /** Any additional information related to the FTS query. */
+  def metaData: SearchMetaData = SearchMetaData(internal.metaData)
+
+  /** Any search facets returned. */
+  def facets: Map[String, SearchFacetResult] =
+    internal.facets.asScala.map(k => k._1 -> convert(k._2)).toMap
 }
 
-/** The results of an FTS query, as returned by the reactive API.
-  *
-  * @param rows            a Flux of any returned rows.  If the FTS service returns an error while returning the
-  *                        rows, it will be raised on this Flux
-  * @param meta            any additional information related to the FTS query
-  */
-case class ReactiveSearchResult(
-    rows: SFlux[SearchRow],
-    facets: SMono[Map[String, SearchFacetResult]],
-    meta: SMono[SearchMetaData]
-)
+/** The results of an FTS query, as returned by the reactive API. */
+case class ReactiveSearchResult private (private val internal: CoreReactiveSearchResult) {
+  def rows: SFlux[SearchRow] = SFlux(internal.rows).map(row => SearchRow(row))
+
+  /** Any additional information related to the FTS query. */
+  def metaData: SMono[SearchMetaData] = SMono(internal.metaData).map(md => SearchMetaData(md))
+
+  /** Any search facets returned. */
+  def facets: SMono[Map[String, SearchFacetResult]] =
+    SMono(internal.facets).map(_.asScala).map(v => v.map(k => k._1 -> convert(k._2)).toMap)
+}

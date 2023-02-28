@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.search.queries
 
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.core.api.search.queries.CoreRegexpQuery
 
 /** An FTS query that allows for simple matching of regular expressions.
   *
@@ -48,9 +48,6 @@ case class RegexpQuery(
     copy(boost = Some(boost))
   }
 
-  override protected def injectParams(input: JsonObject): Unit = {
-    input.put("regexp", regexp)
-    boost.foreach(v => input.put("boost", v))
-    field.foreach(v => input.put("field", v))
-  }
+  override private[scala] def toCore =
+    new CoreRegexpQuery(regexp, field.orNull, boost.map(_.asInstanceOf[java.lang.Double]).orNull)
 }

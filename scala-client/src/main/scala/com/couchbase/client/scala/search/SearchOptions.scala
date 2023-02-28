@@ -16,16 +16,26 @@
 package com.couchbase.client.scala.search
 
 import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.api.search.facet.CoreSearchFacet
+import com.couchbase.client.core.api.search.sort.CoreSearchSort
+import com.couchbase.client.core.api.search.{
+  CoreHighlightStyle,
+  CoreSearchOptions,
+  CoreSearchScanConsistency
+}
+import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.cnc.RequestSpan
-import com.couchbase.client.core.msg.kv.MutationToken
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions
+import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.json.{JsonArray, JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.search.facet.SearchFacet
-import com.couchbase.client.scala.search.queries._
 import com.couchbase.client.scala.search.sort.SearchSort
 
+import java.{lang, util}
+import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
-import scala.util.Success
+import scala.jdk.CollectionConverters._
 
 /** Options to be used with a Full Text Search query.
   */
@@ -145,7 +155,7 @@ case class SearchOptions(
     * the firstname and if the names are equal then sort ascending by lastname. Special fields like "_id" and "_score"
     * can also be used. If prefixed with "-" the sort order is set to descending.
     *
-    * If no sort is provided, it is equal to sort("-_score"), since the server will sort it by score in descending
+    * If no sort is provided, it is equal to sort(Seq("-_score")), since the server will sort it by score in descending
     * order.
     *
     * @param fields the fields that should take part in the sorting.
@@ -162,7 +172,7 @@ case class SearchOptions(
     *
     * See [[com.couchbase.client.scala.search.sort.SearchSort]] for the various sorting options.
     *
-    * If no sort is provided, it is equal to sort("-_score"), since the server will sort it by score in descending
+    * If no sort is provided, it is equal to sort(Seq("-_score")), since the server will sort it by score in descending
     * order.
     *
     * @param fields the fields that should take part in the sorting.
@@ -227,118 +237,70 @@ case class SearchOptions(
     copy(includeLocations = value)
   }
 
-  /** Exports the whole query as a `JsonObject`.
-    */
-  private[scala] def `export`(
-      indexName: String,
-      query: SearchQuery,
-      timeout: Duration
-  ): JsonObject = {
-    val result = JsonObject.create
-    injectParams(indexName, result, timeout)
-
-    val queryJson = JsonObject.create
-    query.injectParamsAndBoost(queryJson)
-    result.put("query", queryJson)
-    result
-  }
-
-  /** Inject the top level parameters of a query into a prepared `JsonObject`
-    * that represents the root of the query.
+  /** Sets a maximum timeout for processing.
     *
-    * @param queryJson the prepared `JsonObject` for the whole query.
+    * @param timeout the duration of the timeout.
+    * @return a copy of this with the change applied, for chaining.
     */
-  private[scala] def injectParams(
-      indexName: String,
-      queryJson: JsonObject,
-      timeout: Duration
-  ): Unit = {
-    limit.foreach(v => if (v > 0) queryJson.put("size", v))
-    skip.foreach(v => if (v > 0) queryJson.put("from", v))
-    explain.foreach(v => queryJson.put("explain", v))
-
-    if (includeLocations) {
-      queryJson.put("includeLocations", true)
-    }
-
-    highlightStyle.foreach(hs => {
-      val highlight = JsonObject.create
-      hs match {
-        case HighlightStyle.ServerDefault =>
-        case HighlightStyle.HTML          => highlight.put("style", "html")
-        case HighlightStyle.ANSI          => highlight.put("style", "ansi")
-      }
-
-      highlightFields.foreach(hf => {
-        if (hf.nonEmpty) highlight.put("fields", JsonArray(hf: _*))
-      })
-
-      queryJson.put("highlight", highlight)
-    })
-    fields.foreach(f => {
-      if (f.nonEmpty) queryJson.put("fields", JsonArray(f: _*))
-    })
-
-    collections.foreach(c => {
-      if (c.nonEmpty) queryJson.put("collections", JsonArray(c: _*))
-    })
-
-    sort.foreach(sortParams => {
-      val sortJson = sortParams.foldLeft(JsonArray.create)((params, sort) => {
-        val paramObj = JsonObject.create
-        sort.injectParams(paramObj)
-        params.add(paramObj)
-      })
-
-      queryJson.put("sort", sortJson)
-    })
-    facets.foreach(f => {
-      val facets = JsonObject.create
-      for (entry <- f) {
-        val facetJson = JsonObject.create
-        entry._2.injectParams(facetJson)
-        facets.put(entry._1, facetJson)
-      }
-      queryJson.put("facets", facets)
-    })
-    val control = JsonObject.create
-
-    serverSideTimeout match {
-      case Some(t) => control.put("timeout", t.toMillis)
-      case None    => control.put("timeout", timeout.toMillis)
-    }
-
-    scanConsistency.foreach {
-      case SearchScanConsistency.ConsistentWith(ms) =>
-        val consistencyJson = JsonObject.create
-        consistencyJson.put("level", "at_plus")
-        consistencyJson.put("vectors", JsonObject(indexName -> convertMutationTokens(ms.tokens)))
-        control.put("consistency", consistencyJson)
-      case _ =>
-    }
-
-    if (!control.isEmpty) queryJson.put("ctl", control)
-    if (disableScoring) queryJson.put("score", "none")
-
-    raw.foreach(_.foreach(x => queryJson.put(x._1, x._2)))
+  def timeout(timeout: Duration): SearchOptions = {
+    copy(timeout = Option(timeout))
   }
 
-  private def convertMutationTokens(tokens: Seq[MutationToken]): JsonObject = {
-    val result = JsonObjectSafe.create
-    for (token <- tokens) {
-      val tokenKey = token.partitionID.toString + "/" + token.partitionUUID
+  private[scala] def toCore: CoreSearchOptions = {
+    val x = this
+    val common = CoreCommonOptions.ofOptional(
+      timeout
+        .map(v => com.couchbase.client.scala.util.DurationConversions.scalaDurationToJava(v))
+        .asJava,
+      retryStrategy.asJava,
+      parentSpan.asJava
+    )
 
-      result.numLong(tokenKey) match {
-        case Success(seqno) =>
-          // Only store the highest seqno for each vbucket
-          if (seqno < token.sequenceNumber) {
-            result.put(tokenKey, token.sequenceNumber)
-          }
-        case _ =>
-          result.put(tokenKey, token.sequenceNumber)
+    new CoreSearchOptions {
+      override def collections(): util.List[String] = x.collections.getOrElse(Seq()).asJava
+
+      override def consistency(): CoreSearchScanConsistency = x.scanConsistency match {
+        case Some(SearchScanConsistency.NotBounded) => CoreSearchScanConsistency.NOT_BOUNDED
+        case _                                      => null
       }
-    }
 
-    result.o
+      override def consistentWith(): CoreMutationState = x.scanConsistency match {
+        case Some(SearchScanConsistency.ConsistentWith(ms)) => ms.toCore
+        case _                                              => null
+      }
+
+      override def disableScoring(): lang.Boolean = x.disableScoring
+
+      override def explain(): lang.Boolean = x.explain.map(_.asInstanceOf[lang.Boolean]).orNull
+
+      override def facets(): util.Map[String, CoreSearchFacet] =
+        x.facets.map(_.map(k => k._1 -> k._2.toCore)).getOrElse(Map()).asJava
+
+      override def fields(): util.List[String] = x.fields.getOrElse(Seq()).asJava
+
+      override def highlightFields(): util.List[String] = x.highlightFields.getOrElse(Seq()).asJava
+
+      override def highlightStyle(): CoreHighlightStyle =
+        x.highlightStyle.map {
+          case HighlightStyle.ANSI          => CoreHighlightStyle.HTML
+          case HighlightStyle.HTML          => CoreHighlightStyle.ANSI
+          case HighlightStyle.ServerDefault => CoreHighlightStyle.SERVER_DEFAULT
+        }.orNull
+
+      override def limit(): Integer = x.limit.map(_.asInstanceOf[Integer]).orNull
+
+      override def raw(): JsonNode =
+        x.raw.map(v => Mapper.convertValue(v, classOf[JsonNode])).orNull
+
+      override def skip(): Integer = x.skip.map(_.asInstanceOf[Integer]).orNull
+
+      override def sort(): util.List[CoreSearchSort] = x.sort.getOrElse(Seq()).map(_.toCore).asJava
+
+      override def sortString(): util.List[String] = Seq().asJava
+
+      override def includeLocations(): lang.Boolean = x.includeLocations
+
+      override def commonOptions(): CoreCommonOptions = common
+    }
   }
 }

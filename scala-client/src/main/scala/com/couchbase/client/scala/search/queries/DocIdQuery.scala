@@ -15,7 +15,9 @@
  */
 package com.couchbase.client.scala.search.queries
 
-import com.couchbase.client.scala.json.{JsonArray, JsonObject}
+import com.couchbase.client.core.api.search.queries.CoreDocIdQuery
+
+import scala.jdk.CollectionConverters._
 
 /** An FTS query that matches on Couchbase document IDs. Useful to restrict the search space to a list of keys
   * (by using this in an [[AbstractCompoundQuery]] compound query).
@@ -26,7 +28,6 @@ import com.couchbase.client.scala.json.{JsonArray, JsonObject}
   */
 case class DocIdQuery(
     private[scala] val docIds: Seq[String],
-    private[scala] val field: Option[String] = None,
     private[scala] val boost: Option[Double] = None
 ) extends SearchQuery {
 
@@ -41,8 +42,6 @@ case class DocIdQuery(
     copy(boost = Some(boost))
   }
 
-  override protected def injectParams(input: JsonObject): Unit = {
-    input.put("ids", JsonArray(docIds: _*))
-    boost.foreach(v => input.put("boost", v))
-  }
+  override private[scala] def toCore =
+    new CoreDocIdQuery(boost.map(_.asInstanceOf[java.lang.Double]).orNull, docIds.asJava)
 }

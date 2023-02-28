@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.search.queries
 
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.core.api.search.queries.CoreWildcardQuery
 
 /**
   * An FTS query that allows for simple matching using wildcard characters (* and ?).
@@ -47,9 +47,8 @@ case class WildcardQuery(
     copy(boost = Some(boost))
   }
 
-  override protected def injectParams(input: JsonObject): Unit = {
-    input.put("wildcard", wildcard)
-    boost.foreach(v => input.put("boost", v))
-    field.foreach(v => input.put("field", v))
-  }
+  override private[scala] def toCore =
+    new CoreWildcardQuery(wildcard,
+      field.orNull,
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
 }

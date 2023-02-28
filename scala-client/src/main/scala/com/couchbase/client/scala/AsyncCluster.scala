@@ -21,29 +21,19 @@ import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.service.ServiceType
-import com.couchbase.client.core.util.ConnectionStringUtil.{
-  asConnectionString,
-  checkConnectionString
-}
 import com.couchbase.client.core.util.ConnectionString
+import com.couchbase.client.core.util.ConnectionStringUtil.{asConnectionString, checkConnectionString}
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.diagnostics.{
-  DiagnosticsOptions,
-  PingOptions,
-  WaitUntilReadyOptions
-}
+import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
-import com.couchbase.client.scala.manager.analytics.{
-  AsyncAnalyticsIndexManager,
-  ReactiveAnalyticsIndexManager
-}
+import com.couchbase.client.scala.manager.analytics.{AsyncAnalyticsIndexManager, ReactiveAnalyticsIndexManager}
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, ReactiveBucketManager}
 import com.couchbase.client.scala.manager.eventing.AsyncEventingFunctionManager
 import com.couchbase.client.scala.manager.query.AsyncQueryIndexManager
 import com.couchbase.client.scala.manager.search.AsyncSearchIndexManager
 import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager}
 import com.couchbase.client.scala.query._
-import com.couchbase.client.scala.query.handlers.{AnalyticsHandler, SearchHandler}
+import com.couchbase.client.scala.query.handlers.AnalyticsHandler
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.{SearchResult, SearchRow}
@@ -95,7 +85,7 @@ class AsyncCluster(
   private[scala] val analyticsTimeout           = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
   private[scala] val retryStrategy              = env.retryStrategy
   private[scala] val analyticsHandler           = new AnalyticsHandler(hp)
-  private[scala] val searchHandler              = new SearchHandler(hp)
+  private[scala] val searchOps                  = core.searchOps(null)
   private[scala] lazy val reactiveUserManager   = new ReactiveUserManager(core)
   private[scala] lazy val reactiveBucketManager = new ReactiveBucketManager(core)
   private[scala] lazy val reactiveAnalyticsIndexManager = new ReactiveAnalyticsIndexManager(
@@ -246,11 +236,8 @@ class AsyncCluster(
       query: SearchQuery,
       options: SearchOptions
   ): Future[SearchResult] = {
-
-    searchHandler.request(indexName, query, options, core, environment) match {
-      case Success(request) => AsyncCluster.searchQuery(request, core)
-      case Failure(err)     => Future.failed(err)
-    }
+    convert(searchOps.searchQueryAsync(indexName, query.toCore, options.toCore))
+      .map(result => SearchResult(result))
   }
 
   /** Performs a Full Text Search (FTS) query against the cluster.
@@ -467,43 +454,6 @@ object AsyncCluster {
     */
   def connect(seedNodes: Set[SeedNode], options: ClusterOptions): Try[AsyncCluster] = {
     connect(asConnectionString(seedNodes.map(_.toCore).asJava).original(), options)
-  }
-
-  private[client] def searchQuery(request: SearchRequest, core: Core)(
-      implicit ec: ExecutionContext
-  ): Future[SearchResult] = {
-    core.send(request)
-
-    val ret: Future[SearchResult] =
-      FutureConversions
-        .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-        .flatMap(
-          response =>
-            FutureConversions
-              .javaFluxToScalaFlux(response.rows())
-              // This can throw, which will return a failed Future as desired
-              .map(row => SearchRow.fromResponse(row))
-              .collectSeq()
-              .flatMap(
-                rows =>
-                  FutureConversions
-                    .javaMonoToScalaMono(response.trailer())
-                    .map(
-                      trailer =>
-                        SearchResult(
-                          rows,
-                          SearchHandler.parseSearchFacets(trailer),
-                          SearchHandler.parseSearchMeta(response, trailer)
-                        )
-                    )
-              )
-        )
-        .toFuture
-    ret onComplete {
-      case Success(_)   => request.context.logicallyComplete()
-      case Failure(err) => request.context.logicallyComplete(err)
-    }
-    ret
   }
 
   private[client] def extractClusterEnvironment(

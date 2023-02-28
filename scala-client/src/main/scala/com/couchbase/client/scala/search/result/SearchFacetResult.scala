@@ -15,7 +15,9 @@
  */
 
 package com.couchbase.client.scala.search.result
-import com.couchbase.client.scala.util.CouchbasePickler
+import com.couchbase.client.core.api.search.result._
+
+import scala.jdk.CollectionConverters._
 
 /**
   * Base interface for all facet results.
@@ -34,21 +36,22 @@ import com.couchbase.client.scala.util.CouchbasePickler
   * @since 1.0.0
   */
 sealed trait SearchFacetResult {
+  protected val internal: CoreAbstractSearchFacetResult
 
   /** $name */
-  def name: String
+  def name: String = internal.name
 
   /** $field */
-  def field: String
+  def field: String = internal.field
 
   /** $total */
-  def total: Long
+  def total: Long = internal.total
 
   /** $missing */
-  def missing: Long
+  def missing: Long = internal.missing
 
   /** $other */
-  def other: Long
+  def other: Long = internal.other
 }
 
 object SearchFacetResult {
@@ -59,108 +62,62 @@ object SearchFacetResult {
     *
     * @since 1.0.0
     */
-  case class DateRange(name: String, start: String, end: String, count: Long)
+  case class DateRange private (private val internal: CoreSearchDateRange) {
+    def name: String = internal.name
 
-  private[scala] object DateRange {
-    implicit val rw: CouchbasePickler.ReadWriter[DateRange] = CouchbasePickler.macroRW
+    def start: String = internal.start.toString
+
+    def end: String = internal.end.toString
+
+    def count: Long = internal.count
   }
 
   /**
     * Represents the result for a [[com.couchbase.client.scala.search.facet.SearchFacet.DateRangeFacet]].
     *
-    * @param name    the name of the [[com.couchbase.client.scala.search.facet.SearchFacet]] this result corresponds to.
-    * @param field   the field the [[com.couchbase.client.scala.search.facet.SearchFacet]] was targeting.
-    * @param total   the total number of valued facet results (it doesn't include missing).
-    * @param missing the number of results that couldn't be faceted, missing the
-    *                 adequate value. No matter how many more
-    *                 buckets are added to the original facet, these
-    *                 result won't ever be included in one.
-    * @param other   the number of results that could have been faceted (because
-    *                 they have a value for the facet's field) but
-    *                 weren't, due to not having a bucket in which they belong.
-    *                 Adding a bucket can result in these results being faceted.
-    *
     * @since 1.0.0
     */
-  case class DateRangeSearchFacetResult(
-      name: String,
-      field: String,
-      total: Long,
-      missing: Long,
-      other: Long,
-      dateRanges: Seq[DateRange]
-  ) extends SearchFacetResult
+  case class DateRangeSearchFacetResult private (
+      protected val internal: CoreDateRangeSearchFacetResult
+  ) extends SearchFacetResult {
 
-  private[scala] object DateRangeSearchFacetResult {
-    implicit val rw: CouchbasePickler.ReadWriter[DateRangeSearchFacetResult] =
-      CouchbasePickler.macroRW
+    /** The date range results. */
+    def dateRanges: Seq[DateRange] = internal.dateRanges.asScala.map(v => DateRange(v))
   }
 
   /**
     * Represents the result for a [[com.couchbase.client.scala.search.facet.SearchFacet.NumericRangeFacet]].
     *
-    * @param name    the name of the [[com.couchbase.client.scala.search.facet.SearchFacet]] this result corresponds to.
-    * @param field   the field the [[com.couchbase.client.scala.search.facet.SearchFacet]] was targeting.
-    * @param total   the total number of valued facet results (it doesn't include missing).
-    * @param missing the number of results that couldn't be faceted, missing the
-    *                 adequate value. No matter how many more
-    *                 buckets are added to the original facet, these
-    *                 result won't ever be included in one.
-    * @param other   the number of results that could have been faceted (because
-    *                 they have a value for the facet's field) but
-    *                 weren't, due to not having a bucket in which they belong.
-    *                 Adding a bucket can result in these results being faceted.
-    *
     * @since 1.0.0
     */
-  case class NumericRangeSearchFacetResult(
-      name: String,
-      field: String,
-      total: Long,
-      missing: Long,
-      other: Long,
-      numericRanges: Seq[NumericRange]
-  ) extends SearchFacetResult
+  case class NumericRangeSearchFacetResult private (
+      protected val internal: CoreNumericRangeSearchFacetResult
+  ) extends SearchFacetResult {
 
-  private[scala] object NumericRangeSearchFacetResult {
-    implicit val rw: CouchbasePickler.ReadWriter[NumericRangeSearchFacetResult] =
-      CouchbasePickler.macroRW
+    /** The numeric range results. */
+    def numericRanges: Seq[NumericRange] = internal.numericRanges.asScala.map(v => NumericRange(v))
   }
 
-  case class NumericRange(name: String, min: Double, max: Double, count: Long)
+  case class NumericRange private (private val internal: CoreSearchNumericRange) {
+    def name: String = internal.name
 
-  private[scala] object NumericRange {
-    implicit val rw: CouchbasePickler.ReadWriter[NumericRange] = CouchbasePickler.macroRW
+    def min: Double = internal.min
+
+    def max: Double = internal.max
+
+    def count: Long = internal.count
   }
 
   /**
     * Represents the result for a [[com.couchbase.client.scala.search.facet.SearchFacet.TermFacet]].
     *
-    * @param name    the name of the [[com.couchbase.client.scala.search.facet.SearchFacet]] this result corresponds to.
-    * @param field   the field the [[com.couchbase.client.scala.search.facet.SearchFacet]] was targeting.
-    * @param total   the total number of valued facet results (it doesn't include missing).
-    * @param missing the number of results that couldn't be faceted, missing the
-    *                 adequate value. No matter how many more
-    *                 buckets are added to the original facet, these
-    *                 result won't ever be included in one.
-    * @param other   the number of results that could have been faceted (because
-    *                 they have a value for the facet's field) but
-    *                 weren't, due to not having a bucket in which they belong.
-    *                 Adding a bucket can result in these results being faceted.
-    *
     * @since 1.0.0
     */
-  case class TermSearchFacetResult(
-      name: String,
-      field: String,
-      total: Long,
-      missing: Long,
-      other: Long,
-      terms: Seq[TermRange]
-  ) extends SearchFacetResult
+  case class TermSearchFacetResult private (protected val internal: CoreTermSearchFacetResult)
+      extends SearchFacetResult {
 
-  private[scala] object TermSearchFacetResult {
-    implicit val rw: CouchbasePickler.ReadWriter[TermSearchFacetResult] = CouchbasePickler.macroRW
+    /** The term ranges results. */
+    def terms: Seq[TermRange] = internal.terms.asScala.map(v => TermRange(v))
   }
 
   /**
@@ -169,9 +126,9 @@ object SearchFacetResult {
     *
     * @since 1.0.0
     */
-  case class TermRange(term: String, count: Long)
+  case class TermRange private (private val internal: CoreSearchTermRange) {
+    def term: String = internal.name
 
-  private[scala] object TermRange {
-    implicit val rw: CouchbasePickler.ReadWriter[TermRange] = CouchbasePickler.macroRW
+    def count: Long = internal.count
   }
 }

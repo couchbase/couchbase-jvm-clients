@@ -16,6 +16,8 @@
 
 package com.couchbase.client.scala.search
 
+import com.couchbase.client.core.api.search.result.CoreSearchTermRange
+
 import java.util.concurrent.TimeUnit
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConsistencyUtil
@@ -202,14 +204,19 @@ class SearchSpec extends ScalaIntegrationTest {
             runTest()
           } else {
             result.facets("type_facet") match {
-              case TermSearchFacetResult(name, field, total, missing, other, terms) =>
-                if (total == 2) {
-                  assert(name == "type_facet")
-                  assert(field == "type")
-                  assert(total == 2)
-                  assert(missing == 0)
-                  assert(other == 0)
-                  assert(terms.toSet == Set(TermRange("user", 1), TermRange("admin", 1)))
+              case x: TermSearchFacetResult =>
+                if (x.total == 2) {
+                  assert(x.name == "type_facet")
+                  assert(x.field == "type")
+                  assert(x.total == 2)
+                  assert(x.missing == 0)
+                  assert(x.other == 0)
+                  assert(
+                    x.terms.toSet == Set(
+                      TermRange(new CoreSearchTermRange("user", 1)),
+                      TermRange(new CoreSearchTermRange("admin", 1))
+                    )
+                  )
                 } else {
                   println("Running test again as not enough facet total")
                   runTest()

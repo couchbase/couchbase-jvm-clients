@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.search.queries
 
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.core.api.search.queries.CoreTermRangeQuery
 
 /** An FTS query that matches documents on a range of values. At least one bound is required, and the
   * inclusiveness of each bound can be configured.
@@ -86,12 +86,11 @@ case class TermRangeQuery(
     copy(boost = Some(boost))
   }
 
-  override protected def injectParams(input: JsonObject): Unit = {
-    min.foreach(v => input.put("min", v))
-    inclusiveMin.foreach(v => input.put("inclusive_min", v))
-    max.foreach(v => input.put("max", v))
-    inclusiveMax.foreach(v => input.put("inclusive_max", v))
-    boost.foreach(v => input.put("boost", v))
-    field.foreach(v => input.put("field", v))
-  }
+  override private[scala] def toCore =
+    new CoreTermRangeQuery(min.orNull,
+      max.orNull,
+      inclusiveMin.map(_.asInstanceOf[java.lang.Boolean]).orNull,
+      inclusiveMax.map(_.asInstanceOf[java.lang.Boolean]).orNull,
+      field.orNull,
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
 }

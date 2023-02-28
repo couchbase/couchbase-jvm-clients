@@ -16,9 +16,10 @@
 
 package com.couchbase.client.scala.search.facet
 
-import java.time.Instant
+import com.couchbase.client.core.api.search.facet._
 
-import com.couchbase.client.scala.json.{JsonArray, JsonObject}
+import java.time.Instant
+import scala.jdk.CollectionConverters._
 
 /** Base class for all FTS facets in querying.
   *
@@ -28,10 +29,7 @@ sealed trait SearchFacet {
   protected val field: String
   protected val size: Option[Int]
 
-  def injectParams(queryJson: JsonObject): Unit = {
-    size.foreach(v => queryJson.put("size", v))
-    queryJson.put("field", field)
-  }
+  private[scala] def toCore: CoreSearchFacet
 }
 
 object SearchFacet {
@@ -43,7 +41,10 @@ object SearchFacet {
     *
     * @return a constructed facet
     */
-  case class TermFacet(field: String, size: Option[Int] = None) extends SearchFacet
+  case class TermFacet(field: String, size: Option[Int] = None) extends SearchFacet {
+    override private[scala] def toCore =
+      new CoreTermFacet(field, size.map(_.asInstanceOf[Integer]).orNull)
+  }
 
   /** A search facet that categorizes rows into numerical ranges (or buckets) provided by the user.
     *
@@ -58,19 +59,12 @@ object SearchFacet {
       numericRanges: Seq[NumericRange],
       size: Option[Int] = None
   ) extends SearchFacet {
-
-    override def injectParams(queryJson: JsonObject): Unit = {
-      super.injectParams(queryJson)
-      val numericRange = JsonArray.create
-      numericRanges.foreach(nr => {
-        val nrJson = JsonObject.create
-        nrJson.put("name", nr.name)
-        nr.min.foreach(v => nrJson.put("min", v))
-        nr.max.foreach(v => nrJson.put("max", v))
-        numericRange.add(nrJson)
-      })
-      queryJson.put("numeric_ranges", numericRange)
-    }
+    override private[scala] def toCore =
+      new CoreNumericRangeFacet(
+        field,
+        size.map(_.asInstanceOf[Integer]).orNull,
+        numericRanges.map(_.toCore).asJava
+      )
   }
 
   /** Defines a numeric range.
@@ -81,7 +75,13 @@ object SearchFacet {
     * @param min  the lower bound (optional)
     * @param max  the upper bound (optional)
     */
-  case class NumericRange(name: String, min: Option[Float], max: Option[Float])
+  case class NumericRange(name: String, min: Option[Float], max: Option[Float]) {
+    private[scala] val toCore = new CoreNumericRange(
+      name,
+      min.map(_.asInstanceOf[java.lang.Double]).orNull,
+      max.map(_.asInstanceOf[java.lang.Double]).orNull
+    )
+  }
 
   /** A facet that categorizes rows inside date ranges (or buckets) provided by the user.
     *
@@ -93,30 +93,25 @@ object SearchFacet {
     */
   case class DateRangeFacet(field: String, dateRanges: Seq[DateRange], size: Option[Int] = None)
       extends SearchFacet {
-
-    override def injectParams(queryJson: JsonObject): Unit = {
-      super.injectParams(queryJson)
-      val dateRange = JsonArray.create
-      dateRanges.foreach(dr => {
-        val drJson = JsonObject.create
-        drJson.put("name", dr.name)
-        dr.start.foreach(v => drJson.put("start", v))
-        dr.end.foreach(v => drJson.put("end", v))
-        dateRange.add(drJson)
-      })
-      queryJson.put("date_ranges", dateRange)
-    }
+    override private[scala] def toCore =
+      new CoreDateRangeFacet(
+        field,
+        size.map(_.asInstanceOf[Integer]).orNull,
+        dateRanges.map(_.toCore).asJava
+      )
   }
 
   /** Defines a date range.
     *
-    * `start` and `end` are both optional, but at least one should be provided.
+    * `start` and `end` are both optional, but at least one must be provided.
     *
     * @param name   the name of the range, to make it easier to find in the results
     * @param start  the start of the range (optional)
     * @param end    the start of the range (optional)
     */
-  case class DateRange(name: String, start: Option[String], end: Option[String])
+  case class DateRange(name: String, start: Option[String], end: Option[String]) {
+    private[scala] def toCore = new CoreDateRange(name, start.orNull, end.orNull)
+  }
 
   object DateRange {
     def create(name: String, start: Option[Instant], end: Option[Instant]): DateRange = {

@@ -16,9 +16,9 @@
 
 package com.couchbase.client.scala.search.queries
 
-import java.time.Instant
+import com.couchbase.client.core.api.search.queries.CoreDateRangeQuery
 
-import com.couchbase.client.scala.json.JsonObject
+import java.time.Instant
 
 /** An FTS query that matches documents on a range of dates. At least one bound is required.
   *
@@ -114,17 +114,14 @@ case class DateRangeQuery(
     copy(boost = Some(boost))
   }
 
-  override protected def injectParams(input: JsonObject): Unit = {
-    start.foreach(s => {
-      input.put("start", s)
-      inclusiveStart.foreach(is => input.put("inclusive_start", is))
-    })
-    end.foreach(e => {
-      input.put("end", e)
-      inclusiveEnd.foreach(ie => input.put("inclusive_end", ie))
-    })
-    dateTimeParser.foreach(v => input.put("datetime_parser", v))
-    boost.foreach(v => input.put("boost", v))
-    field.foreach(v => input.put("field", v))
-  }
+  override private[scala] def toCore =
+    new CoreDateRangeQuery(
+      start.orNull,
+      end.orNull,
+      inclusiveStart.map(_.asInstanceOf[java.lang.Boolean]).orNull,
+      inclusiveEnd.map(_.asInstanceOf[java.lang.Boolean]).orNull,
+      dateTimeParser.orNull,
+      field.orNull,
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull
+    )
 }

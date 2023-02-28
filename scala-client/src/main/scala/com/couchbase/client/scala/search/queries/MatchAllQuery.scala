@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.search.queries
 
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.core.api.search.queries.CoreMatchAllQuery
 
 /** An FTS query that matches all indexed documents (usually for debugging purposes).
   *
@@ -37,8 +37,6 @@ case class MatchAllQuery(
     copy(boost = Some(boost))
   }
 
-  override protected def injectParams(input: JsonObject): Unit = {
-    input.put("match_all", null.asInstanceOf[String])
-    boost.foreach(v => input.put("boost", v))
-  }
+  override private[scala] def toCore =
+    new CoreMatchAllQuery(boost.map(_.asInstanceOf[java.lang.Double]).orNull)
 }

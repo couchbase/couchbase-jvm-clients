@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.search.queries
 
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.core.api.search.queries.CoreTermQuery
 
 /**
   * An FTS query that matches terms (without further analysis). Usually for debugging purposes,
@@ -75,17 +75,10 @@ case class TermQuery(
     copy(boost = Some(boost))
   }
 
-  override protected def injectParams(input: JsonObject): Unit = {
-    input.put("term", term)
-    boost.foreach(v => input.put("boost", v))
-    field.foreach(v => input.put("field", v))
-    fuzziness.foreach(f => {
-      if (f > 0) {
-        input.put("fuzziness", f)
-        prefixLength.foreach(pl => {
-          if (pl > 0) input.put("prefix_length", pl)
-        })
-      }
-    })
-  }
+  override private[scala] def toCore =
+    new CoreTermQuery(term,
+      field.orNull,
+      fuzziness.map(_.asInstanceOf[Integer]).orNull,
+      prefixLength.map(_.asInstanceOf[Integer]).orNull,
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
 }

@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.search.queries
 
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.core.api.search.queries.CoreQueryStringQuery
 
 /** An FTS query that performs a search according to the "query string" syntax.
   *
@@ -48,9 +48,6 @@ case class QueryStringQuery(
     copy(boost = Some(boost))
   }
 
-  override protected def injectParams(input: JsonObject): Unit = {
-    input.put("query", query)
-    boost.foreach(v => input.put("boost", v))
-    field.foreach(v => input.put("field", v))
-  }
+  override private[scala] def toCore =
+    new CoreQueryStringQuery(query, boost.map(_.asInstanceOf[java.lang.Double]).orNull)
 }

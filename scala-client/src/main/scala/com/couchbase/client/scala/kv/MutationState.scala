@@ -1,6 +1,8 @@
 package com.couchbase.client.scala.kv
 
+import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.msg.kv.MutationToken
+import scala.jdk.CollectionConverters._
 
 /** Represents the tokens from one or more mutations. */
 case class MutationState(tokens: Seq[MutationToken]) {
@@ -23,6 +25,8 @@ case class MutationState(tokens: Seq[MutationToken]) {
   def add(mutationState: MutationState): MutationState = {
     copy(tokens ++ mutationState.tokens)
   }
+
+  private[scala] def toCore = new CoreMutationState(tokens.asJava)
 }
 
 object MutationState {
