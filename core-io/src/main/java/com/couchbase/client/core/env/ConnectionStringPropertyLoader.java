@@ -46,6 +46,8 @@ public class ConnectionStringPropertyLoader extends AbstractMapPropertyLoader<Co
     COMPAT_ALIAS.put("certpath", "security.trustCertificate");
     COMPAT_ALIAS.put("enable_tls", "security.enableTls");
 
+    COMPAT_ALIAS.put("network", "io.networkResolution");
+
     COMPAT_ALIAS.put("kv_connect_timeout", "timeout.connectTimeout");
     COMPAT_ALIAS.put("kv_timeout", "timeout.kvTimeout");
     COMPAT_ALIAS.put("kv_durable_timeout", "timeout.kvDurableTimeout");

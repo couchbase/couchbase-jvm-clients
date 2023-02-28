@@ -101,6 +101,10 @@ class ConnectionStringPropertyLoaderTest {
       "couchbase://127.0.0.1?num_kv_connections=4",
       env -> assertEquals(4, env.ioConfig().numKvConnections())
     );
+    parse(
+      "couchbase://127.0.0.1?network=external",
+      env -> assertEquals(NetworkResolution.EXTERNAL, env.ioConfig().networkResolution())
+    );
   }
 
   /**
