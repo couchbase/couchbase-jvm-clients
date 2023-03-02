@@ -23,6 +23,7 @@ import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
 import com.couchbase.client.performer.scala.query.QueryIndexManagerHelper
+import com.couchbase.client.performer.scala.search.SearchHelper
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaIteratorStreamer}
 import com.couchbase.client.protocol
 import com.couchbase.client.protocol.sdk.kv.rangescan.{Scan, ScanTermChoice}
@@ -197,6 +198,10 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
 
       if (clc.hasQueryIndexManager) {
         result = QueryIndexManagerHelper.handleClusterQueryIndexManager(connection.cluster, op)
+      } else if (clc.hasSearch) {
+        result = SearchHelper.handleSearchBlocking(connection.cluster, clc.getSearch)
+      } else if (clc.hasSearchIndexManager) {
+        result = SearchHelper.handleClusterSearchIndexManager(connection.cluster, op)
       } else throw new UnsupportedOperationException()
     } else if (op.hasCollectionCommand) {
       val clc  = op.getCollectionCommand

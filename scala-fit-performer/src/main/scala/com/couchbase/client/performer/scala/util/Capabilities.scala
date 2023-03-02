@@ -24,11 +24,11 @@ object Capabilities {
     val out = new util.ArrayList[Caps]
 
     // [start:1.1.5]
-    out.add(Caps.SDK_PRESERVE_EXPIRY);
+    out.add(Caps.SDK_PRESERVE_EXPIRY)
     // [end:1.1.5]
 
     // [start:1.4.1]
-    out.add(Caps.SDK_KV_RANGE_SCAN);
+    out.add(Caps.SDK_KV_RANGE_SCAN)
     // [end:1.4.1]
 
     out.add(Caps.SDK_QUERY_INDEX_MANAGEMENT)
@@ -36,6 +36,8 @@ object Capabilities {
     // [start:1.4.4]
     out.add(Caps.SDK_COLLECTION_QUERY_INDEX_MANAGEMENT)
     // [end:1.4.4]
+
+    out.add(Caps.SDK_SEARCH)
 
     out
   }
