@@ -48,7 +48,7 @@ public class ReactiveBinaryCollection {
   private final CollectionIdentifier collectionIdentifier;
   private final CoreKvBinaryOps coreKvBinaryOps;
 
-  ReactiveBinaryCollection(final Core core, final AsyncBinaryCollection async) {
+  ReactiveBinaryCollection(final AsyncBinaryCollection async) {
     this.collectionIdentifier = async.collectionIdentifier();
     this.coreKvBinaryOps = async.coreKvBinaryOps;
   }

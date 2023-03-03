@@ -17,7 +17,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvOps;
@@ -120,16 +119,6 @@ public class ReactiveCollection {
   private final CoreKvOps kvOps;
 
   /**
-   * Holds the core context of the attached core.
-   */
-  private final CoreContext coreContext;
-
-  /**
-   * Holds a direct reference to the core.
-   */
-  private final Core core;
-
-  /**
    * Holds the related binary collection.
    */
   private final ReactiveBinaryCollection reactiveBinaryCollection;
@@ -141,9 +130,7 @@ public class ReactiveCollection {
 
   ReactiveCollection(final AsyncCollection asyncCollection) {
     this.asyncCollection = asyncCollection;
-    this.coreContext = asyncCollection.core().context();
-    this.core = asyncCollection.core();
-    this.reactiveBinaryCollection = new ReactiveBinaryCollection(core, asyncCollection.binary());
+    this.reactiveBinaryCollection = new ReactiveBinaryCollection(asyncCollection.binary());
     this.kvOps = asyncCollection.kvOps;
     this.queryIndexManager = new ReactiveCollectionQueryIndexManager(asyncCollection.queryIndexes());
   }
@@ -605,7 +592,7 @@ public class ReactiveCollection {
       SubdocGetRequest request = asyncCollection.lookupInRequest(id, specs, opts);
       return Reactor.wrap(
         request,
-        LookupInAccessor.lookupInAccessor(core, request, serializer),
+        LookupInAccessor.lookupInAccessor(core(), request, serializer),
         true
       );
     });
