@@ -34,6 +34,8 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InternalServerFailureException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
+import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.error.context.ProtostellarErrorContext;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -58,10 +60,6 @@ public class CoreProtostellarErrorHandlingUtil {
     // Handle wrapped CompletableFuture failures.
     if (t instanceof ExecutionException) {
       return convertKeyValueException(core, request, t.getCause());
-    }
-
-    if (request.timeoutElapsed()) {
-      return request.cancelDueToTimeout();
     }
 
     ProtostellarErrorContext context = request.context();
@@ -117,7 +115,16 @@ public class CoreProtostellarErrorHandlingUtil {
         case INVALID_ARGUMENT:
           return ProtostellarRequestBehaviour.fail(new InvalidArgumentException("Invalid argument provided", t, context));
         case DEADLINE_EXCEEDED:
-          return ProtostellarRequestBehaviour.fail(new AmbiguousTimeoutException("The server reported the operation timeout, and state might have been changed", new CancellationErrorContext(context)));
+          CancellationErrorContext ec = new CancellationErrorContext(context);
+          TimeoutException e;
+          if (!request.maybeSent()) {
+            e = new UnambiguousTimeoutException("The operation timed out before being sent.  Possible explanations include that a Protostellar connection could not be established in time, or that this client is presently overloaded.", ec);
+          } else if (request.readonly()) {
+            e = new UnambiguousTimeoutException("The operation timed out possibly after being sent, and is read-only", ec);
+          } else {
+            e = new AmbiguousTimeoutException("The operation timed out possibly after being sent, and state could have been changed on the server as a result", ec);
+          }
+          return ProtostellarRequestBehaviour.fail(e);
         case NOT_FOUND:
           return ProtostellarRequestBehaviour.fail(new DocumentNotFoundException(context));
         case ALREADY_EXISTS:

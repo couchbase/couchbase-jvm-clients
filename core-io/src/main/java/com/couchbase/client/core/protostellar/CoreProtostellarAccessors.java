@@ -77,6 +77,7 @@ public class CoreProtostellarAccessors {
       RequestSpan dispatchSpan = createDispatchSpan(core, request, endpoint);
       try {
         // Make the Protostellar call.
+        request.markAsSent();
         TGrpcResponse response = executeBlockingGrpcCall.apply(endpoint);
 
         request.dispatchDuration(System.nanoTime() - start);
@@ -154,6 +155,7 @@ public class CoreProtostellarAccessors {
           dispatchSpan.end();
         }
 
+        request.markAsSent();
         TSdkResult result = convertResponse.apply(response);
 
         if (request.completed()) {
@@ -223,6 +225,9 @@ public class CoreProtostellarAccessors {
     });
   }
 
+  /**
+   * This method must always be called at Reactive runtime, not build-time (e.g., inside a Mono.defer or similar).
+   */
   public static <TSdkResult, TGrpcRequest, TGrpcResponse>
   void reactiveInternal(Sinks.One<TSdkResult> ret,
                         CoreProtostellar core,
@@ -239,6 +244,7 @@ public class CoreProtostellarAccessors {
     long start = System.nanoTime();
 
     // Make the Protostellar call.
+    request.markAsSent();
     ListenableFuture<TGrpcResponse> response = executeFutureGrpcCall.apply(endpoint);
 
     Futures.addCallback(response, new FutureCallback<TGrpcResponse>() {

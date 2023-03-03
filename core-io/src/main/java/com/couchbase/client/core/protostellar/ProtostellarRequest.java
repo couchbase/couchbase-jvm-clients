@@ -23,9 +23,7 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
 import com.couchbase.client.core.deps.io.grpc.Deadline;
-import com.couchbase.client.core.error.AmbiguousTimeoutException;
 import com.couchbase.client.core.error.RequestCanceledException;
-import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.error.context.ProtostellarErrorContext;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -62,7 +60,10 @@ public class ProtostellarRequest<TGrpcRequest> {
   private final long createdAt = System.nanoTime();
   protected final ServiceType serviceType;
   private final String requestName;
-  private final boolean idempotent;
+
+  /** Whether this request definitely will not effect any change on the server. */
+
+  private final boolean readonly;
   private final Duration timeout;
   private final Deadline deadline;
   private final Map<String, Object> clientContext;
@@ -83,12 +84,16 @@ public class ProtostellarRequest<TGrpcRequest> {
    */
   private volatile State state = State.INCOMPLETE;
 
+  /** Has this request been sent on the wire.  Note we set this just before trying to send it - it doesn't guarantee
+   * that it actually was sent. */
+  private volatile boolean maybeSent;
+
   public ProtostellarRequest(CoreProtostellar core,
                              ServiceType serviceType,
                              String requestName,
                              RequestSpan span,
                              Duration timeout,
-                             boolean idempotent,
+                             boolean readonly,
                              RetryStrategy retryStrategy,
                              Map<String, Object> clientContext) {
     this.core = core;
@@ -96,7 +101,7 @@ public class ProtostellarRequest<TGrpcRequest> {
     this.requestName = requestName;
     this.span = span;
     this.absoluteTimeout = System.nanoTime() + timeout.toNanos();
-    this.idempotent = idempotent;
+    this.readonly = readonly;
     this.retryStrategy = retryStrategy;
     this.timeout = timeout;
     this.deadline = convertTimeout(timeout);
@@ -185,19 +190,8 @@ public class ProtostellarRequest<TGrpcRequest> {
     return ProtostellarRequestBehaviour.fail(exception);
   }
 
-  public ProtostellarRequestBehaviour cancelDueToTimeout() {
-    CancellationReason reason = CancellationReason.TIMEOUT;
-    cancellationReason = reason;
-
-    String msg = this.getClass().getSimpleName() + ", Reason: " + reason;
-    CancellationErrorContext ctx = new CancellationErrorContext(context());
-    RuntimeException exception = idempotent() ? new UnambiguousTimeoutException(msg, ctx) : new AmbiguousTimeoutException(msg, ctx);
-
-    return ProtostellarRequestBehaviour.fail(exception);
-  }
-
-  public boolean idempotent() {
-    return idempotent;
+  public boolean readonly() {
+    return readonly;
   }
 
   public long logicalRequestLatency() {
@@ -219,14 +213,23 @@ public class ProtostellarRequest<TGrpcRequest> {
     return null;
   }
 
+  public void markAsSent() {
+    maybeSent = true;
+  }
+
+  public boolean maybeSent() {
+    return maybeSent;
+  }
+
   public ProtostellarErrorContext context() {
     Map<String, Object> input = new HashMap<>();
 
-    input.put("idempotent", idempotent);
+    input.put("readonly", readonly);
     input.put("requestName", requestName);
     input.put("retried", retryAttempts);
     input.put("completed", completed());
     input.put("timeoutMs", timeout.toMillis());
+    input.put("maybeSent", maybeSent);
     if (cancellationReason != null) {
       input.put("cancelled", true);
       input.put("reason", cancellationReason);

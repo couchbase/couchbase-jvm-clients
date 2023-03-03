@@ -40,13 +40,7 @@ public class RetryOrchestratorProtostellar {
   public static ProtostellarRequestBehaviour shouldRetry(CoreProtostellar core, ProtostellarRequest<?> request, RetryReason reason) {
     ProtostellarContext ctx = core.context();
 
-    if (request.timeoutElapsed()) {
-      CancellationErrorContext cancelContext = new CancellationErrorContext(request.context());
-      RuntimeException exception = request.idempotent()
-        ? new UnambiguousTimeoutException("Request timed out", cancelContext)
-        : new AmbiguousTimeoutException("Request timed out", cancelContext);
-      return ProtostellarRequestBehaviour.fail(exception);
-    }
+    // Note there is intentionally no timeout handling here - that is left to GRPC to raise.
 
     if (reason.alwaysRetry()) {
       return retryWithDuration(ctx, request, controlledBackoff(request.retryAttempts()), reason);

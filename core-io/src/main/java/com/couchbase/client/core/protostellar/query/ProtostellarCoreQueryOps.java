@@ -111,6 +111,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
       }
     };
 
+    request.markAsSent();
     core.endpoint().queryStub()
       .withDeadline(request.deadline())
       .query(request.request(), response);
@@ -169,6 +170,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
       }
     };
 
+    request.markAsSent();
     core.endpoint().queryStub()
       .withDeadline(request.deadline())
       .query(request.request(), response);
@@ -216,6 +218,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
         }
       };
 
+      request.markAsSent();
       core.endpoint().queryStub()
               .withDeadline(request.deadline())
               .query(request.request(), response);
