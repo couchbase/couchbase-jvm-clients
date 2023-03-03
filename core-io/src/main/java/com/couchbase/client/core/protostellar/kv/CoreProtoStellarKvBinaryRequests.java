@@ -49,17 +49,6 @@ public class CoreProtoStellarKvBinaryRequests {
     validateAppendPrependArgs(key, keyspace, opts, content, cas, durability);
     Duration timeout = CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
 
-    ProtostellarRequest<AppendRequest> out = new ProtostellarKeyValueRequest<>(core,
-      keyspace,
-      key,
-      durability,
-      TracingIdentifiers.SPAN_REQUEST_KV_APPEND,
-      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_APPEND, durability, opts.parentSpan().orElse(null)),
-      timeout,
-      false,
-      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
-      opts.clientContext());
-
     AppendRequest.Builder request = com.couchbase.client.protostellar.kv.v1.AppendRequest.newBuilder()
       .setBucketName(keyspace.bucket())
       .setScopeName(keyspace.scope())
@@ -72,7 +61,18 @@ public class CoreProtoStellarKvBinaryRequests {
       request.setDurabilityLevel(CoreProtostellarUtil.convert(durability));
     }
 
-    return out.request(request.build());
+    return new ProtostellarKeyValueRequest<>(request.build(),
+      core,
+      keyspace,
+      key,
+      durability,
+      TracingIdentifiers.SPAN_REQUEST_KV_APPEND,
+      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_APPEND, durability, opts.parentSpan().orElse(null)),
+      timeout,
+      false,
+      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
+      opts.clientContext(),
+      0);
   }
 
   public static ProtostellarRequest<PrependRequest> prependRequest(CoreProtostellar core, String key, CoreKeyspace keyspace,
@@ -80,17 +80,6 @@ public class CoreProtoStellarKvBinaryRequests {
 
     validateAppendPrependArgs(key, keyspace, opts, content, cas, durability);
     Duration timeout = CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
-
-    ProtostellarRequest<PrependRequest> out = new ProtostellarKeyValueRequest<>(core,
-      keyspace,
-      key,
-      durability,
-      TracingIdentifiers.SPAN_REQUEST_KV_PREPEND,
-      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_PREPEND, durability, opts.parentSpan().orElse(null)),
-      timeout,
-      false,
-      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
-      opts.clientContext());
 
     PrependRequest.Builder request = com.couchbase.client.protostellar.kv.v1.PrependRequest.newBuilder()
       .setBucketName(keyspace.bucket())
@@ -104,7 +93,18 @@ public class CoreProtoStellarKvBinaryRequests {
       request.setDurabilityLevel(CoreProtostellarUtil.convert(durability));
     }
 
-    return out.request(request.build());
+    return new ProtostellarKeyValueRequest<>(request.build(),
+      core,
+      keyspace,
+      key,
+      durability,
+      TracingIdentifiers.SPAN_REQUEST_KV_PREPEND,
+      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_PREPEND, durability, opts.parentSpan().orElse(null)),
+      timeout,
+      false,
+      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
+      opts.clientContext(),
+      0);
   }
 
   public static ProtostellarRequest<IncrementRequest> incrementRequest(CoreProtostellar core, String key, CoreKeyspace keyspace,
@@ -112,17 +112,6 @@ public class CoreProtoStellarKvBinaryRequests {
 
     validateIncrementDecrementArgs(key, keyspace, opts, expiry, delta, initial, durability);
     Duration timeout = CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
-
-    ProtostellarRequest<IncrementRequest> out = new ProtostellarKeyValueRequest<>(core,
-      keyspace,
-      key,
-      durability,
-      TracingIdentifiers.SPAN_REQUEST_KV_INCREMENT,
-      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_INCREMENT, durability, opts.parentSpan().orElse(null)),
-      timeout,
-      false,
-      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
-      opts.clientContext());
 
     IncrementRequest.Builder request = com.couchbase.client.protostellar.kv.v1.IncrementRequest.newBuilder()
       .setBucketName(keyspace.bucket()).setScopeName(keyspace.scope()).setCollectionName(keyspace.collection())
@@ -135,7 +124,18 @@ public class CoreProtoStellarKvBinaryRequests {
       request.setDurabilityLevel(CoreProtostellarUtil.convert(durability));
     }
 
-    return out.request(request.build());
+    return new ProtostellarKeyValueRequest<>(request.build(),
+      core,
+      keyspace,
+      key,
+      durability,
+      TracingIdentifiers.SPAN_REQUEST_KV_INCREMENT,
+      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_INCREMENT, durability, opts.parentSpan().orElse(null)),
+      timeout,
+      false,
+      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
+      opts.clientContext(),
+      0);
   }
 
   public static ProtostellarRequest<DecrementRequest> decrementRequest(CoreProtostellar core, String key, CoreKeyspace keyspace,
@@ -143,17 +143,6 @@ public class CoreProtoStellarKvBinaryRequests {
 
     validateIncrementDecrementArgs(key, keyspace, opts, expiry, delta, initial, durability);
     Duration timeout = CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
-
-    ProtostellarRequest<DecrementRequest> out = new ProtostellarKeyValueRequest<>(core,
-      keyspace,
-      key,
-      durability,
-      TracingIdentifiers.SPAN_REQUEST_KV_DECREMENT,
-      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_DECREMENT, durability, opts.parentSpan().orElse(null)),
-      timeout,
-      false,
-      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
-      opts.clientContext());
 
     DecrementRequest.Builder request = com.couchbase.client.protostellar.kv.v1.DecrementRequest.newBuilder()
       .setBucketName(keyspace.bucket())
@@ -170,7 +159,17 @@ public class CoreProtoStellarKvBinaryRequests {
       request.setDurabilityLevel(CoreProtostellarUtil.convert(durability));
     }
 
-    return out.request(request.build());
+    return new ProtostellarKeyValueRequest<>(request.build(),
+      core,
+      keyspace,
+      key,
+      durability,
+      TracingIdentifiers.SPAN_REQUEST_KV_DECREMENT,
+      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_DECREMENT, durability, opts.parentSpan().orElse(null)),
+      timeout,
+      false,
+      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
+      opts.clientContext(),
+      0);
   }
-
 }

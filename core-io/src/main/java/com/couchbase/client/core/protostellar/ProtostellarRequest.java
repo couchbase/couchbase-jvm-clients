@@ -54,7 +54,7 @@ public class ProtostellarRequest<TGrpcRequest> {
   /**
    * The time it took to encode the payload (if any).
    */
-  private long encodeLatency;
+  private long encodeDurationNanos;
   private final RetryStrategy retryStrategy;
 
   private final long createdAt = System.nanoTime();
@@ -69,10 +69,10 @@ public class ProtostellarRequest<TGrpcRequest> {
   private final Map<String, Object> clientContext;
 
 
-  private TGrpcRequest request;
+  private final TGrpcRequest request;
   private long logicallyCompletedAt;
-  private long lastDispatchDuration;
-  private long totalDispatchDuration;
+  private long lastDispatchDurationNanos;
+  private long totalDispatchDurationNanos;
   private int retryAttempts;
   private Set<RetryReason> retryReasons;
   private CancellationReason cancellationReason;
@@ -88,14 +88,17 @@ public class ProtostellarRequest<TGrpcRequest> {
    * that it actually was sent. */
   private volatile boolean maybeSent;
 
-  public ProtostellarRequest(CoreProtostellar core,
+  public ProtostellarRequest(TGrpcRequest request,
+                             CoreProtostellar core,
                              ServiceType serviceType,
                              String requestName,
                              RequestSpan span,
                              Duration timeout,
                              boolean readonly,
                              RetryStrategy retryStrategy,
-                             Map<String, Object> clientContext) {
+                             Map<String, Object> clientContext,
+                             long encodeDurationNanos) {
+    this.request = request;
     this.core = core;
     this.serviceType = serviceType;
     this.requestName = requestName;
@@ -106,24 +109,11 @@ public class ProtostellarRequest<TGrpcRequest> {
     this.timeout = timeout;
     this.deadline = convertTimeout(timeout);
     this.clientContext = clientContext;
-  }
-
-  public ProtostellarRequest<TGrpcRequest> request(TGrpcRequest request) {
-    this.request = request;
-    return this;
+    this.encodeDurationNanos = encodeDurationNanos;
   }
 
   public TGrpcRequest request() {
     return request;
-  }
-
-  public long encodeLatency() {
-    return encodeLatency;
-  }
-
-  public ProtostellarRequest<TGrpcRequest> encodeLatency(long encodeLatency) {
-    this.encodeLatency = encodeLatency;
-    return this;
   }
 
   public RequestSpan span() {
@@ -245,19 +235,19 @@ public class ProtostellarRequest<TGrpcRequest> {
       input.put("retryReasons", retryReasons);
     }
     long logicalLatency = logicalRequestLatency();
-    if (lastDispatchDuration != 0 || logicalLatency != 0 || encodeLatency != 0) {
+    if (lastDispatchDurationNanos != 0 || logicalLatency != 0 || encodeDurationNanos != 0) {
       HashMap<String, Long> timings = new HashMap<>();
-      if (lastDispatchDuration != 0) {
-        timings.put("lastDispatchMicros", TimeUnit.NANOSECONDS.toMicros(lastDispatchDuration));
+      if (lastDispatchDurationNanos != 0) {
+        timings.put("lastDispatchMicros", TimeUnit.NANOSECONDS.toMicros(lastDispatchDurationNanos));
       }
-      if (totalDispatchDuration != 0) {
-        timings.put("totalDispatchMicros", TimeUnit.NANOSECONDS.toMicros(totalDispatchDuration));
+      if (totalDispatchDurationNanos != 0) {
+        timings.put("totalDispatchMicros", TimeUnit.NANOSECONDS.toMicros(totalDispatchDurationNanos));
       }
       if (logicalLatency != 0) {
         timings.put("totalMicros", TimeUnit.NANOSECONDS.toMicros(logicalLatency));
       }
-      if (encodeLatency != 0) {
-        timings.put("encodingMicros", TimeUnit.NANOSECONDS.toMicros(encodeLatency));
+      if (encodeDurationNanos != 0) {
+        timings.put("encodingMicros", TimeUnit.NANOSECONDS.toMicros(encodeDurationNanos));
       }
       input.put("timings", timings);
     }
@@ -269,9 +259,9 @@ public class ProtostellarRequest<TGrpcRequest> {
     return retryAttempts;
   }
 
-  public void dispatchDuration(long duration) {
-    lastDispatchDuration = duration;
-    totalDispatchDuration += duration;
+  public void dispatchDuration(long durationNanos) {
+    lastDispatchDurationNanos = durationNanos;
+    totalDispatchDurationNanos += durationNanos;
   }
 
   public boolean completed() {

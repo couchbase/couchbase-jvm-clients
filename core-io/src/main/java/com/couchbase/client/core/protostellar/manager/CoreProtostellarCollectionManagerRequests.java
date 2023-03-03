@@ -38,7 +38,8 @@ import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.create
  */
 @Stability.Internal
 public class CoreProtostellarCollectionManagerRequests {
-  private CoreProtostellarCollectionManagerRequests() {}
+  private CoreProtostellarCollectionManagerRequests() {
+  }
 
   public static ProtostellarRequest<CreateCollectionRequest> createCollectionRequest(CoreProtostellar core,
                                                                                      String bucketName,
@@ -47,7 +48,17 @@ public class CoreProtostellarCollectionManagerRequests {
                                                                                      Duration maxTTL,
                                                                                      CoreCommonOptions opts) {
     Duration timeout = CoreProtostellarUtil.managementTimeout(opts.timeout(), core);
-    ProtostellarRequest<CreateCollectionRequest> out = new ProtostellarCollectionManagerRequest<>(core,
+
+    CreateCollectionRequest request = CreateCollectionRequest.newBuilder()
+      .setBucketName(bucketName)
+      .setScopeName(scopeName)
+      .setCollectionName(collectionName)
+      // This functionality is missing from Protostellar currently.
+      //.setMaxTTL(maxTTL)
+      .build();
+
+    return new ProtostellarCollectionManagerRequest<>(request,
+      core,
       bucketName, scopeName, collectionName,
       TracingIdentifiers.SPAN_REQUEST_MC_CREATE_COLLECTION,
       createSpan(core, TracingIdentifiers.SPAN_REQUEST_MC_CREATE_COLLECTION, CoreDurability.NONE, opts.parentSpan().orElse(null)),
@@ -55,15 +66,6 @@ public class CoreProtostellarCollectionManagerRequests {
       false,
       opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
       opts.clientContext());
-
-    CreateCollectionRequest.Builder request = CreateCollectionRequest.newBuilder()
-      .setBucketName(bucketName)
-      .setScopeName(scopeName)
-      .setCollectionName(collectionName);
-      //.setMaxTTL(maxTTL)
-
-    out.request(request.build());
-    return out;
   }
 
   public static ProtostellarRequest<DeleteCollectionRequest> deleteCollectionRequest(CoreProtostellar core,
@@ -72,7 +74,15 @@ public class CoreProtostellarCollectionManagerRequests {
                                                                                      String collectionName,
                                                                                      CoreCommonOptions opts) {
     Duration timeout = CoreProtostellarUtil.managementTimeout(opts.timeout(), core);
-    ProtostellarRequest<DeleteCollectionRequest> out = new ProtostellarCollectionManagerRequest<>(core,
+
+    DeleteCollectionRequest request = DeleteCollectionRequest.newBuilder()
+      .setBucketName(bucketName)
+      .setScopeName(scopeName)
+      .setCollectionName(collectionName)
+      .build();
+
+    return new ProtostellarCollectionManagerRequest<>(request,
+      core,
       bucketName, scopeName, collectionName,
       TracingIdentifiers.SPAN_REQUEST_MC_DROP_COLLECTION,
       createSpan(core, TracingIdentifiers.SPAN_REQUEST_MC_DROP_COLLECTION, CoreDurability.NONE, opts.parentSpan().orElse(null)),
@@ -80,14 +90,6 @@ public class CoreProtostellarCollectionManagerRequests {
       false,
       opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
       opts.clientContext());
-
-    DeleteCollectionRequest.Builder request = DeleteCollectionRequest.newBuilder()
-      .setBucketName(bucketName)
-      .setScopeName(scopeName)
-      .setCollectionName(collectionName);
-
-    out.request(request.build());
-    return out;
   }
 
   public static ProtostellarRequest<CreateScopeRequest> createScopeRequest(CoreProtostellar core,
@@ -95,7 +97,14 @@ public class CoreProtostellarCollectionManagerRequests {
                                                                            String scopeName,
                                                                            CoreCommonOptions opts) {
     Duration timeout = CoreProtostellarUtil.managementTimeout(opts.timeout(), core);
-    ProtostellarRequest<CreateScopeRequest> out = new ProtostellarCollectionManagerRequest<>(core,
+
+    CreateScopeRequest request = CreateScopeRequest.newBuilder()
+      .setBucketName(bucketName)
+      .setScopeName(scopeName)
+      .build();
+
+    return new ProtostellarCollectionManagerRequest<>(request,
+      core,
       bucketName, scopeName, null,
       TracingIdentifiers.SPAN_REQUEST_MC_CREATE_SCOPE,
       createSpan(core, TracingIdentifiers.SPAN_REQUEST_MC_CREATE_SCOPE, CoreDurability.NONE, opts.parentSpan().orElse(null)),
@@ -103,12 +112,6 @@ public class CoreProtostellarCollectionManagerRequests {
       false,
       opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
       opts.clientContext());
-
-    CreateScopeRequest.Builder request = CreateScopeRequest.newBuilder()
-      .setBucketName(bucketName)
-      .setScopeName(scopeName);
-    out.request(request.build());
-    return out;
   }
 
   public static ProtostellarRequest<DeleteScopeRequest> deleteScopeRequest(CoreProtostellar core,
@@ -116,7 +119,14 @@ public class CoreProtostellarCollectionManagerRequests {
                                                                            String scopeName,
                                                                            CoreCommonOptions opts) {
     Duration timeout = CoreProtostellarUtil.managementTimeout(opts.timeout(), core);
-    ProtostellarRequest<DeleteScopeRequest> out = new ProtostellarCollectionManagerRequest<>(core,
+
+    DeleteScopeRequest request = DeleteScopeRequest.newBuilder()
+      .setBucketName(bucketName)
+      .setScopeName(scopeName)
+      .build();
+
+    return new ProtostellarCollectionManagerRequest<>(request,
+      core,
       bucketName, scopeName, null,
       TracingIdentifiers.SPAN_REQUEST_MC_DROP_SCOCPE,
       createSpan(core, TracingIdentifiers.SPAN_REQUEST_MC_DROP_SCOCPE, CoreDurability.NONE, opts.parentSpan().orElse(null)),
@@ -124,19 +134,19 @@ public class CoreProtostellarCollectionManagerRequests {
       false,
       opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
       opts.clientContext());
-
-    DeleteScopeRequest.Builder request = DeleteScopeRequest.newBuilder()
-      .setBucketName(bucketName)
-      .setScopeName(scopeName);
-    out.request(request.build());
-    return out;
   }
 
   public static ProtostellarRequest<ListCollectionsRequest> listCollectionsRequest(CoreProtostellar core,
                                                                                    String bucketName,
                                                                                    CoreCommonOptions opts) {
     Duration timeout = CoreProtostellarUtil.managementTimeout(opts.timeout(), core);
-    ProtostellarRequest<ListCollectionsRequest> out = new ProtostellarCollectionManagerRequest<>(core,
+
+    ListCollectionsRequest request = ListCollectionsRequest.newBuilder()
+      .setBucketName(bucketName)
+      .build();
+
+    return new ProtostellarCollectionManagerRequest<>(request,
+      core,
       bucketName, null, null,
       TracingIdentifiers.SPAN_REQUEST_MC_GET_ALL_SCOPES,
       createSpan(core, TracingIdentifiers.SPAN_REQUEST_MC_GET_ALL_SCOPES, CoreDurability.NONE, opts.parentSpan().orElse(null)),
@@ -144,10 +154,5 @@ public class CoreProtostellarCollectionManagerRequests {
       true,
       opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
       opts.clientContext());
-
-    ListCollectionsRequest.Builder request = ListCollectionsRequest.newBuilder()
-      .setBucketName(bucketName);
-    out.request(request.build());
-    return out;
   }
 }

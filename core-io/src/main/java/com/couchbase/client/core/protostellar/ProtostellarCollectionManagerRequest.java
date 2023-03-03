@@ -36,6 +36,7 @@ public class ProtostellarCollectionManagerRequest<TGrpcRequest> extends Protoste
   private final @Nullable String collectionName;
 
   public ProtostellarCollectionManagerRequest(
+    TGrpcRequest request,
     CoreProtostellar core,
     String bucketName,
     @Nullable String scopeName,
@@ -43,11 +44,11 @@ public class ProtostellarCollectionManagerRequest<TGrpcRequest> extends Protoste
     String requestName,
     RequestSpan span,
     Duration timeout,
-    boolean idempotent,
+    boolean readonly,
     RetryStrategy retryStrategy,
     Map<String, Object> clientContext
   ) {
-    super(core, ServiceType.KV, requestName, span, timeout, idempotent, retryStrategy, clientContext);
+    super(request, core, ServiceType.MANAGER, requestName, span, timeout, readonly, retryStrategy, clientContext, 0);
     this.bucketName = notNull(bucketName, "bucket name");
     this.scopeName = scopeName;
     this.collectionName = collectionName;

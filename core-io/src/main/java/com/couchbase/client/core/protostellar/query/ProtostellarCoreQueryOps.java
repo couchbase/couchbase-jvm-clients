@@ -244,19 +244,6 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
                                                            @Nullable CoreQueryContext queryContext) {
     notNullOrEmpty(statement, "Statement", () -> new ReducedAnalyticsErrorContext(statement));
 
-    Duration timeout = opts.commonOptions().timeout().orElse(core.context().environment().timeoutConfig().queryTimeout());
-    RequestSpan span = createSpan(core, TracingIdentifiers.SPAN_REQUEST_QUERY, CoreDurability.NONE, opts.commonOptions().parentSpan().orElse(null));
-    span.attribute(TracingIdentifiers.ATTR_STATEMENT, statement);
-    ProtostellarRequest<QueryRequest> out = new ProtostellarRequest<>(core,
-      ServiceType.QUERY,
-      TracingIdentifiers.SPAN_REQUEST_QUERY,
-      span,
-      timeout,
-      opts.readonly(),
-      opts.commonOptions().retryStrategy().orElse(core.context().environment().retryStrategy()),
-      opts.commonOptions().clientContext()
-    );
-
     QueryRequest.Builder request = convertOptions(opts);
 
     request.setStatement(statement);
@@ -265,9 +252,21 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
       request.setScopeName(queryContext.scope());
     }
 
-    out.request(request.build());
+    Duration timeout = opts.commonOptions().timeout().orElse(core.context().environment().timeoutConfig().queryTimeout());
+    RequestSpan span = createSpan(core, TracingIdentifiers.SPAN_REQUEST_QUERY, CoreDurability.NONE, opts.commonOptions().parentSpan().orElse(null));
+    span.attribute(TracingIdentifiers.ATTR_STATEMENT, statement);
 
-    return out;
+    return new ProtostellarRequest<>(request.build(),
+      core,
+      ServiceType.QUERY,
+      TracingIdentifiers.SPAN_REQUEST_QUERY,
+      span,
+      timeout,
+      opts.readonly(),
+      opts.commonOptions().retryStrategy().orElse(core.context().environment().retryStrategy()),
+      opts.commonOptions().clientContext(),
+      0
+    );
   }
 
   private static QueryRequest.Builder convertOptions(CoreQueryOptions opts) {

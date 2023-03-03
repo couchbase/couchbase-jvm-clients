@@ -40,17 +40,19 @@ public class ProtostellarKeyValueRequest<TGrpcRequest> extends ProtostellarReque
   private final String key;
   private final CoreDurability durability;
 
-  public ProtostellarKeyValueRequest(CoreProtostellar core,
+  public ProtostellarKeyValueRequest(TGrpcRequest request,
+                                     CoreProtostellar core,
                                      CoreKeyspace keyspace,
                                      String key,
                                      CoreDurability durability,
                                      String requestName,
                                      RequestSpan span,
                                      Duration timeout,
-                                     boolean idempotent,
+                                     boolean readonly,
                                      RetryStrategy retryStrategy,
-                                     Map<String, Object> clientContext) {
-    super(core, ServiceType.KV, requestName, span, timeout, idempotent, retryStrategy, clientContext);
+                                     Map<String, Object> clientContext,
+                                     long encodeDurationNanos) {
+    super(request, core, ServiceType.KV, requestName, span, timeout, readonly, retryStrategy, clientContext, encodeDurationNanos);
     this.keyspace = keyspace;
     this.key = key;
     this.durability = durability;
