@@ -23,6 +23,7 @@ import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConsistencyUtil;
@@ -211,7 +212,10 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
   protected static void waitForService(final Bucket bucket, final ServiceType serviceType) {
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
 
-    if (bucket.core().isProtostellar()) {
+    try {
+      bucket.core();
+    }
+    catch (FeatureNotAvailableException e) {
       // Protostellar ping support will be implemented under JVMCBC-1189
       return;
     }

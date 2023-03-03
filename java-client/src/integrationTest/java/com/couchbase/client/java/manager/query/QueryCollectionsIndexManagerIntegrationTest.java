@@ -70,7 +70,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @IgnoreWhen(clusterTypes = { CAVES, MOCKED },
   missesCapabilities = { QUERY, COLLECTIONS },
-  clusterVersionIsBelow = REQUIRE_MB_50132
+  clusterVersionIsBelow = REQUIRE_MB_50132,
+  isProtostellarWillWorkLater = true
 )
 public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegrationTest {
 

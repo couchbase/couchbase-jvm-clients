@@ -168,7 +168,14 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     catch (DocumentNotFoundException err) {
       Map<String, Object> input = new HashMap<>();
       err.context().injectExportableParams(input);
-      assertEquals(true, input.get("idempotent"));
+      try {
+        cluster.core();
+        assertEquals(true, input.get("idempotent"));
+      }
+      catch (FeatureNotAvailableException e) {
+        // Ideally would have a better way of determining whether in Protostellar mode.
+        assertEquals(true, input.get("readonly"));
+      }
       assertEquals(0, input.get("retried"));
       assertEquals(2500L, input.get("timeoutMs"));
       assertFalse(input.containsKey("cancelled"));

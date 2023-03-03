@@ -44,7 +44,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @IgnoreWhen(missesCapabilities = Capabilities.COLLECTIONS,
-  clusterTypes = ClusterType.CAVES
+  clusterTypes = ClusterType.CAVES,
+  isProtostellarWillWorkLater = true
 )
 class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 

@@ -263,6 +263,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     assertNotNull(thrown.context());
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   @Test
   void verifyLookupInExceptions() {
     assertThrows(InvalidArgumentException.class, () -> collection.lookupIn(null, null));
