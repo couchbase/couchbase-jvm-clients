@@ -67,7 +67,9 @@ public abstract class ClassicCoreBaseSearchIndexManager implements CoreSearchInd
 
   abstract String indexesPath();
 
-  abstract String indexPath(String indexName);
+  String indexPath(String indexName) {
+    return indexesPath() + "/" + urlEncode(indexName);
+  }
 
   String indexCountPath(String indexName) {
     return indexPath(indexName) + "/count";

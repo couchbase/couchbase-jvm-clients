@@ -16,33 +16,18 @@
 
 package com.couchbase.client.java.manager.search;
 
-import com.couchbase.client.core.Core;
-import com.couchbase.client.core.cnc.CbTracing;
-import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
-import com.couchbase.client.core.endpoint.http.CoreHttpClient;
-import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.api.CoreCouchbaseOps;
+import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.java.json.JsonObject;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
-import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
-import static com.couchbase.client.core.util.Validators.notNull;
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static com.couchbase.client.java.manager.search.AllowQueryingSearchIndexOptions.allowQueryingSearchIndexOptions;
 import static com.couchbase.client.java.manager.search.AnalyzeDocumentOptions.analyzeDocumentOptions;
 import static com.couchbase.client.java.manager.search.DisallowQueryingSearchIndexOptions.disallowQueryingSearchIndexOptions;
@@ -55,7 +40,6 @@ import static com.couchbase.client.java.manager.search.PauseIngestSearchIndexOpt
 import static com.couchbase.client.java.manager.search.ResumeIngestSearchIndexOptions.resumeIngestSearchIndexOptions;
 import static com.couchbase.client.java.manager.search.UnfreezePlanSearchIndexOptions.unfreezePlanSearchIndexOptions;
 import static com.couchbase.client.java.manager.search.UpsertSearchIndexOptions.upsertSearchIndexOptions;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * The {@link AsyncSearchIndexManager} allows to manage search index structures in a couchbase cluster.
@@ -63,53 +47,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * @since 3.0.0
  */
 public class AsyncSearchIndexManager {
+  private final CoreSearchIndexManager internal;
 
-  private final Core core;
-  private final CoreHttpClient searchHttpClient;
-
-  public AsyncSearchIndexManager(final Core core) {
-    this.core = core;
-    this.searchHttpClient = core.httpClient(RequestTarget.search());
-  }
-
-  private static String indexesPath() {
-    return "/api/index";
-  }
-
-  private static String indexPath(final String indexName) {
-    return indexesPath() + "/" + urlEncode(indexName);
-  }
-
-  private static String indexCountPath(final String indexName) {
-    return indexPath(indexName) + "/count";
-  }
-
-  private static String analyzeDocumentPath(final String indexName) {
-    return indexPath(indexName) + "/analyzeDoc";
-  }
-
-  private static String pauseIngestPath(final String indexName) {
-    return indexPath(indexName) + "/ingestControl/pause";
-  }
-
-  private static String resumeIngestPath(final String indexName) {
-    return indexPath(indexName) + "/ingestControl/resume";
-  }
-
-  private static String allowQueryingPath(final String indexName) {
-    return indexPath(indexName) + "/queryControl/allow";
-  }
-
-  private static String disallowQueryingPath(final String indexName) {
-    return indexPath(indexName) + "/queryControl/disallow";
-  }
-
-  private static String freezePlanPath(final String indexName) {
-    return indexPath(indexName) + "/planFreezeControl/freeze";
-  }
-
-  private static String unfreezePlanPath(final String indexName) {
-    return indexPath(indexName) + "/planFreezeControl/unfreeze";
+  public AsyncSearchIndexManager(CoreCouchbaseOps couchbaseOps) {
+    this.internal = couchbaseOps.clusterSearchIndexManager();
   }
 
   /**
@@ -129,20 +70,8 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} the found index once complete.
    */
   public CompletableFuture<SearchIndex> getIndex(final String name, GetSearchIndexOptions options) {
-    notNullOrEmpty(name, "Search Index Name");
-
-    RequestSpan span = CbTracing.newSpan(
-        core.context(),
-        TracingIdentifiers.SPAN_REQUEST_MS_GET_INDEX,
-        options.build().parentSpan().orElse(null)
-    );
-
-    return getAllIndexes(getAllSearchIndexesOptions().parentSpan(span))
-      .thenApply(indexes -> indexes.stream()
-        .filter(i -> i.name().equals(name))
-        .findFirst().orElseThrow(() -> new IndexNotFoundException(name)))
-      .whenComplete((r, t) -> span.end());
-  }
+    return internal.getIndex(name, options.build())
+            .thenApply(SearchIndexManagerUtil::convert);  }
 
   /**
    * Fetches all indexes from the server.
@@ -159,18 +88,10 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} with all index definitions once complete.
    */
   public CompletableFuture<List<SearchIndex>> getAllIndexes(final GetAllSearchIndexesOptions options) {
-    return searchHttpClient.get(path(indexesPath()), options.build())
-      .trace(TracingIdentifiers.SPAN_REQUEST_MS_GET_ALL_INDEXES)
-      .exec(core)
-      .thenApply(response -> {
-        JsonNode rootNode = Mapper.decodeIntoTree(response.content());
-        JsonNode indexDefs = rootNode.get("indexDefs").get("indexDefs");
-        Map<String, SearchIndex> indexes = Mapper.convertValue(
-          indexDefs,
-          new TypeReference<Map<String, SearchIndex>>() {}
-        );
-        return indexes == null ? Collections.emptyList() : new ArrayList<>(indexes.values());
-      });
+    return internal.getAllIndexes(options.build())
+            .thenApply(indexes -> indexes.stream()
+                    .map(SearchIndexManagerUtil::convert)
+                    .collect(Collectors.toList()));
   }
 
   /**
@@ -190,15 +111,7 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} with the indexed documents count once complete.
    */
   public CompletableFuture<Long> getIndexedDocumentsCount(final String name, final GetIndexedSearchIndexOptions options) {
-    notNullOrEmpty(name, "Search Index Name");
-
-    return searchHttpClient.get(path(indexCountPath(name)), options.build())
-      .trace(TracingIdentifiers.SPAN_REQUEST_MS_GET_IDX_DOC_COUNT)
-      .exec(core)
-      .thenApply(response -> {
-        JsonNode rootNode = Mapper.decodeIntoTree(response.content());
-        return rootNode.get("count").asLong();
-      });
+    return internal.getIndexedDocumentsCount(name, options.build());
   }
 
   /**
@@ -218,14 +131,7 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> upsertIndex(final SearchIndex index, final UpsertSearchIndexOptions options) {
-    notNull(index, "Search Index");
-
-    return searchHttpClient.put(path(indexPath(index.name())), options.build())
-      .trace(TracingIdentifiers.SPAN_REQUEST_MS_UPSERT_INDEX)
-      .json(index.toJson().getBytes(UTF_8))
-      .header(HttpHeaderNames.CACHE_CONTROL, "no-cache")
-      .exec(core)
-      .thenApply(response -> null);
+    return internal.upsertIndex(SearchIndexManagerUtil.convert(index), options.build());
   }
 
   /**
@@ -245,12 +151,7 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> dropIndex(final String name, final DropSearchIndexOptions options) {
-    notNullOrEmpty(name, "Search Index Name");
-
-    return searchHttpClient.delete(path(indexPath(name)), options.build())
-      .trace(TracingIdentifiers.SPAN_REQUEST_MS_DROP_INDEX)
-      .exec(core)
-      .thenApply(response -> null);
+    return internal.dropIndex(name, options.build());
   }
 
   /**
@@ -273,30 +174,13 @@ public class AsyncSearchIndexManager {
    */
   public CompletableFuture<List<JsonObject>> analyzeDocument(final String name, final JsonObject document,
                                                              final AnalyzeDocumentOptions options) {
-    notNullOrEmpty(name, "Search Index Name");
-    notNull(document, "Document");
-
-    return searchHttpClient.post(path(analyzeDocumentPath(name)), options.build())
-      .trace(TracingIdentifiers.SPAN_REQUEST_MS_ANALYZE_DOCUMENT)
-      .json(Mapper.encodeAsBytes(document.toMap()))
-      .exec(core)
-      .exceptionally(throwable -> {
-        if (throwable.getMessage().contains("Page not found")) {
-          throw new FeatureNotAvailableException("Document analysis is not available on this server version!");
-        } else if (throwable instanceof RuntimeException) {
-          throw (RuntimeException) throwable;
-        } else {
-          throw new CouchbaseException("Failed to analyze search document", throwable);
-        }
-      })
-      .thenApply(response -> {
-        JsonNode rootNode = Mapper.decodeIntoTree(response.content());
-        List<Map<String, Object>> analyzed = Mapper.convertValue(
-          rootNode.get("analyzed"),
-          new TypeReference<List<Map<String, Object>>>() {}
-        );
-        return analyzed.stream().filter(Objects::nonNull).map(JsonObject::from).collect(Collectors.toList());
-      });
+    try {
+      ObjectNode json = (ObjectNode) Mapper.reader().readTree(document.toBytes());
+      return internal.analyzeDocument(name, json, options.build())
+              .thenApply(list -> list.stream().map(o -> JsonObject.fromJson(o.toString())).collect(Collectors.toList()));
+    } catch (IOException e) {
+      throw new DecodingFailureException("Failed to decode document", e);
+    }
   }
 
   /**
@@ -316,12 +200,7 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> pauseIngest(final String name, final PauseIngestSearchIndexOptions options) {
-    notNullOrEmpty(name, "Search Index Name");
-
-    return searchHttpClient.post(path(pauseIngestPath(name)), options.build())
-      .trace(TracingIdentifiers.SPAN_REQUEST_MS_PAUSE_INGEST)
-      .exec(core)
-      .thenApply(response -> null);
+    return internal.pauseIngest(name, options.build());
   }
 
   /**
@@ -341,12 +220,7 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> resumeIngest(final String name, final ResumeIngestSearchIndexOptions options) {
-    notNullOrEmpty(name, "Search Index Name");
-
-    return searchHttpClient.post(path(resumeIngestPath(name)), options.build())
-      .trace(TracingIdentifiers.SPAN_REQUEST_MS_RESUME_INGEST)
-      .exec(core)
-      .thenApply(response -> null);
+    return internal.resumeIngest(name, options.build());
   }
 
   /**
@@ -366,12 +240,7 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> allowQuerying(final String name, final AllowQueryingSearchIndexOptions options) {
-    notNullOrEmpty(name, "Search Index Name");
-
-    return searchHttpClient.post(path(allowQueryingPath(name)), options.build())
-      .trace(TracingIdentifiers.SPAN_REQUEST_MS_ALLOW_QUERYING)
-      .exec(core)
-      .thenApply(response -> null);
+    return internal.allowQuerying(name, options.build());
   }
 
   /**
@@ -391,12 +260,7 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> disallowQuerying(final String name, final DisallowQueryingSearchIndexOptions options) {
-    notNullOrEmpty(name, "Search Index Name");
-
-    return searchHttpClient.post(path(disallowQueryingPath(name)), options.build())
-      .trace(TracingIdentifiers.SPAN_REQUEST_MS_DISALLOW_QUERYING)
-      .exec(core)
-      .thenApply(response -> null);
+    return internal.disallowQuerying(name, options.build());
   }
 
   /**
@@ -416,12 +280,7 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> freezePlan(final String name, final FreezePlanSearchIndexOptions options) {
-    notNullOrEmpty(name, "Search Index Name");
-
-    return searchHttpClient.post(path(freezePlanPath(name)), options.build())
-      .trace(TracingIdentifiers.SPAN_REQUEST_MS_FREEZE_PLAN)
-      .exec(core)
-      .thenApply(response -> null);
+    return internal.freezePlan(name, options.build());
   }
 
   /**
@@ -441,12 +300,7 @@ public class AsyncSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> unfreezePlan(final String name, final UnfreezePlanSearchIndexOptions options) {
-    notNullOrEmpty(name, "Search Index Name");
-
-    return searchHttpClient.post(path(unfreezePlanPath(name)), options.build())
-      .trace(TracingIdentifiers.SPAN_REQUEST_MS_UNFREEZE_PLAN)
-      .exec(core)
-      .thenApply(response -> null);
+    return internal.unfreezePlan(name, options.build());
   }
 
 }

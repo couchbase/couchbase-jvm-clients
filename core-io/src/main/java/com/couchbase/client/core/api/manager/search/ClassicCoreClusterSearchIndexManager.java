@@ -18,26 +18,16 @@ package com.couchbase.client.core.api.manager.search;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.api.manager.CoreBucketAndScope;
-import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 
 @Stability.Internal
-public class ClassicCoreScopeSearchIndexManager extends ClassicCoreBaseSearchIndexManager {
-
-  private final CoreBucketAndScope scope;
-
+public class ClassicCoreClusterSearchIndexManager extends ClassicCoreBaseSearchIndexManager {
   @Stability.Internal
-  public ClassicCoreScopeSearchIndexManager(Core core, CoreBucketAndScope scope) {
+  public ClassicCoreClusterSearchIndexManager(Core core) {
     super(core);
-    this.scope = scope;
   }
 
   @Override
   String indexesPath() {
-    return CoreHttpPath.formatPath(
-            "/api/bucket/{}/scope/{}/index",
-            scope.bucketName(),
-            scope.scopeName()
-    );
+    return "/api/index";
   }
 }

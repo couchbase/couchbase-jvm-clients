@@ -143,6 +143,11 @@ public class CoreProtostellar implements CoreCouchbaseOps {
   }
 
   @Override
+  public CoreSearchIndexManager clusterSearchIndexManager() {
+    throw new UnsupportedOperationException("Cluster-level search index management is not yet supported in Protostellar");
+  }
+
+  @Override
   public CoreSearchIndexManager scopeSearchIndexManager(CoreBucketAndScope scope) {
     throw new UnsupportedOperationException("Scope-level search index management is not yet supported in Protostellar");
   }

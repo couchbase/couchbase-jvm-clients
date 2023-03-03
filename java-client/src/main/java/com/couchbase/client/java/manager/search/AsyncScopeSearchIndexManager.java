@@ -16,11 +16,9 @@
 
 package com.couchbase.client.java.manager.search;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
-import com.couchbase.client.core.api.manager.search.CoreSearchIndex;
 import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.DecodingFailureException;
@@ -77,7 +75,7 @@ public class AsyncScopeSearchIndexManager {
    */
   public CompletableFuture<SearchIndex> getIndex(String name, GetSearchIndexOptions options) {
     return internal.getIndex(name, options.build())
-            .thenApply(AsyncScopeSearchIndexManager::convert);
+            .thenApply(SearchIndexManagerUtil::convert);
   }
 
   /**
@@ -97,7 +95,7 @@ public class AsyncScopeSearchIndexManager {
   public CompletableFuture<List<SearchIndex>> getAllIndexes(GetAllSearchIndexesOptions options) {
     return internal.getAllIndexes(options.build())
             .thenApply(indexes -> indexes.stream()
-                    .map(AsyncScopeSearchIndexManager::convert)
+                    .map(SearchIndexManagerUtil::convert)
                     .collect(Collectors.toList()));
   }
 
@@ -138,7 +136,7 @@ public class AsyncScopeSearchIndexManager {
    * @return a {@link CompletableFuture} indicating request completion.
    */
   public CompletableFuture<Void> upsertIndex(SearchIndex index, UpsertSearchIndexOptions options) {
-    return internal.upsertIndex(convert(index), options.build());
+    return internal.upsertIndex(SearchIndexManagerUtil.convert(index), options.build());
   }
 
   /**
@@ -307,29 +305,5 @@ public class AsyncScopeSearchIndexManager {
    */
   public CompletableFuture<Void> unfreezePlan(String name, UnfreezePlanSearchIndexOptions options) {
     return internal.unfreezePlan(name, options.build());
-  }
-
-  private static SearchIndex convert(CoreSearchIndex index) {
-    return new SearchIndex(index.uuid(),
-            index.name(),
-            index.type(),
-            index.params(),
-            index.sourceUuid(),
-            index.sourceName(),
-            index.sourceParams(),
-            index.sourceType(),
-            index.planParams());
-  }
-
-  private static CoreSearchIndex convert(SearchIndex index) {
-    return new CoreSearchIndex(index.uuid(),
-            index.name(),
-            index.type(),
-            index.params(),
-            index.sourceUuid(),
-            index.sourceName(),
-            index.sourceParams(),
-            index.sourceType(),
-            index.planParams());
   }
 }

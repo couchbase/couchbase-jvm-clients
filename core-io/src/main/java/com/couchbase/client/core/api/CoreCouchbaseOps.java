@@ -58,6 +58,8 @@ public interface CoreCouchbaseOps {
 
   CoreCollectionManager collectionManager(String bucketName);
 
+  CoreSearchIndexManager clusterSearchIndexManager();
+
   CoreSearchIndexManager scopeSearchIndexManager(CoreBucketAndScope scope);
 
   CoreEnvironment environment();
