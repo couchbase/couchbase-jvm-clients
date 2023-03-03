@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
@@ -26,6 +27,11 @@ public class InternalServerFailureException extends CouchbaseException {
 
   public InternalServerFailureException(final ErrorContext ctx) {
     super("Internal Couchbase Server error", ctx);
+  }
+
+  @Stability.Internal
+  public InternalServerFailureException(final Throwable cause, final ErrorContext ctx) {
+    super("Internal Couchbase Server error", cause, ctx);
   }
 
 }

@@ -57,7 +57,7 @@ public class CoreProtostellarAccessors {
                       ProtostellarRequest<TGrpcRequest>     request,
                       Function<ProtostellarEndpoint, TGrpcResponse> executeBlockingGrpcCall,
                       Function<TGrpcResponse, TSdkResult>   convertResponse) {
-    return blocking(core, request, executeBlockingGrpcCall, convertResponse, (err) -> CoreProtostellarErrorHandlingUtil.convertKeyValueException(core, request, err));
+    return blocking(core, request, executeBlockingGrpcCall, convertResponse, (err) -> CoreProtostellarErrorHandlingUtil.convertException(core, request, err));
   }
 
   /**
@@ -114,7 +114,7 @@ public class CoreProtostellarAccessors {
                                       ProtostellarRequest<TGrpcRequest>         request,
                                       Function<ProtostellarEndpoint, ListenableFuture<TGrpcResponse>> executeFutureGrpcCall,
                                       Function<TGrpcResponse, TSdkResult>       convertResponse) {
-    return async(core, request, executeFutureGrpcCall, convertResponse, (err) -> CoreProtostellarErrorHandlingUtil.convertKeyValueException(core, request, err));
+    return async(core, request, executeFutureGrpcCall, convertResponse, (err) -> CoreProtostellarErrorHandlingUtil.convertException(core, request, err));
   }
 
   public static <TSdkResult, TGrpcRequest, TGrpcResponse>
@@ -207,7 +207,7 @@ public class CoreProtostellarAccessors {
                             Function<TGrpcResponse, TSdkResult>       convertResponse) {
     return Mono.defer(() -> {
       Sinks.One<TSdkResult> ret = Sinks.one();
-      reactiveInternal(ret, core, request, executeFutureGrpcCall, convertResponse, (err) -> CoreProtostellarErrorHandlingUtil.convertKeyValueException(core, request, err));
+      reactiveInternal(ret, core, request, executeFutureGrpcCall, convertResponse, (err) -> CoreProtostellarErrorHandlingUtil.convertException(core, request, err));
       return ret.asMono();
     });
   }

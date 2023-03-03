@@ -54,12 +54,12 @@ public class CoreProtostellarErrorHandlingUtil {
   private static final String TYPE_URL_PRECONDITION_FAILURE = "type.googleapis.com/google.rpc.PreconditionFailure";
   private static final String TYPE_URL_RESOURCE_INFO = "type.googleapis.com/google.rpc.ResourceInfo";
 
-  public static ProtostellarRequestBehaviour convertKeyValueException(CoreProtostellar core,
-                                                                      ProtostellarRequest<?> request,
-                                                                      Throwable t) {
+  public static ProtostellarRequestBehaviour convertException(CoreProtostellar core,
+                                                              ProtostellarRequest<?> request,
+                                                              Throwable t) {
     // Handle wrapped CompletableFuture failures.
     if (t instanceof ExecutionException) {
-      return convertKeyValueException(core, request, t.getCause());
+      return convertException(core, request, t.getCause());
     }
 
     ProtostellarErrorContext context = request.context();
@@ -70,6 +70,7 @@ public class CoreProtostellarErrorHandlingUtil {
 
       Status status = StatusProto.fromThrowable(sre);
       context.put("server", status.getMessage());
+      context.put("details", status.getDetailsCount());
 
       if (status.getDetailsCount() > 0) {
         Any details = status.getDetails(0);
@@ -106,11 +107,11 @@ public class CoreProtostellarErrorHandlingUtil {
 
       switch (code) {
         case CANCELLED:
-          return ProtostellarRequestBehaviour.fail(new RequestCanceledException("Request cancelled by server", CancellationReason.SERVER_CANCELLED, new CancellationErrorContext(context)));
+          return ProtostellarRequestBehaviour.fail(new RequestCanceledException("Request cancelled by server", CancellationReason.SERVER_CANCELLED, t, new CancellationErrorContext(context)));
         case ABORTED:
         case UNKNOWN:
         case INTERNAL:
-          return ProtostellarRequestBehaviour.fail(new InternalServerFailureException(context));
+          return ProtostellarRequestBehaviour.fail(new InternalServerFailureException(t, context));
         case OUT_OF_RANGE:
         case INVALID_ARGUMENT:
           return ProtostellarRequestBehaviour.fail(new InvalidArgumentException("Invalid argument provided", t, context));
@@ -138,7 +139,7 @@ public class CoreProtostellarErrorHandlingUtil {
           return RetryOrchestratorProtostellar.shouldRetry(core, request, RetryReason.ENDPOINT_NOT_AVAILABLE);
         default:
           // There are several codes left to handle, to be fixed under JVMCBC-1188.
-          return ProtostellarRequestBehaviour.fail(new UnsupportedOperationException("Unhandled error code " + code));
+          return ProtostellarRequestBehaviour.fail(new UnsupportedOperationException("Unhandled error code " + code, t));
       }
     } else if (t instanceof RuntimeException) {
       return ProtostellarRequestBehaviour.fail((RuntimeException) t);

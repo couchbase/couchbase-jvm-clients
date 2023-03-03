@@ -187,12 +187,6 @@ public class CoreProtostellarUtil {
     return Timestamp.newBuilder().setSeconds(expiry).build();
   }
 
-  public static <TResponse> ProtostellarRequestBehaviour convertKeyValueException(CoreProtostellar core,
-                                                                                  ProtostellarRequest<TResponse> request,
-                                                                                  Throwable t) {
-    return CoreProtostellarErrorHandlingUtil.convertKeyValueException(core, request, t);
-  }
-
   public static RequestSpan createSpan(CoreProtostellar core,
                                        String spanName,
                                        CoreDurability durability,

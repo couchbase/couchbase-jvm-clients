@@ -32,12 +32,15 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingE
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
 import com.couchbase.client.core.deps.io.grpc.stub.StreamObserver;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.protostellar.CoreProtostellarErrorHandlingUtil;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
+import com.couchbase.client.core.retry.ProtostellarRequestBehaviour;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.protostellar.query.v1.QueryRequest;
 import com.couchbase.client.protostellar.query.v1.QueryResponse;
@@ -101,7 +104,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
 
       @Override
       public void onError(Throwable throwable) {
-        err.set(convertException(errorConverter, throwable));
+        err.set(convertException(core, request, errorConverter, throwable));
         latch.countDown();
       }
 
@@ -161,7 +164,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
 
       @Override
       public void onError(Throwable throwable) {
-        ret.completeExceptionally(convertException(errorConverter, throwable));
+        ret.completeExceptionally(convertException(core, request, errorConverter, throwable));
       }
 
       @Override
@@ -209,7 +212,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
 
         @Override
         public void onError(Throwable throwable) {
-          responses.tryEmitError(convertException(errorConverter, throwable)).orThrow();
+          responses.tryEmitError(convertException(core, request, errorConverter, throwable)).orThrow();
         }
 
         @Override
@@ -227,15 +230,25 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
     });
   }
 
-  private static RuntimeException convertException(@Nullable Function<Throwable, RuntimeException> errorConverter, Throwable throwable) {
-    // STG does not currently implement most query errors.  Once it does, will want to pass throwable through CoreProtostellarErrorHandlingUtil.
+  private static RuntimeException convertException(CoreProtostellar core,
+                                                   ProtostellarRequest<?> request,
+                                                   @Nullable Function<Throwable, RuntimeException> errorConverter,
+                                                   Throwable throwable) {
+
+    ProtostellarRequestBehaviour behaviour;
+
     if (errorConverter != null) {
-      return errorConverter.apply(throwable);
+      behaviour = CoreProtostellarErrorHandlingUtil.convertException(core, request, errorConverter.apply(throwable));
     }
-    if (throwable instanceof RuntimeException) {
-      return (RuntimeException) throwable;
+    else {
+      behaviour = CoreProtostellarErrorHandlingUtil.convertException(core, request, throwable);
     }
-    return new RuntimeException(throwable);
+
+    if (behaviour.retryDuration() != null) {
+      throw new CouchbaseException("Internal bug - Protostellar query support does not yet handle retries");
+    }
+
+    return behaviour.exception();
   }
 
   private static ProtostellarRequest<QueryRequest> request(CoreProtostellar core,
