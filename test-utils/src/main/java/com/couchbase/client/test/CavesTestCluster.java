@@ -18,12 +18,12 @@ package com.couchbase.client.test;
 
 import com.couchbase.client.test.caves.CavesControlServer;
 import com.couchbase.client.test.caves.CavesProcess;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import okhttp3.Credentials;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -43,6 +43,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static com.couchbase.client.test.Util.urlEncode;
 
 public class CavesTestCluster extends TestCluster {
 
@@ -142,7 +144,7 @@ public class CavesTestCluster extends TestCluster {
 
     Response getResponse = httpClient.newCall(new Request.Builder()
       .header("Authorization", Credentials.basic(username, password))
-      .url("http://" + mgmtSockets.get(0).hostname + ":" + mgmtSockets.get(0).port + "/pools/default/b/" + bucketname)
+      .url("http://" + mgmtSockets.get(0).hostname + ":" + mgmtSockets.get(0).port + "/pools/default/b/" + urlEncode(bucketname))
       .build())
       .execute();
 

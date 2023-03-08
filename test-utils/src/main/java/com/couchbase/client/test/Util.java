@@ -17,6 +17,9 @@
 package com.couchbase.client.test;
 
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -96,4 +99,13 @@ public class Util {
     return s.hasNext() ? s.next() : "";
   }
 
+  static String urlEncode(String s) {
+    try {
+      return URLEncoder.encode(s, StandardCharsets.UTF_8.name())
+        .replace("+", "%20"); // Make sure spaces are encoded as "%20"
+      // so the result can be used in path components and with "application/x-www-form-urlencoded"
+    } catch (UnsupportedEncodingException inconceivable) {
+      throw new AssertionError("UTF-8 not supported", inconceivable);
+    }
+  }
 }

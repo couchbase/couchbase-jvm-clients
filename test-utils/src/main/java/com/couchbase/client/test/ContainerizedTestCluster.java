@@ -20,14 +20,14 @@ package com.couchbase.client.test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 import okhttp3.Credentials;
 import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -42,6 +42,7 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
+import static com.couchbase.client.test.Util.urlEncode;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -115,7 +116,7 @@ public class ContainerizedTestCluster extends TestCluster {
 
     Response getResponse = httpClient.newCall(new Request.Builder()
       .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-      .url("http://" + seedHost + ":" + seedPort + "/pools/default/b/" + bucketname)
+      .url("http://" + seedHost + ":" + seedPort + "/pools/default/b/" + urlEncode(bucketname))
       .build())
       .execute();
 

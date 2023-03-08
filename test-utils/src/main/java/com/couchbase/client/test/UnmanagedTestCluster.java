@@ -16,13 +16,13 @@
 
 package com.couchbase.client.test;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import okhttp3.Credentials;
 import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.naming.NamingException;
 import javax.net.ssl.SSLContext;
@@ -31,9 +31,6 @@ import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
@@ -50,6 +47,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.test.DnsSrvUtil.fromDnsSrv;
+import static com.couchbase.client.test.Util.urlEncode;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class UnmanagedTestCluster extends TestCluster {
@@ -315,13 +313,4 @@ public class UnmanagedTestCluster extends TestCluster {
     return isProtostellar;
   }
 
-  private static String urlEncode(String s) {
-    try {
-      return URLEncoder.encode(s, StandardCharsets.UTF_8.name())
-        .replace("+", "%20"); // Make sure spaces are encoded as "%20"
-      // so the result can be used in path components and with "application/x-www-form-urlencoded"
-    } catch (UnsupportedEncodingException inconceivable) {
-      throw new AssertionError("UTF-8 not supported", inconceivable);
-    }
-  }
 }
