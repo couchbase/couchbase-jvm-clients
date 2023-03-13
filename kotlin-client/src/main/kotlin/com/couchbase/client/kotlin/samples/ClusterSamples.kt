@@ -17,7 +17,6 @@
 package com.couchbase.client.kotlin.samples
 
 import com.couchbase.client.core.env.NetworkResolution
-import com.couchbase.client.core.env.SecurityConfig
 import com.couchbase.client.core.retry.FailFastRetryStrategy
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.kotlin.Cluster
@@ -86,15 +85,15 @@ internal fun configureTlsUsingBuilder() {
     val cluster = Cluster.connect(
         "localhost", "Administrator", "password",
         ClusterEnvironment.builder()
-            .securityConfig(
-                SecurityConfig
+            .securityConfig { security ->
+                security
                     .enableTls(true)
                     .trustStore(
                         Paths.get("/path/to/truststore.jks"),
                         "password",
                         Optional.empty()
                     )
-            )
+            }
     )
 }
 
