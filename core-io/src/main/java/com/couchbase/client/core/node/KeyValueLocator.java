@@ -34,11 +34,13 @@ import com.couchbase.client.core.msg.kv.ObserveViaSeqnoRequest;
 import com.couchbase.client.core.msg.kv.PredeterminedPartitionRequest;
 import com.couchbase.client.core.msg.kv.ReplicaGetRequest;
 import com.couchbase.client.core.msg.kv.SyncDurabilityRequest;
+import com.couchbase.client.core.retry.AuthErrorDecider;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.zip.CRC32;
 
 import static java.util.Objects.requireNonNull;
@@ -65,11 +67,17 @@ public class KeyValueLocator implements Locator {
       BucketConfig bucketConfig = config.bucketConfig(bucket);
 
       if (bucketConfig == null) {
-        // Since a bucket is opened lazily, it might not be available yet (or for some
-        // other reason the config is gone) - send it into retry!
-        RetryOrchestrator.maybeRetry(ctx, request, ctx.core().configurationProvider().bucketConfigLoadInProgress()
+        boolean isAuthError = AuthErrorDecider.isAuthError(ctx.core().diagnostics().collect(Collectors.toList()));
+
+        RetryReason retryReason = isAuthError ? RetryReason.AUTHENTICATION_ERROR
+
+          // Since a bucket is opened lazily, it might not be available yet (or for some
+          // other reason the config is gone) - send it into retry!
+          : ctx.core().configurationProvider().bucketConfigLoadInProgress()
           ? RetryReason.BUCKET_OPEN_IN_PROGRESS
-          : RetryReason.BUCKET_NOT_AVAILABLE);
+          : RetryReason.BUCKET_NOT_AVAILABLE;
+
+        RetryOrchestrator.maybeRetry(ctx, request, retryReason);
         return;
       }
 
@@ -159,7 +167,7 @@ public class KeyValueLocator implements Locator {
     }
 
     if (ctx.core().configurationProvider().bucketConfigLoadInProgress()) {
-      RetryOrchestrator.maybeRetry(ctx, request, RetryReason.BUCKET_OPEN_IN_PROGRESS);
+      RetryOrchestrator.maybeRetry(ctx, request, AuthErrorDecider.isAuthError(ctx.core().diagnostics()) ? RetryReason.AUTHENTICATION_ERROR : RetryReason.BUCKET_OPEN_IN_PROGRESS);
     } else {
       throw new IllegalStateException("Node not found for request " + request);
     }

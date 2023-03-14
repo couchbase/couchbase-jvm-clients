@@ -165,6 +165,8 @@ public class SelectBucketHandler extends ChannelDuplexHandler {
         endpointContext.environment().eventBus().publish(
           new SelectBucketFailedEvent(severity, ioContext, status)
         );
+        // We don't set AuthenticationStatus.FAILED here, as it's not unambiguously that.
+        // We'll be using the GCCCP endpoints anyway for determining RetryReason.AUTHENTICATION_FAILED.
         interceptedConnectPromise.tryFailure(
           new AuthenticationFailureException(
             "Either the bucket with name \"" + redactMeta(bucketName) + "\" is not present, the user does not have " +

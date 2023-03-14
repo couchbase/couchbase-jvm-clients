@@ -26,6 +26,7 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.retry.AuthErrorDecider;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.util.CompositeStateful;
@@ -40,6 +41,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -289,8 +291,13 @@ abstract class PooledService implements Service {
     if (!fixedPool && (endpoints.size() + reservedEndpoints.size()) < serviceConfig.maxEndpoints()) {
       connectReservedEndpoint(request);
     } else {
-      RetryOrchestrator.maybeRetry(serviceContext, request, RetryReason.ENDPOINT_NOT_AVAILABLE);
+      RetryOrchestrator.maybeRetry(serviceContext, request, chooseRetryReason());
     }
+  }
+
+  private RetryReason chooseRetryReason() {
+    return AuthErrorDecider.isAuthError(context().core().diagnostics().collect(Collectors.toList()))
+      ? RetryReason.AUTHENTICATION_ERROR : RetryReason.ENDPOINT_NOT_AVAILABLE;
   }
 
   /**
@@ -323,14 +330,14 @@ abstract class PooledService implements Service {
             if (disconnected.get()) {
               endpoint.disconnect();
               endpointStates.deregister(endpoint);
-              RetryOrchestrator.maybeRetry(serviceContext, request, RetryReason.ENDPOINT_NOT_AVAILABLE);
+              RetryOrchestrator.maybeRetry(serviceContext, request, chooseRetryReason());
             } else {
               endpoints.add(endpoint);
 
               if (s == EndpointState.CONNECTED) {
                 endpoint.send(request);
               } else if (s == EndpointState.DISCONNECTED) {
-                RetryOrchestrator.maybeRetry(serviceContext, request, RetryReason.ENDPOINT_NOT_AVAILABLE);
+                RetryOrchestrator.maybeRetry(serviceContext, request, chooseRetryReason());
               }
             }
           }

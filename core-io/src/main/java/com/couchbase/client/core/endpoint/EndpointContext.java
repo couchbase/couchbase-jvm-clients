@@ -17,6 +17,8 @@
 package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
 
@@ -25,6 +27,7 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static java.util.Objects.requireNonNull;
 
 public class EndpointContext extends CoreContext {
 
@@ -49,6 +52,8 @@ public class EndpointContext extends CoreContext {
 
   private final Optional<String> channelId;
 
+  private volatile AuthenticationStatus authenticationStatus = AuthenticationStatus.UNKNOWN;
+
   /**
    * Helper method to duplicate the endpoint context (useful for extension).
    *
@@ -71,6 +76,11 @@ public class EndpointContext extends CoreContext {
     this.bucket = bucket;
     this.localSocket = localSocket;
     this.channelId = channelId;
+  }
+
+  @Stability.Internal
+  public void authenticationStatus(AuthenticationStatus authenticationStatus) {
+    this.authenticationStatus = requireNonNull(authenticationStatus);
   }
 
   @Override
@@ -108,5 +118,10 @@ public class EndpointContext extends CoreContext {
 
   public Optional<String> channelId() {
     return channelId;
+  }
+
+  @Stability.Internal
+  public AuthenticationStatus authenticationStatus() {
+    return authenticationStatus;
   }
 }

@@ -45,6 +45,7 @@ import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueSocketChanne
 import com.couchbase.client.core.deps.io.netty.channel.local.LocalChannel;
 import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChannel;
+import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SecurityConfig;
@@ -416,6 +417,7 @@ public abstract class BaseEndpoint implements Endpoint {
               endpointContext.bucket(),
               Optional.ofNullable(channel.attr(ChannelAttributes.CHANNEL_ID_KEY).get())
             );
+            newContext.authenticationStatus(AuthenticationStatus.SUCCEEDED);
             this.endpointContext.get().environment().eventBus().publish(new EndpointConnectedEvent(
               Duration.ofNanos(now - attemptStart.get()),
               newContext,
@@ -741,7 +743,7 @@ public abstract class BaseEndpoint implements Endpoint {
 
     final Optional<String> id = Optional.ofNullable(channel).map(c -> "0x" + c.id().asShortText());
     return new EndpointDiagnostics(context().serviceType(), state(), circuitBreaker.state(), local, remote, context().bucket(),
-      lastActivity, id, Optional.ofNullable(lastConnectAttemptFailure()));
+      lastActivity, id, Optional.ofNullable(lastConnectAttemptFailure()), context().authenticationStatus());
   }
 
   @Override

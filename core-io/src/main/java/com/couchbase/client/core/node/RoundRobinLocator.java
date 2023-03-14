@@ -28,6 +28,7 @@ import com.couchbase.client.core.error.context.GenericRequestErrorContext;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.retry.AuthErrorDecider;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
@@ -36,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
@@ -83,11 +85,16 @@ public class RoundRobinLocator implements Locator {
       boolean bucketLoadInProgress =ctx.core().configurationProvider().bucketConfigLoadInProgress();
       boolean loadInProgress = globalLoadInProgress || bucketLoadInProgress;
 
-      if (loadInProgress) {
+      boolean isAuthError = AuthErrorDecider.isAuthError(ctx.core().diagnostics().collect(Collectors.toList()));
+
+      RetryReason retryReason = isAuthError ? RetryReason.AUTHENTICATION_ERROR
+        : bucketLoadInProgress ? RetryReason.BUCKET_OPEN_IN_PROGRESS : RetryReason.GLOBAL_CONFIG_LOAD_IN_PROGRESS;
+
+      if (isAuthError || loadInProgress) {
         RetryOrchestrator.maybeRetry(
           ctx,
           request,
-          bucketLoadInProgress ? RetryReason.BUCKET_OPEN_IN_PROGRESS : RetryReason.GLOBAL_CONFIG_LOAD_IN_PROGRESS
+          retryReason
         );
       } else {
         request.fail(FeatureNotAvailableException.clusterLevelQuery(serviceType));

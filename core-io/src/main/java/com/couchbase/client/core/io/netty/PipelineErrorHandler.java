@@ -19,6 +19,7 @@ package com.couchbase.client.core.io.netty;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.io.GenericFailureDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
+import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.IoContext;
@@ -53,6 +54,7 @@ public class PipelineErrorHandler extends ChannelInboundHandlerAdapter {
     assembleIoContext(ctx);
 
     if (cause instanceof DecoderException && cause.getCause() instanceof SSLException) {
+      endpointContext.authenticationStatus(AuthenticationStatus.FAILED);
       eventBus.publish(new SecureConnectionFailedEvent(ioContext, (SSLException) cause.getCause()));
     } else {
       eventBus.publish(new GenericFailureDetectedEvent(ioContext, cause));

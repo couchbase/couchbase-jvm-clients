@@ -144,7 +144,12 @@ public enum RetryReason {
   /**
    * Server indicated that the query failed, but it is retryable.
    */
-  QUERY_ERROR_RETRYABLE(true, false);
+  QUERY_ERROR_RETRYABLE(true, false),
+  /**
+   * An authentication error is occurring, such as incorrect credentials or an incorrect certificate.
+   */
+  @Stability.Uncommitted
+  AUTHENTICATION_ERROR(true, false);
 
   private final boolean allowsNonIdempotentRetry;
   private final boolean alwaysRetry;

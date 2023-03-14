@@ -29,6 +29,7 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.SaslMechanism;
 import com.couchbase.client.core.error.AuthenticationFailureException;
@@ -438,6 +439,12 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
     }
 
     Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
+
+    // We set AuthenticationStatus.SUCCEEDED here in addition to BaseEndpoint reaching EndpointState.CONNECTED, because a KV connection that cannot select a bucket (because that bucket does not exist
+    // or because the user does not have the correct RBAC permissions, for example) will not reach that point.  However, such a connection _has_ been successfully authenticated - it just may not be
+    // authorized to access that bucket.
+    endpointContext.authenticationStatus(AuthenticationStatus.SUCCEEDED);
+
     endpointContext.environment().eventBus().publish(
       new SaslAuthenticationCompletedEvent(latency.orElse(Duration.ZERO), ioContext)
     );
@@ -488,6 +495,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       MemcacheProtocol.decodeStatus(status), endpointContext, serverContext
     );
 
+    endpointContext.authenticationStatus(AuthenticationStatus.FAILED);
     endpointContext.environment().eventBus().publish(new SaslAuthenticationFailedEvent(
       latency.orElse(Duration.ZERO),
       errorContext,
