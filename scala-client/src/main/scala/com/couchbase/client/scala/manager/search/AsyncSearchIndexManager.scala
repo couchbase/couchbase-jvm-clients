@@ -15,70 +15,49 @@
  */
 package com.couchbase.client.scala.manager.search
 
-import java.nio.charset.StandardCharsets
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.deps.io.netty.handler.codec.http._
-import com.couchbase.client.core.endpoint.http.{CoreCommonOptions, CoreHttpResponse}
-import com.couchbase.client.core.endpoint.http.CoreHttpPath.path
-import com.couchbase.client.core.msg.RequestTarget
+import com.couchbase.client.core.api.CoreCouchbaseOps
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode
-import com.couchbase.client.scala.AsyncCluster
-import com.couchbase.client.scala.util.CouchbasePickler
+import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import com.couchbase.client.scala.util.DurationConversions._
+import com.couchbase.client.scala.util.FutureConversions
 
-import scala.compat.java8.FutureConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.jdk.CollectionConverters._
 
 @Stability.Volatile
-class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
+class AsyncSearchIndexManager(private[scala] val couchbaseOps: CoreCouchbaseOps)(
     implicit val ec: ExecutionContext
 ) {
-  private val core = cluster.core
-  private val DefaultTimeout: Duration =
-    core.context().environment().timeoutConfig().managementTimeout()
-  private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
-  private val httpClient                          = core.httpClient(RequestTarget.search())
+  private val internal = couchbaseOps.clusterSearchIndexManager()
+  private[scala] val DefaultTimeout: Duration =
+    couchbaseOps.asCore().context().environment().timeoutConfig().managementTimeout()
+  private[scala] val DefaultRetryStrategy: RetryStrategy =
+    couchbaseOps.asCore().context().environment().retryStrategy()
 
   def getIndex(
       indexName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): Future[SearchIndex] = {
-    val options = CoreCommonOptions.of(timeout, retryStrategy, null)
-    val request = httpClient.get(path(indexPath(indexName)), options).build()
-    core.send(request)
-    val out = request.response.toScala
-      .map((response: CoreHttpResponse) => {
-        val read = CouchbasePickler.read[SearchIndexWrapper](response.content())
-        read.indexDef.copy(numPlanPIndexes = read.numPlanPIndexes)
-      })
-    out onComplete {
-      case Success(_)   => request.context.logicallyComplete()
-      case Failure(err) => request.context.logicallyComplete(err)
-    }
-    out
+    FutureConversions
+      .javaCFToScalaFutureMappingExceptions(
+        internal.getIndex(indexName, CoreCommonOptions.of(timeout, retryStrategy, null))
+      )
+      .map(result => convert(result))
   }
 
   def getAllIndexes(
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): Future[Seq[SearchIndex]] = {
-    val options = CoreCommonOptions.of(timeout, retryStrategy, null)
-    val request = httpClient.get(path(indexesPath), options).build()
-
-    core.send(request)
-    val out = request.response.toScala
-      .map((response: CoreHttpResponse) => {
-        AsyncSearchIndexManager.parseIndexes(response.content())
-      })
-    out onComplete {
-      case Success(_)   => request.context.logicallyComplete()
-      case Failure(err) => request.context.logicallyComplete(err)
-    }
-    out
+    FutureConversions
+      .javaCFToScalaFutureMappingExceptions(
+        internal.getAllIndexes(CoreCommonOptions.of(timeout, retryStrategy, null))
+      )
+      .map(result => result.asScala.map(v => convert(v)))
   }
 
   def upsertIndex(
@@ -86,20 +65,12 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): Future[Unit] = {
-    val options = CoreCommonOptions.of(timeout, retryStrategy, null)
-    val request = httpClient
-      .put(path(indexPath(indexDefinition.name)), options)
-      .header(HttpHeaderNames.CACHE_CONTROL, "no-cache")
-      .json(indexDefinition.toJson.getBytes(StandardCharsets.UTF_8))
-      .build()
-
-    core.send(request)
-    val out = request.response.toScala
-    out onComplete {
-      case Success(_)   => request.context.logicallyComplete()
-      case Failure(err) => request.context.logicallyComplete(err)
-    }
-    out.map(_ => ())
+    FutureConversions
+      .javaCFToScalaFutureMappingExceptions(
+        internal
+          .upsertIndex(convert(indexDefinition), CoreCommonOptions.of(timeout, retryStrategy, null))
+      )
+      .map(_ => ())
   }
 
   def dropIndex(
@@ -107,37 +78,10 @@ class AsyncSearchIndexManager(private[scala] val cluster: AsyncCluster)(
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): Future[Unit] = {
-    val options = CoreCommonOptions.of(timeout, retryStrategy, null)
-    val request = httpClient.delete(path(indexPath(indexName)), options).build()
-
-    core.send(request)
-    val out = request.response.toScala
-    out onComplete {
-      case Success(_)   => request.context.logicallyComplete()
-      case Failure(err) => request.context.logicallyComplete(err)
-    }
-    out
+    FutureConversions
+      .javaCFToScalaFutureMappingExceptions(
+        internal.dropIndex(indexName, CoreCommonOptions.of(timeout, retryStrategy, null))
+      )
       .map(_ => ())
-  }
-
-  private def indexesPath = "/api/index"
-
-  private def indexPath(indexName: String) = indexesPath + "/" + urlEncode(indexName)
-
-  private def indexCountPath(indexName: String) = indexPath(indexName) + "/count"
-
-}
-
-object AsyncSearchIndexManager {
-  // This can throw, so should be called inside a Future operator
-  private[scala] def parseIndexes(in: Array[Byte]): Seq[SearchIndex] = {
-    val json      = CouchbasePickler.read[ujson.Obj](in)
-    val indexDefs = json.obj("indexDefs")
-    if (indexDefs.isNull) {
-      Seq.empty
-    } else {
-      val allIndexes: SearchIndexesWrapper = CouchbasePickler.read[SearchIndexesWrapper](indexDefs)
-      allIndexes.indexDefs.values.toSeq
-    }
   }
 }

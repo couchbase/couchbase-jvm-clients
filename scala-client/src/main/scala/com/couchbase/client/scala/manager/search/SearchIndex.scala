@@ -69,6 +69,9 @@ case class SearchIndex(
     output.put("sourceName", sourceName)
     output.put("type", typ.getOrElse(DefaultType))
     output.put("sourceType", sourceType.getOrElse(DefaultSourceType))
+    params.foreach(v => output.put("params", v))
+    sourceParams.foreach(v => output.put("sourceParams", v))
+    planParams.foreach(v => output.put("planParams", v))
     output.toString
   }
 

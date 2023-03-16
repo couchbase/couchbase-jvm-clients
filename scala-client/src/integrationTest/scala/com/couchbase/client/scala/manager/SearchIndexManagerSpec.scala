@@ -162,22 +162,6 @@ class SearchIndexManagerSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def parseAllIndexes(): Unit = {
-    val raw =
-      """{"status":"ok","indexDefs":{"uuid":"1893929e4a47ae29",
-             "indexDefs":{"idx-3b687670":{"type":"fulltext-index","name":"idx-3b687670","uuid":"1893929e4a47ae29",
-             "sourceType":"couchbase","sourceName":"e12c3ee1-2fb7-41b6-825a-4397865548dc",
-             "planParams":{"maxPartitionsPerPIndex":171},"params":{"doc_config":{"docid_prefix_delim":"",
-             "docid_regexp":"","mode":"type_field","type_field":"type"},"mapping":{"analysis":{},
-             "default_analyzer":"standard","default_datetime_parser":"dateTimeOptional","default_field":"_all",
-             "default_mapping":{"dynamic":true,"enabled":true},"default_type":"_default","docvalues_dynamic":true,
-             "index_dynamic":true,"store_dynamic":false,"type_field":"_type"},"store":{"indexType":"scorch",
-             "kvStoreName":""}},"sourceParams":null}},"implVersion":"5.5.0"}}"""
-    val indexes = AsyncSearchIndexManager.parseIndexes(raw.getBytes(StandardCharsets.UTF_8))
-    assert(indexes.size == 1)
-  }
-
-  @Test
   def dropIndex(): Unit = {
     val name  = "idx-" + UUID.randomUUID.toString.substring(0, 8)
     val index = SearchIndex.create(name, config.bucketname)

@@ -17,16 +17,27 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionString
-import com.couchbase.client.core.util.ConnectionStringUtil.{asConnectionString, checkConnectionString}
+import com.couchbase.client.core.util.ConnectionStringUtil.{
+  asConnectionString,
+  checkConnectionString
+}
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
+import com.couchbase.client.scala.diagnostics.{
+  DiagnosticsOptions,
+  PingOptions,
+  WaitUntilReadyOptions
+}
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
-import com.couchbase.client.scala.manager.analytics.{AsyncAnalyticsIndexManager, ReactiveAnalyticsIndexManager}
+import com.couchbase.client.scala.manager.analytics.{
+  AsyncAnalyticsIndexManager,
+  ReactiveAnalyticsIndexManager
+}
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, ReactiveBucketManager}
 import com.couchbase.client.scala.manager.eventing.AsyncEventingFunctionManager
 import com.couchbase.client.scala.manager.query.AsyncQueryIndexManager
@@ -80,6 +91,14 @@ class AsyncCluster(
       authenticator,
       connectionString
     )
+  private[scala] val couchbaseOps =
+    CoreCouchbaseOps.create(environment.coreEnv, authenticator, connectionString)
+
+  couchbaseOps match {
+    case core: Core => core.initGlobalConfig()
+    case _          =>
+  }
+
   private[scala] val hp                         = HandlerBasicParams(core, env)
   private[scala] val searchTimeout              = javaDurationToScala(env.timeoutConfig.searchTimeout())
   private[scala] val analyticsTimeout           = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
@@ -101,7 +120,7 @@ class AsyncCluster(
   lazy val users = new AsyncUserManager(reactiveUserManager)
 
   lazy val queryIndexes  = new AsyncQueryIndexManager(this)
-  lazy val searchIndexes = new AsyncSearchIndexManager(this)
+  lazy val searchIndexes = new AsyncSearchIndexManager(couchbaseOps)
   lazy val analyticsIndexes: AsyncAnalyticsIndexManager = new AsyncAnalyticsIndexManager(
     reactiveAnalyticsIndexManager
   )

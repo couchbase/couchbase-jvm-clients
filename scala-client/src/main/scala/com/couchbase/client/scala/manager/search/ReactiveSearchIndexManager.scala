@@ -31,10 +31,8 @@ import scala.util.Try
 class ReactiveSearchIndexManager(private[scala] val async: AsyncSearchIndexManager)(
     implicit val ec: ExecutionContext
 ) {
-  private val core = async.cluster.core
-  private val DefaultTimeout: Duration =
-    core.context().environment().timeoutConfig().managementTimeout()
-  private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
+  private val DefaultTimeout: Duration            = async.DefaultTimeout
+  private val DefaultRetryStrategy: RetryStrategy = async.DefaultRetryStrategy
 
   def getIndex(
       indexName: String,

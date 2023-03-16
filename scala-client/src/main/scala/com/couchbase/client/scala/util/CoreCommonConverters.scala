@@ -16,6 +16,7 @@
 package com.couchbase.client.scala.util
 
 import com.couchbase.client.core.api.kv._
+import com.couchbase.client.core.api.manager.search.CoreSearchIndex
 import com.couchbase.client.core.api.query.{
   CoreQueryMetaData,
   CoreQueryMetrics,
@@ -39,6 +40,7 @@ import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
+import com.couchbase.client.scala.manager.search.SearchIndex
 import com.couchbase.client.scala.query.{
   QueryMetaData,
   QueryMetrics,
@@ -54,6 +56,8 @@ import reactor.core.scala.publisher.{SFlux, SMono}
 import reactor.util.annotation.Nullable
 
 import java.util.function.Supplier
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -218,6 +222,57 @@ private[scala] object CoreCommonConverters {
       case v: CoreNumericRangeSearchFacetResult =>
         SearchFacetResult.NumericRangeSearchFacetResult(v)
     }
+  }
+
+  def convert(in: CoreSearchIndex): SearchIndex = {
+    SearchIndex(
+      in.name,
+      in.sourceName,
+      Option(in.uuid),
+      Option(in.`type`),
+      Option(convert(in.params.asScala.toMap)),
+      Option(in.sourceUuid),
+      Option(convert(in.sourceParams.asScala.toMap)),
+      Option(in.sourceType),
+      Option(convert(in.planParams.asScala.toMap))
+    )
+  }
+
+  def convert(in: Map[String, Any]): ujson.Obj = {
+    def convertInternal(in: Any): Option[ujson.Value] = {
+      in match {
+        case x: String                               => Some(ujson.Str(x))
+        case x: Int                                  => Some(ujson.Num(x))
+        case x: Double                               => Some(ujson.Num(x))
+        case x: Boolean                              => Some(ujson.Bool(x))
+        case x: java.util.LinkedHashMap[String, Any] => Some(convert(x.asScala.toMap))
+        case x: java.util.ArrayList[Any]             =>
+          // For some reason ujson.Arr takes an ArrayBuffer
+          val ab = new ArrayBuffer[ujson.Value]()
+          x.forEach(
+            v =>
+              convertInternal(v) match {
+                case Some(value) => ab += value
+                case _           =>
+              }
+          )
+          Some(ujson.Arr(ab))
+        case _ =>
+          // There's no mechanism for us to return a decoding failure in this path, so any
+          // JSON that's not parsed is dropped.
+          None
+      }
+    }
+
+    val out = in.map(x => x._1 -> convertInternal(x._2)) collect {
+      case x: (String, Option[ujson.Value]) if x._2.isDefined => x._1 -> x._2.get
+    }
+
+    out
+  }
+
+  def convert(in: SearchIndex): CoreSearchIndex = {
+    CoreSearchIndex.fromJson(in.toJson)
   }
 
   def convert[T](in: CoreAsyncResponse[T])(implicit ec: ExecutionContext): Future[T] = {
