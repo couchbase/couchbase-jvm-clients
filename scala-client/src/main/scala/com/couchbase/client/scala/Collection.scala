@@ -17,6 +17,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.api.kv.CoreExpiry
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.datastructures._
 import com.couchbase.client.scala.durability.Durability
@@ -185,7 +186,7 @@ class Collection(
         id,
         encoder(async.environment.transcoder, serializer, content),
         convert(durability),
-        0
+        CoreExpiry.NONE
       )
     ).map(result => convert(result))
   }
@@ -245,7 +246,7 @@ class Collection(
         encoder(async.environment.transcoder, serializer, content),
         cas,
         convert(durability),
-        0,
+        CoreExpiry.NONE,
         false
       )
     ).map(result => convert(result))
@@ -305,7 +306,7 @@ class Collection(
         id,
         encoder(async.environment.transcoder, serializer, content),
         convert(durability),
-        0,
+        CoreExpiry.NONE,
         false
       )
     ).map(result => convert(result))
@@ -416,7 +417,7 @@ class Collection(
         convert(document),
         cas,
         convert(durability),
-        0,
+        CoreExpiry.NONE,
         false,
         false,
         false

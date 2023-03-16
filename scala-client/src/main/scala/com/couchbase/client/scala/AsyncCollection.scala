@@ -16,6 +16,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.api.kv.CoreExpiry
 import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
@@ -158,7 +159,7 @@ class AsyncCollection(
         id,
         encoder(environment.transcoder, serializer, content),
         convert(durability),
-        0
+        CoreExpiry.NONE
       )
     ).map(result => convert(result))
   }
@@ -199,7 +200,7 @@ class AsyncCollection(
         encoder(environment.transcoder, serializer, content),
         cas,
         convert(durability),
-        0,
+        CoreExpiry.NONE,
         false
       )
     ).map(result => convert(result))
@@ -241,7 +242,7 @@ class AsyncCollection(
         id,
         encoder(environment.transcoder, serializer, content),
         convert(durability),
-        0,
+        CoreExpiry.NONE,
         false
       )
     ).map(result => convert(result))
@@ -365,7 +366,7 @@ class AsyncCollection(
         convert(document),
         cas,
         convert(durability),
-        0,
+        CoreExpiry.NONE,
         false,
         false,
         false

@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.api.kv.CoreEncodedContent;
+import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.api.kv.CoreStoreSemantics;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.cnc.CbTracing;
@@ -43,6 +44,7 @@ import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -62,6 +64,7 @@ import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.conver
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.convertExpiry;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.convertFromFlags;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.throwRelativeExpiryUnsupported;
 
 /**
  * For creating Protostellar GRPC KV requests.
@@ -142,20 +145,24 @@ public class CoreProtostellarKeyValueRequests {
                                                                                                                    CoreCommonOptions opts,
                                                                                                                    CoreKeyspace keyspace,
                                                                                                                    String key,
-                                                                                                                   long expiration) {
-    validateGetAndTouchParams(opts, key, expiration);
+                                                                                                                   CoreExpiry expiry) {
+    validateGetAndTouchParams(opts, key, expiry);
 
-    GetAndTouchRequest request = com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest.newBuilder()
+    GetAndTouchRequest.Builder request = com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest.newBuilder()
       .setBucketName(keyspace.bucket())
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
-      .setKey(key)
-      .setExpiry(convertExpiry(expiration))
-      .build();
+      .setKey(key);
+
+    if (expiry.isNone()) {
+      request.setExpiry(convertExpiry(Instant.EPOCH));
+    }
+    expiry.ifAbsolute(it -> request.setExpiry(convertExpiry(it)));
+    expiry.ifRelative(it -> throwRelativeExpiryUnsupported());
 
     Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
 
-    return new ProtostellarKeyValueRequest<>(request,
+    return new ProtostellarKeyValueRequest<>(request.build(),
       core,
       keyspace,
       key,
@@ -175,7 +182,7 @@ public class CoreProtostellarKeyValueRequests {
                                                                  String key,
                                                                  Supplier<CoreEncodedContent> content,
                                                                  CoreDurability durability,
-                                                                 long expiry) {
+                                                                 CoreExpiry expiry) {
     validateInsertParams(opts, key, content, durability, expiry);
 
     RequestSpan span = createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_INSERT, durability, opts.parentSpan().orElse(null));
@@ -190,9 +197,12 @@ public class CoreProtostellarKeyValueRequests {
       .setContent(ByteString.copyFrom(encoded.getT1().encoded()))
       .setContentType(convertFromFlags(encoded.getT1().flags()));
 
-    if (expiry != 0) {
-      request.setExpiry(convertExpiry(expiry));
+    if (expiry.isNone()) {
+      request.setExpiry(convertExpiry(Instant.EPOCH));
     }
+    expiry.ifAbsolute(it -> request.setExpiry(convertExpiry(it)));
+    expiry.ifRelative(it -> throwRelativeExpiryUnsupported());
+
     if (!durability.isNone()) {
       request.setDurabilityLevel(convert(durability));
     }
@@ -220,7 +230,7 @@ public class CoreProtostellarKeyValueRequests {
                                                                    Supplier<CoreEncodedContent> content,
                                                                    long cas,
                                                                    CoreDurability durability,
-                                                                   long expiry,
+                                                                   CoreExpiry expiry,
                                                                    boolean preserveExpiry) {
     validateReplaceParams(opts, key, content, cas, durability, expiry, preserveExpiry);
 
@@ -238,7 +248,11 @@ public class CoreProtostellarKeyValueRequests {
       .setContentType(convertFromFlags(encoded.getT1().flags()));
 
     if (!preserveExpiry) {
-      request.setExpiry(convertExpiry(expiry));
+      if (expiry.isNone()) {
+        request.setExpiry(convertExpiry(Instant.EPOCH));
+      }
+      expiry.ifAbsolute(it -> request.setExpiry(convertExpiry(it)));
+      expiry.ifRelative(it -> throwRelativeExpiryUnsupported());
     }
     if (!durability.isNone()) {
       request.setDurabilityLevel(convert(durability));
@@ -266,7 +280,7 @@ public class CoreProtostellarKeyValueRequests {
                                                                  String key,
                                                                  Supplier<CoreEncodedContent> content,
                                                                  CoreDurability durability,
-                                                                 long expiry,
+                                                                 CoreExpiry expiry,
                                                                  boolean preserveExpiry) {
     validateUpsertParams(opts, key, content, durability, expiry, preserveExpiry);
 
@@ -283,7 +297,11 @@ public class CoreProtostellarKeyValueRequests {
       .setContentType(convertFromFlags(encoded.getT1().flags()));
 
     if (!preserveExpiry) {
-      request.setExpiry(convertExpiry(expiry));
+      if (expiry.isNone()) {
+        request.setExpiry(convertExpiry(Instant.EPOCH));
+      }
+      expiry.ifAbsolute(it -> request.setExpiry(convertExpiry(it)));
+      expiry.ifRelative(it -> throwRelativeExpiryUnsupported());
     }
     if (!durability.isNone()) {
       request.setDurabilityLevel(convert(durability));
@@ -385,20 +403,24 @@ public class CoreProtostellarKeyValueRequests {
                                                                                                        CoreKeyspace keyspace,
                                                                                                        CoreCommonOptions opts,
                                                                                                        String key,
-                                                                                                       long expiry) {
+                                                                                                       CoreExpiry expiry) {
     validateTouchParams(opts, key, expiry);
 
-    TouchRequest request = com.couchbase.client.protostellar.kv.v1.TouchRequest.newBuilder()
+    TouchRequest.Builder request = com.couchbase.client.protostellar.kv.v1.TouchRequest.newBuilder()
       .setBucketName(keyspace.bucket())
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
-      .setExpiry(convertExpiry(expiry))
-      .setKey(key)
-      .build();
+      .setKey(key);
+
+    if (expiry.isNone()) {
+      request.setExpiry(convertExpiry(Instant.EPOCH));
+    }
+    expiry.ifAbsolute(it -> request.setExpiry(convertExpiry(it)));
+    expiry.ifRelative(it -> throwRelativeExpiryUnsupported());
 
     Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
 
-    return new ProtostellarKeyValueRequest<>(request,
+    return new ProtostellarKeyValueRequest<>(request.build(),
       core,
       keyspace,
       key,
@@ -451,7 +473,7 @@ public class CoreProtostellarKeyValueRequests {
                                                                                                              CoreStoreSemantics storeSemantics,
                                                                                                              long cas,
                                                                                                              CoreDurability durability,
-                                                                                                             long expiry,
+                                                                                                             CoreExpiry expiry,
                                                                                                              boolean preserveExpiry,
                                                                                                              boolean accessDeleted,
                                                                                                              boolean createAsDeleted) {
@@ -553,7 +575,7 @@ public class CoreProtostellarKeyValueRequests {
       throw new IllegalArgumentException("createAsDeleted is not supported in mutateIn in Protostellar");
     }
 
-    if (expiry != 0) {
+    if (!expiry.isNone()) {
       throw new IllegalArgumentException("Setting expiry is not supported in mutateIn in Protostellar");
     }
 

@@ -24,6 +24,7 @@ import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.api.kv.CoreEncodedContent;
 import com.couchbase.client.core.api.kv.CoreExistsResult;
+import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.api.kv.CoreGetResult;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.api.kv.CoreKvResponseMetadata;
@@ -61,7 +62,6 @@ import com.couchbase.client.core.msg.kv.GetMetaRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
-import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.core.msg.kv.ReplaceRequest;
 import com.couchbase.client.core.msg.kv.SubDocumentField;
@@ -83,10 +83,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -109,6 +106,7 @@ import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateUnl
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateUpsertParams;
 import static com.couchbase.client.core.api.kv.CoreStoreSemantics.INSERT;
 import static com.couchbase.client.core.api.kv.CoreStoreSemantics.REVIVE;
+import static com.couchbase.client.core.classic.ClassicExpiryHelper.encode;
 import static com.couchbase.client.core.classic.ClassicHelper.maybeWrapWithLegacyDurability;
 import static com.couchbase.client.core.classic.ClassicHelper.setClientContext;
 import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
@@ -321,15 +319,15 @@ public final class ClassicCoreKvOps implements CoreKvOps {
   public CoreAsyncResponse<CoreGetResult> getAndTouchAsync(
       CoreCommonOptions common,
       String key,
-      long expiration
+      CoreExpiry expiry
   ) {
-    validateGetAndTouchParams(common, key, expiration);
+    validateGetAndTouchParams(common, key, expiry);
 
     Duration timeout = timeout(common);
     RetryStrategy retryStrategy = retryStrategy(common);
     RequestSpan span = span(common, TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH);
 
-    GetAndTouchRequest request = new GetAndTouchRequest(key, timeout, ctx, collectionIdentifier, retryStrategy, expiration, span);
+    GetAndTouchRequest request = new GetAndTouchRequest(key, timeout, ctx, collectionIdentifier, retryStrategy, encode(expiry), span);
     setClientContext(request, common);
 
     return newAsyncResponse(
@@ -353,7 +351,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
       String key,
       Supplier<CoreEncodedContent> content,
       CoreDurability durability,
-      long expiry
+      CoreExpiry expiry
   ) {
     validateInsertParams(common, key, content, durability, expiry);
 
@@ -375,7 +373,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
     InsertRequest request = new InsertRequest(
         key,
         coreContent.encoded(),
-        expiry,
+        encode(expiry),
         coreContent.flags(),
         timeout,
         ctx,
@@ -418,7 +416,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
       String key,
       Supplier<CoreEncodedContent> content,
       CoreDurability durability,
-      long expiry,
+      CoreExpiry expiry,
       boolean preserveExpiry
   ) {
     validateUpsertParams(common, key, content, durability, expiry, preserveExpiry);
@@ -441,7 +439,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
     UpsertRequest request = new UpsertRequest(
         key,
         coreContent.encoded(),
-        expiry,
+        encode(expiry),
         preserveExpiry,
         coreContent.flags(),
         timeout,
@@ -480,7 +478,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
       Supplier<CoreEncodedContent> content,
       long cas,
       CoreDurability durability,
-      long expiry,
+      CoreExpiry expiry,
       boolean preserveExpiry
   ) {
     validateReplaceParams(common, key, content, cas, durability, expiry, preserveExpiry);
@@ -503,7 +501,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
     ReplaceRequest request = new ReplaceRequest(
         key,
         coreContent.encoded(),
-        expiry,
+        encode(expiry),
         preserveExpiry,
         coreContent.flags(),
         timeout,
@@ -610,14 +608,14 @@ public final class ClassicCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreAsyncResponse<CoreMutationResult> touchAsync(CoreCommonOptions common, String key, long expiry) {
+  public CoreAsyncResponse<CoreMutationResult> touchAsync(CoreCommonOptions common, String key, CoreExpiry expiry) {
     validateTouchParams(common, key, expiry);
 
     Duration timeout = timeout(common);
     RetryStrategy retryStrategy = retryStrategy(common);
     RequestSpan span = span(common, TracingIdentifiers.SPAN_REQUEST_KV_TOUCH);
 
-    TouchRequest request = new TouchRequest(timeout, ctx, collectionIdentifier, retryStrategy, key, expiry, span);
+    TouchRequest request = new TouchRequest(timeout, ctx, collectionIdentifier, retryStrategy, key, encode(expiry), span);
     setClientContext(request, common);
 
     return newAsyncResponse(
@@ -700,7 +698,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
       CoreStoreSemantics storeSemantics,
       long cas,
       CoreDurability durability,
-      long expiry,
+      CoreExpiry expiry,
       boolean preserveExpiry,
       boolean accessDeleted,
       boolean createAsDeleted
@@ -745,7 +743,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
       SubdocMutateRequest request = new SubdocMutateRequest(
           timeout, ctx, collectionIdentifier, bucketConfig, retryStrategy, key,
           storeSemantics,
-          accessDeleted, createAsDeleted, encodedCommands, expiry, preserveExpiry, cas,
+          accessDeleted, createAsDeleted, encodedCommands, encode(expiry), preserveExpiry, cas,
           durability.levelIfSynchronous(), span
       );
 

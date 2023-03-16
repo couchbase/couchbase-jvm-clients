@@ -16,9 +16,8 @@
 
 package com.couchbase.client.kotlin.kv
 
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.greaterThanOrEqualTo
-import org.hamcrest.Matchers.lessThanOrEqualTo
+import com.couchbase.client.core.api.kv.CoreExpiry
+import com.couchbase.client.core.error.InvalidArgumentException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
@@ -35,8 +34,8 @@ import kotlin.time.Duration.Companion.seconds
 internal class ExpiryTest {
 
     @Test
-    fun `none encodes to zero`() {
-        assertEquals(0, Expiry.none().encode())
+    fun `none encodes to core none`() {
+        assertEquals(CoreExpiry.NONE, Expiry.none().encode())
     }
 
     @Test
@@ -46,7 +45,7 @@ internal class ExpiryTest {
 
     @Test
     fun `negative duration is invalid`() {
-        assertThrows<IllegalArgumentException> { Expiry.of((-1).seconds) }
+        assertThrows<InvalidArgumentException> { Expiry.of((-1).seconds) }
     }
 
     @Test
@@ -56,45 +55,23 @@ internal class ExpiryTest {
     }
 
     @Test
-    fun `short durations are encoded verbatim`() {
-        val longestVerbatimSeconds = DAYS.toSeconds(30) - 1
-        assertEquals(longestVerbatimSeconds, Expiry.of(longestVerbatimSeconds.seconds).encode())
-    }
-
-    @Test
-    fun `long durations are converted to absolute`() {
-        val lowerBound = Instant.now().epochSecond + DAYS.toSeconds(30)
-        val actual = Expiry.of(30.days).encode()
-        val upperBound = Instant.now().epochSecond + DAYS.toSeconds(30)
-
-        assertThat(actual, greaterThanOrEqualTo(lowerBound))
-        assertThat(actual, lessThanOrEqualTo(upperBound))
-    }
-
-    @Test
     fun `zero instant is invalid`() {
         assertThrows<IllegalArgumentException> { Expiry.of(Instant.EPOCH) }
     }
 
     @Test
     fun `negative instant is invalid`() {
-        assertThrows<IllegalArgumentException> { Expiry.of(Instant.ofEpochSecond(-1)) }
+        assertThrows<InvalidArgumentException> { Expiry.of(Instant.ofEpochSecond(-1)) }
     }
 
     @Test
     fun `instant in distant past is invalid`() {
-        assertThrows<IllegalArgumentException> { Expiry.of(Instant.ofEpochSecond(DAYS.toSeconds(30))) }
+        assertThrows<InvalidArgumentException> { Expiry.of(Instant.ofEpochSecond(DAYS.toSeconds(30))) }
     }
 
     @Test
     fun `instant in distant future is invalid`() {
-        assertThrows<IllegalArgumentException> { Expiry.of(Instant.ofEpochSecond(DAYS.toSeconds(356) * 200)) }
-    }
-
-    @Test
-    fun `instant in recent past is encoded verbatim`() {
-        val now = Instant.ofEpochSecond(DAYS.toSeconds(31)).epochSecond
-        assertEquals(now, Expiry.of(Instant.ofEpochSecond(now)).encode())
+        assertThrows<InvalidArgumentException> { Expiry.of(Instant.ofEpochSecond(DAYS.toSeconds(356) * 200)) }
     }
 
     @Test

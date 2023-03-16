@@ -23,6 +23,7 @@ import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.api.kv.CoreEncodedContent;
 import com.couchbase.client.core.api.kv.CoreExistsResult;
+import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.api.kv.CoreGetResult;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.api.kv.CoreMutationResult;
@@ -112,8 +113,8 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreAsyncResponse<CoreGetResult> getAndTouchAsync(CoreCommonOptions common, String key, long expiration) {
-    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest> req = getAndTouchRequest(core, common, keyspace, key, expiration);
+  public CoreAsyncResponse<CoreGetResult> getAndTouchAsync(CoreCommonOptions common, String key, CoreExpiry expiry) {
+    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest> req = getAndTouchRequest(core, common, keyspace, key, expiry);
     return CoreProtostellarAccessors.async(core,
       req,
       (endpoint) -> endpoint.kvStub().withDeadline(req.deadline()).getAndTouch(req.request()),
@@ -121,7 +122,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreMutationResult insertBlocking(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, long expiry) {
+  public CoreMutationResult insertBlocking(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, CoreExpiry expiry) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.InsertRequest> request = insertRequest(core, keyspace, common, key, content, durability, expiry);
     return CoreProtostellarAccessors.blocking(core,
       request,
@@ -130,7 +131,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreAsyncResponse<CoreMutationResult> insertAsync(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, long expiry) {
+  public CoreAsyncResponse<CoreMutationResult> insertAsync(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, CoreExpiry expiry) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.InsertRequest> request = insertRequest(core, keyspace, common, key, content, durability, expiry);
     return CoreProtostellarAccessors.async(core,
       request,
@@ -139,7 +140,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public Mono<CoreMutationResult> insertReactive(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, long expiry) {
+  public Mono<CoreMutationResult> insertReactive(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, CoreExpiry expiry) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.InsertRequest> request = insertRequest(core, keyspace, common, key, content, durability, expiry);
     return CoreProtostellarAccessors.reactive(core,
       request,
@@ -148,7 +149,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreMutationResult upsertBlocking(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, long expiry, boolean preserveExpiry) {
+  public CoreMutationResult upsertBlocking(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, CoreExpiry expiry, boolean preserveExpiry) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.UpsertRequest> request = upsertRequest(core, keyspace, common, key, content, durability, expiry, preserveExpiry);
     return CoreProtostellarAccessors.blocking(core,
       request,
@@ -157,7 +158,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreAsyncResponse<CoreMutationResult> upsertAsync(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, long expiry, boolean preserveExpiry) {
+  public CoreAsyncResponse<CoreMutationResult> upsertAsync(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, CoreExpiry expiry, boolean preserveExpiry) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.UpsertRequest> request = upsertRequest(core, keyspace, common, key, content, durability, expiry, preserveExpiry);
     return CoreProtostellarAccessors.async(core,
       request,
@@ -166,7 +167,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public Mono<CoreMutationResult> upsertReactive(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, long expiry, boolean preserveExpiry) {
+  public Mono<CoreMutationResult> upsertReactive(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, CoreExpiry expiry, boolean preserveExpiry) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.UpsertRequest> request = upsertRequest(core, keyspace, common, key, content, durability, expiry, preserveExpiry);
     return CoreProtostellarAccessors.reactive(core,
       request,
@@ -175,7 +176,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreMutationResult replaceBlocking(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, long cas, CoreDurability durability, long expiry, boolean preserveExpiry) {
+  public CoreMutationResult replaceBlocking(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, long cas, CoreDurability durability, CoreExpiry expiry, boolean preserveExpiry) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.ReplaceRequest> request = replaceRequest(core, keyspace, common, key, content, cas, durability, expiry, preserveExpiry);
     return CoreProtostellarAccessors.blocking(core,
       request,
@@ -184,7 +185,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreAsyncResponse<CoreMutationResult> replaceAsync(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, long cas, CoreDurability durability, long expiry, boolean preserveExpiry) {
+  public CoreAsyncResponse<CoreMutationResult> replaceAsync(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, long cas, CoreDurability durability, CoreExpiry expiry, boolean preserveExpiry) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.ReplaceRequest> request = replaceRequest(core, keyspace, common, key, content, cas, durability, expiry, preserveExpiry);
     return CoreProtostellarAccessors.async(core,
       request,
@@ -193,7 +194,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public Mono<CoreMutationResult> replaceReactive(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, long cas, CoreDurability durability, long expiry, boolean preserveExpiry) {
+  public Mono<CoreMutationResult> replaceReactive(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, long cas, CoreDurability durability, CoreExpiry expiry, boolean preserveExpiry) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.ReplaceRequest> request = replaceRequest(core, keyspace, common, key, content, cas, durability, expiry, preserveExpiry);
     return CoreProtostellarAccessors.reactive(core,
       request,
@@ -256,7 +257,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreAsyncResponse<CoreMutationResult> touchAsync(CoreCommonOptions common, String key, long expiry) {
+  public CoreAsyncResponse<CoreMutationResult> touchAsync(CoreCommonOptions common, String key, CoreExpiry expiry) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.TouchRequest> request = touchRequest(core, keyspace, common, key, expiry);
     return CoreProtostellarAccessors.async(core,
       request,
@@ -286,7 +287,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreSubdocMutateResult subdocMutateBlocking(CoreCommonOptions common, String key, Supplier<List<CoreSubdocMutateCommand>> commands, CoreStoreSemantics storeSemantics, long cas, CoreDurability durability, long expiry, boolean preserveExpiry, boolean accessDeleted, boolean createAsDeleted) {
+  public CoreSubdocMutateResult subdocMutateBlocking(CoreCommonOptions common, String key, Supplier<List<CoreSubdocMutateCommand>> commands, CoreStoreSemantics storeSemantics, long cas, CoreDurability durability, CoreExpiry expiry, boolean preserveExpiry, boolean accessDeleted, boolean createAsDeleted) {
     List<CoreSubdocMutateCommand> specs = commands.get();
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.MutateInRequest> request = mutateInRequest(core, keyspace, common, key, specs, storeSemantics, cas, durability, expiry, preserveExpiry, accessDeleted, createAsDeleted);
     return CoreProtostellarAccessors.blocking(core,
@@ -296,7 +297,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreAsyncResponse<CoreSubdocMutateResult> subdocMutateAsync(CoreCommonOptions common, String key, Supplier<List<CoreSubdocMutateCommand>> commands, CoreStoreSemantics storeSemantics, long cas, CoreDurability durability, long expiry, boolean preserveExpiry, boolean accessDeleted, boolean createAsDeleted) {
+  public CoreAsyncResponse<CoreSubdocMutateResult> subdocMutateAsync(CoreCommonOptions common, String key, Supplier<List<CoreSubdocMutateCommand>> commands, CoreStoreSemantics storeSemantics, long cas, CoreDurability durability, CoreExpiry expiry, boolean preserveExpiry, boolean accessDeleted, boolean createAsDeleted) {
     List<CoreSubdocMutateCommand> specs = commands.get();
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.MutateInRequest> request = mutateInRequest(core, keyspace, common, key, specs, storeSemantics, cas, durability, expiry, preserveExpiry, accessDeleted, createAsDeleted);
     return CoreProtostellarAccessors.async(core,
@@ -306,7 +307,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public Mono<CoreSubdocMutateResult> subdocMutateReactive(CoreCommonOptions common, String key, Supplier<List<CoreSubdocMutateCommand>> commands, CoreStoreSemantics storeSemantics, long cas, CoreDurability durability, long expiry, boolean preserveExpiry, boolean accessDeleted, boolean createAsDeleted) {
+  public Mono<CoreSubdocMutateResult> subdocMutateReactive(CoreCommonOptions common, String key, Supplier<List<CoreSubdocMutateCommand>> commands, CoreStoreSemantics storeSemantics, long cas, CoreDurability durability, CoreExpiry expiry, boolean preserveExpiry, boolean accessDeleted, boolean createAsDeleted) {
     List<CoreSubdocMutateCommand> specs = commands.get();
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.MutateInRequest> request = mutateInRequest(core, keyspace, common, key, specs, storeSemantics, cas, durability, expiry, preserveExpiry, accessDeleted, createAsDeleted);
     return CoreProtostellarAccessors.reactive(core,

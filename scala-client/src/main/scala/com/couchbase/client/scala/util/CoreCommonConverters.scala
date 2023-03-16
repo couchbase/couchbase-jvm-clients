@@ -259,9 +259,9 @@ private[scala] object CoreCommonConverters {
 
   /** @Nullable is not very Scala, but is required for backwards compatibility in e.g. IncrementOptions
     */
-  def convertExpiry(@Nullable in: Duration): Long = {
-    if (in == null) 0
-    else in.toSeconds
+  def convertExpiry(@Nullable in: Duration): CoreExpiry = {
+    if (in == null) CoreExpiry.NONE
+    else CoreExpiry.of(in)
   }
 
   def convert(in: Duration): java.time.Duration = {

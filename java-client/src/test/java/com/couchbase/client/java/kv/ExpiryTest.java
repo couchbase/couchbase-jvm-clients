@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
 
@@ -23,6 +24,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 
+import static com.couchbase.client.core.classic.ClassicExpiryHelper.encode;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -35,9 +37,6 @@ class ExpiryTest {
     assertInvalid(Instant.ofEpochSecond(-1));
     assertInvalid(Instant.ofEpochMilli(-1));
     assertInvalid(Instant.ofEpochMilli(1));
-
-    // must accept, since this is how "get with expiry" represents "no expiry"
-    assertValid(Instant.ofEpochSecond(0));
 
     // almost certainly a programming error, and the epoch seconds would be misinterpreted as durations (< 30 day, give or take)
     assertInvalid(Instant.ofEpochSecond(1));
@@ -54,25 +53,14 @@ class ExpiryTest {
   }
 
   @Test
-  void shortDurationsAreEncodedVerbatim() {
-    // this behavior isn't *critical*, but it does mitigate clock drift for very short durations
-    assertEncodedAsSecondsFromNow(Duration.ofSeconds(1));
-    assertEncodedAsSecondsFromNow(Duration.ofDays(30).minusSeconds(1));
-  }
-
-  @Test
-  void longDurationsAreConvertedToEpochSecond() {
-    // if duration is exactly 30 days, err on the side of caution and convert to epoch second
-    assertEncodedAsEpochSecond(Duration.ofDays(30));
-    assertEncodedAsEpochSecond(Duration.ofDays(30).plusSeconds(1));
-
-    // Due to historical madness related to JCBC-1645, this is the max duration we're considering valid
-    assertEncodedAsEpochSecond(Duration.ofDays(365 * 50));
-  }
-
-  @Test
   void zeroDurationMeansNoExpiry() {
-    assertEquals(0L, Expiry.relative(Duration.ZERO).encode());
+    assertEquals(CoreExpiry.NONE, Expiry.relative(Duration.ZERO).encode());
+  }
+
+  @Test
+  void zeroInstantMeansNoExpiry() {
+    // must accept, since this is how "get with expiry" represents "no expiry"
+    assertEquals(CoreExpiry.NONE, Expiry.absolute(Instant.ofEpochSecond(0)).encode());
   }
 
   @Test
@@ -83,7 +71,7 @@ class ExpiryTest {
     // would get rounded down to zero (which means no expiry)
     assertInvalid(Duration.ofMillis(1));
 
-    // we're calling this invalid due to the history of JCBC-1645
+    // we're calling this invalid (only in Java SDK) due to the history of JCBC-1645
     assertInvalid(Duration.ofDays(365 * 50).plusSeconds(1));
   }
 
@@ -92,8 +80,8 @@ class ExpiryTest {
     // As we get closer to the end of time, it will be possible for a duration
     // less than 50 years to still be too long because it ends after 2106-02-07T06:28:15Z
     long currentTimeMillis = 4294967295L * 1000;
-    assertThrows(InvalidArgumentException.class, () -> Expiry.relative(Duration.ofDays(31))
-        .encode(() -> currentTimeMillis));
+    CoreExpiry core = Expiry.relative(Duration.ofDays(31)).encode();
+    assertThrows(InvalidArgumentException.class, () -> encode(core, () -> currentTimeMillis));
   }
 
   @Test
@@ -114,18 +102,6 @@ class ExpiryTest {
   }
 
   private static void assertValid(Instant expiry) {
-    long result = Expiry.absolute(expiry).encode();
-    assertEquals(expiry.getEpochSecond(), result);
-  }
-
-  private static void assertEncodedAsSecondsFromNow(Duration expiry) {
-    long result = Expiry.relative(expiry).encode();
-    assertEquals(expiry.getSeconds(), result);
-  }
-
-  private static void assertEncodedAsEpochSecond(Duration expiry) {
-    long currentTimeMillis = 1000L;
-    long result = Expiry.relative(expiry).encode(() -> currentTimeMillis);
-    assertEquals(1 + expiry.getSeconds(), result);
+    assertEquals(expiry, Expiry.absolute(expiry).encode().absolute());
   }
 }

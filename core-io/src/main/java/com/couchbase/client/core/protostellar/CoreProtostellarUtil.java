@@ -180,11 +180,8 @@ public class CoreProtostellarUtil {
     return null;
   }
 
-  public static Timestamp convertExpiry(long expiry) {
-    if (expiry == 0) {
-      return Timestamp.getDefaultInstance();
-    }
-    return Timestamp.newBuilder().setSeconds(expiry).build();
+  public static Timestamp convertExpiry(Instant expiry) {
+    return Timestamp.newBuilder().setSeconds(expiry.getEpochSecond()).build();
   }
 
   public static RequestSpan createSpan(CoreProtostellar core,
@@ -217,5 +214,9 @@ public class CoreProtostellarUtil {
   // JVMCBC-1187: This and everything using it will be fixed and removed before GA.
   public static RuntimeException unsupportedCurrentlyInProtostellar() {
     return new FeatureNotAvailableException("Feature is not supported when using protostellar:// to connect (but will be before GA)");
+  }
+
+  public static void throwRelativeExpiryUnsupported() {
+    throw new FeatureNotAvailableException("Relative expiry is not yet not supported when using protostellar:// to connect (but will be before GA)");
   }
 }

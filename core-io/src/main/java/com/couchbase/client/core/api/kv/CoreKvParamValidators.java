@@ -38,16 +38,19 @@ public class CoreKvParamValidators {
     validateCommonOptions(common, key);
   }
 
-  public static void validateInsertParams(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, long expiry) {
+  public static void validateInsertParams(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, CoreExpiry expiry) {
     validateCommonOptions(common, key);
+    notNull(expiry, "expiry");
   }
 
-  public static void validateUpsertParams(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, long expiry, boolean preserveExpiry) {
+  public static void validateUpsertParams(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, CoreDurability durability, CoreExpiry expiry, boolean preserveExpiry) {
     validateCommonOptions(common, key);
+    notNull(expiry, "expiry");
   }
 
-  public static void validateReplaceParams(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, long cas, CoreDurability durability, long expiry, boolean preserveExpiry) {
+  public static void validateReplaceParams(CoreCommonOptions common, String key, Supplier<CoreEncodedContent> content, long cas, CoreDurability durability, CoreExpiry expiry, boolean preserveExpiry) {
     validateCommonOptions(common, key);
+    notNull(expiry, "expiry");
   }
 
   public static void validateRemoveParams(CoreCommonOptions common, String key, long cas, CoreDurability durability) {
@@ -63,12 +66,14 @@ public class CoreKvParamValidators {
     notNull(lockTime, "lockTime");
   }
 
-  public static void validateGetAndTouchParams(CoreCommonOptions common, String key, long expiration) {
+  public static void validateGetAndTouchParams(CoreCommonOptions common, String key, CoreExpiry expiry) {
     validateCommonOptions(common, key);
+    notNull(expiry, "expiry");
   }
 
-  public static void validateTouchParams(CoreCommonOptions common, String key, long expiry) {
+  public static void validateTouchParams(CoreCommonOptions common, String key, CoreExpiry expiry) {
     validateCommonOptions(common, key);
+    notNull(expiry, "expiry");
   }
 
   public static void validateUnlockParams(CoreCommonOptions common, String key, long cas, CollectionIdentifier collectionIdentifier) {

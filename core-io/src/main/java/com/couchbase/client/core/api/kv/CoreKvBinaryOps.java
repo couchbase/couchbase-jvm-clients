@@ -16,11 +16,11 @@
 package com.couchbase.client.core.api.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 import java.util.Optional;
-
-import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 
 @Stability.Internal
 public interface CoreKvBinaryOps {
@@ -51,28 +51,28 @@ public interface CoreKvBinaryOps {
     return Mono.defer(() -> prependAsync(id, content, options, cas, durability).toMono());
   }
 
-  default CoreCounterResult incrementBlocking(String id, CoreCommonOptions options, long expiry, long delta,
+  default CoreCounterResult incrementBlocking(String id, CoreCommonOptions options, CoreExpiry expiry, long delta,
       Optional<Long> initial, CoreDurability durability) {
     return incrementAsync(id, options, expiry, delta, initial, durability).toBlocking();
   }
 
-  CoreAsyncResponse<CoreCounterResult> incrementAsync(String id, CoreCommonOptions options, long expiry, long delta,
+  CoreAsyncResponse<CoreCounterResult> incrementAsync(String id, CoreCommonOptions options, CoreExpiry expiry, long delta,
       Optional<Long> initial, CoreDurability durability);
 
-  default Mono<CoreCounterResult> incrementReactive(String id, CoreCommonOptions options, long expiry, long delta,
+  default Mono<CoreCounterResult> incrementReactive(String id, CoreCommonOptions options, CoreExpiry expiry, long delta,
       Optional<Long> initial, CoreDurability durability) {
     return Mono.defer(() -> incrementAsync(id, options, expiry, delta, initial, durability).toMono());
   }
 
-  default CoreCounterResult decrementBlocking(String id, CoreCommonOptions options, long expiry, long delta,
+  default CoreCounterResult decrementBlocking(String id, CoreCommonOptions options, CoreExpiry expiry, long delta,
       Optional<Long> initial, CoreDurability durability) {
     return decrementAsync(id, options, expiry, delta, initial, durability).toBlocking();
   }
 
-  CoreAsyncResponse<CoreCounterResult> decrementAsync(String id, CoreCommonOptions options, long expiry, long delta,
+  CoreAsyncResponse<CoreCounterResult> decrementAsync(String id, CoreCommonOptions options, CoreExpiry expiry, long delta,
       Optional<Long> initial, CoreDurability durability);
 
-  default Mono<CoreCounterResult> decrementReactive(String id, CoreCommonOptions options, long expiry, long delta,
+  default Mono<CoreCounterResult> decrementReactive(String id, CoreCommonOptions options, CoreExpiry expiry, long delta,
       Optional<Long> initial, CoreDurability durability) {
     return Mono.defer(() -> decrementAsync(id, options, expiry, delta, initial, durability).toMono());
   }

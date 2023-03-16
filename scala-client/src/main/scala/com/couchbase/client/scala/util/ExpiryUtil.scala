@@ -15,24 +15,25 @@
  */
 package com.couchbase.client.scala.util
 
-import java.time.Instant
+import com.couchbase.client.core.api.kv.CoreExpiry
+import com.couchbase.client.scala.util.DurationConversions.scalaDurationToJava
 
+import java.time.Instant
 import scala.concurrent.duration.Duration
 
 object ExpiryUtil {
 
-  /** Converts expiration times into an absolute epoch timestamp in seconds. */
+  /** Converts expiration times into representation used by core-io. */
   def expiryActual(
       expiry: Duration,
-      expiryTime: Option[Instant],
-      now: Instant = Instant.now
-  ): Long = {
+      expiryTime: Option[Instant]
+  ): CoreExpiry = {
     expiryTime match {
-      case Some(et) => et.getEpochSecond
+      case Some(et) => CoreExpiry.of(et)
       case _ =>
         expiry match {
-          case null        => 0
-          case x: Duration => now.getEpochSecond + x.toSeconds
+          case null        => CoreExpiry.NONE
+          case x: Duration => CoreExpiry.of(x)
         }
     }
   }

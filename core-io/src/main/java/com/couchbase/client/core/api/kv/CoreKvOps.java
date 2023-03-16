@@ -19,7 +19,6 @@ package com.couchbase.client.core.api.kv;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.kv.CoreRangeScan;
 import com.couchbase.client.core.kv.CoreRangeScanItem;
 import com.couchbase.client.core.kv.CoreScanOptions;
 import com.couchbase.client.core.kv.CoreScanType;
@@ -100,23 +99,23 @@ public interface CoreKvOps {
   CoreAsyncResponse<CoreGetResult> getAndTouchAsync(
       CoreCommonOptions common,
       String key,
-      long expiration
+      CoreExpiry expiry
   );
 
   default CoreGetResult getAndTouchBlocking(
       CoreCommonOptions common,
       String key,
-      long expiration
+      CoreExpiry expiry
   ) {
-    return getAndTouchAsync(common, key, expiration).toBlocking();
+    return getAndTouchAsync(common, key, expiry).toBlocking();
   }
 
   default Mono<CoreGetResult> getAndTouchReactive(
       CoreCommonOptions common,
       String key,
-      long expiration
+      CoreExpiry expiry
   ) {
-    return Mono.defer(() -> getAndTouchAsync(common, key, expiration).toMono());
+    return Mono.defer(() -> getAndTouchAsync(common, key, expiry).toMono());
   }
 
   CoreAsyncResponse<CoreMutationResult> insertAsync(
@@ -124,7 +123,7 @@ public interface CoreKvOps {
       String key,
       Supplier<CoreEncodedContent> content,
       CoreDurability durability,
-      long expiry
+      CoreExpiry expiry
   );
 
   default CoreMutationResult insertBlocking(
@@ -132,7 +131,7 @@ public interface CoreKvOps {
       String key,
       Supplier<CoreEncodedContent> content,
       CoreDurability durability,
-      long expiry
+      CoreExpiry expiry
   ) {
     return insertAsync(common, key, content, durability, expiry).toBlocking();
   }
@@ -142,7 +141,7 @@ public interface CoreKvOps {
       String key,
       Supplier<CoreEncodedContent> content,
       CoreDurability durability,
-      long expiry
+      CoreExpiry expiry
   ) {
     return Mono.defer(() -> insertAsync(common, key, content, durability, expiry).toMono());
   }
@@ -152,7 +151,7 @@ public interface CoreKvOps {
       String key,
       Supplier<CoreEncodedContent> content,
       CoreDurability durability,
-      long expiry,
+      CoreExpiry expiry,
       boolean preserveExpiry
   );
 
@@ -161,7 +160,7 @@ public interface CoreKvOps {
       String key,
       Supplier<CoreEncodedContent> content,
       CoreDurability durability,
-      long expiry,
+      CoreExpiry expiry,
       boolean preserveExpiry
   ) {
     return upsertAsync(common, key, content, durability, expiry, preserveExpiry).toBlocking();
@@ -172,7 +171,7 @@ public interface CoreKvOps {
       String key,
       Supplier<CoreEncodedContent> content,
       CoreDurability durability,
-      long expiry,
+      CoreExpiry expiry,
       boolean preserveExpiry
   ) {
     return Mono.defer(() -> upsertAsync(common, key, content, durability, expiry, preserveExpiry).toMono());
@@ -184,7 +183,7 @@ public interface CoreKvOps {
       Supplier<CoreEncodedContent> content,
       long cas,
       CoreDurability durability,
-      long expiry,
+      CoreExpiry expiry,
       boolean preserveExpiry
   );
 
@@ -194,7 +193,7 @@ public interface CoreKvOps {
       Supplier<CoreEncodedContent> content,
       long cas,
       CoreDurability durability,
-      long expiry,
+      CoreExpiry expiry,
       boolean preserveExpiry
   ) {
     return replaceAsync(common, key, content, cas, durability, expiry, preserveExpiry).toBlocking();
@@ -206,7 +205,7 @@ public interface CoreKvOps {
       Supplier<CoreEncodedContent> content,
       long cas,
       CoreDurability durability,
-      long expiry,
+      CoreExpiry expiry,
       boolean preserveExpiry
   ) {
     return Mono.defer(() -> replaceAsync(common, key, content, cas, durability, expiry, preserveExpiry).toMono());
@@ -259,13 +258,13 @@ public interface CoreKvOps {
   CoreAsyncResponse<CoreMutationResult> touchAsync(
       CoreCommonOptions common,
       String key,
-      long expiry
+      CoreExpiry expiry
   );
 
   default CoreMutationResult touchBlocking(
       CoreCommonOptions common,
       String key,
-      long expiry
+      CoreExpiry expiry
   ) {
     return touchAsync(common, key, expiry).toBlocking();
   }
@@ -273,7 +272,7 @@ public interface CoreKvOps {
   default Mono<CoreMutationResult> touchReactive(
       CoreCommonOptions common,
       String key,
-      long expiry
+      CoreExpiry expiry
   ) {
     return Mono.defer(() -> touchAsync(common, key, expiry).toMono());
   }
@@ -317,7 +316,7 @@ public interface CoreKvOps {
       CoreStoreSemantics storeSemantics,
       long cas,
       CoreDurability durability,
-      long expiry,
+      CoreExpiry expiry,
       boolean preserveExpiry,
       boolean accessDeleted,
       boolean createAsDeleted
@@ -330,7 +329,7 @@ public interface CoreKvOps {
       CoreStoreSemantics storeSemantics,
       long cas,
       CoreDurability durability,
-      long expiry,
+      CoreExpiry expiry,
       boolean preserveExpiry,
       boolean accessDeleted,
       boolean createAsDeleted
@@ -356,7 +355,7 @@ public interface CoreKvOps {
       CoreStoreSemantics storeSemantics,
       long cas,
       CoreDurability durability,
-      long expiry,
+      CoreExpiry expiry,
       boolean preserveExpiry,
       boolean accessDeleted,
       boolean createAsDeleted

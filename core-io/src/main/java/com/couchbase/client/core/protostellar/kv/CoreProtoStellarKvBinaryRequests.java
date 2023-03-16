@@ -19,6 +19,7 @@ import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreDurability;
+import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
@@ -31,11 +32,14 @@ import com.couchbase.client.protostellar.kv.v1.IncrementRequest;
 import com.couchbase.client.protostellar.kv.v1.PrependRequest;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 
 import static com.couchbase.client.core.api.kv.CoreKvBinaryParamValidators.validateAppendPrependArgs;
 import static com.couchbase.client.core.api.kv.CoreKvBinaryParamValidators.validateIncrementDecrementArgs;
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.convertExpiry;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.throwRelativeExpiryUnsupported;
 
 @Stability.Internal
 public class CoreProtoStellarKvBinaryRequests {
@@ -108,7 +112,7 @@ public class CoreProtoStellarKvBinaryRequests {
   }
 
   public static ProtostellarRequest<IncrementRequest> incrementRequest(CoreProtostellar core, String key, CoreKeyspace keyspace,
-                                                                       CoreCommonOptions opts, long expiry, long delta, Optional<Long> initial, CoreDurability durability) {
+                                                                       CoreCommonOptions opts, CoreExpiry expiry, long delta, Optional<Long> initial, CoreDurability durability) {
 
     validateIncrementDecrementArgs(key, keyspace, opts, expiry, delta, initial, durability);
     Duration timeout = CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
@@ -117,9 +121,12 @@ public class CoreProtoStellarKvBinaryRequests {
       .setBucketName(keyspace.bucket()).setScopeName(keyspace.scope()).setCollectionName(keyspace.collection())
       .setKey(key).setDelta(delta).setInitial(initial.orElse(0L));
 
-    if (expiry != 0) {
-      request.setExpiry(CoreProtostellarUtil.convertExpiry(expiry));
+    if (expiry.isNone()) {
+      request.setExpiry(convertExpiry(Instant.EPOCH));
     }
+    expiry.ifAbsolute(it -> request.setExpiry(convertExpiry(it)));
+    expiry.ifRelative(it -> throwRelativeExpiryUnsupported());
+
     if (!durability.isNone()) {
       request.setDurabilityLevel(CoreProtostellarUtil.convert(durability));
     }
@@ -139,7 +146,7 @@ public class CoreProtoStellarKvBinaryRequests {
   }
 
   public static ProtostellarRequest<DecrementRequest> decrementRequest(CoreProtostellar core, String key, CoreKeyspace keyspace,
-                                                                       CoreCommonOptions opts, long expiry, long delta, Optional<Long> initial, CoreDurability durability) {
+                                                                       CoreCommonOptions opts, CoreExpiry expiry, long delta, Optional<Long> initial, CoreDurability durability) {
 
     validateIncrementDecrementArgs(key, keyspace, opts, expiry, delta, initial, durability);
     Duration timeout = CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
@@ -152,9 +159,12 @@ public class CoreProtoStellarKvBinaryRequests {
       .setDelta(delta)
       .setInitial(initial.orElse(0L));
 
-    if (expiry != 0) {
-      request.setExpiry(CoreProtostellarUtil.convertExpiry(expiry));
+    if (expiry.isNone()) {
+      request.setExpiry(convertExpiry(Instant.EPOCH));
     }
+    expiry.ifAbsolute(it -> request.setExpiry(convertExpiry(it)));
+    expiry.ifRelative(it -> throwRelativeExpiryUnsupported());
+
     if (!durability.isNone()) {
       request.setDurabilityLevel(CoreProtostellarUtil.convert(durability));
     }

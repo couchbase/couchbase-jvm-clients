@@ -17,22 +17,14 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.api.kv.CoreExpiry
 import com.couchbase.client.scala.codec.JsonSerializer
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv._
-import com.couchbase.client.scala.manager.query.{
-  ReactiveCollectionQueryIndexManager,
-  ReactiveQueryIndexManager
-}
-import com.couchbase.client.scala.util.CoreCommonConverters.{
-  convert,
-  convertExpiry,
-  convertReplica,
-  encoder,
-  makeCommonOptions
-}
-import com.couchbase.client.scala.util.{ExpiryUtil, FutureConversions, TimeoutUtil}
+import com.couchbase.client.scala.manager.query.ReactiveCollectionQueryIndexManager
+import com.couchbase.client.scala.util.CoreCommonConverters._
+import com.couchbase.client.scala.util.{ExpiryUtil, TimeoutUtil}
 import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.concurrent.ExecutionContext
@@ -82,7 +74,7 @@ class ReactiveCollection(async: AsyncCollection) {
         id,
         encoder(environment.transcoder, serializer, content),
         convert(durability),
-        0
+        CoreExpiry.NONE
       )
     ).map(result => convert(result))
   }
@@ -123,7 +115,7 @@ class ReactiveCollection(async: AsyncCollection) {
         encoder(environment.transcoder, serializer, content),
         cas,
         convert(durability),
-        0,
+        CoreExpiry.NONE,
         false
       )
     ).map(result => convert(result))
@@ -165,7 +157,7 @@ class ReactiveCollection(async: AsyncCollection) {
         id,
         encoder(environment.transcoder, serializer, content),
         convert(durability),
-        0,
+        CoreExpiry.NONE,
         false
       )
     ).map(result => convert(result))
@@ -257,7 +249,7 @@ class ReactiveCollection(async: AsyncCollection) {
         convert(document),
         cas,
         convert(durability),
-        0,
+        CoreExpiry.NONE,
         false,
         false,
         false

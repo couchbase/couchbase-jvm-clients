@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.kv.CoreCounterResult;
 import com.couchbase.client.core.api.kv.CoreDurability;
+import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.api.kv.CoreMutationResult;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
@@ -108,7 +109,7 @@ public class ProtostellarCoreKvBinaryOps implements CoreKvBinaryOps {
   }
 
   @Override
-  public CoreCounterResult incrementBlocking(String id, CoreCommonOptions options, long expiry, long delta,
+  public CoreCounterResult incrementBlocking(String id, CoreCommonOptions options, CoreExpiry expiry, long delta,
       Optional<Long> initial, CoreDurability durability) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.IncrementRequest> request = incrementRequest(core, id,
         keyspace, options, expiry, delta, initial, durability);
@@ -118,7 +119,7 @@ public class ProtostellarCoreKvBinaryOps implements CoreKvBinaryOps {
   }
 
   @Override
-  public CoreAsyncResponse<CoreCounterResult> incrementAsync(String id, CoreCommonOptions options, long expiry,
+  public CoreAsyncResponse<CoreCounterResult> incrementAsync(String id, CoreCommonOptions options, CoreExpiry expiry,
       long delta, Optional<Long> initial, CoreDurability durability) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.IncrementRequest> request = incrementRequest(core, id,
         keyspace, options, expiry, delta, initial,  durability);
@@ -128,7 +129,7 @@ public class ProtostellarCoreKvBinaryOps implements CoreKvBinaryOps {
   }
 
   @Override
-  public Mono<CoreCounterResult> incrementReactive(String id, CoreCommonOptions options, long expiry, long delta,
+  public Mono<CoreCounterResult> incrementReactive(String id, CoreCommonOptions options, CoreExpiry expiry, long delta,
       Optional<Long> initial, CoreDurability durability) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.IncrementRequest> request = incrementRequest(core, id,
         keyspace, options, expiry, delta, initial , durability);
@@ -138,7 +139,7 @@ public class ProtostellarCoreKvBinaryOps implements CoreKvBinaryOps {
   }
 
   @Override
-  public CoreCounterResult decrementBlocking(String id, CoreCommonOptions options, long expiry, long delta,
+  public CoreCounterResult decrementBlocking(String id, CoreCommonOptions options, CoreExpiry expiry, long delta,
       Optional<Long> initial, CoreDurability durability) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.DecrementRequest> request = decrementRequest(core, id,
         keyspace, options, expiry, delta, initial, durability);
@@ -148,7 +149,7 @@ public class ProtostellarCoreKvBinaryOps implements CoreKvBinaryOps {
   }
 
   @Override
-  public CoreAsyncResponse<CoreCounterResult> decrementAsync(String id, CoreCommonOptions options, long expiry,
+  public CoreAsyncResponse<CoreCounterResult> decrementAsync(String id, CoreCommonOptions options, CoreExpiry expiry,
       long delta, Optional<Long> initial, CoreDurability durability) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.DecrementRequest> request = decrementRequest(core, id,
         keyspace, options, expiry, delta, initial, durability);
@@ -158,7 +159,7 @@ public class ProtostellarCoreKvBinaryOps implements CoreKvBinaryOps {
   }
 
   @Override
-  public Mono<CoreCounterResult> decrementReactive(String id, CoreCommonOptions options, long expiry, long delta,
+  public Mono<CoreCounterResult> decrementReactive(String id, CoreCommonOptions options, CoreExpiry expiry, long delta,
       Optional<Long> initial, CoreDurability durability) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.DecrementRequest> request = decrementRequest(core, id,
         keyspace, options, expiry, delta, initial,  durability);

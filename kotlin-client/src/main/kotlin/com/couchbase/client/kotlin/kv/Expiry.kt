@@ -16,16 +16,19 @@
 
 package com.couchbase.client.kotlin.kv
 
+import com.couchbase.client.core.api.kv.CoreExpiry
+import com.couchbase.client.core.api.kv.CoreExpiry.EARLIEST_VALID_EXPIRY_INSTANT
+import com.couchbase.client.core.api.kv.CoreExpiry.LATEST_VALID_EXPIRY_INSTANT
 import java.time.Instant
-import java.util.concurrent.TimeUnit.DAYS
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import kotlin.time.Duration
+import kotlin.time.toJavaDuration
 
 public sealed class Expiry {
-    internal abstract fun encode(): Long
+    internal abstract fun encode(): CoreExpiry
 
     public object None : Expiry() {
-        override fun encode() = 0L
+        override fun encode() = CoreExpiry.NONE
         override fun toString(): String = "None"
     }
 
@@ -42,28 +45,17 @@ public sealed class Expiry {
     }
 
     public class Absolute internal constructor(public val instant: Instant) : Expiry() {
-        init {
-            // If we were to require the instant be in the future, it could cause problems
-            // when creating the Absolute object for a GetResult with expiry.
-            // Also, it must be possible to preserve the existing expiry time when
-            // updating the document, even if it means the document expires immediately.
-            // We can, however, do a basic sanity check.
-            require(instant >= EARLIEST_VALID_EXPIRY_INSTANT) {
-                expiryErrorMessage(
-                    "expiry instant $instant is in the distant past." +
-                            " Earliest valid expiry instant is $EARLIEST_VALID_EXPIRY_INSTANT"
-                )
-            }
+        private val core: CoreExpiry = CoreExpiry.of(instant)
 
-            require(instant <= LATEST_VALID_EXPIRY_INSTANT) {
-                expiryErrorMessage(
-                    "expiry instant $instant is too far in the future." +
-                            " Latest valid expiry instant is $LATEST_VALID_EXPIRY_INSTANT"
-                )
+        init {
+            // CoreExpiry treats zero instant as "none", but Kotlin SDK is stricter and disallows.
+            require(instant.epochSecond != 0L) {
+                "Expiry instant $instant is too far in the past." +
+                        " Earliest valid expiry instant is $EARLIEST_VALID_EXPIRY_INSTANT"
             }
         }
 
-        override fun encode() = instant.epochSecond
+        override fun encode() = core
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -86,8 +78,12 @@ public sealed class Expiry {
     }
 
     public class Relative internal constructor(public val duration: Duration) : Expiry() {
+        private val core: CoreExpiry = CoreExpiry.of(duration.toJavaDuration())
+
         init {
             val seconds = duration.inWholeSeconds
+
+            // CoreExpiry treats zero duration as "none", but Kotlin SDK is stricter and disallows.
             require(seconds > 0L) {
                 expiryErrorMessage("expiry duration $duration is less than one second")
             }
@@ -100,14 +96,7 @@ public sealed class Expiry {
             }
         }
 
-        override fun encode(): Long {
-            val seconds: Long = duration.inWholeSeconds
-
-            // If it's under the threshold, let the server convert it to an absolute time.
-            // Otherwise we need to do the conversion on the client.
-            return if (seconds < RELATIVE_EXPIRY_CUTOFF_SECONDS) seconds
-            else currentTimeSeconds() + seconds
-        }
+        override fun encode(): CoreExpiry = core
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -151,24 +140,10 @@ public sealed class Expiry {
     }
 }
 
-// Durations longer than this must be converted to an absolute
-// epoch second before being passed to the server.
-private val RELATIVE_EXPIRY_CUTOFF_SECONDS = DAYS.toSeconds(30).toInt()
-
-// Any instant earlier than this is almost certainly the result
-// of a programming error. The selected value is > 30 days so
-// we don't need to worry about the relative expiry cutoff.
-private val EARLIEST_VALID_EXPIRY_INSTANT = Instant.ofEpochSecond(DAYS.toSeconds(31))
-
-// The server interprets the 32-bit expiry field as an unsigned
-// integer. This means the maximum value is 4294967295 seconds,
-// which corresponds to 2106-02-07T06:28:15Z.
-private val LATEST_VALID_EXPIRY_INSTANT = Instant.ofEpochSecond(4294967295)
-
 private fun currentTimeSeconds() = MILLISECONDS.toSeconds(System.currentTimeMillis())
 
 private fun expiryErrorMessage(reason: String) =
-    "Document would expire immediately; ${reason}." +
+    "${reason}." +
             " If you want to disable expiration, use Expiry.none() instead." +
             " If for some reason you want the document to expire immediately," +
             " use Expiry.absolute(Instant.ofEpochSecond(DAYS.toSeconds(31)))."

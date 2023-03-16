@@ -22,6 +22,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.kv.CoreCounterResult;
 import com.couchbase.client.core.api.kv.CoreDurability;
+import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.api.kv.CoreKvBinaryParamValidators;
 import com.couchbase.client.core.api.kv.CoreMutationResult;
@@ -46,6 +47,7 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.classic.ClassicExpiryHelper.encode;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.util.Objects.requireNonNull;
@@ -143,7 +145,7 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   @Override
-  public CoreAsyncResponse<CoreCounterResult> incrementAsync(final String id, final CoreCommonOptions options, long expiry,
+  public CoreAsyncResponse<CoreCounterResult> incrementAsync(final String id, final CoreCommonOptions options, CoreExpiry expiry,
       long delta, Optional<Long> initial, CoreDurability durability) {
     IncrementRequest request = incrementRequestClassic(id, options, expiry, delta, initial, durability);
     CompletableFuture<CoreCounterResult> future =   BinaryAccessor.increment(core, request, id,
@@ -151,7 +153,7 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
     return ClassicHelper.newAsyncResponse(request, future);
   }
 
-  private IncrementRequest incrementRequestClassic(final String id, final CoreCommonOptions options, final long expiry,
+  private IncrementRequest incrementRequestClassic(final String id, final CoreCommonOptions options, final CoreExpiry expiry,
                                                 final long delta, final Optional<Long> initial, final CoreDurability durability) {
     CoreKvBinaryParamValidators.validateIncrementDecrementArgs(id, keyspace, options, expiry, delta, initial,
         durability);
@@ -161,7 +163,7 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
       options.parentSpan().orElse(null));
 
     IncrementRequest request = new IncrementRequest(timeout, context(), collectionIdentifier(), retryStrategy, id,
-      delta, initial, expiry, durability.levelIfSynchronous(), span);
+      delta, initial, encode(expiry), durability.levelIfSynchronous(), span);
     request.context().clientContext(options.clientContext());
     return request;
   }
@@ -177,7 +179,7 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   @Override
-  public CoreAsyncResponse<CoreCounterResult> decrementAsync(final String id, final CoreCommonOptions options, long expiry,
+  public CoreAsyncResponse<CoreCounterResult> decrementAsync(final String id, final CoreCommonOptions options, CoreExpiry expiry,
       long delta, Optional<Long> initial, CoreDurability durability) {
     notNull(options, "DecrementOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     DecrementRequest request = decrementRequestClassic(id, options, expiry, delta, initial, durability);
@@ -186,7 +188,7 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
     return ClassicHelper.newAsyncResponse(request, future);
   }
 
-  private DecrementRequest decrementRequestClassic(final String id, final CoreCommonOptions opts, final long expiry,
+  private DecrementRequest decrementRequestClassic(final String id, final CoreCommonOptions opts, final CoreExpiry expiry,
                                                    final long delta, final Optional<Long> initial, final CoreDurability durability) {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     Duration timeout = timeout(opts, durability);
@@ -195,7 +197,7 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
       opts.parentSpan().orElse(null));
 
     DecrementRequest request = new DecrementRequest(timeout, context(), collectionIdentifier(), retryStrategy, id,
-      delta, initial, expiry, durability.levelIfSynchronous(), span);
+      delta, initial, encode(expiry), durability.levelIfSynchronous(), span);
     request.context().clientContext(opts.clientContext());
     return request;
   }

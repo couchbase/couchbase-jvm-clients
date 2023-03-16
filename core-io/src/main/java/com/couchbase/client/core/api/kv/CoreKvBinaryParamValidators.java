@@ -39,13 +39,14 @@ public class CoreKvBinaryParamValidators {
   }
 
   public static void validateIncrementDecrementArgs(String key, CoreKeyspace keyspace,
-                                                    CoreCommonOptions options, long expiry, long delta, Optional<Long> initial, CoreDurability durability) {
+                                                    CoreCommonOptions options, CoreExpiry expiry, long delta, Optional<Long> initial, CoreDurability durability) {
     Supplier<ErrorContext> supplier = () -> ReducedKeyValueErrorContext.create(key, keyspace.toCollectionIdentifier());
     notNullOrEmpty(key, "Id", supplier);
     notNull(keyspace, "Keyspace", supplier);
     notNull(options, "Options", supplier);
     notNull(initial, "Initial", supplier);
     notNull(durability, "Durability", supplier);
+    notNull(expiry, "Expiry", supplier);
   }
 
 }

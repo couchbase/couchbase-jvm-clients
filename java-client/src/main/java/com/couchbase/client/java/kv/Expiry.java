@@ -17,46 +17,29 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.function.Supplier;
 
+import static com.couchbase.client.core.api.kv.CoreExpiry.EARLIEST_VALID_EXPIRY_INSTANT;
+import static com.couchbase.client.core.api.kv.CoreExpiry.LATEST_VALID_EXPIRY_INSTANT;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.DAYS;
 
 @Stability.Internal
 public class Expiry {
-  // Durations longer than this must be converted to an
-  // epoch second before being passed to the server.
-  private static final int RELATIVE_EXPIRY_CUTOFF_SECONDS = (int) DAYS.toSeconds(30);
-
   // Prior to SDK 3.2, any duration longer than this was interpreted as a workaround
   // for JCBC-1645. Now we avoid ambiguity by disallowing such durations.
   private static final int LATEST_VALID_EXPIRY_DURATION = (int) DAYS.toSeconds(365) * 50;
 
-  // Any instant earlier than this is almost certainly the result
-  // of a programming error. The selected value is > 30 days so
-  // we don't need to worry about instant's epoch second being
-  // misinterpreted as a number of seconds from the current time.
-  private static final Instant EARLIEST_VALID_EXPIRY_INSTANT = Instant.ofEpochSecond(DAYS.toSeconds(31));
+  private static final Expiry NONE = new Expiry(CoreExpiry.NONE);
 
-  // The server interprets the 32-bit expiry field as an unsigned
-  // integer. This means the maximum value is 4294967295 seconds,
-  // which corresponds to 2106-02-07T06:28:15Z.
-  private static final long UNSIGNED_INT_MAX_VALUE = 4294967295L;
-  private static final Instant LATEST_VALID_EXPIRY_INSTANT = Instant.ofEpochSecond(UNSIGNED_INT_MAX_VALUE);
+  private final CoreExpiry core;
 
-  private static final Expiry NONE = absolute(Instant.ofEpochSecond(0));
-
-  private final Duration duration;
-  private final Instant instant;
-
-  private Expiry(Duration duration, Instant instant) {
-    this.duration = duration;
-    this.instant = instant;
+  private Expiry(CoreExpiry core) {
+    this.core = requireNonNull(core);
   }
 
   public static Expiry none() {
@@ -95,7 +78,7 @@ public class Expiry {
               " If you truly require a longer expiry, please specify it as an Instant instead.");
     }
 
-    return new Expiry(expiry, null);
+    return new Expiry(CoreExpiry.of(expiry));
   }
 
   /**
@@ -103,71 +86,15 @@ public class Expiry {
    */
   public static Expiry absolute(Instant expiry) {
     requireNonNull(expiry);
-
-    // Basic sanity check, prevent instant from being interpreted as a relative duration.
-    // Allow EPOCH (zero instant) because that is how "get with expiry" represents "no expiry"
-    if (expiry.isBefore(EARLIEST_VALID_EXPIRY_INSTANT) && !expiry.equals(Instant.EPOCH)) {
-      throw InvalidArgumentException.fromMessage("Expiry instant must be zero (for no expiry) or later than " + EARLIEST_VALID_EXPIRY_INSTANT + ", but got " + expiry);
-    }
-
-    if (expiry.isAfter(LATEST_VALID_EXPIRY_INSTANT)) {
-      // Anything after this would roll over when converted to an unsigned 32-bit value
-      // and cause the document to expire sooner than expected.
-      throw InvalidArgumentException.fromMessage("Expiry instant must be no later than " + LATEST_VALID_EXPIRY_DURATION + ", but got " + expiry);
-    }
-
-    return new Expiry(null, expiry);
+    return new Expiry(CoreExpiry.of(expiry));
   }
 
-  private static final Supplier<Long> systemClock = System::currentTimeMillis;
-
-  /**
-   * @throws InvalidArgumentException if the expiry occurs after 2106-02-07T06:28:15Z
-   */
-  public long encode() {
-    return encode(systemClock);
-  }
-
-  // Visible for testing
-  long encode(Supplier<Long> millisClock) {
-    if (instant != null) {
-      return instant.getEpochSecond();
-    }
-
-    long seconds = duration.getSeconds();
-    if (seconds < RELATIVE_EXPIRY_CUTOFF_SECONDS) {
-      return seconds;
-    }
-
-    long epochSecond = (millisClock.get() / 1000) + seconds;
-    if (epochSecond > LATEST_VALID_EXPIRY_INSTANT.getEpochSecond()) {
-      throw InvalidArgumentException.fromMessage(
-          "Document would expire sooner than requested, since the end of duration " + duration +
-              " is after " + LATEST_VALID_EXPIRY_INSTANT);
-    }
-
-    return epochSecond;
-  }
-
-  /**
-   * This method remains as a courtesy to users brave enough to rely on
-   * Couchbase internal API. It is scheduled for removal in a future version of the SDK.
-   *
-   * @deprecated Please use {@link #encode()} instead.
-   */
-  @Deprecated
-  public long encode(EventBus eventBus) {
-    return encode();
+  public CoreExpiry encode() {
+    return core;
   }
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("Expiry{");
-    if (duration != null) {
-      sb.append(duration.isZero() ? "none" : duration);
-    } else {
-      sb.append(instant.getEpochSecond() == 0 ? "none" : instant);
-    }
-    return sb.append("}").toString();
+    return core.toString();
   }
 }
