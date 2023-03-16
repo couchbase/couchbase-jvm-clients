@@ -198,16 +198,6 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
     Duration timeout = opts.commonOptions().timeout().orElse(core.context().environment().timeoutConfig().queryTimeout());
     RequestSpan span = createSpan(core, TracingIdentifiers.SPAN_REQUEST_SEARCH, CoreDurability.NONE, opts.commonOptions().parentSpan().orElse(null));
 
-    ProtostellarRequest<SearchQueryRequest> out = new ProtostellarRequest<>(core,
-            ServiceType.SEARCH,
-            TracingIdentifiers.SPAN_REQUEST_SEARCH,
-            span,
-            timeout,
-            false,
-            opts.commonOptions().retryStrategy().orElse(core.context().environment().retryStrategy()),
-            opts.commonOptions().clientContext()
-    );
-
     SearchQueryRequest.Builder request = SearchQueryRequest.newBuilder()
             .setIndexName(indexName)
             .setQuery(query.asProtostellar());
@@ -271,8 +261,18 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
       request.setIncludeExplanation(opts.includeLocations());
     }
 
-    out.request(request.build());
+    return new ProtostellarRequest<>(
+      request.build(),
+      core,
+      ServiceType.SEARCH,
+      TracingIdentifiers.SPAN_REQUEST_SEARCH,
+      span,
+      timeout,
+      false,
+      opts.commonOptions().retryStrategy().orElse(core.context().environment().retryStrategy()),
+      opts.commonOptions().clientContext(),
+      0L
+    );
 
-    return out;
   }
 }
