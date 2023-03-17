@@ -1,7 +1,8 @@
 syntax = "proto3";
 
 option go_package = "github.com/couchbase/goprotostellar/genproto/internal_hooks_v1;internal_hooks_v1";
-option ruby_package = "Couchbase::StellarNebula::Generated::InternalHooks::V1";
+option ruby_package = "Couchbase::Protostellar::Generated::Internal::Hooks::V1";
+option php_namespace = "Couchbase\\Protostellar\\Generated\\Internal\\Hooks\\V1";
 option java_package = "com.couchbase.client.protostellar.internal.hooks.v1";
 option java_multiple_files = true;
 

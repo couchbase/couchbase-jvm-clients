@@ -3,6 +3,8 @@ syntax = "proto3";
 package couchbase.health.v1;
 
 option go_package = "github.com/couchbase/goprotostellar/genproto/health_v1;health_v1";
+option ruby_package = "Couchbase::Protostellar::Generated::Internal::Health::V1";
+option php_namespace = "Couchbase\\Protostellar\\Generated\\Internal\\Health\\V1";
 option java_package = "com.couchbase.client.protostellar.internal.health.v1";
 option java_multiple_files = true;
 

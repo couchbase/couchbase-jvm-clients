@@ -1,7 +1,8 @@
 syntax = "proto3";
 
 option go_package = "github.com/couchbase/goprotostellar/genproto/admin_bucket_v1;admin_bucket_v1";
-option ruby_package = "Couchbase::StellarNebula::Generated::BucketAdmin::V1";
+option ruby_package = "Couchbase::Protostellar::Generated::Admin::Bucket::V1";
+option php_namespace = "Couchbase\\Protostellar\\Generated\\Admin\\Bucket\\V1";
 option java_package = "com.couchbase.client.protostellar.admin.bucket.v1";
 option java_multiple_files = true;
 

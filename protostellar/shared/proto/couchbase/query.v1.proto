@@ -1,7 +1,8 @@
 syntax = "proto3";
 
 option go_package = "github.com/couchbase/goprotostellar/genproto/query_v1;query_v1";
-option ruby_package = "Couchbase::StellarNebula::Generated::Query::V1";
+option ruby_package = "Couchbase::Protostellar::Generated::Query::V1";
+option php_namespace = "Couchbase\\Protostellar\\Generated\\Query\\V1";
 option java_package = "com.couchbase.client.protostellar.query.v1";
 option java_multiple_files = true;
 
