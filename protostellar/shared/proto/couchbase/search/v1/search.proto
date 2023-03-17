@@ -87,8 +87,8 @@ message MatchPhraseQuery {
 
 message MatchQuery {
   enum Operator {
-    OR = 0;
-    AND = 1;
+    OPERATOR_OR = 0;
+    OPERATOR_AND = 1;
   }
 
   float boost = 1;
@@ -212,7 +212,7 @@ message Sorting {
   }
 }
 
-service Search {
+service SearchService {
   rpc SearchQuery(SearchQueryRequest) returns (stream SearchQueryResponse) {}
 }
 
@@ -220,16 +220,16 @@ message SearchQueryRequest {
   string index_name = 1;
   Query query = 2;
 
-  enum ScanConsistency { NOT_BOUNDED = 0; }
+  enum ScanConsistency { SCAN_CONSISTENCY_NOT_BOUNDED = 0; }
   ScanConsistency scan_consistency = 3;
   uint32 limit = 4;
   uint32 skip = 5;
   bool include_explanation = 6;
 
   enum HighlightStyle {
-    DEFAULT = 0;
-    HTML = 1;
-    ANSI = 2;
+    HIGHLIGHT_STYLE_DEFAULT = 0;
+    HIGHLIGHT_STYLE_HTML = 1;
+    HIGHLIGHT_STYLE_ANSI = 2;
   }
   HighlightStyle highlight_style = 7;
   repeated string highlight_fields = 8;

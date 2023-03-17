@@ -11,12 +11,12 @@ package couchbase.kv.v1;
 import "google/rpc/status.proto";
 import "google/protobuf/timestamp.proto";
 
-service Kv {
+service KvService {
   rpc Get(GetRequest) returns (GetResponse) {}
-  rpc GetAndTouch(GetAndTouchRequest) returns (GetResponse) {}
-  rpc GetAndLock(GetAndLockRequest) returns (GetResponse) {}
+  rpc GetAndTouch(GetAndTouchRequest) returns (GetAndTouchResponse) {}
+  rpc GetAndLock(GetAndLockRequest) returns (GetAndLockResponse) {}
   rpc Unlock(UnlockRequest) returns (UnlockResponse) {}
-  rpc GetReplica(GetReplicaRequest) returns (GetResponse) {}
+  rpc GetReplica(GetReplicaRequest) returns (GetReplicaResponse) {}
   rpc Touch(TouchRequest) returns (TouchResponse) {}
   rpc Exists(ExistsRequest) returns (ExistsResponse) {}
 
@@ -35,9 +35,9 @@ service Kv {
 }
 
 enum DurabilityLevel {
-  MAJORITY = 0;
-  MAJORITY_AND_PERSIST_TO_ACTIVE = 1;
-  PERSIST_TO_MAJORITY = 2;
+  DURABILITY_LEVEL_MAJORITY = 0;
+  DURABILITY_LEVEL_MAJORITY_AND_PERSIST_TO_ACTIVE = 1;
+  DURABILITY_LEVEL_PERSIST_TO_MAJORITY = 2;
 }
 
 message LegacyDurabilitySpec {
@@ -47,19 +47,19 @@ message LegacyDurabilitySpec {
 
 enum DocumentContentType {
   // Indicates that we are not able to determine the document content type.
-  UNKNOWN = 0;
+  DOCUMENT_CONTENT_TYPE_UNKNOWN = 0;
 
   // Indicates that the content is raw binary data.
-  BINARY = 1;
+  DOCUMENT_CONTENT_TYPE_BINARY = 1;
 
   // Indicates that the content is JSON
-  JSON = 2;
+  DOCUMENT_CONTENT_TYPE_JSON = 2;
 }
 
 enum DocumentCompressionType {
-  NONE = 0;
+  DOCUMENT_COMPRESSION_TYPE_NONE = 0;
 
-  SNAPPY = 1;
+  DOCUMENT_COMPRESSION_TYPE_SNAPPY = 1;
 }
 
 message MutationToken {
@@ -76,6 +76,14 @@ message GetRequest {
   string key = 4;
 }
 
+message GetResponse {
+  bytes content = 1;
+  DocumentContentType content_type = 2;
+  DocumentCompressionType compression_type = 5;
+  uint64 cas = 3;
+  google.protobuf.Timestamp expiry = 4;
+}
+
 message GetAndTouchRequest {
   string bucket_name = 1;
   string scope_name = 2;
@@ -87,12 +95,28 @@ message GetAndTouchRequest {
   }
 }
 
+message GetAndTouchResponse {
+  bytes content = 1;
+  DocumentContentType content_type = 2;
+  DocumentCompressionType compression_type = 5;
+  uint64 cas = 3;
+  google.protobuf.Timestamp expiry = 4;
+}
+
 message GetAndLockRequest {
   string bucket_name = 1;
   string scope_name = 2;
   string collection_name = 3;
   string key = 4;
   uint32 lock_time = 5;
+}
+
+message GetAndLockResponse {
+  bytes content = 1;
+  DocumentContentType content_type = 2;
+  DocumentCompressionType compression_type = 5;
+  uint64 cas = 3;
+  google.protobuf.Timestamp expiry = 4;
 }
 
 message GetReplicaRequest {
@@ -103,7 +127,7 @@ message GetReplicaRequest {
   uint32 replica_index = 5;
 }
 
-message GetResponse {
+message GetReplicaResponse {
   bytes content = 1;
   DocumentContentType content_type = 2;
   DocumentCompressionType compression_type = 5;
@@ -160,10 +184,7 @@ message InsertRequest {
     google.protobuf.Timestamp expiry_time = 7;
     uint32 expiry_secs = 10;
   }
-  oneof durability_spec {
-    LegacyDurabilitySpec legacy_durability_spec = 8;
-    DurabilityLevel durability_level = 9;
-  }
+  optional DurabilityLevel durability_level = 9;
 }
 
 message InsertResponse {
@@ -182,10 +203,7 @@ message UpsertRequest {
     google.protobuf.Timestamp expiry_time = 7;
     uint32 expiry_secs = 10;
   }
-  oneof durability_spec {
-    LegacyDurabilitySpec legacy_durability_spec = 8;
-    DurabilityLevel durability_level = 9;
-  }
+  optional DurabilityLevel durability_level = 9;
 }
 
 message UpsertResponse {
@@ -205,10 +223,7 @@ message ReplaceRequest {
     google.protobuf.Timestamp expiry_time = 8;
     uint32 expiry_secs = 11;
   }
-  oneof durability_spec {
-    LegacyDurabilitySpec legacy_durability_spec = 9;
-    DurabilityLevel durability_level = 10;
-  }
+  optional DurabilityLevel durability_level = 10;
 }
 
 message ReplaceResponse {
@@ -222,10 +237,7 @@ message RemoveRequest {
   string collection_name = 3;
   string key = 4;
   optional uint64 cas = 5;
-  oneof durability_spec {
-    LegacyDurabilitySpec legacy_durability_spec = 6;
-    DurabilityLevel durability_level = 7;
-  }
+  optional DurabilityLevel durability_level = 7;
 }
 
 message RemoveResponse {
@@ -244,10 +256,7 @@ message IncrementRequest {
     uint32 expiry_secs = 10;
   }
   optional int64 initial = 7;
-  oneof durability_spec {
-    LegacyDurabilitySpec legacy_durability_spec = 8;
-    DurabilityLevel durability_level = 9;
-  }
+  optional DurabilityLevel durability_level = 9;
 }
 
 message IncrementResponse {
@@ -267,10 +276,7 @@ message DecrementRequest {
     uint32 expiry_secs = 10;
   }
   optional int64 initial = 7;
-  oneof durability_spec {
-    LegacyDurabilitySpec legacy_durability_spec = 8;
-    DurabilityLevel durability_level = 9;
-  }
+  optional DurabilityLevel durability_level = 9;
 }
 
 message DecrementResponse {
@@ -286,10 +292,7 @@ message AppendRequest {
   string key = 4;
   bytes content = 5;
   optional uint64 cas = 6;
-  oneof durability_spec {
-    LegacyDurabilitySpec legacy_durability_spec = 7;
-    DurabilityLevel durability_level = 8;
-  }
+  optional DurabilityLevel durability_level = 8;
 }
 
 message AppendResponse {
@@ -304,10 +307,7 @@ message PrependRequest {
   string key = 4;
   bytes content = 5;
   optional uint64 cas = 6;
-  oneof durability_spec {
-    LegacyDurabilitySpec legacy_durability_spec = 7;
-    DurabilityLevel durability_level = 8;
-  }
+  optional DurabilityLevel durability_level = 8;
 }
 
 message PrependResponse {
@@ -323,9 +323,9 @@ message LookupInRequest {
 
   message Spec {
     enum Operation {
-      GET = 0;
-      EXISTS = 1;
-      COUNT = 2;
+      OPERATION_GET = 0;
+      OPERATION_EXISTS = 1;
+      OPERATION_COUNT = 2;
     }
     Operation operation = 1;
 
@@ -359,15 +359,15 @@ message MutateInRequest {
 
   message Spec {
     enum Operation {
-      INSERT = 0;
-      UPSERT = 1;
-      REPLACE = 2;
-      REMOVE = 3;
-      ARRAY_APPEND = 4;
-      ARRAY_PREPEND = 5;
-      ARRAY_INSERT = 6;
-      ARRAY_ADD_UNIQUE = 7;
-      COUNTER = 8;
+      OPERATION_INSERT = 0;
+      OPERATION_UPSERT = 1;
+      OPERATION_REPLACE = 2;
+      OPERATION_REMOVE = 3;
+      OPERATION_ARRAY_APPEND = 4;
+      OPERATION_ARRAY_PREPEND = 5;
+      OPERATION_ARRAY_INSERT = 6;
+      OPERATION_ARRAY_ADD_UNIQUE = 7;
+      OPERATION_COUNTER = 8;
     }
     Operation operation = 1;
 
@@ -384,16 +384,13 @@ message MutateInRequest {
   repeated Spec specs = 5;
 
   enum StoreSemantic {
-    REPLACE = 0;
-    UPSERT = 1;
-    INSERT = 2;
+    STORE_SEMANTIC_REPLACE = 0;
+    STORE_SEMANTIC_UPSERT = 1;
+    STORE_SEMANTIC_INSERT = 2;
   }
   optional StoreSemantic store_semantic = 6;
 
-  oneof durability_spec {
-    LegacyDurabilitySpec legacy_durability_spec = 7;
-    DurabilityLevel durability_level = 8;
-  }
+  optional DurabilityLevel durability_level = 8;
 
   optional uint64 cas = 9;
 

@@ -495,31 +495,31 @@ public class CoreProtostellarKeyValueRequests {
 
           switch (command.type()) {
             case COUNTER:
-              operation = MutateInRequest.Spec.Operation.COUNTER;
+              operation = MutateInRequest.Spec.Operation.OPERATION_COUNTER;
               break;
             case REPLACE:
-              operation = MutateInRequest.Spec.Operation.REPLACE;
+              operation = MutateInRequest.Spec.Operation.OPERATION_REPLACE;
               break;
             case DICT_ADD:
-              operation = MutateInRequest.Spec.Operation.INSERT;
+              operation = MutateInRequest.Spec.Operation.OPERATION_INSERT;
               break;
             case DICT_UPSERT:
-              operation = MutateInRequest.Spec.Operation.UPSERT;
+              operation = MutateInRequest.Spec.Operation.OPERATION_UPSERT;
               break;
             case ARRAY_PUSH_FIRST:
-              operation = MutateInRequest.Spec.Operation.ARRAY_PREPEND;
+              operation = MutateInRequest.Spec.Operation.OPERATION_ARRAY_PREPEND;
               break;
             case ARRAY_PUSH_LAST:
-              operation = MutateInRequest.Spec.Operation.ARRAY_APPEND;
+              operation = MutateInRequest.Spec.Operation.OPERATION_ARRAY_APPEND;
               break;
             case ARRAY_ADD_UNIQUE:
-              operation = MutateInRequest.Spec.Operation.ARRAY_ADD_UNIQUE;
+              operation = MutateInRequest.Spec.Operation.OPERATION_ARRAY_ADD_UNIQUE;
               break;
             case ARRAY_INSERT:
-              operation = MutateInRequest.Spec.Operation.ARRAY_INSERT;
+              operation = MutateInRequest.Spec.Operation.OPERATION_ARRAY_INSERT;
               break;
             case DELETE:
-              operation = MutateInRequest.Spec.Operation.REMOVE;
+              operation = MutateInRequest.Spec.Operation.OPERATION_REMOVE;
               break;
             default:
               throw new IllegalArgumentException("Sub-Document mutateIn command " + command.type() + " is not supported in Protostellar");
@@ -554,13 +554,13 @@ public class CoreProtostellarKeyValueRequests {
 
     switch (storeSemantics) {
       case REPLACE:
-        request.setStoreSemantic(MutateInRequest.StoreSemantic.REPLACE);
+        request.setStoreSemantic(MutateInRequest.StoreSemantic.STORE_SEMANTIC_REPLACE);
         break;
       case UPSERT:
-        request.setStoreSemantic(MutateInRequest.StoreSemantic.UPSERT);
+        request.setStoreSemantic(MutateInRequest.StoreSemantic.STORE_SEMANTIC_UPSERT);
         break;
       case INSERT:
-        request.setStoreSemantic(MutateInRequest.StoreSemantic.INSERT);
+        request.setStoreSemantic(MutateInRequest.StoreSemantic.STORE_SEMANTIC_INSERT);
         break;
       default:
         throw new IllegalArgumentException("Sub-Document store semantic " + storeSemantics + " is not supported in Protostellar");

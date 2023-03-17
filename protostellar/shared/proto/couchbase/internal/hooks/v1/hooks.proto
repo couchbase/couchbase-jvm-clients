@@ -10,7 +10,7 @@ package couchbase.internal.hooks.v1;
 
 import "google/protobuf/any.proto";
 
-service Hooks {
+service HooksService {
   rpc CreateHooksContext(CreateHooksContextRequest)
       returns (CreateHooksContextResponse) {}
   rpc DestroyHooksContext(DestroyHooksContextRequest)
@@ -31,12 +31,12 @@ message DestroyHooksContextRequest { string id = 1; }
 message DestroyHooksContextResponse {}
 
 enum ComparisonOperator {
-  EQUAL = 0;
-  NOT_EQUAL = 1;
-  GREATER_THAN = 2;
-  GREATER_THAN_OR_EQUAL = 3;
-  LESS_THAN = 4;
-  LESS_THAN_OR_EQUAL = 5;
+  COMPARISON_OPERATOR_EQUAL = 0;
+  COMPARISON_OPERATOR_NOT_EQUAL = 1;
+  COMPARISON_OPERATOR_GREATER_THAN = 2;
+  COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL = 3;
+  COMPARISON_OPERATOR_LESS_THAN = 4;
+  COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL = 5;
 }
 
 message ValueRef {

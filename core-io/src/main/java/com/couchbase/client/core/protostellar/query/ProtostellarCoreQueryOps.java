@@ -282,13 +282,17 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
     );
   }
 
+  static QueryRequest.ScanConsistency toProtostellar(CoreQueryScanConsistency scanConsistency) {
+    return QueryRequest.ScanConsistency.valueOf("SCAN_CONSISTENCY_" + scanConsistency.name());
+  }
+
   private static QueryRequest.Builder convertOptions(CoreQueryOptions opts) {
     QueryRequest.Builder input = QueryRequest.newBuilder();
 
     input.setClientContextId(opts.clientContextId() == null ? UUID.randomUUID().toString() : opts.clientContextId());
 
     if (opts.scanConsistency() != null) {
-      input.setScanConsistency(QueryRequest.QueryScanConsistency.valueOf(opts.scanConsistency().name()));
+      input.setScanConsistency(toProtostellar(opts.scanConsistency()));
     }
 
     boolean positionalPresent = opts.positionalParameters() != null && !opts.positionalParameters().isEmpty();
@@ -320,7 +324,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
 
 
     if (opts.scanConsistency() == CoreQueryScanConsistency.REQUEST_PLUS) {
-      input.setScanConsistency(QueryRequest.QueryScanConsistency.REQUEST_PLUS);
+      input.setScanConsistency(QueryRequest.ScanConsistency.SCAN_CONSISTENCY_REQUEST_PLUS);
     }
 
     if (opts.consistentWith() != null) {
@@ -337,10 +341,10 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
     if (opts.profile() != null && opts.profile() != CoreQueryProfile.OFF) {
       switch (opts.profile()) {
         case TIMINGS:
-          input.setProfileMode(QueryRequest.QueryProfileMode.TIMINGS);
+          input.setProfileMode(QueryRequest.ProfileMode.PROFILE_MODE_TIMINGS);
           break;
         case PHASES:
-          input.setProfileMode(QueryRequest.QueryProfileMode.PHASES);
+          input.setProfileMode(QueryRequest.ProfileMode.PROFILE_MODE_PHASES);
           break;
         default:
           throw new InvalidArgumentException("Unknown profile mode " + opts.profile(), null, null);

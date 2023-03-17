@@ -10,7 +10,7 @@ package couchbase.analytics.v1;
 
 import "google/protobuf/duration.proto";
 
-service Analytics {
+service AnalyticsService {
   rpc AnalyticsQuery(AnalyticsQueryRequest)
       returns (stream AnalyticsQueryResponse) {}
 }
@@ -25,8 +25,8 @@ message AnalyticsQueryRequest {
   optional bool priority = 4;
 
   enum ScanConsistency {
-    NOT_BOUNDED = 0;
-    REQUEST_PLUS = 1;
+    SCAN_CONSISTENCY_NOT_BOUNDED = 0;
+    SCAN_CONSISTENCY_REQUEST_PLUS = 1;
   }
   optional ScanConsistency scan_consistency = 5;
   repeated bytes positional_parameters = 6;

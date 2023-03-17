@@ -8,9 +8,9 @@ option java_multiple_files = true;
 
 package couchbase.admin.bucket.v1;
 
-import "couchbase/kv.v1.proto";
+import "couchbase/kv/v1/kv.proto";
 
-service BucketAdmin {
+service BucketAdminService {
   rpc ListBuckets(ListBucketsRequest) returns (ListBucketsResponse) {}
 
   rpc CreateBucket(CreateBucketRequest) returns (CreateBucketResponse) {}
@@ -19,33 +19,33 @@ service BucketAdmin {
 }
 
 enum BucketType {
-  COUCHBASE = 0;
-  MEMCACHED = 1;
-  EPHEMERAL = 2;
+  BUCKET_TYPE_COUCHBASE = 0;
+  BUCKET_TYPE_MEMCACHED = 1;
+  BUCKET_TYPE_EPHEMERAL = 2;
 }
 
 enum EvictionMode {
-  FULL = 0;
-  NOT_RECENTLY_USED = 1;
-  VALUE_ONLY = 2;
-  NONE = 3;
+  EVICTION_MODE_FULL = 0;
+  EVICTION_MODE_NOT_RECENTLY_USED = 1;
+  EVICTION_MODE_VALUE_ONLY = 2;
+  EVICTION_MODE_NONE = 3;
 }
 
 enum CompressionMode {
-  OFF = 0;
-  PASSIVE = 1;
-  ACTIVE = 2;
+  COMPRESSION_MODE_OFF = 0;
+  COMPRESSION_MODE_PASSIVE = 1;
+  COMPRESSION_MODE_ACTIVE = 2;
 }
 
 enum StorageBackend {
-  COUCHSTORE = 0;
-  MAGMA = 1;
+  STORAGE_BACKEND_COUCHSTORE = 0;
+  STORAGE_BACKEND_MAGMA = 1;
 }
 
 enum ConflictResolutionType {
-  TIMESTAMP = 0;
-  SEQUENCE_NUMBER = 1;
-  CUSTOM = 2;
+  CONFLICT_RESOLUTION_TYPE_TIMESTAMP = 0;
+  CONFLICT_RESOLUTION_TYPE_SEQUENCE_NUMBER = 1;
+  CONFLICT_RESOLUTION_TYPE_CUSTOM = 2;
 }
 
 message ListBucketsRequest {}

@@ -47,12 +47,12 @@ import com.couchbase.client.core.protostellar.ProtostellarContext;
 import com.couchbase.client.core.protostellar.ProtostellarStatsCollector;
 import com.couchbase.client.core.util.Deadline;
 import com.couchbase.client.core.util.HostAndPort;
-import com.couchbase.client.protostellar.admin.collection.v1.CollectionAdminGrpc;
-import com.couchbase.client.protostellar.analytics.v1.AnalyticsGrpc;
-import com.couchbase.client.protostellar.internal.hooks.v1.HooksGrpc;
-import com.couchbase.client.protostellar.kv.v1.KvGrpc;
-import com.couchbase.client.protostellar.query.v1.QueryGrpc;
-import com.couchbase.client.protostellar.search.v1.SearchGrpc;
+import com.couchbase.client.protostellar.admin.collection.v1.CollectionAdminServiceGrpc;
+import com.couchbase.client.protostellar.analytics.v1.AnalyticsServiceGrpc;
+import com.couchbase.client.protostellar.internal.hooks.v1.HooksServiceGrpc;
+import com.couchbase.client.protostellar.kv.v1.KvServiceGrpc;
+import com.couchbase.client.protostellar.query.v1.QueryServiceGrpc;
+import com.couchbase.client.protostellar.search.v1.SearchServiceGrpc;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -80,13 +80,13 @@ public class ProtostellarEndpoint {
 
   private final AtomicBoolean shutdown = new AtomicBoolean(false);
   private final ManagedChannel managedChannel;
-  private final KvGrpc.KvFutureStub kvStub;
-  private final KvGrpc.KvBlockingStub kvBlockingStub;
-  private final AnalyticsGrpc.AnalyticsStub analyticsStub;
-  private final QueryGrpc.QueryStub queryStub;
-  private final SearchGrpc.SearchStub searchStub;
-  private final HooksGrpc.HooksBlockingStub hooksBlockingStub;
-  private final CollectionAdminGrpc.CollectionAdminFutureStub collectionAdminStub;
+  private final KvServiceGrpc.KvServiceFutureStub kvStub;
+  private final KvServiceGrpc.KvServiceBlockingStub kvBlockingStub;
+  private final AnalyticsServiceGrpc.AnalyticsServiceStub analyticsStub;
+  private final QueryServiceGrpc.QueryServiceStub queryStub;
+  private final SearchServiceGrpc.SearchServiceStub searchStub;
+  private final HooksServiceGrpc.HooksServiceBlockingStub hooksBlockingStub;
+  private final CollectionAdminServiceGrpc.CollectionAdminServiceFutureStub collectionAdminStub;
   private final HostAndPort remote;
   private final CoreEnvironment env;
   private final ProtostellarContext ctx;
@@ -198,13 +198,13 @@ public class ProtostellarEndpoint {
     };
 
     // withWaitForReady exists but better to do retries ourselves for ErrorContext transparency.
-    kvStub = KvGrpc.newFutureStub(managedChannel).withInterceptors(ci);
-    kvBlockingStub = KvGrpc.newBlockingStub(managedChannel).withInterceptors(ci);
-    analyticsStub = AnalyticsGrpc.newStub(managedChannel).withCallCredentials(creds);
-    queryStub = QueryGrpc.newStub(managedChannel).withCallCredentials(creds);
-    searchStub = SearchGrpc.newStub(managedChannel).withCallCredentials(creds);
-    hooksBlockingStub = HooksGrpc.newBlockingStub(managedChannel).withCallCredentials(creds);
-    collectionAdminStub = CollectionAdminGrpc.newFutureStub(managedChannel).withCallCredentials(creds);
+    kvStub = KvServiceGrpc.newFutureStub(managedChannel).withInterceptors(ci);
+    kvBlockingStub = KvServiceGrpc.newBlockingStub(managedChannel).withInterceptors(ci);
+    analyticsStub = AnalyticsServiceGrpc.newStub(managedChannel).withCallCredentials(creds);
+    queryStub = QueryServiceGrpc.newStub(managedChannel).withCallCredentials(creds);
+    searchStub = SearchServiceGrpc.newStub(managedChannel).withCallCredentials(creds);
+    hooksBlockingStub = HooksServiceGrpc.newBlockingStub(managedChannel).withCallCredentials(creds);
+    collectionAdminStub = CollectionAdminServiceGrpc.newFutureStub(managedChannel).withCallCredentials(creds);
   }
 
   private ManagedChannel channel() {
@@ -323,31 +323,31 @@ public class ProtostellarEndpoint {
     }
   }
 
-  public KvGrpc.KvFutureStub kvStub() {
+  public KvServiceGrpc.KvServiceFutureStub kvStub() {
     return kvStub;
   }
 
-  public KvGrpc.KvBlockingStub kvBlockingStub() {
+  public KvServiceGrpc.KvServiceBlockingStub kvBlockingStub() {
     return kvBlockingStub;
   }
 
-  public AnalyticsGrpc.AnalyticsStub analyticsStub() {
+  public AnalyticsServiceGrpc.AnalyticsServiceStub analyticsStub() {
     return analyticsStub;
   }
 
-  public QueryGrpc.QueryStub queryStub() {
+  public QueryServiceGrpc.QueryServiceStub queryStub() {
     return queryStub;
   }
 
-  public SearchGrpc.SearchStub searchStub() {
+  public SearchServiceGrpc.SearchServiceStub searchStub() {
     return searchStub;
   }
 
-  public HooksGrpc.HooksBlockingStub hooksBlockingStub() {
+  public HooksServiceGrpc.HooksServiceBlockingStub hooksBlockingStub() {
     return hooksBlockingStub;
   }
 
-  public CollectionAdminGrpc.CollectionAdminFutureStub collectionAdminStub() {
+  public CollectionAdminServiceGrpc.CollectionAdminServiceFutureStub collectionAdminStub() {
     return collectionAdminStub;
   }
 

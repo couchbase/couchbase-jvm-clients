@@ -28,6 +28,8 @@ import com.couchbase.client.core.msg.kv.SubDocumentField;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.protostellar.kv.v1.ExistsResponse;
+import com.couchbase.client.protostellar.kv.v1.GetAndLockResponse;
+import com.couchbase.client.protostellar.kv.v1.GetAndTouchResponse;
 import com.couchbase.client.protostellar.kv.v1.GetResponse;
 import com.couchbase.client.protostellar.kv.v1.InsertResponse;
 import com.couchbase.client.protostellar.kv.v1.MutateInResponse;
@@ -95,6 +97,28 @@ public class CoreProtostellarKeyValueResponses {
   }
 
   public static CoreGetResult convertResponse(CoreKeyspace keyspace, String key, GetResponse response) {
+    return new CoreGetResult(CoreKvResponseMetadata.NONE,
+      keyspace,
+      key,
+      response.getContent().toByteArray(),
+      convertToFlags(response.getContentType()),
+      response.getCas(),
+      CoreProtostellarUtil.convertExpiry(response.hasExpiry(), response.getExpiry()),
+      false);
+  }
+
+  public static CoreGetResult convertResponse(CoreKeyspace keyspace, String key, GetAndLockResponse response) {
+    return new CoreGetResult(CoreKvResponseMetadata.NONE,
+      keyspace,
+      key,
+      response.getContent().toByteArray(),
+      convertToFlags(response.getContentType()),
+      response.getCas(),
+      CoreProtostellarUtil.convertExpiry(response.hasExpiry(), response.getExpiry()),
+      false);
+  }
+
+  public static CoreGetResult convertResponse(CoreKeyspace keyspace, String key, GetAndTouchResponse response) {
     return new CoreGetResult(CoreKvResponseMetadata.NONE,
       keyspace,
       key,

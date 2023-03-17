@@ -8,7 +8,7 @@ option java_multiple_files = true;
 
 package couchbase.admin.collection.v1;
 
-service CollectionAdmin {
+service CollectionAdminService {
   rpc ListCollections(ListCollectionsRequest)
       returns (ListCollectionsResponse) {}
 
@@ -23,7 +23,10 @@ service CollectionAdmin {
 message ListCollectionsRequest { string bucket_name = 1; }
 
 message ListCollectionsResponse {
-  message Collection { string name = 1; }
+  message Collection {
+    string name = 1;
+    optional uint32 max_expiry_secs = 2;
+  }
 
   message Scope {
     string name = 1;
@@ -51,6 +54,7 @@ message CreateCollectionRequest {
   string bucket_name = 1;
   string scope_name = 2;
   string collection_name = 3;
+  optional uint32 max_expiry_secs = 4;
 }
 
 message CreateCollectionResponse {}

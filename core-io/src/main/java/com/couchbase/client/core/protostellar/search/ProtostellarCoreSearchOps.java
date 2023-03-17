@@ -31,7 +31,6 @@ import com.couchbase.client.core.api.search.result.CoreSearchResult;
 import com.couchbase.client.core.api.search.result.CoreSearchRow;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.deps.io.grpc.stub.StreamObserver;
 import com.couchbase.client.core.json.Mapper;
@@ -45,12 +44,9 @@ import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownAsync;
@@ -204,7 +200,7 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
 
     if (opts.consistency() != null) {
       if (opts.consistency() == CoreSearchScanConsistency.NOT_BOUNDED) {
-        request.setScanConsistency(SearchQueryRequest.ScanConsistency.NOT_BOUNDED);
+        request.setScanConsistency(SearchQueryRequest.ScanConsistency.SCAN_CONSISTENCY_NOT_BOUNDED);
       }
     }
 
@@ -223,13 +219,13 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
     if (opts.highlightStyle() != null) {
       switch (opts.highlightStyle()) {
         case HTML:
-          request.setHighlightStyle(SearchQueryRequest.HighlightStyle.HTML);
+          request.setHighlightStyle(SearchQueryRequest.HighlightStyle.HIGHLIGHT_STYLE_HTML);
           break;
         case ANSI:
-          request.setHighlightStyle(SearchQueryRequest.HighlightStyle.ANSI);
+          request.setHighlightStyle(SearchQueryRequest.HighlightStyle.HIGHLIGHT_STYLE_ANSI);
           break;
         case SERVER_DEFAULT:
-          request.setHighlightStyle(SearchQueryRequest.HighlightStyle.DEFAULT);
+          request.setHighlightStyle(SearchQueryRequest.HighlightStyle.HIGHLIGHT_STYLE_DEFAULT);
           break;
       }
     }

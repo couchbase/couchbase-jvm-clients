@@ -38,6 +38,13 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import static com.couchbase.client.protostellar.kv.v1.DocumentContentType.DOCUMENT_CONTENT_TYPE_BINARY;
+import static com.couchbase.client.protostellar.kv.v1.DocumentContentType.DOCUMENT_CONTENT_TYPE_JSON;
+import static com.couchbase.client.protostellar.kv.v1.DocumentContentType.DOCUMENT_CONTENT_TYPE_UNKNOWN;
+import static com.couchbase.client.protostellar.kv.v1.DurabilityLevel.DURABILITY_LEVEL_MAJORITY;
+import static com.couchbase.client.protostellar.kv.v1.DurabilityLevel.DURABILITY_LEVEL_MAJORITY_AND_PERSIST_TO_ACTIVE;
+import static com.couchbase.client.protostellar.kv.v1.DurabilityLevel.DURABILITY_LEVEL_PERSIST_TO_MAJORITY;
+
 @Stability.Internal
 public class CoreProtostellarUtil {
   private CoreProtostellarUtil() {}
@@ -91,10 +98,10 @@ public class CoreProtostellarUtil {
   public static int convertToFlags(DocumentContentType contentType) {
     int flags = 0;
     switch (contentType) {
-      case JSON:
+      case DOCUMENT_CONTENT_TYPE_JSON:
         flags = CodecFlags.JSON_COMPAT_FLAGS;
         break;
-      case BINARY:
+      case DOCUMENT_CONTENT_TYPE_BINARY:
         flags = CodecFlags.BINARY_COMPAT_FLAGS;
         break;
     }
@@ -103,12 +110,12 @@ public class CoreProtostellarUtil {
 
   public static DocumentContentType convertFromFlags(int flags) {
     if ((flags & CodecFlags.JSON_COMPAT_FLAGS) != 0) {
-      return DocumentContentType.JSON;
+      return DOCUMENT_CONTENT_TYPE_JSON;
     }
     if ((flags & CodecFlags.BINARY_COMPAT_FLAGS) != 0) {
-      return DocumentContentType.BINARY;
+      return DOCUMENT_CONTENT_TYPE_BINARY;
     }
-    return DocumentContentType.UNKNOWN;
+    return DOCUMENT_CONTENT_TYPE_UNKNOWN;
   }
 
   public static void handleShutdownBlocking(CoreProtostellar core, ProtostellarRequest<?> request) {
@@ -143,11 +150,11 @@ public class CoreProtostellarUtil {
   public static DurabilityLevel convert(com.couchbase.client.core.msg.kv.DurabilityLevel dl) {
     switch (dl) {
       case MAJORITY:
-        return DurabilityLevel.MAJORITY;
+        return DURABILITY_LEVEL_MAJORITY;
       case MAJORITY_AND_PERSIST_TO_ACTIVE:
-        return DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE;
+        return DURABILITY_LEVEL_MAJORITY_AND_PERSIST_TO_ACTIVE;
       case PERSIST_TO_MAJORITY:
-        return DurabilityLevel.PERSIST_TO_MAJORITY;
+        return DURABILITY_LEVEL_PERSIST_TO_MAJORITY;
     }
 
     // NONE should be handled earlier, by not sending anything.
@@ -161,11 +168,11 @@ public class CoreProtostellarUtil {
 
     switch (dl.levelIfSynchronous().get()) {
       case MAJORITY:
-        return DurabilityLevel.MAJORITY;
+        return DURABILITY_LEVEL_MAJORITY;
       case MAJORITY_AND_PERSIST_TO_ACTIVE:
-        return DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE;
+        return DURABILITY_LEVEL_MAJORITY_AND_PERSIST_TO_ACTIVE;
       case PERSIST_TO_MAJORITY:
-        return DurabilityLevel.PERSIST_TO_MAJORITY;
+        return DURABILITY_LEVEL_PERSIST_TO_MAJORITY;
     }
 
     // NONE should be handled earlier, by not sending anything.

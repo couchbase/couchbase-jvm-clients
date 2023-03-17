@@ -8,7 +8,7 @@ option java_multiple_files = true;
 
 package couchbase.view.v1;
 
-service View {
+service ViewService {
   rpc ViewQuery(ViewQueryRequest) returns (stream ViewQueryResponse) {}
 }
 
@@ -21,21 +21,21 @@ message ViewQueryRequest {
   optional uint32 limit = 4;
 
   enum ScanConsistency {
-    NOT_BOUNDED = 0;
-    REQUEST_PLUS = 1;
-    UPDATE_AFTER = 2;
+    SCAN_CONSISTENCY_NOT_BOUNDED = 0;
+    SCAN_CONSISTENCY_REQUEST_PLUS = 1;
+    SCAN_CONSISTENCY_UPDATE_AFTER = 2;
   }
   enum ErrorMode {
-    CONTINUE = 0;
-    STOP = 1;
+    ERROR_MODE_CONTINUE = 0;
+    ERROR_MODE_STOP = 1;
   }
-  enum DesignDocumentNamespace {
-    PRODUCTION = 0;
-    DEVELOPMENT = 1;
+  enum Namespace {
+    NAMESPACE_PRODUCTION = 0;
+    NAMESPACE_DEVELOPMENT = 1;
   }
   enum Order {
-    ASCENDING = 0;
-    DESCENDING = 1;
+    ORDER_ASCENDING = 0;
+    ORDER_DESCENDING = 1;
   }
   optional ScanConsistency scan_consistency = 5;
   optional bool reduce = 6;
@@ -50,7 +50,7 @@ message ViewQueryRequest {
   optional string end_key_doc_id = 16;
   optional ErrorMode on_error = 17;
   optional bool debug = 18;
-  optional DesignDocumentNamespace namespace = 19;
+  optional Namespace namespace = 19;
   optional Order order = 20;
 }
 

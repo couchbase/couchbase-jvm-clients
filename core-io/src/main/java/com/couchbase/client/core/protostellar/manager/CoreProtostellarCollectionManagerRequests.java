@@ -53,8 +53,7 @@ public class CoreProtostellarCollectionManagerRequests {
       .setBucketName(bucketName)
       .setScopeName(scopeName)
       .setCollectionName(collectionName)
-      // This functionality is missing from Protostellar currently.
-      //.setMaxTTL(maxTTL)
+      .setMaxExpirySecs(Math.toIntExact(maxTTL.getSeconds()))
       .build();
 
     return new ProtostellarCollectionManagerRequest<>(request,

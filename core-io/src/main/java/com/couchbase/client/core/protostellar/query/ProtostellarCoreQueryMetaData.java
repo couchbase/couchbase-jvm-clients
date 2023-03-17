@@ -50,23 +50,23 @@ public class ProtostellarCoreQueryMetaData extends CoreQueryMetaData {
   @Override
   public CoreQueryStatus status() {
     switch (metaData.getStatus()) {
-      case RUNNING:
+      case STATUS_RUNNING:
         return CoreQueryStatus.RUNNING;
-      case SUCCESS:
+      case STATUS_SUCCESS:
         return CoreQueryStatus.SUCCESS;
-      case ERRORS:
+      case STATUS_ERRORS:
         return CoreQueryStatus.ERRORS;
-      case COMPLETED:
+      case STATUS_COMPLETED:
         return CoreQueryStatus.COMPLETED;
-      case STOPPED:
+      case STATUS_STOPPED:
         return CoreQueryStatus.STOPPED;
-      case TIMEOUT:
+      case STATUS_TIMEOUT:
         return CoreQueryStatus.TIMEOUT;
-      case CLOSED:
+      case STATUS_CLOSED:
         return CoreQueryStatus.CLOSED;
-      case FATAL:
+      case STATUS_FATAL:
         return CoreQueryStatus.FATAL;
-      case ABORTED:
+      case STATUS_ABORTED:
         return CoreQueryStatus.ABORTED;
     }
     return CoreQueryStatus.UNKNOWN;
