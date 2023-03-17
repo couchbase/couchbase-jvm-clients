@@ -144,15 +144,19 @@ public final class CoreExpiry {
     return absolute;
   }
 
-  public void ifRelative(Consumer<Duration> consumer) {
-    if (relative != null) {
-      consumer.accept(relative);
-    }
-  }
-
-  public void ifAbsolute(Consumer<Instant> consumer) {
-    if (absolute != null) {
-      consumer.accept(absolute);
+  public void when(
+      Consumer<Instant> ifAbsolute,
+      Consumer<Duration> ifRelative,
+      Runnable ifNone
+  ) {
+    if (isNone()) {
+      ifNone.run();
+    } else if (relative != null) {
+      ifRelative.accept(relative);
+    } else if (absolute != null) {
+      ifAbsolute.accept(absolute);
+    } else {
+      throw new AssertionError("invariant failed");
     }
   }
 

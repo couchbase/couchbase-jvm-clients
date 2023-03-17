@@ -26,7 +26,6 @@ import com.couchbase.client.core.deps.io.grpc.Deadline;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.msg.kv.CodecFlags;
-import com.couchbase.client.core.retry.ProtostellarRequestBehaviour;
 import com.couchbase.client.protostellar.kv.v1.DocumentContentType;
 import com.couchbase.client.protostellar.kv.v1.DurabilityLevel;
 import reactor.core.publisher.Mono;
@@ -180,8 +179,12 @@ public class CoreProtostellarUtil {
     return null;
   }
 
-  public static Timestamp convertExpiry(Instant expiry) {
+  public static Timestamp toExpiryTime(Instant expiry) {
     return Timestamp.newBuilder().setSeconds(expiry.getEpochSecond()).build();
+  }
+
+  public static int toExpirySeconds(Duration expiry) {
+    return Math.toIntExact(expiry.getSeconds());
   }
 
   public static RequestSpan createSpan(CoreProtostellar core,
@@ -214,9 +217,5 @@ public class CoreProtostellarUtil {
   // JVMCBC-1187: This and everything using it will be fixed and removed before GA.
   public static RuntimeException unsupportedCurrentlyInProtostellar() {
     return new FeatureNotAvailableException("Feature is not supported when using protostellar:// to connect (but will be before GA)");
-  }
-
-  public static void throwRelativeExpiryUnsupported() {
-    throw new FeatureNotAvailableException("Relative expiry is not yet not supported when using protostellar:// to connect (but will be before GA)");
   }
 }

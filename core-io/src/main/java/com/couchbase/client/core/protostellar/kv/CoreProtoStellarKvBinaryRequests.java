@@ -32,14 +32,14 @@ import com.couchbase.client.protostellar.kv.v1.IncrementRequest;
 import com.couchbase.client.protostellar.kv.v1.PrependRequest;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Optional;
 
 import static com.couchbase.client.core.api.kv.CoreKvBinaryParamValidators.validateAppendPrependArgs;
 import static com.couchbase.client.core.api.kv.CoreKvBinaryParamValidators.validateIncrementDecrementArgs;
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.convertExpiry;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.throwRelativeExpiryUnsupported;
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.toExpirySeconds;
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.toExpiryTime;
+import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.NO_EXPIRY;
 
 @Stability.Internal
 public class CoreProtoStellarKvBinaryRequests {
@@ -121,11 +121,11 @@ public class CoreProtoStellarKvBinaryRequests {
       .setBucketName(keyspace.bucket()).setScopeName(keyspace.scope()).setCollectionName(keyspace.collection())
       .setKey(key).setDelta(delta).setInitial(initial.orElse(0L));
 
-    if (expiry.isNone()) {
-      request.setExpiry(convertExpiry(Instant.EPOCH));
-    }
-    expiry.ifAbsolute(it -> request.setExpiry(convertExpiry(it)));
-    expiry.ifRelative(it -> throwRelativeExpiryUnsupported());
+    expiry.when(
+      absolute -> request.setExpiryTime(toExpiryTime(absolute)),
+      relative -> request.setExpirySecs(toExpirySeconds(relative)),
+      () -> request.setExpiryTime(NO_EXPIRY)
+    );
 
     if (!durability.isNone()) {
       request.setDurabilityLevel(CoreProtostellarUtil.convert(durability));
@@ -159,11 +159,11 @@ public class CoreProtoStellarKvBinaryRequests {
       .setDelta(delta)
       .setInitial(initial.orElse(0L));
 
-    if (expiry.isNone()) {
-      request.setExpiry(convertExpiry(Instant.EPOCH));
-    }
-    expiry.ifAbsolute(it -> request.setExpiry(convertExpiry(it)));
-    expiry.ifRelative(it -> throwRelativeExpiryUnsupported());
+    expiry.when(
+      absolute -> request.setExpiryTime(toExpiryTime(absolute)),
+      relative -> request.setExpirySecs(toExpirySeconds(relative)),
+      () -> request.setExpiryTime(NO_EXPIRY)
+    );
 
     if (!durability.isNone()) {
       request.setDurabilityLevel(CoreProtostellarUtil.convert(durability));

@@ -81,7 +81,10 @@ message GetAndTouchRequest {
   string scope_name = 2;
   string collection_name = 3;
   string key = 4;
-  google.protobuf.Timestamp expiry = 5;
+  oneof expiry {
+    google.protobuf.Timestamp expiry_time = 5;
+    uint32 expiry_secs = 6;
+  }
 }
 
 message GetAndLockRequest {
@@ -105,7 +108,7 @@ message GetResponse {
   DocumentContentType content_type = 2;
   DocumentCompressionType compression_type = 5;
   uint64 cas = 3;
-  optional google.protobuf.Timestamp expiry = 4;
+  google.protobuf.Timestamp expiry = 4;
 }
 
 message UnlockRequest {
@@ -123,7 +126,10 @@ message TouchRequest {
   string scope_name = 2;
   string collection_name = 3;
   string key = 4;
-  google.protobuf.Timestamp expiry = 5;
+  oneof expiry {
+    google.protobuf.Timestamp expiry_time = 5;
+    uint32 expiry_secs = 6;
+  }
 }
 
 message TouchResponse {
@@ -150,7 +156,10 @@ message InsertRequest {
   string key = 4;
   bytes content = 5;
   DocumentContentType content_type = 6;
-  optional google.protobuf.Timestamp expiry = 7;
+  oneof expiry {
+    google.protobuf.Timestamp expiry_time = 7;
+    uint32 expiry_secs = 10;
+  }
   oneof durability_spec {
     LegacyDurabilitySpec legacy_durability_spec = 8;
     DurabilityLevel durability_level = 9;
@@ -169,7 +178,10 @@ message UpsertRequest {
   string key = 4;
   bytes content = 5;
   DocumentContentType content_type = 6;
-  optional google.protobuf.Timestamp expiry = 7;
+  oneof expiry {
+    google.protobuf.Timestamp expiry_time = 7;
+    uint32 expiry_secs = 10;
+  }
   oneof durability_spec {
     LegacyDurabilitySpec legacy_durability_spec = 8;
     DurabilityLevel durability_level = 9;
@@ -189,7 +201,10 @@ message ReplaceRequest {
   bytes content = 5;
   DocumentContentType content_type = 6;
   optional uint64 cas = 7;
-  optional google.protobuf.Timestamp expiry = 8;
+  oneof expiry {
+    google.protobuf.Timestamp expiry_time = 8;
+    uint32 expiry_secs = 11;
+  }
   oneof durability_spec {
     LegacyDurabilitySpec legacy_durability_spec = 9;
     DurabilityLevel durability_level = 10;
@@ -224,7 +239,10 @@ message IncrementRequest {
   string collection_name = 3;
   string key = 4;
   uint64 delta = 5;
-  optional google.protobuf.Timestamp expiry = 6;
+  oneof expiry {
+    google.protobuf.Timestamp expiry_time = 6;
+    uint32 expiry_secs = 10;
+  }
   optional int64 initial = 7;
   oneof durability_spec {
     LegacyDurabilitySpec legacy_durability_spec = 8;
@@ -244,7 +262,10 @@ message DecrementRequest {
   string collection_name = 3;
   string key = 4;
   uint64 delta = 5;
-  optional google.protobuf.Timestamp expiry = 6;
+  oneof expiry {
+    google.protobuf.Timestamp expiry_time = 6;
+    uint32 expiry_secs = 10;
+  }
   optional int64 initial = 7;
   oneof durability_spec {
     LegacyDurabilitySpec legacy_durability_spec = 8;
