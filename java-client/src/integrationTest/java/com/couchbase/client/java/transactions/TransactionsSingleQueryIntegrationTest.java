@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 @IgnoreWhen(clusterTypes = {ClusterType.MOCKED},
   // Using COLLECTIONS as a proxy for 7.0+, which is when query added support for transactions
-  missesCapabilities = {Capabilities.CREATE_AS_DELETED, Capabilities.COLLECTIONS, Capabilities.QUERY},
+  missesCapabilities = {Capabilities.CREATE_AS_DELETED, Capabilities.COLLECTIONS, Capabilities.QUERY, Capabilities.CLUSTER_LEVEL_QUERY},
   isProtostellarWillWorkLater = true
 )
 public class TransactionsSingleQueryIntegrationTest extends JavaIntegrationTest {

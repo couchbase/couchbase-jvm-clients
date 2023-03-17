@@ -48,6 +48,7 @@ import static com.couchbase.client.java.manager.query.GetAllQueryIndexesOptions.
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.REQUIRE_MB_50132;
 import static com.couchbase.client.java.manager.query.WatchQueryIndexesOptions.watchQueryIndexesOptions;
+import static com.couchbase.client.test.Capabilities.CLUSTER_LEVEL_QUERY;
 import static com.couchbase.client.test.Capabilities.QUERY;
 import static com.couchbase.client.test.ClusterType.CAVES;
 import static com.couchbase.client.test.ClusterType.MOCKED;
@@ -61,7 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IgnoreWhen(clusterTypes = {CAVES, MOCKED},
-  missesCapabilities = QUERY,
+  missesCapabilities = {QUERY, CLUSTER_LEVEL_QUERY},
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
   clusterVersionIsBelow = REQUIRE_MB_50132,
   isProtostellar = true

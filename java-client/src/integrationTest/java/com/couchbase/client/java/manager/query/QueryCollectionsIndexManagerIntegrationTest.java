@@ -51,6 +51,7 @@ import static com.couchbase.client.java.manager.query.DropQueryIndexOptions.drop
 import static com.couchbase.client.java.manager.query.GetAllQueryIndexesOptions.getAllQueryIndexesOptions;
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.REQUIRE_MB_50132;
 import static com.couchbase.client.java.manager.query.WatchQueryIndexesOptions.watchQueryIndexesOptions;
+import static com.couchbase.client.test.Capabilities.CLUSTER_LEVEL_QUERY;
 import static com.couchbase.client.test.Capabilities.COLLECTIONS;
 import static com.couchbase.client.test.Capabilities.QUERY;
 import static com.couchbase.client.test.Capabilities.SUBDOC_REVIVE_DOCUMENT;
@@ -69,7 +70,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Very similar to the {@link QueryIndexManagerIntegrationTest}, but this one tests with scope and collection support.
  */
 @IgnoreWhen(clusterTypes = { CAVES, MOCKED },
-  missesCapabilities = { QUERY, COLLECTIONS },
+  missesCapabilities = { QUERY, COLLECTIONS, CLUSTER_LEVEL_QUERY },
   clusterVersionIsBelow = REQUIRE_MB_50132,
   isProtostellarWillWorkLater = true
 )

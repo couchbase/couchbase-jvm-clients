@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 // Disabling against 5.5.  See comment on QueryIndexManagerIntegrationTest for details.
 @IgnoreWhen(
-  missesCapabilities = Capabilities.QUERY,
+  missesCapabilities = {Capabilities.QUERY, Capabilities.CLUSTER_LEVEL_QUERY},
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
   clusterVersionIsBelow = REQUIRE_MB_50132,
   clusterTypes = ClusterType.CAVES

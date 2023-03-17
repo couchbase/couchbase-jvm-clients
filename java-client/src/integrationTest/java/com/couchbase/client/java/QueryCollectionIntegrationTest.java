@@ -94,7 +94,6 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
     Bucket bucket = cluster.bucket(config().bucketname());
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
     waitForService(bucket, ServiceType.QUERY);
-    waitForQueryIndexerToHaveKeyspace(cluster, config().bucketname());
     collectionManager = bucket.collections();
 
     // Create the scope.collection (borrowed from CollectionManagerIntegrationTest )
@@ -108,10 +107,11 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
     ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), bucket.name(), collSpec.scopeName(), collSpec.name());
     waitUntilCondition(() -> collectionExists(collectionManager, collSpec));
 
-    waitForQueryIndexerToHaveKeyspace(cluster, COLLECTION_NAME);
+    Scope scope = cluster.bucket(config().bucketname()).scope(SCOPE_NAME);
+    waitForQueryIndexerToHaveKeyspace(scope, COLLECTION_NAME);
 
-    // the call to createPrimaryIndex takes about 60 seconds
-    block(createPrimaryIndex(config().bucketname(), SCOPE_NAME, COLLECTION_NAME));
+    scope.collection(COLLECTION_NAME).queryIndexes().createPrimaryIndex(CreatePrimaryQueryIndexOptions
+      .createPrimaryQueryIndexOptions().timeout(Duration.ofSeconds(60)));
   }
 
   @AfterAll
@@ -191,63 +191,4 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
     return UUID.randomUUID().toString().substring(0, 10);
   }
 
-  private static CompletableFuture<Void> createPrimaryIndex(String bucketName, String scopeName, String collectionName) {
-    CreatePrimaryQueryIndexOptions options = CreatePrimaryQueryIndexOptions.createPrimaryQueryIndexOptions();
-    options.timeout(Duration.ofSeconds(300));
-    final CreatePrimaryQueryIndexOptions.Built builtOpts = options.build();
-    final String indexName = builtOpts.indexName();
-
-    String keyspace = "`default`:`" + bucketName + "`.`" + scopeName + "`.`" + collectionName + "`";
-    String statement = "CREATE PRIMARY INDEX ";
-    if (indexName != null) {
-      statement += (indexName) + " ";
-    }
-    statement += "ON " + (keyspace); // do not quote, this might be "default:bucketName.scopeName.collectionName"
-
-    return exec(false, statement, builtOpts.with(), builtOpts).exceptionally(t -> {
-      if (builtOpts.ignoreIfExists() && hasCause(t, IndexExistsException.class)) {
-        return null;
-      }
-      throwIfUnchecked(t);
-      throw new RuntimeException(t);
-    }).thenApply(result -> null);
-  }
-
-  private static CompletableFuture<QueryResult> exec(boolean queryType,
-      CharSequence statement, Map<String, Object> with, CommonOptions<?>.BuiltCommonOptions options) {
-    return with.isEmpty() ? exec(queryType, statement, options)
-        : exec(queryType, statement + " WITH " + Mapper.encodeAsString(with), options);
-  }
-
-  private static CompletableFuture<QueryResult> exec(boolean queryType,
-      CharSequence statement, CommonOptions<?>.BuiltCommonOptions options) {
-    QueryOptions queryOpts = toQueryOptions(options).readonly(queryType);
-
-    return cluster.async().query(statement.toString(), queryOpts).exceptionally(t -> {
-      throw translateException(t);
-    });
-  }
-
-  private static QueryOptions toQueryOptions(CommonOptions<?>.BuiltCommonOptions options) {
-    QueryOptions result = queryOptions();
-    options.timeout().ifPresent(result::timeout);
-    options.retryStrategy().ifPresent(result::retryStrategy);
-    return result;
-  }
-
-  private static final Map<Predicate<QueryException>, Function<QueryException, ? extends QueryException>> errorMessageMap = new LinkedHashMap<>();
-
-  private static RuntimeException translateException(Throwable t) {
-    if (t instanceof QueryException) {
-      final QueryException e = ((QueryException) t);
-
-      for (Map.Entry<Predicate<QueryException>, Function<QueryException, ? extends QueryException>> entry : errorMessageMap
-          .entrySet()) {
-        if (entry.getKey().test(e)) {
-          return entry.getValue().apply(e);
-        }
-      }
-    }
-    return (t instanceof RuntimeException) ? (RuntimeException) t : new RuntimeException(t);
-  }
 }

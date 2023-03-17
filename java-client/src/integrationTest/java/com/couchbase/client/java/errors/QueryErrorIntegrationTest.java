@@ -33,7 +33,7 @@ import java.time.Duration;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen( missesCapabilities = { Capabilities.QUERY },
+@IgnoreWhen( missesCapabilities = { Capabilities.QUERY, Capabilities.CLUSTER_LEVEL_QUERY },
   // Needs fixed STG error handling
   isProtostellarOnlyBecauseOfWaitUntilReady = true
 )

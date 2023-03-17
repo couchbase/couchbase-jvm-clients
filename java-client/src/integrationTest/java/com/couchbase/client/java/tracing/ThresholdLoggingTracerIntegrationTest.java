@@ -90,7 +90,7 @@ public class ThresholdLoggingTracerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.QUERY, clusterTypes = ClusterType.CAVES)
+  @IgnoreWhen(missesCapabilities = {Capabilities.QUERY, Capabilities.CLUSTER_LEVEL_QUERY}, clusterTypes = ClusterType.CAVES)
   void logsAboveQueryThreshold() {
     cluster.query("select 1=1");
     assertInEvent("query");

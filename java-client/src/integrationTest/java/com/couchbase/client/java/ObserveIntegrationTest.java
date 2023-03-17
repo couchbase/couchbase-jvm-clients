@@ -23,6 +23,7 @@ import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.ReplicateTo;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -123,7 +124,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(replicasLessThan = 1, nodesGreaterThan = 1)
+  @IgnoreWhen(replicasLessThan = 1, nodesGreaterThan = 1, clusterTypes = ClusterType.CAPELLA)
   void timesOutIfReplicaNotAvailableWithBestEffort() {
     String id = UUID.randomUUID().toString();
 

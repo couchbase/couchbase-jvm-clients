@@ -103,5 +103,9 @@ public enum Capabilities {
   /**
    * JVMCBC-1187: There is no cluster cap for Protostellar currently, but will be ultimately.
    */
-  PROTOSTELLAR
+  PROTOSTELLAR,
+  /**
+   * Cluster is able to perform cluster level queries.
+   */
+  CLUSTER_LEVEL_QUERY
 }

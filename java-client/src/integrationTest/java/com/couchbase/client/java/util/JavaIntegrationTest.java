@@ -19,17 +19,15 @@ package com.couchbase.client.java.util;
 import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.diagnostics.PingState;
 import com.couchbase.client.core.env.Authenticator;
-import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.PasswordAuthenticator;
-import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
+import com.couchbase.client.java.Scope;
 import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
@@ -51,6 +49,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.java.manager.query.CreatePrimaryQueryIndexOptions.createPrimaryQueryIndexOptions;
@@ -74,14 +73,13 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
    */
   protected static Consumer<ClusterEnvironment.Builder> environmentCustomizer() {
     return env -> {
-      if (config().runWithTLS()) {
-        env.securityConfig(SecurityConfig.builder()
-          .enableTls(true)
-          .trustCertificates(config().clusterCerts()
-            .orElseThrow(() -> new IllegalStateException("expected cluster certs")))
-        );
-      }
-      env.ioConfig(IoConfig.enableDnsSrv(config().nodes().get(0).isDns()));
+      env.securityConfig(security -> security.enableTls(config().runWithTLS()));
+      config().clusterCerts().ifPresent(certs ->
+        env.securityConfig(security -> security.trustCertificates(certs)));
+      // otherwise, if TLS enabled, trust default certs (Capella CA plus JVM's 'cacerts')
+
+      env.ioConfig(io -> io.enableDnsSrv(config().nodes().get(0).isDns())
+      );
     };
   }
 
@@ -173,14 +171,23 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
   }
 
   protected static void waitForQueryIndexerToHaveKeyspace(final Cluster cluster, final String keyspaceName) {
+    waitForQueryIndexerToHaveKeyspace(cluster::query, keyspaceName);
+  }
+
+  protected static void waitForQueryIndexerToHaveKeyspace(final Scope scope, final String keyspaceName) {
+    waitForQueryIndexerToHaveKeyspace(scope::query, keyspaceName);
+  }
+
+  private static void waitForQueryIndexerToHaveKeyspace(Function<String, QueryResult> queryFunction, final String keyspaceName) {
     boolean ready = false;
     long start = System.nanoTime();
 
     while (!ready && (Duration.ofNanos(System.nanoTime() - start).toMillis() < 60_000)) {
       String statement =
-              "SELECT COUNT(*) > 0 as present FROM system:keyspaces where name = '" + keyspaceName + "';";
+        "SELECT COUNT(*) > 0 as present FROM system:keyspaces where name = '" + keyspaceName + "';";
 
-      QueryResult queryResult = cluster.query(statement);
+      QueryResult queryResult;
+      queryResult = queryFunction.apply(statement);
       List<JsonObject> rows = queryResult.rowsAsObject();
       if (rows.size() == 1 && rows.get(0).getBoolean("present")) {
         ready = true;
@@ -193,13 +200,13 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
         }
 
         LOGGER.info("Query keyspaces: " + rows.stream()
-                .map(v -> v.toString())
-                .collect(Collectors.joining(";")).toString());
+          .map(v -> v.toString())
+          .collect(Collectors.joining(";")).toString());
       }
     }
 
     if (!ready) {
-      QueryResult queryResult = cluster.query("SELECT * FROM system:keyspaces");
+      QueryResult queryResult = queryFunction.apply("SELECT * FROM system:keyspaces");
       queryResult.rowsAsObject().forEach(row -> LOGGER.info("Keyspace: " + row.toString()));
 
       throw new IllegalStateException("Query indexer is still not aware of keyspaceName " + keyspaceName);
