@@ -24,8 +24,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.DAYS;
-
 
 /**
  * A relative or absolute expiry.
@@ -34,7 +34,7 @@ import static java.util.concurrent.TimeUnit.DAYS;
  * except for the special {@link #NONE} instance, which has null for both.
  */
 @Stability.Internal
-public class CoreExpiry {
+public final class CoreExpiry {
   /**
    * Latest expiry instant that can be represented in the Memcached binary protocol.
    * <p>
@@ -64,14 +64,21 @@ public class CoreExpiry {
    * Its {@link #isNone()} method returns true.
    * Its {@link #absolute()} and {@link #relative} methods both return null.
    */
-  public static final CoreExpiry NONE = new CoreExpiry(null, null);
+  public static final CoreExpiry NONE = new CoreExpiry();
 
-  private CoreExpiry(
-      @Nullable Duration relative,
-      @Nullable Instant absolute
-  ) {
-    this.relative = relative;
-    this.absolute = absolute;
+  private CoreExpiry() {
+    this.relative = null;
+    this.absolute = null;
+  }
+
+  private CoreExpiry(Duration relative) {
+    this.relative = requireNonNull(relative);
+    this.absolute = null;
+  }
+
+  private CoreExpiry(Instant absolute) {
+    this.relative = null;
+    this.absolute = requireNonNull(absolute);
   }
 
   /**
@@ -92,7 +99,7 @@ public class CoreExpiry {
       );
     }
 
-    return new CoreExpiry(duration, null);
+    return new CoreExpiry(duration);
   }
 
   /**
@@ -120,7 +127,7 @@ public class CoreExpiry {
       );
     }
 
-    return new CoreExpiry(null, instant);
+    return new CoreExpiry(instant);
   }
 
   public boolean isNone() {
