@@ -16,6 +16,8 @@
 
 package com.couchbase.query;
 
+// [skip:<3.4.3]
+
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Collection;
@@ -71,16 +73,12 @@ public class QueryIndexManagerHelper {
       throw new UnsupportedOperationException();
     }
 
-    // [start:3.4.3]
     var op = command.getCollectionCommand().getQueryIndexManager().getShared();
     handleQueryIndexManagerShared(null, null, collection, spans, command, op, result);
-    // [end:3.4.3]
 
-    // [start:<3.4.3]
-    /*
+        /*
     throw new UnsupportedOperationException();
-    // [end:<3.4.3]
-    */
+        */
   }
 
   public static Mono<Result> handleClusterQueryIndexManagerReactive(ReactiveCluster cluster,
@@ -105,16 +103,8 @@ public class QueryIndexManagerHelper {
       throw new UnsupportedOperationException();
     }
 
-    // [start:3.4.3]
     var op = command.getCollectionCommand().getQueryIndexManager().getShared();
     return handleQueryIndexManagerSharedReactive(null, null, collection, spans, command, op, result);
-    // [end:3.4.3]
-
-    // [start:<3.4.3]
-    /*
-    return Mono.empty(new UnsupportedOperationException());
-    // [end:<3.4.3]
-    */
   }
 
   /**
@@ -135,13 +125,17 @@ public class QueryIndexManagerHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       if (collection == null) {
-        if (options == null) cluster.queryIndexes().createPrimaryIndex(bucketName);
-        else cluster.queryIndexes().createPrimaryIndex(bucketName, options);
+        if (options == null) {
+          cluster.queryIndexes().createPrimaryIndex(bucketName);
+        } else {
+          cluster.queryIndexes().createPrimaryIndex(bucketName, options);
+        }
       } else {
-        // [start:3.4.3]
-        if (options == null) collection.queryIndexes().createPrimaryIndex();
-        else collection.queryIndexes().createPrimaryIndex(options);
-        // [end:3.4.3]
+        if (options == null) {
+          collection.queryIndexes().createPrimaryIndex();
+        } else {
+          collection.queryIndexes().createPrimaryIndex(options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
@@ -152,13 +146,17 @@ public class QueryIndexManagerHelper {
       long start = System.nanoTime();
       var fields = request.getFieldsList().stream().map(f -> f.toString()).collect(Collectors.toSet());
       if (collection == null) {
-        if (options == null) cluster.queryIndexes().createIndex(bucketName, request.getIndexName(), fields);
-        else cluster.queryIndexes().createIndex(bucketName, request.getIndexName(), fields, options);
+        if (options == null) {
+          cluster.queryIndexes().createIndex(bucketName, request.getIndexName(), fields);
+        } else {
+          cluster.queryIndexes().createIndex(bucketName, request.getIndexName(), fields, options);
+        }
       } else {
-        // [start:3.4.3]
-        if (options == null) collection.queryIndexes().createIndex(request.getIndexName(), fields);
-        else collection.queryIndexes().createIndex(request.getIndexName(), fields, options);
-        // [end:3.4.3]
+        if (options == null) {
+          collection.queryIndexes().createIndex(request.getIndexName(), fields);
+        } else {
+          collection.queryIndexes().createIndex(request.getIndexName(), fields, options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
@@ -169,35 +167,41 @@ public class QueryIndexManagerHelper {
       long start = System.nanoTime();
       List<QueryIndex> indexes;
       if (collection == null) {
-        if (options == null) indexes = cluster.queryIndexes().getAllIndexes(bucketName);
-        else indexes = cluster.queryIndexes().getAllIndexes(bucketName, options);
+        if (options == null) {
+          indexes = cluster.queryIndexes().getAllIndexes(bucketName);
+        } else {
+          indexes = cluster.queryIndexes().getAllIndexes(bucketName, options);
+        }
       } else {
-        // [start:3.4.3]
-        if (options == null) indexes = collection.queryIndexes().getAllIndexes();
-        else indexes = collection.queryIndexes().getAllIndexes(options);
-        // [end:3.4.3]
-        // [start:<3.4.3]
-        /*
-        throw new UnsupportedOperationException();
-        // [end:<3.4.3]
-         */
+        if (options == null) {
+          indexes = collection.queryIndexes().getAllIndexes();
+        } else {
+          indexes = collection.queryIndexes().getAllIndexes(options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
-      if (command.getReturnResult()) populateResult(result, indexes);
-      else setSuccess(result);
+      if (command.getReturnResult()) {
+        populateResult(result, indexes);
+      } else {
+        setSuccess(result);
+      }
     } else if (op.hasDropPrimaryIndex()) {
       var request = op.getDropPrimaryIndex();
       var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       if (collection == null) {
-        if (options == null) cluster.queryIndexes().dropPrimaryIndex(bucketName);
-        else cluster.queryIndexes().dropPrimaryIndex(bucketName, options);
+        if (options == null) {
+          cluster.queryIndexes().dropPrimaryIndex(bucketName);
+        } else {
+          cluster.queryIndexes().dropPrimaryIndex(bucketName, options);
+        }
       } else {
-        // [start:3.4.3]
-        if (options == null) collection.queryIndexes().dropPrimaryIndex();
-        else collection.queryIndexes().dropPrimaryIndex(options);
-        // [end:3.4.3]
+        if (options == null) {
+          collection.queryIndexes().dropPrimaryIndex();
+        } else {
+          collection.queryIndexes().dropPrimaryIndex(options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
@@ -207,13 +211,17 @@ public class QueryIndexManagerHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       if (collection == null) {
-        if (options == null) cluster.queryIndexes().dropIndex(bucketName, request.getIndexName());
-        else cluster.queryIndexes().dropIndex(bucketName, request.getIndexName(), options);
+        if (options == null) {
+          cluster.queryIndexes().dropIndex(bucketName, request.getIndexName());
+        } else {
+          cluster.queryIndexes().dropIndex(bucketName, request.getIndexName(), options);
+        }
       } else {
-        // [start:3.4.3]
-        if (options == null) collection.queryIndexes().dropIndex(request.getIndexName());
-        else collection.queryIndexes().dropIndex(request.getIndexName(), options);
-        // [end:3.4.3]
+        if (options == null) {
+          collection.queryIndexes().dropIndex(request.getIndexName());
+        } else {
+          collection.queryIndexes().dropIndex(request.getIndexName(), options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
@@ -223,17 +231,17 @@ public class QueryIndexManagerHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       if (collection == null) {
-        if (options == null)
+        if (options == null) {
           cluster.queryIndexes().watchIndexes(bucketName, request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs()));
-        else
+        } else {
           cluster.queryIndexes().watchIndexes(bucketName, request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs()), options);
+        }
       } else {
-        // [start:3.4.3]
-        if (options == null)
+        if (options == null) {
           collection.queryIndexes().watchIndexes(request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs()));
-        else
+        } else {
           collection.queryIndexes().watchIndexes(request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs()), options);
-        // [end:3.4.3]
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
@@ -243,17 +251,23 @@ public class QueryIndexManagerHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       if (collection == null) {
-        if (options == null) cluster.queryIndexes().buildDeferredIndexes(bucketName);
-        else cluster.queryIndexes().buildDeferredIndexes(bucketName, options);
+        if (options == null) {
+          cluster.queryIndexes().buildDeferredIndexes(bucketName);
+        } else {
+          cluster.queryIndexes().buildDeferredIndexes(bucketName, options);
+        }
       } else {
-        // [start:3.4.3]
-        if (options == null) collection.queryIndexes().buildDeferredIndexes();
-        else collection.queryIndexes().buildDeferredIndexes(options);
-        // [end:3.4.3]
+        if (options == null) {
+          collection.queryIndexes().buildDeferredIndexes();
+        } else {
+          collection.queryIndexes().buildDeferredIndexes(options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
-    } else throw new UnsupportedOperationException();
+    } else {
+      throw new UnsupportedOperationException();
+    }
   }
 
 
@@ -268,7 +282,6 @@ public class QueryIndexManagerHelper {
                                                                     com.couchbase.client.protocol.sdk.Command op,
                                                                     com.couchbase.client.protocol.sdk.query.indexmanager.Command command,
                                                                     Result.Builder result) {
-    // [start:3.4.3]
     if (command.hasCreatePrimaryIndex()) {
       var request = command.getCreatePrimaryIndex();
       var options = createOptions(request, spans);
@@ -276,11 +289,17 @@ public class QueryIndexManagerHelper {
       long start = System.nanoTime();
       Mono<Void> res;
       if (collection == null) {
-        if (options == null) res = cluster.queryIndexes().createPrimaryIndex(bucketName);
-        else res = cluster.queryIndexes().createPrimaryIndex(bucketName, options);
+        if (options == null) {
+          res = cluster.queryIndexes().createPrimaryIndex(bucketName);
+        } else {
+          res = cluster.queryIndexes().createPrimaryIndex(bucketName, options);
+        }
       } else {
-        if (options == null) res = collection.queryIndexes().createPrimaryIndex();
-        else res = collection.queryIndexes().createPrimaryIndex(options);
+        if (options == null) {
+          res = collection.queryIndexes().createPrimaryIndex();
+        } else {
+          res = collection.queryIndexes().createPrimaryIndex(options);
+        }
       }
       return res.then(Mono.fromCallable(() -> {
         result.setElapsedNanos(System.nanoTime() - start);
@@ -295,11 +314,17 @@ public class QueryIndexManagerHelper {
       var fields = new HashSet<>(request.getFieldsList());
       Mono<Void> res;
       if (collection == null) {
-        if (options == null) res = cluster.queryIndexes().createIndex(bucketName, request.getIndexName(), fields);
-        else res = cluster.queryIndexes().createIndex(bucketName, request.getIndexName(), fields, options);
+        if (options == null) {
+          res = cluster.queryIndexes().createIndex(bucketName, request.getIndexName(), fields);
+        } else {
+          res = cluster.queryIndexes().createIndex(bucketName, request.getIndexName(), fields, options);
+        }
       } else {
-        if (options == null) res = collection.queryIndexes().createIndex(request.getIndexName(), fields);
-        else res = collection.queryIndexes().createIndex(request.getIndexName(), fields, options);
+        if (options == null) {
+          res = collection.queryIndexes().createIndex(request.getIndexName(), fields);
+        } else {
+          res = collection.queryIndexes().createIndex(request.getIndexName(), fields, options);
+        }
       }
       return res.then(Mono.fromCallable(() -> {
         result.setElapsedNanos(System.nanoTime() - start);
@@ -313,16 +338,25 @@ public class QueryIndexManagerHelper {
       long start = System.nanoTime();
       Flux<QueryIndex> indexes;
       if (collection == null) {
-        if (options == null) indexes = cluster.queryIndexes().getAllIndexes(bucketName);
-        else indexes = cluster.queryIndexes().getAllIndexes(bucketName, options);
+        if (options == null) {
+          indexes = cluster.queryIndexes().getAllIndexes(bucketName);
+        } else {
+          indexes = cluster.queryIndexes().getAllIndexes(bucketName, options);
+        }
       } else {
-        if (options == null) indexes = collection.queryIndexes().getAllIndexes();
-        else indexes = collection.queryIndexes().getAllIndexes(options);
+        if (options == null) {
+          indexes = collection.queryIndexes().getAllIndexes();
+        } else {
+          indexes = collection.queryIndexes().getAllIndexes(options);
+        }
       }
       return indexes.collectList().map(i -> {
         result.setElapsedNanos(System.nanoTime() - start);
-        if (op.getReturnResult()) populateResult(result, i);
-        else setSuccess(result);
+        if (op.getReturnResult()) {
+          populateResult(result, i);
+        } else {
+          setSuccess(result);
+        }
         return result.build();
       });
     } else if (command.hasDropPrimaryIndex()) {
@@ -332,11 +366,17 @@ public class QueryIndexManagerHelper {
       long start = System.nanoTime();
       Mono<Void> res;
       if (collection == null) {
-        if (options == null) res = cluster.queryIndexes().dropPrimaryIndex(bucketName);
-        else res = cluster.queryIndexes().dropPrimaryIndex(bucketName, options);
+        if (options == null) {
+          res = cluster.queryIndexes().dropPrimaryIndex(bucketName);
+        } else {
+          res = cluster.queryIndexes().dropPrimaryIndex(bucketName, options);
+        }
       } else {
-        if (options == null) res = collection.queryIndexes().dropPrimaryIndex();
-        else res = collection.queryIndexes().dropPrimaryIndex(options);
+        if (options == null) {
+          res = collection.queryIndexes().dropPrimaryIndex();
+        } else {
+          res = collection.queryIndexes().dropPrimaryIndex(options);
+        }
       }
       return res.then(Mono.fromCallable(() -> {
         result.setElapsedNanos(System.nanoTime() - start);
@@ -350,11 +390,17 @@ public class QueryIndexManagerHelper {
       long start = System.nanoTime();
       Mono<Void> res;
       if (collection == null) {
-        if (options == null) res = cluster.queryIndexes().dropIndex(bucketName, request.getIndexName());
-        else res = cluster.queryIndexes().dropIndex(bucketName, request.getIndexName(), options);
+        if (options == null) {
+          res = cluster.queryIndexes().dropIndex(bucketName, request.getIndexName());
+        } else {
+          res = cluster.queryIndexes().dropIndex(bucketName, request.getIndexName(), options);
+        }
       } else {
-        if (options == null) res = collection.queryIndexes().dropIndex(request.getIndexName());
-        else res = collection.queryIndexes().dropIndex(request.getIndexName(), options);
+        if (options == null) {
+          res = collection.queryIndexes().dropIndex(request.getIndexName());
+        } else {
+          res = collection.queryIndexes().dropIndex(request.getIndexName(), options);
+        }
       }
       return res.then(Mono.fromCallable(() -> {
         result.setElapsedNanos(System.nanoTime() - start);
@@ -368,15 +414,17 @@ public class QueryIndexManagerHelper {
       long start = System.nanoTime();
       Mono<Void> res;
       if (collection == null) {
-        if (options == null)
+        if (options == null) {
           res = cluster.queryIndexes().watchIndexes(bucketName, request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs()));
-        else
+        } else {
           res = cluster.queryIndexes().watchIndexes(bucketName, request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs()), options);
+        }
       } else {
-        if (options == null)
+        if (options == null) {
           res = collection.queryIndexes().watchIndexes(request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs()));
-        else
+        } else {
           res = collection.queryIndexes().watchIndexes(request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs()), options);
+        }
       }
       return res.then(Mono.fromCallable(() -> {
         result.setElapsedNanos(System.nanoTime() - start);
@@ -390,11 +438,17 @@ public class QueryIndexManagerHelper {
       long start = System.nanoTime();
       Mono<Void> res;
       if (collection == null) {
-        if (options == null) res = cluster.queryIndexes().buildDeferredIndexes(bucketName);
-        else res = cluster.queryIndexes().buildDeferredIndexes(bucketName, options);
+        if (options == null) {
+          res = cluster.queryIndexes().buildDeferredIndexes(bucketName);
+        } else {
+          res = cluster.queryIndexes().buildDeferredIndexes(bucketName, options);
+        }
       } else {
-        if (options == null) res = collection.queryIndexes().buildDeferredIndexes();
-        else res = collection.queryIndexes().buildDeferredIndexes(options);
+        if (options == null) {
+          res = collection.queryIndexes().buildDeferredIndexes();
+        } else {
+          res = collection.queryIndexes().buildDeferredIndexes(options);
+        }
       }
       return res.then(Mono.fromCallable(() -> {
         result.setElapsedNanos(System.nanoTime() - start);
@@ -404,7 +458,6 @@ public class QueryIndexManagerHelper {
     } else {
       return Mono.error(new UnsupportedOperationException());
     }
-    // [end:3.4.3]
   }
 
   public static void populateResult(com.couchbase.client.protocol.run.Result.Builder result, List<QueryIndex> indexes) {
@@ -417,8 +470,7 @@ public class QueryIndexManagerHelper {
               .setKeyspace(idx.keyspace())
               .setType(QueryIndexType.valueOf(idx.type().toUpperCase()));
 
-      // [start:3.2.5]
-      // bucketName also only added in 3.2.5
+      // bucketName only added in 3.2.5
       index.setBucketName(idx.bucketName());
 
       if (idx.scopeName().isPresent()) {
@@ -428,13 +480,10 @@ public class QueryIndexManagerHelper {
       if (idx.collectionName().isPresent()) {
         index.setCollectionName(idx.collectionName().get());
       }
-      // [end:3.2.5]
 
       idx.indexKey().forEach(k -> index.addIndexKey((String) k));
       if (idx.condition().isPresent()) index.setCondition(idx.condition().get());
-      // [start:3.1.1]
       if (idx.partition().isPresent()) index.setPartition(idx.partition().get());
-      // [end:3.1.1]
 
       builder.addIndexes(index);
     }
@@ -442,7 +491,6 @@ public class QueryIndexManagerHelper {
             .setQueryIndexes(builder));
   }
 
-  // [start:3.4.3]
   public static @Nullable CreatePrimaryQueryIndexOptions createOptions(com.couchbase.client.protocol.sdk.query.indexmanager.CreatePrimaryIndex request, ConcurrentHashMap<String, RequestSpan> spans) {
     if (request.hasOptions()) {
       var opts = request.getOptions();
@@ -456,7 +504,9 @@ public class QueryIndexManagerHelper {
       if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
       if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
       return out;
-    } else return null;
+    } else {
+      return null;
+    }
   }
 
   public static @Nullable CreateQueryIndexOptions createOptions(com.couchbase.client.protocol.sdk.query.indexmanager.CreateIndex request, ConcurrentHashMap<String, RequestSpan> spans) {
@@ -471,7 +521,9 @@ public class QueryIndexManagerHelper {
       if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
       if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
       return out;
-    } else return null;
+    } else {
+      return null;
+    }
   }
 
   public static @Nullable DropPrimaryQueryIndexOptions createOptions(com.couchbase.client.protocol.sdk.query.indexmanager.DropPrimaryIndex request, ConcurrentHashMap<String, RequestSpan> spans) {
@@ -484,7 +536,9 @@ public class QueryIndexManagerHelper {
       if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
       if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
       return out;
-    } else return null;
+    } else {
+      return null;
+    }
   }
 
   public static @Nullable DropQueryIndexOptions createOptions(com.couchbase.client.protocol.sdk.query.indexmanager.DropIndex request, ConcurrentHashMap<String, RequestSpan> spans) {
@@ -497,7 +551,9 @@ public class QueryIndexManagerHelper {
       if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
       if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
       return out;
-    } else return null;
+    } else {
+      return null;
+    }
   }
 
   public static @Nullable WatchQueryIndexesOptions createOptions(com.couchbase.client.protocol.sdk.query.indexmanager.WatchIndexes request) {
@@ -508,7 +564,9 @@ public class QueryIndexManagerHelper {
       if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
       if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
       return out;
-    } else return null;
+    } else {
+      return null;
+    }
   }
 
   public static @Nullable BuildQueryIndexOptions createOptions(com.couchbase.client.protocol.sdk.query.indexmanager.BuildDeferredIndexes request, ConcurrentHashMap<String, RequestSpan> spans) {
@@ -520,7 +578,9 @@ public class QueryIndexManagerHelper {
       if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
       if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
       return out;
-    } else return null;
+    } else {
+      return null;
+    }
   }
 
   public static @Nullable GetAllQueryIndexesOptions createOptions(com.couchbase.client.protocol.sdk.query.indexmanager.GetAllIndexes request, ConcurrentHashMap<String, RequestSpan> spans) {
@@ -532,7 +592,8 @@ public class QueryIndexManagerHelper {
       if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
       if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
       return out;
-    } else return null;
+    } else {
+      return null;
+    }
   }
-  // [end:3.4.3]
 }

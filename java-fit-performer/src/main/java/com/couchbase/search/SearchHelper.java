@@ -16,6 +16,8 @@
 
 package com.couchbase.search;
 
+// [skip:<3.4.5]
+
 import com.couchbase.JavaSdkCommandExecutor;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.java.Cluster;
@@ -188,24 +190,21 @@ public class SearchHelper {
                       default -> throw new UnsupportedOperationException();
                     });
                   }
-                }
-                else if (sort.hasScore()) {
+                } else if (sort.hasScore()) {
                   var ss = sort.getScore();
                   var s = SearchSort.byScore();
                   out = s;
                   if (ss.hasDesc()) {
                     s.desc(ss.getDesc());
                   }
-                }
-                else if (sort.hasId()) {
+                } else if (sort.hasId()) {
                   var ss = sort.getId();
                   var s = SearchSort.byId();
                   out = s;
                   if (ss.hasDesc()) {
                     s.desc(ss.getDesc());
                   }
-                }
-                else if (sort.hasGeoDistance()) {
+                } else if (sort.hasGeoDistance()) {
                   var ss = sort.getGeoDistance();
                   var s = SearchSort.byGeoDistance(ss.getLocation().getLon(), ss.getLocation().getLat(), ss.getField());
                   out = s;
@@ -213,7 +212,7 @@ public class SearchHelper {
                     s.desc(ss.getDesc());
                   }
                   if (ss.hasUnit()) {
-                    s.unit(switch(ss.getUnit()) {
+                    s.unit(switch (ss.getUnit()) {
                       case SEARCH_GEO_DISTANCE_UNITS_METERS -> SearchGeoDistanceUnits.Meters;
                       case SEARCH_GEO_DISTANCE_UNITS_MILES -> SearchGeoDistanceUnits.Miles;
                       case SEARCH_GEO_DISTANCE_UNITS_CENTIMETERS -> SearchGeoDistanceUnits.Centimeters;
@@ -226,11 +225,11 @@ public class SearchHelper {
                       default -> throw new UnsupportedOperationException();
                     });
                   }
-                }
-                else if (sort.hasRaw()) {
+                } else if (sort.hasRaw()) {
                   out = sort.getRaw();
+                } else {
+                  throw new UnsupportedOperationException();
                 }
-                else throw new UnsupportedOperationException();
 
                 return out;
               }).toList()
@@ -623,8 +622,8 @@ public class SearchHelper {
       } else {
         r = cluster.searchQuery(command.getIndexName(), query);
       }
-    }
-    else {
+    } else {
+
       if (options != null) {
         r = scope.searchQuery(command.getIndexName(), query, options);
       } else {
@@ -662,8 +661,7 @@ public class SearchHelper {
         } else {
           r = cluster.reactive().searchQuery(command.getIndexName(), query);
         }
-      }
-      else {
+      } else {
         if (options != null) {
           r = scope.reactive().searchQuery(command.getIndexName(), query, options);
         } else {
@@ -802,15 +800,7 @@ public class SearchHelper {
       throw new UnsupportedOperationException();
     }
 
-    // [start:3.4.4]
     return handleSearchIndexManagerBlockingShared(null, scope, spans, command, sim.getShared());
-    // [end:3.4.4]
-
-    // [start:<3.4.4]
-    /*
-    throw new UnsupportedOperationException();
-    // [end:<3.4.4]
-    */
   }
 
   /*
@@ -829,17 +819,26 @@ public class SearchHelper {
       var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
-      SearchIndex index;
+      SearchIndex index = null;
       if (scope == null) {
-        if (options == null) index = cluster.searchIndexes().getIndex(request.getIndexName());
-        else index = cluster.searchIndexes().getIndex(request.getIndexName(), options);
+        if (options == null) {
+          index = cluster.searchIndexes().getIndex(request.getIndexName());
+        } else {
+          index = cluster.searchIndexes().getIndex(request.getIndexName(), options);
+        }
       } else {
-        if (options == null) index = scope.searchIndexes().getIndex(request.getIndexName());
-        else index = scope.searchIndexes().getIndex(request.getIndexName(), options);
+        if (options == null) {
+          index = scope.searchIndexes().getIndex(request.getIndexName());
+        } else {
+          index = scope.searchIndexes().getIndex(request.getIndexName(), options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
-      if (op.getReturnResult()) populateResult(result, index);
-      else setSuccess(result);
+      if (op.getReturnResult()) {
+        populateResult(result, index);
+      } else {
+        setSuccess(result);
+      }
     } else if (command.hasGetAllIndexes()) {
       var request = command.getGetAllIndexes();
       var options = createOptions(request, spans);
@@ -847,15 +846,24 @@ public class SearchHelper {
       long start = System.nanoTime();
       List<SearchIndex> indexes;
       if (scope == null) {
-        if (options == null) indexes = cluster.searchIndexes().getAllIndexes();
-        else indexes = cluster.searchIndexes().getAllIndexes(options);
+        if (options == null) {
+          indexes = cluster.searchIndexes().getAllIndexes();
+        } else {
+          indexes = cluster.searchIndexes().getAllIndexes(options);
+        }
       } else {
-        if (options == null) indexes = scope.searchIndexes().getAllIndexes();
-        else indexes = scope.searchIndexes().getAllIndexes(options);
+        if (options == null) {
+          indexes = scope.searchIndexes().getAllIndexes();
+        } else {
+          indexes = scope.searchIndexes().getAllIndexes(options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
-      if (op.getReturnResult()) populateResult(result, indexes);
-      else setSuccess(result);
+      if (op.getReturnResult()) {
+        populateResult(result, indexes);
+      } else {
+        setSuccess(result);
+      }
     } else if (command.hasUpsertIndex()) {
       var request = command.getUpsertIndex();
       var options = createOptions(request, spans);
@@ -863,11 +871,17 @@ public class SearchHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       if (scope == null) {
-        if (options == null) cluster.searchIndexes().upsertIndex(converted);
-        else cluster.searchIndexes().upsertIndex(converted, options);
+        if (options == null) {
+          cluster.searchIndexes().upsertIndex(converted);
+        } else {
+          cluster.searchIndexes().upsertIndex(converted, options);
+        }
       } else {
-        if (options == null) scope.searchIndexes().upsertIndex(converted);
-        else scope.searchIndexes().upsertIndex(converted, options);
+        if (options == null) {
+          scope.searchIndexes().upsertIndex(converted);
+        } else {
+          scope.searchIndexes().upsertIndex(converted, options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
@@ -877,11 +891,17 @@ public class SearchHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       if (scope == null) {
-        if (options == null) cluster.searchIndexes().dropIndex(request.getIndexName());
-        else cluster.searchIndexes().dropIndex(request.getIndexName(), options);
+        if (options == null) {
+          cluster.searchIndexes().dropIndex(request.getIndexName());
+        } else {
+          cluster.searchIndexes().dropIndex(request.getIndexName(), options);
+        }
       } else {
-        if (options == null) scope.searchIndexes().dropIndex(request.getIndexName());
-        else scope.searchIndexes().dropIndex(request.getIndexName(), options);
+        if (options == null) {
+          scope.searchIndexes().dropIndex(request.getIndexName());
+        } else {
+          scope.searchIndexes().dropIndex(request.getIndexName(), options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
@@ -891,11 +911,17 @@ public class SearchHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       if (scope == null) {
-        if (options == null) cluster.searchIndexes().pauseIngest(request.getIndexName());
-        else cluster.searchIndexes().pauseIngest(request.getIndexName(), options);
+        if (options == null) {
+          cluster.searchIndexes().pauseIngest(request.getIndexName());
+        } else {
+          cluster.searchIndexes().pauseIngest(request.getIndexName(), options);
+        }
       } else {
-        if (options == null) scope.searchIndexes().pauseIngest(request.getIndexName());
-        else scope.searchIndexes().pauseIngest(request.getIndexName(), options);
+        if (options == null) {
+          scope.searchIndexes().pauseIngest(request.getIndexName());
+        } else {
+          scope.searchIndexes().pauseIngest(request.getIndexName(), options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
@@ -905,11 +931,17 @@ public class SearchHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       if (scope == null) {
-        if (options == null) cluster.searchIndexes().resumeIngest(request.getIndexName());
-        else cluster.searchIndexes().resumeIngest(request.getIndexName(), options);
+        if (options == null) {
+          cluster.searchIndexes().resumeIngest(request.getIndexName());
+        } else {
+          cluster.searchIndexes().resumeIngest(request.getIndexName(), options);
+        }
       } else {
-        if (options == null) scope.searchIndexes().resumeIngest(request.getIndexName());
-        else scope.searchIndexes().resumeIngest(request.getIndexName(), options);
+        if (options == null) {
+          scope.searchIndexes().resumeIngest(request.getIndexName());
+        } else {
+          scope.searchIndexes().resumeIngest(request.getIndexName(), options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
@@ -919,11 +951,17 @@ public class SearchHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       if (scope == null) {
-        if (options == null) cluster.searchIndexes().allowQuerying(request.getIndexName());
-        else cluster.searchIndexes().allowQuerying(request.getIndexName(), options);
+        if (options == null) {
+          cluster.searchIndexes().allowQuerying(request.getIndexName());
+        } else {
+          cluster.searchIndexes().allowQuerying(request.getIndexName(), options);
+        }
       } else {
-        if (options == null) scope.searchIndexes().allowQuerying(request.getIndexName());
-        else scope.searchIndexes().allowQuerying(request.getIndexName(), options);
+        if (options == null) {
+          scope.searchIndexes().allowQuerying(request.getIndexName());
+        } else {
+          scope.searchIndexes().allowQuerying(request.getIndexName(), options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
@@ -933,11 +971,17 @@ public class SearchHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       if (scope == null) {
-        if (options == null) cluster.searchIndexes().disallowQuerying(request.getIndexName());
-        else cluster.searchIndexes().disallowQuerying(request.getIndexName(), options);
+        if (options == null) {
+          cluster.searchIndexes().disallowQuerying(request.getIndexName());
+        } else {
+          cluster.searchIndexes().disallowQuerying(request.getIndexName(), options);
+        }
       } else {
-        if (options == null) scope.searchIndexes().disallowQuerying(request.getIndexName());
-        else scope.searchIndexes().disallowQuerying(request.getIndexName(), options);
+        if (options == null) {
+          scope.searchIndexes().disallowQuerying(request.getIndexName());
+        } else {
+          scope.searchIndexes().disallowQuerying(request.getIndexName(), options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
@@ -947,11 +991,17 @@ public class SearchHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       if (scope == null) {
-        if (options == null) cluster.searchIndexes().freezePlan(request.getIndexName());
-        else cluster.searchIndexes().freezePlan(request.getIndexName(), options);
+        if (options == null) {
+          cluster.searchIndexes().freezePlan(request.getIndexName());
+        } else {
+          cluster.searchIndexes().freezePlan(request.getIndexName(), options);
+        }
       } else {
-        if (options == null) scope.searchIndexes().freezePlan(request.getIndexName());
-        else scope.searchIndexes().freezePlan(request.getIndexName(), options);
+        if (options == null) {
+          scope.searchIndexes().freezePlan(request.getIndexName());
+        } else {
+          scope.searchIndexes().freezePlan(request.getIndexName(), options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
@@ -961,11 +1011,17 @@ public class SearchHelper {
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       if (scope == null) {
-        if (options == null) cluster.searchIndexes().unfreezePlan(request.getIndexName());
-        else cluster.searchIndexes().unfreezePlan(request.getIndexName(), options);
+        if (options == null) {
+          cluster.searchIndexes().unfreezePlan(request.getIndexName());
+        } else {
+          cluster.searchIndexes().unfreezePlan(request.getIndexName(), options);
+        }
       } else {
-        if (options == null) scope.searchIndexes().unfreezePlan(request.getIndexName());
-        else scope.searchIndexes().unfreezePlan(request.getIndexName(), options);
+        if (options == null) {
+          scope.searchIndexes().unfreezePlan(request.getIndexName());
+        } else {
+          scope.searchIndexes().unfreezePlan(request.getIndexName(), options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
       setSuccess(result);
@@ -974,36 +1030,54 @@ public class SearchHelper {
       var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
-      long count;
+      long count = 0;
       if (scope == null) {
-        if (options == null) count = cluster.searchIndexes().getIndexedDocumentsCount(request.getIndexName());
-        else count = cluster.searchIndexes().getIndexedDocumentsCount(request.getIndexName(), options);
+        if (options == null) {
+          count = cluster.searchIndexes().getIndexedDocumentsCount(request.getIndexName());
+        } else {
+          count = cluster.searchIndexes().getIndexedDocumentsCount(request.getIndexName(), options);
+        }
       } else {
-        if (options == null) count = scope.searchIndexes().getIndexedDocumentsCount(request.getIndexName());
-        else count = scope.searchIndexes().getIndexedDocumentsCount(request.getIndexName(), options);
+        if (options == null) {
+          count = scope.searchIndexes().getIndexedDocumentsCount(request.getIndexName());
+        } else {
+          count = scope.searchIndexes().getIndexedDocumentsCount(request.getIndexName(), options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
-      if (op.getReturnResult()) result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
-              .setSearchIndexManagerResult(com.couchbase.client.protocol.sdk.search.indexmanager.Result.newBuilder()
-                      .setIndexedDocumentCounts((int) count)));
-      else setSuccess(result);
+      if (op.getReturnResult()) {
+        result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
+                .setSearchIndexManagerResult(com.couchbase.client.protocol.sdk.search.indexmanager.Result.newBuilder()
+                        .setIndexedDocumentCounts((int) count)));
+      } else {
+        setSuccess(result);
+      }
     } else if (command.hasAnalyzeDocument()) {
       var request = command.getAnalyzeDocument();
       var options = createOptions(request, spans);
       var document = JsonObject.fromJson(request.getDocument().toString());
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
-      List<JsonObject> results;
+      List<JsonObject> results = null;
       if (scope == null) {
-        if (options == null) results = cluster.searchIndexes().analyzeDocument(request.getIndexName(), document);
-        else results = cluster.searchIndexes().analyzeDocument(request.getIndexName(), document, options);
+        if (options == null) {
+          results = cluster.searchIndexes().analyzeDocument(request.getIndexName(), document);
+        } else {
+          results = cluster.searchIndexes().analyzeDocument(request.getIndexName(), document, options);
+        }
       } else {
-        if (options == null) results = scope.searchIndexes().analyzeDocument(request.getIndexName(), document);
-        else results = scope.searchIndexes().analyzeDocument(request.getIndexName(), document, options);
+        if (options == null) {
+          results = scope.searchIndexes().analyzeDocument(request.getIndexName(), document);
+        } else {
+          results = scope.searchIndexes().analyzeDocument(request.getIndexName(), document, options);
+        }
       }
       result.setElapsedNanos(System.nanoTime() - start);
-      if (op.getReturnResult()) populateAnalyzeDocumentResult(result, results);
-      else setSuccess(result);
+      if (op.getReturnResult()) {
+        populateAnalyzeDocumentResult(result, results);
+      } else {
+        setSuccess(result);
+      }
     }
 
     return result.build();

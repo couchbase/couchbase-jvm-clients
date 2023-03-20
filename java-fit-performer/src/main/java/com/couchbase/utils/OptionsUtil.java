@@ -24,6 +24,7 @@ import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.LoggingMeterConfig;
 import com.couchbase.client.core.env.ThresholdLoggingTracerConfig;
 // [end:3.2.0]
+import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -99,7 +100,7 @@ public class OptionsUtil {
             // [end:3.3.0]
 
             if (cc.getUseTls()) {
-                clusterEnvironment.securityConfig(env -> env.enableTls(cc.getUseTls()));
+                clusterEnvironment.securityConfig(SecurityConfig.enableTls(cc.getUseTls()));
             }
 
             applyClusterConfig(clusterEnvironment, cc);

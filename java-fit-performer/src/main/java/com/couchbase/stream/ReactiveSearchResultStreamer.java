@@ -15,6 +15,8 @@
  */
 package com.couchbase.stream;
 
+// [skip:<3.4.5]
+
 import com.couchbase.client.java.search.SearchMetaData;
 import com.couchbase.client.java.search.result.ReactiveSearchResult;
 import com.couchbase.client.java.search.result.SearchFacetResult;

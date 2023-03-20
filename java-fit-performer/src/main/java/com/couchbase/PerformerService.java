@@ -122,10 +122,10 @@ public class PerformerService extends CorePerformer {
         return new JavaTransactionCommandExecutor(connection, counters, spans);
         // [end:3.3.0]
         // [start:<3.3.0]
-        /*
+/*
         return null;
         // [end:<3.3.0]
-         */
+*/
     }
 
     @Override

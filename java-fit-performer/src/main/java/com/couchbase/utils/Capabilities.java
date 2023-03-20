@@ -32,19 +32,21 @@ public class Capabilities {
         out.add(Caps.SDK_KV_RANGE_SCAN);
         // [end:3.4.1]
 
-        out.add(Caps.SDK_QUERY_INDEX_MANAGEMENT);
-
+        // We're not performance testing query index management, so not worth the complexity
+        // of keeping them compiling.
         // [start:3.4.3]
+        out.add(Caps.SDK_QUERY_INDEX_MANAGEMENT);
         out.add(Caps.SDK_COLLECTION_QUERY_INDEX_MANAGEMENT);
         // [end:3.4.3]
 
+        // Actually the SDK has had various forms of FTS since 3.0.0, but we're not performance testing it currently
+        // so it's not worth trying to keep the various flavours compiling.
+        // [start:3.4.5]
         out.add(Caps.SDK_SEARCH);
         out.add(Caps.SDK_SEARCH_INDEX_MANAGEMENT);
-
-        // [start:3.4.4]
         out.add(Caps.SDK_SCOPE_SEARCH);
         out.add(Caps.SDK_SCOPE_SEARCH_INDEX_MANAGEMENT);
-        // [end:3.4.4]
+        // [end:3.4.5]
 
         return out;
     }
