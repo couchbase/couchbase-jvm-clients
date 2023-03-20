@@ -271,7 +271,8 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
       false,
       opts.commonOptions().retryStrategy().orElse(core.context().environment().retryStrategy()),
       opts.commonOptions().clientContext(),
-      0L
+      0L,
+      null
     );
 
   }
