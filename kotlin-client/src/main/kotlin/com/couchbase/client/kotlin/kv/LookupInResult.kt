@@ -16,9 +16,8 @@
 
 package com.couchbase.client.kotlin.kv
 
-import com.couchbase.client.core.error.subdoc.DocumentTooDeepException
-import com.couchbase.client.core.error.subdoc.PathInvalidException
-import com.couchbase.client.core.error.subdoc.PathTooDeepException
+import com.couchbase.client.core.error.subdoc.PathMismatchException
+import com.couchbase.client.core.error.subdoc.PathNotFoundException
 import com.couchbase.client.core.msg.kv.SubDocumentField
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.TypeRef
@@ -54,14 +53,13 @@ public class LookupInResult(
         checkIndex(index, 0 until size)
         val field = fields[index]
 
-        field.error().ifPresent {
-            // In these cases, can't tell if the path exists
-            if (it is PathTooDeepException) throw it
-            if (it is DocumentTooDeepException) throw it
-            if (it is PathInvalidException) throw it
-        }
+        if (!field.error().isPresent) return true
 
-        return !field.error().isPresent
+        return when (val error = field.error().get()) {
+            is PathNotFoundException -> false
+            is PathMismatchException -> false
+            else -> throw error // because the request was somehow invalid, or we can't tell if the field exists
+        }
     }
 
     internal operator fun get(index: Int): SubDocumentField {

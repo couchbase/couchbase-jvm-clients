@@ -1,9 +1,14 @@
 package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.error.DocumentNotFoundException
+import com.couchbase.client.core.error.subdoc.DocumentNotJsonException
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException
+import com.couchbase.client.core.error.subdoc.PathInvalidException
+import com.couchbase.client.core.error.subdoc.PathMismatchException
+import com.couchbase.client.core.error.subdoc.PathTooDeepException
 import com.couchbase.client.core.msg.kv.CodecFlags
 import com.couchbase.client.kotlin.codec.Content
+import com.couchbase.client.kotlin.codec.RawBinaryTranscoder
 import com.couchbase.client.kotlin.internal.toStringUtf8
 import com.couchbase.client.kotlin.kv.LookupInSpec
 import com.couchbase.client.kotlin.kv.internal.LookupInMacro
@@ -27,6 +32,26 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
         val id = nextId()
         val emptySpec = object : LookupInSpec() {}
         assertThrows<IllegalArgumentException> { collection.lookupIn(id, emptySpec) }
+    }
+
+    @Test
+    fun `throws when document is not json`(): Unit = runBlocking {
+        val id = nextId()
+
+        collection.upsert(id, "not json".toByteArray(), transcoder = RawBinaryTranscoder)
+
+        val spec = object : LookupInSpec() {
+            val foo = get("foo")
+            val fooExists = exists("foo")
+            val count = count("foo")
+        }
+        // Not a top-level failure, because the spec might include xattrs which *can* be accessed.
+        collection.lookupIn(id, spec) {
+            assertThrows<DocumentNotJsonException> { spec.fooExists.value }
+            assertThrows<DocumentNotJsonException> { spec.foo.exists }
+            assertThrows<DocumentNotJsonException> { spec.count.value }
+            assertThrows<DocumentNotJsonException> { spec.foo.contentAsBytes }
+        }
     }
 
     @Test
@@ -138,6 +163,66 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
                 assertThrows<DocumentTooDeepException> { spec.fooExists.get(this) }
                 assertThrows<DocumentTooDeepException> { spec.foo.exists }
                 assertThrows<DocumentTooDeepException> { spec.foo.exists(this) }
+            }
+        }
+
+        @Test
+        @IgnoreWhen(clusterTypes = [ClusterType.CAVES])
+        fun `throws when path is too deep`(): Unit = runBlocking {
+            val id = nextId()
+            collection.upsert(id, mapOf("magicWord" to "xyzzy"))
+
+            val path = List(128) { _ -> "x" }.joinToString(".")
+
+            val spec = object : LookupInSpec() {
+                val fooExists = exists(path)
+                val foo = get(path)
+            }
+            collection.lookupIn(id, spec) {
+                assertThrows<PathTooDeepException> { spec.fooExists.value }
+                assertThrows<PathTooDeepException> { spec.fooExists.get(this) }
+                assertThrows<PathTooDeepException> { spec.foo.exists }
+                assertThrows<PathTooDeepException> { spec.foo.exists(this) }
+            }
+        }
+
+        @Test
+        fun `returns false for path mismatch`(): Unit = runBlocking {
+            val id = nextId()
+            collection.upsert(id, mapOf("magicWord" to "xyzzy"))
+
+            val spec = object : LookupInSpec() {
+                val nopeExists = exists("magicWord[0].foo")
+                val nope = get("magicWord[0].foo")
+            }
+            collection.lookupIn(id, spec) {
+                assertFalse(spec.nopeExists.value)
+                assertFalse(spec.nopeExists.get(this))
+                assertFalse(spec.nope.exists)
+                assertFalse(spec.nope.exists(this))
+
+                // sanity check, path is actually a mismatch
+                assertThrows<PathMismatchException> { spec.nope.contentAsBytes }
+            }
+        }
+
+        @Test
+        @IgnoreWhen(clusterTypes = [ClusterType.CAVES])
+        fun `throws when path is invalid`(): Unit = runBlocking {
+            val id = nextId()
+            collection.upsert(id, mapOf("magicWord" to "xyzzy"))
+
+            val path = "syntaxError["
+
+            val spec = object : LookupInSpec() {
+                val fooExists = exists(path)
+                val foo = get(path)
+            }
+            collection.lookupIn(id, spec) {
+                assertThrows<PathInvalidException> { spec.fooExists.value }
+                assertThrows<PathInvalidException> { spec.fooExists.get(this) }
+                assertThrows<PathInvalidException> { spec.foo.exists }
+                assertThrows<PathInvalidException> { spec.foo.exists(this) }
             }
         }
     }
