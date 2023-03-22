@@ -68,7 +68,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -115,24 +114,7 @@ public class ProtostellarEndpoint {
     ConnectivityState now = this.managedChannel.getState(false);
     notifyOnChannelStateChange(now);
 
-    CallCredentials creds = new CallCredentials() {
-      @Override
-      public void applyRequestMetadata(RequestInfo requestInfo, Executor executor, MetadataApplier applier) {
-        executor.execute(() -> {
-          try {
-            Metadata headers = new Metadata();
-            ctx.authenticator().authProtostellarRequest(headers);
-            applier.apply(headers);
-          } catch (Throwable e) {
-            applier.fail(Status.UNAUTHENTICATED.withCause(e));
-          }
-        });
-      }
-
-      @Override
-      public void thisUsesUnstableApi() {
-      }
-    };
+    CallCredentials creds = ctx.authenticator().protostellarCallCredentials();
 
     // JVMCBC-1187: Temporary code to provide some insight on GRPC internals, will likely be removed pre-GA.
     ClientStreamTracer.Factory factory = new ClientStreamTracer.Factory() {

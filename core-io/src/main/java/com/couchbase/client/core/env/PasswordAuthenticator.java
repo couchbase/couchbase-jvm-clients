@@ -16,7 +16,9 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.io.grpc.CallCredentials;
 import com.couchbase.client.core.deps.io.grpc.Metadata;
+import com.couchbase.client.core.deps.io.grpc.Status;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
@@ -29,6 +31,7 @@ import com.couchbase.client.core.service.ServiceType;
 import java.util.Base64;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.deps.io.grpc.Metadata.ASCII_STRING_MARSHALLER;
@@ -132,8 +135,25 @@ public class PasswordAuthenticator implements Authenticator {
   }
 
   @Override
-  public void authProtostellarRequest(Metadata metadata) {
-    metadata.put(Metadata.Key.of("Authorization", ASCII_STRING_MARSHALLER), encodeAuthHttpHeader());
+  public CallCredentials protostellarCallCredentials() {
+    return new CallCredentials() {
+      @Override
+      public void applyRequestMetadata(RequestInfo requestInfo, Executor executor, MetadataApplier applier) {
+        executor.execute(() -> {
+          try {
+            Metadata headers = new Metadata();
+            headers.put(Metadata.Key.of("Authorization", ASCII_STRING_MARSHALLER), encodeAuthHttpHeader());
+            applier.apply(headers);
+          } catch (Throwable e) {
+            applier.fail(Status.UNAUTHENTICATED.withCause(e));
+          }
+        });
+      }
+
+      @Override
+      public void thisUsesUnstableApi() {
+      }
+    };
   }
 
   /**

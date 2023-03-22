@@ -17,12 +17,13 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.grpc.Metadata;
+import com.couchbase.client.core.deps.io.grpc.CallCredentials;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.service.ServiceType;
+import reactor.util.annotation.Nullable;
 
 /**
  * The {@link Authenticator} encapsulates authentication strategies.
@@ -53,8 +54,9 @@ public interface Authenticator {
   @Stability.Internal
   default void authHttpRequest(final ServiceType serviceType, final HttpRequest request) { }
 
+  @Nullable
   @Stability.Internal
-  void authProtostellarRequest(final Metadata metadata);
+  CallCredentials protostellarCallCredentials();
 
   /**
    * The authenticator gets the chance to attach the client certificate to the ssl context if needed.
