@@ -184,7 +184,7 @@ public class RangeScanOrchestrator {
       partitionStreams.add(streamForPartition(i, createSupplier, options));
     }
 
-    Flux<CoreRangeScanItem> stream = Flux.merge(partitionStreams);
+    Flux<CoreRangeScanItem> stream = Flux.concat(partitionStreams);
 
     return stream
       .doOnNext(item -> itemsStreamed.incrementAndGet())
