@@ -30,7 +30,6 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.kv.CoreRangeScan;
 import com.couchbase.client.core.kv.CoreRangeScanId;
-import com.couchbase.client.core.kv.CoreRangeScanSort;
 import com.couchbase.client.core.kv.CoreSamplingScan;
 import com.couchbase.client.core.kv.CoreScanOptions;
 import com.couchbase.client.core.msg.ResponseStatus;

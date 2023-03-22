@@ -42,9 +42,6 @@ public interface CoreScanOptions {
   boolean idsOnly();
 
   @Nullable
-  CoreRangeScanSort sort();
-
-  @Nullable
   CoreMutationState consistentWith();
 
   int batchItemLimit();

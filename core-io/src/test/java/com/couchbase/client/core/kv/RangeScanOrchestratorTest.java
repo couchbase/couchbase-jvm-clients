@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.couchbase.client.core.Core;
+import org.junit.jupiter.api.Disabled;
 import reactor.core.publisher.Flux;
 
 import java.nio.charset.StandardCharsets;
@@ -91,48 +92,6 @@ class RangeScanOrchestratorTest {
 
     List<CoreRangeScanItem> result = orchestrator.runSamplingScan(new TestSamplingScan(10), new TestScanOptions());
     assertEquals(7, result.size());
-  }
-
-  /**
-   * Same test as {@link #streamsUnsortedRangeScan()} but asserts sorting of the results.
-   */
-  @Test
-  void streamsSortedRangeScan() {
-    Map<Short, List<CoreRangeScanItem>> data = new HashMap<>();
-    data.put((short) 0, randomItemsSorted(100));
-    data.put((short) 1, randomItemsSorted(30));
-    data.put((short) 2, randomItemsSorted(55));
-    orchestrator.prepare(data);
-
-    List<CoreRangeScanItem> result = orchestrator.runRangeScan(
-      new TestRangeScan(), new TestScanOptions(CoreRangeScanSort.ASCENDING)
-    );
-    assertEquals(185, result.size());
-
-    List<CoreRangeScanItem> sorted = new ArrayList<>(result);
-    sorted.sort(Comparator.comparing(CoreRangeScanItem::key));
-    assertEquals(sorted, result);
-  }
-
-  /**
-   * Same test as {@link #streamsUnsortedSamplingScan()} but asserts sorting of the results.
-   */
-  @Test
-  void streamsSortedSamplingScan() {
-    Map<Short, List<CoreRangeScanItem>> data = new HashMap<>();
-    data.put((short) 0, randomItemsSorted(100));
-    data.put((short) 1, randomItemsSorted(30));
-    data.put((short) 2, randomItemsSorted(55));
-    orchestrator.prepare(data);
-
-    List<CoreRangeScanItem> result = orchestrator.runSamplingScan(
-      new TestSamplingScan(200), new TestScanOptions(CoreRangeScanSort.ASCENDING)
-    );
-    assertEquals(185, result.size());
-
-    List<CoreRangeScanItem> sorted = new ArrayList<>(result);
-    sorted.sort(Comparator.comparing(CoreRangeScanItem::key));
-    assertEquals(sorted, result);
   }
 
   /**
@@ -237,11 +196,8 @@ class RangeScanOrchestratorTest {
 
   class TestScanOptions implements CoreScanOptions{
     CoreCommonOptions commons = CoreCommonOptions.DEFAULT;
-    CoreRangeScanSort sort;
+
     public TestScanOptions(){
-    }
-    public TestScanOptions(CoreRangeScanSort sort){
-      this.sort = sort;
     }
 
     @Override
@@ -252,11 +208,6 @@ class RangeScanOrchestratorTest {
     @Override
     public boolean idsOnly() {
       return false;
-    }
-
-    @Override
-    public CoreRangeScanSort sort() {
-      return sort;
     }
 
     @Override

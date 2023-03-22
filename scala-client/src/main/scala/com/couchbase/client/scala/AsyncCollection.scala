@@ -25,7 +25,6 @@ import com.couchbase.client.core.error.context.KeyValueErrorContext
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.kv.{
   CoreRangeScan,
-  CoreRangeScanSort,
   CoreSamplingScan,
   CoreScanOptions,
   CoreScanTerm,
@@ -618,11 +617,6 @@ class AsyncCollection(
       if (opts.timeout == Duration.MinusInf) environment.timeoutConfig.kvScanTimeout()
       else opts.timeout
 
-    val sortCore = opts.scanSort match {
-      case Some(ScanSort.Ascending) => CoreRangeScanSort.ASCENDING
-      case _                        => CoreRangeScanSort.NONE
-    }
-
     val consistencyTokens = new java.util.LinkedList[MutationToken]()
 
     opts.consistentWith match {
@@ -641,8 +635,6 @@ class AsyncCollection(
         )
 
       override def idsOnly(): Boolean = _idsOnly
-
-      override def sort(): CoreRangeScanSort = sortCore
 
       override def consistentWith(): CoreMutationState =
         new CoreMutationState(consistencyTokens)

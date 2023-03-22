@@ -64,7 +64,6 @@ import com.couchbase.client.kotlin.kv.LookupInSpec
 import com.couchbase.client.kotlin.kv.MutateInResult
 import com.couchbase.client.kotlin.kv.MutateInSpec
 import com.couchbase.client.kotlin.kv.MutationResult
-import com.couchbase.client.kotlin.kv.ScanSort
 import com.couchbase.client.kotlin.kv.ScanType
 import com.couchbase.client.kotlin.kv.StoreSemantics
 import com.couchbase.client.kotlin.manager.query.CollectionQueryIndexManager
@@ -199,9 +198,6 @@ public class Collection internal constructor(
      * @param type Specifies which documents to include in the scan results.
      * Defaults to every document in the collection.
      *
-     * @param sort By default, results are emitted in the order they arrive from each partition.
-     * If you want them sorted by document ID, pass [ScanSort.ASCENDING].
-     *
      * @param consistency By default, the scan runs immediately, without waiting for
      * previous KV mutations to be indexed. If the scan results must include
      * certain mutations, pass [KvScanConsistency.consistentWith].
@@ -218,12 +214,11 @@ public class Collection internal constructor(
     public fun scanDocuments(
         type: ScanType = ScanType.range(),
         common: CommonOptions = CommonOptions.Default,
-        sort: ScanSort = ScanSort.NONE,
         consistency: KvScanConsistency = KvScanConsistency.notBounded(),
         batchItemLimit: Int = DEFAULT_SCAN_BATCH_ITEM_LIMIT,
         batchSizeLimit: StorageSize = DEFAULT_SCAN_BATCH_SIZE_LIMIT,
     ): Flow<GetResult> {
-        return scan(type, common, sort, idsOnly = false, consistency, batchItemLimit, batchSizeLimit)
+        return scan(type, common, idsOnly = false, consistency, batchItemLimit, batchSizeLimit)
             .map {
                 GetResult(
                     id = it.keyBytes().toStringUtf8(),
@@ -242,12 +237,11 @@ public class Collection internal constructor(
     public fun scanIds(
         type: ScanType = ScanType.range(),
         common: CommonOptions = CommonOptions.Default,
-        sort: ScanSort = ScanSort.NONE,
         consistency: KvScanConsistency = KvScanConsistency.notBounded(),
         batchItemLimit: Int = DEFAULT_SCAN_BATCH_ITEM_LIMIT,
         batchSizeLimit: StorageSize = DEFAULT_SCAN_BATCH_SIZE_LIMIT,
     ): Flow<String> {
-        return scan(type, common, sort, idsOnly = true, consistency, batchItemLimit, batchSizeLimit)
+        return scan(type, common, idsOnly = true, consistency, batchItemLimit, batchSizeLimit)
             .map { it.keyBytes().toStringUtf8() }
             .asFlow()
     }
@@ -264,7 +258,6 @@ public class Collection internal constructor(
     internal fun scan(
         type: ScanType = ScanType.range(),
         common: CommonOptions = CommonOptions.Default,
-        sort: ScanSort = ScanSort.NONE,
         idsOnly: Boolean = false,
         consistency: KvScanConsistency = KvScanConsistency.notBounded(),
         batchItemLimit: Int = RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_ITEM_LIMIT,
@@ -277,7 +270,6 @@ public class Collection internal constructor(
         val options = object : CoreScanOptions {
             override fun commonOptions(): CoreCommonOptions = common.toCore()
             override fun idsOnly(): Boolean = idsOnly
-            override fun sort(): CoreRangeScanSort = sort.toCore()
             override fun consistentWith(): CoreMutationState = CoreMutationState(consistency.mutationState)
             override fun batchItemLimit(): Int = batchItemLimit
             override fun batchByteLimit(): Int = batchSizeLimit.inBytes.toSaturatedInt()

@@ -16,7 +16,6 @@
 
 package com.couchbase.client.kotlin.kv
 
-import com.couchbase.client.core.kv.CoreRangeScanSort
 import com.couchbase.client.core.kv.RangeScanOrchestrator
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.internal.hexContentToString
@@ -133,43 +132,6 @@ public class ScanTerm(
                 ", termBytes=${privateTerm.hexContentToString()}" +
                 ")"
     }
-}
-
-/**
- * Specifies the order of scan results.
- */
-@VolatileCouchbaseApi
-public enum class ScanSort {
-    /**
-     * Do not sort the results.
-     *
-     * Fast and efficient. Results are emitted in the order they arrive from each partition.
-     */
-    NONE,
-
-    /**
-     * Sort the results by document ID in lexicographic order.
-     *
-     * Reasonably efficient. Suitable for large range scans, since it *does not*
-     * require buffering the entire result set in memory.
-     *
-     * **CAVEAT**: When used with a [ScanType.sample] scan, the behavior is unspecified
-     * and may change in a future version. Likely outcomes include:
-     *
-     * - Skewing the results towards "low" document IDs.
-     * - Not actually sorting.
-     *
-     * If you require sorted results from a sample scan, please use [ScanSort.NONE],
-     * then collect the results into a list and sort the list.
-     */
-    ASCENDING,
-    ;
-
-    internal fun toCore(): CoreRangeScanSort =
-        when (this) {
-            NONE -> CoreRangeScanSort.NONE
-            ASCENDING -> CoreRangeScanSort.ASCENDING
-        }
 }
 
 /**

@@ -22,10 +22,7 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
-import com.couchbase.client.java.kv.PersistTo;
-import com.couchbase.client.java.kv.ReplicateTo;
 import com.couchbase.client.java.kv.ScanResult;
-import com.couchbase.client.java.kv.ScanSort;
 import com.couchbase.client.java.kv.ScanTerm;
 import com.couchbase.client.java.kv.ScanType;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -122,7 +119,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
     List<String> results = collection
       .scan(
         ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.inclusive("c-ba5ff9da-bb87-4dd0-be8e-6d24010062a1")),
-        scanOptions().sort(ScanSort.ASCENDING).timeout(TIMEOUT)
+        scanOptions().timeout(TIMEOUT)
       )
       .map(ScanResult::id)
       .collect(Collectors.toList());
@@ -189,8 +186,6 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
       () -> collection.scan(ScanType.samplingScan(1), scanOptions().batchByteLimit(-1)));
     assertThrows(InvalidArgumentException.class,
       () -> collection.scan(ScanType.samplingScan(1), scanOptions().batchItemLimit(-1)));
-    assertThrows(InvalidArgumentException.class,
-      () -> collection.scan(ScanType.samplingScan(1), scanOptions().sort(null)));
   }
 
   @Test

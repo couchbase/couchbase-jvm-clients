@@ -29,7 +29,6 @@ import com.couchbase.client.core.api.shared.CoreMutationState;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.kv.CoreRangeScanSort;
 import com.couchbase.client.core.kv.CoreScanOptions;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.CommonOptions;
@@ -46,7 +45,6 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
   }
 
   private boolean idsOnly = false;
-  private ScanSort sort = ScanSort.NONE;
 
   /**
    * The default batch item limit is 50.
@@ -77,17 +75,6 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
    */
   public ScanOptions idsOnly(final boolean idsOnly) {
     this.idsOnly = idsOnly;
-    return this;
-  }
-
-  /**
-   * Allows to configure sorting of the scan output.
-   *
-   * @param sort the sorting type to use.
-   * @return the {@link ScanOptions} to allow method chaining.
-   */
-  public ScanOptions sort(final ScanSort sort) {
-    this.sort = notNull(sort, "ScanSort");
     return this;
   }
 
@@ -184,11 +171,6 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
 
     public Transcoder transcoder() {
       return transcoder;
-    }
-
-    @Override
-    public CoreRangeScanSort sort() {
-      return sort.intoCore();
     }
 
     @Override
