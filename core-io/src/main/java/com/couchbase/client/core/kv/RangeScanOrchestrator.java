@@ -229,7 +229,7 @@ public class RangeScanOrchestrator {
             return true;
           }
         }
-        return Exceptions.propagate(rs.failure());
+        throw Exceptions.propagate(rs.failure());
       })));
   }
 
