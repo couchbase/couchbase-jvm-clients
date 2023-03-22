@@ -243,6 +243,9 @@ public class ConnectionStringUtil {
       if (!tls && connStr.scheme() == COUCHBASES) {
         throw new IllegalArgumentException(INCOMPATIBLE_CONNECTION_STRING_SCHEME);
       }
+      if (!tls && connStr.scheme() == ConnectionString.Scheme.PROTOSTELLAR) {
+        throw new IllegalArgumentException(INCOMPATIBLE_CONNECTION_STRING_SCHEME);
+      }
       if (!connStr.params().isEmpty()) {
         throw new IllegalArgumentException(INCOMPATIBLE_CONNECTION_STRING_PARAMS);
       }

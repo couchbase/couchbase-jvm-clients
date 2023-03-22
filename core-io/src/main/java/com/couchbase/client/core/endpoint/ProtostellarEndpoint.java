@@ -30,18 +30,21 @@ import com.couchbase.client.core.deps.io.grpc.ClientInterceptor;
 import com.couchbase.client.core.deps.io.grpc.ClientStreamTracer;
 import com.couchbase.client.core.deps.io.grpc.ConnectivityState;
 import com.couchbase.client.core.deps.io.grpc.EquivalentAddressGroup;
-import com.couchbase.client.core.deps.io.grpc.InsecureChannelCredentials;
 import com.couchbase.client.core.deps.io.grpc.ManagedChannel;
 import com.couchbase.client.core.deps.io.grpc.ManagedChannelBuilder;
 import com.couchbase.client.core.deps.io.grpc.Metadata;
 import com.couchbase.client.core.deps.io.grpc.MethodDescriptor;
 import com.couchbase.client.core.deps.io.grpc.Status;
+import com.couchbase.client.core.deps.io.grpc.netty.GrpcSslContexts;
 import com.couchbase.client.core.deps.io.grpc.netty.NettyChannelBuilder;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelOption;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContext;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.SecurityConfig;
+import com.couchbase.client.core.error.SecurityException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.protostellar.ProtostellarContext;
@@ -55,6 +58,7 @@ import com.couchbase.client.protostellar.kv.v1.KvServiceGrpc;
 import com.couchbase.client.protostellar.query.v1.QueryServiceGrpc;
 import com.couchbase.client.protostellar.search.v1.SearchServiceGrpc;
 
+import javax.net.ssl.SSLException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -105,7 +109,7 @@ public class ProtostellarEndpoint {
 
     this.ctx = requireNonNull(ctx);
     this.env = ctx.environment();
-    this.managedChannel = channel();
+    this.managedChannel = channel(ctx);
 
 
     // This getState is inherently non-atomic.  However, nothing should be able to use this channel or endpoint yet, so it should be guaranteed to be IDLE.
@@ -209,9 +213,30 @@ public class ProtostellarEndpoint {
     collectionAdminStub = CollectionAdminServiceGrpc.newFutureStub(managedChannel).withCallCredentials(creds);
   }
 
-  private ManagedChannel channel() {
-    // JVMCBC-1187: we're using unverified TLS for now - once STG has it we can use the same Capella cert bundling approach and use TLS properly.
-    ManagedChannelBuilder builder = NettyChannelBuilder.forAddress(remote.host(), remote.port(), InsecureChannelCredentials.create())
+  private ManagedChannel channel(ProtostellarContext ctx) {
+    SecurityConfig securityConfig = ctx.environment().securityConfig();
+
+    SslContext sslContext;
+
+    try {
+      if (securityConfig.trustManagerFactory() != null) {
+        sslContext = GrpcSslContexts.forClient()
+          .trustManager(securityConfig.trustManagerFactory())
+          .build();
+      } else if (!securityConfig.trustCertificates().isEmpty()) {
+        sslContext = GrpcSslContexts.forClient()
+          .trustManager(securityConfig.trustCertificates())
+          .build();
+      } else {
+        throw new UnsupportedOperationException();
+      }
+    } catch (SSLException e) {
+      throw new SecurityException(e);
+    }
+
+    ManagedChannelBuilder builder = NettyChannelBuilder.forAddress(remote.host(), remote.port())
+      .sslContext(sslContext)
+
       // 20MB is the (current) maximum document size supported by the server.  Specifying 21MB to give wiggle room for the rest of the GRPC message.
       .maxInboundMessageSize(21 * 1024 * 1024) // Max Couchbase document size (20 MiB) plus some slack
       .executor(env.executor())
