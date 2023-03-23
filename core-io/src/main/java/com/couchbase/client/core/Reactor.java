@@ -38,7 +38,13 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
+
+import static reactor.core.publisher.Sinks.EmitResult.FAIL_CANCELLED;
+import static reactor.core.publisher.Sinks.EmitResult.FAIL_TERMINATED;
+import static reactor.core.publisher.Sinks.EmitResult.OK;
+import static reactor.core.scheduler.Schedulers.boundedElastic;
 
 /**
  * This class provides utility methods when working with reactor.
@@ -251,4 +257,37 @@ public class Reactor {
     return Sinks.EmitFailureHandler.busyLooping(duration);
   }
 
+  /**
+   * Returns a new Flux that wraps the given Flux and receives events from it.
+   * If the returned Flux is cancelled, the cancellation is not propagated to the inner Flux.
+   * <p>
+   * Useful for cooperative cancellation schemes, where an external flag
+   * (typically an {@link AtomicBoolean}) is set whenever the
+   * inner Flux should stop emitting events. The external flag is typically
+   * set by a {@link Flux#doOnCancel} callback on the returned Flux.
+   * <p>
+   * This allows the inner Flux to do non-trivial cleanup work before it
+   * terminates.
+   */
+  public static <T> Flux<T> shieldFromCancellation(Flux<T> flux) {
+    return Flux.defer(() -> {
+      // Use unbounded buffer to ensure emission always succeeds.
+      // Emission must not fail, since there's no way to report / handle the errors.
+      Sinks.Many<T> sink = Sinks.many().unicast().onBackpressureBuffer();
+      flux
+        .subscribeOn(boundedElastic())
+        .subscribe(
+          next -> ignoreIfDone(sink.tryEmitNext(next)).orThrow(),
+          error -> ignoreIfDone(sink.tryEmitError(error)).orThrowWithCause(error),
+          () -> ignoreIfDone(sink.tryEmitComplete()).orThrow()
+        );
+      return sink.asFlux();
+    });
+  }
+
+  private static Sinks.EmitResult ignoreIfDone(Sinks.EmitResult result) {
+    return result == FAIL_TERMINATED || result == FAIL_CANCELLED
+      ? OK
+      : result;
+  }
 }

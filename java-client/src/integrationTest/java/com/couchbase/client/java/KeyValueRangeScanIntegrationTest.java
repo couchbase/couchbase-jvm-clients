@@ -18,7 +18,6 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
-import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
@@ -31,6 +30,7 @@ import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -42,7 +42,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.java.kv.ScanOptions.scanOptions;
-import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -82,10 +81,16 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
   }
 
   static void loadSampleData(final Collection collection) {
-    for (String id : DOC_IDS) {
-      JsonObject payload = JsonObject.create().put("random", UUID.randomUUID().toString());
-      collection.upsert(id, payload, upsertOptions().durability(DurabilityLevel.MAJORITY));
-    }
+    Flux.fromIterable(DOC_IDS)
+      .flatMap(id -> collection.reactive().upsert(id, "payload-" + id))
+      .blockLast();
+
+    final int MANY_DOCS = 100_000;
+    final int padLen = String.valueOf(MANY_DOCS).length() - 1;
+    Flux.range(0, MANY_DOCS)
+      .map(i -> String.format("%0" + padLen + "d", i)) // zero-pad (in case we want to sort in the future?)
+      .flatMap(id -> collection.reactive().upsert(id, "payload-" + id))
+      .blockLast();
   }
 
   @Test
@@ -168,6 +173,25 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
     assertEquals(limit, count.get());
   }
 
+  /**
+   * Need to repeatedly make requests that reach limit without ending the rangescan (ie. the last response from
+   * RangeScanContinue will be CONTINUE. That will leave the rangescan active on the server and if not cancelled,
+   * will (eventually) result in Server Busy.
+   */
+  @Test
+  void samplingWithLimitIdsOnlyNeedsCancels() {
+    for (int i = 0; i < 1000; i++) {
+      long limit = 3;
+      AtomicLong count = new AtomicLong(0);
+      collection.scan(ScanType.samplingScan(limit), scanOptions().idsOnly(true).batchItemLimit(2)).forEach(item -> {
+        count.incrementAndGet();
+        assertThrows(NoSuchElementException.class, item::contentAsBytes);
+        assertTrue(item.idOnly());
+      });
+      assertEquals(limit, count.get());
+    }
+  }
+
   @Test
   void checkSamplingLimitMustBeGreaterThan0() {
     assertThrows(InvalidArgumentException.class, () -> collection.scan(ScanType.samplingScan(-1)));
@@ -198,7 +222,6 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
         scanOptions().timeout(Duration.ofMillis(1))
       ).forEach(r -> {})
     );
-
     assertNotNull(ex.context().getRangeScanContext());
   }
 

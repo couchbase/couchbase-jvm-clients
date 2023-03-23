@@ -19,8 +19,6 @@ package com.couchbase.client.core.kv;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.api.shared.CoreMutationState;
-import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.config.BucketCapabilities;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
@@ -40,9 +38,9 @@ import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.MutationToken;
+import com.couchbase.client.core.msg.kv.RangeScanCancelRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanCreateRequest;
-import com.couchbase.client.core.retry.RetryStrategy;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -51,10 +49,8 @@ import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -197,16 +193,20 @@ public class RangeScanOrchestrator {
                                                      final BiFunction<Short, byte[], RangeScanCreateRequest> createSupplier,
                                                      final CoreScanOptions options) {
     final AtomicReference<byte[]> lastStreamed = new AtomicReference<>();
+    final AtomicBoolean needToCancel = new AtomicBoolean(false);
 
-    return Flux
-      .defer(() -> {
+    return Flux.defer(() -> {
         RangeScanCreateRequest request = createSupplier.apply(partition, lastStreamed.get());
         core.send(request);
-        return Reactor
+        Flux<CoreRangeScanItem> inner = Reactor
           .wrap(request, request.response(), true)
           .flatMapMany(res -> {
             if (res.status().success()) {
-              return continueScan( partition, res.rangeScanId(), options);
+              if (needToCancel.get()) {
+                return cancel(res.rangeScanId(), partition, options)
+                  .thenMany(Flux.empty());
+              }
+              return continueScan(partition, res.rangeScanId(), options, needToCancel);
             }
 
             final KeyValueErrorContext errorContext = KeyValueErrorContext.completedRequest(request, res);
@@ -221,7 +221,8 @@ public class RangeScanOrchestrator {
                 return Flux.error(new CouchbaseException(res.toString(), errorContext));
             }
           });
-        })
+        return Reactor.shieldFromCancellation(inner);
+      })
       .doOnNext(item -> lastStreamed.set(item.keyBytes()))
       .retryWhen(Retry.from(companion -> companion.map(rs -> {
         if (rs.failure() instanceof RangeScanPartitionFailedException) {
@@ -230,22 +231,33 @@ public class RangeScanOrchestrator {
           }
         }
         throw Exceptions.propagate(rs.failure());
-      })));
+      })))
+      .doOnCancel(() -> {
+        needToCancel.set(true);
+      });
   }
 
-  private Flux<CoreRangeScanItem> continueScan(final short partition, final CoreRangeScanId id,
-                                               final CoreScanOptions options) {
+  private Flux<CoreRangeScanItem> continueScan(final short partition,
+                                               final CoreRangeScanId id,
+                                               final CoreScanOptions options,
+                                               final AtomicBoolean needToCancel) {
+
     final AtomicBoolean complete = new AtomicBoolean(false);
 
     return Flux
       .defer(() -> {
           RangeScanContinueRequest request = new RangeScanContinueRequest(id,
               Sinks.many().unicast().onBackpressureBuffer(), null, options, partition, core.context(), collectionIdentifier);
-          core.send(request);
+        core.send(request);
         return Reactor
           .wrap(request, request.response(), true)
           .flatMapMany(res -> {
-            if (res.status() == ResponseStatus.SUCCESS || res.status() == ResponseStatus.COMPLETE) {
+            if (res.status() == ResponseStatus.SUCCESS || res.status() == ResponseStatus.COMPLETE || res.status() == ResponseStatus.CONTINUE) {
+              if (needToCancel.get()) {
+                complete.set(true);
+                return cancel(id, partition, options)
+                  .thenMany(Flux.empty());
+              }
               return res.items();
             }
 
@@ -283,6 +295,29 @@ public class RangeScanOrchestrator {
       })
       .repeat(() -> !complete.get())
       .filter(item -> !(item instanceof LastCoreRangeScanItem));
+  }
+
+  /**
+   * Cancel the rangescan request.
+   */
+  private Mono<Void> cancel(
+    CoreRangeScanId scanId,
+    short partition,
+    CoreScanOptions options
+  ) {
+    return Mono.defer(() -> {
+        RangeScanCancelRequest cancelRequest = new RangeScanCancelRequest(
+          scanId,
+          options,
+          partition,
+          core.context(),
+          collectionIdentifier
+        );
+        core.send(cancelRequest);
+        return Reactor.wrap(cancelRequest, cancelRequest.response(), true);
+      })
+      .onErrorResume(ignore -> Mono.empty()) // cancellation is best-effort
+      .then();
   }
 
 }
