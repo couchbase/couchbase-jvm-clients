@@ -506,14 +506,6 @@ object ScalaSdkCommandExecutor {
       if (opts.hasIdsOnly) out = out.idsOnly(opts.getIdsOnly)
       if (opts.hasConsistentWith)
         out = out.consistentWith(convertMutationState(opts.getConsistentWith))
-      if (opts.hasSort)
-        out = out.scanSort(
-          if (opts.getSort == com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_NONE)
-            ScanSort.None
-          else if (opts.getSort == com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_ASCENDING)
-            ScanSort.Ascending
-          else throw new UnsupportedOperationException("Unknown scan sort")
-        )
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
       if (opts.hasTimeoutMsecs)
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))

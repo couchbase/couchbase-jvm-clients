@@ -39,7 +39,6 @@ import com.couchbase.client.java.kv.ReplicateTo;
 // [start:3.4.1]
 import com.couchbase.client.java.kv.ScanOptions;
 import com.couchbase.client.java.kv.ScanResult;
-import com.couchbase.client.java.kv.ScanSort;
 import com.couchbase.client.java.kv.ScanTerm;
 // [end:3.4.1]
 import com.couchbase.client.java.kv.UpsertOptions;
@@ -467,13 +466,6 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             var out = ScanOptions.scanOptions();
             if (opts.hasIdsOnly()) out.idsOnly(opts.getIdsOnly());
             if (opts.hasConsistentWith()) out.consistentWith(convertMutationState(opts.getConsistentWith()));
-            if (opts.hasSort()) {
-                out.sort(switch (opts.getSort()) {
-                    case KV_RANGE_SCAN_SORT_NONE -> ScanSort.NONE;
-                    case KV_RANGE_SCAN_SORT_ASCENDING -> ScanSort.ASCENDING;
-                    default -> throw new UnsupportedOperationException();
-                });
-            }
             if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));

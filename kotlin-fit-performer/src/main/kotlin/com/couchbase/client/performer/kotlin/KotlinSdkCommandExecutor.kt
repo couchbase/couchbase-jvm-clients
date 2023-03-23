@@ -255,14 +255,6 @@ class KotlinSdkCommandExecutor(
 
                 fun ScanOptions.ktCommon() = createCommon(hasTimeoutMsecs(), timeoutMsecs)
 
-                fun ScanOptions.ktSort() =
-                    if (!hasSort()) ScanSort.NONE
-                    else when (sort) {
-                        KV_RANGE_SCAN_SORT_NONE -> ScanSort.NONE
-                        KV_RANGE_SCAN_SORT_ASCENDING -> ScanSort.ASCENDING
-                        else -> throw UnsupportedOperationException("Unsupported scan sort: $sort")
-                    }
-
                 fun ScanOptions.ktConsistency() =
                     if (!hasConsistentWith()) KvScanConsistency.notBounded()
                     else options.consistentWith.toKotlin()
