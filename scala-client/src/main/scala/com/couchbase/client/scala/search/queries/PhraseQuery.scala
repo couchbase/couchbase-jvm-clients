@@ -53,7 +53,9 @@ case class PhraseQuery(
   }
 
   override private[scala] def toCore =
-    new CorePhraseQuery(terms.asJava,
+    new CorePhraseQuery(
+      terms.asJava,
       field.orNull,
-      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull
+    )
 }

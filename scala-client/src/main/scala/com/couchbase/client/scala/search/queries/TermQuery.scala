@@ -76,9 +76,11 @@ case class TermQuery(
   }
 
   override private[scala] def toCore =
-    new CoreTermQuery(term,
+    new CoreTermQuery(
+      term,
       field.orNull,
       fuzziness.map(_.asInstanceOf[Integer]).orNull,
       prefixLength.map(_.asInstanceOf[Integer]).orNull,
-      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull
+    )
 }

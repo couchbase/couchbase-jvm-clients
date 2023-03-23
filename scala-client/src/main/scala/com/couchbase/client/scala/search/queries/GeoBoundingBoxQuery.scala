@@ -56,10 +56,12 @@ case class GeoBoundingBoxQuery(
   }
 
   override private[scala] def toCore =
-    new CoreGeoBoundingBoxQuery(topLeftLon,
+    new CoreGeoBoundingBoxQuery(
+      topLeftLon,
       topLeftLat,
       bottomRightLon,
       bottomRightLat,
       field.orNull,
-      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull
+    )
 }

@@ -56,5 +56,6 @@ case class GeoPolygonQuery(
     new CoreGeoPolygonQuery(
       coordinates.map(_.toCore).asJava,
       field.orNull,
-      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull
+    )
 }

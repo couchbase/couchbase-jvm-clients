@@ -19,11 +19,7 @@ package com.couchbase.client.scala
 import java.util.UUID
 
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diagnostics.{
-  ClusterState,
-  HealthPinger,
-  PingResult
-}
+import com.couchbase.client.core.diagnostics.{ClusterState, HealthPinger, PingResult}
 import com.couchbase.client.core.retry.{FailFastRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.diagnostics.{PingOptions, WaitUntilReadyOptions}

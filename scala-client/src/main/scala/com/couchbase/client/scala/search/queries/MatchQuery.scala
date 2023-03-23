@@ -95,14 +95,16 @@ case class MatchQuery(
   }
 
   override private[scala] def toCore =
-    new CoreMatchQuery(matchStr,
+    new CoreMatchQuery(
+      matchStr,
       field.orNull,
       analyzer.orNull,
       prefixLength.map(_.asInstanceOf[Integer]).orNull,
       fuzziness.map(_.asInstanceOf[Integer]).orNull,
       operator.map {
         case MatchOperator.And => CoreMatchOperator.AND
-        case MatchOperator.Or => CoreMatchOperator.OR
+        case MatchOperator.Or  => CoreMatchOperator.OR
       }.orNull,
-      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull
+    )
 }

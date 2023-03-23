@@ -53,9 +53,11 @@ case class GeoDistanceQuery(
   }
 
   override private[scala] def toCore =
-    new CoreGeoDistanceQuery(locationLon,
+    new CoreGeoDistanceQuery(
+      locationLon,
       locationLat,
       distance,
       field.orNull,
-      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull
+    )
 }

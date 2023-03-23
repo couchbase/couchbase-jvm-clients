@@ -67,7 +67,7 @@ case class SearchRowLocations private (private val internal: CoreSearchRowLocati
 case class SearchRowLocation private (private val internal: CoreSearchRowLocation) {
   def field: String = internal.field
 
-  def term: String  = internal.term
+  def term: String = internal.term
 
   /** The position of the term within the field, starting at 1. */
   def pos: Int = internal.pos.intValue

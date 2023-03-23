@@ -52,5 +52,6 @@ case class ConjunctionQuery(
   override private[scala] def toCore =
     new CoreConjunctionQuery(
       queries.map(_.toCore).asJava,
-      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull
+    )
 }

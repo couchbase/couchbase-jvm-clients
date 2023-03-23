@@ -48,7 +48,9 @@ case class WildcardQuery(
   }
 
   override private[scala] def toCore =
-    new CoreWildcardQuery(wildcard,
+    new CoreWildcardQuery(
+      wildcard,
       field.orNull,
-      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull
+    )
 }

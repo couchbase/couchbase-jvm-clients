@@ -23,7 +23,11 @@ import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString
 import com.couchbase.client.scala.AsyncCluster.extractClusterEnvironment
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
+import com.couchbase.client.scala.diagnostics.{
+  DiagnosticsOptions,
+  PingOptions,
+  WaitUntilReadyOptions
+}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.manager.analytics.ReactiveAnalyticsIndexManager
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager

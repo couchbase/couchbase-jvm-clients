@@ -87,10 +87,12 @@ case class TermRangeQuery(
   }
 
   override private[scala] def toCore =
-    new CoreTermRangeQuery(min.orNull,
+    new CoreTermRangeQuery(
+      min.orNull,
       max.orNull,
       inclusiveMin.map(_.asInstanceOf[java.lang.Boolean]).orNull,
       inclusiveMax.map(_.asInstanceOf[java.lang.Boolean]).orNull,
       field.orNull,
-      boost.map(_.asInstanceOf[java.lang.Double]).orNull)
+      boost.map(_.asInstanceOf[java.lang.Double]).orNull
+    )
 }
