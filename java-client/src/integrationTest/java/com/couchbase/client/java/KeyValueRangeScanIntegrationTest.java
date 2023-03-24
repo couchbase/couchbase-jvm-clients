@@ -94,6 +94,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
     collection.scan(ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.maximum()),
         scanOptions().timeout(TIMEOUT)).forEach(item -> {
       count.incrementAndGet();
+      item.contentAsObject();
       assertTrue(item.contentAsBytes().length > 0);
       assertFalse(item.idOnly());
     });

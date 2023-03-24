@@ -667,8 +667,9 @@ public class ReactiveCollection {
         () -> ReducedKeyValueErrorContext.create(null, asyncCollection.collectionIdentifier()));
     ScanOptions.Built opts = notNull(options, "ScanOptions",
         () -> ReducedKeyValueErrorContext.create(null, asyncCollection.collectionIdentifier())).build();
-    return kvOps.scanRequestReactive(scanType.build(),  opts).map(r -> new ScanResult(opts.idsOnly(), r.key(),
-        r.value(), r.flags(), r.cas(), Optional.ofNullable(r.expiry()), opts.transcoder()));
+    return kvOps.scanRequestReactive(scanType.build(), opts).map(
+        r -> new ScanResult(opts.idsOnly(), r.key(), r.value(), r.flags(), r.cas(), Optional.ofNullable(r.expiry()),
+            opts.transcoder() != null ? opts.transcoder() : environment().transcoder()));
   }
 
 }

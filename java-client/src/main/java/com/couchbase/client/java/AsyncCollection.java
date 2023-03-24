@@ -704,8 +704,9 @@ public class AsyncCollection {
     notNull(scanType, "ScanType", () -> ReducedKeyValueErrorContext.create(null, collectionIdentifier()));
     ScanOptions.Built opts = notNull(options, "ScanOptions",
         () -> ReducedKeyValueErrorContext.create(null, collectionIdentifier())).build();
-    return kvOps.scanRequestReactive(scanType.build(), opts).map(r -> new ScanResult(opts.idsOnly(), r.key(),
-        r.value(), r.flags(), r.cas(), Optional.ofNullable(r.expiry()), opts.transcoder())).collectList().toFuture();
+    return kvOps.scanRequestReactive(scanType.build(), opts).map(r -> 
+      new ScanResult(opts.idsOnly(), r.key(), r.value(), r.flags(), r.cas(), Optional.ofNullable(r.expiry()),
+        opts.transcoder() != null ? opts.transcoder() : environment().transcoder())).collectList().toFuture();
   }
 
   CollectionIdentifier collectionIdentifier() {
