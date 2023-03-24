@@ -101,6 +101,7 @@ public class Observe {
           .wrap(request, request.response(), true)
           .doOnNext(ignored -> request.context().logicallyComplete())
           .doOnError(err -> request.context().logicallyComplete(err))
+          .doOnCancel(() -> request.context().logicallyComplete())
           .onErrorResume(t-> Mono.empty());
       })
       .map(response -> ObserveItem.fromMutationToken(mutationToken, response));
