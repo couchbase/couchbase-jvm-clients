@@ -70,11 +70,6 @@ public class Scope {
   private final Map<String, Collection> collectionCache = new ConcurrentHashMap<>();
 
   /**
-   * Manages search indexes.
-   */
-  private final ScopeSearchIndexManager searchIndexManager;
-
-  /**
    * Creates a new {@link Scope}.
    *
    * @param asyncScope the underlying async scope.
@@ -82,7 +77,6 @@ public class Scope {
   Scope(final AsyncScope asyncScope) {
     this.asyncScope = asyncScope;
     this.reactiveScope = new ReactiveScope(asyncScope);
-    this.searchIndexManager = new ScopeSearchIndexManager(asyncScope.searchIndexes());
   }
 
   /**
@@ -238,6 +232,6 @@ public class Scope {
    */
   @Stability.Volatile
   public ScopeSearchIndexManager searchIndexes() {
-    return searchIndexManager;
+    return new ScopeSearchIndexManager(asyncScope.searchIndexes());
   }
 }

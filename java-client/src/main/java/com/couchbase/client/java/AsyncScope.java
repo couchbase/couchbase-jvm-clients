@@ -103,11 +103,6 @@ public class AsyncScope {
   private final Map<String, AsyncCollection> collectionCache = new ConcurrentHashMap<>();
 
   /**
-   * Manages search indexes.
-   */
-  private final AsyncScopeSearchIndexManager searchIndexManager;
-
-  /**
    * Strategy for performing search operations.
    */
   final CoreSearchOps searchOps;
@@ -120,7 +115,6 @@ public class AsyncScope {
     this.environment = requireNonNull(environment);
     this.queryOps = couchbaseOps.queryOps();
     queryContext = CoreQueryContext.of(bucketName, scopeName);
-    this.searchIndexManager = new AsyncScopeSearchIndexManager(couchbaseOps, this);
     this.searchOps = couchbaseOps.searchOps(new CoreBucketAndScope(bucketName, name()));
   }
 
@@ -318,6 +312,6 @@ public class AsyncScope {
    */
   @Stability.Volatile
   public AsyncScopeSearchIndexManager searchIndexes() {
-    return searchIndexManager;
+    return new AsyncScopeSearchIndexManager(couchbaseOps, this);
   }
 }

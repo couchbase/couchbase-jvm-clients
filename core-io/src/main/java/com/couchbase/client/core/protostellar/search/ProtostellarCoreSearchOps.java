@@ -61,10 +61,8 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
   public ProtostellarCoreSearchOps(CoreProtostellar core, @Nullable CoreBucketAndScope scope) {
     this.core = requireNonNull(core);
 
-    if (scope != null) {
-      // Requires ING-381
-      throw new UnsupportedOperationException("Scope level indexes are not yet supported in Protostellar");
-    }
+    // scope is silently ignored as it requires ING-381.
+    // throwing here would require creating a new CoreSearchOps object on every search operation.
   }
 
   @Override
