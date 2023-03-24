@@ -185,8 +185,8 @@ public class ProtostellarEndpoint {
     };
 
     // withWaitForReady exists but better to do retries ourselves for ErrorContext transparency.
-    kvStub = KvServiceGrpc.newFutureStub(managedChannel).withInterceptors(ci);
-    kvBlockingStub = KvServiceGrpc.newBlockingStub(managedChannel).withInterceptors(ci);
+    kvStub = KvServiceGrpc.newFutureStub(managedChannel).withInterceptors(ci).withCallCredentials(creds);
+    kvBlockingStub = KvServiceGrpc.newBlockingStub(managedChannel).withInterceptors(ci).withCallCredentials(creds);
     analyticsStub = AnalyticsServiceGrpc.newStub(managedChannel).withCallCredentials(creds);
     queryStub = QueryServiceGrpc.newStub(managedChannel).withCallCredentials(creds);
     searchStub = SearchServiceGrpc.newStub(managedChannel).withCallCredentials(creds);
