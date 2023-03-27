@@ -59,6 +59,7 @@ import com.couchbase.client.core.config.DefaultConfigurationProvider;
 import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
+import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
 import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
 import com.couchbase.client.core.env.Authenticator;
@@ -66,7 +67,6 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.ConfigException;
-import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
@@ -88,7 +88,6 @@ import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvBinaryOps;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
 import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
 import com.couchbase.client.core.protostellar.query.ProtostellarCoreQueryOps;
-import com.couchbase.client.core.protostellar.search.ProtostellarCoreSearchOps;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
@@ -417,6 +416,11 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   @Stability.Internal
   public Stream<EndpointDiagnostics> diagnostics() {
     return nodes.stream().flatMap(Node::diagnostics);
+  }
+
+  @Stability.Internal
+  public Stream<InternalEndpointDiagnostics> internalDiagnostics() {
+    return nodes.stream().flatMap(Node::internalDiagnostics);
   }
 
   /**

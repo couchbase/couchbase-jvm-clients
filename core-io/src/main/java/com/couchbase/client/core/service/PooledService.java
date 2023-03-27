@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.events.service.ServiceConnectInitiatedEvent
 import com.couchbase.client.core.cnc.events.service.ServiceDisconnectInitiatedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceStateChangedEvent;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
+import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.EndpointState;
@@ -41,7 +42,6 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -296,7 +296,7 @@ abstract class PooledService implements Service {
   }
 
   private RetryReason chooseRetryReason() {
-    return AuthErrorDecider.isAuthError(context().core().diagnostics().collect(Collectors.toList()))
+    return AuthErrorDecider.isAuthError(context().core().internalDiagnostics())
       ? RetryReason.AUTHENTICATION_ERROR : RetryReason.ENDPOINT_NOT_AVAILABLE;
   }
 
@@ -408,4 +408,10 @@ abstract class PooledService implements Service {
       .map(Endpoint::diagnostics);
   }
 
+  @Override
+  public Stream<InternalEndpointDiagnostics> internalDiagnostics() {
+    return Stream
+      .concat(endpoints.stream(), reservedEndpoints.stream())
+      .map(Endpoint::internalDiagnostics);
+  }
 }

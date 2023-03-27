@@ -440,9 +440,6 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
 
     Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
 
-    // We set AuthenticationStatus.SUCCEEDED here in addition to BaseEndpoint reaching EndpointState.CONNECTED, because a KV connection that cannot select a bucket (because that bucket does not exist
-    // or because the user does not have the correct RBAC permissions, for example) will not reach that point.  However, such a connection _has_ been successfully authenticated - it just may not be
-    // authorized to access that bucket.
     endpointContext.authenticationStatus(AuthenticationStatus.SUCCEEDED);
 
     endpointContext.environment().eventBus().publish(

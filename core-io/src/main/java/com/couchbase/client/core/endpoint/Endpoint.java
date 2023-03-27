@@ -16,7 +16,9 @@
 
 package com.couchbase.client.core.endpoint;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
+import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.util.Stateful;
@@ -92,6 +94,9 @@ public interface Endpoint extends Stateful<EndpointState> {
    * Returns diagnostics information for this endpoint.
    */
   EndpointDiagnostics diagnostics();
+
+  @Stability.Internal
+  InternalEndpointDiagnostics internalDiagnostics();
 
   /**
    * On this endpoint {@link #disconnect()} has been called on.

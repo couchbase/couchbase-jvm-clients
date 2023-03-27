@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
@@ -85,7 +84,7 @@ public class RoundRobinLocator implements Locator {
       boolean bucketLoadInProgress =ctx.core().configurationProvider().bucketConfigLoadInProgress();
       boolean loadInProgress = globalLoadInProgress || bucketLoadInProgress;
 
-      boolean isAuthError = AuthErrorDecider.isAuthError(ctx.core().diagnostics().collect(Collectors.toList()));
+      boolean isAuthError = AuthErrorDecider.isAuthError(ctx.core().internalDiagnostics());
 
       RetryReason retryReason = isAuthError ? RetryReason.AUTHENTICATION_ERROR
         : bucketLoadInProgress ? RetryReason.BUCKET_OPEN_IN_PROGRESS : RetryReason.GLOBAL_CONFIG_LOAD_IN_PROGRESS;

@@ -83,11 +83,6 @@ public class EndpointDiagnostics {
      */
     private final Optional<Throwable> lastConnectAttemptFailure;
 
-    /**
-     * If present, the last authentication status of this endpoint.
-     */
-    private final AuthenticationStatus authenticationStatus;
-
     @Stability.Internal
     public EndpointDiagnostics(final ServiceType type,
                                final EndpointState state,
@@ -97,8 +92,7 @@ public class EndpointDiagnostics {
                                final Optional<String> namespace,
                                final Optional<Long> lastActivityUs,
                                final Optional<String> id,
-                               final Optional<Throwable> lastConnectAttemptFailure,
-                               final AuthenticationStatus authenticationStatus) {
+                               final Optional<Throwable> lastConnectAttemptFailure) {
         this.type = type;
         this.state = state;
         this.circuitBreakerState = requireNonNull(circuitBreakerState);
@@ -108,7 +102,6 @@ public class EndpointDiagnostics {
         this.lastActivityUs = lastActivityUs;
         this.namespace = namespace;
         this.lastConnectAttemptFailure = lastConnectAttemptFailure;
-        this.authenticationStatus = requireNonNull(authenticationStatus);
     }
 
     /**
@@ -178,14 +171,6 @@ public class EndpointDiagnostics {
         return lastConnectAttemptFailure;
     }
 
-    /**
-     * If present, the last authentication status of this endpoint.
-     */
-    @Stability.Volatile
-    public AuthenticationStatus authenticationStatus() {
-      return authenticationStatus;
-    }
-
     Map<String, Object> toMap() {
         Map<String, Object> map = new HashMap<>();
         if (remote != null) {
@@ -199,7 +184,6 @@ public class EndpointDiagnostics {
         lastActivityUs.ifPresent(a -> map.put("last_activity_us", a));
         id.ifPresent(id -> map.put("id", id));
         namespace.ifPresent(n -> map.put("namespace", n));
-        map.put("authStatus", authenticationStatus);
         lastConnectAttemptFailure.ifPresent(e -> map.put("lastConnectAttemptFailure", e.getMessage()));
         return map;
     }
@@ -209,7 +193,6 @@ public class EndpointDiagnostics {
         return "EndpointDiagnostics{" +
           "type=" + type +
           ", state=" + state +
-          ", authStatus=" + authenticationStatus +
           ", namespace=" + namespace +
           ", circuitBreakerState=" + circuitBreakerState +
           ", local='" + local + '\'' +
@@ -233,12 +216,11 @@ public class EndpointDiagnostics {
           Objects.equals(lastActivityUs, that.lastActivityUs) &&
           Objects.equals(id, that.id) &&
           Objects.equals(namespace, that.namespace) &&
-          Objects.equals(lastConnectAttemptFailure, that.lastConnectAttemptFailure) &&
-          Objects.equals(authenticationStatus, that.authenticationStatus);
+          Objects.equals(lastConnectAttemptFailure, that.lastConnectAttemptFailure);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, state, circuitBreakerState, local, remote, lastActivityUs, id, namespace, lastConnectAttemptFailure, authenticationStatus);
+        return Objects.hash(type, state, circuitBreakerState, local, remote, lastActivityUs, id, namespace, lastConnectAttemptFailure);
     }
 }

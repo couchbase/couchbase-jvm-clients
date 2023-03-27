@@ -37,6 +37,7 @@ import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.transactions.config.TransactionsCleanupConfig;
 import com.couchbase.client.java.transactions.config.TransactionsConfig;
 import com.couchbase.client.java.util.JavaIntegrationTest;
+import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -68,7 +69,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * - various operations (KV, waitUntilReady, query, etc.)
  * - AuthenticationStatus in EndpointDiagnostic is correct
  */
-@IgnoreWhen(clusterTypes = {com.couchbase.client.test.ClusterType.MOCKED})
+@IgnoreWhen(clusterTypes = {com.couchbase.client.test.ClusterType.MOCKED}, missesCapabilities = {Capabilities.COLLECTIONS})
 class FastFailAuthErrorTest extends JavaIntegrationTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(FastFailAuthErrorTest.class);
 
@@ -350,8 +351,6 @@ class FastFailAuthErrorTest extends JavaIntegrationTest {
     return iterateWithOp(ClusterType.AVAILABLE_BAD_CREDENTIALS, null, p -> {
       Bucket bucket = p.cluster.cluster.bucket(config().bucketname());
       assertThrows(AuthenticationFailureException.class, () -> p.operation.execute(bucket));
-      // Only check GCCCP AuthStatus here - this can fail so fast that the bucket KV endpoint hasn't left AuthStatus.UNKNOWN
-      assertAuthenticationStatus(p.cluster.cluster, AuthenticationStatus.FAILED, true);
     });
   }
 
@@ -366,8 +365,6 @@ class FastFailAuthErrorTest extends JavaIntegrationTest {
       FastFailOnNthAuthErrorRetryStrategy retryStrategy = new FastFailOnNthAuthErrorRetryStrategy(authErrorsRequired);
       assertThrows(AuthenticationFailureException.class, () -> p.operation.execute(bucket, retryStrategy));
       assertEquals(authErrorsRequired, retryStrategy.authErrors());
-      // Only check GCCCP AuthStatus here - this can fail so fast that the bucket KV endpoint hasn't left AuthStatus.UNKNOWN
-      assertAuthenticationStatus(p.cluster.cluster, AuthenticationStatus.FAILED, true);
     });
   }
 
@@ -379,8 +376,6 @@ class FastFailAuthErrorTest extends JavaIntegrationTest {
     return iterateWithOp(ClusterType.AVAILABLE_USER_DOES_NOT_EXIST, null, p -> {
       Bucket bucket = p.cluster.cluster.bucket(config().bucketname());
       assertThrows(AuthenticationFailureException.class, () -> p.operation.execute(bucket));
-      // Only check GCCCP AuthStatus here - this can fail so fast that the bucket KV endpoint hasn't left AuthStatus.UNKNOWN
-      assertAuthenticationStatus(p.cluster.cluster, AuthenticationStatus.FAILED, true);
     });
   }
 
@@ -392,7 +387,6 @@ class FastFailAuthErrorTest extends JavaIntegrationTest {
     return iterateWithOp(ClusterType.UNAVAILABLE, null, p -> {
       Bucket bucket = p.cluster.cluster.bucket(config().bucketname());
       assertThrows(TimeoutException.class, () -> p.operation.execute(bucket));
-      assertAuthenticationStatus(p.cluster.cluster, AuthenticationStatus.UNKNOWN);
     });
   }
 
@@ -404,7 +398,6 @@ class FastFailAuthErrorTest extends JavaIntegrationTest {
     return iterateWithOp(ClusterType.AVAILABLE_GOOD_CREDENTIALS, OpType.REQUIRES_BUCKET_CONNECTION, p -> {
       Bucket bucket = p.cluster.cluster.bucket("does_not_exist");
       assertThrows(TimeoutException.class, () -> p.operation.execute(bucket));
-      assertAuthenticationStatus(p.cluster.cluster, AuthenticationStatus.SUCCEEDED);
     });
   }
 
@@ -416,7 +409,6 @@ class FastFailAuthErrorTest extends JavaIntegrationTest {
     return iterateWithOp(ClusterType.AVAILABLE_GOOD_CREDENTIALS, null, p -> {
       Bucket bucket = p.cluster.cluster.bucket(config().bucketname());
       p.operation.execute(bucket);
-      assertAuthenticationStatus(p.cluster.cluster, AuthenticationStatus.SUCCEEDED);
     });
   }
 
@@ -428,24 +420,6 @@ class FastFailAuthErrorTest extends JavaIntegrationTest {
     return iterateWithOp(ClusterType.AVAILABLE_GOOD_CREDENTIALS_BAD_RBAC, null, p -> {
       Bucket bucket = p.cluster.cluster.bucket(config().bucketname());
       assertThrows(TimeoutException.class, () -> p.operation.execute(bucket));
-      assertAuthenticationStatus(p.cluster.cluster, AuthenticationStatus.SUCCEEDED);
     });
-  }
-
-
-  private static void assertAuthenticationStatus(Cluster cluster, AuthenticationStatus status) {
-    assertAuthenticationStatus(cluster, status, false);
-  }
-
-  private static void assertAuthenticationStatus(Cluster cluster, AuthenticationStatus status, boolean onlyCheckGCCCP) {
-    List<EndpointDiagnostics> all = cluster.diagnostics().endpoints().values().stream().flatMap(java.util.Collection::stream)
-      .collect(Collectors.toList());
-
-    all.forEach(e -> LOGGER.info(e.toString()));
-
-    all.stream().filter(e -> onlyCheckGCCCP ? (e.type() == ServiceType.KV && !e.namespace().isPresent()) : true)
-      .forEach(e -> {
-        assertEquals(status, e.authenticationStatus());
-      });
   }
 }

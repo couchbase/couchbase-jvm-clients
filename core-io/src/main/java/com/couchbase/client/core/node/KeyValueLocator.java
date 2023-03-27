@@ -40,7 +40,6 @@ import com.couchbase.client.core.retry.RetryReason;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.zip.CRC32;
 
 import static java.util.Objects.requireNonNull;
@@ -67,7 +66,7 @@ public class KeyValueLocator implements Locator {
       BucketConfig bucketConfig = config.bucketConfig(bucket);
 
       if (bucketConfig == null) {
-        boolean isAuthError = AuthErrorDecider.isAuthError(ctx.core().diagnostics().collect(Collectors.toList()));
+        boolean isAuthError = AuthErrorDecider.isAuthError(ctx.core().internalDiagnostics());
 
         RetryReason retryReason = isAuthError ? RetryReason.AUTHENTICATION_ERROR
 
@@ -167,7 +166,8 @@ public class KeyValueLocator implements Locator {
     }
 
     if (ctx.core().configurationProvider().bucketConfigLoadInProgress()) {
-      RetryOrchestrator.maybeRetry(ctx, request, AuthErrorDecider.isAuthError(ctx.core().diagnostics()) ? RetryReason.AUTHENTICATION_ERROR : RetryReason.BUCKET_OPEN_IN_PROGRESS);
+      RetryOrchestrator.maybeRetry(ctx, request, AuthErrorDecider.isAuthError(ctx.core().internalDiagnostics())
+        ? RetryReason.AUTHENTICATION_ERROR : RetryReason.BUCKET_OPEN_IN_PROGRESS);
     } else {
       throw new IllegalStateException("Node not found for request " + request);
     }

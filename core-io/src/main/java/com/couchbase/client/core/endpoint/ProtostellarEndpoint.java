@@ -95,7 +95,6 @@ public class ProtostellarEndpoint {
   private final HostAndPort remote;
   private final CoreEnvironment env;
   private final ProtostellarContext ctx;
-  private volatile AuthenticationStatus authenticationStatus = AuthenticationStatus.UNKNOWN;
 
   public ProtostellarEndpoint(ProtostellarContext ctx, HostAndPort remote) {
     // JVMCBC-1187: This is a temporary solution to get performance testing working, which will be removed pre-GA.
@@ -286,14 +285,6 @@ public class ProtostellarEndpoint {
   private void notifyOnChannelStateChange(ConnectivityState current) {
     this.managedChannel.notifyWhenStateChanged(current, () -> {
       ConnectivityState now = this.managedChannel.getState(false);
-
-      if (now == ConnectivityState.READY) {
-        authenticationStatus = AuthenticationStatus.SUCCEEDED;
-      } else {
-        // Try and improve on this in JVMCBC-1187
-        authenticationStatus = AuthenticationStatus.UNKNOWN;
-      }
-
       Context ec = new ProtostellarEndpointContext(ctx, remote);
       env.eventBus().publish(new EndpointStateChangedEvent(ec, convert(current), convert(now)));
 
@@ -344,8 +335,7 @@ public class ProtostellarEndpoint {
       Optional.empty(),
       Optional.empty(),
       Optional.empty(),
-      Optional.empty(),
-      authenticationStatus
+      Optional.empty()
       );
   }
 

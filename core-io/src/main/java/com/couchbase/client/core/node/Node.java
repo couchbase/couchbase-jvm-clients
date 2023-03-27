@@ -17,6 +17,7 @@
 package com.couchbase.client.core.node;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.node.NodeConnectedEvent;
 import com.couchbase.client.core.cnc.events.node.NodeCreatedEvent;
@@ -28,6 +29,7 @@ import com.couchbase.client.core.cnc.events.service.ServiceAddedEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemoveIgnoredEvent;
 import com.couchbase.client.core.cnc.events.service.ServiceRemovedEvent;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
+import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -478,6 +480,14 @@ public class Node implements Stateful<NodeState> {
             .stream()
             .flatMap(services -> services.values().stream())
             .flatMap(service -> service.diagnostics());
+  }
+
+  @Stability.Internal
+  public Stream<InternalEndpointDiagnostics> internalDiagnostics() {
+    return services.values()
+      .stream()
+      .flatMap(services -> services.values().stream())
+      .flatMap(service -> service.internalDiagnostics());
   }
 
   @Override

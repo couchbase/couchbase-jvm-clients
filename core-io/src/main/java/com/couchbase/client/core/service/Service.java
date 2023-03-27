@@ -16,7 +16,9 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
+import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.util.Stateful;
@@ -76,4 +78,7 @@ public interface Service extends Stateful<ServiceState> {
    * Returns diagnostics information for this service.
    */
   Stream<EndpointDiagnostics> diagnostics();
+
+  @Stability.Internal
+  Stream<InternalEndpointDiagnostics> internalDiagnostics();
 }

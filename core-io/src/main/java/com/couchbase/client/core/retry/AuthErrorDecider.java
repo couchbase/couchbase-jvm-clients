@@ -18,7 +18,7 @@ package com.couchbase.client.core.retry;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
-import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
+import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.util.List;
@@ -36,18 +36,19 @@ public class AuthErrorDecider {
    * <p>
    * AuthenticationStatus.FAILED on a GCCCP endpoint should mean exactly that.
    */
-  public static boolean isAuthError(List<EndpointDiagnostics> endpointDiagnostics) {
+  public static boolean isAuthError(List<InternalEndpointDiagnostics> endpointDiagnostics) {
     // We decide AUTHENTICATION_ERROR if _any_ node's GCCCP stream is auth-erroring.  Because a) it's a fairly safe assumption that if one stream is auth-erroring the rest will be, and b) it allows the user
     // to override our decision in the RetryStrategy by redoing this logic and requiring a different heuristic (such as all or a majority of nodes to be auth-erroring).
     return endpointDiagnostics.stream().anyMatch(ed ->
 
       // Look for the GCCCP streams
-      ed.type() == ServiceType.KV
-        && !ed.namespace().isPresent()
-        && ed.authenticationStatus() == AuthenticationStatus.FAILED);
+      ed.internal.type() == ServiceType.KV
+        && !ed.internal.namespace().isPresent()
+
+        && ed.authenticationStatus == AuthenticationStatus.FAILED);
   }
 
-  public static boolean isAuthError(Stream<EndpointDiagnostics> endpointDiagnostics) {
+  public static boolean isAuthError(Stream<InternalEndpointDiagnostics> endpointDiagnostics) {
     return isAuthError(endpointDiagnostics.collect(Collectors.toList()));
   }
 }
