@@ -579,12 +579,12 @@ public class CoreProtostellarKeyValueRequests {
       throw new IllegalArgumentException("createAsDeleted is not supported in mutateIn in Protostellar");
     }
 
-    if (!expiry.isNone()) {
-      throw new IllegalArgumentException("Setting expiry is not supported in mutateIn in Protostellar");
-    }
-
-    if (preserveExpiry) {
-      throw new IllegalArgumentException("preserveExpiry is not supported in mutateIn in Protostellar");
+    if (!preserveExpiry) {
+      expiry.when(
+        absolute -> request.setExpiryTime(toExpiryTime(absolute)),
+        relative -> request.setExpirySecs(toExpirySeconds(relative)),
+        () -> request.setExpiryTime(NO_EXPIRY)
+      );
     }
 
     Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);

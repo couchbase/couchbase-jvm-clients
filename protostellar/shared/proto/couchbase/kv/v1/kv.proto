@@ -396,6 +396,11 @@ message MutateInRequest {
 
   message Flags { optional bool access_deleted = 1; }
   optional Flags flags = 10;
+
+  oneof expiry {
+    google.protobuf.Timestamp expiry_time = 11;
+    uint32 expiry_secs = 12;
+  }
 }
 
 message MutateInResponse {

@@ -627,7 +627,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY, clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true) // No Protostellar support currently
+  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY, clusterTypes = ClusterType.CAVES)
   void subdocCanPreserveExpiry() {
     String id = UUID.randomUUID().toString();
 
