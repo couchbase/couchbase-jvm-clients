@@ -61,7 +61,6 @@ import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateTou
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateUnlockParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateUpsertParams;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.convert;
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.convertFromFlags;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.toExpirySeconds;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.toExpiryTime;
@@ -197,7 +196,7 @@ public class CoreProtostellarKeyValueRequests {
       .setCollectionName(keyspace.collection())
       .setKey(key)
       .setContent(ByteString.copyFrom(encoded.getT1().encoded()))
-      .setContentType(convertFromFlags(encoded.getT1().flags()));
+      .setContentFlags(encoded.getT1().flags());
 
     expiry.when(
       absolute -> request.setExpiryTime(toExpiryTime(absolute)),
@@ -247,7 +246,7 @@ public class CoreProtostellarKeyValueRequests {
       .setKey(key)
       .setCas(cas)
       .setContent(ByteString.copyFrom(encoded.getT1().encoded()))
-      .setContentType(convertFromFlags(encoded.getT1().flags()));
+      .setContentFlags(encoded.getT1().flags());
 
     if (!preserveExpiry) {
       expiry.when(
@@ -297,7 +296,7 @@ public class CoreProtostellarKeyValueRequests {
       .setCollectionName(keyspace.collection())
       .setKey(key)
       .setContent(ByteString.copyFrom(encoded.getT1().encoded()))
-      .setContentType(convertFromFlags(encoded.getT1().flags()));
+      .setContentFlags(encoded.getT1().flags());
 
     if (!preserveExpiry) {
       expiry.when(

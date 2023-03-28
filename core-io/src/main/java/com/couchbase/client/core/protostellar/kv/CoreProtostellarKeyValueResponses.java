@@ -44,8 +44,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.convertToFlags;
-
 /**
  * For converting Protostellar GRPC KV responses.
  */
@@ -101,7 +99,7 @@ public class CoreProtostellarKeyValueResponses {
       keyspace,
       key,
       response.getContent().toByteArray(),
-      convertToFlags(response.getContentType()),
+      response.getContentFlags(),
       response.getCas(),
       CoreProtostellarUtil.convertExpiry(response.hasExpiry(), response.getExpiry()),
       false);
@@ -112,7 +110,7 @@ public class CoreProtostellarKeyValueResponses {
       keyspace,
       key,
       response.getContent().toByteArray(),
-      convertToFlags(response.getContentType()),
+      response.getContentFlags(),
       response.getCas(),
       CoreProtostellarUtil.convertExpiry(response.hasExpiry(), response.getExpiry()),
       false);
@@ -123,7 +121,7 @@ public class CoreProtostellarKeyValueResponses {
       keyspace,
       key,
       response.getContent().toByteArray(),
-      convertToFlags(response.getContentType()),
+      response.getContentFlags(),
       response.getCas(),
       CoreProtostellarUtil.convertExpiry(response.hasExpiry(), response.getExpiry()),
       false);

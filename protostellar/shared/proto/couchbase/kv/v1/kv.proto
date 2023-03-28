@@ -45,23 +45,6 @@ message LegacyDurabilitySpec {
   uint32 num_persisted = 2;
 }
 
-enum DocumentContentType {
-  // Indicates that we are not able to determine the document content type.
-  DOCUMENT_CONTENT_TYPE_UNKNOWN = 0;
-
-  // Indicates that the content is raw binary data.
-  DOCUMENT_CONTENT_TYPE_BINARY = 1;
-
-  // Indicates that the content is JSON
-  DOCUMENT_CONTENT_TYPE_JSON = 2;
-}
-
-enum DocumentCompressionType {
-  DOCUMENT_COMPRESSION_TYPE_NONE = 0;
-
-  DOCUMENT_COMPRESSION_TYPE_SNAPPY = 1;
-}
-
 message MutationToken {
   string bucket_name = 1;
   uint32 vbucket_id = 2;
@@ -78,10 +61,10 @@ message GetRequest {
 
 message GetResponse {
   bytes content = 1;
-  DocumentContentType content_type = 2;
-  DocumentCompressionType compression_type = 5;
+  uint32 content_flags = 6;
   uint64 cas = 3;
   google.protobuf.Timestamp expiry = 4;
+  reserved 2, 5;
 }
 
 message GetAndTouchRequest {
@@ -97,10 +80,10 @@ message GetAndTouchRequest {
 
 message GetAndTouchResponse {
   bytes content = 1;
-  DocumentContentType content_type = 2;
-  DocumentCompressionType compression_type = 5;
+  uint32 content_flags = 6;
   uint64 cas = 3;
   google.protobuf.Timestamp expiry = 4;
+  reserved 2, 5;
 }
 
 message GetAndLockRequest {
@@ -113,10 +96,10 @@ message GetAndLockRequest {
 
 message GetAndLockResponse {
   bytes content = 1;
-  DocumentContentType content_type = 2;
-  DocumentCompressionType compression_type = 5;
+  uint32 content_flags = 6;
   uint64 cas = 3;
   google.protobuf.Timestamp expiry = 4;
+  reserved 2, 5;
 }
 
 message GetReplicaRequest {
@@ -129,10 +112,10 @@ message GetReplicaRequest {
 
 message GetReplicaResponse {
   bytes content = 1;
-  DocumentContentType content_type = 2;
-  DocumentCompressionType compression_type = 5;
+  uint32 content_flags = 6;
   uint64 cas = 3;
   google.protobuf.Timestamp expiry = 4;
+  reserved 2, 5;
 }
 
 message UnlockRequest {
@@ -179,12 +162,13 @@ message InsertRequest {
   string collection_name = 3;
   string key = 4;
   bytes content = 5;
-  DocumentContentType content_type = 6;
+  uint32 content_flags = 11;
   oneof expiry {
     google.protobuf.Timestamp expiry_time = 7;
     uint32 expiry_secs = 10;
   }
   optional DurabilityLevel durability_level = 9;
+  reserved 6;
 }
 
 message InsertResponse {
@@ -198,12 +182,13 @@ message UpsertRequest {
   string collection_name = 3;
   string key = 4;
   bytes content = 5;
-  DocumentContentType content_type = 6;
+  uint32 content_flags = 11;
   oneof expiry {
     google.protobuf.Timestamp expiry_time = 7;
     uint32 expiry_secs = 10;
   }
   optional DurabilityLevel durability_level = 9;
+  reserved 6;
 }
 
 message UpsertResponse {
@@ -217,13 +202,14 @@ message ReplaceRequest {
   string collection_name = 3;
   string key = 4;
   bytes content = 5;
-  DocumentContentType content_type = 6;
+  uint32 content_flags = 12;
   optional uint64 cas = 7;
   oneof expiry {
     google.protobuf.Timestamp expiry_time = 8;
     uint32 expiry_secs = 11;
   }
   optional DurabilityLevel durability_level = 10;
+  reserved 6;
 }
 
 message ReplaceResponse {
@@ -443,12 +429,11 @@ message RangeScanRequest {
 message RangeScanResponse {
   message Document {
     message MetaData {
-      uint32 flags = 1;
+      uint32 content_flags = 1;
       optional google.protobuf.Timestamp expiry = 2;
       uint64 seqno = 3;
       uint64 cas = 4;
-      DocumentContentType content_type = 5;
-      DocumentCompressionType compression_type = 6;
+      reserved 5, 6;
     }
 
     string key = 1;

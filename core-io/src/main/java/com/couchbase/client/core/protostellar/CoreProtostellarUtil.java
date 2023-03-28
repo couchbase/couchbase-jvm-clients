@@ -25,8 +25,6 @@ import com.couchbase.client.core.deps.com.google.protobuf.Timestamp;
 import com.couchbase.client.core.deps.io.grpc.Deadline;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.RequestCanceledException;
-import com.couchbase.client.core.msg.kv.CodecFlags;
-import com.couchbase.client.protostellar.kv.v1.DocumentContentType;
 import com.couchbase.client.protostellar.kv.v1.DurabilityLevel;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -38,9 +36,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import static com.couchbase.client.protostellar.kv.v1.DocumentContentType.DOCUMENT_CONTENT_TYPE_BINARY;
-import static com.couchbase.client.protostellar.kv.v1.DocumentContentType.DOCUMENT_CONTENT_TYPE_JSON;
-import static com.couchbase.client.protostellar.kv.v1.DocumentContentType.DOCUMENT_CONTENT_TYPE_UNKNOWN;
 import static com.couchbase.client.protostellar.kv.v1.DurabilityLevel.DURABILITY_LEVEL_MAJORITY;
 import static com.couchbase.client.protostellar.kv.v1.DurabilityLevel.DURABILITY_LEVEL_MAJORITY_AND_PERSIST_TO_ACTIVE;
 import static com.couchbase.client.protostellar.kv.v1.DurabilityLevel.DURABILITY_LEVEL_PERSIST_TO_MAJORITY;
@@ -93,29 +88,6 @@ public class CoreProtostellarUtil {
 
   public static Duration managementTimeout(Optional<Duration> customTimeout, CoreProtostellar core) {
     return customTimeout.orElse(core.context().environment().timeoutConfig().managementTimeout());
-  }
-
-  public static int convertToFlags(DocumentContentType contentType) {
-    int flags = 0;
-    switch (contentType) {
-      case DOCUMENT_CONTENT_TYPE_JSON:
-        flags = CodecFlags.JSON_COMPAT_FLAGS;
-        break;
-      case DOCUMENT_CONTENT_TYPE_BINARY:
-        flags = CodecFlags.BINARY_COMPAT_FLAGS;
-        break;
-    }
-    return flags;
-  }
-
-  public static DocumentContentType convertFromFlags(int flags) {
-    if ((flags & CodecFlags.JSON_COMPAT_FLAGS) != 0) {
-      return DOCUMENT_CONTENT_TYPE_JSON;
-    }
-    if ((flags & CodecFlags.BINARY_COMPAT_FLAGS) != 0) {
-      return DOCUMENT_CONTENT_TYPE_BINARY;
-    }
-    return DOCUMENT_CONTENT_TYPE_UNKNOWN;
   }
 
   public static void handleShutdownBlocking(CoreProtostellar core, ProtostellarRequest<?> request) {
