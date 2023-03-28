@@ -135,7 +135,11 @@ public class CoreProtostellarUtil {
 
   public static DurabilityLevel convert(CoreDurability dl) {
     if (dl.isNone()) {
-      throw new IllegalStateException("Should not have no durability here");
+      throw new IllegalArgumentException("Durability must not be 'none' here.");
+    }
+
+    if (dl.isLegacy()) {
+      throw unsupportedInProtostellar("persistTo / replicateTo");
     }
 
     switch (dl.levelIfSynchronous().get()) {
