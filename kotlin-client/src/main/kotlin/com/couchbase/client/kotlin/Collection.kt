@@ -270,7 +270,7 @@ public class Collection internal constructor(
         val options = object : CoreScanOptions {
             override fun commonOptions(): CoreCommonOptions = common.toCore()
             override fun idsOnly(): Boolean = idsOnly
-            override fun consistentWith(): CoreMutationState = CoreMutationState(consistency.mutationState)
+            override fun consistentWith(): CoreMutationState? = consistency.mutationState?.let { CoreMutationState(consistency.mutationState) }
             override fun batchItemLimit(): Int = batchItemLimit
             override fun batchByteLimit(): Int = batchSizeLimit.inBytes.toSaturatedInt()
         }
