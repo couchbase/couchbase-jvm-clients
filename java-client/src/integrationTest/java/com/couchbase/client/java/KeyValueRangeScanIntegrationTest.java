@@ -82,14 +82,14 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
 
   static void loadSampleData(final Collection collection) {
     Flux.fromIterable(DOC_IDS)
-      .flatMap(id -> collection.reactive().upsert(id, "payload-" + id))
+      .flatMap(id -> collection.reactive().upsert(id, JsonObject.create().put("payload","payload-" + id)))
       .blockLast();
 
     final int MANY_DOCS = 100_000;
     final int padLen = String.valueOf(MANY_DOCS).length() - 1;
     Flux.range(0, MANY_DOCS)
       .map(i -> String.format("%0" + padLen + "d", i)) // zero-pad (in case we want to sort in the future?)
-      .flatMap(id -> collection.reactive().upsert(id, "payload-" + id))
+      .flatMap(id -> collection.reactive().upsert(id, JsonObject.create().put("payload","payload-" + id)))
       .blockLast();
   }
 
